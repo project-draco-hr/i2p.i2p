@@ -1,0 +1,43 @@
+{
+  String resourceName=System.getProperty("jbigi.impl");
+  if (resourceName == null)   return false;
+  URL resource=NativeBigInteger.class.getClassLoader().getResource(resourceName);
+  if (resource == null) {
+    if (_doLog)     System.err.println("ERROR: Resource name [" + resourceName + "] was not found");
+    return false;
+  }
+  File outFile=null;
+  try {
+    InputStream libStream=resource.openStream();
+    outFile=File.createTempFile("jbigi","lib.tmp");
+    FileOutputStream fos=new FileOutputStream(outFile);
+    byte buf[]=new byte[4096 * 1024];
+    while (true) {
+      int read=libStream.read(buf);
+      if (read < 0)       break;
+      fos.write(buf,0,read);
+    }
+    fos.close();
+    System.load(outFile.getPath());
+    return true;
+  }
+ catch (  UnsatisfiedLinkError ule) {
+    if (_doLog) {
+      System.err.println("ERROR: The resource " + resourceName + " was not a valid library for this platform");
+      ule.printStackTrace();
+    }
+    return false;
+  }
+catch (  IOException ioe) {
+    if (_doLog) {
+      System.err.println("ERROR: Problem writing out the temporary native library data");
+      ioe.printStackTrace();
+    }
+    return false;
+  }
+ finally {
+    if (outFile != null) {
+      outFile.deleteOnExit();
+    }
+  }
+}
