@@ -4,29 +4,7 @@
       if (_log.shouldLog(Log.INFO))       _log.info("Waiting for a connection on " + _myAddress.getHost() + ":"+ _myAddress.getPort());
       Socket s=_socket.accept();
       if (_log.shouldLog(Log.INFO))       _log.info("Connection handled on " + _myAddress.getHost() + ":"+ _myAddress.getPort()+ " with "+ s.getInetAddress().toString()+ ":"+ s.getPort());
-      TimedHandler h=new TimedHandler(s);
-      I2PThread t=new I2PThread(h);
-      t.setDaemon(true);
-      t.start();
-synchronized (h) {
-        h.wait(HANDLE_TIMEOUT);
-      }
-      if (h.wasSuccessful()) {
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("Handle successful");
-      }
- else {
-        if (h.receivedIdentByte()) {
-          if (_log.shouldLog(Log.ERROR))           _log.error("Unable to handle in the time allotted");
-        }
- else {
-          if (_log.shouldLog(Log.DEBUG))           _log.debug("Peer didn't send the ident byte, so either they were testing us, or portscanning");
-        }
-        try {
-          s.close();
-        }
- catch (        IOException ioe) {
-        }
-      }
+      handle(s);
     }
  catch (    SocketException se) {
       _log.error("Error handling a connection - closed?",se);
