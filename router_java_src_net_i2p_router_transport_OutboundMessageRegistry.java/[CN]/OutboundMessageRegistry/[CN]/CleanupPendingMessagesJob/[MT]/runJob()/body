@@ -1,33 +1,8 @@
 {
-  List toRemove=new ArrayList();
-  long now=CleanupPendingMessagesJob.this._context.clock().now();
-  Map messages=null;
-synchronized (_pendingMessages) {
-    messages=(Map)_pendingMessages.clone();
-  }
-  long afterCreate=CleanupPendingMessagesJob.this._context.clock().now();
-  for (Iterator iter=messages.keySet().iterator(); iter.hasNext(); ) {
-    Long exp=(Long)iter.next();
-    OutNetMessage msg=(OutNetMessage)messages.get(exp);
-    if (msg.getExpiration() < now) {
-      toRemove.add(exp);
-    }
-  }
-  long findRemove=CleanupPendingMessagesJob.this._context.clock().now();
-  long removeTime=0;
-  long loopTime=0;
+  List removed=removeMessages();
   RouterContext ctx=OutboundMessageRegistry.this._context;
-  for (Iterator iter=toRemove.iterator(); iter.hasNext(); ) {
-    long beforeRemove=ctx.clock().now();
-    Long exp=(Long)iter.next();
-    OutNetMessage msg=null;
-synchronized (_pendingMessages) {
-      msg=(OutNetMessage)_pendingMessages.remove(exp);
-    }
-    long afterRemove=ctx.clock().now();
-    long diff=afterRemove - beforeRemove;
-    if (diff > 500)     _log.error("Synchronize during remove took too long " + diff + "ms");
-    removeTime+=diff;
+  for (int i=0; i < removed.size(); i++) {
+    OutNetMessage msg=(OutNetMessage)removed.get(i);
     if (msg != null) {
       ctx.messageHistory().replyTimedOut(msg);
       Job fail=msg.getOnFailedReplyJob();
@@ -39,21 +14,6 @@ synchronized (_pendingMessages) {
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Removing message with selector " + msg.getReplySelector() + " and not firing any job");
       }
     }
-    long doneLoop=ctx.clock().now();
-    long ldiff=doneLoop - beforeRemove;
-    if (ldiff > 500)     _log.error("Loop took too long [" + ldiff + "ms]");
-    loopTime+=ldiff;
-  }
-  long cleanupDelay=ctx.clock().now() - now;
-  long findTime=findRemove - afterCreate;
-  long syncTime=afterCreate - now;
-  String warn=cleanupDelay + "ms (syncTime = " + syncTime+ "ms, findTime ="+ findTime+ "ms, removeTime = "+ removeTime+ "ms, loopTime = "+ loopTime+ ")";
-  if (cleanupDelay > 1000) {
-    _log.error("Cleanup took too long! " + warn);
-    ctx.messageHistory().messageProcessingError(-1,OutboundMessageRegistry.CleanupPendingMessagesJob.class.getName(),"Cleanup took too long: " + warn);
-  }
- else {
-    _log.debug("Cleanup was quick: " + warn);
   }
   requeue(CLEANUP_DELAY);
 }
