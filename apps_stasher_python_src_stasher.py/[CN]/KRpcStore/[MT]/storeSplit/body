@@ -1,0 +1,20 @@
+def storeSplit(self):
+    "\n        Gets called if we're splitting a big file into smaller chunks\n        \n        Here, we:\n            - break the file up into chunks\n            - build a manifest\n            - launch store RPCs to store each chunk, where the key is SHA(chunk)\n            - launch a store RPC to store the 'manifest' (noting that if the manifest\n              is too big, it'll get recursively inserted as a splitfile as well\n        "
+    chunks = []
+    hashes = []
+    size = len(self.value)
+    i = 0
+    self.nchunks = 0
+    while (i < size):
+        chunks.append(self.value[i:(i + maxValueSize)])
+        hashes.append(shahash(chunks[(-1)]))
+        i += maxValueSize
+        self.nchunks += 1
+    manifest = ('chunks:%s\n%s\n' % (self.nchunks, '\n'.join(hashes)))
+    self.chunkManifestInserted = False
+    self.chunksInserted = 0
+    KRpcStore(self.localNode, self.on_doneChunkManifest, local=self.isLocalOnly, key=self.key, value=manifest)
+    i = 0
+    while (i < self.nchunks):
+        KRpcStore(self.localNode, self.on_doneChunk, local=self.isLocalOnly, key=hashes[i], value=chunks[i])
+        i += 1

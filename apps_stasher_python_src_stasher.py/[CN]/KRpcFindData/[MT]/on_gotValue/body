@@ -1,0 +1,39 @@
+def on_gotValue(self, value, hash=None):
+    '\n        Callback which fires when we get the value stored under a key\n        \n        Value is either the real value, or a splitfile manifest\n        If a real value, just return it.\n        If a splitfile manifest, launch nested findValue RPCs to get each chunk\n        '
+    nchunks = 0
+    try:
+        (firstline, rest) = value.split('\n', 1)
+        firstline = firstline.strip()
+        (kwd, str_nchunks) = firstline.split(':')
+        if (kwd != 'chunks'):
+            raise hell
+        nchunks = int(nchunks)
+        value = rest
+    except:
+        pass
+    if (nchunks == 0):
+        self.returnValue(value)
+        return
+    hashes = rest.strip().split('\n')
+    hashesAllValid = [(len(h) == 40) for h in hashes]
+    if (len(hashes) != nchunks):
+        self.log(2, ('Splitfile retrieval failure\nmanifest contains %s hashes, should have been %s' % (len(hashes), nchunks)))
+        self.returnValue(None)
+    if (False in hashesAllValid):
+        self.log(2, 'Splitfile retrieval failure - one or more invalid hashes')
+
+
+    class ChunkNotifier:
+
+        def __init__(me, h, cb):
+            me.h = h
+            me.cb = cb
+
+        def __call__(me, val):
+            me.cb(me.h, val)
+    self.numChunks = nchunks
+    self.numChunksReceived = 0
+    self.chunkHashes = hashes
+    self.chunks = dict.fromkeys(hashes)
+    for h in hashes:
+        KRpcFindData(self.localNode, h, ChunkNotifier(h, self.on_gotChunk))

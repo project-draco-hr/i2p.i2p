@@ -1,0 +1,24 @@
+def on_gotChunk(self, hexhash, value):
+    '\n        Callback which fires when a nested chunk findNode returns\n        '
+    if (value == None):
+        self.log(2, 'Chunk retrieval failed, fatal to this findData')
+        self.returnValue(None)
+        return
+    if (shahash(value) != hexhash):
+        self.log(2, "Got a chunk, but it doesn't hash right - fatal to this findData")
+        self.returnValue(None)
+        return
+    self.chunks[hexhash] = value
+    self.numChunksReceived += 1
+    if (self.numChunksReceived <= self.numChunks):
+        self.log(4, ('Received chunk %s of %s' % (self.numChunksReceived, self.numChunks)))
+        return
+    self.log(4, 'We appear to have all chunks, checking further')
+    if (None in self.chunks.values()):
+        self.log(2, 'Fatal - reached chunk count, but chunks still missing')
+        self.returnValue(None)
+        return
+    allChunks = [self.chunks[h] for h in self.chunkHashes]
+    reassembled = ''.join(allChunks)
+    self.log(4, ('Reassembled all %s chunks, SUCCESS' % self.numChunks))
+    self.returnValue(reassembled)
