@@ -7,7 +7,14 @@
     NtpMessage.encodeTimestamp(packet.getData(),40,(System.currentTimeMillis() / 1000.0) + SECONDS_1900_TO_EPOCH);
     socket.send(packet);
     packet=new DatagramPacket(buf,buf.length);
-    socket.receive(packet);
+    socket.setSoTimeout(10 * 1000);
+    try {
+      socket.receive(packet);
+    }
+ catch (    InterruptedIOException iie) {
+      socket.close();
+      return -1;
+    }
     double destinationTimestamp=(System.currentTimeMillis() / 1000.0) + SECONDS_1900_TO_EPOCH;
     NtpMessage msg=new NtpMessage(packet.getData());
     double roundTripDelay=(destinationTimestamp - msg.originateTimestamp) - (msg.receiveTimestamp - msg.transmitTimestamp);
