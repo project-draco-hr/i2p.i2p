@@ -2,26 +2,29 @@
   if (_state.completed())   return;
   int toCheck=PARALLELIZATION - _state.getPending().size();
   if (toCheck <= 0) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug(getJobId() + ": Too many store messages pending");
     return;
   }
   if (toCheck > PARALLELIZATION)   toCheck=PARALLELIZATION;
   List closestHashes=getClosestRouters(_state.getTarget(),toCheck,_state.getAttempted());
   if ((closestHashes == null) || (closestHashes.size() <= 0)) {
     if (_state.getPending().size() <= 0) {
+      if (_log.shouldLog(Log.WARN))       _log.warn(getJobId() + ": No more peers left and none pending");
       fail();
     }
  else {
+      if (_log.shouldLog(Log.WARN))       _log.warn(getJobId() + ": No more peers left but some are pending, so keep waiting");
       return;
     }
   }
  else {
     _state.addPending(closestHashes);
-    if (_log.shouldLog(Log.INFO))     _log.info("Continue sending key " + _state.getTarget() + " to "+ closestHashes);
+    if (_log.shouldLog(Log.INFO))     _log.info(getJobId() + ": Continue sending key " + _state.getTarget()+ " after "+ _state.getAttempted().size()+ " tries to "+ closestHashes);
     for (Iterator iter=closestHashes.iterator(); iter.hasNext(); ) {
       Hash peer=(Hash)iter.next();
       DataStructure ds=_facade.getDataStore().get(peer);
       if ((ds == null) || !(ds instanceof RouterInfo)) {
-        if (_log.shouldLog(Log.WARN))         _log.warn("Error selecting closest hash that wasnt a router! " + peer + " : "+ ds);
+        if (_log.shouldLog(Log.WARN))         _log.warn(getJobId() + ": Error selecting closest hash that wasnt a router! " + peer+ " : "+ ds);
       }
  else {
         sendStore((RouterInfo)ds);

@@ -42,8 +42,15 @@ synchronized (_messages) {
   if (origMessages.size() <= 0) {
     if (size == -1) {
       _context.messageHistory().droppedOtherMessage(msg.getMessage());
-      if (_log.shouldLog(Log.ERROR))       _log.error("Message " + msg.getMessage() + " was not handled by a HandlerJobBuilder - DROPPING: "+ msg,new Exception("DROPPED MESSAGE"));
-      _context.statManager().addRateData("inNetPool.dropped",1,0);
+      if (msg.getMessage().getType() == DeliveryStatusMessage.MESSAGE_TYPE) {
+        long timeSinceSent=_context.clock().now() - ((DeliveryStatusMessage)msg.getMessage()).getArrival().getTime();
+        if (_log.shouldLog(Log.INFO))         _log.info("Dropping unhandled delivery status message created " + timeSinceSent + "ms ago: "+ msg);
+        _context.statManager().addRateData("inNetPool.droppedDeliveryStatusDelay",timeSinceSent,timeSinceSent);
+      }
+ else {
+        if (_log.shouldLog(Log.ERROR))         _log.error("Message " + msg.getMessage() + " was not handled by a HandlerJobBuilder - DROPPING: "+ msg,new Exception("DROPPED MESSAGE"));
+        _context.statManager().addRateData("inNetPool.dropped",1,0);
+      }
     }
  else {
       String mtype=msg.getMessage().getClass().getName();

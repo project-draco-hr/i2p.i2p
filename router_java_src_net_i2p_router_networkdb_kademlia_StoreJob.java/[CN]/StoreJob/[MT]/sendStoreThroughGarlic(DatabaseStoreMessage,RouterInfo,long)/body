@@ -1,0 +1,28 @@
+{
+  long token=_context.random().nextInt(Integer.MAX_VALUE);
+  TunnelId replyTunnelId=selectInboundTunnel();
+  TunnelInfo replyTunnel=_context.tunnelManager().getTunnelInfo(replyTunnelId);
+  if (replyTunnel == null) {
+    _log.error("No reply inbound tunnels available!");
+    return;
+  }
+  msg.setReplyToken(token);
+  msg.setReplyTunnel(replyTunnelId);
+  msg.setReplyGateway(replyTunnel.getThisHop());
+  if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": send(dbStore) w/ token expected " + token);
+  _state.addPending(peer.getIdentity().getHash());
+  SendSuccessJob onReply=new SendSuccessJob(peer);
+  FailedJob onFail=new FailedJob(peer);
+  StoreMessageSelector selector=new StoreMessageSelector(_context,getJobId(),peer,token,expiration);
+  TunnelId outTunnelId=selectOutboundTunnel();
+  if (outTunnelId != null) {
+    TunnelId targetTunnelId=null;
+    Job onSend=null;
+    SendTunnelMessageJob j=new SendTunnelMessageJob(_context,msg,outTunnelId,peer.getIdentity().getHash(),targetTunnelId,onSend,onReply,onFail,selector,STORE_TIMEOUT_MS,STORE_PRIORITY);
+    _context.jobQueue().addJob(j);
+  }
+ else {
+    if (_log.shouldLog(Log.ERROR))     _log.error("No outbound tunnels to send a dbStore out!");
+    fail();
+  }
+}
