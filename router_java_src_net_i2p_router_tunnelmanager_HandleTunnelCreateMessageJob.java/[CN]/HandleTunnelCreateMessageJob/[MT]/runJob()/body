@@ -4,30 +4,30 @@
     sendReply(false);
     return;
   }
-  TunnelInfo info=new TunnelInfo(_context);
+  TunnelInfo info=new TunnelInfo(getContext());
   info.setConfigurationKey(_message.getConfigurationKey());
   info.setEncryptionKey(_message.getTunnelKey());
   info.setNextHop(_message.getNextRouter());
-  TunnelSettings settings=new TunnelSettings(_context);
+  TunnelSettings settings=new TunnelSettings(getContext());
   settings.setBytesPerMinuteAverage(_message.getMaxAvgBytesPerMin());
   settings.setBytesPerMinutePeak(_message.getMaxPeakBytesPerMin());
   settings.setMessagesPerMinuteAverage(_message.getMaxAvgMessagesPerMin());
   settings.setMessagesPerMinutePeak(_message.getMaxPeakMessagesPerMin());
-  settings.setExpiration(_message.getTunnelDurationSeconds() * 1000 + _context.clock().now());
+  settings.setExpiration(_message.getTunnelDurationSeconds() * 1000 + getContext().clock().now());
   settings.setIncludeDummy(_message.getIncludeDummyTraffic());
   settings.setReorder(_message.getReorderMessages());
   info.setSettings(settings);
   info.setSigningKey(_message.getVerificationPrivateKey());
-  info.setThisHop(_context.routerHash());
+  info.setThisHop(getContext().routerHash());
   info.setTunnelId(_message.getTunnelId());
   info.setVerificationKey(_message.getVerificationPublicKey());
   info.getTunnelId().setType(TunnelId.TYPE_PARTICIPANT);
   if (_message.getNextRouter() == null) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("We're the endpoint, don't test the \"next\" peer [duh]");
-    boolean ok=_context.tunnelManager().joinTunnel(info);
+    boolean ok=getContext().tunnelManager().joinTunnel(info);
     sendReply(ok);
   }
  else {
-    _context.netDb().lookupRouterInfo(info.getNextHop(),new TestJob(info),new JoinJob(info,false),TIMEOUT);
+    getContext().netDb().lookupRouterInfo(info.getNextHop(),new TestJob(info),new JoinJob(info,false),TIMEOUT);
   }
 }

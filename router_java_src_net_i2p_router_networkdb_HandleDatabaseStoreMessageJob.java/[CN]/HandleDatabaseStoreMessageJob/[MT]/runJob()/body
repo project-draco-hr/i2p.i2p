@@ -2,20 +2,20 @@
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Handling database store message");
   boolean wasNew=false;
   if (_message.getValueType() == DatabaseStoreMessage.KEY_TYPE_LEASESET) {
-    Object match=_context.netDb().store(_message.getKey(),_message.getLeaseSet());
+    Object match=getContext().netDb().store(_message.getKey(),_message.getLeaseSet());
     wasNew=(null == match);
   }
  else   if (_message.getValueType() == DatabaseStoreMessage.KEY_TYPE_ROUTERINFO) {
     if (_log.shouldLog(Log.INFO))     _log.info("Handling dbStore of router " + _message.getKey() + " with publishDate of "+ new Date(_message.getRouterInfo().getPublished()));
-    Object match=_context.netDb().store(_message.getKey(),_message.getRouterInfo());
+    Object match=getContext().netDb().store(_message.getKey(),_message.getRouterInfo());
     wasNew=(null == match);
-    _context.profileManager().heardAbout(_message.getKey());
+    getContext().profileManager().heardAbout(_message.getKey());
   }
  else {
     if (_log.shouldLog(Log.ERROR))     _log.error("Invalid DatabaseStoreMessage data type - " + _message.getValueType() + ": "+ _message);
   }
   if (_message.getReplyToken() > 0)   sendAck();
   if (_from != null)   _fromHash=_from.getHash();
-  if (_fromHash != null)   _context.profileManager().dbStoreReceived(_fromHash,wasNew);
-  _context.statManager().addRateData("netDb.storeHandled",1,0);
+  if (_fromHash != null)   getContext().profileManager().dbStoreReceived(_fromHash,wasNew);
+  getContext().statManager().addRateData("netDb.storeHandled",1,0);
 }

@@ -4,17 +4,17 @@
     if (_log.shouldLog(Log.ERROR))     _log.error("Someone br0ke us.  where is this message supposed to go again?",getAddedBy());
     return;
   }
-  long expiration=REPLY_TIMEOUT + _context.clock().now();
-  TunnelMessage msg=new TunnelMessage(_context);
+  long expiration=REPLY_TIMEOUT + getContext().clock().now();
+  TunnelMessage msg=new TunnelMessage(getContext());
   try {
     ByteArrayOutputStream baos=new ByteArrayOutputStream(1024);
     message.writeBytes(baos);
     msg.setData(baos.toByteArray());
     msg.setTunnelId(replyTunnel);
     msg.setMessageExpiration(new Date(expiration));
-    _context.jobQueue().addJob(new SendMessageDirectJob(_context,msg,toPeer,null,null,null,null,expiration,MESSAGE_PRIORITY));
+    getContext().jobQueue().addJob(new SendMessageDirectJob(getContext(),msg,toPeer,null,null,null,null,expiration,MESSAGE_PRIORITY));
     String bodyType=message.getClass().getName();
-    _context.messageHistory().wrap(bodyType,message.getUniqueId(),TunnelMessage.class.getName(),msg.getUniqueId());
+    getContext().messageHistory().wrap(bodyType,message.getUniqueId(),TunnelMessage.class.getName(),msg.getUniqueId());
   }
  catch (  IOException ioe) {
     if (_log.shouldLog(Log.ERROR))     _log.error("Error writing out the tunnel message to send to the tunnel",ioe);

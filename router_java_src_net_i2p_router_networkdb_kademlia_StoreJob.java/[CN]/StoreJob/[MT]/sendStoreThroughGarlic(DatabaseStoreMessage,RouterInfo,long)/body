@@ -1,7 +1,7 @@
 {
-  long token=_context.random().nextLong(I2NPMessage.MAX_ID_VALUE);
+  long token=getContext().random().nextLong(I2NPMessage.MAX_ID_VALUE);
   TunnelId replyTunnelId=selectInboundTunnel();
-  TunnelInfo replyTunnel=_context.tunnelManager().getTunnelInfo(replyTunnelId);
+  TunnelInfo replyTunnel=getContext().tunnelManager().getTunnelInfo(replyTunnelId);
   if (replyTunnel == null) {
     _log.error("No reply inbound tunnels available!");
     return;
@@ -13,13 +13,13 @@
   _state.addPending(peer.getIdentity().getHash());
   SendSuccessJob onReply=new SendSuccessJob(peer);
   FailedJob onFail=new FailedJob(peer);
-  StoreMessageSelector selector=new StoreMessageSelector(_context,getJobId(),peer,token,expiration);
+  StoreMessageSelector selector=new StoreMessageSelector(getContext(),getJobId(),peer,token,expiration);
   TunnelId outTunnelId=selectOutboundTunnel();
   if (outTunnelId != null) {
     TunnelId targetTunnelId=null;
     Job onSend=null;
-    SendTunnelMessageJob j=new SendTunnelMessageJob(_context,msg,outTunnelId,peer.getIdentity().getHash(),targetTunnelId,onSend,onReply,onFail,selector,STORE_TIMEOUT_MS,STORE_PRIORITY);
-    _context.jobQueue().addJob(j);
+    SendTunnelMessageJob j=new SendTunnelMessageJob(getContext(),msg,outTunnelId,peer.getIdentity().getHash(),targetTunnelId,onSend,onReply,onFail,selector,STORE_TIMEOUT_MS,STORE_PRIORITY);
+    getContext().jobQueue().addJob(j);
   }
  else {
     if (_log.shouldLog(Log.ERROR))     _log.error("No outbound tunnels to send a dbStore out!");

@@ -1,31 +1,31 @@
 {
   TunnelId id=_message.getTunnelId();
-  long excessLag=_context.clock().now() - _message.getMessageExpiration().getTime();
+  long excessLag=getContext().clock().now() - _message.getMessageExpiration().getTime();
   if (excessLag > Router.CLOCK_FUDGE_FACTOR) {
     if (_log.shouldLog(Log.WARN))     _log.warn("Accepted message (" + _message.getUniqueId() + ") expired on the queue for tunnel "+ id.getTunnelId()+ " expiring "+ excessLag+ "ms ago");
-    _context.statManager().addRateData("tunnel.expiredAfterAcceptTime",excessLag,excessLag);
-    _context.messageHistory().messageProcessingError(_message.getUniqueId(),TunnelMessage.class.getName(),"tunnel message expired on the queue");
+    getContext().statManager().addRateData("tunnel.expiredAfterAcceptTime",excessLag,excessLag);
+    getContext().messageHistory().messageProcessingError(_message.getUniqueId(),TunnelMessage.class.getName(),"tunnel message expired on the queue");
     return;
   }
  else   if (excessLag > 0) {
     if (_log.shouldLog(Log.WARN))     _log.warn("Accepted message (" + _message.getUniqueId() + ") *almost* expired on the queue for tunnel "+ id.getTunnelId()+ " expiring "+ excessLag+ "ms ago");
   }
-  TunnelInfo info=_context.tunnelManager().getTunnelInfo(id);
+  TunnelInfo info=getContext().tunnelManager().getTunnelInfo(id);
   if (info == null) {
     Hash from=_fromHash;
     if (_from != null)     from=_from.getHash();
-    _context.messageHistory().droppedTunnelMessage(id,from);
+    getContext().messageHistory().droppedTunnelMessage(id,from);
     if (_log.shouldLog(Log.ERROR))     _log.error("Received a message for an unknown tunnel [" + id.getTunnelId() + "], dropping it: "+ _message,getAddedBy());
-    long timeRemaining=_message.getMessageExpiration().getTime() - _context.clock().now();
-    _context.statManager().addRateData("tunnel.unknownTunnelTimeLeft",timeRemaining,0);
+    long timeRemaining=_message.getMessageExpiration().getTime() - getContext().clock().now();
+    getContext().statManager().addRateData("tunnel.unknownTunnelTimeLeft",timeRemaining,0);
     return;
   }
   info.messageProcessed();
   info=getUs(info);
   if (info == null) {
     if (_log.shouldLog(Log.ERROR))     _log.error("We are not part of a known tunnel?? wtf!  drop.",getAddedBy());
-    long timeRemaining=_message.getMessageExpiration().getTime() - _context.clock().now();
-    _context.statManager().addRateData("tunnel.unknownTunnelTimeLeft",timeRemaining,0);
+    long timeRemaining=_message.getMessageExpiration().getTime() - getContext().clock().now();
+    getContext().statManager().addRateData("tunnel.unknownTunnelTimeLeft",timeRemaining,0);
     return;
   }
  else {
@@ -37,24 +37,24 @@
         if (_log.shouldLog(Log.DEBUG))         _log.debug("We are the gateway to tunnel " + id.getTunnelId());
         byte data[]=_message.getData();
         I2NPMessage msg=getBody(data);
-        _context.jobQueue().addJob(new HandleGatewayMessageJob(msg,info,data.length));
+        getContext().jobQueue().addJob(new HandleGatewayMessageJob(msg,info,data.length));
         return;
       }
  else {
         if (_log.shouldLog(Log.DEBUG))         _log.debug("We are the gateway and the endpoint for tunnel " + id.getTunnelId());
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Process locally");
         if (info.getDestination() != null) {
-          if (!_context.clientManager().isLocal(info.getDestination())) {
+          if (!getContext().clientManager().isLocal(info.getDestination())) {
             if (_log.shouldLog(Log.WARN))             _log.warn("Received a message on a tunnel allocated to a client that has disconnected - dropping it!");
             if (_log.shouldLog(Log.DEBUG))             _log.debug("Dropping message for disconnected client: " + _message);
-            _context.messageHistory().droppedOtherMessage(_message);
-            _context.messageHistory().messageProcessingError(_message.getUniqueId(),_message.getClass().getName(),"Disconnected client");
+            getContext().messageHistory().droppedOtherMessage(_message);
+            getContext().messageHistory().messageProcessingError(_message.getUniqueId(),_message.getClass().getName(),"Disconnected client");
             return;
           }
         }
         I2NPMessage body=getBody(_message.getData());
         if (body != null) {
-          _context.jobQueue().addJob(new HandleLocallyJob(body,info));
+          getContext().jobQueue().addJob(new HandleLocallyJob(body,info));
           return;
         }
  else {
@@ -71,7 +71,7 @@
   }
  else {
     TunnelVerificationStructure struct=_message.getVerificationStructure();
-    boolean ok=struct.verifySignature(_context,info.getVerificationKey().getKey());
+    boolean ok=struct.verifySignature(getContext(),info.getVerificationKey().getKey());
     if (!ok) {
       if (_log.shouldLog(Log.WARN))       _log.warn("Failed tunnel verification!  Spoofing / tagging attack?  " + _message,getAddedBy());
       return;
@@ -79,13 +79,13 @@
  else {
       if (info.getNextHop() != null) {
         if (_log.shouldLog(Log.INFO))         _log.info("Message for tunnel " + id.getTunnelId() + " received where we're not the gateway and there are remaining hops, so forward it on to "+ info.getNextHop().toBase64()+ " via SendTunnelMessageJob");
-        _context.statManager().addRateData("tunnel.relayMessageSize",_message.getData().length,0);
-        _context.jobQueue().addJob(new SendMessageDirectJob(_context,_message,info.getNextHop(),_context.clock().now() + FORWARD_TIMEOUT,FORWARD_PRIORITY));
+        getContext().statManager().addRateData("tunnel.relayMessageSize",_message.getData().length,0);
+        getContext().jobQueue().addJob(new SendMessageDirectJob(getContext(),_message,info.getNextHop(),getContext().clock().now() + FORWARD_TIMEOUT,FORWARD_PRIORITY));
         return;
       }
  else {
         if (_log.shouldLog(Log.DEBUG))         _log.debug("No more hops, unwrap and follow the instructions");
-        _context.jobQueue().addJob(new HandleEndpointJob(info));
+        getContext().jobQueue().addJob(new HandleEndpointJob(info));
         return;
       }
     }
