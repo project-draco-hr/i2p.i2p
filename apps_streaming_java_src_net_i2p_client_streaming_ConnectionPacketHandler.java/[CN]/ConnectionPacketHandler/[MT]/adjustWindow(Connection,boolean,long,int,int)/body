@@ -10,10 +10,14 @@
   }
  else {
     if (acked > 0) {
-      int newWindowSize=con.getOptions().getWindowSize();
-      newWindowSize+=1;
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("New window size " + newWindowSize + " (#resends: "+ numResends+ ") for "+ con);
-      con.getOptions().setWindowSize(newWindowSize);
+      long lowest=con.getHighestAckedThrough();
+      if (lowest >= con.getCongestionWindowEnd()) {
+        int newWindowSize=con.getOptions().getWindowSize();
+        newWindowSize+=1;
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("New window size " + newWindowSize + " (#resends: "+ numResends+ ") for "+ con);
+        con.getOptions().setWindowSize(newWindowSize);
+        con.setCongestionWindowEnd(newWindowSize + lowest);
+      }
     }
   }
   return false;
