@@ -13,16 +13,25 @@
     requeue(REQUEUE_DELAY);
     return;
   }
+  boolean alreadyProcessed=false;
+  long beforeLock=MessageDeliveryStatusUpdate.this._context.clock().now();
+  long inLock=0;
 synchronized (_alreadyProcessed) {
+    inLock=MessageDeliveryStatusUpdate.this._context.clock().now();
     if (_alreadyProcessed.contains(_messageId)) {
       _log.warn("Status already updated");
-      return;
+      alreadyProcessed=true;
     }
  else {
       _alreadyProcessed.add(_messageId);
       while (_alreadyProcessed.size() > 10)       _alreadyProcessed.remove(0);
     }
   }
+  long afterLock=MessageDeliveryStatusUpdate.this._context.clock().now();
+  if (afterLock - beforeLock > 50) {
+    _log.warn("MessageDeliveryStatusUpdate.locking took too long: " + (afterLock - beforeLock) + " overall, synchronized took "+ (inLock - beforeLock));
+  }
+  if (alreadyProcessed)   return;
   if (_lastTried > 0) {
     if (_log.shouldLog(Log.DEBUG))     _log.info("Updating message status for message " + _messageId + " to "+ MessageStatusMessage.getStatusString(msg.getStatus())+ " for session ["+ _sessionId.getSessionId()+ "] (with nonce=2), retrying after ["+ (ClientConnectionRunner.this._context.clock().now() - _lastTried)+ "]",getAddedBy());
   }
@@ -34,8 +43,5 @@ synchronized (_alreadyProcessed) {
   }
  catch (  I2CPMessageException ime) {
     _log.warn("Error updating the status for message ID " + _messageId,ime);
-  }
-catch (  IOException ioe) {
-    _log.warn("Error updating the status for message ID " + _messageId,ioe);
   }
 }

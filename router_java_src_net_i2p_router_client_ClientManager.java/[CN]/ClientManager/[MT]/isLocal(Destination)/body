@@ -1,5 +1,14 @@
 {
+  boolean rv=false;
+  long beforeLock=_context.clock().now();
+  long inLock=0;
 synchronized (_runners) {
-    return (_runners.containsKey(dest));
+    inLock=_context.clock().now();
+    rv=_runners.containsKey(dest);
   }
+  long afterLock=_context.clock().now();
+  if (afterLock - beforeLock > 50) {
+    _log.warn("isLocal(Destination).locking took too long: " + (afterLock - beforeLock) + " overall, synchronized took "+ (inLock - beforeLock));
+  }
+  return rv;
 }

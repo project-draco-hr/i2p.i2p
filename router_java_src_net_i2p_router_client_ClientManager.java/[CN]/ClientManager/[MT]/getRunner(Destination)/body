@@ -1,5 +1,14 @@
 {
+  ClientConnectionRunner rv=null;
+  long beforeLock=_context.clock().now();
+  long inLock=0;
 synchronized (_runners) {
-    return (ClientConnectionRunner)_runners.get(dest);
+    inLock=_context.clock().now();
+    rv=(ClientConnectionRunner)_runners.get(dest);
   }
+  long afterLock=_context.clock().now();
+  if (afterLock - beforeLock > 50) {
+    _log.warn("getRunner(Dest).locking took too long: " + (afterLock - beforeLock) + " overall, synchronized took "+ (inLock - beforeLock));
+  }
+  return rv;
 }

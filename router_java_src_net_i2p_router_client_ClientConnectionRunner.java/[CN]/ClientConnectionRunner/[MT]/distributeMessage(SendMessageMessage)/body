@@ -3,10 +3,20 @@
   Destination dest=message.getDestination();
   MessageId id=new MessageId();
   id.setMessageId(getNextMessageId());
+  long beforeLock=_context.clock().now();
+  long inLock=0;
 synchronized (_acceptedPending) {
+    inLock=_context.clock().now();
     _acceptedPending.add(id);
   }
+  long afterLock=_context.clock().now();
+  if (afterLock - beforeLock > 50) {
+    _log.warn("distributeMessage.locking took too long: " + (afterLock - beforeLock) + " overall, synchronized took "+ (inLock - beforeLock));
+  }
   if (_log.shouldLog(Log.DEBUG))   _log.debug("** Recieving message [" + id.getMessageId() + "] with payload of size ["+ payload.getSize()+ "]"+ " for session ["+ _sessionId.getSessionId()+ "]");
+  long beforeDistribute=_context.clock().now();
   _manager.distributeMessage(_config.getDestination(),message.getDestination(),message.getPayload(),id);
+  long timeToDistribute=_context.clock().now() - beforeDistribute;
+  if (timeToDistribute > 50)   _log.warn("Took too long to distribute in the manager to " + message.getDestination().calculateHash().toBase64() + ": "+ timeToDistribute);
   return id;
 }

@@ -1,0 +1,29 @@
+{
+  long before=_context.clock().now();
+  try {
+synchronized (_out) {
+      msg.writeMessage(_out);
+      _out.flush();
+    }
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("after doSend of a " + msg.getClass().getName() + " message");
+  }
+ catch (  I2CPMessageException ime) {
+    _log.error("Message exception sending I2CP message",ime);
+    stopRunning();
+  }
+catch (  IOException ioe) {
+    _log.error("IO exception sending I2CP message",ioe);
+    stopRunning();
+  }
+catch (  Throwable t) {
+    _log.log(Log.CRIT,"Unhandled exception sending I2CP message",t);
+    stopRunning();
+  }
+ finally {
+    long after=_context.clock().now();
+    long lag=after - before;
+    if (lag > 300) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("synchronization on the i2cp message send took too long (" + lag + "ms): "+ msg);
+    }
+  }
+}
