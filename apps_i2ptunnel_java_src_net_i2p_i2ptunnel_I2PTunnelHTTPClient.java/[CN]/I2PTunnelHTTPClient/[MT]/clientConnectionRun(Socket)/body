@@ -9,7 +9,9 @@
     String line, method=null, protocol=null, host=null, destination=null;
     StringBuffer newRequest=new StringBuffer();
     while ((line=br.readLine()) != null) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Line=[" + line + "]");
       if (method == null) {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Method is null for [" + line + "]");
         int pos=line.indexOf(" ");
         if (pos == -1)         break;
         method=line.substring(0,pos);
@@ -39,6 +41,7 @@
  else         if (host.indexOf(".") != -1) {
           destination=wwwProxy;
           usingWWWProxy=true;
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("Host doesnt end with .i2p and it contains a period [" + host + "]: wwwProxy!");
         }
  else {
           request=request.substring(pos + 1);
@@ -64,13 +67,16 @@
           _log.debug("DEST  :" + destination + ":");
         }
       }
- else       if (line.startsWith("Host: ") && !usingWWWProxy) {
-        line="Host: " + host;
-        if (_log.shouldLog(Log.INFO))         _log.info("Setting host = " + host);
+ else {
+        if (line.startsWith("Host: ") && !usingWWWProxy) {
+          line="Host: " + host;
+          if (_log.shouldLog(Log.INFO))           _log.info("Setting host = " + host);
+        }
       }
       newRequest.append(line).append("\r\n");
       if (line.length() == 0)       break;
     }
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("NewRequest header: [" + newRequest.toString() + "]");
     while (br.ready()) {
       int i=br.read();
       if (i != -1) {
@@ -89,6 +95,7 @@
       s.close();
       return;
     }
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Destination: " + destination);
     Destination dest=I2PTunnel.destFromName(destination);
     if (dest == null) {
       l.log("Could not resolve " + destination + ".");
