@@ -1,29 +1,30 @@
 {
   if (info == null) {
-    _log.error("Null tunnel",new Exception("Null tunnel"));
+    if (_log.shouldLog(Log.ERROR))     _log.error("Null tunnel",new Exception("Null tunnel"));
     StatManager.getInstance().updateFrequency("tunnel.rejectRequestFrequency");
     return false;
   }
   if (info.getSettings() == null) {
-    _log.error("Null settings!",new Exception("settings are null"));
+    if (_log.shouldLog(Log.ERROR))     _log.error("Null settings!",new Exception("settings are null"));
     StatManager.getInstance().updateFrequency("tunnel.rejectRequestFrequency");
     return false;
   }
   if (info.getSettings().getExpiration() == 0) {
-    _log.info("No expiration for tunnel " + info.getTunnelId().getTunnelId(),new Exception("No expiration"));
+    if (_log.shouldLog(Log.INFO))     _log.info("No expiration for tunnel " + info.getTunnelId().getTunnelId(),new Exception("No expiration"));
     StatManager.getInstance().updateFrequency("tunnel.rejectRequestFrequency");
     return false;
   }
  else {
     if (info.getSettings().getExpiration() < Clock.getInstance().now()) {
-      _log.warn("Already expired - " + new Date(info.getSettings().getExpiration()),new Exception("Already expired"));
+      if (_log.shouldLog(Log.WARN))       _log.warn("Already expired - " + new Date(info.getSettings().getExpiration()),new Exception("Already expired"));
       StatManager.getInstance().updateFrequency("tunnel.rejectRequestFrequency");
       return false;
     }
   }
-  _log.debug("Joining tunnel: " + info);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Joining tunnel: " + info);
   boolean ok=_pool.addParticipatingTunnel(info);
   if (!ok)   StatManager.getInstance().updateFrequency("tunnel.rejectRequestFrequency");
  else   StatManager.getInstance().updateFrequency("tunnel.acceptRequestFrequency");
+  StatManager.getInstance().addRateData("tunnel.participatingTunnels",_pool.getParticipatingTunnelCount(),0);
   return ok;
 }
