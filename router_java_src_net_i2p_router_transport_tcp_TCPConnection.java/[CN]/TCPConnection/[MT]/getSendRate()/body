@@ -1,0 +1,20 @@
+{
+  if (_sendRate == null)   return 2 * 1024;
+  _sendRate.coallesceStats();
+  Rate r=_sendRate.getRate(60 * 1000);
+  if (r == null) {
+    return 2 * 1024;
+  }
+ else   if (r.getLastEventCount() <= 2) {
+    r=_sendRate.getRate(5 * 60 * 1000);
+    if (r.getLastEventCount() <= 2)     r=_sendRate.getRate(60 * 60 * 1000);
+  }
+  if (r.getLastEventCount() <= 2) {
+    return 2 * 1024;
+  }
+ else {
+    long bps=(long)(r.getLastTotalValue() * 1000 / r.getLastTotalEventTime());
+    _context.statManager().addRateData("tcp.sendBps",bps,0);
+    return bps;
+  }
+}

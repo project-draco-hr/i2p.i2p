@@ -1,0 +1,14 @@
+{
+  for (int i=0; i < _pendingMessages.size() && excessBytesQueued > 0; i++) {
+    OutNetMessage msg=(OutNetMessage)_pendingMessages.get(i);
+    int p=getDropProbability(msg.getMessageSize(),excessBytesQueued);
+    if (_context.random().nextInt(100) > p) {
+      _pendingMessages.remove(i);
+      i--;
+      msg.timestamp("Probabalistically dropped due to queue size " + excessBytesQueued);
+      sent(msg,false,-1);
+      _context.statManager().addRateData("tcp.probabalisticDropQueueSize",excessBytesQueued,msg.getLifetime());
+      excessBytesQueued-=msg.getMessageSize();
+    }
+  }
+}
