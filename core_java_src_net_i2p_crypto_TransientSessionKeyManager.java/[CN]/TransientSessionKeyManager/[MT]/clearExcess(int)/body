@@ -1,0 +1,30 @@
+{
+  long now=_context.clock().now();
+  int old=0;
+  int large=0;
+  int absurd=0;
+  int recent=0;
+  int tags=0;
+  int toRemove=overage * 2;
+  List removed=new ArrayList(toRemove);
+synchronized (_inboundTagSets) {
+    for (Iterator iter=_inboundTagSets.values().iterator(); iter.hasNext(); ) {
+      TagSet set=(TagSet)iter.next();
+      int size=set.getTags().size();
+      if (size > 1000)       absurd++;
+      if (size > 100)       large++;
+      if (now - set.getDate() > SESSION_LIFETIME_MAX_MS)       old++;
+ else       if (now - set.getDate() < 1 * 60 * 1000)       recent++;
+      if ((removed.size() < (toRemove)) || (now - set.getDate() > SESSION_LIFETIME_MAX_MS))       removed.add(set);
+    }
+    for (int i=0; i < removed.size(); i++) {
+      TagSet cur=(TagSet)removed.get(i);
+      for (Iterator iter=cur.getTags().iterator(); iter.hasNext(); ) {
+        SessionTag tag=(SessionTag)iter.next();
+        _inboundTagSets.remove(tag);
+        tags++;
+      }
+    }
+  }
+  if (_log.shouldLog(Log.CRIT))   _log.log(Log.CRIT,"TOO MANY SESSION TAGS!  removing " + removed + " tag sets arbitrarily, with "+ tags+ " tags,"+ "where there are "+ old+ " long lasting sessions, "+ recent+ " ones created in the last minute, and "+ large+ " sessions with more than 100 tags (and "+ absurd+ " with more than 1000!), leaving a total of "+ _inboundTagSets.size()+ " tags behind");
+}
