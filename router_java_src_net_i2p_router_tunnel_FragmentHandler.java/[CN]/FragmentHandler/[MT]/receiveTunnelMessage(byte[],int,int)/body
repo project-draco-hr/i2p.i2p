@@ -1,8 +1,9 @@
 {
   boolean ok=verifyPreprocessed(preprocessed,offset,length);
   if (!ok) {
-    _log.error("Unable to verify preprocessed data (pre.length=" + preprocessed.length + " off="+ offset+ " len="+ length,new Exception("failed"));
+    if (_log.shouldLog(Log.WARN))     _log.warn("Unable to verify preprocessed data (pre.length=" + preprocessed.length + " off="+ offset+ " len="+ length);
     _cache.release(new ByteArray(preprocessed));
+    _context.statManager().addRateData("tunnel.corruptMessage",1,1);
     return;
   }
   offset+=HopProcessor.IV_LENGTH;
@@ -21,6 +22,7 @@
   }
  catch (  RuntimeException e) {
     if (_log.shouldLog(Log.ERROR))     _log.error("Corrupt fragment received: offset = " + offset,e);
+    _context.statManager().addRateData("tunnel.corruptMessage",1,1);
     throw e;
   }
  finally {

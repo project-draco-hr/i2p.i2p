@@ -1,11 +1,18 @@
 {
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Sending " + startAt + ":"+ sendThrough+ " out of "+ pending.size());
   byte preprocessed[]=_dataCache.acquire().getData();
-  ByteArray ivBuf=_ivCache.acquire();
-  byte iv[]=ivBuf.getData();
-  _context.random().nextBytes(iv);
   int offset=0;
   offset=writeFragments(pending,startAt,sendThrough,preprocessed,offset);
+  if (offset <= 0) {
+    StringBuffer buf=new StringBuffer(128);
+    buf.append("wtf, written offset is ").append(offset);
+    buf.append(" for ").append(startAt).append(" through ").append(sendThrough);
+    for (int i=startAt; i <= sendThrough; i++) {
+      buf.append(" ").append(pending.get(i).toString());
+    }
+    _log.log(Log.CRIT,buf.toString());
+    return;
+  }
   preprocess(preprocessed,offset);
   sender.sendPreprocessed(preprocessed,rec);
 }

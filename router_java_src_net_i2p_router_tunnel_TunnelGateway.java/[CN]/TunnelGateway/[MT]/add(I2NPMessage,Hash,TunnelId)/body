@@ -1,15 +1,15 @@
 {
   _messagesSent++;
   boolean delayedFlush=false;
-  Pending cur=new Pending(msg,toRouter,toTunnel);
+  Pending cur=new PendingImpl(msg,toRouter,toTunnel);
 synchronized (_queue) {
     _queue.add(cur);
     delayedFlush=_preprocessor.preprocessQueue(_queue,_sender,_receiver);
     _lastFlush=_context.clock().now();
     for (int i=0; i < _queue.size(); i++) {
       Pending m=(Pending)_queue.get(i);
-      if (m.getExpiration() < _lastFlush) {
-        if (_log.shouldLog(Log.ERROR))         _log.error("Expire on the queue: " + m);
+      if (m.getExpiration() + Router.CLOCK_FUDGE_FACTOR < _lastFlush) {
+        if (_log.shouldLog(Log.ERROR))         _log.error("Expire on the queue (size=" + _queue.size() + "): "+ m);
         _queue.remove(i);
         i--;
       }

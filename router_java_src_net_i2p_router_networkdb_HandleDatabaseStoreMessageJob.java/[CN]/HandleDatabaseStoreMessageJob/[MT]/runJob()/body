@@ -4,8 +4,16 @@
   boolean wasNew=false;
   if (_message.getValueType() == DatabaseStoreMessage.KEY_TYPE_LEASESET) {
     try {
-      Object match=getContext().netDb().store(_message.getKey(),_message.getLeaseSet());
-      wasNew=(null == match);
+      LeaseSet ls=_message.getLeaseSet();
+      ls.setReceivedAsPublished(true);
+      LeaseSet match=getContext().netDb().store(_message.getKey(),_message.getLeaseSet());
+      if (match == null) {
+        wasNew=true;
+      }
+ else {
+        wasNew=false;
+        match.setReceivedAsPublished(true);
+      }
     }
  catch (    IllegalArgumentException iae) {
       invalidMessage=iae.getMessage();

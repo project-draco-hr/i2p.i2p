@@ -4,8 +4,34 @@
   if (_log.shouldLog(Log.DEBUG)) {
     if (_message.getReplyTunnel() != null)     _log.debug("dbLookup received with replies going to " + fromKey + " (tunnel "+ _message.getReplyTunnel()+ ")");
   }
-  if (getContext().netDb().lookupRouterInfoLocally(_message.getFrom()) == null) {
-    getContext().netDb().lookupRouterInfo(_message.getFrom(),null,null,REPLY_TIMEOUT);
+  LeaseSet ls=getContext().netDb().lookupLeaseSetLocally(_message.getSearchKey());
+  if (ls != null) {
+    if (ls.getReceivedAsPublished()) {
+      getContext().statManager().addRateData("netDb.lookupsMatchedReceivedPublished",1,0);
+      sendData(_message.getSearchKey(),ls,fromKey,_message.getReplyTunnel());
+    }
+ else {
+      Set routerInfoSet=getContext().netDb().findNearestRouters(_message.getSearchKey(),CLOSENESS_THRESHOLD,_message.getDontIncludePeers());
+      if (getContext().clientManager().isLocal(ls.getDestination()) && weAreClosest(routerInfoSet)) {
+        getContext().statManager().addRateData("netDb.lookupsMatchedLocalClosest",1,0);
+        sendData(_message.getSearchKey(),ls,fromKey,_message.getReplyTunnel());
+      }
+ else {
+        getContext().statManager().addRateData("netDb.lookupsMatchedLocalNotClosest",1,0);
+        sendClosest(_message.getSearchKey(),routerInfoSet,fromKey,_message.getReplyTunnel());
+      }
+    }
   }
-  handleRequest(fromKey);
+ else {
+    RouterInfo info=getContext().netDb().lookupRouterInfoLocally(_message.getSearchKey());
+    if (info != null) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("We do have key " + _message.getSearchKey().toBase64() + " locally as a router info.  sending to "+ fromKey.toBase64());
+      sendData(_message.getSearchKey(),info,fromKey,_message.getReplyTunnel());
+    }
+ else {
+      Set routerInfoSet=getContext().netDb().findNearestRouters(_message.getSearchKey(),MAX_ROUTERS_RETURNED,_message.getDontIncludePeers());
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("We do not have key " + _message.getSearchKey().toBase64() + " locally.  sending back "+ routerInfoSet.size()+ " peers to "+ fromKey.toBase64());
+      sendClosest(_message.getSearchKey(),routerInfoSet,fromKey,_message.getReplyTunnel());
+    }
+  }
 }
