@@ -33,7 +33,8 @@ synchronized (_sendingStates) {
   }
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Adding sending state " + state.getMessageId() + " / "+ state.getNonce());
   _producer.sendMessage(this,dest,nonce,payload,tag,key,sentTags,newKey);
-  state.waitFor(MessageStatusMessage.STATUS_SEND_GUARANTEED_SUCCESS,Clock.getInstance().now() + SEND_TIMEOUT);
+  if (isGuaranteed())   state.waitFor(MessageStatusMessage.STATUS_SEND_GUARANTEED_SUCCESS,Clock.getInstance().now() + SEND_TIMEOUT);
+ else   state.waitFor(MessageStatusMessage.STATUS_SEND_ACCEPTED,Clock.getInstance().now() + SEND_TIMEOUT);
 synchronized (_sendingStates) {
     _sendingStates.remove(state);
   }
