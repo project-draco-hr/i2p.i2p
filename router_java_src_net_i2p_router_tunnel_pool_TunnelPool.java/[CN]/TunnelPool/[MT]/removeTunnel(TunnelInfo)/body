@@ -14,8 +14,14 @@ synchronized (_tunnels) {
     }
  else {
       if (_log.shouldLog(Log.WARN))       _log.warn(toString() + ": unable to build a new leaseSet on removal (" + remaining+ " remaining), request a new tunnel");
-      if (_settings.getAllowZeroHop())       buildFake();
+      if (_settings.getAllowZeroHop())       buildFallback();
     }
+  }
+  boolean connected=true;
+  if ((_settings.getDestination() != null) && (!_context.clientManager().isLocal(_settings.getDestination())))   connected=false;
+  if ((getTunnelCount() <= 0) && (!connected)) {
+    _manager.removeTunnels(_settings.getDestination());
+    return;
   }
   refreshBuilders();
 }

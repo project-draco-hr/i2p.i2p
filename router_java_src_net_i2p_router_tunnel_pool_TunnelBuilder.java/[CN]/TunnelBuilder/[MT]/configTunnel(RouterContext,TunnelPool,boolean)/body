@@ -3,24 +3,20 @@
   TunnelPoolSettings settings=pool.getSettings();
   long expiration=ctx.clock().now() + settings.getDuration();
   List peers=null;
-  long failures=countFailures(ctx);
-  boolean failing=(failures > 5) && (pool.getSettings().getAllowZeroHop());
-  boolean failsafe=false;
-  if (failing && (ctx.random().nextInt(100) < failures))   failsafe=true;
-  if (fake || failsafe) {
+  if (zeroHop) {
     peers=new ArrayList(1);
     peers.add(ctx.routerHash());
-    if ((failsafe) && (log.shouldLog(Log.WARN)))     log.warn("Building failsafe tunnel for " + pool);
+    if (log.shouldLog(Log.WARN))     log.warn("Building failsafe tunnel for " + pool);
   }
  else {
     peers=pool.getSelector().selectPeers(ctx,settings);
   }
   if ((peers == null) || (peers.size() <= 0)) {
     if (peers == null) {
-      if (log.shouldLog(Log.ERROR))       log.error("No peers to put in the new tunnel! selectPeers returned null!  boo, hiss!  fake=" + fake);
+      if (log.shouldLog(Log.ERROR))       log.error("No peers to put in the new tunnel! selectPeers returned null!  boo, hiss!  fake=" + zeroHop);
     }
  else {
-      if (log.shouldLog(Log.ERROR))       log.error("No peers to put in the new tunnel! selectPeers returned an empty list?!  fake=" + fake);
+      if (log.shouldLog(Log.ERROR))       log.error("No peers to put in the new tunnel! selectPeers returned an empty list?!  fake=" + zeroHop);
     }
     return null;
   }

@@ -1,0 +1,15 @@
+{
+  pool.refreshSettings();
+  PooledTunnelCreatorConfig cfg=configTunnel(ctx,pool,zeroHop);
+  if (cfg == null) {
+    RetryJob j=new RetryJob(ctx,pool);
+    j.getTiming().setStartAfter(ctx.clock().now() + ctx.random().nextInt(30 * 1000));
+    ctx.jobQueue().addJob(j);
+    return;
+  }
+  OnCreatedJob onCreated=new OnCreatedJob(ctx,pool,cfg);
+  RetryJob onFailed=(zeroHop ? null : new RetryJob(ctx,pool));
+  RequestTunnelJob req=new RequestTunnelJob(ctx,cfg,onCreated,onFailed,cfg.getLength() - 1,zeroHop,pool.getSettings().isExploratory());
+  if (zeroHop || (cfg.getLength() <= 1))   req.runJob();
+ else   ctx.jobQueue().addJob(req);
+}
