@@ -1,21 +1,24 @@
 {
   long now=OutboundMessageRegistry.this._context.clock().now();
-  List removedMessages=new ArrayList(8);
-  List expirationsToRemove=new ArrayList(8);
+  List removedMessages=new ArrayList(2);
+  List expirationsToRemove=null;
 synchronized (_pendingMessages) {
     for (Iterator iter=_pendingMessages.keySet().iterator(); iter.hasNext(); ) {
       Long expiration=(Long)iter.next();
       if (expiration.longValue() < now) {
+        if (expirationsToRemove == null)         expirationsToRemove=new ArrayList(8);
         expirationsToRemove.add(expiration);
       }
  else {
         break;
       }
     }
-    for (int i=0; i < expirationsToRemove.size(); i++) {
-      Long expiration=(Long)expirationsToRemove.get(i);
-      OutNetMessage msg=(OutNetMessage)_pendingMessages.remove(expiration);
-      if (msg != null)       removedMessages.add(msg);
+    if (expirationsToRemove != null) {
+      for (int i=0; i < expirationsToRemove.size(); i++) {
+        Long expiration=(Long)expirationsToRemove.get(i);
+        OutNetMessage msg=(OutNetMessage)_pendingMessages.remove(expiration);
+        if (msg != null)         removedMessages.add(msg);
+      }
     }
   }
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Removed " + removedMessages.size() + " messages");
