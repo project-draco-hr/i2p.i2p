@@ -3,7 +3,11 @@
   PublicKey key=_status.getLeaseSet().getEncryptionKey();
   SessionKey sessKey=new SessionKey();
   Set tags=new HashSet();
-  GarlicMessage msg=OutboundClientMessageJobHelper.createGarlicMessage(_context,token,_overallExpiration,key,_status.getClove(),_status.getTo(),sessKey,tags,true);
+  LeaseSet replyLeaseSet=null;
+  if (_shouldBundle) {
+    replyLeaseSet=_context.netDb().lookupLeaseSetLocally(_status.getFrom().calculateHash());
+  }
+  GarlicMessage msg=OutboundClientMessageJobHelper.createGarlicMessage(_context,token,_overallExpiration,key,_status.getClove(),_status.getTo(),sessKey,tags,true,replyLeaseSet);
   if (_log.shouldLog(Log.DEBUG))   _log.debug("send(lease) - token expected " + token);
   _status.sent(lease.getRouterIdentity().getHash(),lease.getTunnelId());
   SendSuccessJob onReply=new SendSuccessJob(lease,sessKey,tags);
