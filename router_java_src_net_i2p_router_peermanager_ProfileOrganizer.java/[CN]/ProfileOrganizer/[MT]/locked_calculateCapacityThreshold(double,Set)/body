@@ -1,0 +1,40 @@
+{
+  int numNotFailing=reordered.size();
+  double meanCapacity=avg(totalCapacity,numNotFailing);
+  long baseline=CapacityCalculator.GROWTH_FACTOR;
+  int minHighCapacityPeers=getMinimumHighCapacityPeers();
+  int numExceedingMean=0;
+  int numExceedingBaseline=0;
+  double thresholdAtMedian=0;
+  double thresholdAtMinHighCap=0;
+  int cur=0;
+  for (Iterator iter=reordered.iterator(); iter.hasNext(); ) {
+    PeerProfile profile=(PeerProfile)iter.next();
+    double val=profile.getCapacityValue();
+    if (val > meanCapacity)     numExceedingMean++;
+    if (val > baseline)     numExceedingBaseline++;
+    if (cur == reordered.size() / 2)     thresholdAtMedian=val;
+    if (cur == minHighCapacityPeers)     thresholdAtMinHighCap=val;
+    cur++;
+  }
+  if (meanCapacity > baseline) {
+    if (numExceedingMean > minHighCapacityPeers) {
+      if (_log.shouldLog(Log.INFO))       _log.info("Our average capacity is doing well [" + meanCapacity + "], and includes "+ numExceedingMean);
+      _thresholdCapacityValue=meanCapacity;
+    }
+ else {
+      if (_log.shouldLog(Log.INFO))       _log.info("Our average capacity is doing well [" + meanCapacity + "], but it is skewed to only have "+ numExceedingMean+ " so falling back on the top few to "+ thresholdAtMinHighCap);
+      _thresholdCapacityValue=thresholdAtMinHighCap;
+    }
+  }
+ else {
+    if (numExceedingBaseline > minHighCapacityPeers) {
+      if (_log.shouldLog(Log.INFO))       _log.info("Our average capacity isn't doing well [" + meanCapacity + "], but the baseline has "+ numExceedingBaseline);
+      _thresholdCapacityValue=baseline + .0001;
+    }
+ else {
+      if (_log.shouldLog(Log.INFO))       _log.info("Our average capacity isn't doing well [" + meanCapacity + "], and the baseline has "+ numExceedingBaseline+ " so falling back on the median of "+ thresholdAtMedian);
+      _thresholdCapacityValue=thresholdAtMedian;
+    }
+  }
+}

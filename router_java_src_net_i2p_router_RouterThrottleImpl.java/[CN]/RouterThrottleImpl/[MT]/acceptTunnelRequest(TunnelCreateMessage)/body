@@ -36,6 +36,19 @@
   double bytesPerTunnel=msgsPerTunnel * bytesPerMsg;
   int numTunnels=_context.tunnelManager().getParticipatingCount();
   double bytesAllocated=(numTunnels + 1) * bytesPerTunnel;
+  String maxTunnels=_context.getProperty(PROP_MAX_TUNNELS);
+  if (maxTunnels != null) {
+    try {
+      int max=Integer.parseInt(maxTunnels);
+      if (numTunnels >= max) {
+        if (_log.shouldLog(Log.WARN))         _log.warn("Refusing tunnel request since we are already participating in " + numTunnels + " (our max is "+ max+ ")");
+        _context.statManager().addRateData("router.throttleTunnelMaxExceeded",numTunnels,0);
+        return false;
+      }
+    }
+ catch (    NumberFormatException nfe) {
+    }
+  }
   _context.statManager().addRateData("tunnel.bytesAllocatedAtAccept",(long)bytesAllocated,msg.getTunnelDurationSeconds() * 1000);
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Accepting a new tunnel request (now allocating " + bytesAllocated + " bytes across "+ numTunnels+ " tunnels with lag of "+ lag+ " and "+ throttleEvents+ " throttle events)");
   return true;
