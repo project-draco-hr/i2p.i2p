@@ -4,10 +4,17 @@
     String className=_context.router().getConfigSetting("clientApp." + i + ".main");
     String clientName=_context.router().getConfigSetting("clientApp." + i + ".name");
     String args=_context.router().getConfigSetting("clientApp." + i + ".args");
+    String onBoot=_context.router().getConfigSetting("clientApp." + i + ".onBoot");
+    boolean onStartup=false;
+    if (onBoot != null)     onStartup="true".equals(onBoot) || "yes".equals(onBoot);
     if (className == null)     break;
     String argVal[]=parseArgs(args);
-    _log.info("Loading up the client application " + clientName + ": "+ className+ " "+ args);
-    runClient(className,clientName,argVal);
+    if (onStartup) {
+      runClient(className,clientName,argVal);
+    }
+ else {
+      _context.jobQueue().addJob(new DelayedRunClient(className,clientName,argVal));
+    }
     i++;
   }
 }
