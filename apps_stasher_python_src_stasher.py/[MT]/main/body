@@ -4,7 +4,7 @@ def main():
     argv = sys.argv
     argc = len(argv)
     try:
-        (opts, args) = getopt.getopt(sys.argv[1:], 'h?vV:S:C:sd:f', ['help', 'version', 'samaddr=', 'clientaddr=', 'verbosity=', 'status', 'datadir=', 'foreground', 'shortversion'])
+        (opts, args) = getopt.getopt(sys.argv[1:], 'h?vV:S:C:sd:fl', ['help', 'version', 'samaddr=', 'clientaddr=', 'verbosity=', 'status', 'datadir=', 'foreground', 'shortversion', 'localonly'])
     except:
         traceback.print_exc(file=sys.stdout)
         usage('You entered an invalid option')
@@ -12,6 +12,7 @@ def main():
     verbosity = 2
     debug = False
     foreground = False
+    localOnly = False
     for (opt, val) in opts:
         if (opt in ['-h', '-?', '--help']):
             usage(True)
@@ -34,6 +35,8 @@ def main():
             sys.stdout.write(('%s' % version))
             sys.stdout.flush()
             sys.exit(0)
+        elif (opt in ['-l', '--localonly']):
+            localOnly = True
     if (len(args) == 0):
         err('No command given')
         usage(0, 1)
@@ -120,7 +123,9 @@ def main():
                 usage(0, 1)
         else:
             outfile = sys.stdout
-        res = client.get(key)
+        if (logVerbosity >= 3):
+            sys.stderr.write(('Searching for key - may take up to %s seconds or more\n' % timeout['findData']))
+        res = client.get(key, local=localOnly)
         if (res == None):
             err(("Failed to retrieve '%s'" % key))
             sys.exit(1)
@@ -146,7 +151,9 @@ def main():
         val = infile.read()
         if (len(val) > maxValueSize):
             err(('File is too big - please trim to %s' % maxValueSize))
-        res = client.put(key, val)
+        if (logVerbosity >= 3):
+            sys.stderr.write(('Inserting key - may take up to %s seconds\n' % (timeout['findNode'] + timeout['store'])))
+        res = client.put(key, val, local=localOnly)
         if (res == None):
             err(("Failed to insert '%s'" % key))
             sys.exit(1)
