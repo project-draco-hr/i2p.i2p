@@ -1,14 +1,37 @@
 {
-  Connection con=new Connection(_context,this,_schedulerChooser,_outboundQueue,_conPacketHandler,opts);
-  con.setRemotePeer(peer);
+  Connection con=null;
   byte receiveId[]=new byte[4];
-  _context.random().nextBytes(receiveId);
-synchronized (_connectionLock) {
-    ByteArray ba=new ByteArray(receiveId);
-    while (_connectionByInboundId.containsKey(ba)) {
-      _context.random().nextBytes(receiveId);
+  long expiration=_context.clock().now() + opts.getConnectTimeout();
+  if (opts.getConnectTimeout() <= 0)   expiration=_context.clock().now() + DEFAULT_STREAM_DELAY_MAX;
+  _numWaiting++;
+  while (true) {
+    if (expiration < _context.clock().now()) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Refusing to connect since we have exceeded our max of " + _maxConcurrentStreams + " connections");
+      _numWaiting--;
+      return null;
     }
-    _connectionByInboundId.put(ba,con);
+    con=new Connection(_context,this,_schedulerChooser,_outboundQueue,_conPacketHandler,opts);
+    con.setRemotePeer(peer);
+    _context.random().nextBytes(receiveId);
+    boolean reject=false;
+synchronized (_connectionLock) {
+      if (locked_tooManyStreams()) {
+        if (_numWaiting > _maxConcurrentStreams) {
+          if (_log.shouldLog(Log.WARN))           _log.warn("Refusing connection since we have exceeded our max of " + _maxConcurrentStreams + " and there are "+ _numWaiting+ " waiting already");
+          _numWaiting--;
+          return null;
+        }
+        reject=true;
+      }
+ else {
+        ByteArray ba=new ByteArray(receiveId);
+        while (_connectionByInboundId.containsKey(ba)) {
+          _context.random().nextBytes(receiveId);
+        }
+        _connectionByInboundId.put(ba,con);
+      }
+    }
+    if (!reject)     break;
   }
   con.setReceiveStreamId(receiveId);
   con.eventOccurred();
@@ -16,5 +39,6 @@ synchronized (_connectionLock) {
   if (opts.getConnectDelay() <= 0) {
     con.waitForConnect();
   }
+  if (_numWaiting > 0)   _numWaiting--;
   return con;
 }
