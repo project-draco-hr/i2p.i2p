@@ -14,23 +14,26 @@
         if (s == null) {
           if (_log.shouldLog(Log.WARN))           _log.warn("Unable to establish a socket in time to " + addr);
           _context.profileManager().commErrorOccurred(target.getIdentity().getHash());
+          _context.shitlist().shitlistRouter(target.getIdentity().getHash(),"Unable to contact host");
           return false;
         }
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Socket created");
-        if (s != null) {
-          TCPConnection con=new RestrictiveTCPConnection(_context,s,true);
-          conCreated=_context.clock().now();
-          if (_log.shouldLog(Log.DEBUG))           _log.debug("TCPConnection created");
-          boolean established=handleConnection(con,target);
-          conEstablished=_context.clock().now();
-          if (_log.shouldLog(Log.DEBUG))           _log.debug("connection handled");
-          return established;
-        }
+        TCPConnection con=new RestrictiveTCPConnection(_context,s,true);
+        conCreated=_context.clock().now();
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("TCPConnection created");
+        boolean established=handleConnection(con,target);
+        conEstablished=_context.clock().now();
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("connection handled");
+        return established;
       }
     }
+    _context.shitlist().shitlistRouter(target.getIdentity().getHash(),"No addresses we can handle");
+    return false;
   }
  catch (  Throwable t) {
     if (_log.shouldLog(Log.WARN))     _log.warn("Unexpected error establishing the connection",t);
+    _context.shitlist().shitlistRouter(target.getIdentity().getHash(),"Internal error connecting");
+    return false;
   }
  finally {
     long diff=conEstablished - startEstablish;
@@ -38,5 +41,4 @@
       _log.warn("establishConnection took too long: socketCreate: " + (socketCreated - startEstablish) + "ms conCreated: "+ (conCreated - socketCreated)+ "ms conEstablished: "+ (conEstablished - conCreated)+ "ms overall: "+ diff);
     }
   }
-  return false;
 }
