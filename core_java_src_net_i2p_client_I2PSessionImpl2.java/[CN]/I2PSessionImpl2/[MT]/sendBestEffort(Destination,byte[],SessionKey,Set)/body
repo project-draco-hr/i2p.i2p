@@ -8,13 +8,18 @@
   if ((tagsSent == null) || (tagsSent.size() <= 0)) {
     if (oldTags < 10) {
       sentTags=createNewTags(50);
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("** sendBestEffort only had " + oldTags + " with "+ availTimeLeft+ ", adding 50");
     }
- else     if (availTimeLeft < 30 * 1000) {
+ else     if (availTimeLeft < 2 * 60 * 1000) {
       sentTags=createNewTags(50);
-      if (_log.shouldLog(Log.DEBUG))       _log.debug(getPrefix() + "Tags are almost expired, adding 50 new ones");
+      if (_log.shouldLog(Log.DEBUG))       _log.debug(getPrefix() + "Tags expiring in " + availTimeLeft+ ", adding 50 new ones");
     }
  else {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("sendBestEffort old tags: " + oldTags + " available time left: "+ availTimeLeft);
     }
+  }
+ else {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("sendBestEffort is sending " + tagsSent.size() + " with "+ availTimeLeft+ "ms left, "+ oldTags+ " tags known and "+ (tag == null ? "no tag" : " a valid tag"));
   }
   SessionKey newKey=null;
   if (false)   newKey=_context.keyGenerator().generateSessionKey();
@@ -57,7 +62,7 @@ synchronized (_sendingStates) {
   }
   long afterRemovingSync=_context.clock().now();
   boolean found=state.received(MessageStatusMessage.STATUS_SEND_ACCEPTED);
-  if (_log.shouldLog(Log.DEBUG))   _log.debug(getPrefix() + "After waitFor sending state " + state.getMessageId().getMessageId()+ " / "+ state.getNonce()+ " found = "+ found);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug(getPrefix() + "After waitFor sending state " + state.getMessageId()+ " / "+ state.getNonce()+ " found = "+ found);
   if (found) {
     if (_log.shouldLog(Log.INFO))     _log.info(getPrefix() + "Message sent after " + state.getElapsed()+ "ms with "+ payload.length+ " bytes");
   }

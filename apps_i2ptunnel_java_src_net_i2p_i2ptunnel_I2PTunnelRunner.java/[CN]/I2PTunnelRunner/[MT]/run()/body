@@ -1,4 +1,5 @@
 {
+  boolean closedCleanly=false;
   try {
     InputStream in=s.getInputStream();
     OutputStream out=s.getOutputStream();
@@ -21,6 +22,7 @@ synchronized (finishLock) {
     i2ps.close();
     t1.join();
     t2.join();
+    closedCleanly=true;
   }
  catch (  InterruptedException ex) {
     if (_log.shouldLog(Log.ERROR))     _log.error("Interrupted",ex);
@@ -34,14 +36,19 @@ catch (  Exception e) {
  finally {
     removeRef();
     try {
-      if (s != null)       s.close();
+      if ((s != null) && (!closedCleanly))       s.close();
+    }
+ catch (    IOException ex) {
+      if (_log.shouldLog(Log.ERROR))       _log.error("Could not close java socket",ex);
+    }
+    try {
       if (i2ps != null) {
-        i2ps.close();
+        if (!closedCleanly)         i2ps.close();
         i2ps.setSocketErrorListener(null);
       }
     }
  catch (    IOException ex) {
-      if (_log.shouldLog(Log.ERROR))       _log.error("Could not close socket",ex);
+      if (_log.shouldLog(Log.ERROR))       _log.error("Could not close I2PSocket",ex);
     }
   }
 }

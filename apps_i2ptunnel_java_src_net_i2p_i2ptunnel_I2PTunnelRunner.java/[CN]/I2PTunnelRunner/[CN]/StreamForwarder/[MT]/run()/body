@@ -1,7 +1,7 @@
 {
+  String from=i2ps.getThisDestination().calculateHash().toBase64().substring(0,6);
+  String to=i2ps.getPeerDestination().calculateHash().toBase64().substring(0,6);
   if (_log.shouldLog(Log.DEBUG)) {
-    String from=i2ps.getThisDestination().calculateHash().toBase64().substring(0,6);
-    String to=i2ps.getPeerDestination().calculateHash().toBase64().substring(0,6);
     _log.debug(direction + ": Forwarding between " + from+ " and "+ to);
   }
   ByteArray ba=_cache.acquire();
@@ -22,6 +22,7 @@
         if (in.available() <= 0)         out.flush();
       }
     }
+    out.flush();
   }
  catch (  SocketException ex) {
 synchronized (finishLock) {
@@ -39,6 +40,9 @@ catch (  IOException ex) {
     }
   }
  finally {
+    if (_log.shouldLog(Log.INFO)) {
+      _log.info(direction + ": done forwarding between " + from+ " and "+ to);
+    }
     try {
       out.close();
       in.close();

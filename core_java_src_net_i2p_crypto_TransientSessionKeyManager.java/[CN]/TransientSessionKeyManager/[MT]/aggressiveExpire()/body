@@ -1,27 +1,38 @@
 {
   int removed=0;
-  long now=Clock.getInstance().now();
-  Set tagsToDrop=new HashSet(64);
+  long now=_context.clock().now();
+  Set tagsToDrop=null;
 synchronized (_inboundTagSets) {
     for (Iterator iter=_inboundTagSets.keySet().iterator(); iter.hasNext(); ) {
       SessionTag tag=(SessionTag)iter.next();
       TagSet ts=(TagSet)_inboundTagSets.get(tag);
       if (ts.getDate() < now - SESSION_LIFETIME_MAX_MS) {
+        if (tagsToDrop == null)         tagsToDrop=new HashSet(4);
         tagsToDrop.add(tag);
       }
     }
-    removed+=tagsToDrop.size();
-    for (Iterator iter=tagsToDrop.iterator(); iter.hasNext(); )     _inboundTagSets.remove(iter.next());
+    if (tagsToDrop != null) {
+      removed+=tagsToDrop.size();
+      for (Iterator iter=tagsToDrop.iterator(); iter.hasNext(); )       _inboundTagSets.remove(iter.next());
+    }
   }
 synchronized (_outboundSessions) {
-    Set sessionsToDrop=new HashSet(64);
+    Set sessionsToDrop=null;
     for (Iterator iter=_outboundSessions.keySet().iterator(); iter.hasNext(); ) {
       PublicKey key=(PublicKey)iter.next();
       OutboundSession sess=(OutboundSession)_outboundSessions.get(key);
       removed+=sess.expireTags();
-      if (sess.getTagSets().size() <= 0)       sessionsToDrop.add(key);
+      if (sess.getTagSets().size() <= 0) {
+        if (sessionsToDrop == null)         sessionsToDrop=new HashSet(4);
+        sessionsToDrop.add(key);
+      }
     }
-    for (Iterator iter=sessionsToDrop.iterator(); iter.hasNext(); )     _outboundSessions.remove(iter.next());
+    if (sessionsToDrop != null) {
+      for (Iterator iter=sessionsToDrop.iterator(); iter.hasNext(); ) {
+        OutboundSession cur=(OutboundSession)_outboundSessions.remove(iter.next());
+        if ((cur != null) && (_log.shouldLog(Log.WARN)))         _log.warn("Removing session tags with " + cur.availableTags() + " available for "+ (cur.getLastExpirationDate() - _context.clock().now())+ "ms more",new Exception("Removed by"));
+      }
+    }
   }
   return removed;
 }

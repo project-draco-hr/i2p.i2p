@@ -6,7 +6,7 @@
   if (_context.sessionKeyManager().getAvailableTags(dest.getPublicKey(),key) < 10) {
     sentTags=createNewTags(50);
   }
- else   if (_context.sessionKeyManager().getAvailableTimeLeft(dest.getPublicKey(),key) < 30 * 1000) {
+ else   if (_context.sessionKeyManager().getAvailableTimeLeft(dest.getPublicKey(),key) < 2 * 60 * 1000) {
     sentTags=createNewTags(50);
     if (_log.shouldLog(Log.DEBUG))     _log.debug(getPrefix() + "Tags are almost expired, adding 50 new ones");
   }
@@ -47,23 +47,29 @@ synchronized (_sendingStates) {
     _sendingStates.remove(state);
   }
   long afterRemovingSync=_context.clock().now();
+  boolean guaranteed=isGuaranteed();
   boolean found=false;
   boolean accepted=state.received(MessageStatusMessage.STATUS_SEND_ACCEPTED);
-  if (isGuaranteed())   found=state.received(MessageStatusMessage.STATUS_SEND_GUARANTEED_SUCCESS);
+  if (guaranteed)   found=state.received(MessageStatusMessage.STATUS_SEND_GUARANTEED_SUCCESS);
  else   found=accepted;
   if ((!accepted) || (state.getMessageId() == null)) {
     if (_log.shouldLog(Log.CRIT))     _log.log(Log.CRIT,getPrefix() + "State with nonce " + state.getNonce()+ " was not accepted?  (no messageId!! found="+ found+ " msgId="+ state.getMessageId()+ ", sendingSync="+ (afterSendingSync - beforeSendingSync)+ ", sendMessage="+ (beforeWaitFor - afterSendingSync)+ ", waitFor="+ (afterWaitFor - beforeWaitFor)+ ", removingSync="+ (afterRemovingSync - afterWaitFor)+ ")");
-    nackTags(state);
+    if (guaranteed)     nackTags(state);
     return false;
   }
   if (_log.shouldLog(Log.DEBUG))   _log.debug(getPrefix() + "After waitFor sending state " + state.getMessageId().getMessageId()+ " / "+ state.getNonce()+ " found = "+ found);
-  if (found) {
-    if (_log.shouldLog(Log.INFO))     _log.info(getPrefix() + "Message sent after " + state.getElapsed()+ "ms with "+ payload.length+ " bytes");
-    ackTags(state);
+  if (guaranteed) {
+    if (found) {
+      if (_log.shouldLog(Log.INFO))       _log.info(getPrefix() + "Message sent after " + state.getElapsed()+ "ms with "+ payload.length+ " bytes");
+      ackTags(state);
+    }
+ else {
+      if (_log.shouldLog(Log.INFO))       _log.info(getPrefix() + "Message send failed after " + state.getElapsed()+ "ms with "+ payload.length+ " bytes");
+      nackTags(state);
+    }
   }
  else {
-    if (_log.shouldLog(Log.INFO))     _log.info(getPrefix() + "Message send failed after " + state.getElapsed()+ "ms with "+ payload.length+ " bytes");
-    nackTags(state);
+    if (_log.shouldLog(Log.INFO))     _log.info(getPrefix() + "Message send enqueued after " + state.getElapsed()+ "ms with "+ payload.length+ " bytes");
   }
   return found;
 }
