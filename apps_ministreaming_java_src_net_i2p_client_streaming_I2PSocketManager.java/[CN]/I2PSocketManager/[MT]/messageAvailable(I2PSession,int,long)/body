@@ -37,15 +37,18 @@ case 0x52:
   _log.debug("*Disconnect outgoing!");
 try {
   s=(I2PSocketImpl)_outSockets.get(id);
-  if (payload.length == 0 && s != null) {
+  if (s != null) {
+    if (payload.length > 0) {
+      _log.debug("Disconnect packet had " + payload.length + " bytes");
+    }
+    if (s.getRemoteID(false) == null) {
+      s.setRemoteID(null);
+      return;
+    }
     s.internalClose();
     _outSockets.remove(id);
-    return;
   }
- else {
-    if (payload.length > 0)     _log.warn("Disconnect packet had " + payload.length + " bytes");
-    return;
-  }
+  return;
 }
  catch (Exception t) {
   _log.error("Ignoring error on disconnect",t);
@@ -67,6 +70,17 @@ if (payload.length == PUBKEY_LENGTH) {
 String newLocalID=makeID(_inSockets);
 Destination d=new Destination();
 d.readBytes(new ByteArrayInputStream(payload));
+if (_serverSocket == null) {
+byte[] packet=makePacket((byte)0x52,id,newLocalID.getBytes("ISO-8859-1"));
+boolean replySentOk=false;
+synchronized (_session) {
+replySentOk=_session.sendMessage(d,packet);
+}
+if (!replySentOk) {
+_log.error("Error sending close to " + d.calculateHash().toBase64() + " in response to a new con message",new Exception("Failed creation"));
+}
+return;
+}
 s=new I2PSocketImpl(d,this,false,newLocalID);
 s.setRemoteID(id);
 if (_serverSocket.getNewSocket(s)) {
