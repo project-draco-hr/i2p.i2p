@@ -23,11 +23,16 @@ synchronized (_outboundPackets) {
     _packet.setReceiveStreamId(_receiveStreamId);
     _packet.setSendStreamId(_sendStreamId);
     int newWindowSize=getOptions().getWindowSize();
-    congestionOccurred();
-    _context.statManager().addRateData("stream.con.windowSizeAtCongestion",newWindowSize,_packet.getLifetime());
-    newWindowSize/=2;
-    if (newWindowSize <= 0)     newWindowSize=1;
-    getOptions().setWindowSize(newWindowSize);
+    if (_ackSinceCongestion) {
+      if (_packet.getSequenceNum() > _lastCongestionHighestUnacked) {
+        congestionOccurred();
+        _context.statManager().addRateData("stream.con.windowSizeAtCongestion",newWindowSize,_packet.getLifetime());
+        newWindowSize/=2;
+        if (newWindowSize <= 0)         newWindowSize=1;
+        if (_log.shouldLog(Log.WARN))         _log.warn("Congestion resending packet " + _packet.getSequenceNum() + ": new windowSize "+ newWindowSize+ ") for "+ Connection.this.toString());
+        getOptions().setWindowSize(newWindowSize);
+      }
+    }
     int numSends=_packet.getNumSends() + 1;
     if (numSends == 2) {
       _activeResends++;
