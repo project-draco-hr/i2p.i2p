@@ -9,10 +9,10 @@
     String line, method=null, protocol=null, host=null, destination=null;
     StringBuffer newRequest=new StringBuffer();
     while ((line=br.readLine()) != null) {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Line=[" + line + "]");
+      if (_log.shouldLog(Log.DEBUG))       _log.debug(getPrefix() + "Line=[" + line+ "]");
       if (line.startsWith("Connection: ") || line.startsWith("Keep-Alive: ") || line.startsWith("Proxy-Connection: "))       continue;
       if (method == null) {
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("Method is null for [" + line + "]");
+        if (_log.shouldLog(Log.DEBUG))         _log.debug(getPrefix() + "Method is null for [" + line+ "]");
         int pos=line.indexOf(" ");
         if (pos == -1)         break;
         method=line.substring(0,pos);
@@ -42,7 +42,7 @@
  else         if (host.indexOf(".") != -1) {
           destination=wwwProxy;
           usingWWWProxy=true;
-          if (_log.shouldLog(Log.DEBUG))           _log.debug("Host doesnt end with .i2p and it contains a period [" + host + "]: wwwProxy!");
+          if (_log.shouldLog(Log.DEBUG))           _log.debug(getPrefix() + "Host doesnt end with .i2p and it contains a period [" + host+ "]: wwwProxy!");
         }
  else {
           request=request.substring(pos + 1);
@@ -52,26 +52,26 @@
         }
         boolean isValid=usingWWWProxy || isSupportedAddress(host,protocol);
         if (!isValid) {
-          if (_log.shouldLog(Log.INFO))           _log.info("notValid(" + host + ")");
+          if (_log.shouldLog(Log.INFO))           _log.info(getPrefix() + "notValid(" + host+ ")");
           method=null;
           destination=null;
           break;
         }
  else         if (!usingWWWProxy) {
-          if (_log.shouldLog(Log.INFO))           _log.info("host=getHostName(" + destination + ")");
+          if (_log.shouldLog(Log.INFO))           _log.info(getPrefix() + "host=getHostName(" + destination+ ")");
           host=getHostName(destination);
         }
         if (_log.shouldLog(Log.DEBUG)) {
-          _log.debug("METHOD:" + method + ":");
-          _log.debug("PROTOC:" + protocol + ":");
-          _log.debug("HOST  :" + host + ":");
-          _log.debug("DEST  :" + destination + ":");
+          _log.debug(getPrefix() + "METHOD:" + method+ ":");
+          _log.debug(getPrefix() + "PROTOC:" + protocol+ ":");
+          _log.debug(getPrefix() + "HOST  :" + host+ ":");
+          _log.debug(getPrefix() + "DEST  :" + destination+ ":");
         }
       }
  else {
         if (line.startsWith("Host: ") && !usingWWWProxy) {
           line="Host: " + host;
-          if (_log.shouldLog(Log.INFO))           _log.info("Setting host = " + host);
+          if (_log.shouldLog(Log.INFO))           _log.info(getPrefix() + "Setting host = " + host);
         }
       }
       if (line.length() == 0) {
@@ -82,7 +82,7 @@
         newRequest.append(line).append("\r\n");
       }
     }
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("NewRequest header: [" + newRequest.toString() + "]");
+    if (_log.shouldLog(Log.DEBUG))     _log.debug(getPrefix() + "NewRequest header: [" + newRequest.toString()+ "]");
     while (br.ready()) {
       int i=br.read();
       if (i != -1) {
@@ -101,7 +101,7 @@
       s.close();
       return;
     }
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Destination: " + destination);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug(getPrefix() + "Destination: " + destination);
     Destination dest=I2PTunnel.destFromName(destination);
     if (dest == null) {
       l.log("Could not resolve " + destination + ".");
@@ -118,21 +118,21 @@
   }
  catch (  SocketException ex) {
     if (timeoutThread != null)     timeoutThread.disable();
-    _log.info("Error trying to connect",ex);
+    _log.info(getPrefix() + "Error trying to connect",ex);
     l.log(ex.getMessage());
     handleHTTPClientException(ex,out,targetRequest,usingWWWProxy,wwwProxy);
     closeSocket(s);
   }
 catch (  IOException ex) {
     if (timeoutThread != null)     timeoutThread.disable();
-    _log.info("Error trying to connect",ex);
+    _log.info(getPrefix() + "Error trying to connect",ex);
     l.log(ex.getMessage());
     handleHTTPClientException(ex,out,targetRequest,usingWWWProxy,wwwProxy);
     closeSocket(s);
   }
 catch (  I2PException ex) {
     if (timeoutThread != null)     timeoutThread.disable();
-    _log.info("Error trying to connect",ex);
+    _log.info("getPrefix() + Error trying to connect",ex);
     l.log(ex.getMessage());
     handleHTTPClientException(ex,out,targetRequest,usingWWWProxy,wwwProxy);
     closeSocket(s);
