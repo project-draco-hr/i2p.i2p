@@ -1,0 +1,30 @@
+{
+  int stride=m - 5;
+  int curBit=k * 5;
+  int curByte;
+  for (int j=0; j < k; j++) {
+    curByte=curBit / 8;
+    int bitsUnused=((curByte + 1) * 8) - curBit;
+    if (bitsUnused > stride) {
+      wordOffset[j]=((0xff & b[curByte]) >> (bitsUnused - stride)) & UNMASK[stride];
+    }
+ else     if (bitsUnused == stride) {
+      wordOffset[j]=b[curByte] & UNMASK[stride];
+    }
+ else {
+      wordOffset[j]=b[curByte] & UNMASK[bitsUnused];
+      int bitsToGet=stride - bitsUnused;
+      if (bitsToGet >= 8) {
+        wordOffset[j]|=(0xff & b[curByte + 1]) << bitsUnused;
+        bitsToGet-=8;
+        if (bitsToGet > 0) {
+          wordOffset[j]|=((0xff & b[curByte + 2]) >> (8 - bitsToGet)) << (stride - bitsToGet);
+        }
+      }
+ else {
+        wordOffset[j]|=((b[curByte + 1] >> (8 - bitsToGet)) & UNMASK[bitsToGet]) << bitsUnused;
+      }
+    }
+    curBit+=stride;
+  }
+}

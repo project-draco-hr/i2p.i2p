@@ -1,0 +1,19 @@
+{
+  if ((_tunnelId == null) || ((_msg == null) && (_msgData == null))) {
+    _log.log(Log.CRIT,"failing to write out gateway message, created by: ",_creator);
+    throw new I2NPMessageException("Not enough data to write out (id=" + _tunnelId + " data="+ _msg+ ")");
+  }
+  DataHelper.toLong(out,curIndex,4,_tunnelId.getTunnelId());
+  curIndex+=4;
+synchronized (this) {
+    if (_msgData == null) {
+      _msgData=_msg.toByteArray();
+      _msg=null;
+    }
+  }
+  DataHelper.toLong(out,curIndex,2,_msgData.length);
+  curIndex+=2;
+  System.arraycopy(_msgData,0,out,curIndex,_msgData.length);
+  curIndex+=_msgData.length;
+  return curIndex;
+}
