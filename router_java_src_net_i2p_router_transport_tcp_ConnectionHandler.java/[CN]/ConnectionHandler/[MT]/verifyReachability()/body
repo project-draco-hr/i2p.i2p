@@ -1,16 +1,20 @@
 {
   if (_actualPeer == null)   return false;
   _remoteAddress=new TCPAddress(_actualPeer.getTargetAddress(TCPTransport.STYLE));
-  if (!_transport.allowAddress(_remoteAddress))   return false;
+  if ((_remoteAddress.getPort() <= 0) || (_remoteAddress.getPort() > 65535))   return false;
+  TCPAddress testAddress=_remoteAddress;
+  if (!TCPAddress.isPubliclyRoutable(_from)) {
+    testAddress=new TCPAddress(_from,_remoteAddress.getPort());
+  }
   try {
-    return verifyReachability(_remoteAddress);
+    return verifyReachability(testAddress);
   }
  catch (  IOException ioe) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("Error verifying " + _actualPeer.getIdentity().calculateHash().toBase64().substring(0,6) + "at "+ _remoteAddress,ioe);
+    if (_log.shouldLog(Log.WARN))     _log.warn("Error verifying " + _actualPeer.getIdentity().calculateHash().toBase64().substring(0,6) + "at "+ testAddress,ioe);
     return false;
   }
 catch (  DataFormatException dfe) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("Error verifying " + _actualPeer.getIdentity().calculateHash().toBase64().substring(0,6) + "at "+ _remoteAddress,dfe);
+    if (_log.shouldLog(Log.WARN))     _log.warn("Error verifying " + _actualPeer.getIdentity().calculateHash().toBase64().substring(0,6) + "at "+ testAddress,dfe);
     return false;
   }
 }
