@@ -3,7 +3,16 @@
   long expiration=timeoutMs + _context.clock().now();
   while (true) {
     if ((timeoutMs > 0) && (expiration < _context.clock().now()))     return null;
-    if (!_active)     return null;
+    if (!_active) {
+synchronized (_synQueue) {
+        for (int i=0; i < _synQueue.size(); i++) {
+          Packet packet=(Packet)_synQueue.get(i);
+          sendReset(packet);
+        }
+        _synQueue.clear();
+      }
+      return null;
+    }
     Packet syn=null;
 synchronized (_synQueue) {
       while (_active && (_synQueue.size() <= 0)) {

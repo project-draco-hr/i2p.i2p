@@ -2,16 +2,11 @@
   ClientConnectionRunner runner=getRunner(toDest);
   if (runner != null) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Message " + msgId + " is targeting a local destination.  distribute it as such");
-    runner.receiveMessage(toDest,fromDest,payload);
-    if (fromDest != null) {
-      ClientConnectionRunner sender=getRunner(fromDest);
-      if (sender != null) {
-        sender.updateMessageDeliveryStatus(msgId,true);
-      }
- else {
-        _log.log(Log.CRIT,"Um, wtf, we're sending a local message, but we can't find who sent it?",new Exception("wtf"));
-      }
+    ClientConnectionRunner sender=getRunner(fromDest);
+    if (sender == null) {
+      return;
     }
+    _context.jobQueue().addJob(new DistributeLocal(toDest,runner,sender,fromDest,payload,msgId));
   }
  else {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Message " + msgId + " is targeting a REMOTE destination!  Added to the client message pool");
