@@ -1,4 +1,5 @@
 {
+  _state=52;
   I2NPMessage msg=null;
   if (_targetTunnelId != null) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Forward " + _message.getClass().getName() + " message off to remote tunnel "+ _targetTunnelId.getTunnelId()+ " on router "+ _destRouter.toBase64());
@@ -9,8 +10,10 @@
     byte data[]=_message.toByteArray();
     tmsg.setData(data);
     msg=tmsg;
+    _state=53;
   }
  else {
+    _state=54;
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Forward " + _message.getClass().getName() + " message off to remote router "+ _destRouter.toBase64());
     msg=_message;
   }
@@ -23,8 +26,11 @@
       return;
     }
   }
+  _state=55;
   String bodyType=_message.getClass().getName();
   getContext().messageHistory().wrap(bodyType,_message.getUniqueId(),TunnelMessage.class.getName(),msg.getUniqueId());
+  _state=56;
   SendMessageDirectJob j=new SendMessageDirectJob(getContext(),msg,_destRouter,_onSend,_onReply,_onFailure,null,(int)(timeLeft),_priority);
+  _state=57;
   getContext().jobQueue().addJob(j);
 }

@@ -1,13 +1,17 @@
 {
+  _state=59;
   if ((info.getDestination() == null) || !(_message instanceof DataMessage)) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Destination is null or its not a DataMessage - pass it off to the InNetMessagePool");
+    _state=59;
     InNetMessage msg=new InNetMessage(getContext());
     msg.setFromRouter(ident);
     msg.setFromRouterHash(ident.getHash());
     msg.setMessage(_message);
     getContext().inNetMessagePool().add(msg);
+    _state=60;
   }
  else {
+    _state=61;
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Destination is not null and it is a DataMessage - pop it into the ClientMessagePool");
     DataMessage msg=(DataMessage)_message;
     boolean valid=getContext().messageValidator().validateMessage(msg.getUniqueId(),msg.getMessageExpiration().getTime());
@@ -15,6 +19,7 @@
       if (_log.shouldLog(Log.WARN))       _log.warn("Duplicate data message received [" + msg.getUniqueId() + " expiring on "+ msg.getMessageExpiration()+ "]");
       getContext().messageHistory().droppedOtherMessage(msg);
       getContext().messageHistory().messageProcessingError(msg.getUniqueId(),msg.getClass().getName(),"Duplicate");
+      _state=62;
       return;
     }
     Payload payload=new Payload();
@@ -28,5 +33,6 @@
     clientMessage.setReceptionInfo(receptionInfo);
     getContext().clientMessagePool().add(clientMessage);
     getContext().messageHistory().receivePayloadMessage(msg.getUniqueId());
+    _state=63;
   }
 }

@@ -1,14 +1,18 @@
 {
+  _state=10;
   TunnelInfo us=getUs(info);
   if (us == null) {
     if (_log.shouldLog(Log.ERROR))     _log.error("We are not participating in this /known/ tunnel - was the router reset?");
     if (_onFailure != null)     getContext().jobQueue().addJob(_onFailure);
+    _state=11;
   }
  else {
+    _state=12;
     TunnelMessage msg=prepareMessage(info);
     if (msg == null) {
       if (_log.shouldLog(Log.ERROR))       _log.error("wtf, unable to prepare a tunnel message to the next hop, when we're the gateway and hops remain?  tunnel: " + info);
       if (_onFailure != null)       getContext().jobQueue().addJob(_onFailure);
+      _state=13;
       return;
     }
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Tunnel message created: " + msg + " out of encrypted message: "+ _message);
@@ -16,6 +20,7 @@
     if (_expiration < now - Router.CLOCK_FUDGE_FACTOR) {
       if (_log.shouldLog(Log.ERROR))       _log.error("We are the gateway to " + info.getTunnelId().getTunnelId() + " and the message "+ msg.getUniqueId()+ " is valid, but it has timed out ("+ (now - _expiration)+ "ms ago)");
       if (_onFailure != null)       getContext().jobQueue().addJob(_onFailure);
+      _state=14;
       return;
     }
  else     if (_expiration < now + 15 * 1000) {
@@ -23,5 +28,6 @@
     }
     msg.setMessageExpiration(new Date(_expiration));
     getContext().jobQueue().addJob(new SendMessageDirectJob(getContext(),msg,info.getNextHop(),_onSend,_onReply,_onFailure,_selector,(int)(_expiration - getContext().clock().now()),_priority));
+    _state=15;
   }
 }

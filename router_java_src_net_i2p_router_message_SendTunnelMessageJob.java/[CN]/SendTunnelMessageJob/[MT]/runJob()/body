@@ -1,4 +1,5 @@
 {
+  _state=3;
   TunnelInfo info=getContext().tunnelManager().getTunnelInfo(_tunnelId);
   if (info == null) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Message for unknown tunnel [" + _tunnelId + "] received, forward to "+ _destRouter);
@@ -8,22 +9,30 @@
       return;
     }
  else {
+      _state=4;
       forwardToGateway();
+      _state=0;
       return;
     }
   }
   info.messageProcessed();
   if (isEndpoint(info)) {
     if (_log.shouldLog(Log.INFO))     _log.info("Tunnel message where we're both the gateway and the endpoint - honor instructions");
+    _state=5;
     honorInstructions(info);
+    _state=0;
     return;
   }
  else   if (isGateway(info)) {
+    _state=6;
     handleAsGateway(info);
+    _state=0;
     return;
   }
  else {
+    _state=7;
     handleAsParticipant(info);
+    _state=0;
     return;
   }
 }

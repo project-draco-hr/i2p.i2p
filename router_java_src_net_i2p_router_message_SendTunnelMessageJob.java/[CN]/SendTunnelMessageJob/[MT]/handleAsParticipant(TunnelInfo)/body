@@ -1,8 +1,10 @@
 {
+  _state=16;
   if (_log.shouldLog(Log.DEBUG))   _log.debug("SendTunnelMessageJob for a participant... ",getAddedBy());
   if (!(_message instanceof TunnelMessage)) {
     if (_log.shouldLog(Log.ERROR))     _log.error("Cannot inject non-tunnel messages as a participant!" + _message,getAddedBy());
     if (_onFailure != null)     getContext().jobQueue().addJob(_onFailure);
+    _state=17;
     return;
   }
   TunnelMessage msg=(TunnelMessage)_message;
@@ -10,24 +12,32 @@
   if ((info.getVerificationKey() == null) || (info.getVerificationKey().getKey() == null)) {
     if (_log.shouldLog(Log.ERROR))     _log.error("No verification key for the participant? tunnel: " + info,getAddedBy());
     if (_onFailure != null)     getContext().jobQueue().addJob(_onFailure);
+    _state=18;
     return;
   }
   boolean ok=struct.verifySignature(getContext(),info.getVerificationKey().getKey());
+  _state=19;
   if (!ok) {
     if (_log.shouldLog(Log.WARN))     _log.warn("Failed tunnel verification!  Spoofing / tagging attack?  " + _message,getAddedBy());
     if (_onFailure != null)     getContext().jobQueue().addJob(_onFailure);
+    _state=20;
     return;
   }
  else {
+    _state=21;
     if (info.getNextHop() != null) {
+      _state=22;
       if (_log.shouldLog(Log.INFO))       _log.info("Message for tunnel " + info.getTunnelId().getTunnelId() + " received where we're not the gateway and there are remaining hops, so forward it on to "+ info.getNextHop().toBase64()+ " via SendMessageDirectJob");
       SendMessageDirectJob j=new SendMessageDirectJob(getContext(),msg,info.getNextHop(),_onSend,null,_onFailure,null,(int)(_message.getMessageExpiration().getTime() - getContext().clock().now()),_priority);
       getContext().jobQueue().addJob(j);
+      _state=23;
       return;
     }
  else {
+      _state=24;
       if (_log.shouldLog(Log.ERROR))       _log.error("Should not be reached - participant, but no more hops?!");
       if (_onFailure != null)       getContext().jobQueue().addJob(_onFailure);
+      _state=25;
       return;
     }
   }
