@@ -1,0 +1,36 @@
+{
+  byte id[]=new byte[4];
+  _context.random().nextBytes(id);
+  ByteArray ba=new ByteArray(id);
+  PacketLocal packet=new PacketLocal(_context,peer);
+  packet.setSendStreamId(id);
+  packet.setFlag(Packet.FLAG_ECHO);
+  packet.setFlag(Packet.FLAG_SIGNATURE_INCLUDED);
+  packet.setOptionalFrom(_session.getMyDestination());
+  if ((keyToUse != null) && (tagsToSend != null)) {
+    packet.setKeyUsed(keyToUse);
+    packet.setTagsSent(tagsToSend);
+  }
+  PingRequest req=new PingRequest(peer,packet);
+synchronized (_pendingPings) {
+    _pendingPings.put(ba,req);
+  }
+  _outboundQueue.enqueue(packet);
+  if (blocking) {
+synchronized (req) {
+      if (!req.pongReceived())       try {
+        req.wait(timeoutMs);
+      }
+ catch (      InterruptedException ie) {
+      }
+    }
+synchronized (_pendingPings) {
+      _pendingPings.remove(ba);
+    }
+  }
+ else {
+    SimpleTimer.getInstance().addEvent(new PingFailed(ba),timeoutMs);
+  }
+  boolean ok=req.pongReceived();
+  return ok;
+}

@@ -5,7 +5,9 @@
     packet.setFlag(Packet.FLAG_SIGNATURE_INCLUDED);
     packet.setFlag(Packet.FLAG_SIGNATURE_REQUESTED);
   }
+  boolean ackOnly=false;
   if ((packet.getSequenceNum() == 0) && (!packet.isFlagSet(Packet.FLAG_SYNCHRONIZE))) {
+    ackOnly=true;
   }
  else {
 synchronized (_outboundPackets) {
@@ -15,4 +17,10 @@ synchronized (_outboundPackets) {
   }
   _lastSendTime=_context.clock().now();
   _outboundQueue.enqueue(packet);
+  if (ackOnly) {
+    if (packet.getTagsSent().size() > 0) {
+      _log.error("Sending a ping since the ACK we just sent has " + packet.getTagsSent().size() + " tags");
+      _connectionManager.ping(_remotePeer,_options.getRTT() * 2,false,packet.getKeyUsed(),packet.getTagsSent());
+    }
+  }
 }
