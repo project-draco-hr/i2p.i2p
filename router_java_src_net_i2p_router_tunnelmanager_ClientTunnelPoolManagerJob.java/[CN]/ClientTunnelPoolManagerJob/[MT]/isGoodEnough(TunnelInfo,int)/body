@@ -8,10 +8,10 @@
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Refusing tunnel " + info.getTunnelId() + " because it is going to expire soon ("+ new Date(info.getSettings().getExpiration())+ ", before "+ new Date(expireAfter)+ ")");
     return false;
   }
-  int length=info.getLength();
+  int length=info.getLength() - 1;
   if (_clientPool.getClientSettings().getEnforceStrictMinimumLength()) {
     if (length < _clientPool.getClientSettings().getDepthInbound()) {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Refusing tunnel " + info.getTunnelId() + " because it is too short (length = "+ length+ ", wanted = "+ _clientPool.getClientSettings().getDepthInbound()+ ")");
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Strictly refusing tunnel " + info.getTunnelId() + " because it is too short (length = "+ length+ ", wanted = "+ _clientPool.getClientSettings().getDepthInbound()+ ")");
       return false;
     }
  else {
@@ -19,7 +19,7 @@
   }
  else {
     if (length < _clientPool.getClientSettings().getDepthInbound() && (length < max)) {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Refusing tunnel " + info.getTunnelId() + " because it is too short (length = "+ length+ ", wanted = "+ _clientPool.getClientSettings().getDepthInbound()+ ")");
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Loosely refusing tunnel " + info.getTunnelId() + " because it is too short (length = "+ length+ ", wanted = "+ _clientPool.getClientSettings().getDepthInbound()+ ")");
       return false;
     }
  else {
@@ -31,6 +31,6 @@
       return false;
     }
   }
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Accepting tunnel " + info.getTunnelId());
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Accepting tunnel for length=" + _clientPool.getClientSettings().getDepthInbound() + " and dest="+ _clientPool.getDestination().calculateHash().toBase64().substring(0,6)+ " for "+ info.getTunnelId());
   return true;
 }
