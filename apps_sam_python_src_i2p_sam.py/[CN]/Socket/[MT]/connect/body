@@ -1,4 +1,5 @@
-def connect(self, address):
+def connect(self, address, **kw):
+    '\n    Attempts to connect to a remote dest, identified in local\n    SAM bridge\'s hosts file as host \'address\'.\n\n    For example:\n      s.connect("duck.i2p")\n\n    You can pass a keyword \'dontResolve\', which if true,\n    allows you to pass the base64 destination as the address, and\n    override the hostname lookup.\n\n    For example:\n      s.connect("238797sdfh2k34kjh....AAAA")\n    '
     self.lock.acquire()
     try:
         self._verify_open()
@@ -6,7 +7,8 @@ def connect(self, address):
             self.packet_dest = address
             return
         self._verify_not_connected()
-        address = resolve(address, self.samaddr)
+        if (not kw.get('dontResolve', 1)):
+            address = resolve(address, self.samaddr)
         timeout = self.timeout
         unwrap = self.sessobj.connect(address, timeout=timeout)
         w = _wrap_stream(unwrap, self)
