@@ -1,0 +1,26 @@
+{
+  long localTime=-1;
+  long now=-1;
+  long expectedDelta=0;
+  for (int i=0; i < _concurringServers; i++) {
+    localTime=_context.clock().now();
+    now=NtpClient.currentTime(serverList);
+    long delta=now - localTime;
+    if (i == 0) {
+      if (Math.abs(delta) < MAX_VARIANCE) {
+        if (_log.shouldLog(Log.INFO))         _log.info("a single SNTP query was within the tolerance (" + delta + "ms)");
+        return;
+      }
+ else {
+        expectedDelta=delta;
+      }
+    }
+ else {
+      if (Math.abs(delta - expectedDelta) > MAX_VARIANCE) {
+        if (_log.shouldLog(Log.ERROR))         _log.error("SNTP client variance exceeded at query " + i + ".  expected = "+ expectedDelta+ ", found = "+ delta);
+        return;
+      }
+    }
+  }
+  stampTime(now);
+}

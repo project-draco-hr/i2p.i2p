@@ -6,14 +6,14 @@
   _log.debug("orig: \n" + Base64.encode(orig,16,orig.length - 16));
   InboundGatewayProcessor p=new InboundGatewayProcessor(_context,config.getConfig(0));
   p.process(message,0,message.length,null);
-  for (int i=1; i < numHops; i++) {
+  for (int i=1; i < numHops - 1; i++) {
     HopProcessor hop=new HopProcessor(_context,config.getConfig(i));
     Hash prev=config.getConfig(i).getReceiveFrom();
     boolean ok=hop.process(message,0,message.length,prev);
     if (!ok)     _log.error("Error processing at hop " + i);
   }
   InboundEndpointProcessor end=new InboundEndpointProcessor(_context,config);
-  boolean ok=end.retrievePreprocessedData(message,0,message.length,config.getPeer(numHops - 1));
+  boolean ok=end.retrievePreprocessedData(message,0,message.length,config.getPeer(numHops - 2));
   if (!ok) {
     _log.error("Error retrieving cleartext at the endpoint");
     try {

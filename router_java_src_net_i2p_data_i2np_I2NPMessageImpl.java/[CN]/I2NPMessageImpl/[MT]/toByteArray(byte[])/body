@@ -1,23 +1,27 @@
 {
   long start=_context.clock().now();
-  byte prefix[][]=new byte[][]{DataHelper.toLong(1,getType()),DataHelper.toLong(4,_uniqueId),DataHelper.toDate(_expiration),new byte[2],new byte[Hash.HASH_LENGTH]};
-  byte suffix[][]=new byte[][]{};
+  int prefixLen=1 + 4 + DataHelper.DATE_LENGTH+ 2+ CHECKSUM_LENGTH;
   try {
-    int writtenLen=toByteArray(buffer,prefix,suffix);
-    int prefixLen=1 + 4 + 8+ 2+ Hash.HASH_LENGTH;
-    int suffixLen=0;
-    int payloadLen=writtenLen - prefixLen - suffixLen;
-    Hash h=_context.sha().calculateHash(buffer,prefixLen,payloadLen);
-    byte len[]=DataHelper.toLong(2,payloadLen);
-    buffer[1 + 4 + 8]=len[0];
-    buffer[1 + 4 + 8+ 1]=len[1];
-    for (int i=0; i < Hash.HASH_LENGTH; i++)     System.arraycopy(h.getData(),0,buffer,1 + 4 + 8+ 2,Hash.HASH_LENGTH);
+    int writtenLen=writeMessageBody(buffer,prefixLen);
+    int payloadLen=writtenLen - prefixLen;
+    SHA256EntryCache.CacheEntry cache=_context.sha().cache().acquire(payloadLen);
+    Hash h=_context.sha().calculateHash(buffer,prefixLen,payloadLen,cache);
+    int off=0;
+    DataHelper.toLong(buffer,off,1,getType());
+    off+=1;
+    DataHelper.toLong(buffer,off,4,_uniqueId);
+    off+=4;
+    DataHelper.toLong(buffer,off,DataHelper.DATE_LENGTH,_expiration);
+    off+=DataHelper.DATE_LENGTH;
+    DataHelper.toLong(buffer,off,2,payloadLen);
+    off+=2;
+    System.arraycopy(h.getData(),0,buffer,off,CHECKSUM_LENGTH);
+    _context.sha().cache().release(cache);
     long time=_context.clock().now() - start;
-    if (time > 50)     _context.statManager().addRateData("i2np.writeTime",time,time);
     return writtenLen;
   }
  catch (  I2NPMessageException ime) {
-    _context.logManager().getLog(getClass()).error("Error writing",ime);
-    throw new IllegalStateException("Unable to serialize the message: " + ime.getMessage());
+    _context.logManager().getLog(getClass()).log(Log.CRIT,"Error writing",ime);
+    throw new IllegalStateException("Unable to serialize the message (" + getClass().getName() + "): "+ ime.getMessage());
   }
 }

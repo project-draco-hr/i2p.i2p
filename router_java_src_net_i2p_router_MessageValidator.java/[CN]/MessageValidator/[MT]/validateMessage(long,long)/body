@@ -4,9 +4,14 @@
     if (_log.shouldLog(Log.WARN))     _log.warn("Rejecting message " + messageId + " because it expired "+ (now - expiration)+ "ms ago");
     return false;
   }
+ else   if (now + 4 * Router.CLOCK_FUDGE_FACTOR < expiration) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Rejecting message " + messageId + " because it will expire too far in the future ("+ (expiration - now)+ "ms)");
+    return false;
+  }
   boolean isDuplicate=noteReception(messageId,expiration);
   if (isDuplicate) {
     if (_log.shouldLog(Log.WARN))     _log.warn("Rejecting message " + messageId + " because it is a duplicate",new Exception("Duplicate origin"));
+    _context.statManager().addRateData("router.duplicateMessageId",1,0);
     return false;
   }
  else {

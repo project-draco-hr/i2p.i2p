@@ -1,0 +1,17 @@
+{
+  OutNetMessage msg=null;
+synchronized (_pendingMessages) {
+    msg=(OutNetMessage)_pendingMessages.remove(new Long(_expiration));
+  }
+  if (msg != null) {
+    _context.messageHistory().replyTimedOut(msg);
+    Job fail=msg.getOnFailedReplyJob();
+    if (fail != null) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Removing message with selector " + msg.getReplySelector() + ": "+ msg.getMessageType()+ " and firing fail job: "+ fail.getClass().getName());
+      _context.jobQueue().addJob(fail);
+    }
+ else {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Removing message with selector " + msg.getReplySelector() + " and not firing any job");
+    }
+  }
+}

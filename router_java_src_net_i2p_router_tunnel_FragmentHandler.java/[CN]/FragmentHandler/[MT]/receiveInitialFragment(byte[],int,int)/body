@@ -20,7 +20,7 @@
   }
   if (fragmented) {
     messageId=DataHelper.fromLong(preprocessed,offset,4);
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("reading messageId " + messageId + " at offset "+ offset+ " type = "+ type+ "tunnelId = "+ tunnelId);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("reading messageId " + messageId + " at offset "+ offset+ " type = "+ type+ " router = "+ (router != null ? router.toBase64().substring(0,4) : "n/a")+ " tunnelId = "+ tunnelId);
     offset+=4;
   }
   if (extended) {
@@ -45,12 +45,6 @@ synchronized (_fragmentedMessages) {
  else {
     msg=new FragmentedMessage(_context);
   }
-  if (isNew && fragmented) {
-    RemoveFailed evt=new RemoveFailed(msg);
-    msg.setExpireEvent(evt);
-    _log.debug("In " + MAX_DEFRAGMENT_TIME + " dropping "+ messageId);
-    SimpleTimer.getInstance().addEvent(evt,MAX_DEFRAGMENT_TIME);
-  }
   msg.receive(messageId,preprocessed,offset,size,!fragmented,router,tunnelId);
   if (msg.isComplete()) {
     if (fragmented) {
@@ -60,6 +54,15 @@ synchronized (_fragmentedMessages) {
     }
     if (msg.getExpireEvent() != null)     SimpleTimer.getInstance().removeEvent(msg.getExpireEvent());
     receiveComplete(msg);
+  }
+ else {
+    noteReception(msg.getMessageId(),0);
+  }
+  if (isNew && fragmented && !msg.isComplete()) {
+    RemoveFailed evt=new RemoveFailed(msg);
+    msg.setExpireEvent(evt);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("In " + MAX_DEFRAGMENT_TIME + " dropping "+ messageId);
+    SimpleTimer.getInstance().addEvent(evt,MAX_DEFRAGMENT_TIME);
   }
   offset+=size;
   return offset;

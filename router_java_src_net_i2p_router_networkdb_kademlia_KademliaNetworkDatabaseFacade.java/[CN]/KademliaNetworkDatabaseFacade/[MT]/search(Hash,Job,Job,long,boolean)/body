@@ -1,23 +1,23 @@
 {
   if (!_initialized)   return;
-  int pendingRequests=0;
-  boolean allowSearch=false;
+  boolean isNew=true;
+  SearchJob searchJob=null;
 synchronized (_activeRequests) {
-    List pending=(List)_activeRequests.get(key);
-    if (pending == null) {
-      _activeRequests.put(key,new ArrayList(0));
-      allowSearch=true;
+    searchJob=(SearchJob)_activeRequests.get(key);
+    if (searchJob == null) {
+      searchJob=new SearchJob(_context,this,key,onFindJob,onFailedLookupJob,timeoutMs,true,isLease);
+      _activeRequests.put(key,searchJob);
     }
  else {
-      pending.add(new DeferredSearchJob(key,onFindJob,onFailedLookupJob,timeoutMs,isLease));
-      pendingRequests=pending.size();
-      allowSearch=false;
+      isNew=false;
     }
   }
-  if (allowSearch) {
-    _context.jobQueue().addJob(new SearchJob(_context,this,key,onFindJob,onFailedLookupJob,timeoutMs,true,isLease));
+  if (isNew) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("this is the first search for that key, fire off the SearchJob");
+    _context.jobQueue().addJob(searchJob);
   }
  else {
-    if (_log.shouldLog(Log.INFO))     _log.info("Deferring search for " + key.toBase64() + ": there are "+ pendingRequests+ " other concurrent requests for it");
+    if (_log.shouldLog(Log.INFO))     _log.info("Deferring search for " + key.toBase64() + " with "+ onFindJob);
+    searchJob.addDeferred(onFindJob,onFailedLookupJob,timeoutMs,isLease);
   }
 }

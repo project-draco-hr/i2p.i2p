@@ -1,0 +1,25 @@
+{
+  while (_alive) {
+    I2NPMessage msg=null;
+    try {
+synchronized (_pendingGatewayMessages) {
+        if (_pendingGatewayMessages.size() <= 0)         _pendingGatewayMessages.wait();
+ else         msg=(I2NPMessage)_pendingGatewayMessages.remove(0);
+      }
+      if (msg != null) {
+        long before=_context.clock().now();
+        doShortCircuitTunnelGateway(msg);
+        long elapsed=_context.clock().now() - before;
+        _context.statManager().addRateData("pool.dispatchGatewayTime",elapsed,elapsed);
+      }
+    }
+ catch (    InterruptedException ie) {
+    }
+catch (    OutOfMemoryError oome) {
+      throw oome;
+    }
+catch (    Exception e) {
+      if (_log.shouldLog(Log.CRIT))       _log.log(Log.CRIT,"Error in the tunnel gateway dispatcher",e);
+    }
+  }
+}

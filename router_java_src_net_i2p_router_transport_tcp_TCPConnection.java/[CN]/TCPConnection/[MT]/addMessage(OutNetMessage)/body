@@ -3,10 +3,13 @@
   List expired=null;
   int remaining=0;
   long remainingSize=0;
+  long curSize=msg.getMessageSize();
 synchronized (_pendingMessages) {
     _pendingMessages.add(msg);
     expired=locked_expireOld();
-    locked_throttle();
+    List throttled=locked_throttle();
+    if (expired == null)     expired=throttled;
+ else     if (throttled != null)     expired.addAll(throttled);
     for (int i=0; i < _pendingMessages.size(); i++) {
       OutNetMessage cur=(OutNetMessage)_pendingMessages.get(i);
       remaining++;

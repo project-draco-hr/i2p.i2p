@@ -2,11 +2,25 @@
   int paddingEnd=HopProcessor.IV_LENGTH + 4;
   while (preprocessed[offset + paddingEnd] != (byte)0x00)   paddingEnd++;
   paddingEnd++;
-  byte preV[]=new byte[length - offset - paddingEnd + HopProcessor.IV_LENGTH];
-  System.arraycopy(preprocessed,offset + paddingEnd,preV,0,preV.length - HopProcessor.IV_LENGTH);
-  System.arraycopy(preprocessed,0,preV,preV.length - HopProcessor.IV_LENGTH,HopProcessor.IV_LENGTH);
-  Hash v=_context.sha().calculateHash(preV);
+  ByteArray ba=_validateCache.acquire();
+  byte preV[]=ba.getData();
+  int validLength=length - offset - paddingEnd + HopProcessor.IV_LENGTH;
+  System.arraycopy(preprocessed,offset + paddingEnd,preV,0,validLength - HopProcessor.IV_LENGTH);
+  System.arraycopy(preprocessed,0,preV,validLength - HopProcessor.IV_LENGTH,HopProcessor.IV_LENGTH);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("endpoint IV: " + Base64.encode(preV,validLength - HopProcessor.IV_LENGTH,HopProcessor.IV_LENGTH));
+  SHA256EntryCache.CacheEntry cache=_context.sha().cache().acquire(TrivialPreprocessor.PREPROCESSED_SIZE);
+  Hash v=_context.sha().calculateHash(preV,0,validLength,cache);
   boolean eq=DataHelper.eq(v.getData(),0,preprocessed,offset + HopProcessor.IV_LENGTH,4);
-  if (!eq)   _log.error("Endpoint data doesn't match:\n" + Base64.encode(preprocessed,offset + paddingEnd,preV.length - HopProcessor.IV_LENGTH));
+  if (!eq) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Endpoint data doesn't match: # pad bytes: " + (paddingEnd - (HopProcessor.IV_LENGTH + 4) - 1));
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("nomatching endpoint: # pad bytes: " + (paddingEnd - (HopProcessor.IV_LENGTH + 4) - 1) + "\n"+ Base64.encode(preprocessed,offset + paddingEnd,preV.length - HopProcessor.IV_LENGTH));
+  }
+  _context.sha().cache().release(cache);
+  _validateCache.release(ba);
+  if (eq) {
+    int excessPadding=paddingEnd - (HopProcessor.IV_LENGTH + 4 + 1);
+    if (excessPadding > 0)     _context.statManager().addRateData("tunnel.smallFragments",excessPadding,0);
+ else     _context.statManager().addRateData("tunnel.fullFragments",1,0);
+  }
   return eq;
 }

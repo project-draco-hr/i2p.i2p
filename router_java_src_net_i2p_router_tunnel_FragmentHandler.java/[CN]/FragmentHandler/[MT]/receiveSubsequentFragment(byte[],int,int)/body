@@ -7,6 +7,7 @@
   offset+=4;
   int size=(int)DataHelper.fromLong(preprocessed,offset,2);
   offset+=2;
+  if (messageId < 0)   throw new RuntimeException("Preprocessed message was invalid [messageId =" + messageId + " size="+ size+ " offset="+ offset+ " fragment="+ fragmentNum);
   boolean isNew=false;
   FragmentedMessage msg=null;
 synchronized (_fragmentedMessages) {
@@ -17,19 +18,23 @@ synchronized (_fragmentedMessages) {
       isNew=true;
     }
   }
-  if (isNew) {
-    RemoveFailed evt=new RemoveFailed(msg);
-    msg.setExpireEvent(evt);
-    _log.debug("In " + MAX_DEFRAGMENT_TIME + " dropping "+ msg.getMessageId()+ "/"+ fragmentNum);
-    SimpleTimer.getInstance().addEvent(evt,MAX_DEFRAGMENT_TIME);
-  }
   msg.receive(messageId,fragmentNum,preprocessed,offset,size,isLast);
   if (msg.isComplete()) {
 synchronized (_fragmentedMessages) {
       _fragmentedMessages.remove(new Long(messageId));
     }
     if (msg.getExpireEvent() != null)     SimpleTimer.getInstance().removeEvent(msg.getExpireEvent());
+    _context.statManager().addRateData("tunnel.fragmentedComplete",msg.getFragmentCount(),msg.getLifetime());
     receiveComplete(msg);
+  }
+ else {
+    noteReception(msg.getMessageId(),fragmentNum);
+  }
+  if (isNew && !msg.isComplete()) {
+    RemoveFailed evt=new RemoveFailed(msg);
+    msg.setExpireEvent(evt);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("In " + MAX_DEFRAGMENT_TIME + " dropping "+ msg.getMessageId()+ "/"+ fragmentNum);
+    SimpleTimer.getInstance().addEvent(evt,MAX_DEFRAGMENT_TIME);
   }
   offset+=size;
   return offset;

@@ -1,10 +1,17 @@
 {
-  TunnelInfo info=getContext().tunnelManager().getTunnelInfo(replyTunnel);
-  if ((info == null) || (info.getSigningKey() != null)) {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Sending reply through " + replyTunnel + " on "+ toPeer);
-    getContext().jobQueue().addJob(new SendTunnelMessageJob(getContext(),message,replyTunnel,toPeer,null,null,null,null,null,REPLY_TIMEOUT,MESSAGE_PRIORITY));
+  if (getContext().routerHash().equals(toPeer)) {
+    TunnelGatewayMessage m=new TunnelGatewayMessage(getContext());
+    m.setMessage(message);
+    m.setTunnelId(replyTunnel);
+    m.setMessageExpiration(message.getMessageExpiration());
+    getContext().tunnelDispatcher().dispatch(m);
   }
  else {
-    sendToGateway(message,toPeer,replyTunnel,info);
+    TunnelGatewayMessage m=new TunnelGatewayMessage(getContext());
+    m.setMessage(message);
+    m.setMessageExpiration(message.getMessageExpiration());
+    m.setTunnelId(replyTunnel);
+    SendMessageDirectJob j=new SendMessageDirectJob(getContext(),m,toPeer,10 * 1000,100);
+    getContext().jobQueue().addJob(j);
   }
 }

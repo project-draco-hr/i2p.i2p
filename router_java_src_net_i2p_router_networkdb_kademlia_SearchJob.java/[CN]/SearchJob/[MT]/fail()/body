@@ -1,11 +1,16 @@
 {
+  if (isLocal()) {
+    if (_log.shouldLog(Log.ERROR))     _log.error(getJobId() + ": why did we fail if the target is local?: " + _state.getTarget().toBase64(),new Exception("failure cause"));
+    succeed();
+    return;
+  }
   if (_log.shouldLog(Log.INFO))   _log.info(getJobId() + ": Failed search for key " + _state.getTarget());
   if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": State of failed search: " + _state);
   if (_keepStats) {
     long time=getContext().clock().now() - _state.getWhenStarted();
     getContext().statManager().addRateData("netDb.failedTime",time,0);
-    _facade.fail(_state.getTarget());
   }
   if (_onFailure != null)   getContext().jobQueue().addJob(_onFailure);
   _facade.searchComplete(_state.getTarget());
+  handleDeferred(false);
 }

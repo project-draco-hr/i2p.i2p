@@ -1,26 +1,3 @@
 {
-  Hash to=_msg.getTarget().getIdentity().getHash();
-  if (getContext().shitlist().isShitlisted(to)) {
-    _log.warn("Attempt to send a message to a shitlisted peer - " + to);
-    getContext().messageRegistry().peerFailed(to);
-    fail();
-    return;
-  }
-  Hash us=getContext().routerHash();
-  if (to.equals(us)) {
-    _log.error("wtf, send a message to ourselves?  nuh uh. msg = " + _msg,getAddedBy());
-    fail();
-    return;
-  }
-  List bids=_facade.getBids(_msg);
-  if (bids.size() <= 0) {
-    _log.warn("No bids available for the message " + _msg);
-    getContext().shitlist().shitlistRouter(to,"No bids");
-    getContext().netDb().fail(to);
-    fail();
-  }
- else {
-    TransportBid bid=(TransportBid)bids.get(0);
-    bid.getTransport().send(_msg);
-  }
+  getBids(getContext(),_facade,_msg);
 }

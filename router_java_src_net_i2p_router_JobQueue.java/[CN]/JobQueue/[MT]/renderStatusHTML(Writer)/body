@@ -62,7 +62,9 @@ synchronized (_jobLock) {
   buf.append("# ready/waiting jobs: ").append(readyJobs.size()).append(" <i>(lots of these mean there's likely a big problem)</i><ol>\n");
   for (int i=0; i < readyJobs.size(); i++) {
     Job j=(Job)readyJobs.get(i);
-    buf.append("<li> [waiting ").append(now - j.getTiming().getStartAfter()).append("ms]: ");
+    buf.append("<li> [waiting ");
+    buf.append(DataHelper.formatDuration(now - j.getTiming().getStartAfter()));
+    buf.append("]: ");
     buf.append(j.toString()).append("</li>\n");
   }
   buf.append("</ol>\n");
@@ -75,8 +77,9 @@ synchronized (_jobLock) {
   }
   for (Iterator iter=ordered.values().iterator(); iter.hasNext(); ) {
     Job j=(Job)iter.next();
-    buf.append("<li>").append(j.getName()).append(" @ ");
-    buf.append(new Date(j.getTiming().getStartAfter())).append("</li>\n");
+    long time=j.getTiming().getStartAfter() - now;
+    buf.append("<li>").append(j.getName()).append(" in ");
+    buf.append(DataHelper.formatDuration(time)).append("</li>\n");
   }
   buf.append("</ol>\n");
   out.write("<!-- jobQueue rendering: after main buffer, before stats -->\n");

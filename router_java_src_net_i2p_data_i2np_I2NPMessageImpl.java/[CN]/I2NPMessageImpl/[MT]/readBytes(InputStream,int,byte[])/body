@@ -2,10 +2,11 @@
   try {
     if (type < 0)     type=(int)DataHelper.readLong(in,1);
     _uniqueId=DataHelper.readLong(in,4);
-    _expiration=DataHelper.readDate(in);
+    _expiration=DataHelper.readLong(in,DataHelper.DATE_LENGTH);
     int size=(int)DataHelper.readLong(in,2);
-    Hash h=new Hash();
-    h.readBytes(in);
+    byte checksum[]=new byte[CHECKSUM_LENGTH];
+    int read=DataHelper.read(in,checksum);
+    if (read != CHECKSUM_LENGTH)     throw new I2NPMessageException("checksum is too small [" + read + "]");
     if (buffer.length < size) {
       if (size > 64 * 1024)       throw new I2NPMessageException("size=" + size);
       buffer=new byte[size];
@@ -20,14 +21,13 @@
     }
     SHA256EntryCache.CacheEntry cache=_context.sha().cache().acquire(size);
     Hash calc=_context.sha().calculateHash(buffer,0,size,cache);
-    boolean eq=calc.equals(h);
+    boolean eq=DataHelper.eq(checksum,0,calc.getData(),0,CHECKSUM_LENGTH);
     _context.sha().cache().release(cache);
-    if (!eq)     throw new I2NPMessageException("Hash does not match");
+    if (!eq)     throw new I2NPMessageException("Hash does not match for " + getClass().getName());
     long start=_context.clock().now();
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Reading bytes: type = " + type + " / uniqueId : "+ _uniqueId+ " / expiration : "+ _expiration);
     readMessage(buffer,0,size,type);
     long time=_context.clock().now() - start;
-    if (time > 50)     _context.statManager().addRateData("i2np.readTime",time,time);
     return size + Hash.HASH_LENGTH + 1+ 4+ DataHelper.DATE_LENGTH;
   }
  catch (  DataFormatException dfe) {

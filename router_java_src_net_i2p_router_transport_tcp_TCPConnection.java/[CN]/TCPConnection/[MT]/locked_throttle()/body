@@ -1,5 +1,5 @@
 {
-  if (!shouldDropProbabalistically())   return;
+  if (!shouldDropProbabalistically())   return null;
   int bytesQueued=0;
   long earliestExpiration=-1;
   for (int i=0; i < _pendingMessages.size(); i++) {
@@ -11,5 +11,6 @@
   long sendRate=getSendRate();
   long bytesSendableUntilFirstExpire=sendRate * (earliestExpiration - _context.clock().now()) / 1000;
   long excessQueued=(long)(bytesQueued - ((double)bytesSendableUntilFirstExpire * (1.0 - getQueueFreeFactor())));
-  if ((excessQueued > 0) && (_pendingMessages.size() > 1) && (_transport != null))   locked_probabalisticDrop(excessQueued);
+  if ((excessQueued > 0) && (_pendingMessages.size() > 1) && (_transport != null))   return locked_probabalisticDrop(excessQueued);
+ else   return null;
 }

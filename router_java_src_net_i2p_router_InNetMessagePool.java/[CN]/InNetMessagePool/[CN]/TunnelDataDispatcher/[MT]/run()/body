@@ -1,0 +1,31 @@
+{
+  while (_alive) {
+    I2NPMessage msg=null;
+    Hash from=null;
+    try {
+synchronized (_pendingDataMessages) {
+        if (_pendingDataMessages.size() <= 0) {
+          _pendingDataMessages.wait();
+        }
+ else {
+          msg=(I2NPMessage)_pendingDataMessages.remove(0);
+          from=(Hash)_pendingDataMessagesFrom.remove(0);
+        }
+      }
+      if (msg != null) {
+        long before=_context.clock().now();
+        doShortCircuitTunnelData(msg,from);
+        long elapsed=_context.clock().now() - before;
+        _context.statManager().addRateData("pool.dispatchDataTime",elapsed,elapsed);
+      }
+    }
+ catch (    InterruptedException ie) {
+    }
+catch (    OutOfMemoryError oome) {
+      throw oome;
+    }
+catch (    Exception e) {
+      if (_log.shouldLog(Log.CRIT))       _log.log(Log.CRIT,"Error in the tunnel data dispatcher",e);
+    }
+  }
+}

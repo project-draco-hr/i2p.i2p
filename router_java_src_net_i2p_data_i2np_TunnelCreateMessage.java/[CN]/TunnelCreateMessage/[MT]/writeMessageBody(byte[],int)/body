@@ -1,56 +1,33 @@
 {
-  byte type[]=DataHelper.toLong(1,_participantType);
-  out[curIndex++]=type[0];
-  if (_participantType != PARTICIPANT_TYPE_ENDPOINT) {
-    System.arraycopy(_nextRouter.getData(),0,out,curIndex,Hash.HASH_LENGTH);
-    curIndex+=Hash.HASH_LENGTH;
-    byte id[]=DataHelper.toLong(4,_nextTunnelId.getTunnelId());
-    System.arraycopy(id,0,out,curIndex,4);
-    curIndex+=4;
-  }
-  byte id[]=DataHelper.toLong(4,_tunnelId.getTunnelId());
-  System.arraycopy(id,0,out,curIndex,4);
-  curIndex+=4;
-  byte duration[]=DataHelper.toLong(4,_tunnelDuration);
-  System.arraycopy(duration,0,out,curIndex,4);
-  curIndex+=4;
-  System.arraycopy(_configKey.getKey().getData(),0,out,curIndex,SessionKey.KEYSIZE_BYTES);
-  curIndex+=SessionKey.KEYSIZE_BYTES;
-  byte val[]=DataHelper.toLong(4,_maxPeakMessagesPerMin);
-  System.arraycopy(val,0,out,curIndex,4);
-  curIndex+=4;
-  val=DataHelper.toLong(4,_maxAvgMessagesPerMin);
-  System.arraycopy(val,0,out,curIndex,4);
-  curIndex+=4;
-  val=DataHelper.toLong(4,_maxPeakBytesPerMin);
-  System.arraycopy(val,0,out,curIndex,4);
-  curIndex+=4;
-  val=DataHelper.toLong(4,_maxAvgBytesPerMin);
-  System.arraycopy(val,0,out,curIndex,4);
-  curIndex+=4;
-  long flags=getFlags();
-  byte flag[]=DataHelper.toLong(1,flags);
-  out[curIndex++]=flag[0];
-  System.arraycopy(_verificationPubKey.getKey().getData(),0,out,curIndex,SigningPublicKey.KEYSIZE_BYTES);
-  curIndex+=SigningPublicKey.KEYSIZE_BYTES;
-  if (_participantType == PARTICIPANT_TYPE_GATEWAY) {
-    System.arraycopy(_verificationPrivKey.getKey().getData(),0,out,curIndex,SigningPrivateKey.KEYSIZE_BYTES);
-    curIndex+=SigningPrivateKey.KEYSIZE_BYTES;
-  }
-  if ((_participantType == PARTICIPANT_TYPE_ENDPOINT) || (_participantType == PARTICIPANT_TYPE_GATEWAY)) {
-    System.arraycopy(_tunnelKey.getKey().getData(),0,out,curIndex,SessionKey.KEYSIZE_BYTES);
-    curIndex+=SessionKey.KEYSIZE_BYTES;
-  }
-  System.arraycopy(_certificateCache,0,out,curIndex,_certificateCache.length);
-  curIndex+=_certificateCache.length;
-  System.arraycopy(_replyTag.getData(),0,out,curIndex,SessionTag.BYTE_LENGTH);
-  curIndex+=SessionTag.BYTE_LENGTH;
-  System.arraycopy(_replyKey.getData(),0,out,curIndex,SessionKey.KEYSIZE_BYTES);
-  curIndex+=SessionKey.KEYSIZE_BYTES;
-  id=DataHelper.toLong(4,_replyTunnel.getTunnelId());
-  System.arraycopy(id,0,out,curIndex,4);
-  curIndex+=4;
-  System.arraycopy(_replyPeer.getData(),0,out,curIndex,Hash.HASH_LENGTH);
-  curIndex+=Hash.HASH_LENGTH;
-  return curIndex;
+  if (_nextRouter == null)   System.arraycopy(INVALID_HASH.getData(),0,data,offset,Hash.HASH_LENGTH);
+ else   System.arraycopy(_nextRouter.getData(),0,data,offset,Hash.HASH_LENGTH);
+  offset+=Hash.HASH_LENGTH;
+  if (_nextTunnelId == null)   DataHelper.toLong(data,offset,4,0);
+ else   DataHelper.toLong(data,offset,4,_nextTunnelId.getTunnelId());
+  offset+=4;
+  DataHelper.toLong(data,offset,2,_durationSeconds);
+  offset+=2;
+  System.arraycopy(_layerKey.getData(),0,data,offset,SessionKey.KEYSIZE_BYTES);
+  offset+=SessionKey.KEYSIZE_BYTES;
+  System.arraycopy(_ivKey.getData(),0,data,offset,SessionKey.KEYSIZE_BYTES);
+  offset+=SessionKey.KEYSIZE_BYTES;
+  if (_optionsCache == null)   _optionsCache=DataHelper.toProperties(_options);
+  System.arraycopy(_optionsCache,0,data,offset,_optionsCache.length);
+  offset+=_optionsCache.length;
+  System.arraycopy(_replyGateway.getData(),0,data,offset,Hash.HASH_LENGTH);
+  offset+=Hash.HASH_LENGTH;
+  DataHelper.toLong(data,offset,4,_replyTunnel.getTunnelId());
+  offset+=4;
+  System.arraycopy(_replyTag.getData(),0,data,offset,SessionTag.BYTE_LENGTH);
+  offset+=SessionTag.BYTE_LENGTH;
+  System.arraycopy(_replyKey.getData(),0,data,offset,SessionKey.KEYSIZE_BYTES);
+  offset+=SessionKey.KEYSIZE_BYTES;
+  DataHelper.toLong(data,offset,4,_nonce);
+  offset+=4;
+  if (_certificateCache == null)   _certificateCache=_certificate.toByteArray();
+  System.arraycopy(_certificateCache,0,data,offset,_certificateCache.length);
+  offset+=_certificateCache.length;
+  DataHelper.toBoolean(data,offset,_isGateway);
+  offset+=DataHelper.BOOLEAN_LENGTH;
+  return offset;
 }

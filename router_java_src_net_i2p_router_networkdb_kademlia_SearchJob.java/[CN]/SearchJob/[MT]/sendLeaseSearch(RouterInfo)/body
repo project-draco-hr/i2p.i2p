@@ -1,12 +1,12 @@
 {
-  TunnelId inTunnelId=getInboundTunnelId();
-  if (inTunnelId == null) {
+  TunnelInfo inTunnel=getInboundTunnelId();
+  if (inTunnel == null) {
     _log.error("No tunnels to get search replies through!  wtf!");
     getContext().jobQueue().addJob(new FailedJob(getContext(),router));
     return;
   }
-  TunnelInfo inTunnel=getContext().tunnelManager().getTunnelInfo(inTunnelId);
-  RouterInfo inGateway=getContext().netDb().lookupRouterInfoLocally(inTunnel.getThisHop());
+  TunnelId inTunnelId=inTunnel.getReceiveTunnelId(0);
+  RouterInfo inGateway=getContext().netDb().lookupRouterInfoLocally(inTunnel.getPeer(0));
   if (inGateway == null) {
     _log.error("We can't find the gateway to our inbound tunnel?! wtf");
     getContext().jobQueue().addJob(new FailedJob(getContext(),router));
@@ -14,15 +14,16 @@
   }
   long expiration=getContext().clock().now() + PER_PEER_TIMEOUT;
   DatabaseLookupMessage msg=buildMessage(inTunnelId,inGateway,expiration);
-  TunnelId outTunnelId=getOutboundTunnelId();
-  if (outTunnelId == null) {
+  TunnelInfo outTunnel=getOutboundTunnelId();
+  if (outTunnel == null) {
     _log.error("No tunnels to send search out through!  wtf!");
     getContext().jobQueue().addJob(new FailedJob(getContext(),router));
     return;
   }
+  TunnelId outTunnelId=outTunnel.getSendTunnelId(0);
   if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": Sending leaseSet search to " + router.getIdentity().getHash().toBase64()+ " for "+ msg.getSearchKey().toBase64()+ " w/ replies through ["+ msg.getFrom().toBase64()+ "] via tunnel ["+ msg.getReplyTunnel()+ "]");
   SearchMessageSelector sel=new SearchMessageSelector(getContext(),router,_expiration,_state);
   SearchUpdateReplyFoundJob reply=new SearchUpdateReplyFoundJob(getContext(),router,_state,_facade,this);
-  SendTunnelMessageJob j=new SendTunnelMessageJob(getContext(),msg,outTunnelId,router.getIdentity().getHash(),null,null,reply,new FailedJob(getContext(),router),sel,PER_PEER_TIMEOUT,SEARCH_PRIORITY);
-  getContext().jobQueue().addJob(j);
+  getContext().messageRegistry().registerPending(sel,reply,new FailedJob(getContext(),router),PER_PEER_TIMEOUT);
+  getContext().tunnelDispatcher().dispatchOutbound(msg,outTunnelId,router.getIdentity().getHash());
 }

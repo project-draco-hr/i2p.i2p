@@ -1,10 +1,12 @@
 {
+  if (payload == null)   throw new RuntimeException("Payload is null for messageId " + messageId);
+  if (length <= 0)   throw new RuntimeException("Length is impossible (" + length + ") for messageId "+ messageId);
+  if (offset + length > payload.length)   throw new RuntimeException("Length is impossible (" + length + "/"+ offset+ " out of "+ payload.length+ ") for messageId "+ messageId);
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Receive message " + messageId + " with "+ length+ " bytes (last? "+ isLast+ ") targetting "+ toRouter+ " / "+ toTunnel+ " offset="+ offset);
   _messageId=messageId;
-  ByteArray ba=new ByteArray(new byte[length]);
-  System.arraycopy(payload,offset,ba.getData(),0,length);
-  _log.debug("fragment[0/" + offset + "/"+ length+ "]: "+ Base64.encode(ba.getData()));
-  _fragments.put(new Integer(0),ba);
+  ByteArray ba=new ByteArray(payload,offset,length);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("fragment[0/" + offset + "/"+ length+ "]: "+ Base64.encode(ba.getData(),ba.getOffset(),ba.getValid()));
+  _fragments[0]=ba;
   _lastReceived=isLast;
   _toRouter=toRouter;
   _toTunnel=toTunnel;

@@ -1,0 +1,32 @@
+{
+switch (instructions.getDeliveryMode()) {
+case DeliveryInstructions.DELIVERY_MODE_LOCAL:
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("local delivery instructions for clove: " + data);
+  getContext().inNetMessagePool().add(data,null,null);
+return;
+case DeliveryInstructions.DELIVERY_MODE_DESTINATION:
+if (_log.shouldLog(Log.ERROR)) _log.error("this message didn't come down a tunnel, not forwarding to a destination: " + instructions + " - "+ data);
+return;
+case DeliveryInstructions.DELIVERY_MODE_ROUTER:
+if (getContext().routerHash().equals(instructions.getRouter())) {
+if (_log.shouldLog(Log.DEBUG)) _log.debug("router delivery instructions targetting us");
+getContext().inNetMessagePool().add(data,null,null);
+}
+ else {
+if (_log.shouldLog(Log.DEBUG)) _log.debug("router delivery instructions targetting " + instructions.getRouter().toBase64().substring(0,4));
+SendMessageDirectJob j=new SendMessageDirectJob(getContext(),data,instructions.getRouter(),10 * 1000,100);
+getContext().jobQueue().addJob(j);
+}
+return;
+case DeliveryInstructions.DELIVERY_MODE_TUNNEL:
+TunnelGatewayMessage gw=new TunnelGatewayMessage(getContext());
+gw.setMessage(data);
+gw.setTunnelId(instructions.getTunnelId());
+gw.setMessageExpiration(data.getMessageExpiration());
+getContext().jobQueue().addJob(new SendMessageDirectJob(getContext(),gw,instructions.getRouter(),10 * 1000,100));
+return;
+default :
+_log.error("Unknown instruction " + instructions.getDeliveryMode() + ": "+ instructions);
+return;
+}
+}

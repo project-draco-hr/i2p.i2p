@@ -1,8 +1,19 @@
 {
   try {
-    DataHelper.loadProps(props,file);
+    FileInputStream fin=new FileInputStream(file);
+    int c=fin.read();
+    fin.close();
+    fin=new FileInputStream(file);
+    if (c == '#') {
+      if (_log.shouldLog(Log.INFO))       _log.info("Loading uncompressed profile data from " + file.getName());
+      DataHelper.loadProps(props,fin);
+    }
+ else {
+      if (_log.shouldLog(Log.INFO))       _log.info("Loading compressed profile data from " + file.getName());
+      DataHelper.loadProps(props,new GZIPInputStream(fin));
+    }
   }
  catch (  IOException ioe) {
-    _log.warn("Error loading properties from " + file.getName(),ioe);
+    if (_log.shouldLog(Log.WARN))     _log.warn("Error loading properties from " + file.getName(),ioe);
   }
 }

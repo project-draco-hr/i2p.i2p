@@ -1,7 +1,15 @@
 {
   ByteArrayOutputStream baos=new ByteArrayOutputStream(1024);
-  URLConnection con=url.openConnection();
-  InputStream in=con.getInputStream();
+  String hostname=url.getHost();
+  int port=url.getPort();
+  if (port < 0)   port=80;
+  Socket s=new Socket(hostname,port);
+  OutputStream out=s.getOutputStream();
+  InputStream in=s.getInputStream();
+  String request=getRequest(url);
+  System.out.println("Sending to " + hostname + ":"+ port+ ": "+ request);
+  out.write(request.getBytes());
+  out.flush();
   byte buf[]=new byte[1024];
   while (true) {
     int read=in.read(buf);
@@ -9,5 +17,6 @@
     baos.write(buf,0,read);
   }
   in.close();
+  s.close();
   return baos.toByteArray();
 }

@@ -1,8 +1,22 @@
 {
   if (numBytes > 8)   throw new DataFormatException("readLong doesn't currently support reading numbers > 8 bytes [as thats bigger than java's long]");
-  byte data[]=new byte[numBytes];
-  int num=read(rawStream,data);
-  if (num != numBytes)   throw new DataFormatException("Not enough bytes [" + num + "] as required for the field ["+ numBytes+ "]");
-  UnsignedInteger val=new UnsignedInteger(data);
-  return val.getLong();
+  long rv=0;
+  for (int i=0; i < numBytes; i++) {
+    long cur=rawStream.read() & 0xFF;
+    if (cur == -1)     throw new DataFormatException("Not enough bytes for the field");
+    if (cur != 0) {
+      long remaining=numBytes - i;
+      for (int j=0; j < remaining; j++) {
+        long shiftAmount=8 * (remaining - j - 1);
+        cur=cur << shiftAmount;
+        rv+=cur;
+        if (j + 1 < remaining) {
+          cur=rawStream.read() & 0xFF;
+          if (cur == -1)           throw new DataFormatException("Not enough bytes for the field");
+        }
+      }
+      break;
+    }
+  }
+  return rv;
 }

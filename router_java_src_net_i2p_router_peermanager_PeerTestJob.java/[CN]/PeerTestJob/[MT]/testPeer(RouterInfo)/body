@@ -1,29 +1,29 @@
 {
-  TunnelId inTunnelId=getInboundTunnelId();
-  if (inTunnelId == null) {
+  TunnelInfo inTunnel=getInboundTunnelId();
+  if (inTunnel == null) {
     _log.error("No tunnels to get peer test replies through!  wtf!");
     return;
   }
-  TunnelInfo inTunnel=getContext().tunnelManager().getTunnelInfo(inTunnelId);
-  RouterInfo inGateway=getContext().netDb().lookupRouterInfoLocally(inTunnel.getThisHop());
+  TunnelId inTunnelId=inTunnel.getReceiveTunnelId(0);
+  RouterInfo inGateway=getContext().netDb().lookupRouterInfoLocally(inTunnel.getPeer(0));
   if (inGateway == null) {
-    _log.error("We can't find the gateway to our inbound tunnel?! wtf");
+    if (_log.shouldLog(Log.WARN))     _log.warn("We can't find the gateway to our inbound tunnel?! wtf");
     return;
   }
-  long timeoutMs=getTestTimeout();
+  int timeoutMs=getTestTimeout();
   long expiration=getContext().clock().now() + timeoutMs;
   long nonce=getContext().random().nextLong(I2NPMessage.MAX_ID_VALUE);
   DatabaseStoreMessage msg=buildMessage(peer,inTunnelId,inGateway.getIdentity().getHash(),nonce,expiration);
-  TunnelId outTunnelId=getOutboundTunnelId();
-  if (outTunnelId == null) {
+  TunnelInfo outTunnel=getOutboundTunnelId();
+  if (outTunnel == null) {
     _log.error("No tunnels to send search out through!  wtf!");
     return;
   }
-  TunnelInfo outTunnel=getContext().tunnelManager().getTunnelInfo(outTunnelId);
-  if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": Sending peer test to " + peer.getIdentity().getHash().toBase64()+ "w/ replies through ["+ inGateway.getIdentity().getHash().toBase64()+ "] via tunnel ["+ msg.getReplyTunnel()+ "]");
+  TunnelId outTunnelId=outTunnel.getSendTunnelId(0);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": Sending peer test to " + peer.getIdentity().getHash().toBase64()+ " out "+ outTunnel+ " w/ replies through "+ inTunnel);
   ReplySelector sel=new ReplySelector(peer.getIdentity().getHash(),nonce,expiration);
   PeerReplyFoundJob reply=new PeerReplyFoundJob(getContext(),peer,inTunnel,outTunnel);
   PeerReplyTimeoutJob timeoutJob=new PeerReplyTimeoutJob(getContext(),peer,inTunnel,outTunnel);
-  SendTunnelMessageJob j=new SendTunnelMessageJob(getContext(),msg,outTunnelId,peer.getIdentity().getHash(),null,null,reply,timeoutJob,sel,timeoutMs,TEST_PRIORITY);
-  getContext().jobQueue().addJob(j);
+  getContext().messageRegistry().registerPending(sel,reply,timeoutJob,timeoutMs);
+  getContext().tunnelDispatcher().dispatchOutbound(msg,outTunnelId,null,peer.getIdentity().getHash());
 }

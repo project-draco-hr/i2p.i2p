@@ -5,8 +5,8 @@
     msg.timestamp("TCPTransport.outboundMessageReady");
     TCPConnection con=null;
     boolean newPeer=false;
+    Hash peer=msg.getTarget().getIdentity().calculateHash();
 synchronized (_connectionLock) {
-      Hash peer=msg.getTarget().getIdentity().calculateHash();
       con=(TCPConnection)_connectionsByIdent.get(peer);
       if (con == null) {
         if (_log.shouldLog(Log.DEBUG)) {
@@ -27,8 +27,8 @@ synchronized (_connectionLock) {
           newPeer=true;
         }
         msgs.add(msg);
+        if (newPeer)         _connectionLock.notifyAll();
       }
-      if (newPeer)       _connectionLock.notifyAll();
     }
     if (con != null)     con.addMessage(msg);
   }

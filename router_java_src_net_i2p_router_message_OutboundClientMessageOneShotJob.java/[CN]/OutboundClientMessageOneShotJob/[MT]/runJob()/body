@@ -3,6 +3,11 @@
   buildClove();
   if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": Clove built");
   long timeoutMs=_overallExpiration - getContext().clock().now();
+  if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": preparing to search for the leaseSet");
+  Hash key=_to.calculateHash();
+  SendJob success=new SendJob(getContext());
+  LookupLeaseSetFailedJob failed=new LookupLeaseSetFailedJob(getContext());
   if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": Send outbound client message - sending off leaseSet lookup job");
-  getContext().netDb().lookupLeaseSet(_to.calculateHash(),new SendJob(getContext()),new LookupLeaseSetFailedJob(getContext()),timeoutMs);
+  getContext().netDb().lookupLeaseSet(key,success,failed,timeoutMs);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": after sending off leaseSet lookup job");
 }
