@@ -8,12 +8,24 @@
  else {
     home=".";
   }
-  try {
-    settings=ConfigParser.parse(new File(home,settingsLocation));
+  Map defaultSettings=new HashMap();
+  defaultSettings.put("proxy_host","localhost");
+  defaultSettings.put("proxy_port","4444");
+  defaultSettings.put("master_addressbook","myhosts.txt");
+  defaultSettings.put("router_addressbook","../userhosts.txt");
+  defaultSettings.put("published_addressbook","../eepsite/docroot/hosts.txt");
+  defaultSettings.put("log","log.txt");
+  defaultSettings.put("subscriptions","subscriptions.txt");
+  defaultSettings.put("etags","etags");
+  defaultSettings.put("last_modified","last_modified");
+  defaultSettings.put("update_delay","1");
+  File homeFile=new File(home);
+  if (!homeFile.exists()) {
+    boolean created=homeFile.mkdirs();
+    if (created)     System.out.println("INFO:  Addressbook directory " + homeFile.getName() + " created");
+ else     System.out.println("ERROR: Addressbook directory " + homeFile.getName() + " could not be created");
   }
- catch (  IOException exp) {
-    System.out.println("Could not load " + settingsLocation);
-  }
+  settings=ConfigParser.parse(new File(homeFile,settingsLocation),defaultSettings);
   System.setProperty("proxySet","true");
   System.setProperty("http.proxyHost",(String)settings.get("proxy_host"));
   System.setProperty("http.proxyPort",(String)settings.get("proxy_port"));
