@@ -8,7 +8,7 @@ synchronized (bc) {
     bc.notifyAll();
   }
   boolean timedOut=false;
-  while (read.length == 0) {
+  while ((read.length == 0) && (!inStreamClosed)) {
 synchronized (flagLock) {
       if (closed) {
         if (_log.shouldLog(Log.DEBUG))         _log.debug(getStreamPrefix() + "Closed is set after reading " + _bytesRead+ " and writing "+ _bytesWritten+ ", so closing stream: "+ hashCode());
@@ -36,6 +36,7 @@ synchronized (bc) {
     }
   }
   if (read.length > len)   throw new RuntimeException("BUG");
+  if ((inStreamClosed) && ((read == null) || (read.length <= 0)))   return -1;
   System.arraycopy(read,0,b,off,read.length);
   if (_log.shouldLog(Log.DEBUG)) {
     _log.debug(getStreamPrefix() + "Read from I2PInputStream " + hashCode()+ " returned "+ read.length+ " bytes");
