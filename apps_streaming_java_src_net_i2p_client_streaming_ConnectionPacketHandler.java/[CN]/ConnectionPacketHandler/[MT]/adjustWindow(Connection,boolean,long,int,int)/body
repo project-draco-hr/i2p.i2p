@@ -1,9 +1,11 @@
 {
   if ((!isNew) && (sequenceNum > 0)) {
     int oldSize=con.getOptions().getWindowSize();
+    con.congestionOccurred();
     oldSize>>>=1;
     if (oldSize <= 0)     oldSize=1;
     con.getOptions().setWindowSize(oldSize);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Congestion occurred - new windowSize " + oldSize + " congestionSeenAt: "+ con.getLastCongestionSeenAt()+ " (#resends: "+ numResends+ ") for "+ con);
     return true;
   }
  else   if (numResends > 0) {
@@ -13,8 +15,14 @@
       long lowest=con.getHighestAckedThrough();
       if (lowest >= con.getCongestionWindowEnd()) {
         int newWindowSize=con.getOptions().getWindowSize();
-        newWindowSize+=1;
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("New window size " + newWindowSize + " (#resends: "+ numResends+ ") for "+ con);
+        if (newWindowSize > con.getLastCongestionSeenAt() / 2) {
+          int shouldIncrement=_context.random().nextInt(newWindowSize);
+          if (shouldIncrement <= 0)           newWindowSize+=1;
+        }
+ else {
+          newWindowSize+=1;
+        }
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("New window size " + newWindowSize + " congestionSeenAt: "+ con.getLastCongestionSeenAt()+ " (#resends: "+ numResends+ ") for "+ con);
         con.getOptions().setWindowSize(newWindowSize);
         con.setCongestionWindowEnd(newWindowSize + lowest);
       }
