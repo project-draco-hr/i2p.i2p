@@ -3,9 +3,14 @@
   TunnelPoolSettings settings=pool.getSettings();
   long expiration=ctx.clock().now() + settings.getDuration();
   List peers=null;
-  if (fake) {
+  long failures=countFailures(ctx);
+  boolean failing=(failures > 5) && (pool.getSettings().getAllowZeroHop());
+  boolean failsafe=false;
+  if (failing && (ctx.random().nextInt(100) < failures))   failsafe=true;
+  if (fake || failsafe) {
     peers=new ArrayList(1);
     peers.add(ctx.routerHash());
+    if ((failsafe) && (log.shouldLog(Log.WARN)))     log.warn("Building failsafe tunnel for " + pool);
   }
  else {
     peers=pool.getSelector().selectPeers(ctx,settings);
