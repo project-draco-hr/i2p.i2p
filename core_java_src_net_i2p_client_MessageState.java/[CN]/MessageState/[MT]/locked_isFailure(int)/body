@@ -1,41 +1,40 @@
 {
-  List received=null;
-synchronized (_receivedStatus) {
-    received=new ArrayList(_receivedStatus);
-  }
   boolean rv=false;
-  if (_log.shouldLog(Log.DEBUG))   _log.debug(_prefix + "isSuccess(" + wantedStatus+ "): "+ received);
-  for (Iterator iter=received.iterator(); iter.hasNext(); ) {
+  if (_log.shouldLog(Log.DEBUG))   _log.debug(_prefix + "isFailure(" + wantedStatus+ "): "+ _receivedStatus);
+  for (Iterator iter=_receivedStatus.iterator(); iter.hasNext(); ) {
     Integer val=(Integer)iter.next();
     int recv=val.intValue();
 switch (recv) {
 case MessageStatusMessage.STATUS_SEND_BEST_EFFORT_FAILURE:
-      if (_log.shouldLog(Log.WARN))       _log.warn(_prefix + "Received best effort failure after " + getElapsed()+ " from "+ toString());
-    rv=false;
+      if (_log.shouldLog(Log.DEBUG))       _log.warn(_prefix + "Received best effort failure after " + getElapsed()+ " from "+ toString());
+    rv=true;
   break;
 case MessageStatusMessage.STATUS_SEND_GUARANTEED_FAILURE:
-if (_log.shouldLog(Log.WARN)) _log.warn(_prefix + "Received guaranteed failure after " + getElapsed()+ " from "+ toString());
-rv=false;
+if (_log.shouldLog(Log.DEBUG)) _log.warn(_prefix + "Received guaranteed failure after " + getElapsed()+ " from "+ toString());
+rv=true;
 break;
 case MessageStatusMessage.STATUS_SEND_ACCEPTED:
 if (wantedStatus == MessageStatusMessage.STATUS_SEND_ACCEPTED) {
-return true;
+rv=false;
 }
+ else {
 if (_log.shouldLog(Log.DEBUG)) _log.debug(_prefix + "Got accepted, but we're waiting for more from " + toString());
 continue;
+}
+break;
 case MessageStatusMessage.STATUS_SEND_BEST_EFFORT_SUCCESS:
 if (_log.shouldLog(Log.DEBUG)) _log.debug(_prefix + "Received best effort success after " + getElapsed()+ " from "+ toString());
 if (wantedStatus == recv) {
-rv=true;
+rv=false;
 }
  else {
 if (_log.shouldLog(Log.DEBUG)) _log.debug(_prefix + "Not guaranteed success, but best effort after " + getElapsed()+ " will do... from "+ toString());
-rv=true;
+rv=false;
 }
 break;
 case MessageStatusMessage.STATUS_SEND_GUARANTEED_SUCCESS:
 if (_log.shouldLog(Log.DEBUG)) _log.debug(_prefix + "Received guaranteed success after " + getElapsed()+ " from "+ toString());
-rv=true;
+rv=false;
 break;
 case -1:
 continue;
