@@ -1,0 +1,26 @@
+{
+  boolean shouldAccept=super.acceptNetDbLookupRequest(key);
+  if (!shouldAccept)   return false;
+  long now=getContext().clock().now();
+  if (_currentLookupPeriod + LOOKUP_THROTTLE_PERIOD > now) {
+    _currentLookupCount++;
+    if (_currentLookupCount >= LOOKUP_THROTTLE_MAX) {
+      getContext().statManager().addRateData("router.throttleNetDbDoS",_currentLookupCount,0);
+      int rand=getContext().random().nextInt(_currentLookupCount);
+      if (rand > LOOKUP_THROTTLE_MAX) {
+        return false;
+      }
+ else {
+        return true;
+      }
+    }
+ else {
+      return true;
+    }
+  }
+ else {
+    _currentLookupPeriod=now;
+    _currentLookupCount=1;
+    return true;
+  }
+}
