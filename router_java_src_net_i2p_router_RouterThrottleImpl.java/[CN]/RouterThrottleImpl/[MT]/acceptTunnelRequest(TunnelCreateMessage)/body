@@ -1,0 +1,18 @@
+{
+  long lag=_context.jobQueue().getMaxLag();
+  if (lag > JOB_LAG_LIMIT) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Refusing tunnel request, as the job lag is " + lag);
+    _context.statManager().addRateData("router.throttleTunnelCause",lag,lag);
+    return false;
+  }
+ else {
+    double msgsPerTunnel=_context.statManager().getRate("tunnel.participatingMessagesProcessed").getRate(10 * 60 * 1000).getAverageValue();
+    double bytesPerMsg=_context.statManager().getRate("tunnel.relayMessageSize").getRate(10 * 60 * 1000).getAverageValue();
+    double bytesPerTunnel=msgsPerTunnel * bytesPerMsg;
+    int numTunnels=_context.tunnelManager().getParticipatingCount();
+    double bytesAllocated=(numTunnels + 1) * bytesPerTunnel;
+    _context.statManager().addRateData("tunnel.bytesAllocatedAtAccept",(long)bytesAllocated,msg.getTunnelDurationSeconds() * 1000);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Accepting a new tunnel request (now allocating " + bytesAllocated + " bytes across "+ numTunnels+ " tunnels");
+    return true;
+  }
+}
