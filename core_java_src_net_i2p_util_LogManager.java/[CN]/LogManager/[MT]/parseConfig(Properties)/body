@@ -1,0 +1,40 @@
+{
+  String fmt=config.getProperty(PROP_FORMAT,new String(DEFAULT_FORMAT));
+  _format=fmt.toCharArray();
+  String df=config.getProperty(PROP_DATEFORMAT,DEFAULT_DATEFORMAT);
+  _dateFormat=new SimpleDateFormat(df);
+  String disp=config.getProperty(PROP_DISPLAYONSCREEN);
+  if (disp == null)   _displayOnScreen=DEFAULT_DISPLAYONSCREEN;
+ else {
+    if ("TRUE".equals(disp.toUpperCase().trim()))     _displayOnScreen=true;
+ else     if ("YES".equals(disp.toUpperCase().trim()))     _displayOnScreen=true;
+ else     _displayOnScreen=false;
+  }
+  String filenameOverride=System.getProperty(FILENAME_OVERRIDE_PROP);
+  if (filenameOverride != null)   _baseLogfilename=filenameOverride;
+ else   _baseLogfilename=config.getProperty(PROP_FILENAME,DEFAULT_FILENAME);
+  _fileSize=getFilesize(config.getProperty(PROP_FILESIZE,DEFAULT_FILESIZE));
+  _rotationLimit=-1;
+  try {
+    String str=config.getProperty(PROP_ROTATIONLIMIT);
+    if (str == null)     System.err.println("Rotation limit not specified");
+    _rotationLimit=Integer.parseInt(config.getProperty(PROP_ROTATIONLIMIT,DEFAULT_ROTATIONLIMIT));
+  }
+ catch (  NumberFormatException nfe) {
+    System.err.println("Invalid rotation limit");
+    nfe.printStackTrace();
+  }
+  _defaultLimit=Log.getLevel(config.getProperty(PROP_DEFALTLEVEL,DEFAULT_DEFALTLEVEL));
+  _onScreenLimit=Log.getLevel(config.getProperty(PROP_DISPLAYONSCREENLEVEL,DEFAULT_ONSCREENLEVEL));
+  try {
+    String str=config.getProperty(PROP_CONSOLEBUFFERSIZE);
+    if (str == null)     _consoleBufferSize=DEFAULT_CONSOLEBUFFERSIZE;
+ else     _consoleBufferSize=Integer.parseInt(str);
+  }
+ catch (  NumberFormatException nfe) {
+    System.err.println("Invalid console buffer size");
+    nfe.printStackTrace();
+    _consoleBufferSize=DEFAULT_CONSOLEBUFFERSIZE;
+  }
+  parseLimits(config);
+}

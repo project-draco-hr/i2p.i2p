@@ -1,0 +1,40 @@
+{
+  _log.debug("Handle message " + message);
+  RequestLeaseSetMessage msg=(RequestLeaseSetMessage)message;
+  LeaseSet leaseSet=new LeaseSet();
+  for (int i=0; i < msg.getEndpoints(); i++) {
+    Lease lease=new Lease();
+    lease.setRouterIdentity(msg.getRouter(i));
+    lease.setTunnelId(msg.getTunnelId(i));
+    lease.setEndDate(msg.getEndDate());
+    leaseSet.addLease(lease);
+  }
+  leaseSet.setDestination(session.getMyDestination());
+  LeaseInfo li=null;
+synchronized (_existingLeaseSets) {
+    if (_existingLeaseSets.containsKey(session.getMyDestination()))     li=(LeaseInfo)_existingLeaseSets.get(session.getMyDestination());
+  }
+  if (li == null) {
+    li=new LeaseInfo(session.getMyDestination());
+synchronized (_existingLeaseSets) {
+      _existingLeaseSets.put(session.getMyDestination(),li);
+    }
+    _log.debug("Creating new leaseInfo keys",new Exception("new leaseInfo keys"));
+  }
+ else {
+    _log.debug("Caching the old leaseInfo keys",new Exception("cached!  w00t"));
+  }
+  leaseSet.setEncryptionKey(li.getPublicKey());
+  leaseSet.setSigningKey(li.getSigningPublicKey());
+  try {
+    leaseSet.sign(session.getPrivateKey());
+    session.getProducer().createLeaseSet(session,leaseSet,li.getSigningPrivateKey(),li.getPrivateKey());
+    session.setLeaseSet(leaseSet);
+  }
+ catch (  DataFormatException dfe) {
+    session.propogateError("Error signing the leaseSet",dfe);
+  }
+catch (  I2PSessionException ise) {
+    session.propogateError("Error sending the signed leaseSet",ise);
+  }
+}

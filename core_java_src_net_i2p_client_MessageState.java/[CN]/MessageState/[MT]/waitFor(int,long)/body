@@ -1,0 +1,24 @@
+{
+  while (true) {
+    if (_cancelled)     return;
+    long timeToWait=expiration - Clock.getInstance().now();
+    if (timeToWait <= 0) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Expired waiting for the status [" + status + "]");
+      return;
+    }
+    if (isSuccess(status) || isFailure(status)) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Received a confirm (one way or the other)");
+      return;
+    }
+    if (timeToWait > 5000) {
+      timeToWait=5000;
+    }
+synchronized (_lock) {
+      try {
+        _lock.wait(timeToWait);
+      }
+ catch (      InterruptedException ie) {
+      }
+    }
+  }
+}

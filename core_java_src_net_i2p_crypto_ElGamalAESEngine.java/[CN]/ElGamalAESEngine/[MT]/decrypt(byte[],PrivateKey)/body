@@ -1,0 +1,45 @@
+{
+  if (data == null) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Null data being decrypted?");
+    return null;
+  }
+ else   if (data.length < MIN_ENCRYPTED_SIZE) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Data is less than the minimum size (" + data.length + " < "+ MIN_ENCRYPTED_SIZE+ ")");
+    return null;
+  }
+  byte tag[]=new byte[32];
+  System.arraycopy(data,0,tag,0,tag.length);
+  SessionTag st=new SessionTag(tag);
+  SessionKey key=SessionKeyManager.getInstance().consumeTag(st);
+  SessionKey foundKey=new SessionKey();
+  foundKey.setData(null);
+  SessionKey usedKey=new SessionKey();
+  Set foundTags=new HashSet();
+  byte decrypted[]=null;
+  if (key != null) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Key is known for tag " + st);
+    usedKey.setData(key.getData());
+    decrypted=decryptExistingSession(data,key,targetPrivateKey,foundTags,usedKey,foundKey);
+    if (decrypted != null)     StatManager.getInstance().updateFrequency("crypto.elGamalAES.decryptExistingSession");
+ else     StatManager.getInstance().updateFrequency("crypto.elGamalAES.decryptFailed");
+  }
+ else {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Key is NOT known for tag " + st);
+    decrypted=decryptNewSession(data,targetPrivateKey,foundTags,usedKey,foundKey);
+    if (decrypted != null)     StatManager.getInstance().updateFrequency("crypto.elGamalAES.decryptNewSession");
+ else     StatManager.getInstance().updateFrequency("crypto.elGamalAES.decryptFailed");
+  }
+  if ((key == null) && (decrypted == null)) {
+  }
+  if (foundTags.size() > 0) {
+    if (foundKey.getData() != null) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Found key: " + foundKey);
+      SessionKeyManager.getInstance().tagsReceived(foundKey,foundTags);
+    }
+ else {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Used key: " + usedKey);
+      SessionKeyManager.getInstance().tagsReceived(usedKey,foundTags);
+    }
+  }
+  return decrypted;
+}

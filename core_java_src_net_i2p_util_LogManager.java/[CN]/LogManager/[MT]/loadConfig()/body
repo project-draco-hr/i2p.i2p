@@ -1,0 +1,26 @@
+{
+  Properties p=new Properties();
+  File cfgFile=new File(_location);
+  if ((_configLastRead > 0) && (_configLastRead > cfgFile.lastModified())) {
+    _log.debug("Short circuiting config read");
+    return;
+  }
+  FileInputStream fis=null;
+  try {
+    fis=new FileInputStream(cfgFile);
+    p.load(fis);
+    _configLastRead=cfgFile.lastModified();
+  }
+ catch (  IOException ioe) {
+    System.err.println("Error loading logger config from " + new File(_location).getAbsolutePath());
+  }
+ finally {
+    if (fis != null)     try {
+      fis.close();
+    }
+ catch (    IOException ioe) {
+    }
+  }
+  parseConfig(p);
+  updateLimits();
+}

@@ -1,0 +1,34 @@
+{
+  if (_byteified != null)   return _byteified;
+  if (_identity == null)   throw new IllegalStateException("Router identity isn't set? wtf!");
+  if (_addresses == null)   throw new IllegalStateException("Router addressess isn't set? wtf!");
+  if (_peers == null)   throw new IllegalStateException("Router peers isn't set? wtf!");
+  if (_options == null)   throw new IllegalStateException("Router options isn't set? wtf!");
+  long before=Clock.getInstance().now();
+  ByteArrayOutputStream out=new ByteArrayOutputStream();
+  try {
+    _identity.writeBytes(out);
+    DataHelper.writeDate(out,new Date(_published));
+    DataHelper.writeLong(out,1,_addresses.size());
+    List addresses=DataHelper.sortStructures(_addresses);
+    for (Iterator iter=addresses.iterator(); iter.hasNext(); ) {
+      RouterAddress addr=(RouterAddress)iter.next();
+      addr.writeBytes(out);
+    }
+    DataHelper.writeLong(out,1,_peers.size());
+    List peers=DataHelper.sortStructures(_peers);
+    for (Iterator iter=peers.iterator(); iter.hasNext(); ) {
+      Hash peerHash=(Hash)iter.next();
+      peerHash.writeBytes(out);
+    }
+    DataHelper.writeProperties(out,_options);
+  }
+ catch (  IOException ioe) {
+    throw new DataFormatException("IO Error getting bytes",ioe);
+  }
+  byte data[]=out.toByteArray();
+  long after=Clock.getInstance().now();
+  _log.debug("getBytes()  took " + (after - before) + "ms");
+  _byteified=data;
+  return data;
+}

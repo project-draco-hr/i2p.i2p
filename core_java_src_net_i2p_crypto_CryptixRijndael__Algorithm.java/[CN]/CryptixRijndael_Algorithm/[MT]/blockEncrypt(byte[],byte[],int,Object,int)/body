@@ -1,0 +1,37 @@
+{
+  if (blockSize == _BLOCK_SIZE) {
+    blockEncrypt(in,result,inOffset,sessionKey);
+    return;
+  }
+  if (_RDEBUG)   trace(_IN,"blockEncrypt(" + in + ", "+ inOffset+ ", "+ sessionKey+ ", "+ blockSize+ ")");
+  Object[] sKey=(Object[])sessionKey;
+  int[][] Ke=(int[][])sKey[0];
+  int BC=blockSize / 4;
+  int ROUNDS=Ke.length - 1;
+  int SC=BC == 4 ? 0 : (BC == 6 ? 1 : 2);
+  int s1=_shifts[SC][1][0];
+  int s2=_shifts[SC][2][0];
+  int s3=_shifts[SC][3][0];
+  int[] a=new int[BC];
+  int[] t=new int[BC];
+  int i;
+  int j=0, tt;
+  for (i=0; i < BC; i++)   t[i]=((in[inOffset++] & 0xFF) << 24 | (in[inOffset++] & 0xFF) << 16 | (in[inOffset++] & 0xFF) << 8 | (in[inOffset++] & 0xFF)) ^ Ke[0][i];
+  for (int r=1; r < ROUNDS; r++) {
+    for (i=0; i < BC; i++)     a[i]=(_T1[(t[i] >>> 24) & 0xFF] ^ _T2[(t[(i + s1) % BC] >>> 16) & 0xFF] ^ _T3[(t[(i + s2) % BC] >>> 8) & 0xFF]^ _T4[t[(i + s3) % BC] & 0xFF]) ^ Ke[r][i];
+    System.arraycopy(a,0,t,0,BC);
+    if (_RDEBUG && _debuglevel > 6)     System.out.println("CT" + r + "="+ toString(t));
+  }
+  for (i=0; i < BC; i++) {
+    tt=Ke[ROUNDS][i];
+    result[j++]=(byte)(_S[(t[i] >>> 24) & 0xFF] ^ (tt >>> 24));
+    result[j++]=(byte)(_S[(t[(i + s1) % BC] >>> 16) & 0xFF] ^ (tt >>> 16));
+    result[j++]=(byte)(_S[(t[(i + s2) % BC] >>> 8) & 0xFF] ^ (tt >>> 8));
+    result[j++]=(byte)(_S[t[(i + s3) % BC] & 0xFF] ^ tt);
+  }
+  if (_RDEBUG && _debuglevel > 6) {
+    System.out.println("CT=" + toString(result));
+    System.out.println();
+  }
+  if (_RDEBUG)   trace(_OUT,"blockEncrypt()");
+}

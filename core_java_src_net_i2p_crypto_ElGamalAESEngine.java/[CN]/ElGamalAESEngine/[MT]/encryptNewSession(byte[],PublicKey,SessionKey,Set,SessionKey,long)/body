@@ -1,0 +1,42 @@
+{
+  try {
+    ByteArrayOutputStream elgSrc=new ByteArrayOutputStream(64);
+    key.writeBytes(elgSrc);
+    byte preIV[]=new byte[32];
+    RandomSource.getInstance().nextBytes(preIV);
+    elgSrc.write(preIV);
+    byte rnd[]=new byte[158];
+    RandomSource.getInstance().nextBytes(rnd);
+    elgSrc.write(rnd);
+    elgSrc.flush();
+    long before=Clock.getInstance().now();
+    byte elgEncr[]=ElGamalEngine.getInstance().encrypt(elgSrc.toByteArray(),target);
+    long after=Clock.getInstance().now();
+    if (_log.shouldLog(Log.INFO))     _log.info("elgEngine.encrypt of the session key took " + (after - before) + "ms");
+    if (elgEncr.length < 514) {
+      byte elg[]=new byte[514];
+      int diff=elg.length - elgEncr.length;
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Difference in size: " + diff);
+      System.arraycopy(elgEncr,0,elg,diff,elgEncr.length);
+      elgEncr=elg;
+    }
+    Hash ivHash=SHA256Generator.getInstance().calculateHash(preIV);
+    byte iv[]=new byte[16];
+    System.arraycopy(ivHash.getData(),0,iv,0,16);
+    byte aesEncr[]=encryptAESBlock(data,key,iv,tagsForDelivery,newKey,paddedSize);
+    byte rv[]=new byte[elgEncr.length + aesEncr.length];
+    System.arraycopy(elgEncr,0,rv,0,elgEncr.length);
+    System.arraycopy(aesEncr,0,rv,elgEncr.length,aesEncr.length);
+    long finish=Clock.getInstance().now();
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("after the elgEngine.encrypt took a total of " + (finish - after) + "ms");
+    return rv;
+  }
+ catch (  IOException ioe) {
+    _log.error("Error encrypting the new session",ioe);
+    return null;
+  }
+catch (  DataFormatException dfe) {
+    _log.error("Error writing out the bytes for the new session",dfe);
+    return null;
+  }
+}

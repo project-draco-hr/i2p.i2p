@@ -1,0 +1,51 @@
+{
+  _closed=false;
+  long startConnect=Clock.getInstance().now();
+  try {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("connect begin to " + _hostname + ":"+ _portNum);
+    _socket=new Socket(_hostname,_portNum);
+    _out=_socket.getOutputStream();
+synchronized (_out) {
+      _out.write(I2PClient.PROTOCOL_BYTE);
+    }
+    InputStream in=_socket.getInputStream();
+    _reader=new I2CPMessageReader(in,this);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("before startReading");
+    _reader.startReading();
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Before getDate");
+    sendMessage(new GetDateMessage());
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("After getDate / begin waiting for a response");
+    while (!_dateReceived) {
+      try {
+synchronized (_dateReceivedLock) {
+          _dateReceivedLock.wait(1000);
+        }
+      }
+ catch (      InterruptedException ie) {
+      }
+    }
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("After received a SetDate response");
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Before producer.connect()");
+    _producer.connect(this);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("After  producer.connect()");
+    while (_leaseSet == null) {
+synchronized (_leaseSetWait) {
+        try {
+          _leaseSetWait.wait(1000);
+        }
+ catch (        InterruptedException ie) {
+        }
+      }
+    }
+    long connected=Clock.getInstance().now();
+    if (_log.shouldLog(Log.INFO))     _log.info("Lease set created with inbound tunnels after " + (connected - startConnect) + "ms - ready to participate in the network!");
+  }
+ catch (  UnknownHostException uhe) {
+    _closed=true;
+    throw new I2PSessionException("Invalid session configuration",uhe);
+  }
+catch (  IOException ioe) {
+    _closed=true;
+    throw new I2PSessionException("Problem connecting to " + _hostname + " on port "+ _portNum,ioe);
+  }
+}

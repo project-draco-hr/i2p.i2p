@@ -1,0 +1,39 @@
+{
+  try {
+    ByteArrayOutputStream aesSrc=new ByteArrayOutputStream((int)paddedSize);
+    if (tagsForDelivery == null)     tagsForDelivery=EMPTY_SET;
+    DataHelper.writeLong(aesSrc,2,tagsForDelivery.size());
+    for (Iterator iter=tagsForDelivery.iterator(); iter.hasNext(); ) {
+      SessionTag tag=(SessionTag)iter.next();
+      aesSrc.write(tag.getData());
+    }
+    DataHelper.writeLong(aesSrc,4,data.length);
+    Hash hash=SHA256Generator.getInstance().calculateHash(data);
+    hash.writeBytes(aesSrc);
+    if (newKey == null) {
+      byte flag=0x00;
+      aesSrc.write(flag);
+    }
+ else {
+      byte flag=0x01;
+      aesSrc.write(flag);
+      aesSrc.write(newKey.getData());
+    }
+    aesSrc.write(data);
+    int len=aesSrc.toByteArray().length;
+    byte padding[]=getPadding(len,paddedSize);
+    aesSrc.write(padding);
+    byte aesUnencr[]=aesSrc.toByteArray();
+    Hash h=SHA256Generator.getInstance().calculateHash(aesUnencr);
+    byte aesEncr[]=AESEngine.getInstance().encrypt(aesUnencr,key,iv);
+    return aesEncr;
+  }
+ catch (  IOException ioe) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Error encrypting AES chunk",ioe);
+    return null;
+  }
+catch (  DataFormatException dfe) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Error formatting the bytes to write the AES chunk",dfe);
+    return null;
+  }
+}

@@ -1,0 +1,44 @@
+{
+  String hexoff;
+  int dumpoff, hexofflen, i, nextbytes, end=len + off;
+  int val;
+  for (dumpoff=off; dumpoff < end; dumpoff+=FORMAT_BYTES_PER_ROW) {
+    hexoff=Integer.toString(dumpoff,16);
+    hexofflen=hexoff.length();
+    for (i=0; i < FORMAT_OFFSET_PADDING - hexofflen; ++i) {
+      hexoff="0" + hexoff;
+    }
+    out.write((hexoff + " ").getBytes());
+    nextbytes=(FORMAT_BYTES_PER_ROW < (end - dumpoff) ? FORMAT_BYTES_PER_ROW : (end - dumpoff));
+    for (i=0; i < FORMAT_BYTES_PER_ROW; ++i) {
+      if ((i % 8) == 0) {
+        out.write(" ".getBytes());
+      }
+      if (i >= nextbytes) {
+        out.write("   ".getBytes());
+      }
+ else {
+        val=((int)data[dumpoff + i]) & 0xff;
+        out.write(HEXCHARS[val >>> 4]);
+        out.write(HEXCHARS[val & 0xf]);
+        out.write(" ".getBytes());
+      }
+    }
+    out.write(" |".getBytes());
+    for (i=0; i < FORMAT_BYTES_PER_ROW; ++i) {
+      if (i >= nextbytes) {
+        out.write(" ".getBytes());
+      }
+ else {
+        val=data[i + dumpoff];
+        if ((val > 31) && (val < 127)) {
+          out.write(val);
+        }
+ else {
+          out.write(".".getBytes());
+        }
+      }
+    }
+    out.write("|\n".getBytes());
+  }
+}

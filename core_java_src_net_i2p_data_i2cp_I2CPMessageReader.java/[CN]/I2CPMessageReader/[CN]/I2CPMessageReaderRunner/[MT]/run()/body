@@ -1,0 +1,36 @@
+{
+  while (_stayAlive) {
+    while (_doRun) {
+      try {
+        I2CPMessage msg=I2CPMessageHandler.readMessage(_stream);
+        if (msg != null) {
+          _log.debug("Before handling the newly received message");
+          _listener.messageReceived(I2CPMessageReader.this,msg);
+          _log.debug("After handling the newly received message");
+        }
+      }
+ catch (      I2CPMessageException ime) {
+        _log.error("Error handling message",ime);
+        _listener.readError(I2CPMessageReader.this,ime);
+        cancelRunner();
+      }
+catch (      IOException ioe) {
+        _log.error("IO Error handling message",ioe);
+        _listener.disconnected(I2CPMessageReader.this);
+        cancelRunner();
+      }
+catch (      Throwable t) {
+        _log.log(Log.CRIT,"Unhandled error reading I2CP stream",t);
+        _listener.disconnected(I2CPMessageReader.this);
+        cancelRunner();
+      }
+    }
+    if (!_doRun) {
+      try {
+        Thread.sleep(500);
+      }
+ catch (      InterruptedException ie) {
+      }
+    }
+  }
+}

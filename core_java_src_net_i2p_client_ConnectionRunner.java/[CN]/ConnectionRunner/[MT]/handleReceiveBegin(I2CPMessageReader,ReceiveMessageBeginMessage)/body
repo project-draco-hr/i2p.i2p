@@ -1,0 +1,26 @@
+{
+  _log.debug("Handling recieve begin: id = " + message.getMessageId());
+  MessagePayloadMessage msg=new MessagePayloadMessage();
+  msg.setMessageId(message.getMessageId());
+  msg.setSessionId(_sessionId);
+  Payload payload=(Payload)_messages.get(message.getMessageId());
+  if (payload == null) {
+    _log.error("Payload for message id [" + message.getMessageId() + "] is null!  Unknown message id?",new Exception("Error, null payload"));
+    StringBuffer buf=new StringBuffer();
+    for (Iterator iter=_messages.keySet().iterator(); iter.hasNext(); ) {
+      buf.append("messageId: ").append(iter.next()).append(", ");
+    }
+    _log.error("Known message IDs: " + buf.toString());
+    return;
+  }
+  msg.setPayload(payload);
+  try {
+    doSend(msg);
+  }
+ catch (  IOException ioe) {
+    _log.error("Error delivering the payload",ioe);
+  }
+catch (  I2CPMessageException ime) {
+    _log.error("Error delivering the payload",ime);
+  }
+}

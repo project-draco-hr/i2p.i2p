@@ -1,0 +1,17 @@
+{
+  long now=Clock.getInstance().now();
+synchronized (_tagSets) {
+    while (_tagSets.size() > 0) {
+      TagSet set=(TagSet)_tagSets.get(0);
+      if (set.getDate() + SESSION_TAG_DURATION_MS > now) {
+        SessionTag tag=set.consumeNext();
+        if (tag != null)         return tag;
+      }
+ else {
+        _log.info("TagSet from " + new Date(set.getDate()) + " expired");
+      }
+      _tagSets.remove(0);
+    }
+  }
+  return null;
+}

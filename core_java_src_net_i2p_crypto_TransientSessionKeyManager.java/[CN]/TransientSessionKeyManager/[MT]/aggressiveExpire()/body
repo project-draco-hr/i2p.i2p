@@ -1,0 +1,27 @@
+{
+  int removed=0;
+  long now=Clock.getInstance().now();
+  Set tagsToDrop=new HashSet(64);
+synchronized (_inboundTagSets) {
+    for (Iterator iter=_inboundTagSets.keySet().iterator(); iter.hasNext(); ) {
+      SessionTag tag=(SessionTag)iter.next();
+      TagSet ts=(TagSet)_inboundTagSets.get(tag);
+      if (ts.getDate() < now - SESSION_LIFETIME_MAX_MS) {
+        tagsToDrop.add(tag);
+      }
+    }
+    removed+=tagsToDrop.size();
+    for (Iterator iter=tagsToDrop.iterator(); iter.hasNext(); )     _inboundTagSets.remove(iter.next());
+  }
+synchronized (_outboundSessions) {
+    Set sessionsToDrop=new HashSet(64);
+    for (Iterator iter=_outboundSessions.keySet().iterator(); iter.hasNext(); ) {
+      PublicKey key=(PublicKey)iter.next();
+      OutboundSession sess=(OutboundSession)_outboundSessions.get(key);
+      removed+=sess.expireTags();
+      if (sess.getTagSets().size() <= 0)       sessionsToDrop.add(key);
+    }
+    for (Iterator iter=sessionsToDrop.iterator(); iter.hasNext(); )     _outboundSessions.remove(iter.next());
+  }
+  return removed;
+}

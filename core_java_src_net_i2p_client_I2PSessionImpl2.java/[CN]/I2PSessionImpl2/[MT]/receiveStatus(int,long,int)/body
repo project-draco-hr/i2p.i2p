@@ -1,0 +1,33 @@
+{
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Received status " + status + " for msgId "+ msgId+ " / "+ nonce);
+  MessageState state=null;
+synchronized (_sendingStates) {
+    for (Iterator iter=_sendingStates.iterator(); iter.hasNext(); ) {
+      state=(MessageState)iter.next();
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("State " + state.getMessageId() + " / "+ state.getNonce());
+      if (state.getNonce() == nonce) {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Found a matching state");
+        break;
+      }
+ else       if ((state.getMessageId() != null) && (state.getMessageId().getMessageId() == msgId)) {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Found a matching state by msgId");
+        break;
+      }
+ else {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("State does not match");
+        state=null;
+      }
+    }
+  }
+  if (state != null) {
+    if (state.getMessageId() == null) {
+      MessageId id=new MessageId();
+      id.setMessageId(msgId);
+      state.setMessageId(id);
+    }
+    state.receive(status);
+  }
+ else {
+    if (_log.shouldLog(Log.INFO))     _log.info("No matching state for messageId " + msgId + " / "+ nonce+ " w/ status = "+ status);
+  }
+}

@@ -1,0 +1,49 @@
+{
+  if (_RDEBUG)   trace(_IN,"blockDecrypt(" + in + ", "+ inOffset+ ", "+ sessionKey+ ")");
+  int[][] Kd=(int[][])((Object[])sessionKey)[1];
+  int ROUNDS=Kd.length - 1;
+  int[] Kdr=Kd[0];
+  int t0=((in[inOffset++] & 0xFF) << 24 | (in[inOffset++] & 0xFF) << 16 | (in[inOffset++] & 0xFF) << 8 | (in[inOffset++] & 0xFF)) ^ Kdr[0];
+  int t1=((in[inOffset++] & 0xFF) << 24 | (in[inOffset++] & 0xFF) << 16 | (in[inOffset++] & 0xFF) << 8 | (in[inOffset++] & 0xFF)) ^ Kdr[1];
+  int t2=((in[inOffset++] & 0xFF) << 24 | (in[inOffset++] & 0xFF) << 16 | (in[inOffset++] & 0xFF) << 8 | (in[inOffset++] & 0xFF)) ^ Kdr[2];
+  int t3=((in[inOffset++] & 0xFF) << 24 | (in[inOffset++] & 0xFF) << 16 | (in[inOffset++] & 0xFF) << 8 | (in[inOffset++] & 0xFF)) ^ Kdr[3];
+  int a0, a1, a2, a3;
+  for (int r=1; r < ROUNDS; r++) {
+    Kdr=Kd[r];
+    a0=(_T5[(t0 >>> 24) & 0xFF] ^ _T6[(t3 >>> 16) & 0xFF] ^ _T7[(t2 >>> 8) & 0xFF]^ _T8[t1 & 0xFF]) ^ Kdr[0];
+    a1=(_T5[(t1 >>> 24) & 0xFF] ^ _T6[(t0 >>> 16) & 0xFF] ^ _T7[(t3 >>> 8) & 0xFF]^ _T8[t2 & 0xFF]) ^ Kdr[1];
+    a2=(_T5[(t2 >>> 24) & 0xFF] ^ _T6[(t1 >>> 16) & 0xFF] ^ _T7[(t0 >>> 8) & 0xFF]^ _T8[t3 & 0xFF]) ^ Kdr[2];
+    a3=(_T5[(t3 >>> 24) & 0xFF] ^ _T6[(t2 >>> 16) & 0xFF] ^ _T7[(t1 >>> 8) & 0xFF]^ _T8[t0 & 0xFF]) ^ Kdr[3];
+    t0=a0;
+    t1=a1;
+    t2=a2;
+    t3=a3;
+    if (_RDEBUG && _debuglevel > 6)     System.out.println("PT" + r + "="+ intToString(t0)+ intToString(t1)+ intToString(t2)+ intToString(t3));
+  }
+  Kdr=Kd[ROUNDS];
+  int tt=Kdr[0];
+  result[0]=(byte)(_Si[(t0 >>> 24) & 0xFF] ^ (tt >>> 24));
+  result[1]=(byte)(_Si[(t3 >>> 16) & 0xFF] ^ (tt >>> 16));
+  result[2]=(byte)(_Si[(t2 >>> 8) & 0xFF] ^ (tt >>> 8));
+  result[3]=(byte)(_Si[t1 & 0xFF] ^ tt);
+  tt=Kdr[1];
+  result[4]=(byte)(_Si[(t1 >>> 24) & 0xFF] ^ (tt >>> 24));
+  result[5]=(byte)(_Si[(t0 >>> 16) & 0xFF] ^ (tt >>> 16));
+  result[6]=(byte)(_Si[(t3 >>> 8) & 0xFF] ^ (tt >>> 8));
+  result[7]=(byte)(_Si[t2 & 0xFF] ^ tt);
+  tt=Kdr[2];
+  result[8]=(byte)(_Si[(t2 >>> 24) & 0xFF] ^ (tt >>> 24));
+  result[9]=(byte)(_Si[(t1 >>> 16) & 0xFF] ^ (tt >>> 16));
+  result[10]=(byte)(_Si[(t0 >>> 8) & 0xFF] ^ (tt >>> 8));
+  result[11]=(byte)(_Si[t3 & 0xFF] ^ tt);
+  tt=Kdr[3];
+  result[12]=(byte)(_Si[(t3 >>> 24) & 0xFF] ^ (tt >>> 24));
+  result[13]=(byte)(_Si[(t2 >>> 16) & 0xFF] ^ (tt >>> 16));
+  result[14]=(byte)(_Si[(t1 >>> 8) & 0xFF] ^ (tt >>> 8));
+  result[15]=(byte)(_Si[t0 & 0xFF] ^ tt);
+  if (_RDEBUG && _debuglevel > 6) {
+    System.out.println("PT=" + toString(result));
+    System.out.println();
+  }
+  if (_RDEBUG)   trace(_OUT,"blockDecrypt()");
+}

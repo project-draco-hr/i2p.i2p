@@ -1,0 +1,21 @@
+{
+  if ((iv == null) || (payload == null) || (sessionKey == null)|| (iv.length != 16))   return null;
+  ByteArrayOutputStream baos=new ByteArrayOutputStream(paddedSize + 64);
+  Hash h=SHA256Generator.getInstance().calculateHash(sessionKey.getData());
+  try {
+    h.writeBytes(baos);
+    DataHelper.writeLong(baos,4,payload.length);
+    baos.write(payload);
+    byte tv[]=baos.toByteArray();
+    baos.write(ElGamalAESEngine.getPadding(tv.length,paddedSize));
+  }
+ catch (  IOException ioe) {
+    _log.error("Error writing data",ioe);
+    return null;
+  }
+catch (  DataFormatException dfe) {
+    _log.error("Error writing data",dfe);
+    return null;
+  }
+  return encrypt(baos.toByteArray(),sessionKey,iv);
+}

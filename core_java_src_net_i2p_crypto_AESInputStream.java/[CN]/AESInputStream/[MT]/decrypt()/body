@@ -1,0 +1,43 @@
+{
+  byte encrypted[]=_encryptedBuf.toByteArray();
+  _encryptedBuf.reset();
+  if ((encrypted == null) || (encrypted.length <= 0))   throw new IOException("Error decrypting - no data to decrypt");
+  int numBlocks=encrypted.length / BLOCK_SIZE;
+  if ((encrypted.length % BLOCK_SIZE) != 0) {
+    int trailing=encrypted.length % BLOCK_SIZE;
+    _encryptedBuf.write(encrypted,encrypted.length - trailing,trailing);
+    byte nencrypted[]=new byte[encrypted.length - trailing];
+    System.arraycopy(encrypted,0,nencrypted,0,nencrypted.length);
+    encrypted=nencrypted;
+    _log.warn("Decrypt got odd segment - " + trailing + " bytes pushed back for later decryption - corrupted or slow data stream perhaps?");
+  }
+ else {
+  }
+  byte block[]=new byte[BLOCK_SIZE];
+  for (int i=0; i < numBlocks; i++) {
+    System.arraycopy(encrypted,i * BLOCK_SIZE,block,0,BLOCK_SIZE);
+    byte decrypted[]=_engine.decrypt(block,_key,_lastBlock);
+    byte data[]=CryptixAESEngine.xor(decrypted,_lastBlock);
+    int cleaned[]=stripPadding(data);
+    for (int j=0; j < cleaned.length; j++) {
+      if (((int)cleaned[j]) <= 0) {
+        cleaned[j]+=256;
+      }
+      _readyBuf.add(new Integer(cleaned[j]));
+    }
+    _cumulativePrepared+=cleaned.length;
+    System.arraycopy(decrypted,0,_lastBlock,0,BLOCK_SIZE);
+  }
+  int remaining=encrypted.length % BLOCK_SIZE;
+  if (remaining != 0) {
+    _encryptedBuf.write(encrypted,encrypted.length - remaining,remaining);
+    _log.debug("After pushing " + remaining + " bytes back onto the buffer, lets delay 1s our action so we don't fast busy until the net transfers data");
+    try {
+      Thread.sleep(1000);
+    }
+ catch (    InterruptedException ie) {
+    }
+  }
+ else {
+  }
+}

@@ -1,0 +1,21 @@
+{
+  long now=Clock.getInstance().now();
+  long insane=now + MAX_FUTURE_EXPIRATION;
+  int cnt=getLeaseCount();
+  for (int i=0; i < cnt; i++) {
+    Lease l=getLease(i);
+    if (l.getEndDate().getTime() > insane) {
+      _log.warn("LeaseSet" + calculateHash() + " expires an insane amount in the future - skip it: "+ l);
+      return false;
+    }
+    if (l.getEndDate().getTime() > now) {
+      _log.debug("LeaseSet " + calculateHash() + " isn't exired: "+ l);
+      return true;
+    }
+ else     if (l.getEndDate().getTime() > now - fudge) {
+      _log.debug("LeaseSet " + calculateHash() + " isn't quite expired, but its within the fudge factor so we'll let it slide: "+ l);
+      return true;
+    }
+  }
+  return false;
+}

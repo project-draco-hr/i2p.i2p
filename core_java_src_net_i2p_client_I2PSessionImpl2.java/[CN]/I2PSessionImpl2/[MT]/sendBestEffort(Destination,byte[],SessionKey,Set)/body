@@ -1,0 +1,52 @@
+{
+  SessionKey key=SessionKeyManager.getInstance().getCurrentKey(dest.getPublicKey());
+  if (key == null)   key=SessionKeyManager.getInstance().createSession(dest.getPublicKey());
+  SessionTag tag=SessionKeyManager.getInstance().consumeNextAvailableTag(dest.getPublicKey(),key);
+  Set sentTags=null;
+  if (SessionKeyManager.getInstance().getAvailableTags(dest.getPublicKey(),key) < 10) {
+    sentTags=createNewTags(50);
+  }
+ else   if (SessionKeyManager.getInstance().getAvailableTimeLeft(dest.getPublicKey(),key) < 30 * 1000) {
+    sentTags=createNewTags(50);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Tags are almost expired, adding 50 new ones");
+  }
+  SessionKey newKey=null;
+  if (false)   newKey=KeyGenerator.getInstance().generateSessionKey();
+  long nonce=(long)RandomSource.getInstance().nextInt(Integer.MAX_VALUE);
+  MessageState state=new MessageState(nonce);
+  state.setKey(key);
+  state.setTags(sentTags);
+  state.setNewKey(newKey);
+  state.setTo(dest);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Setting key = " + key);
+  if (keyUsed != null) {
+    if (newKey != null)     keyUsed.setData(newKey.getData());
+ else     keyUsed.setData(key.getData());
+  }
+  if (tagsSent != null) {
+    if (sentTags != null) {
+      tagsSent.addAll(sentTags);
+    }
+  }
+synchronized (_sendingStates) {
+    _sendingStates.add(state);
+  }
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Adding sending state " + state.getMessageId() + " / "+ state.getNonce());
+  _producer.sendMessage(this,dest,nonce,payload,tag,key,sentTags,newKey);
+  state.waitFor(MessageStatusMessage.STATUS_SEND_ACCEPTED,Clock.getInstance().now() + getTimeout());
+synchronized (_sendingStates) {
+    _sendingStates.remove(state);
+  }
+  boolean found=state.received(MessageStatusMessage.STATUS_SEND_ACCEPTED);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("After waitFor sending state " + state.getMessageId().getMessageId() + " / "+ state.getNonce()+ " found = "+ found);
+  if (found) {
+    if (_log.shouldLog(Log.INFO))     _log.info("Message sent after " + state.getElapsed() + "ms with "+ payload.length+ " bytes");
+  }
+ else {
+    if (_log.shouldLog(Log.INFO))     _log.info("Message send failed after " + state.getElapsed() + "ms with "+ payload.length+ " bytes");
+    if (_log.shouldLog(Log.ERROR))     _log.error("Never received *accepted* from the router!  dropping and reconnecting");
+    disconnect();
+    return false;
+  }
+  return found;
+}

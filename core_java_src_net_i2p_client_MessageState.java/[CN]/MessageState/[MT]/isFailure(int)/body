@@ -1,0 +1,50 @@
+{
+  List received=null;
+synchronized (_receivedStatus) {
+    received=new ArrayList(_receivedStatus);
+  }
+  boolean rv=false;
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("isFailure(" + wantedStatus + "): "+ received);
+  for (Iterator iter=received.iterator(); iter.hasNext(); ) {
+    Integer val=(Integer)iter.next();
+    int recv=val.intValue();
+switch (recv) {
+case MessageStatusMessage.STATUS_SEND_BEST_EFFORT_FAILURE:
+      if (_log.shouldLog(Log.DEBUG))       _log.warn("Received best effort failure after " + getElapsed() + " from "+ this.toString());
+    rv=true;
+  break;
+case MessageStatusMessage.STATUS_SEND_GUARANTEED_FAILURE:
+if (_log.shouldLog(Log.DEBUG)) _log.warn("Received guaranteed failure after " + getElapsed() + " from "+ this.toString());
+rv=true;
+break;
+case MessageStatusMessage.STATUS_SEND_ACCEPTED:
+if (wantedStatus == MessageStatusMessage.STATUS_SEND_ACCEPTED) {
+rv=false;
+}
+ else {
+if (_log.shouldLog(Log.DEBUG)) _log.debug("Got accepted, but we're waiting for more from " + this.toString());
+continue;
+}
+break;
+case MessageStatusMessage.STATUS_SEND_BEST_EFFORT_SUCCESS:
+if (_log.shouldLog(Log.DEBUG)) _log.debug("Received best effort success after " + getElapsed() + " from "+ this.toString());
+if (wantedStatus == recv) {
+rv=false;
+}
+ else {
+if (_log.shouldLog(Log.DEBUG)) _log.debug("Not guaranteed success, but best effort after " + getElapsed() + " will do... from "+ this.toString());
+rv=false;
+}
+break;
+case MessageStatusMessage.STATUS_SEND_GUARANTEED_SUCCESS:
+if (_log.shouldLog(Log.DEBUG)) _log.debug("Received guaranteed success after " + getElapsed() + " from "+ this.toString());
+rv=false;
+break;
+case -1:
+continue;
+default :
+if (_log.shouldLog(Log.DEBUG)) _log.debug("Received something else [" + recv + "]...");
+}
+}
+return rv;
+}

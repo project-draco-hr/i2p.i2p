@@ -1,0 +1,28 @@
+{
+  _validated=true;
+  if (getSignature() == null) {
+    _log.error("Signature is null");
+    _isValid=false;
+    return;
+  }
+  byte data[]=null;
+  try {
+    data=getBytes();
+  }
+ catch (  DataFormatException dfe) {
+    _log.error("Error validating",dfe);
+    _isValid=false;
+    return;
+  }
+  if (data == null) {
+    _log.error("Data could not be loaded");
+    _isValid=false;
+    return;
+  }
+  _isValid=DSAEngine.getInstance().verifySignature(_signature,data,_identity.getSigningPublicKey());
+  if (!_isValid) {
+    _log.error("Invalid [" + SHA256Generator.getInstance().calculateHash(data).toBase64() + "] w/ signing key: "+ _identity.getSigningPublicKey(),new Exception("Signature failed"));
+    _log.debug("Failed data: \n" + Base64.encode(data));
+    _log.debug("Signature: " + getSignature());
+  }
+}
