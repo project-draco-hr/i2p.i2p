@@ -14,20 +14,18 @@
  else {
     if (_log.shouldLog(Log.INFO))     _log.info(encrypted.length + " bytes makes up " + numBlocks+ " blocks to decrypt normally");
   }
-  byte block[]=new byte[BLOCK_SIZE];
   for (int i=0; i < numBlocks; i++) {
-    System.arraycopy(encrypted,i * BLOCK_SIZE,block,0,BLOCK_SIZE);
-    byte decrypted[]=_context.AESEngine().decrypt(block,_key,_lastBlock);
-    byte data[]=DataHelper.xor(decrypted,_lastBlock);
-    int cleaned[]=stripPadding(data);
-    for (int j=0; j < cleaned.length; j++) {
-      if (cleaned[j] <= 0) {
-        cleaned[j]+=256;
-      }
-      _readyBuf.add(new Integer(cleaned[j]));
+    _context.aes().decrypt(encrypted,i * BLOCK_SIZE,encrypted,i * BLOCK_SIZE,_key,_lastBlock,BLOCK_SIZE);
+    DataHelper.xor(encrypted,i * BLOCK_SIZE,_lastBlock,0,encrypted,i * BLOCK_SIZE,BLOCK_SIZE);
+    int payloadBytes=countBlockPayload(encrypted,i * BLOCK_SIZE);
+    for (int j=0; j < payloadBytes; j++) {
+      int c=encrypted[j + i * BLOCK_SIZE];
+      if (c <= 0)       c+=256;
+      _readyBuf.add(new Integer(c));
     }
-    _cumulativePrepared+=cleaned.length;
-    System.arraycopy(decrypted,0,_lastBlock,0,BLOCK_SIZE);
+    _cumulativePaddingStripped+=BLOCK_SIZE - payloadBytes;
+    _cumulativePrepared+=payloadBytes;
+    System.arraycopy(encrypted,i * BLOCK_SIZE,_lastBlock,0,BLOCK_SIZE);
   }
   int remaining=encrypted.length % BLOCK_SIZE;
   if (remaining != 0) {
