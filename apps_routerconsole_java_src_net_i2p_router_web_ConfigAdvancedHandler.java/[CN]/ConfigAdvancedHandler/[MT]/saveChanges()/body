@@ -1,0 +1,28 @@
+{
+  if (_config != null) {
+    BufferedReader reader=new BufferedReader(new InputStreamReader(new ByteArrayInputStream(_config.getBytes())));
+    String line=null;
+    try {
+      while ((line=reader.readLine()) != null) {
+        int eq=line.indexOf('=');
+        if (eq == -1)         continue;
+        if (eq >= line.length() - 1)         continue;
+        String key=line.substring(0,eq).trim();
+        String val=line.substring(eq + 1).trim();
+        _context.router().setConfigSetting(key,val);
+      }
+    }
+ catch (    IOException ioe) {
+      addFormError("Error updating the configuration (IOERROR) - please see the error logs");
+      return;
+    }
+    boolean saved=_context.router().saveConfig();
+    if (saved)     addFormNotice("Configuration saved successfully");
+ else     addFormNotice("Error saving the configuration (applied but not saved) - please see the error logs");
+    if (_forceRestart) {
+      addFormNotice("Performing a soft restart");
+      _context.router().restart();
+      addFormNotice("Soft restart complete");
+    }
+  }
+}
