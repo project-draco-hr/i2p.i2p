@@ -1,6 +1,24 @@
 {
 synchronized (_connectionLock) {
-    _connectionsByIdent.remove(con.getRemoteRouterIdentity().getHash());
-    _connectionsByAddress.remove(con.getRemoteAddress().toString());
+    TCPConnection cur=(TCPConnection)_connectionsByIdent.remove(con.getRemoteRouterIdentity().getHash());
+    if (cur != con)     _connectionsByIdent.put(cur.getRemoteRouterIdentity().getHash(),cur);
+    cur=(TCPConnection)_connectionsByAddress.remove(con.getRemoteAddress().toString());
+    if (cur != con)     _connectionsByAddress.put(cur.getRemoteAddress().toString(),cur);
+    if (_log.shouldLog(Log.DEBUG)) {
+      StringBuffer buf=new StringBuffer(256);
+      buf.append("\nCLOSING ").append(con.getRemoteRouterIdentity().getHash().toBase64().substring(0,6));
+      buf.append(".");
+      buf.append("\nconnectionsByAddress: (cur=").append(con.getRemoteAddress().toString()).append(") ");
+      for (Iterator iter=_connectionsByAddress.keySet().iterator(); iter.hasNext(); ) {
+        String addr=(String)iter.next();
+        buf.append(addr).append(" ");
+      }
+      buf.append("\nconnectionsByIdent: ");
+      for (Iterator iter=_connectionsByIdent.keySet().iterator(); iter.hasNext(); ) {
+        Hash h=(Hash)iter.next();
+        buf.append(h.toBase64().substring(0,6)).append(" ");
+      }
+      _log.debug(buf.toString(),new Exception("Closed by"));
+    }
   }
 }

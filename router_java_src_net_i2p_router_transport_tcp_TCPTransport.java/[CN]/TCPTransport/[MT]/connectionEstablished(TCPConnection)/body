@@ -6,39 +6,70 @@
     return;
   }
   List waitingMsgs=null;
-  List oldCons=null;
+  List changedMsgs=null;
+  boolean alreadyConnected=false;
+  boolean changedIdents=false;
 synchronized (_connectionLock) {
     if (_connectionsByAddress.containsKey(remAddr.toString())) {
-      if (oldCons == null)       oldCons=new ArrayList(1);
-      oldCons.add(_connectionsByAddress.remove(remAddr.toString()));
+      alreadyConnected=true;
     }
-    _connectionsByAddress.put(remAddr.toString(),con);
+ else {
+      _connectionsByAddress.put(remAddr.toString(),con);
+    }
     if (_connectionsByIdent.containsKey(ident.calculateHash())) {
-      if (oldCons == null)       oldCons=new ArrayList(1);
-      oldCons.add(_connectionsByIdent.remove(ident.calculateHash()));
+      alreadyConnected=true;
     }
-    _connectionsByIdent.put(ident.calculateHash(),con);
+ else {
+      _connectionsByIdent.put(ident.calculateHash(),con);
+    }
     _pendingConnectionsByAddress.remove(remAddr.toString());
     _pendingConnectionsByIdent.remove(ident.calculateHash());
-    waitingMsgs=(List)_pendingMessages.remove(ident.calculateHash());
-  }
-  if (oldCons != null) {
-    for (int i=0; i < oldCons.size(); i++) {
-      TCPConnection cur=(TCPConnection)oldCons.get(i);
-      List msgs=cur.clearPendingMessages();
-      for (int j=0; j < msgs.size(); j++) {
-        con.addMessage((OutNetMessage)msgs.get(j));
+    if ((con.getAttemptedPeer() != null) && (!ident.getHash().equals(con.getAttemptedPeer()))) {
+      changedIdents=true;
+      _pendingConnectionsByIdent.remove(con.getAttemptedPeer());
+      changedMsgs=(List)_pendingMessages.remove(con.getAttemptedPeer());
+    }
+    if (!alreadyConnected)     waitingMsgs=(List)_pendingMessages.remove(ident.calculateHash());
+    if (_log.shouldLog(Log.DEBUG)) {
+      StringBuffer buf=new StringBuffer(256);
+      buf.append("\nConnection to ").append(ident.getHash().toBase64().substring(0,6));
+      buf.append(" built.  Already connected? ");
+      buf.append(alreadyConnected);
+      buf.append("\nconnectionsByAddress: (cur=").append(remAddr.toString()).append(") ");
+      for (Iterator iter=_connectionsByAddress.keySet().iterator(); iter.hasNext(); ) {
+        String addr=(String)iter.next();
+        buf.append(addr).append(" ");
       }
-      cur.closeConnection();
+      buf.append("\nconnectionsByIdent: ");
+      for (Iterator iter=_connectionsByIdent.keySet().iterator(); iter.hasNext(); ) {
+        Hash h=(Hash)iter.next();
+        buf.append(h.toBase64().substring(0,6)).append(" ");
+      }
+      _log.debug(buf.toString());
     }
   }
-  if (waitingMsgs != null) {
-    for (int i=0; i < waitingMsgs.size(); i++) {
-      con.addMessage((OutNetMessage)waitingMsgs.get(i));
+  if (changedIdents) {
+    _context.shitlist().shitlistRouter(con.getAttemptedPeer(),"Changed identities");
+    if (changedMsgs != null) {
+      for (int i=0; i < changedMsgs.size(); i++) {
+        afterSend((OutNetMessage)changedMsgs.get(i),false,false,0);
+      }
     }
   }
-  _context.shitlist().unshitlistRouter(ident.calculateHash());
-  con.setTransport(this);
-  con.runConnection();
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Connection set to run");
+  if (alreadyConnected) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Closing new duplicate");
+    con.setTransport(this);
+    con.closeConnection();
+  }
+ else {
+    if (waitingMsgs != null) {
+      for (int i=0; i < waitingMsgs.size(); i++) {
+        con.addMessage((OutNetMessage)waitingMsgs.get(i));
+      }
+    }
+    _context.shitlist().unshitlistRouter(ident.calculateHash());
+    con.setTransport(this);
+    con.runConnection();
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Connection set to run");
+  }
 }

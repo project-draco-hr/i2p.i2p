@@ -1,0 +1,20 @@
+{
+  List failed=null;
+synchronized (_pendingMessages) {
+    for (Iterator iter=_pendingMessages.values().iterator(); iter.hasNext(); ) {
+      OutNetMessage msg=(OutNetMessage)iter.next();
+      if ((msg.getTargetHash() != null) && (msg.getTargetHash().equals(peer))) {
+        if (failed == null)         failed=new ArrayList(4);
+        failed.add(msg);
+        iter.remove();
+      }
+    }
+  }
+  if (failed != null) {
+    for (int i=0; i < failed.size(); i++) {
+      OutNetMessage msg=(OutNetMessage)failed.get(i);
+      msg.discardData();
+      if (msg.getOnFailedSendJob() != null)       _context.jobQueue().addJob(msg.getOnFailedSendJob());
+    }
+  }
+}

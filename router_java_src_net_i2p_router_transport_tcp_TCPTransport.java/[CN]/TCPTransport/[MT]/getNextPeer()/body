@@ -11,13 +11,61 @@ synchronized (_connectionLock) {
         if (addr == null) {
           _log.error("Message target has no TCP addresses! " + msg.getTarget());
           iter.remove();
+          _context.shitlist().shitlistRouter(peer,"Peer " + msg.getTarget().getIdentity().calculateHash().toBase64().substring(0,6) + " has no addresses");
+          _context.netDb().fail(peer);
+          for (int i=0; i < msgs.size(); i++) {
+            OutNetMessage cur=(OutNetMessage)msgs.get(i);
+            afterSend(cur,false,false,0);
+          }
           continue;
         }
         TCPAddress tcpAddr=new TCPAddress(addr);
-        if (tcpAddr.getPort() <= 0)         continue;
+        if (tcpAddr.getPort() <= 0) {
+          iter.remove();
+          _context.shitlist().shitlistRouter(peer,"Peer " + msg.getTarget().getIdentity().calculateHash().toBase64().substring(0,6) + " has only invalid addresses");
+          _context.netDb().fail(peer);
+          for (int i=0; i < msgs.size(); i++) {
+            OutNetMessage cur=(OutNetMessage)msgs.get(i);
+            afterSend(cur,false,false,0);
+          }
+          continue;
+        }
         if (_pendingConnectionsByAddress.contains(tcpAddr.toString()))         continue;
+        if (_context.routerHash().equals(peer)) {
+          _log.error("Message points at us! " + msg.getTarget());
+          iter.remove();
+          _context.netDb().fail(peer);
+          for (int i=0; i < msgs.size(); i++) {
+            OutNetMessage cur=(OutNetMessage)msgs.get(i);
+            afterSend(cur,false,false,0);
+          }
+          continue;
+        }
+        if ((_myAddress != null) && (_myAddress.equals(tcpAddr))) {
+          _log.error("Message points at our old TCP addresses! " + msg.getTarget());
+          iter.remove();
+          _context.shitlist().shitlistRouter(peer,"This is our old address...");
+          _context.netDb().fail(peer);
+          for (int i=0; i < msgs.size(); i++) {
+            OutNetMessage cur=(OutNetMessage)msgs.get(i);
+            afterSend(cur,false,false,0);
+          }
+          continue;
+        }
+        if (!allowAddress(tcpAddr)) {
+          _log.error("Message points at illegal address! " + msg.getTarget());
+          iter.remove();
+          _context.shitlist().shitlistRouter(peer,"Invalid addressaddress...");
+          _context.netDb().fail(peer);
+          for (int i=0; i < msgs.size(); i++) {
+            OutNetMessage cur=(OutNetMessage)msgs.get(i);
+            afterSend(cur,false,false,0);
+          }
+          continue;
+        }
         _pendingConnectionsByIdent.add(peer);
         _pendingConnectionsByAddress.add(tcpAddr.toString());
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Add pending connection to: " + peer.toBase64().substring(0,6));
         return msg.getTarget();
       }
       try {
