@@ -1,55 +1,61 @@
 {
-  PrintWriter pw=new PrintWriter(out);
-  pw.println("<html><head><title>I2P Router Stats</title></head><body>");
-  pw.println("<h1>Router statistics</h1>");
-  pw.println("<i><a href=\"/routerConsole.html\">console</a> | <a href=\"/routerStats.html\">stats</a></i><hr />");
+  StringBuffer buf=new StringBuffer(16 * 1024);
+  buf.append("<html><head><title>I2P Router Stats</title></head><body>");
+  buf.append("<h1>Router statistics</h1>");
+  buf.append("<i><a href=\"/routerConsole.html\">console</a> | <a href=\"/routerStats.html\">stats</a></i><hr />");
+  buf.append("<form action=\"/routerStats.html\">");
+  buf.append("<select name=\"go\" onChange='location.href=this.value'>");
+  out.write(buf.toString().getBytes());
+  buf.setLength(0);
   Map groups=_context.statManager().getStatsByGroup();
-  pw.println("<form action=\"/routerStats.html\">");
-  pw.println("<select name=\"go\" onChange='location.href=this.value'>");
   for (Iterator iter=groups.keySet().iterator(); iter.hasNext(); ) {
     String group=(String)iter.next();
     Set stats=(Set)groups.get(group);
-    pw.print("<option value=\"/routerStats.html#");
-    pw.print(group);
-    pw.print("\">");
-    pw.print(group);
-    pw.println("</option>\n");
+    buf.append("<option value=\"/routerStats.html#").append(group).append("\">");
+    buf.append(group).append("</option>\n");
     for (Iterator statIter=stats.iterator(); statIter.hasNext(); ) {
       String stat=(String)statIter.next();
-      pw.print("<option value=\"/routerStats.html#");
-      pw.print(stat);
-      pw.print("\">...");
-      pw.print(stat);
-      pw.println("</option>\n");
+      buf.append("<option value=\"/routerStats.html#");
+      buf.append(stat);
+      buf.append("\">...");
+      buf.append(stat);
+      buf.append("</option>\n");
     }
+    out.write(buf.toString().getBytes());
+    buf.setLength(0);
   }
-  pw.println("</select>");
-  pw.println("</form>");
-  pw.print("Statistics gathered during this router's uptime (");
+  buf.append("</select>");
+  buf.append("</form>");
+  buf.append("Statistics gathered during this router's uptime (");
   long uptime=_context.router().getUptime();
-  pw.print(DataHelper.formatDuration(uptime));
-  pw.println(").  The data gathered is quantized over a 1 minute period, so should just be used as an estimate<p />");
+  buf.append(DataHelper.formatDuration(uptime));
+  buf.append(").  The data gathered is quantized over a 1 minute period, so should just be used as an estimate<p />");
+  out.write(buf.toString().getBytes());
+  buf.setLength(0);
   for (Iterator iter=groups.keySet().iterator(); iter.hasNext(); ) {
     String group=(String)iter.next();
     Set stats=(Set)groups.get(group);
-    pw.print("<h2><a name=\"");
-    pw.print(group);
-    pw.print("\">");
-    pw.print(group);
-    pw.println("</a></h2>");
-    pw.println("<ul>");
+    buf.append("<h2><a name=\"");
+    buf.append(group);
+    buf.append("\">");
+    buf.append(group);
+    buf.append("</a></h2>");
+    buf.append("<ul>");
+    out.write(buf.toString().getBytes());
+    buf.setLength(0);
     for (Iterator statIter=stats.iterator(); statIter.hasNext(); ) {
       String stat=(String)statIter.next();
-      pw.print("<li><b><a name=\"");
-      pw.print(stat);
-      pw.print("\">");
-      pw.print(stat);
-      pw.println("</a></b><br />");
-      if (_context.statManager().isFrequency(stat))       renderFrequency(stat,pw);
- else       renderRate(stat,pw);
+      buf.append("<li><b><a name=\"");
+      buf.append(stat);
+      buf.append("\">");
+      buf.append(stat);
+      buf.append("</a></b><br />");
+      if (_context.statManager().isFrequency(stat))       renderFrequency(stat,buf);
+ else       renderRate(stat,buf);
+      out.write(buf.toString().getBytes());
+      buf.setLength(0);
     }
-    pw.println("</ul><hr />");
+    out.write("</ul><hr />".getBytes());
   }
-  pw.println("</body></html>");
-  pw.flush();
+  out.write("</body></html>".getBytes());
 }
