@@ -82,7 +82,14 @@ catch (  DataFormatException dfe) {
       props.setProperty("SKEW",fmt.format(new Date(_context.clock().now())));
     }
  else {
-      status=STATUS_OK;
+      try {
+        _context.netDb().store(_actualPeer.getIdentity().getHash(),_actualPeer);
+        status=STATUS_OK;
+      }
+ catch (      IllegalArgumentException iae) {
+        status=STATUS_UNKNOWN;
+        props.setProperty("REASON","RouterInfoFailed");
+      }
     }
     baos.write(status);
     DataHelper.writeProperties(baos,props);

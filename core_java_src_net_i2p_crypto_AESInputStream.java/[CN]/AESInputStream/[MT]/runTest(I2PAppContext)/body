@@ -1,0 +1,56 @@
+{
+  Log log=ctx.logManager().getLog(AESInputStream.class);
+  log.setMinimumPriority(Log.DEBUG);
+  byte orig[]=new byte[1024 * 32];
+  RandomSource.getInstance().nextBytes(orig);
+  SessionKey key=KeyGenerator.getInstance().generateSessionKey();
+  byte iv[]="there once was a".getBytes();
+  for (int i=0; i < 20; i++) {
+    runTest(ctx,orig,key,iv);
+  }
+  log.info("Done testing 32KB data");
+  orig=new byte[20];
+  RandomSource.getInstance().nextBytes(orig);
+  for (int i=0; i < 20; i++) {
+    runTest(ctx,orig,key,iv);
+  }
+  log.info("Done testing 20 byte data");
+  orig=new byte[3];
+  RandomSource.getInstance().nextBytes(orig);
+  for (int i=0; i < 20; i++) {
+    runTest(ctx,orig,key,iv);
+  }
+  log.info("Done testing 3 byte data");
+  orig=new byte[0];
+  RandomSource.getInstance().nextBytes(orig);
+  for (int i=0; i < 20; i++) {
+    runTest(ctx,orig,key,iv);
+  }
+  log.info("Done testing 0 byte data");
+  for (int i=0; i <= 32768; i++) {
+    orig=new byte[i];
+    ctx.random().nextBytes(orig);
+    try {
+      log.info("Testing " + orig.length);
+      runTest(ctx,orig,key,iv);
+    }
+ catch (    RuntimeException re) {
+      log.error("Error testing " + orig.length);
+      throw re;
+    }
+  }
+  orig=new byte[32];
+  RandomSource.getInstance().nextBytes(orig);
+  try {
+    runOffsetTest(ctx,orig,key,iv);
+  }
+ catch (  Exception e) {
+    log.info("Error running offset test",e);
+  }
+  log.info("Done testing offset test (it should have come back with a statement NOT EQUAL!)");
+  try {
+    Thread.sleep(30 * 1000);
+  }
+ catch (  InterruptedException ie) {
+  }
+}
