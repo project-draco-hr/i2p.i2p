@@ -1,7 +1,9 @@
 {
   _log.debug("Read called: " + this.hashCode());
   if (len == 0)   return 0;
+  long dieAfter=System.currentTimeMillis() + readTimeout;
   byte[] read=bc.startToByteArray(len);
+  boolean timedOut=false;
   while (read.length == 0) {
 synchronized (flagLock) {
       if (closed) {
@@ -10,9 +12,17 @@ synchronized (flagLock) {
       }
     }
     try {
-      wait();
+      if (readTimeout >= 0) {
+        wait(readTimeout);
+      }
+ else {
+        wait();
+      }
     }
  catch (    InterruptedException ex) {
+    }
+    if ((readTimeout >= 0) && (System.currentTimeMillis() >= dieAfter)) {
+      throw new InterruptedIOException("Timeout reading from I2PSocket (" + readTimeout + " msecs)");
     }
     read=bc.startToByteArray(len);
   }
