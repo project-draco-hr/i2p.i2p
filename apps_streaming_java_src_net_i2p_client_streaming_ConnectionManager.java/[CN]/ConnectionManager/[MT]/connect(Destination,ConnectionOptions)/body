@@ -1,0 +1,16 @@
+{
+  Connection con=new Connection(_context,this,_schedulerChooser,_outboundQueue,_conPacketHandler,opts);
+  con.setRemotePeer(peer);
+  byte receiveId[]=new byte[4];
+  _context.random().nextBytes(receiveId);
+synchronized (_connectionLock) {
+    ByteArray ba=new ByteArray(receiveId);
+    while (_connectionByInboundId.containsKey(ba)) {
+      _context.random().nextBytes(receiveId);
+    }
+    _connectionByInboundId.put(ba,con);
+  }
+  con.setReceiveStreamId(receiveId);
+  con.eventOccurred();
+  return con;
+}

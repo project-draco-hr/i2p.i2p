@@ -1,0 +1,39 @@
+{
+  try {
+    Properties opts=new Properties();
+    I2PSocketManager mgr=new I2PSocketManagerFull(_context,_session,opts,"client");
+    _log.debug("manager created");
+    I2PServerSocket ssocket=mgr.getServerSocket();
+    _log.debug("server socket created");
+    while (true) {
+      I2PSocket socket=ssocket.accept();
+      _log.debug("socket accepted: " + socket);
+      InputStream in=socket.getInputStream();
+      OutputStream out=socket.getOutputStream();
+      _log.debug("server streams built");
+      byte buf[]=new byte[5];
+      while (buf != null) {
+        for (int i=0; i < buf.length; i++) {
+          int c=in.read();
+          if (c == -1) {
+            buf=null;
+            break;
+          }
+ else {
+            buf[i]=(byte)(c & 0xFF);
+          }
+        }
+        if (buf != null) {
+          _log.debug("* server read: " + new String(buf));
+          out.write(buf);
+          out.flush();
+        }
+      }
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Closing the received server socket");
+      socket.close();
+    }
+  }
+ catch (  Exception e) {
+    _log.error("error running",e);
+  }
+}

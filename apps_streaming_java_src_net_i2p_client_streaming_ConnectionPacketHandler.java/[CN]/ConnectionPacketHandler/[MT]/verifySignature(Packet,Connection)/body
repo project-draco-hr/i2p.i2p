@@ -1,0 +1,13 @@
+{
+  if (con.getOptions().getRequireFullySigned() || packet.isFlagSet(Packet.FLAG_SYNCHRONIZE) || packet.isFlagSet(Packet.FLAG_CLOSE)) {
+    Destination from=con.getRemotePeer();
+    if (from == null)     from=packet.getOptionalFrom();
+    boolean sigOk=packet.verifySignature(_context,from,null);
+    if (!sigOk) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Received unsigned / forged packet: " + packet);
+      return false;
+    }
+    if (packet.isFlagSet(Packet.FLAG_CLOSE))     con.closeReceived();
+  }
+  return true;
+}

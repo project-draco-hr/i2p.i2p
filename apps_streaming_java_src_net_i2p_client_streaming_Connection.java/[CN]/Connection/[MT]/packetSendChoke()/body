@@ -1,0 +1,31 @@
+{
+  long writeExpire=_options.getWriteTimeout();
+  if (writeExpire > 0)   writeExpire+=_context.clock().now();
+  while (true) {
+    long timeLeft=writeExpire - _context.clock().now();
+synchronized (_outboundPackets) {
+      if (_outboundPackets.size() >= _options.getWindowSize()) {
+        if (writeExpire > 0) {
+          if (timeLeft <= 0)           return false;
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("Outbound window is full (" + _outboundPackets.size() + "/"+ _options.getWindowSize()+ "), waiting "+ timeLeft);
+          try {
+            _outboundPackets.wait(timeLeft);
+          }
+ catch (          InterruptedException ie) {
+          }
+        }
+ else {
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("Outbound window is full (" + _outboundPackets.size() + "), waiting indefinitely");
+          try {
+            _outboundPackets.wait();
+          }
+ catch (          InterruptedException ie) {
+          }
+        }
+      }
+ else {
+        return true;
+      }
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  Connection con=new Connection(_context,this,_schedulerChooser,_outboundQueue,_conPacketHandler);
+  byte receiveId[]=new byte[4];
+  _context.random().nextBytes(receiveId);
+synchronized (_connectionLock) {
+    while (true) {
+      Connection oldCon=(Connection)_connectionByInboundId.put(new ByteArray(receiveId),con);
+      if (oldCon == null) {
+        break;
+      }
+ else {
+        _connectionByInboundId.put(new ByteArray(receiveId),oldCon);
+        _context.random().nextBytes(receiveId);
+      }
+    }
+  }
+  con.setReceiveStreamId(receiveId);
+  con.getPacketHandler().receivePacket(synPacket,con);
+  return con;
+}

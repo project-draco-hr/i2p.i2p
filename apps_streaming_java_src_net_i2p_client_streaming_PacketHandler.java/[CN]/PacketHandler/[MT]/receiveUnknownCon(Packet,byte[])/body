@@ -1,0 +1,33 @@
+{
+  if (packet.isFlagSet(Packet.FLAG_ECHO)) {
+    if (packet.getSendStreamId() != null) {
+      receivePing(packet);
+    }
+ else     if (packet.getReceiveStreamId() != null) {
+      receivePong(packet);
+    }
+ else {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Echo packet received with no stream IDs: " + packet);
+    }
+  }
+ else   if (packet.isFlagSet(Packet.FLAG_SYNCHRONIZE)) {
+    if (sendId == null) {
+      _manager.getConnectionHandler().receiveNewSyn(packet);
+    }
+ else {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Syn packet reply on a stream we don't know about: " + packet);
+    }
+  }
+ else {
+    if (_log.shouldLog(Log.WARN)) {
+      _log.warn("Packet received on an unknown stream (and not a SYN): " + packet);
+      StringBuffer buf=new StringBuffer(128);
+      Set cons=_manager.listConnections();
+      for (Iterator iter=cons.iterator(); iter.hasNext(); ) {
+        Connection con=(Connection)iter.next();
+        buf.append(Base64.encode(con.getReceiveStreamId())).append(" ");
+      }
+      _log.warn("Other streams: " + buf.toString());
+    }
+  }
+}

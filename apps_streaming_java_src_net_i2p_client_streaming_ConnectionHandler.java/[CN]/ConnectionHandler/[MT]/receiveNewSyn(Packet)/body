@@ -1,0 +1,13 @@
+{
+  if (!_active) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Dropping new SYN request, as we're not listening");
+    sendReset(packet);
+    return;
+  }
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Receive new SYN: " + packet + ": timeout in "+ _acceptTimeout);
+  SimpleTimer.getInstance().addEvent(new TimeoutSyn(packet),_acceptTimeout);
+synchronized (_synQueue) {
+    _synQueue.add(packet);
+    _synQueue.notifyAll();
+  }
+}

@@ -1,12 +1,14 @@
 {
   int cur=offset;
-  System.arraycopy(_sendStreamId,0,buffer,cur,_sendStreamId.length);
-  cur+=_sendStreamId.length;
-  System.arraycopy(_receiveStreamId,0,buffer,cur,_receiveStreamId.length);
-  cur+=_receiveStreamId.length;
-  DataHelper.toLong(buffer,cur,4,_sequenceNum);
+  if (_sendStreamId != null)   System.arraycopy(_sendStreamId,0,buffer,cur,_sendStreamId.length);
+ else   System.arraycopy(STREAM_ID_UNKNOWN,0,buffer,cur,STREAM_ID_UNKNOWN.length);
   cur+=4;
-  DataHelper.toLong(buffer,cur,4,_ackThrough);
+  if (_receiveStreamId != null)   System.arraycopy(_receiveStreamId,0,buffer,cur,_receiveStreamId.length);
+ else   System.arraycopy(STREAM_ID_UNKNOWN,0,buffer,cur,STREAM_ID_UNKNOWN.length);
+  cur+=4;
+  DataHelper.toLong(buffer,cur,4,_sequenceNum > 0 ? _sequenceNum : 0);
+  cur+=4;
+  DataHelper.toLong(buffer,cur,4,_ackThrough > 0 ? _ackThrough : 0);
   cur+=4;
   if (_nacks != null) {
     DataHelper.toLong(buffer,cur,1,_nacks.length);
@@ -20,7 +22,7 @@
     DataHelper.toLong(buffer,cur,1,0);
     cur++;
   }
-  DataHelper.toLong(buffer,cur,1,_resendDelay);
+  DataHelper.toLong(buffer,cur,1,_resendDelay > 0 ? _resendDelay : 0);
   cur++;
   DataHelper.toLong(buffer,cur,2,_flags);
   cur+=2;
@@ -32,19 +34,19 @@
   DataHelper.toLong(buffer,cur,2,optionSize);
   cur+=2;
   if (isFlagSet(FLAG_DELAY_REQUESTED)) {
-    DataHelper.toLong(buffer,cur,1,_optionDelay);
+    DataHelper.toLong(buffer,cur,1,_optionDelay > 0 ? _optionDelay : 0);
     cur++;
   }
   if (isFlagSet(FLAG_FROM_INCLUDED)) {
     cur+=_optionFrom.writeBytes(buffer,cur);
   }
   if (isFlagSet(FLAG_MAX_PACKET_SIZE_INCLUDED)) {
-    DataHelper.toLong(buffer,cur,2,_optionMaxSize);
+    DataHelper.toLong(buffer,cur,2,_optionMaxSize > 0 ? _optionMaxSize : DEFAULT_MAX_SIZE);
     cur+=2;
   }
   if (isFlagSet(FLAG_SIGNATURE_INCLUDED)) {
     if (includeSig)     System.arraycopy(_optionSignature.getData(),0,buffer,cur,Signature.SIGNATURE_BYTES);
- else     Arrays.fill(buffer,cur,Signature.SIGNATURE_BYTES,(byte)0x0);
+ else     Arrays.fill(buffer,cur,cur + Signature.SIGNATURE_BYTES,(byte)0x0);
     cur+=Signature.SIGNATURE_BYTES;
   }
   if (_payload != null) {

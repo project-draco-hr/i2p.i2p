@@ -1,0 +1,25 @@
+{
+  if (!_connection.packetSendChoke())   throw new InterruptedIOException("Timeout expired waiting to write");
+  boolean doSend=true;
+  if ((size <= 0) && (_connection.getLastSendId() >= 0)) {
+    if (_connection.getOutputStream().getClosed()) {
+      if (_connection.getCloseSentOn() < 0) {
+        doSend=true;
+      }
+ else {
+        doSend=false;
+      }
+    }
+ else {
+      doSend=false;
+    }
+  }
+  if (_connection.getUnackedPacketsReceived() > 0)   doSend=true;
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("writeData called: size=" + size + " doSend="+ doSend+ " con: "+ _connection,new Exception("write called by"));
+  if (doSend) {
+    PacketLocal packet=buildPacket(buf,off,size);
+    _connection.sendPacket(packet);
+  }
+ else {
+  }
+}

@@ -1,0 +1,18 @@
+{
+  setNextSendTime(-1);
+  _unackedPacketsReceived=0;
+  if (_options.getRequireFullySigned()) {
+    packet.setFlag(Packet.FLAG_SIGNATURE_INCLUDED);
+    packet.setFlag(Packet.FLAG_SIGNATURE_REQUESTED);
+  }
+  if ((packet.getSequenceNum() == 0) && (!packet.isFlagSet(Packet.FLAG_SYNCHRONIZE))) {
+  }
+ else {
+synchronized (_outboundPackets) {
+      _outboundPackets.put(new Long(packet.getSequenceNum()),packet);
+    }
+    SimpleTimer.getInstance().addEvent(new ResendPacketEvent(packet),_options.getResendDelay());
+  }
+  _lastSendTime=_context.clock().now();
+  _outboundQueue.enqueue(packet);
+}

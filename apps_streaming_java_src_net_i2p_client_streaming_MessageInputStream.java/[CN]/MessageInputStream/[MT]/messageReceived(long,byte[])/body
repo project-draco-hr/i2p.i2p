@@ -1,18 +1,32 @@
 {
 synchronized (_dataLock) {
-    if (messageId <= _highestReadyBlockId)     return;
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("received " + messageId + " with "+ payload.length);
+    if (messageId <= _highestReadyBlockId) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("ignoring dup message " + messageId);
+      return false;
+    }
+    if (messageId > _highestBlockId)     _highestBlockId=messageId;
     if (_highestReadyBlockId + 1 == messageId) {
-      if (!_locallyClosed)       _readyDataBlocks.add(new ByteArray(payload));
+      if (!_locallyClosed && payload.length > 0) {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("accepting bytes as ready: " + payload.length);
+        _readyDataBlocks.add(new ByteArray(payload));
+      }
       _highestReadyBlockId=messageId;
       while (_notYetReadyBlocks.containsKey(new Long(_highestReadyBlockId + 1))) {
-        _readyDataBlocks.add(_notYetReadyBlocks.get(new Long(_highestReadyBlockId + 1)));
+        ByteArray ba=(ByteArray)_notYetReadyBlocks.get(new Long(_highestReadyBlockId + 1));
+        if ((ba != null) && (ba.getData() != null) && (ba.getData().length > 0)) {
+          _readyDataBlocks.add(ba);
+        }
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("making ready the block " + _highestReadyBlockId);
         _highestReadyBlockId++;
       }
       _dataLock.notifyAll();
     }
  else {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("message is out of order: " + messageId);
       if (_locallyClosed)       _notYetReadyBlocks.put(new Long(messageId),new ByteArray(null));
  else       _notYetReadyBlocks.put(new Long(messageId),new ByteArray(payload));
     }
   }
+  return true;
 }

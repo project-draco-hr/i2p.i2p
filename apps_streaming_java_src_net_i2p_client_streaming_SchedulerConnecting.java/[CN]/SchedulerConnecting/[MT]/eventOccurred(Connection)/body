@@ -1,0 +1,13 @@
+{
+  long waited=_context.clock().now() - con.getCreatedOn();
+  if ((con.getOptions().getConnectTimeout() > 0) && (con.getOptions().getConnectTimeout() <= waited)) {
+    con.setConnectionError("Timeout waiting for ack (waited " + waited + "ms)");
+    con.disconnect(false);
+    reschedule(0,con);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("waited too long: " + waited);
+    return;
+  }
+ else {
+    if (con.getOptions().getConnectTimeout() > 0)     reschedule(con.getOptions().getConnectTimeout(),con);
+  }
+}

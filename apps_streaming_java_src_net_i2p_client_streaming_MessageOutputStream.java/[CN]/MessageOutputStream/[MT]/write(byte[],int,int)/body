@@ -4,6 +4,7 @@ synchronized (_dataLock) {
     while (remaining > 0) {
       if (_valid + remaining < _buf.length) {
         System.arraycopy(b,off,_buf,_valid,remaining);
+        _valid+=remaining;
         remaining=0;
       }
  else {
@@ -11,7 +12,9 @@ synchronized (_dataLock) {
         System.arraycopy(b,off,_buf,_valid,toWrite);
         remaining-=toWrite;
         _valid=_buf.length;
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("write(b[], " + off + ", "+ len+ "): valid = "+ _valid);
         _dataReceiver.writeData(_buf,0,_valid);
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("write(b[], " + off + ", "+ len+ "): valid = "+ _valid+ " complete");
         _valid=0;
         throwAnyError();
       }

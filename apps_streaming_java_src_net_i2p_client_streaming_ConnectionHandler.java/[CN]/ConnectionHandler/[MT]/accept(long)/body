@@ -1,0 +1,36 @@
+{
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Accept(" + timeoutMs + ") called");
+  long expiration=timeoutMs;
+  if (expiration > 0)   expiration+=_context.clock().now();
+  Packet syn=null;
+synchronized (_synQueue) {
+    while (_active && (_synQueue.size() <= 0)) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Accept(" + timeoutMs + "): active="+ _active+ " queue: "+ _synQueue.size());
+      if (timeoutMs <= 0) {
+        try {
+          _synQueue.wait();
+        }
+ catch (        InterruptedException ie) {
+        }
+      }
+ else {
+        long remaining=expiration - _context.clock().now();
+        if (remaining < 0)         break;
+        try {
+          _synQueue.wait(remaining);
+        }
+ catch (        InterruptedException ie) {
+        }
+      }
+    }
+    if (_active && _synQueue.size() > 0) {
+      syn=(Packet)_synQueue.remove(0);
+    }
+  }
+  if (syn != null) {
+    return _manager.receiveConnection(syn);
+  }
+ else {
+    return null;
+  }
+}

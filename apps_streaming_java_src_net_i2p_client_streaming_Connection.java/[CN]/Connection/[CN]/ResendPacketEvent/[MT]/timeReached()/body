@@ -1,0 +1,23 @@
+{
+  boolean resend=false;
+synchronized (_outboundPackets) {
+    if (_outboundPackets.containsKey(new Long(_packet.getSequenceNum())))     resend=true;
+  }
+  if ((resend) && (_packet.getAckTime() < 0)) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Resend packet " + _packet + " on "+ Connection.this);
+    _outboundQueue.enqueue(_packet);
+    int numSends=_packet.getNumSends();
+    if (numSends > _options.getMaxResends()) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Too many resends");
+      disconnect(false);
+    }
+ else {
+      long timeout=_options.getResendDelay() << numSends;
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Scheduling resend in " + timeout + "ms");
+      SimpleTimer.getInstance().addEvent(ResendPacketEvent.this,timeout);
+    }
+  }
+ else {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Packet acked before resend: " + _packet + " on "+ Connection.this);
+  }
+}

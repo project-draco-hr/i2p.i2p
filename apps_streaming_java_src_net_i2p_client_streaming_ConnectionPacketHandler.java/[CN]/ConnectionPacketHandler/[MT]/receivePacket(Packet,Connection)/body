@@ -1,0 +1,41 @@
+{
+  boolean ok=verifyPacket(packet,con);
+  if (!ok)   return;
+  boolean isNew=con.getInputStream().messageReceived(packet.getSequenceNum(),packet.getPayload());
+  if (isNew) {
+    con.incrementUnackedPacketsReceived();
+    long nextTime=con.getNextSendTime();
+    if (nextTime <= 0) {
+      con.setNextSendTime(con.getOptions().getSendAckDelay() + _context.clock().now());
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Scheduling ack in " + con.getOptions().getSendAckDelay() + "ms for received packet "+ packet);
+    }
+ else {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Ack is already scheduled in " + nextTime + "ms, though we just received "+ packet);
+    }
+  }
+ else {
+    if (packet.getSequenceNum() > 0) {
+      con.getOptions().setResendDelay(con.getOptions().getResendDelay() * 2);
+    }
+ else {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("ACK only packet received: " + packet);
+    }
+  }
+  List acked=con.ackPackets(packet.getAckThrough(),packet.getNacks());
+  if ((acked != null) && (acked.size() > 0)) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug(acked.size() + " of our packets acked with " + packet);
+    int lowestRtt=-1;
+    for (int i=0; i < acked.size(); i++) {
+      PacketLocal p=(PacketLocal)acked.get(i);
+      if ((lowestRtt < 0) || (p.getAckTime() < lowestRtt))       lowestRtt=p.getAckTime();
+      if ((p.getKeyUsed() != null) && (p.getTagsSent() != null) && (p.getTagsSent().size() > 0)) {
+        _context.sessionKeyManager().tagsDelivered(p.getTo().getPublicKey(),p.getKeyUsed(),p.getTagsSent());
+      }
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Packet acked: " + p);
+    }
+    int oldRTT=con.getOptions().getRTT();
+    int newRTT=(int)(RTT_DAMPENING * oldRTT + (1 - RTT_DAMPENING) * lowestRtt);
+    con.getOptions().setRTT(newRTT);
+  }
+  con.eventOccurred();
+}
