@@ -1,0 +1,34 @@
+{
+  Log log=ctx.logManager().getLog(AESInputStream.class);
+  try {
+    long start=Clock.getInstance().now();
+    ByteArrayOutputStream origStream=new ByteArrayOutputStream(512);
+    AESOutputStream out=new AESOutputStream(ctx,origStream,key,iv);
+    out.write(orig);
+    out.close();
+    byte encrypted[]=origStream.toByteArray();
+    long endE=Clock.getInstance().now();
+    ByteArrayInputStream encryptedStream=new ByteArrayInputStream(encrypted);
+    AESInputStream in=new AESInputStream(ctx,encryptedStream,key,iv);
+    ByteArrayOutputStream baos=new ByteArrayOutputStream(512);
+    byte buf[]=new byte[1024 * 32];
+    int read=DataHelper.read(in,buf);
+    if (read > 0)     baos.write(buf,0,read);
+    in.close();
+    byte fin[]=baos.toByteArray();
+    long end=Clock.getInstance().now();
+    Hash origHash=SHA256Generator.getInstance().calculateHash(orig);
+    Hash newHash=SHA256Generator.getInstance().calculateHash(fin);
+    boolean eq=origHash.equals(newHash);
+    if (eq)     log.info("Equal hashes.  hash: " + origHash);
+ else     log.error("NOT EQUAL!  \norig: \t" + Base64.encode(orig) + "\nnew : \t"+ Base64.encode(fin));
+    boolean ok=DataHelper.eq(orig,fin);
+    log.debug("EQ data? " + ok + " origLen: "+ orig.length+ " fin.length: "+ fin.length);
+    log.debug("Time to D(E(" + orig.length + ")): "+ (end - start)+ "ms");
+    log.debug("Time to E(" + orig.length + "): "+ (endE - start)+ "ms");
+    log.debug("Time to D(" + orig.length + "): "+ (end - endE)+ "ms");
+  }
+ catch (  Throwable t) {
+    log.error("ERROR transferring",t);
+  }
+}

@@ -1,18 +1,10 @@
 {
   boolean valid=validate(msg);
   if (!valid)   return;
-  if (true) {
-    MessageSelector selector=msg.getReplySelector();
-    if (selector != null) {
-      OutboundMessageRegistry.getInstance().registerPending(msg);
-    }
-    CommSystemFacade.getInstance().processMessage(msg);
-    return;
+  MessageSelector selector=msg.getReplySelector();
+  if (selector != null) {
+    _context.messageRegistry().registerPending(msg);
   }
-synchronized (_messageLists) {
-    Integer pri=new Integer(msg.getPriority());
-    if ((_messageLists.size() <= 0) || (!_messageLists.containsKey(pri)))     _messageLists.put(new Integer(msg.getPriority()),new ArrayList(32));
-    List messages=(List)_messageLists.get(pri);
-    messages.add(msg);
-  }
+  _context.commSystem().processMessage(msg);
+  return;
 }

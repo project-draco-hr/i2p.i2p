@@ -2,7 +2,7 @@
   if (_runner.isDead())   return;
   LeaseRequestState oldReq=_runner.getLeaseRequest();
   if (oldReq != null) {
-    if (oldReq.getExpiration() > Clock.getInstance().now()) {
+    if (oldReq.getExpiration() > _context.clock().now()) {
       _log.error("Old *current* leaseRequest already exists!  Why are we trying to request too quickly?",getAddedBy());
       return;
     }
@@ -24,7 +24,7 @@
   try {
     _runner.setLeaseRequest(state);
     _runner.doSend(msg);
-    JobQueue.getInstance().addJob(new CheckLeaseRequestStatus(state));
+    _context.jobQueue().addJob(new CheckLeaseRequestStatus(state));
     return;
   }
  catch (  I2CPMessageException ime) {

@@ -2,21 +2,21 @@
   TunnelInfo us=getUs(info);
   if (us == null) {
     _log.error("We are not participating in this /known/ tunnel - was the router reset?");
-    if (_onFailure != null)     JobQueue.getInstance().addJob(_onFailure);
+    if (_onFailure != null)     _context.jobQueue().addJob(_onFailure);
   }
  else {
     TunnelMessage msg=prepareMessage(info);
     if (msg == null) {
       if (_log.shouldLog(Log.ERROR))       _log.error("wtf, unable to prepare a tunnel message to the next hop, when we're the gateway and hops remain?  tunnel: " + info);
-      if (_onFailure != null)       JobQueue.getInstance().addJob(_onFailure);
+      if (_onFailure != null)       _context.jobQueue().addJob(_onFailure);
       return;
     }
     _log.debug("Tunnel message created: " + msg + " out of encrypted message: "+ _message);
-    long now=Clock.getInstance().now();
+    long now=_context.clock().now();
     if (_expiration < now + 15 * 1000) {
       _log.warn("Adding a tunnel message that will expire shortly [" + new Date(_expiration) + "]",getAddedBy());
     }
     msg.setMessageExpiration(new Date(_expiration));
-    JobQueue.getInstance().addJob(new SendMessageDirectJob(msg,info.getNextHop(),_onSend,_onReply,_onFailure,_selector,_expiration,_priority));
+    _context.jobQueue().addJob(new SendMessageDirectJob(_context,msg,info.getNextHop(),_onSend,_onReply,_onFailure,_selector,_expiration,_priority));
   }
 }

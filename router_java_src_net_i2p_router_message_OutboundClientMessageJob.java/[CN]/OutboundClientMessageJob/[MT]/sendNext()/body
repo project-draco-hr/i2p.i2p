@@ -10,7 +10,7 @@
     if (_log.shouldLog(Log.DEBUG))     _log.debug("sendNext() - already failed!");
     return;
   }
-  long now=Clock.getInstance().now();
+  long now=_context.clock().now();
   if (now >= _overallExpiration) {
     if (_log.shouldLog(Log.WARN))     _log.warn("sendNext() - Expired");
     dieFatal();
@@ -21,13 +21,13 @@
   if (nextLease == null) {
     if (_log.shouldLog(Log.WARN))     _log.warn("No more leases, and we still haven't heard back from the peer, refetching the leaseSet to try again");
     _status.setLeaseSet(null);
-    long remainingMs=_overallExpiration - Clock.getInstance().now();
+    long remainingMs=_overallExpiration - _context.clock().now();
     if (_status.getNumLookups() < MAX_LEASE_LOOKUPS) {
       _status.incrementLookups();
       Hash to=_status.getMessage().getDestination().calculateHash();
       _status.clearAlreadySent();
-      NetworkDatabaseFacade.getInstance().fail(to);
-      NetworkDatabaseFacade.getInstance().lookupLeaseSet(to,_nextStep,_lookupLeaseSetFailed,remainingMs);
+      _context.netDb().fail(to);
+      _context.netDb().lookupLeaseSet(to,_nextStep,_lookupLeaseSetFailed,remainingMs);
       return;
     }
  else {
@@ -36,5 +36,5 @@
       return;
     }
   }
-  JobQueue.getInstance().addJob(new SendJob(nextLease));
+  _context.jobQueue().addJob(new SendJob(nextLease));
 }

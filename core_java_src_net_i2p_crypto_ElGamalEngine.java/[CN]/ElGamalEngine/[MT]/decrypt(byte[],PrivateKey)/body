@@ -1,6 +1,6 @@
 {
   if ((encrypted == null) || (encrypted.length > 514))   throw new IllegalArgumentException("Data to decrypt must be <= 514 bytes at the moment");
-  long start=Clock.getInstance().now();
+  long start=_context.clock().now();
   byte[] ybytes=new byte[257];
   byte[] dbytes=new byte[257];
   System.arraycopy(encrypted,0,ybytes,0,257);
@@ -28,14 +28,14 @@
     if (_log.shouldLog(Log.ERROR))     _log.error("Internal error reading value",e);
     return null;
   }
-  Hash calcHash=SHA256Generator.getInstance().calculateHash(rv);
+  Hash calcHash=_context.sha().calculateHash(rv);
   boolean ok=calcHash.equals(hash);
-  long end=Clock.getInstance().now();
+  long end=_context.clock().now();
   long diff=end - start;
   if (diff > 1000) {
     if (_log.shouldLog(Log.WARN))     _log.warn("Took too long to decrypt and verify ElGamal block (" + diff + "ms)");
   }
-  StatManager.getInstance().addRateData("crypto.elGamal.decrypt",diff,diff);
+  _context.statManager().addRateData("crypto.elGamal.decrypt",diff,diff);
   if (ok) {
     return rv;
   }

@@ -1,12 +1,16 @@
 {
   if (peer == null)   return false;
+  if (_context.routerHash().equals(peer)) {
+    _log.error("wtf, why did we try to shitlist ourselves?",new Exception("shitfaced"));
+    return false;
+  }
   boolean wasAlready=false;
   if (_log.shouldLog(Log.INFO))   _log.info("Shitlisting router " + peer.toBase64(),new Exception("Shitlist cause"));
 synchronized (_shitlist) {
-    Date oldDate=(Date)_shitlist.put(peer,new Date(Clock.getInstance().now()));
+    Date oldDate=(Date)_shitlist.put(peer,new Date(_context.clock().now()));
     wasAlready=(null == oldDate);
   }
-  NetworkDatabaseFacade.getInstance().fail(peer);
-  TunnelManagerFacade.getInstance().peerFailed(peer);
+  _context.netDb().fail(peer);
+  _context.tunnelManager().peerFailed(peer);
   return wasAlready;
 }

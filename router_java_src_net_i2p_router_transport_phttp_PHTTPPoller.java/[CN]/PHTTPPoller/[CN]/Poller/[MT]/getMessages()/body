@@ -1,7 +1,7 @@
 {
   byte authData[]=getAuthData();
   if (authData == null)   return 0;
-  BandwidthLimiter.getInstance().delayOutbound(null,authData.length + 512);
+  _context.bandwidthLimiter().delayOutbound(null,authData.length + 512);
   try {
     _log.debug("Before opening " + _pollURL.toExternalForm());
     HttpURLConnection con=(HttpURLConnection)_pollURL.openConnection();
@@ -41,8 +41,8 @@ InputStream in=con.getInputStream();
 Date peerTime=DataHelper.readDate(in);
 long offset=peerTime.getTime() - System.currentTimeMillis();
 if (_transport.getTrustTime()) {
-_log.info("Updating time offset to " + offset + " (old offset: "+ Clock.getInstance().getOffset()+ ")");
-Clock.getInstance().setOffset(offset);
+_log.info("Updating time offset to " + offset + " (old offset: "+ _context.clock().getOffset()+ ")");
+_context.clock().setOffset(offset);
 }
 boolean shouldReject=shouldRejectMessages();
 if (shouldReject) {
@@ -90,7 +90,7 @@ _log.warn("Poorly formatted message",ime);
 }
 }
 }
-BandwidthLimiter.getInstance().delayInbound(null,bytesRead);
+_context.bandwidthLimiter().delayInbound(null,bytesRead);
 return numSuccessful;
 }
  catch (Throwable t) {

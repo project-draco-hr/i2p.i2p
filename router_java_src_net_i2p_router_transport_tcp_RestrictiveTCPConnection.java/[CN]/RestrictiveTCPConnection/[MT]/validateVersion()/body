@@ -2,7 +2,7 @@
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Before validating version");
   ByteArrayOutputStream baos=new ByteArrayOutputStream(8);
   DataHelper.writeLong(baos,4,PROTO_ID);
-  byte encr[]=AESEngine.getInstance().safeEncrypt(baos.toByteArray(),_key,_iv,16);
+  byte encr[]=_context.AESEngine().safeEncrypt(baos.toByteArray(),_key,_iv,16);
   DataHelper.writeLong(_out,2,encr.length);
   _out.write(encr);
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Version sent");
@@ -10,7 +10,7 @@
   byte pencr[]=new byte[rlen];
   int read=DataHelper.read(_in,pencr);
   if (read != rlen)   throw new DataFormatException("Not enough data in peer version");
-  byte decr[]=AESEngine.getInstance().safeDecrypt(pencr,_key,_iv);
+  byte decr[]=_context.AESEngine().safeDecrypt(pencr,_key,_iv);
   if (decr == null)   throw new DataFormatException("Unable to decrypt - failed version?");
   ByteArrayInputStream bais=new ByteArrayInputStream(decr);
   long peerProtoId=DataHelper.readLong(bais,4);

@@ -1,11 +1,11 @@
 {
   if ((data == null) || (data.length >= 223))   throw new IllegalArgumentException("Data to encrypt must be < 223 bytes at the moment");
   if (publicKey == null)   throw new IllegalArgumentException("Null public key specified");
-  long start=Clock.getInstance().now();
+  long start=_context.clock().now();
   ByteArrayOutputStream baos=new ByteArrayOutputStream(256);
   try {
     baos.write(0xFF);
-    Hash hash=SHA256Generator.getInstance().calculateHash(data);
+    Hash hash=_context.sha().calculateHash(data);
     hash.writeBytes(baos);
     baos.write(data);
     baos.flush();
@@ -15,23 +15,23 @@
     return null;
   }
   byte d2[]=baos.toByteArray();
-  long t0=Clock.getInstance().now();
+  long t0=_context.clock().now();
   BigInteger m=new NativeBigInteger(1,d2);
-  long t1=Clock.getInstance().now();
+  long t1=_context.clock().now();
   if (m.compareTo(CryptoConstants.elgp) >= 0)   throw new IllegalArgumentException("ARGH.  Data cannot be larger than the ElGamal prime.  FIXME");
-  long t2=Clock.getInstance().now();
+  long t2=_context.clock().now();
   BigInteger aalpha=new NativeBigInteger(1,publicKey.getData());
-  long t3=Clock.getInstance().now();
+  long t3=_context.clock().now();
   BigInteger yk[]=getNextYK();
   BigInteger k=yk[1];
   BigInteger y=yk[0];
-  long t7=Clock.getInstance().now();
+  long t7=_context.clock().now();
   BigInteger d=aalpha.modPow(k,CryptoConstants.elgp);
-  long t8=Clock.getInstance().now();
+  long t8=_context.clock().now();
   d=d.multiply(m);
-  long t9=Clock.getInstance().now();
+  long t9=_context.clock().now();
   d=d.mod(CryptoConstants.elgp);
-  long t10=Clock.getInstance().now();
+  long t10=_context.clock().now();
   byte[] ybytes=y.toByteArray();
   byte[] dbytes=d.toByteArray();
   byte[] out=new byte[514];
@@ -45,11 +45,11 @@
   buf.append("7-8: ").append(t8 - t7).append('\n');
   buf.append("8-9: ").append(t9 - t8).append('\n');
   buf.append("9-10: ").append(t10 - t9).append('\n');
-  long end=Clock.getInstance().now();
+  long end=_context.clock().now();
   long diff=end - start;
   if (diff > 1000) {
     if (_log.shouldLog(Log.WARN))     _log.warn("Took too long to encrypt ElGamal block (" + diff + "ms)");
   }
-  StatManager.getInstance().addRateData("crypto.elGamal.encrypt",diff,diff);
+  _context.statManager().addRateData("crypto.elGamal.encrypt",diff,diff);
   return out;
 }

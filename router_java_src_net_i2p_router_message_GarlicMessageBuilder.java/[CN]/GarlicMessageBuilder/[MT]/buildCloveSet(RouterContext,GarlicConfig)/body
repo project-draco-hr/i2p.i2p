@@ -1,0 +1,37 @@
+{
+  ByteArrayOutputStream baos=new ByteArrayOutputStream(1024);
+  Log log=ctx.logManager().getLog(GarlicMessageBuilder.class);
+  try {
+    if (config instanceof PayloadGarlicConfig) {
+      DataHelper.writeLong(baos,1,1);
+      baos.write(buildClove(ctx,(PayloadGarlicConfig)config));
+    }
+ else {
+      DataHelper.writeLong(baos,1,config.getCloveCount());
+      for (int i=0; i < config.getCloveCount(); i++) {
+        GarlicConfig c=config.getClove(i);
+        byte clove[]=null;
+        if (c instanceof PayloadGarlicConfig) {
+          log.debug("Subclove IS a payload garlic clove");
+          clove=buildClove(ctx,(PayloadGarlicConfig)c);
+        }
+ else {
+          log.debug("Subclove IS NOT a payload garlic clove");
+          clove=buildClove(ctx,c);
+        }
+        if (clove == null)         throw new DataFormatException("Unable to build clove");
+ else         baos.write(clove);
+      }
+    }
+    config.getCertificate().writeBytes(baos);
+    DataHelper.writeLong(baos,4,config.getId());
+    DataHelper.writeDate(baos,new Date(config.getExpiration()));
+  }
+ catch (  IOException ioe) {
+    log.error("Error building the clove set",ioe);
+  }
+catch (  DataFormatException dfe) {
+    log.error("Error building the clove set",dfe);
+  }
+  return baos.toByteArray();
+}

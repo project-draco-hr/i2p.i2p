@@ -13,20 +13,20 @@
   int available=_pool.getSafePoolSize();
   if (available >= _pool.getClientSettings().getNumInboundTunnels()) {
     if (_forceRequestLease) {
-      _log.info("Forced to request a new lease (reconnected client perhaps?)");
+      if (_log.shouldLog(Log.INFO))       _log.info("Forced to request a new lease (reconnected client perhaps?)");
       _forceRequestLease=false;
       requestNewLeaseSet();
     }
  else     if (_currentLeaseSet == null) {
-      _log.info("No leaseSet is known - request a new one");
+      if (_log.shouldLog(Log.INFO))       _log.info("No leaseSet is known - request a new one");
       requestNewLeaseSet();
     }
  else     if (tunnelsChanged()) {
-      _log.info("Tunnels changed from the old leaseSet - request a new one: [pool = " + _pool.getInboundTunnelIds() + " old leaseSet: "+ _currentLeaseSet);
+      if (_log.shouldLog(Log.INFO))       _log.info("Tunnels changed from the old leaseSet - request a new one: [pool = " + _pool.getInboundTunnelIds() + " old leaseSet: "+ _currentLeaseSet);
       requestNewLeaseSet();
     }
- else     if (Clock.getInstance().now() > _lastCreated + _pool.getClientSettings().getInboundDuration()) {
-      _log.info("We've exceeded the client's requested duration (limit = " + new Date(_lastCreated + _pool.getClientSettings().getInboundDuration()) + " / "+ _pool.getClientSettings().getInboundDuration()+ ") - request a new leaseSet");
+ else     if (_context.clock().now() > _lastCreated + _pool.getClientSettings().getInboundDuration()) {
+      if (_log.shouldLog(Log.INFO))       _log.info("We've exceeded the client's requested duration (limit = " + new Date(_lastCreated + _pool.getClientSettings().getInboundDuration()) + " / "+ _pool.getClientSettings().getInboundDuration()+ ") - request a new leaseSet");
       requestNewLeaseSet();
     }
  else {

@@ -1,0 +1,41 @@
+{
+  Log log=ctx.logManager().getLog(OutboundClientMessageJobHelper.class);
+  PayloadGarlicConfig ackClove=new PayloadGarlicConfig();
+  Hash replyToTunnelRouter=null;
+  TunnelId replyToTunnelId=null;
+  TunnelSelectionCriteria criteria=new TunnelSelectionCriteria();
+  criteria.setMaximumTunnelsRequired(1);
+  criteria.setMinimumTunnelsRequired(1);
+  criteria.setReliabilityPriority(50);
+  criteria.setAnonymityPriority(50);
+  criteria.setLatencyPriority(50);
+  List tunnelIds=ctx.tunnelManager().selectInboundTunnelIds(criteria);
+  if (tunnelIds.size() <= 0) {
+    log.error("No inbound tunnels to receive an ack through!?");
+    return null;
+  }
+  replyToTunnelId=(TunnelId)tunnelIds.get(0);
+  TunnelInfo info=ctx.tunnelManager().getTunnelInfo(replyToTunnelId);
+  replyToTunnelRouter=info.getThisHop();
+  log.debug("Ack for the data message will come back along tunnel " + replyToTunnelId + ":\n"+ info);
+  DeliveryInstructions ackInstructions=new DeliveryInstructions();
+  ackInstructions.setDeliveryMode(DeliveryInstructions.DELIVERY_MODE_TUNNEL);
+  ackInstructions.setRouter(replyToTunnelRouter);
+  ackInstructions.setTunnelId(replyToTunnelId);
+  ackInstructions.setDelayRequested(false);
+  ackInstructions.setDelaySeconds(0);
+  ackInstructions.setEncrypted(false);
+  DeliveryStatusMessage msg=new DeliveryStatusMessage(ctx);
+  msg.setArrival(new Date(ctx.clock().now()));
+  msg.setMessageId(replyToken);
+  log.debug("Delivery status message key: " + replyToken + " arrival: "+ msg.getArrival());
+  ackClove.setCertificate(new Certificate(Certificate.CERTIFICATE_TYPE_NULL,null));
+  ackClove.setDeliveryInstructions(ackInstructions);
+  ackClove.setExpiration(expiration);
+  ackClove.setId(ctx.random().nextInt(Integer.MAX_VALUE));
+  ackClove.setPayload(msg);
+  ackClove.setRecipient(ctx.router().getRouterInfo());
+  ackClove.setRequestAck(false);
+  log.debug("Delivery status message is targetting us [" + ackClove.getRecipient().getIdentity().getHash().toBase64() + "] via tunnel "+ replyToTunnelId.getTunnelId()+ " on "+ replyToTunnelRouter.toBase64());
+  return ackClove;
+}

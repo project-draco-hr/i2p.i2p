@@ -10,7 +10,7 @@
   byte tag[]=new byte[32];
   System.arraycopy(data,0,tag,0,tag.length);
   SessionTag st=new SessionTag(tag);
-  SessionKey key=SessionKeyManager.getInstance().consumeTag(st);
+  SessionKey key=_context.sessionKeyManager().consumeTag(st);
   SessionKey foundKey=new SessionKey();
   foundKey.setData(null);
   SessionKey usedKey=new SessionKey();
@@ -20,25 +20,25 @@
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Key is known for tag " + st);
     usedKey.setData(key.getData());
     decrypted=decryptExistingSession(data,key,targetPrivateKey,foundTags,usedKey,foundKey);
-    if (decrypted != null)     StatManager.getInstance().updateFrequency("crypto.elGamalAES.decryptExistingSession");
- else     StatManager.getInstance().updateFrequency("crypto.elGamalAES.decryptFailed");
+    if (decrypted != null)     _context.statManager().updateFrequency("crypto.elGamalAES.decryptExistingSession");
+ else     _context.statManager().updateFrequency("crypto.elGamalAES.decryptFailed");
   }
  else {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Key is NOT known for tag " + st);
     decrypted=decryptNewSession(data,targetPrivateKey,foundTags,usedKey,foundKey);
-    if (decrypted != null)     StatManager.getInstance().updateFrequency("crypto.elGamalAES.decryptNewSession");
- else     StatManager.getInstance().updateFrequency("crypto.elGamalAES.decryptFailed");
+    if (decrypted != null)     _context.statManager().updateFrequency("crypto.elGamalAES.decryptNewSession");
+ else     _context.statManager().updateFrequency("crypto.elGamalAES.decryptFailed");
   }
   if ((key == null) && (decrypted == null)) {
   }
   if (foundTags.size() > 0) {
     if (foundKey.getData() != null) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Found key: " + foundKey);
-      SessionKeyManager.getInstance().tagsReceived(foundKey,foundTags);
+      _context.sessionKeyManager().tagsReceived(foundKey,foundTags);
     }
  else {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Used key: " + usedKey);
-      SessionKeyManager.getInstance().tagsReceived(usedKey,foundTags);
+      _context.sessionKeyManager().tagsReceived(usedKey,foundTags);
     }
   }
   return decrypted;

@@ -1,12 +1,12 @@
 {
-  LinkedList readyJobs=new LinkedList();
-  LinkedList timedJobs=new LinkedList();
-  LinkedList activeJobs=new LinkedList();
+  ArrayList readyJobs=null;
+  ArrayList timedJobs=null;
+  ArrayList activeJobs=new ArrayList(4);
 synchronized (_readyJobs) {
-    readyJobs.addAll(_readyJobs);
+    readyJobs=new ArrayList(_readyJobs);
   }
 synchronized (_timedJobs) {
-    timedJobs.addAll(_timedJobs);
+    timedJobs=new ArrayList(_timedJobs);
   }
 synchronized (_queueRunners) {
     for (Iterator iter=_queueRunners.values().iterator(); iter.hasNext(); ) {
@@ -15,7 +15,7 @@ synchronized (_queueRunners) {
       if (job != null)       activeJobs.add(job.getName());
     }
   }
-  StringBuffer buf=new StringBuffer();
+  StringBuffer buf=new StringBuffer(20 * 1024);
   buf.append("<h2>JobQueue</h2>");
   buf.append("# runners: ");
 synchronized (_queueRunners) {
@@ -40,7 +40,8 @@ synchronized (_queueRunners) {
   }
   for (Iterator iter=ordered.values().iterator(); iter.hasNext(); ) {
     Job j=(Job)iter.next();
-    buf.append("<li>").append(j.getName()).append(" @ ").append(new Date(j.getTiming().getStartAfter())).append("</li>\n");
+    buf.append("<li>").append(j.getName()).append(" @ ");
+    buf.append(new Date(j.getTiming().getStartAfter())).append("</li>\n");
   }
   buf.append("</ol>\n");
   buf.append(getJobStats());

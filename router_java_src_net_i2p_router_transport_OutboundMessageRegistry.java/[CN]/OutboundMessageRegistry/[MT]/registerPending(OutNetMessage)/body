@@ -5,7 +5,7 @@
  else   if (msg.getMessage() == null) {
     throw new IllegalArgumentException("OutNetMessage doesn't contain an I2NPMessage? wtf");
   }
-  long beforeSync=Clock.getInstance().now();
+  long beforeSync=_context.clock().now();
   long afterSync1=0;
   long afterDone=0;
   try {
@@ -19,18 +19,18 @@ synchronized (_pendingMessages) {
       while (_pendingMessages.containsKey(new Long(l)))       l++;
       _pendingMessages.put(new Long(l),msg);
     }
-    afterSync1=Clock.getInstance().now();
+    afterSync1=_context.clock().now();
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Register pending: " + msg.getReplySelector().getClass().getName() + " for "+ msg.getMessage().getClass().getName()+ ": "+ msg.getReplySelector().toString(),new Exception("Register pending"));
-    afterDone=Clock.getInstance().now();
+    afterDone=_context.clock().now();
   }
   finally {
-    long delay=Clock.getInstance().now() - beforeSync;
+    long delay=_context.clock().now() - beforeSync;
     long sync1=afterSync1 - beforeSync;
     long done=afterDone - afterSync1;
     String warn=delay + "ms (sync = " + sync1+ "ms, done = "+ done+ "ms)";
     if (delay > 1000) {
       _log.error("Synchronizing in the registry.register took too long!  " + warn);
-      MessageHistory.getInstance().messageProcessingError(msg.getMessage().getUniqueId(),msg.getMessage().getClass().getName(),"RegisterPending took too long: " + warn);
+      _context.messageHistory().messageProcessingError(msg.getMessage().getUniqueId(),msg.getMessage().getClass().getName(),"RegisterPending took too long: " + warn);
     }
  else {
       _log.debug("Synchronizing in the registry.register was quick:  " + warn);

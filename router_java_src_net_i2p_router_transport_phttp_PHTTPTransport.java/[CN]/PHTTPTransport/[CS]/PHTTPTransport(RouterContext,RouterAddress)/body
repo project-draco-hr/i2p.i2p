@@ -1,0 +1,35 @@
+{
+  super(ctx);
+  _log=ctx.logManager().getLog(PHTTPTransport.class);
+  _myAddress=myAddress;
+  if (myAddress != null) {
+    Properties opts=myAddress.getOptions();
+    _myRegisterURL=opts.getProperty(PROP_TO_REGISTER_URL);
+    _mySendURL=opts.getProperty(PROP_TO_SEND_URL);
+    _pollFrequencyMs=DEFAULT_POLL_FREQUENCY;
+    String pollFreq=_context.router().getConfigSetting(CONFIG_POLL_FREQUENCY);
+    if (pollFreq != null) {
+      try {
+        long val=Long.parseLong(pollFreq);
+        _pollFrequencyMs=val * 1000;
+        _log.info("PHTTP Polling Frequency specified as once every " + val + " seconds");
+      }
+ catch (      NumberFormatException nfe) {
+        _log.error("Poll frequency is not valid (" + pollFreq + ")",nfe);
+      }
+    }
+ else {
+      _log.info("PHTTP Polling Frequency not specified via (" + CONFIG_POLL_FREQUENCY + "), defaulting to once every "+ (DEFAULT_POLL_FREQUENCY / 1000)+ " seconds");
+    }
+    String trustTime=_context.router().getConfigSetting(CONFIG_TRUST_TIME);
+    if (trustTime != null) {
+      _trustTime=Boolean.TRUE.toString().equalsIgnoreCase(trustTime);
+    }
+ else {
+      _trustTime=DEFAULT_TRUST_TIME;
+    }
+    _context.jobQueue().addJob(new RegisterJob());
+  }
+  _sender=new PHTTPSender(_context,this);
+  _poller=new PHTTPPoller(_context,this);
+}

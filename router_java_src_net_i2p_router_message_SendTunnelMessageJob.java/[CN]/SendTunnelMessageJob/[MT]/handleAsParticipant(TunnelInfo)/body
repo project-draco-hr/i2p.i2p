@@ -2,31 +2,31 @@
   if (_log.shouldLog(Log.DEBUG))   _log.debug("SendTunnelMessageJob for a participant... ",getAddedBy());
   if (!(_message instanceof TunnelMessage)) {
     if (_log.shouldLog(Log.ERROR))     _log.error("Cannot inject non-tunnel messages as a participant!" + _message,getAddedBy());
-    if (_onFailure != null)     JobQueue.getInstance().addJob(_onFailure);
+    if (_onFailure != null)     _context.jobQueue().addJob(_onFailure);
     return;
   }
   TunnelMessage msg=(TunnelMessage)_message;
   TunnelVerificationStructure struct=msg.getVerificationStructure();
   if ((info.getVerificationKey() == null) || (info.getVerificationKey().getKey() == null)) {
     if (_log.shouldLog(Log.ERROR))     _log.error("No verification key for the participant? tunnel: " + info,getAddedBy());
-    if (_onFailure != null)     JobQueue.getInstance().addJob(_onFailure);
+    if (_onFailure != null)     _context.jobQueue().addJob(_onFailure);
     return;
   }
-  boolean ok=struct.verifySignature(info.getVerificationKey().getKey());
+  boolean ok=struct.verifySignature(_context,info.getVerificationKey().getKey());
   if (!ok) {
     if (_log.shouldLog(Log.WARN))     _log.warn("Failed tunnel verification!  Spoofing / tagging attack?  " + _message,getAddedBy());
-    if (_onFailure != null)     JobQueue.getInstance().addJob(_onFailure);
+    if (_onFailure != null)     _context.jobQueue().addJob(_onFailure);
     return;
   }
  else {
     if (info.getNextHop() != null) {
       if (_log.shouldLog(Log.INFO))       _log.info("Message for tunnel " + info.getTunnelId().getTunnelId() + " received where we're not the gateway and there are remaining hops, so forward it on to "+ info.getNextHop().toBase64()+ " via SendMessageDirectJob");
-      JobQueue.getInstance().addJob(new SendMessageDirectJob(msg,info.getNextHop(),_onSend,null,_onFailure,null,_message.getMessageExpiration().getTime(),_priority));
+      _context.jobQueue().addJob(new SendMessageDirectJob(_context,msg,info.getNextHop(),_onSend,null,_onFailure,null,_message.getMessageExpiration().getTime(),_priority));
       return;
     }
  else {
       if (_log.shouldLog(Log.ERROR))       _log.error("Should not be reached - participant, but no more hops?!");
-      if (_onFailure != null)       JobQueue.getInstance().addJob(_onFailure);
+      if (_onFailure != null)       _context.jobQueue().addJob(_onFailure);
       return;
     }
   }

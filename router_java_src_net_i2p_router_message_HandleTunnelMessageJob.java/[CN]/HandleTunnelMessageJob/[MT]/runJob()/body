@@ -1,20 +1,20 @@
 {
   TunnelId id=_message.getTunnelId();
-  TunnelInfo info=TunnelManagerFacade.getInstance().getTunnelInfo(id);
+  TunnelInfo info=_context.tunnelManager().getTunnelInfo(id);
   if (info == null) {
     Hash from=_fromHash;
     if (_from != null)     from=_from.getHash();
-    MessageHistory.getInstance().droppedTunnelMessage(id,from);
+    _context.messageHistory().droppedTunnelMessage(id,from);
     if (_log.shouldLog(Log.ERROR))     _log.error("Received a message for an unknown tunnel [" + id.getTunnelId() + "], dropping it: "+ _message,getAddedBy());
-    long timeRemaining=_message.getMessageExpiration().getTime() - Clock.getInstance().now();
-    StatManager.getInstance().addRateData("tunnel.unknownTunnelTimeLeft",timeRemaining,0);
+    long timeRemaining=_message.getMessageExpiration().getTime() - _context.clock().now();
+    _context.statManager().addRateData("tunnel.unknownTunnelTimeLeft",timeRemaining,0);
     return;
   }
   info=getUs(info);
   if (info == null) {
     if (_log.shouldLog(Log.ERROR))     _log.error("We are not part of a known tunnel?? wtf!  drop.",getAddedBy());
-    long timeRemaining=_message.getMessageExpiration().getTime() - Clock.getInstance().now();
-    StatManager.getInstance().addRateData("tunnel.unknownTunnelTimeLeft",timeRemaining,0);
+    long timeRemaining=_message.getMessageExpiration().getTime() - _context.clock().now();
+    _context.statManager().addRateData("tunnel.unknownTunnelTimeLeft",timeRemaining,0);
     return;
   }
  else {
@@ -26,24 +26,24 @@
         if (_log.shouldLog(Log.DEBUG))         _log.debug("We are the gateway to tunnel " + id.getTunnelId());
         byte data[]=_message.getData();
         I2NPMessage msg=getBody(data);
-        JobQueue.getInstance().addJob(new HandleGatewayMessageJob(msg,info,data.length));
+        _context.jobQueue().addJob(new HandleGatewayMessageJob(msg,info,data.length));
         return;
       }
  else {
         if (_log.shouldLog(Log.DEBUG))         _log.debug("We are the gateway and the endpoint for tunnel " + id.getTunnelId());
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Process locally");
         if (info.getDestination() != null) {
-          if (!ClientManagerFacade.getInstance().isLocal(info.getDestination())) {
+          if (!_context.clientManager().isLocal(info.getDestination())) {
             if (_log.shouldLog(Log.WARN))             _log.warn("Received a message on a tunnel allocated to a client that has disconnected - dropping it!");
             if (_log.shouldLog(Log.DEBUG))             _log.debug("Dropping message for disconnected client: " + _message);
-            MessageHistory.getInstance().droppedOtherMessage(_message);
-            MessageHistory.getInstance().messageProcessingError(_message.getUniqueId(),_message.getClass().getName(),"Disconnected client");
+            _context.messageHistory().droppedOtherMessage(_message);
+            _context.messageHistory().messageProcessingError(_message.getUniqueId(),_message.getClass().getName(),"Disconnected client");
             return;
           }
         }
         I2NPMessage body=getBody(_message.getData());
         if (body != null) {
-          JobQueue.getInstance().addJob(new HandleLocallyJob(body,info));
+          _context.jobQueue().addJob(new HandleLocallyJob(body,info));
           return;
         }
  else {
@@ -60,7 +60,7 @@
   }
  else {
     TunnelVerificationStructure struct=_message.getVerificationStructure();
-    boolean ok=struct.verifySignature(info.getVerificationKey().getKey());
+    boolean ok=struct.verifySignature(_context,info.getVerificationKey().getKey());
     if (!ok) {
       if (_log.shouldLog(Log.WARN))       _log.warn("Failed tunnel verification!  Spoofing / tagging attack?  " + _message,getAddedBy());
       return;
@@ -68,13 +68,13 @@
  else {
       if (info.getNextHop() != null) {
         if (_log.shouldLog(Log.INFO))         _log.info("Message for tunnel " + id.getTunnelId() + " received where we're not the gateway and there are remaining hops, so forward it on to "+ info.getNextHop().toBase64()+ " via SendTunnelMessageJob");
-        StatManager.getInstance().addRateData("tunnel.relayMessageSize",_message.getData().length,0);
-        JobQueue.getInstance().addJob(new SendMessageDirectJob(_message,info.getNextHop(),Clock.getInstance().now() + FORWARD_TIMEOUT,FORWARD_PRIORITY));
+        _context.statManager().addRateData("tunnel.relayMessageSize",_message.getData().length,0);
+        _context.jobQueue().addJob(new SendMessageDirectJob(_context,_message,info.getNextHop(),_context.clock().now() + FORWARD_TIMEOUT,FORWARD_PRIORITY));
         return;
       }
  else {
         if (_log.shouldLog(Log.DEBUG))         _log.debug("No more hops, unwrap and follow the instructions");
-        JobQueue.getInstance().addJob(new HandleEndpointJob(info));
+        _context.jobQueue().addJob(new HandleEndpointJob(info));
         return;
       }
     }

@@ -1,21 +1,21 @@
 {
-  if ((!forceReinitialize) && (_instance != null))   return;
-  if (Router.getInstance().getRouterInfo() == null) {
-    ReinitializeJob j=ReinitializeJob.getInstance();
-    j.getTiming().setStartAfter(Clock.getInstance().now() + 5000);
-    JobQueue.getInstance().addJob(j);
+  if (!forceReinitialize)   return;
+  if (_context.router().getRouterInfo() == null) {
+    _reinitializeJob.getTiming().setStartAfter(_context.clock().now() + 5000);
+    _context.jobQueue().addJob(_reinitializeJob);
   }
  else {
     String filename=null;
-    filename=Router.getInstance().getConfigSetting(PROP_MESSAGE_HISTORY_FILENAME);
+    filename=_context.router().getConfigSetting(PROP_MESSAGE_HISTORY_FILENAME);
     if ((filename == null) || (filename.trim().length() <= 0))     filename=DEFAULT_MESSAGE_HISTORY_FILENAME;
-    MessageHistory hist=new MessageHistory(Router.getInstance().getRouterInfo().getIdentity().getHash(),filename);
-    setInstance(hist);
-    hist.updateSettings();
-    getInstance().addEntry(getInstance().getPrefix() + "** Router initialized (started up or changed identities)");
-    JobQueue.getInstance().addJob(new WriteJob());
-    SubmitMessageHistoryJob histJob=new SubmitMessageHistoryJob();
-    histJob.getTiming().setStartAfter(Clock.getInstance().now() + 2 * 60 * 1000);
-    JobQueue.getInstance().addJob(histJob);
+    _doLog=DEFAULT_KEEP_MESSAGE_HISTORY;
+    _historyFile=filename;
+    _localIdent=getName(_context.routerHash());
+    _unwrittenEntries=new LinkedList();
+    updateSettings();
+    addEntry(getPrefix() + "** Router initialized (started up or changed identities)");
+    _context.jobQueue().addJob(_writeJob);
+    _submitMessageHistoryJob.getTiming().setStartAfter(_context.clock().now() + 2 * 60 * 1000);
+    _context.jobQueue().addJob(_submitMessageHistoryJob);
   }
 }

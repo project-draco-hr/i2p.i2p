@@ -1,18 +1,18 @@
 {
-  RouterInfo ri=new RouterInfo(Router.getInstance().getRouterInfo());
+  RouterInfo ri=new RouterInfo(_context.router().getRouterInfo());
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Old routerInfo contains " + ri.getAddresses().size() + " addresses and "+ ri.getOptions().size()+ " options");
-  Properties stats=StatisticsManager.getInstance().publishStatistics();
+  Properties stats=_context.statPublisher().publishStatistics();
   try {
-    ri.setPublished(Clock.getInstance().now());
+    ri.setPublished(_context.clock().now());
     ri.setOptions(stats);
-    ri.setAddresses(CommSystemFacade.getInstance().createAddresses());
-    ri.sign(KeyManager.getInstance().getSigningPrivateKey());
-    Router.getInstance().setRouterInfo(ri);
+    ri.setAddresses(_context.commSystem().createAddresses());
+    ri.sign(_context.keyManager().getSigningPrivateKey());
+    _context.router().setRouterInfo(ri);
     if (_log.shouldLog(Log.INFO))     _log.info("Newly updated routerInfo is published with " + stats.size() + "/"+ ri.getOptions().size()+ " options on "+ new Date(ri.getPublished()));
-    NetworkDatabaseFacade.getInstance().publish(ri);
+    _context.netDb().publish(ri);
   }
  catch (  DataFormatException dfe) {
     _log.error("Error signing the updated local router info!",dfe);
   }
-  requeue(PUBLISH_DELAY + RandomSource.getInstance().nextInt((int)PUBLISH_DELAY));
+  requeue(PUBLISH_DELAY + _context.random().nextInt((int)PUBLISH_DELAY));
 }

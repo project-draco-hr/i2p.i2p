@@ -1,0 +1,42 @@
+{
+  Log log=ctx.logManager().getLog(GarlicMessageBuilder.class);
+  if (config == null)   throw new IllegalArgumentException("Null config specified");
+  PublicKey key=config.getRecipientPublicKey();
+  if (key == null) {
+    if (config.getRecipient() == null) {
+      throw new IllegalArgumentException("Null recipient specified");
+    }
+ else     if (config.getRecipient().getIdentity() == null) {
+      throw new IllegalArgumentException("Null recipient.identity specified");
+    }
+ else     if (config.getRecipient().getIdentity().getPublicKey() == null) {
+      throw new IllegalArgumentException("Null recipient.identity.publicKey specified");
+    }
+ else     key=config.getRecipient().getIdentity().getPublicKey();
+  }
+  GarlicMessage msg=new GarlicMessage(ctx);
+  noteWrap(ctx,msg,config);
+  log.info("Encrypted with public key " + key + " to expire on "+ new Date(config.getExpiration()));
+  byte cloveSet[]=buildCloveSet(ctx,config);
+  SessionKey curKey=ctx.sessionKeyManager().getCurrentKey(key);
+  if (curKey == null)   curKey=ctx.sessionKeyManager().createSession(key);
+  wrappedKey.setData(curKey.getData());
+  int availTags=ctx.sessionKeyManager().getAvailableTags(key,curKey);
+  log.debug("Available tags for encryption to " + key + ": "+ availTags);
+  if (availTags < 10) {
+    for (int i=0; i < 20; i++)     wrappedTags.add(new SessionTag(true));
+    log.info("Less than 10 tags are available (" + availTags + "), so we're including 20 more");
+  }
+ else   if (ctx.sessionKeyManager().getAvailableTimeLeft(key,curKey) < 30 * 1000) {
+    for (int i=0; i < 20; i++)     wrappedTags.add(new SessionTag(true));
+    log.info("Tags are almost expired, adding 20 new ones");
+  }
+ else {
+  }
+  SessionTag curTag=ctx.sessionKeyManager().consumeNextAvailableTag(key,curKey);
+  byte encData[]=ctx.elGamalAESEngine().encrypt(cloveSet,key,curKey,wrappedTags,curTag,1024);
+  msg.setData(encData);
+  Date exp=new Date(config.getExpiration());
+  msg.setMessageExpiration(exp);
+  return msg;
+}

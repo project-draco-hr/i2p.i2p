@@ -1,0 +1,23 @@
+{
+  _context=context;
+  _log=context.logManager().getLog(TCPConnection.class);
+  _context.statManager().createRateStat("tcp.queueSize","How many messages were already in the queue when a new message was added?","TCP Transport",new long[]{60 * 1000l,60 * 60 * 1000l,24 * 60 * 60* 1000l});
+  _id=++_idCounter;
+  _weInitiated=locallyInitiated;
+  _closed=false;
+  _socket=s;
+  _created=-1;
+  _toBeSent=new ArrayList();
+  try {
+    _in=_socket.getInputStream();
+    _out=_socket.getOutputStream();
+  }
+ catch (  IOException ioe) {
+    _log.error("Error getting streams for the connection",ioe);
+  }
+  _builder=new DHSessionKeyBuilder();
+  _extraBytes=null;
+  _lastSliceRun=-1;
+  if (_log.shouldLog(Log.INFO))   _log.info("Connected with peer: " + s.getInetAddress() + ":"+ s.getPort());
+  updateMaxQueuedMessages();
+}

@@ -1,11 +1,11 @@
 {
-  CloveSet set=GarlicMessageParser.getInstance().getGarlicCloves(_message,KeyManager.getInstance().getPrivateKey());
+  CloveSet set=_parser.getGarlicCloves(_message,_context.keyManager().getPrivateKey());
   if (set == null) {
-    Set keys=KeyManager.getInstance().getAllKeys();
+    Set keys=_context.keyManager().getAllKeys();
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Decryption with the router's key failed, now try with the " + keys.size() + " leaseSet keys");
     for (Iterator iter=keys.iterator(); iter.hasNext(); ) {
       LeaseSetKeys lskeys=(LeaseSetKeys)iter.next();
-      set=GarlicMessageParser.getInstance().getGarlicCloves(_message,lskeys.getDecryptionKey());
+      set=_parser.getGarlicCloves(_message,lskeys.getDecryptionKey());
       if (set != null) {
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Decrypted garlic message with lease set key for destination " + lskeys.getDestination().calculateHash().toBase64() + " SUCCEEDED: "+ set);
         break;
@@ -26,7 +26,7 @@
   }
  else {
     if (_log.shouldLog(Log.ERROR))     _log.error("CloveMessageParser failed to decrypt the message [" + _message.getUniqueId() + "] to us when received from ["+ _fromHash+ "] / ["+ _from+ "]",new Exception("Decrypt garlic failed"));
-    StatManager.getInstance().addRateData("crypto.garlic.decryptFail",1,0);
-    MessageHistory.getInstance().messageProcessingError(_message.getUniqueId(),_message.getClass().getName(),"Garlic could not be decrypted");
+    _context.statManager().addRateData("crypto.garlic.decryptFail",1,0);
+    _context.messageHistory().messageProcessingError(_message.getUniqueId(),_message.getClass().getName(),"Garlic could not be decrypted");
   }
 }

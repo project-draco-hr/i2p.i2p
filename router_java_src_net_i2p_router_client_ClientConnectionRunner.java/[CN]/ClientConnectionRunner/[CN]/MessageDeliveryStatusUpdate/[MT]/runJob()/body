@@ -9,7 +9,7 @@
  else   msg.setStatus(MessageStatusMessage.STATUS_SEND_GUARANTEED_FAILURE);
   if (!alreadyAccepted(_messageId)) {
     _log.warn("Almost send an update for message " + _messageId + " to "+ MessageStatusMessage.getStatusString(msg.getStatus())+ " for session ["+ _sessionId.getSessionId()+ "] before they knew the messageId!  delaying .5s");
-    _lastTried=Clock.getInstance().now();
+    _lastTried=ClientConnectionRunner.this._context.clock().now();
     requeue(REQUEUE_DELAY);
     return;
   }
@@ -23,8 +23,12 @@ synchronized (_alreadyProcessed) {
       while (_alreadyProcessed.size() > 10)       _alreadyProcessed.remove(0);
     }
   }
-  if (_lastTried > 0)   _log.info("Updating message status for message " + _messageId + " to "+ MessageStatusMessage.getStatusString(msg.getStatus())+ " for session ["+ _sessionId.getSessionId()+ "] (with nonce=2), retrying after ["+ (Clock.getInstance().now() - _lastTried)+ "]",getAddedBy());
- else   _log.debug("Updating message status for message " + _messageId + " to "+ MessageStatusMessage.getStatusString(msg.getStatus())+ " for session ["+ _sessionId.getSessionId()+ "] (with nonce=2)");
+  if (_lastTried > 0) {
+    if (_log.shouldLog(Log.DEBUG))     _log.info("Updating message status for message " + _messageId + " to "+ MessageStatusMessage.getStatusString(msg.getStatus())+ " for session ["+ _sessionId.getSessionId()+ "] (with nonce=2), retrying after ["+ (ClientConnectionRunner.this._context.clock().now() - _lastTried)+ "]",getAddedBy());
+  }
+ else {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Updating message status for message " + _messageId + " to "+ MessageStatusMessage.getStatusString(msg.getStatus())+ " for session ["+ _sessionId.getSessionId()+ "] (with nonce=2)");
+  }
   try {
     doSend(msg);
   }

@@ -3,10 +3,10 @@
   FileOutputStream fos1=null;
   FileOutputStream fos2=null;
   try {
-    info.setAddresses(CommSystemFacade.getInstance().createAddresses());
-    info.setOptions(StatisticsManager.getInstance().publishStatistics());
+    info.setAddresses(_context.commSystem().createAddresses());
+    info.setOptions(_context.statPublisher().publishStatistics());
     info.setPeers(new HashSet());
-    info.setPublished(getCurrentPublishDate());
+    info.setPublished(getCurrentPublishDate(_context));
     RouterIdentity ident=new RouterIdentity();
     Certificate cert=new Certificate();
     cert.setCertificateType(Certificate.CERTIFICATE_TYPE_NULL);
@@ -16,31 +16,31 @@
     PrivateKey privkey=null;
     SigningPublicKey signingPubKey=null;
     SigningPrivateKey signingPrivKey=null;
-    Object keypair[]=KeyGenerator.getInstance().generatePKIKeypair();
+    Object keypair[]=_context.keyGenerator().generatePKIKeypair();
     pubkey=(PublicKey)keypair[0];
     privkey=(PrivateKey)keypair[1];
-    Object signingKeypair[]=KeyGenerator.getInstance().generateSigningKeypair();
+    Object signingKeypair[]=_context.keyGenerator().generateSigningKeypair();
     signingPubKey=(SigningPublicKey)signingKeypair[0];
     signingPrivKey=(SigningPrivateKey)signingKeypair[1];
     ident.setPublicKey(pubkey);
     ident.setSigningPublicKey(signingPubKey);
     info.setIdentity(ident);
     info.sign(signingPrivKey);
-    String infoFilename=Router.getInstance().getConfigSetting(Router.PROP_INFO_FILENAME);
+    String infoFilename=_context.router().getConfigSetting(Router.PROP_INFO_FILENAME);
     if (infoFilename == null)     infoFilename=Router.PROP_INFO_FILENAME_DEFAULT;
     fos1=new FileOutputStream(infoFilename);
     info.writeBytes(fos1);
-    String keyFilename=Router.getInstance().getConfigSetting(Router.PROP_KEYS_FILENAME);
+    String keyFilename=_context.router().getConfigSetting(Router.PROP_KEYS_FILENAME);
     if (keyFilename == null)     keyFilename=Router.PROP_KEYS_FILENAME_DEFAULT;
     fos2=new FileOutputStream(keyFilename);
     privkey.writeBytes(fos2);
     signingPrivKey.writeBytes(fos2);
     pubkey.writeBytes(fos2);
     signingPubKey.writeBytes(fos2);
-    KeyManager.getInstance().setSigningPrivateKey(signingPrivKey);
-    KeyManager.getInstance().setSigningPublicKey(signingPubKey);
-    KeyManager.getInstance().setPrivateKey(privkey);
-    KeyManager.getInstance().setPublicKey(pubkey);
+    _context.keyManager().setSigningPrivateKey(signingPrivKey);
+    _context.keyManager().setSigningPublicKey(signingPubKey);
+    _context.keyManager().setPrivateKey(privkey);
+    _context.keyManager().setPublicKey(pubkey);
     _log.info("Router info created and stored at " + infoFilename + " with private keys stored at "+ keyFilename+ " ["+ info+ "]");
   }
  catch (  DataFormatException dfe) {

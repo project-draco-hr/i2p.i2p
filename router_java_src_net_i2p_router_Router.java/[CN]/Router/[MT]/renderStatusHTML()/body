@@ -19,22 +19,22 @@
   buf.append("</form>");
   buf.append("<hr />\n");
   if ((_routerInfo != null) && (_routerInfo.getIdentity() != null))   buf.append("<b>Router: </b> ").append(_routerInfo.getIdentity().getHash().toBase64()).append("<br />\n");
-  buf.append("<b>As of: </b> ").append(new Date(Clock.getInstance().now())).append(" (uptime: ").append(DataHelper.formatDuration(getUptime())).append(") <br />\n");
+  buf.append("<b>As of: </b> ").append(new Date(_context.clock().now())).append(" (uptime: ").append(DataHelper.formatDuration(getUptime())).append(") <br />\n");
   buf.append("<b>Started on: </b> ").append(new Date(getWhenStarted())).append("<br />\n");
-  buf.append("<b>Clock offset: </b> ").append(Clock.getInstance().getOffset()).append("ms (OS time: ").append(new Date(Clock.getInstance().now() - Clock.getInstance().getOffset())).append(")<br />\n");
+  buf.append("<b>Clock offset: </b> ").append(_context.clock().getOffset()).append("ms (OS time: ").append(new Date(_context.clock().now() - _context.clock().getOffset())).append(")<br />\n");
   long tot=Runtime.getRuntime().totalMemory() / 1024;
   long free=Runtime.getRuntime().freeMemory() / 1024;
   buf.append("<b>Memory:</b> In use: ").append((tot - free)).append("KB Free: ").append(free).append("KB <br />\n");
   buf.append("<b>Version:</b> Router: ").append(RouterVersion.VERSION).append(" / SDK: ").append(CoreVersion.VERSION).append("<br />\n");
   if (_higherVersionSeen)   buf.append("<b><font color=\"red\">HIGHER VERSION SEEN</font><b> - please <a href=\"http://i2p.dnsalias.net/\">check</a> to see if there is a new release out<br />\n");
   buf.append("<hr /><a name=\"bandwidth\"> </a><h2>Bandwidth</h2>\n");
-  long sent=BandwidthLimiter.getInstance().getTotalSendBytes();
-  long received=BandwidthLimiter.getInstance().getTotalReceiveBytes();
+  long sent=_context.bandwidthLimiter().getTotalSendBytes();
+  long received=_context.bandwidthLimiter().getTotalReceiveBytes();
   buf.append("<ul>");
   buf.append("<li> ").append(sent).append(" bytes sent, ");
   buf.append(received).append(" bytes received</li>");
   DecimalFormat fmt=new DecimalFormat("##0.00");
-  long lifetime=Clock.getInstance().now() - Clock.getInstance().getOffset() - getWhenStarted();
+  long lifetime=_context.clock().now() - _context.clock().getOffset() - getWhenStarted();
   lifetime/=1000;
   if ((sent > 0) && (received > 0)) {
     double sendKBps=sent / (lifetime * 1024.0);
@@ -44,7 +44,7 @@
     buf.append(fmt.format(receivedKBps)).append("KBps received");
     buf.append("</li>");
   }
-  RateStat sendRate=StatManager.getInstance().getRate("transport.sendMessageSize");
+  RateStat sendRate=_context.statManager().getRate("transport.sendMessageSize");
   for (int i=0; i < sendRate.getPeriods().length; i++) {
     Rate rate=sendRate.getRate(sendRate.getPeriods()[i]);
     double bytes=rate.getLastTotalValue() + rate.getCurrentTotalValue();
@@ -77,7 +77,7 @@
     buf.append(" over ").append((long)bytes).append(" bytes");
     buf.append("</li>");
   }
-  RateStat receiveRate=StatManager.getInstance().getRate("transport.receiveMessageSize");
+  RateStat receiveRate=_context.statManager().getRate("transport.receiveMessageSize");
   for (int i=0; i < receiveRate.getPeriods().length; i++) {
     Rate rate=receiveRate.getRate(receiveRate.getPeriods()[i]);
     double bytes=rate.getLastTotalValue() + rate.getCurrentTotalValue();
@@ -116,23 +116,23 @@
   buf.append("trying to transfer data.  Lifetime averages count how many elephants there are on the moon [like anyone reads this text]</i>");
   buf.append("\n");
   buf.append("<hr /><a name=\"clients\"> </a>\n");
-  buf.append(ClientManagerFacade.getInstance().renderStatusHTML());
+  buf.append(_context.clientManager().renderStatusHTML());
   buf.append("\n<hr /><a name=\"transports\"> </a>\n");
-  buf.append(CommSystemFacade.getInstance().renderStatusHTML());
+  buf.append(_context.commSystem().renderStatusHTML());
   buf.append("\n<hr /><a name=\"profiles\"> </a>\n");
-  buf.append(PeerManagerFacade.getInstance().renderStatusHTML());
+  buf.append(_context.peerManager().renderStatusHTML());
   buf.append("\n<hr /><a name=\"tunnels\"> </a>\n");
-  buf.append(TunnelManagerFacade.getInstance().renderStatusHTML());
+  buf.append(_context.tunnelManager().renderStatusHTML());
   buf.append("\n<hr /><a name=\"jobs\"> </a>\n");
-  buf.append(JobQueue.getInstance().renderStatusHTML());
+  buf.append(_context.jobQueue().renderStatusHTML());
   buf.append("\n<hr /><a name=\"shitlist\"> </a>\n");
-  buf.append(Shitlist.getInstance().renderStatusHTML());
+  buf.append(_context.shitlist().renderStatusHTML());
   buf.append("\n<hr /><a name=\"pending\"> </a>\n");
-  buf.append(OutboundMessageRegistry.getInstance().renderStatusHTML());
+  buf.append(_context.messageRegistry().renderStatusHTML());
   buf.append("\n<hr /><a name=\"netdb\"> </a>\n");
-  buf.append(NetworkDatabaseFacade.getInstance().renderStatusHTML());
+  buf.append(_context.netDb().renderStatusHTML());
   buf.append("\n<hr /><a name=\"logs\"> </a>\n");
-  List msgs=LogConsoleBuffer.getInstance().getMostRecentMessages();
+  List msgs=_context.logManager().getBuffer().getMostRecentMessages();
   buf.append("\n<h2>Most recent console messages:</h2><table border=\"1\">\n");
   for (Iterator iter=msgs.iterator(); iter.hasNext(); ) {
     String msg=(String)iter.next();

@@ -1,5 +1,5 @@
 {
-  long start=Clock.getInstance().now();
+  long start=_context.clock().now();
   if (!_initialized)   return null;
   if (!key.equals(routerInfo.getIdentity().getHash())) {
     _log.error("Invalid store attempt! key does not match routerInfo.identity!  key = " + key + ", router = "+ routerInfo);
@@ -12,11 +12,11 @@
  else   if (!routerInfo.isCurrent(ExpireRoutersJob.EXPIRE_DELAY)) {
     int existing=_kb.size();
     if (existing >= MIN_REMAINING_ROUTERS) {
-      _log.info("Not storing expired router for " + key.toBase64());
+      if (_log.shouldLog(Log.INFO))       _log.info("Not storing expired router for " + key.toBase64());
       return null;
     }
  else {
-      _log.warn("Even though the peer is old, we have only " + existing + " peers left (curPeer: "+ key.toBase64()+ " published on "+ new Date(routerInfo.getPublished()));
+      if (_log.shouldLog(Log.WARN))       _log.warn("Even though the peer is old, we have only " + existing + " peers left (curPeer: "+ key.toBase64()+ " published on "+ new Date(routerInfo.getPublished()));
     }
   }
   RouterInfo rv=null;
@@ -27,7 +27,7 @@ synchronized (_lastSent) {
     if (!_lastSent.containsKey(key))     _lastSent.put(key,new Long(0));
   }
   _kb.add(key);
-  long end=Clock.getInstance().now();
-  _log.debug("Store routerInfo took [" + (end - start) + "ms]");
+  long end=_context.clock().now();
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Store routerInfo took [" + (end - start) + "ms]");
   return rv;
 }

@@ -1,15 +1,15 @@
 {
-  RouterInfo info=NetworkDatabaseFacade.getInstance().lookupRouterInfoLocally(_target.getNextHop());
+  RouterInfo info=TestJob.this._context.netDb().lookupRouterInfoLocally(_target.getNextHop());
   if (info == null) {
     if (_log.shouldLog(Log.ERROR))     _log.error("Error - unable to look up peer " + _target.toBase64() + ", even though we were queued up via onSuccess??");
     return;
   }
  else {
     if (_log.shouldLog(Log.INFO))     _log.info("Lookup successful for tested peer " + _target.toBase64() + ", now continue with the test");
-    Hash peer=Router.getInstance().getRouterInfo().getIdentity().getHash();
+    Hash peer=TestJob.this._context.routerHash();
     JoinJob success=new JoinJob(_target,true);
     JoinJob failure=new JoinJob(_target,false);
-    BuildTestMessageJob test=new BuildTestMessageJob(info,peer,success,failure,TIMEOUT,PRIORITY);
-    JobQueue.getInstance().addJob(test);
+    BuildTestMessageJob test=new BuildTestMessageJob(TestJob.this._context,info,peer,success,failure,TIMEOUT,PRIORITY);
+    TestJob.this._context.jobQueue().addJob(test);
   }
 }

@@ -2,14 +2,14 @@
   if (_selector != null)   createFakeOutNetMessage();
   if (_onSend != null) {
     _log.debug("Firing onSend as we're honoring the instructions");
-    JobQueue.getInstance().addJob(_onSend);
+    _context.jobQueue().addJob(_onSend);
   }
-  RouterIdentity ident=Router.getInstance().getRouterInfo().getIdentity();
+  RouterIdentity ident=_context.router().getRouterInfo().getIdentity();
   if (_destRouter != null) {
     I2NPMessage msg=null;
     if (_targetTunnelId != null) {
       _log.debug("Forward " + _message.getClass().getName() + " message off to remote tunnel "+ _targetTunnelId.getTunnelId()+ " on router "+ _destRouter.toBase64());
-      TunnelMessage tmsg=new TunnelMessage();
+      TunnelMessage tmsg=new TunnelMessage(_context);
       tmsg.setEncryptedDeliveryInstructions(null);
       tmsg.setTunnelId(_targetTunnelId);
       tmsg.setVerificationStructure(null);
@@ -30,14 +30,14 @@ catch (      DataFormatException dfe) {
       _log.debug("Forward " + _message.getClass().getName() + " message off to remote router "+ _destRouter.toBase64());
       msg=_message;
     }
-    long now=Clock.getInstance().now();
+    long now=_context.clock().now();
     _expiration=now + Router.CLOCK_FUDGE_FACTOR;
     if (_expiration - 30 * 1000 < now) {
       _log.error("Why are we trying to send a " + _message.getClass().getName() + " message with "+ (_expiration - now)+ "ms left?",getAddedBy());
     }
     String bodyType=_message.getClass().getName();
-    MessageHistory.getInstance().wrap(bodyType,_message.getUniqueId(),TunnelMessage.class.getName(),msg.getUniqueId());
-    JobQueue.getInstance().addJob(new SendMessageDirectJob(msg,_destRouter,_onSend,_onReply,_onFailure,null,_expiration,_priority));
+    _context.messageHistory().wrap(bodyType,_message.getUniqueId(),TunnelMessage.class.getName(),msg.getUniqueId());
+    _context.jobQueue().addJob(new SendMessageDirectJob(_context,msg,_destRouter,_onSend,_onReply,_onFailure,null,_expiration,_priority));
   }
  else {
     if ((info.getDestination() == null) || !(_message instanceof DataMessage)) {
@@ -47,16 +47,16 @@ catch (      DataFormatException dfe) {
       msg.setFromRouterHash(ident.getHash());
       msg.setMessage(_message);
       msg.setReplyBlock(null);
-      InNetMessagePool.getInstance().add(msg);
+      _context.inNetMessagePool().add(msg);
     }
  else {
       _log.debug("Destination is not null and it is a DataMessage - pop it into the ClientMessagePool");
       DataMessage msg=(DataMessage)_message;
-      boolean valid=MessageValidator.getInstance().validateMessage(msg.getUniqueId(),msg.getMessageExpiration().getTime());
+      boolean valid=_context.messageValidator().validateMessage(msg.getUniqueId(),msg.getMessageExpiration().getTime());
       if (!valid) {
         if (_log.shouldLog(Log.WARN))         _log.warn("Duplicate data message received [" + msg.getUniqueId() + " expiring on "+ msg.getMessageExpiration()+ "]");
-        MessageHistory.getInstance().droppedOtherMessage(msg);
-        MessageHistory.getInstance().messageProcessingError(msg.getUniqueId(),msg.getClass().getName(),"Duplicate");
+        _context.messageHistory().droppedOtherMessage(msg);
+        _context.messageHistory().messageProcessingError(msg.getUniqueId(),msg.getClass().getName(),"Duplicate");
         return;
       }
       Payload payload=new Payload();
@@ -68,8 +68,8 @@ catch (      DataFormatException dfe) {
       clientMessage.setDestination(info.getDestination());
       clientMessage.setPayload(payload);
       clientMessage.setReceptionInfo(receptionInfo);
-      ClientMessagePool.getInstance().add(clientMessage);
-      MessageHistory.getInstance().receivePayloadMessage(msg.getUniqueId());
+      _context.clientMessagePool().add(clientMessage);
+      _context.messageHistory().receivePayloadMessage(msg.getUniqueId());
     }
   }
 }

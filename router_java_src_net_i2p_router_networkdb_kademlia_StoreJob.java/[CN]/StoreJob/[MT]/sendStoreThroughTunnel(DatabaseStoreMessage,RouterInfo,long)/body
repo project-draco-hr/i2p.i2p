@@ -3,13 +3,13 @@
   Job sent=new OptimisticSendSuccess(peer);
   TunnelInfo info=null;
   TunnelId outboundTunnelId=selectOutboundTunnel();
-  if (outboundTunnelId != null)   info=TunnelManagerFacade.getInstance().getTunnelInfo(outboundTunnelId);
+  if (outboundTunnelId != null)   info=_context.tunnelManager().getTunnelInfo(outboundTunnelId);
   if (info == null) {
     if (_log.shouldLog(Log.ERROR))     _log.error("selectOutboundTunnel didn't find a valid tunnel!  outboundTunnelId = " + outboundTunnelId + " is not known by the tunnel manager");
     return;
   }
   if (_log.shouldLog(Log.INFO))   _log.info("Store for " + _state.getTarget() + " expiring on "+ new Date(_expiration)+ " is going to "+ peer.getIdentity().getHash()+ " via outbound tunnel: "+ info);
-  Job j=new SendTunnelMessageJob(msg,outboundTunnelId,peer.getIdentity().getHash(),null,sent,null,fail,null,_expiration - Clock.getInstance().now(),STORE_PRIORITY);
-  JobQueue.getInstance().addJob(j);
-  StatManager.getInstance().addRateData("netDb.storeSent",1,0);
+  Job j=new SendTunnelMessageJob(_context,msg,outboundTunnelId,peer.getIdentity().getHash(),null,sent,null,fail,null,_expiration - _context.clock().now(),STORE_PRIORITY);
+  _context.jobQueue().addJob(j);
+  _context.statManager().addRateData("netDb.storeSent",1,0);
 }

@@ -1,12 +1,14 @@
 {
   if (_sent) {
-    _log.warn("Not resending!",new Exception("blah"));
+    if (_log.shouldLog(Log.WARN))     _log.warn("Not resending!",new Exception("blah"));
     return;
   }
   _sent=true;
-  if (Router.getInstance().getRouterInfo().getIdentity().getHash().equals(_router.getIdentity().getHash())) {
+  Hash to=_router.getIdentity().getHash();
+  Hash us=_context.router().getRouterInfo().getIdentity().getHash();
+  if (us.equals(to)) {
     if (_selector != null) {
-      OutNetMessage outM=new OutNetMessage();
+      OutNetMessage outM=new OutNetMessage(_context);
       outM.setExpiration(_expiration);
       outM.setMessage(_message);
       outM.setOnFailedReplyJob(_onFail);
@@ -16,17 +18,17 @@
       outM.setPriority(_priority);
       outM.setReplySelector(_selector);
       outM.setTarget(_router);
-      OutboundMessageRegistry.getInstance().registerPending(outM);
+      _context.messageRegistry().registerPending(outM);
     }
-    if (_onSend != null)     JobQueue.getInstance().addJob(_onSend);
+    if (_onSend != null)     _context.jobQueue().addJob(_onSend);
     InNetMessage msg=new InNetMessage();
     msg.setFromRouter(_router.getIdentity());
     msg.setMessage(_message);
-    InNetMessagePool.getInstance().add(msg);
-    _log.debug("Adding " + _message.getClass().getName() + " to inbound message pool as it was destined for ourselves");
+    _context.inNetMessagePool().add(msg);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Adding " + _message.getClass().getName() + " to inbound message pool as it was destined for ourselves");
   }
  else {
-    OutNetMessage msg=new OutNetMessage();
+    OutNetMessage msg=new OutNetMessage(_context);
     msg.setExpiration(_expiration);
     msg.setMessage(_message);
     msg.setOnFailedReplyJob(_onFail);
@@ -36,7 +38,7 @@
     msg.setPriority(_priority);
     msg.setReplySelector(_selector);
     msg.setTarget(_router);
-    OutNetMessagePool.getInstance().add(msg);
-    _log.debug("Adding " + _message.getClass().getName() + " to outbound message pool targeting "+ _router.getIdentity().getHash().toBase64());
+    _context.outNetMessagePool().add(msg);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Adding " + _message.getClass().getName() + " to outbound message pool targeting "+ _router.getIdentity().getHash().toBase64());
   }
 }

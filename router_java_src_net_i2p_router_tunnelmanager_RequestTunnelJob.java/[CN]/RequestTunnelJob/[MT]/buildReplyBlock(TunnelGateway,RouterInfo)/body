@@ -3,11 +3,11 @@
     if (_log.shouldLog(Log.ERROR))     _log.error("No peer specified for reply!");
     return null;
   }
-  SessionKey replySessionKey=KeyGenerator.getInstance().generateSessionKey();
+  SessionKey replySessionKey=_context.keyGenerator().generateSessionKey();
   SessionTag tag=new SessionTag(true);
   Set tags=new HashSet();
   tags.add(tag);
-  SessionKeyManager.getInstance().tagsReceived(replySessionKey,tags);
+  _context.sessionKeyManager().tagsReceived(replySessionKey,tags);
   PublicKey pk=replyPeer.getIdentity().getPublicKey();
   DeliveryInstructions instructions=new DeliveryInstructions();
   instructions.setDelayRequested(false);
@@ -18,15 +18,15 @@
   instructions.setEncryptionKey(null);
   instructions.setRouter(gateway.getGateway());
   instructions.setTunnelId(gateway.getTunnelId());
-  long replyId=RandomSource.getInstance().nextInt(Integer.MAX_VALUE);
+  long replyId=_context.random().nextInt(Integer.MAX_VALUE);
   Certificate replyCert=new Certificate(Certificate.CERTIFICATE_TYPE_NULL,null);
   long expiration=_expiration;
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Setting the expiration on the reply block to " + (new Date(expiration)));
   SourceRouteBlock block=new SourceRouteBlock();
   try {
-    long begin=Clock.getInstance().now();
-    block.setData(instructions,replyId,replyCert,expiration,pk);
-    long end=Clock.getInstance().now();
+    long begin=_context.clock().now();
+    block.setData(_context,instructions,replyId,replyCert,expiration,pk);
+    long end=_context.clock().now();
     if ((end - begin) > 1000) {
       if (_log.shouldLog(Log.WARN))       _log.warn("Took too long (" + (end - begin) + "ms) to build source route block");
     }

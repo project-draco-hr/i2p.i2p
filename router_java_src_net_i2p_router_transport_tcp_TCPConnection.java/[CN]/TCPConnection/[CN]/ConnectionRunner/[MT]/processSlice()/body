@@ -1,5 +1,5 @@
 {
-  long start=Clock.getInstance().now();
+  long start=_context.clock().now();
   OutNetMessage msg=null;
   int remaining=0;
   List timedOut=new LinkedList();
@@ -32,7 +32,7 @@ synchronized (_toBeSent) {
   if (remaining > 0) {
     if (_log.shouldLog(Log.INFO))     _log.info("After pulling off a pending message, there are still " + remaining + " messages queued up for sending to "+ _remoteIdentity.getHash().toBase64());
   }
-  long afterExpire=Clock.getInstance().now();
+  long afterExpire=_context.clock().now();
   if (msg != null) {
     msg.timestamp("TCPConnection.runner.processSlice fetched");
     try {
@@ -44,9 +44,9 @@ synchronized (_out) {
         _out.flush();
       }
       msg.timestamp("TCPConnection.runner.processSlice sent and flushed");
-      long end=Clock.getInstance().now();
+      long end=_context.clock().now();
       long timeLeft=msg.getMessage().getMessageExpiration().getTime() - end;
-      if (_log.shouldLog(Log.INFO))       _log.info("Message " + msg.getMessage().getClass().getName() + " (expiring in "+ timeLeft+ "ms) sent to "+ _remoteIdentity.getHash().toBase64()+ " from "+ _myIdentity.getHash().toBase64()+ " over connection "+ _id+ " with "+ data.length+ " bytes in "+ (end - start)+ "ms");
+      if (_log.shouldLog(Log.INFO))       _log.info("Message " + msg.getMessage().getClass().getName() + " (expiring in "+ timeLeft+ "ms) sent to "+ _remoteIdentity.getHash().toBase64()+ " from "+ _context.routerHash().toBase64()+ " over connection "+ _id+ " with "+ data.length+ " bytes in "+ (end - start)+ "ms");
       if (timeLeft < 10 * 1000) {
         if (_log.shouldLog(Log.DEBUG))         _log.warn("Very little time left... time to send [" + (end - start) + "] time left ["+ timeLeft+ "] to "+ _remoteIdentity.getHash().toBase64()+ "\n"+ msg.toString(),msg.getCreatedBy());
       }

@@ -1,10 +1,10 @@
 {
-  long expiration=Clock.getInstance().now() + PER_PEER_TIMEOUT;
+  long expiration=_context.clock().now() + PER_PEER_TIMEOUT;
   DatabaseLookupMessage msg=buildMessage(expiration);
   if (_log.shouldLog(Log.INFO))   _log.info(getJobId() + ": Sending router search to " + router.getIdentity().getHash().toBase64()+ " for "+ msg.getSearchKey().toBase64()+ " w/ replies to us ["+ msg.getFrom().getIdentity().getHash().toBase64()+ "]");
-  SearchMessageSelector sel=new SearchMessageSelector(router,_expiration,_state);
+  SearchMessageSelector sel=new SearchMessageSelector(_context,router,_expiration,_state);
   long timeoutMs=PER_PEER_TIMEOUT;
-  SearchUpdateReplyFoundJob reply=new SearchUpdateReplyFoundJob(router,_state,_facade,this);
-  SendMessageDirectJob j=new SendMessageDirectJob(msg,router.getIdentity().getHash(),reply,new FailedJob(router),sel,expiration,SEARCH_PRIORITY);
-  JobQueue.getInstance().addJob(j);
+  SearchUpdateReplyFoundJob reply=new SearchUpdateReplyFoundJob(_context,router,_state,_facade,this);
+  SendMessageDirectJob j=new SendMessageDirectJob(_context,msg,router.getIdentity().getHash(),reply,new FailedJob(router),sel,expiration,SEARCH_PRIORITY);
+  _context.jobQueue().addJob(j);
 }

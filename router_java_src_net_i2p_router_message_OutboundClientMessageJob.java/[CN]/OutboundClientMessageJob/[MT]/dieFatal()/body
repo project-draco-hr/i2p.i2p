@@ -1,7 +1,7 @@
 {
   if (_status.getSuccess())   return;
   boolean alreadyFailed=_status.failed();
-  long sendTime=Clock.getInstance().now() - _status.getStart();
+  long sendTime=_context.clock().now() - _status.getStart();
   ClientMessage msg=_status.getMessage();
   if (alreadyFailed) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("dieFatal() - already failed sending " + msg.getMessageId() + ", no need to do it again",new Exception("Duplicate death?"));
@@ -10,8 +10,8 @@
  else {
     if (_log.shouldLog(Log.ERROR))     _log.error("Failed to send the message " + msg.getMessageId() + " after "+ _status.getNumSent()+ " sends and "+ _status.getNumLookups()+ " lookups (and "+ sendTime+ "ms)",new Exception("Message send failure"));
   }
-  MessageHistory.getInstance().sendPayloadMessage(msg.getMessageId().getMessageId(),false,sendTime);
-  ClientManagerFacade.getInstance().messageDeliveryStatusUpdate(msg.getFromDestination(),msg.getMessageId(),false);
-  StatManager.getInstance().updateFrequency("client.sendMessageFailFrequency");
-  StatManager.getInstance().addRateData("client.sendAttemptAverage",_status.getNumSent(),sendTime);
+  _context.messageHistory().sendPayloadMessage(msg.getMessageId().getMessageId(),false,sendTime);
+  _context.clientManager().messageDeliveryStatusUpdate(msg.getFromDestination(),msg.getMessageId(),false);
+  _context.statManager().updateFrequency("client.sendMessageFailFrequency");
+  _context.statManager().addRateData("client.sendAttemptAverage",_status.getNumSent(),sendTime);
 }

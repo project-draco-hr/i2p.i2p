@@ -13,17 +13,17 @@ synchronized (_timedJobs) {
       if (_timedJobs.contains(job))       alreadyExists=true;
     }
   }
-  StatManager.getInstance().addRateData("jobQueue.readyJobs",numReady,0);
+  _context.statManager().addRateData("jobQueue.readyJobs",numReady,0);
   if (shouldDrop(job,numReady)) {
     if (_log.shouldLog(Log.ERROR))     _log.error("Dropping job due to overload!  # ready jobs: " + numReady + ": job = "+ job);
     job.dropped();
-    StatManager.getInstance().addRateData("jobQueue.droppedJobs",1,1);
+    _context.statManager().addRateData("jobQueue.droppedJobs",1,1);
     awaken(1);
     return;
   }
   if (!alreadyExists) {
-    if (job.getTiming().getStartAfter() <= Clock.getInstance().now()) {
-      job.getTiming().setStartAfter(Clock.getInstance().now());
+    if (job.getTiming().getStartAfter() <= _context.clock().now()) {
+      job.getTiming().setStartAfter(_context.clock().now());
       if (job instanceof JobImpl)       ((JobImpl)job).madeReady();
 synchronized (_readyJobs) {
         _readyJobs.add(job);

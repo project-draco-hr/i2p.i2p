@@ -1,28 +1,24 @@
 {
   String key=job.getName();
   long lag=doStart - origStartAfter;
-  MessageHistory hist=MessageHistory.getInstance();
-  long uptime=Router.getInstance().getUptime();
+  MessageHistory hist=_context.messageHistory();
+  long uptime=_context.router().getUptime();
 synchronized (_jobStats) {
     if (!_jobStats.containsKey(key))     _jobStats.put(key,new JobStats(key));
     JobStats stats=(JobStats)_jobStats.get(key);
     stats.jobRan(duration,lag);
   }
   String dieMsg=null;
-  boolean dumpRunners=false;
   if (lag > _lagWarning) {
     dieMsg="Lag too long for job " + job.getName() + " ["+ lag+ "ms and a run time of "+ duration+ "ms]";
-    dumpRunners=true;
   }
  else   if (duration > _runWarning) {
     dieMsg="Job run too long for job " + job.getName() + " ["+ lag+ "ms lag and run time of "+ duration+ "ms]";
-    dumpRunners=true;
   }
   if (dieMsg != null) {
     if (_log.shouldLog(Log.WARN))     _log.warn(dieMsg);
     if (hist != null)     hist.messageProcessingError(-1,JobQueue.class.getName(),dieMsg);
   }
-  if (dumpRunners)   dumpRunners(true);
   if ((lag > _lagFatal) && (uptime > _warmupTime)) {
     if (_log.shouldLog(Log.WARN))     _log.log(Log.WARN,"The router is either incredibly overloaded or (more likely) there's an error.",new Exception("ttttooooo mmmuuuccccchhhh llllaaagggg"));
     return;

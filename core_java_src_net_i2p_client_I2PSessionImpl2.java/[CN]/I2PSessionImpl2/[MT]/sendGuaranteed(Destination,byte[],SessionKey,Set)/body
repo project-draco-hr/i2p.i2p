@@ -1,18 +1,18 @@
 {
-  SessionKey key=SessionKeyManager.getInstance().getCurrentKey(dest.getPublicKey());
-  if (key == null)   key=SessionKeyManager.getInstance().createSession(dest.getPublicKey());
-  SessionTag tag=SessionKeyManager.getInstance().consumeNextAvailableTag(dest.getPublicKey(),key);
+  SessionKey key=_context.sessionKeyManager().getCurrentKey(dest.getPublicKey());
+  if (key == null)   key=_context.sessionKeyManager().createSession(dest.getPublicKey());
+  SessionTag tag=_context.sessionKeyManager().consumeNextAvailableTag(dest.getPublicKey(),key);
   Set sentTags=null;
-  if (SessionKeyManager.getInstance().getAvailableTags(dest.getPublicKey(),key) < 10) {
+  if (_context.sessionKeyManager().getAvailableTags(dest.getPublicKey(),key) < 10) {
     sentTags=createNewTags(50);
   }
- else   if (SessionKeyManager.getInstance().getAvailableTimeLeft(dest.getPublicKey(),key) < 30 * 1000) {
+ else   if (_context.sessionKeyManager().getAvailableTimeLeft(dest.getPublicKey(),key) < 30 * 1000) {
     sentTags=createNewTags(50);
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Tags are almost expired, adding 50 new ones");
   }
   SessionKey newKey=null;
-  if (false)   newKey=KeyGenerator.getInstance().generateSessionKey();
-  long nonce=(long)RandomSource.getInstance().nextInt(Integer.MAX_VALUE);
+  if (false)   newKey=_context.keyGenerator().generateSessionKey();
+  long nonce=(long)_context.random().nextInt(Integer.MAX_VALUE);
   MessageState state=new MessageState(nonce);
   state.setKey(key);
   state.setTags(sentTags);
@@ -33,8 +33,8 @@ synchronized (_sendingStates) {
   }
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Adding sending state " + state.getMessageId() + " / "+ state.getNonce());
   _producer.sendMessage(this,dest,nonce,payload,tag,key,sentTags,newKey);
-  if (isGuaranteed())   state.waitFor(MessageStatusMessage.STATUS_SEND_GUARANTEED_SUCCESS,Clock.getInstance().now() + SEND_TIMEOUT);
- else   state.waitFor(MessageStatusMessage.STATUS_SEND_ACCEPTED,Clock.getInstance().now() + SEND_TIMEOUT);
+  if (isGuaranteed())   state.waitFor(MessageStatusMessage.STATUS_SEND_GUARANTEED_SUCCESS,_context.clock().now() + SEND_TIMEOUT);
+ else   state.waitFor(MessageStatusMessage.STATUS_SEND_ACCEPTED,_context.clock().now() + SEND_TIMEOUT);
 synchronized (_sendingStates) {
     _sendingStates.remove(state);
   }

@@ -5,5 +5,10 @@
 synchronized (_explicitSendKeys) {
     _explicitSendKeys.add(h);
   }
-  if (!RepublishLeaseSetJob.alreadyRepublishing(h))   JobQueue.getInstance().addJob(new RepublishLeaseSetJob(this,h));
+  Job j=null;
+synchronized (_publishingLeaseSets) {
+    boolean isNew=_publishingLeaseSets.add(h);
+    if (isNew)     j=new RepublishLeaseSetJob(_context,this,h);
+  }
+  if (j != null)   _context.jobQueue().addJob(j);
 }

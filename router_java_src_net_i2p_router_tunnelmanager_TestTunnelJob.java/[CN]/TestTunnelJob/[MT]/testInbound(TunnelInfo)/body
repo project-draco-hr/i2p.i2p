@@ -1,19 +1,19 @@
 {
   if (_log.shouldLog(Log.INFO))   _log.info("Testing inbound tunnel " + info);
-  DeliveryStatusMessage msg=new DeliveryStatusMessage();
-  msg.setArrival(new Date(Clock.getInstance().now()));
+  DeliveryStatusMessage msg=new DeliveryStatusMessage(_context);
+  msg.setArrival(new Date(_context.clock().now()));
   msg.setMessageId(_nonce);
   TestFailedJob failureJob=new TestFailedJob();
   MessageSelector selector=new TestMessageSelector(msg.getMessageId(),info.getTunnelId().getTunnelId());
-  TunnelMessage tmsg=new TunnelMessage();
+  TunnelMessage tmsg=new TunnelMessage(_context);
   try {
     ByteArrayOutputStream baos=new ByteArrayOutputStream(1024);
     msg.writeBytes(baos);
     tmsg.setData(baos.toByteArray());
     tmsg.setTunnelId(info.getTunnelId());
-    JobQueue.getInstance().addJob(new SendMessageDirectJob(tmsg,info.getThisHop(),new TestSuccessfulJob(),failureJob,selector,Clock.getInstance().now() + TEST_TIMEOUT,TEST_PRIORITY));
+    _context.jobQueue().addJob(new SendMessageDirectJob(_context,tmsg,info.getThisHop(),new TestSuccessfulJob(),failureJob,selector,_context.clock().now() + TEST_TIMEOUT,TEST_PRIORITY));
     String bodyType=msg.getClass().getName();
-    MessageHistory.getInstance().wrap(bodyType,msg.getUniqueId(),TunnelMessage.class.getName(),tmsg.getUniqueId());
+    _context.messageHistory().wrap(bodyType,msg.getUniqueId(),TunnelMessage.class.getName(),tmsg.getUniqueId());
   }
  catch (  IOException ioe) {
     _log.error("Error writing out the tunnel message to send to the tunnel",ioe);
