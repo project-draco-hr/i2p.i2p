@@ -4,11 +4,10 @@ def on_doneFindNode(self, lst):
     normalisePeer = localNode._normalisePeer
     peers = [normalisePeer(p) for p in lst]
     self.log(2, ('STORE RPC findNode - got peers %s' % repr(peers)))
-    self.numPeersToStore = min(len(peers), numStorePeers)
+    i = 0
     self.numPeersSucceeded = 0
     self.numPeersFailed = 0
     self.numPeersFinished = 0
-    i = 0
     for peer in peers:
         if (peer.dest == localNode.dest):
             self.log(3, 'storing to ourself')
@@ -23,4 +22,6 @@ def on_doneFindNode(self, lst):
         i += 1
         if (i >= numStorePeers):
             break
+    self.nextTickTime = (time.time() + timeout['store'])
     self.log(2, ('Sent store cmd to %s peers, awaiting responses' % i))
+    self.numPeersToStore = i
