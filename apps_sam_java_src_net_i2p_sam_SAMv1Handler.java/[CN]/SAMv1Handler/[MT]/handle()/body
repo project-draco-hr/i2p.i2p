@@ -3,6 +3,7 @@
   boolean canContinue=false;
   ByteArrayOutputStream buf=new ByteArrayOutputStream(IN_BUFSIZE);
   StringTokenizer tok;
+  Properties props;
   this.thread.setName("SAMv1Handler");
   _log.debug("SAM handling started");
   try {
@@ -35,18 +36,24 @@
       }
       domain=tok.nextToken();
       opcode=tok.nextToken();
-      _log.debug("Parsing (domain: \"" + domain + "\"; opcode: \""+ opcode+ "\")");
-      if (domain.equals("RAW")) {
-        canContinue=execRawMessage(opcode,tok);
+      if (_log.shouldLog(Log.DEBUG)) {
+        _log.debug("Parsing (domain: \"" + domain + "\"; opcode: \""+ opcode+ "\")");
+      }
+      props=SAMUtils.parseParams(tok);
+      if (domain.equals("STREAM")) {
+        canContinue=execStreamMessage(opcode,props);
+      }
+ else       if (domain.equals("RAW")) {
+        canContinue=execRawMessage(opcode,props);
       }
  else       if (domain.equals("SESSION")) {
-        canContinue=execSessionMessage(opcode,tok);
+        canContinue=execSessionMessage(opcode,props);
       }
  else       if (domain.equals("DEST")) {
-        canContinue=execDestMessage(opcode,tok);
+        canContinue=execDestMessage(opcode,props);
       }
  else       if (domain.equals("NAMING")) {
-        canContinue=execNamingMessage(opcode,tok);
+        canContinue=execNamingMessage(opcode,props);
       }
  else {
         _log.debug("Unrecognized message domain: \"" + domain + "\"");

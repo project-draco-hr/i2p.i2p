@@ -1,0 +1,35 @@
+{
+  _log.debug("SAM STREAM session socket handler running");
+  int read=-1;
+  byte[] data=new byte[SOCKET_HANDLER_BUF_SIZE];
+  try {
+    InputStream in=i2pSocket.getInputStream();
+    while (stillRunning) {
+      read=in.read(data);
+      if (read == -1) {
+        _log.debug("Handler " + id + ": connection closed");
+        break;
+      }
+      recv.receiveStreamBytes(id,data,read);
+    }
+  }
+ catch (  IOException e) {
+    _log.debug("Caught IOException",e);
+  }
+  try {
+    i2pSocket.close();
+  }
+ catch (  IOException e) {
+    _log.debug("Caught IOException",e);
+  }
+  if (stillRunning) {
+    removeSocketHandler(id);
+    try {
+      recv.notifyStreamDisconnection(id,"OK",null);
+    }
+ catch (    IOException e) {
+      _log.debug("Error sending disconnection notice for handler " + id,e);
+    }
+  }
+  _log.debug("Shutting down SAM STREAM session socket handler " + id);
+}

@@ -1,0 +1,64 @@
+{
+  String dest="BUG!";
+  try {
+    if (opcode.equals("CREATE")) {
+      if ((rawSession != null) || (datagramSession != null) || (streamSession != null)) {
+        _log.debug("Trying to create a session, but one still exists");
+        return false;
+      }
+      if (props == null) {
+        _log.debug("No parameters specified in SESSION CREATE message");
+        return false;
+      }
+      dest=props.getProperty("DESTINATION");
+      if (dest == null) {
+        _log.debug("SESSION DESTINATION parameter not specified");
+        return false;
+      }
+      props.remove("DESTINATION");
+      if (dest.equals("TRANSIENT")) {
+        _log.debug("TRANSIENT destination requested");
+        ByteArrayOutputStream priv=new ByteArrayOutputStream();
+        SAMUtils.genRandomKey(priv,null);
+        dest=Base64.encode(priv.toByteArray());
+      }
+      String style=props.getProperty("STYLE");
+      if (style == null) {
+        _log.debug("SESSION STYLE parameter not specified");
+        return false;
+      }
+      props.remove("STYLE");
+      if (style.equals("RAW")) {
+        rawSession=new SAMRawSession(dest,props,this);
+      }
+ else       if (style.equals("STREAM")) {
+        streamSession=new SAMStreamSession(dest,props,this);
+      }
+ else {
+        _log.debug("Unrecognized SESSION STYLE: \"" + style + "\"");
+        return false;
+      }
+      return writeString("SESSION STATUS RESULT=OK DESTINATION=" + dest + "\n");
+    }
+ else {
+      _log.debug("Unrecognized SESSION message opcode: \"" + opcode + "\"");
+      return false;
+    }
+  }
+ catch (  DataFormatException e) {
+    _log.debug("Invalid destination specified");
+    return writeString("SESSION STATUS RESULT=INVALID_KEY DESTINATION=" + dest + "\n");
+  }
+catch (  I2PSessionException e) {
+    _log.debug("I2P error when instantiating session",e);
+    return writeString("SESSION STATUS RESULT=I2P_ERROR DESTINATION=" + dest + "\n");
+  }
+catch (  SAMException e) {
+    _log.error("Unexpected SAM error",e);
+    return writeString("SESSION STATUS RESULT=I2P_ERROR DESTINATION=" + dest + "\n");
+  }
+catch (  IOException e) {
+    _log.error("Unexpected IOException",e);
+    return writeString("SESSION STATUS RESULT=I2P_ERROR DESTINATION=" + dest + "\n");
+  }
+}
