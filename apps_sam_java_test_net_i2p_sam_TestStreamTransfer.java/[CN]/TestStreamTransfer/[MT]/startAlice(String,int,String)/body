@@ -1,0 +1,37 @@
+{
+  _log.info("\n\nStarting up Alice");
+  try {
+    Socket s=new Socket(host,port);
+    OutputStream out=s.getOutputStream();
+    out.write("HELLO VERSION MIN=1.0 MAX=1.0\n".getBytes());
+    BufferedReader reader=new BufferedReader(new InputStreamReader(s.getInputStream()));
+    String line=reader.readLine();
+    _log.debug("line read for valid version: " + line);
+    String req="SESSION CREATE STYLE=STREAM DESTINATION=Alice " + conOptions + "\n";
+    out.write(req.getBytes());
+    line=reader.readLine();
+    _log.info("Response to creating the session with destination Alice: " + line);
+    req="NAMING LOOKUP NAME=ME\n";
+    out.write(req.getBytes());
+    line=reader.readLine();
+    StringTokenizer tok=new StringTokenizer(line);
+    String maj=tok.nextToken();
+    String min=tok.nextToken();
+    Properties props=SAMUtils.parseParams(tok);
+    String value=props.getProperty("VALUE");
+    if (value == null) {
+      _log.error("No value for ME found!  [" + line + "]");
+      return;
+    }
+ else {
+      _log.info("Alice is located at " + value);
+    }
+    _alice=value;
+    I2PThread aliceThread=new I2PThread(new AliceRunner(reader,out,s));
+    aliceThread.setName("Alice");
+    aliceThread.start();
+  }
+ catch (  Exception e) {
+    _log.error("Error testing for valid version",e);
+  }
+}

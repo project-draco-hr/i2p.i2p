@@ -1,0 +1,53 @@
+{
+  _log.info("\n\nTesting Bob\n\n\n");
+  try {
+    Socket s=new Socket(host,port);
+    OutputStream out=s.getOutputStream();
+    out.write("HELLO VERSION MIN=1.0 MAX=1.0\n".getBytes());
+    BufferedReader reader=new BufferedReader(new InputStreamReader(s.getInputStream()));
+    String line=reader.readLine();
+    _log.debug("line read for valid version: " + line);
+    String req="SESSION CREATE STYLE=STREAM DESTINATION=Bob " + conOptions + "\n";
+    out.write(req.getBytes());
+    line=reader.readLine();
+    _log.info("Response to creating the session with destination Bob: " + line);
+    req="STREAM CONNECT ID=42 DESTINATION=" + _alice + "\n";
+    out.write(req.getBytes());
+    line=reader.readLine();
+    _log.info("Response to the stream connect from Bob to Alice: " + line);
+    StringTokenizer tok=new StringTokenizer(line);
+    String maj=tok.nextToken();
+    String min=tok.nextToken();
+    Properties props=SAMUtils.parseParams(tok);
+    String result=props.getProperty("RESULT");
+    if (!("OK".equals(result))) {
+      _log.error("Unable to connect!");
+      _dead=true;
+      return;
+    }
+    try {
+      Thread.sleep(5 * 1000);
+    }
+ catch (    InterruptedException ie) {
+    }
+    req="STREAM SEND ID=42 SIZE=10\nBlahBlah!!";
+    out.write(req.getBytes());
+    try {
+      Thread.sleep(20 * 1000);
+    }
+ catch (    InterruptedException ie) {
+    }
+    req="STREAM CLOSE ID=42\n";
+    out.write(req.getBytes());
+    try {
+      Thread.sleep(3 * 1000);
+    }
+ catch (    InterruptedException ie) {
+    }
+    _dead=true;
+    s.close();
+  }
+ catch (  Exception e) {
+    _log.error("Error testing for valid version",e);
+  }
+}

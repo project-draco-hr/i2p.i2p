@@ -1,0 +1,63 @@
+{
+  String line=_reader.readLine();
+  StringTokenizer tok=new StringTokenizer(line);
+  String maj=tok.nextToken();
+  String min=tok.nextToken();
+  Properties props=SAMUtils.parseParams(tok);
+  if (("STREAM".equals(maj)) && ("CONNECTED".equals(min))) {
+    String dest=props.getProperty("DESTINATION");
+    String id=props.getProperty("ID");
+    if ((dest == null) || (id == null)) {
+      _log.error("Invalid STREAM CONNECTED line: [" + line + "]");
+      return;
+    }
+    dest=dest.trim();
+    id=id.trim();
+    _streams.put(id,dest);
+  }
+ else   if (("STREAM".equals(maj)) && ("CLOSED".equals(min))) {
+    String id=props.getProperty("ID");
+    if (id == null) {
+      _log.error("Invalid STREAM CLOSED line: [" + line + "]");
+      return;
+    }
+    _streams.remove(id);
+  }
+ else   if (("STREAM".equals(maj)) && ("RECEIVED".equals(min))) {
+    String id=props.getProperty("ID");
+    String size=props.getProperty("SIZE");
+    if ((id == null) || (size == null)) {
+      _log.error("Invalid STREAM RECEIVED line: [" + line + "]");
+      return;
+    }
+    id=id.trim();
+    size=size.trim();
+    int payloadSize=-1;
+    try {
+      payloadSize=Integer.parseInt(size);
+    }
+ catch (    NumberFormatException nfe) {
+      _log.error("Invalid SIZE in message [" + size + "]");
+      return;
+    }
+    char payload[]=new char[payloadSize];
+    int read=_reader.read(payload);
+    if (read != payloadSize) {
+      _log.error("Incorrect size read - expected " + payloadSize + " got "+ read);
+      return;
+    }
+    _log.info("Received from the stream " + id + ": ["+ new String(payload)+ "]");
+    try {
+      Thread.sleep(5 * 1000);
+    }
+ catch (    InterruptedException ie) {
+    }
+    String reply="STREAM SEND ID=" + id + " SIZE="+ payloadSize+ "\n"+ payload;
+    _out.write(reply.getBytes());
+    _out.flush();
+  }
+ else {
+    _log.error("Received unsupported type [" + maj + "/"+ min+ "]");
+    return;
+  }
+}
