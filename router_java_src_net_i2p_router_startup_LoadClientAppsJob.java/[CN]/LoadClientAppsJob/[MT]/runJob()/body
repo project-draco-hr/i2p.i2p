@@ -9,16 +9,23 @@ synchronized (LoadClientAppsJob.class) {
     String className=clientApps.getProperty("clientApp." + i + ".main");
     String clientName=clientApps.getProperty("clientApp." + i + ".name");
     String args=clientApps.getProperty("clientApp." + i + ".args");
+    String delayStr=clientApps.getProperty("clientApp." + i + ".delay");
     String onBoot=clientApps.getProperty("clientApp." + i + ".onBoot");
     boolean onStartup=false;
     if (onBoot != null)     onStartup="true".equals(onBoot) || "yes".equals(onBoot);
+    long delay=(onStartup ? 0 : STARTUP_DELAY);
+    if (delayStr != null)     try {
+      delay=1000 * Integer.parseInt(delayStr);
+    }
+ catch (    NumberFormatException nfe) {
+    }
     if (className == null)     break;
     String argVal[]=parseArgs(args);
     if (onStartup) {
       runClient(className,clientName,argVal);
     }
  else {
-      getContext().jobQueue().addJob(new DelayedRunClient(className,clientName,argVal));
+      getContext().jobQueue().addJob(new DelayedRunClient(className,clientName,argVal,delay));
     }
     i++;
   }

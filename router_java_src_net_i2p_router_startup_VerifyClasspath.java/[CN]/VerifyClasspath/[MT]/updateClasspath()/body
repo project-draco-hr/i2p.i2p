@@ -1,0 +1,33 @@
+{
+  Properties p=new Properties();
+  File configFile=new File("wrapper.config");
+  Set needed=new HashSet(_jars);
+  try {
+    DataHelper.loadProps(p,configFile);
+    Set toAdd=new HashSet();
+    int entry=1;
+    while (true) {
+      String value=p.getProperty("wrapper.java.classpath." + entry);
+      if (value == null)       break;
+      needed.remove(value);
+      entry++;
+    }
+    if (needed.size() <= 0) {
+      return false;
+    }
+ else {
+      FileWriter out=new FileWriter(configFile,true);
+      out.write(NL + "# Adding new libs as required by the update" + NL);
+      for (Iterator iter=needed.iterator(); iter.hasNext(); ) {
+        String name=(String)iter.next();
+        out.write("wrapper.java.classpath." + entry + "="+ name+ NL);
+      }
+      out.close();
+      return true;
+    }
+  }
+ catch (  IOException ioe) {
+    ioe.printStackTrace();
+    return false;
+  }
+}
