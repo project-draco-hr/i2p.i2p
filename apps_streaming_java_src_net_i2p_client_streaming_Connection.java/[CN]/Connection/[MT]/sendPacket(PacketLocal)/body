@@ -27,8 +27,10 @@ synchronized (_outboundPackets) {
       _log.debug("Requesting ack delay of " + delay + "ms for packet "+ packet);
     }
     packet.setFlag(Packet.FLAG_DELAY_REQUESTED);
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Resend in " + (_options.getRTT() * 2) + " for "+ packet);
-    SimpleTimer.getInstance().addEvent(new ResendPacketEvent(packet),(_options.getRTT() * 2 < 5000 ? 5000 : _options.getRTT() * 2));
+    long timeout=(_options.getRTT() < 10000 ? 10000 : _options.getRTT());
+    if (timeout > MAX_RESEND_DELAY)     timeout=MAX_RESEND_DELAY;
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Resend in " + timeout + " for "+ packet);
+    SimpleTimer.getInstance().addEvent(new ResendPacketEvent(packet),timeout);
   }
   _lastSendTime=_context.clock().now();
   _outboundQueue.enqueue(packet);

@@ -1,4 +1,5 @@
 {
+  if (!_connected)   return;
   boolean resend=false;
 synchronized (_outboundPackets) {
     if (_outboundPackets.containsKey(new Long(_packet.getSequenceNum())))     resend=true;
@@ -23,6 +24,7 @@ synchronized (_outboundPackets) {
     }
  else {
       long timeout=_options.getRTT() << (numSends - 1);
+      if ((timeout > MAX_RESEND_DELAY) || (timeout <= 0))       timeout=MAX_RESEND_DELAY;
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Scheduling resend in " + timeout + "ms for "+ _packet);
       SimpleTimer.getInstance().addEvent(ResendPacketEvent.this,timeout);
     }
