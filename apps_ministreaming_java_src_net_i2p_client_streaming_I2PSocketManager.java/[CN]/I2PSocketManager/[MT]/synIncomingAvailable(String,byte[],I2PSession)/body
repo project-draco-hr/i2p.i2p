@@ -1,0 +1,46 @@
+{
+  _log.debug("*Syn!");
+  Destination d=new Destination();
+  d.fromByteArray(payload);
+  I2PSocketImpl s=null;
+  boolean acceptConnections=(_serverSocket != null);
+  String newLocalID=null;
+synchronized (lock) {
+    newLocalID=makeID(_inSockets);
+    if (acceptConnections) {
+      s=new I2PSocketImpl(d,this,false,newLocalID);
+      s.setRemoteID(id);
+    }
+  }
+  if (!acceptConnections) {
+    byte[] packet=makePacket((byte)CLOSE_OUT,id,toBytes(newLocalID));
+    boolean replySentOk=false;
+synchronized (_session) {
+      replySentOk=_session.sendMessage(d,packet);
+    }
+    if (!replySentOk) {
+      _log.error("Error sending close to " + d.calculateHash().toBase64() + " in response to a new con message",new Exception("Failed creation"));
+    }
+    return;
+  }
+  if (_serverSocket.getNewSocket(s)) {
+    _inSockets.put(newLocalID,s);
+    byte[] packet=makePacket((byte)ACK,id,toBytes(newLocalID));
+    boolean replySentOk=false;
+    replySentOk=_session.sendMessage(d,packet);
+    if (!replySentOk) {
+      _log.error("Error sending reply to " + d.calculateHash().toBase64() + " in response to a new con message",new Exception("Failed creation"));
+      s.internalClose();
+    }
+  }
+ else {
+    byte[] packet=toBytes(" " + id);
+    packet[0]=CLOSE_OUT;
+    boolean nackSent=session.sendMessage(d,packet);
+    if (!nackSent) {
+      _log.error("Error sending NACK for session creation");
+    }
+    s.internalClose();
+  }
+  return;
+}

@@ -1,40 +1,14 @@
 {
   byte[] buffer=new byte[MAX_PACKET_SIZE];
   ByteCollector bc=new ByteCollector();
-  boolean sent=true;
+  boolean keepHandling=true;
+  int packetsHandled=0;
   try {
-    int len, bcsize;
-    while (true) {
-      len=in.read(buffer);
-      bcsize=bc.getCurrentSize();
-      if (len != -1) {
-        bc.append(buffer,len);
-      }
- else       if (bcsize == 0) {
-        break;
-      }
-      if ((bcsize < MAX_PACKET_SIZE) && (in.available() == 0)) {
-        _log.debug("Runner Point d: " + this.hashCode());
-        try {
-          Thread.sleep(PACKET_DELAY);
-        }
- catch (        InterruptedException e) {
-          e.printStackTrace();
-        }
-      }
-      if ((bcsize >= MAX_PACKET_SIZE) || (in.available() == 0)) {
-        byte[] data=bc.startToByteArray(MAX_PACKET_SIZE);
-        if (data.length > 0) {
-          _log.debug("Message size is: " + data.length);
-          sent=sendBlock(data);
-          if (!sent) {
-            _log.error("Error sending message to peer.  Killing socket runner");
-            break;
-          }
-        }
-      }
+    while (keepHandling) {
+      keepHandling=handleNextPacket(bc,buffer);
+      packetsHandled++;
     }
-    if ((bc.getCurrentSize() > 0) && sent) {
+    if ((bc.getCurrentSize() > 0) && (packetsHandled > 1)) {
       _log.error("A SCARY MONSTER HAS EATEN SOME DATA! " + "(input stream: " + in.hashCode() + "; "+ "queue size: "+ bc.getCurrentSize()+ ")");
     }
 synchronized (flagLock) {
@@ -45,11 +19,9 @@ synchronized (flagLock) {
       sc=sendClose;
     }
     if (sc) {
-      _log.info("Sending close packet: " + outgoing);
-      byte[] packet=I2PSocketManager.makePacket((byte)(getMask(0x02)),remoteID,new byte[0]);
-synchronized (manager.getSession()) {
-        sent=manager.getSession().sendMessage(remote,packet);
-      }
+      if (_log.shouldLog(Log.INFO))       _log.info("Sending close packet: " + outgoing);
+      byte[] packet=I2PSocketManager.makePacket(getMask(0x02),remoteID,new byte[0]);
+      boolean sent=manager.getSession().sendMessage(remote,packet);
       if (!sent) {
         _log.error("Error sending close packet to peer");
       }

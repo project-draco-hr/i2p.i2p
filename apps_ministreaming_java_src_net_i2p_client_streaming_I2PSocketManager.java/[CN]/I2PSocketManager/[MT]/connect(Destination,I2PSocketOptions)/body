@@ -5,17 +5,15 @@ synchronized (lock) {
     localID=makeID(_outSockets);
     lcID=getReadableForm(localID);
     s=new I2PSocketImpl(peer,this,true,localID);
-    _outSockets.put(s.getLocalID(),s);
+    _outSockets.put(localID,s);
   }
   try {
     ByteArrayOutputStream pubkey=new ByteArrayOutputStream();
     _session.getMyDestination().writeBytes(pubkey);
     String remoteID;
-    byte[] packet=makePacket((byte)0xA1,localID,pubkey.toByteArray());
+    byte[] packet=makePacket((byte)SYN,localID,pubkey.toByteArray());
     boolean sent=false;
-synchronized (_session) {
-      sent=_session.sendMessage(peer,packet);
-    }
+    sent=_session.sendMessage(peer,packet);
     if (!sent) {
       _log.info("Unable to send & receive ack for SYN packet");
 synchronized (lock) {
@@ -24,13 +22,9 @@ synchronized (lock) {
       throw new I2PException("Error sending through I2P network");
     }
     remoteID=s.getRemoteID(true,options.getConnectTimeout());
-    if (remoteID == null) {
-      throw new ConnectException("Connection refused by peer");
-    }
-    if ("".equals(remoteID)) {
-      throw new NoRouteToHostException("Unable to reach peer");
-    }
-    _log.debug("TIMING: s given out for remoteID " + getReadableForm(remoteID));
+    if (remoteID == null)     throw new ConnectException("Connection refused by peer");
+    if ("".equals(remoteID))     throw new NoRouteToHostException("Unable to reach peer");
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("TIMING: s given out for remoteID " + getReadableForm(remoteID));
     return s;
   }
  catch (  InterruptedIOException ioe) {

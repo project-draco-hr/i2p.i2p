@@ -11,143 +11,37 @@
       return;
     }
     int type=msg[0] & 0xff;
-    String id=new String(new byte[]{msg[1],msg[2],msg[3]},"ISO-8859-1");
+    String id=toString(new byte[]{msg[1],msg[2],msg[3]});
     byte[] payload=new byte[msg.length - 4];
     System.arraycopy(msg,4,payload,0,payload.length);
     _log.debug("Message read: type = [" + Integer.toHexString(type) + "] id = ["+ getReadableForm(id)+ "] payload length: "+ payload.length+ "]");
-synchronized (lock) {
 switch (type) {
-case 0x51:
-        s=(I2PSocketImpl)_outSockets.get(id);
-      if (s == null) {
-        _log.warn("No socket responsible for ACK packet");
-        return;
-      }
-    if (payload.length == 3 && s.getRemoteID(false) == null) {
-      String newID=new String(payload,"ISO-8859-1");
-      s.setRemoteID(newID);
-      return;
-    }
- else {
-      if (payload.length != 3)       _log.warn("Ack packet had " + payload.length + " bytes");
- else       _log.warn("Remote ID already exists? " + s.getRemoteID());
-      return;
-    }
-case 0x52:
-  _log.debug("*Disconnect outgoing!");
-try {
-  s=(I2PSocketImpl)_outSockets.get(id);
-  if (s != null) {
-    if (payload.length > 0) {
-      _log.debug("Disconnect packet had " + payload.length + " bytes");
-    }
-    if (s.getRemoteID(false) == null) {
-      s.setRemoteID(null);
-      return;
-    }
-    s.internalClose();
-    _outSockets.remove(id);
-  }
-  return;
-}
- catch (Exception t) {
-  _log.error("Ignoring error on disconnect",t);
-}
-case 0x50:
-_log.debug("*Packet send outgoing [" + payload.length + "]");
-s=(I2PSocketImpl)_outSockets.get(id);
-if (s != null) {
-s.queueData(payload);
+case ACK:
+      ackAvailable(id,payload);
+    return;
+case CLOSE_OUT:
+  disconnectAvailable(id,payload);
 return;
-}
- else {
-_log.error("Null socket with data available");
-throw new IllegalStateException("Null socket with data available");
-}
-case 0xA1:
-_log.debug("*Syn!");
-String newLocalID=makeID(_inSockets);
-Destination d=new Destination();
-d.readBytes(new ByteArrayInputStream(payload));
-if (_serverSocket == null) {
-byte[] packet=makePacket((byte)0x52,id,newLocalID.getBytes("ISO-8859-1"));
-boolean replySentOk=false;
-synchronized (_session) {
-replySentOk=_session.sendMessage(d,packet);
-}
-if (!replySentOk) {
-_log.error("Error sending close to " + d.calculateHash().toBase64() + " in response to a new con message",new Exception("Failed creation"));
-}
+case DATA_OUT:
+sendOutgoingAvailable(id,payload);
 return;
-}
-s=new I2PSocketImpl(d,this,false,newLocalID);
-s.setRemoteID(id);
-if (_serverSocket.getNewSocket(s)) {
-_inSockets.put(newLocalID,s);
-byte[] packet=makePacket((byte)0x51,id,newLocalID.getBytes("ISO-8859-1"));
-boolean replySentOk=false;
-synchronized (_session) {
-replySentOk=_session.sendMessage(d,packet);
-}
-if (!replySentOk) {
-_log.error("Error sending reply to " + d.calculateHash().toBase64() + " in response to a new con message",new Exception("Failed creation"));
-s.internalClose();
-}
-}
- else {
-byte[] packet=(" " + id).getBytes("ISO-8859-1");
-packet[0]=0x52;
-boolean nackSent=session.sendMessage(d,packet);
-if (!nackSent) {
-_log.error("Error sending NACK for session creation");
-}
-s.internalClose();
-}
+case SYN:
+synIncomingAvailable(id,payload,session);
 return;
-case 0xA2:
-_log.debug("*Disconnect incoming!");
-try {
-s=(I2PSocketImpl)_inSockets.get(id);
-if (payload.length == 0 && s != null) {
-s.internalClose();
-_inSockets.remove(id);
+case CLOSE_IN:
+disconnectIncoming(id,payload);
 return;
-}
- else {
-if (payload.length > 0) _log.warn("Disconnect packet had " + payload.length + " bytes");
+case DATA_IN:
+sendIncoming(id,payload);
+case CHAFF:
 return;
-}
-}
- catch (Exception t) {
-_log.error("Ignoring error on disconnect",t);
+default :
+handleUnknown(type,id,payload);
 return;
-}
-case 0xA0:
-_log.debug("*Packet send incoming [" + payload.length + "]");
-s=(I2PSocketImpl)_inSockets.get(id);
-if (s != null) {
-s.queueData(payload);
-return;
-}
- else {
-_log.error("Null socket with data available");
-throw new IllegalStateException("Null socket with data available");
-}
-case 0xFF:
-return;
-}
-_log.error("\n\n=============== Unknown packet! " + "============" + "\nType: " + (int)type + "\nID:   "+ getReadableForm(id)+ "\nBase64'ed Data: "+ Base64.encode(payload)+ "\n\n\n");
-if (id != null) {
-_inSockets.remove(id);
-_outSockets.remove(id);
-}
 }
 }
  catch (I2PException ise) {
 _log.error("Error processing",ise);
-}
-catch (IOException ioe) {
-_log.error("Error processing",ioe);
 }
 catch (IllegalStateException ise) {
 _log.debug("Error processing",ise);

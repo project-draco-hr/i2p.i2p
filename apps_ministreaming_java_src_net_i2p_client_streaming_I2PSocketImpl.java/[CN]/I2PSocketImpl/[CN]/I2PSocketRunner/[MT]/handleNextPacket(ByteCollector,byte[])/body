@@ -1,0 +1,31 @@
+{
+  int len=in.read(buffer);
+  int bcsize=bc.getCurrentSize();
+  if (len != -1) {
+    bc.append(buffer,len);
+  }
+ else   if (bcsize == 0) {
+    return false;
+  }
+  if ((bcsize < MAX_PACKET_SIZE) && (in.available() == 0)) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Runner Point d: " + hashCode());
+    try {
+      Thread.sleep(PACKET_DELAY);
+    }
+ catch (    InterruptedException e) {
+      _log.warn("wtf",e);
+    }
+  }
+  if ((bcsize >= MAX_PACKET_SIZE) || (in.available() == 0)) {
+    byte[] data=bc.startToByteArray(MAX_PACKET_SIZE);
+    if (data.length > 0) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Message size is: " + data.length);
+      boolean sent=sendBlock(data);
+      if (!sent) {
+        _log.error("Error sending message to peer.  Killing socket runner");
+        return false;
+      }
+    }
+  }
+  return true;
+}

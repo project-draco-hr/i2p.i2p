@@ -1,0 +1,29 @@
+{
+  I2PSocketImpl s=null;
+synchronized (lock) {
+    s=(I2PSocketImpl)_outSockets.get(id);
+  }
+  if (s == null) {
+    _log.warn("No socket responsible for ACK packet");
+    return;
+  }
+  String remoteId=null;
+  try {
+    remoteId=s.getRemoteID(false);
+  }
+ catch (  InterruptedIOException iie) {
+    throw new RuntimeException("ERROR!  getRemoteId(false) should never throw InterruptedIOException!");
+  }
+  if ((payload.length == 3) && (remoteId == null)) {
+    String newID=toString(payload);
+    s.setRemoteID(newID);
+    return;
+  }
+ else {
+    if (_log.shouldLog(Log.WARN)) {
+      if (payload.length != 3)       _log.warn("Ack packet had " + payload.length + " bytes");
+ else       _log.warn("Remote ID already exists? " + remoteId);
+    }
+    return;
+  }
+}
