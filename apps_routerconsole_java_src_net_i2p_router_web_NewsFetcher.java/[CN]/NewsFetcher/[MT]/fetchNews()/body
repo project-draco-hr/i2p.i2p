@@ -1,0 +1,19 @@
+{
+  String newsURL=_context.getProperty(ConfigUpdateHandler.PROP_NEWS_URL,ConfigUpdateHandler.DEFAULT_NEWS_URL);
+  boolean shouldProxy=Boolean.valueOf(_context.getProperty(ConfigUpdateHandler.PROP_SHOULD_PROXY,ConfigUpdateHandler.DEFAULT_SHOULD_PROXY)).booleanValue();
+  String proxyHost=_context.getProperty(ConfigUpdateHandler.PROP_PROXY_HOST,ConfigUpdateHandler.DEFAULT_PROXY_HOST);
+  String port=_context.getProperty(ConfigUpdateHandler.PROP_PROXY_PORT,ConfigUpdateHandler.DEFAULT_PROXY_PORT);
+  int proxyPort=-1;
+  try {
+    proxyPort=Integer.parseInt(port);
+    EepGet get=null;
+    if (shouldProxy)     get=new EepGet(_context,proxyHost,proxyPort,10,NEWS_FILE,newsURL);
+ else     get=new EepGet(_context,10,NEWS_FILE,newsURL);
+    get.addStatusListener(this);
+    get.fetch();
+  }
+ catch (  Throwable t) {
+    _log.error("Error fetching the news",t);
+  }
+  _lastFetch=_context.clock().now();
+}

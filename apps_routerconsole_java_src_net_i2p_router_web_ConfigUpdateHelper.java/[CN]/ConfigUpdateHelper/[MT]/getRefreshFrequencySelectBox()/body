@@ -1,3 +1,20 @@
 {
-  return "<select name=\"refreshFrequency\">" + "<option value=\"" + (12 * 60 * 60* 1000) + "\">Twice daily</option>"+ "<option value=\""+ (24 * 60 * 60* 1000)+ "\" selected=\"true\" >Daily</option>"+ "<option value=\""+ (48 * 60 * 60* 1000)+ "\">Every two days</option>"+ "<option value=\""+ -1+ "\">Never</option>"+ "</select>";
+  String freq=_context.getProperty(ConfigUpdateHandler.PROP_REFRESH_FREQUENCY);
+  if (freq == null)   freq=ConfigUpdateHandler.DEFAULT_REFRESH_FREQUENCY;
+  long ms=-1;
+  try {
+    ms=Long.parseLong(freq);
+  }
+ catch (  NumberFormatException nfe) {
+  }
+  StringBuffer buf=new StringBuffer(256);
+  buf.append("<select name=\"refreshFrequency\">");
+  for (int i=0; i < PERIODS.length; i++) {
+    buf.append("<option value=\"").append(PERIODS[i]);
+    if (PERIODS[i] == ms)     buf.append("\" selected=\"true\"");
+    if (PERIODS[i] == -1)     buf.append("\">Never</option>\n");
+ else     buf.append("\">Every ").append(DataHelper.formatDuration(PERIODS[i])).append("</option>\n");
+  }
+  buf.append("</select>\n");
+  return buf.toString();
 }
