@@ -1,0 +1,16 @@
+def samSend(self, topic, subtopic, data=None, **kw):
+    "\n        Sends a SAM message (reply?) back to client\n        \n        Arguments:\n            - topic - the first word in the reply, eg 'STREAM'\n            - subtopic - the second word of the reply, eg 'CONNECTED'\n            - data - a string of raw data to send back (optional)\n        Keywords:\n            - extra 'name=value' items to pass back.\n        \n        Notes:\n            1. SIZE is not required. If sending back data, it will\n               be sized and a SIZE arg inserted automatically.\n            2. a dict of values can be passed to the 'args' keyword, in lieu\n               of direct keywords. This allows for cases where arg names would\n               cause python syntax clashes, eg 'tunnels.depthInbound'\n        "
+    items = [topic, subtopic]
+    if (data is not None):
+        kw['SIZE'] = str(len(data))
+    else:
+        data = ''
+    self.samCreateArgsList(kw, items)
+    buf = ((' '.join(items) + '\n') + data)
+    self.sendLock.acquire()
+    try:
+        self._sendbytes(buf)
+    except:
+        self.sendLock.release()
+        raise
+    self.sendLock.release()

@@ -1,0 +1,15 @@
+def getMessage(self, blocking=1):
+    '\n        Returns the next available inbound message.\n        \n        If blocking is set to 1 (default), blocks\n        till another message comes in.\n        \n        If blocking is set to 0, returns None if there\n        are no available messages.\n        '
+    if blocking:
+        msg = self.qInbound.get()
+        self.lockInbound.acquire()
+        self.nInboundMessages -= 1
+    else:
+        self.lockInbound.acquire()
+        if (self.nInboundMessages > 0):
+            msg = self.qInbound.get()
+            self.nInboundMessages -= 1
+        else:
+            msg = None
+    self.lockInbound.release()
+    return msg

@@ -1,0 +1,67 @@
+def on_SESSION(self, topic, subtopic, args):
+    log(4, 'entered')
+    server = self.server
+    client = server.i2pclient
+    globalsessions = server.sessions
+    localsessions = self.localsessions
+    sessionsLock = server.sessionsLock
+    read = self.rfile.read
+    readline = self.rfile.readline
+    write = self.wfile.write
+    flush = self.wfile.flush
+    if (subtopic == 'CREATE'):
+        if self.samSessionIsOpen:
+            self.samSend('SESSION', 'STATUS', RESULT='I2P_ERROR', MESSAGE='Session_already_created')
+            return
+        style = self.samSessionStyle = args.get('STYLE', None)
+        if (style is None):
+            self.samSend('SESSION', 'STATUS', RESULT='I2P_ERROR', MESSAGE='Missing_STYLE_argument')
+            return
+        elif (style not in ['STREAM', 'DATAGRAM', 'RAW']):
+            self.samSend('SESSION', 'STATUS', RESULT='I2P_ERROR', MESSAGE=("Invalid_STYLE_argument_'%s'" % style))
+            return
+        dest = args.get('DESTINATION', None)
+        if (dest == 'TRANSIENT'):
+            dest = self.samDest = I2PDestination()
+            destb64 = dest.toBase64Private()
+        else:
+            if ((dest in globalsessions.keys()) or (dest in localsessions.keys())):
+                self.samSend('SESSION', 'STATUS', RESULT='DUPLICATED_DEST', MESSAGE=("Destination_'%s...'_already_in_use" % dest[:20]))
+                return
+            try:
+                destb64 = dest
+                dest = I2PDestination(base64private=dest)
+            except:
+                self.samSend('SESSION', 'STATUS', RESULT='INVALID_KEY', MESSAGE=("Bad_destination_base64_string_'%s...'" % destb64[:20]))
+                return
+        self.dest = dest
+        self.samDestPub = dest.toBase64()
+        if (style in ['RAW', 'DATAGRAM']):
+            if (style == 'DATAGRAM'):
+                self.samDestPubBin = dest.toBin()
+                self.samDestPubBinLen = len(self.samDestPubBin)
+                self.samSigLen = len(self.dest.sign('nothing'))
+                log(4, ('binary pub dests are %s bytes, sigs are %s bytes' % (self.samDestPubBinLen, self.samSigLen)))
+            i2cpHost = args.get('I2CP.HOST', server.i2cphost)
+            i2cpPort = int(args.get('I2CP.PORT', server.i2cpport))
+            session = client.createSession(dest, host=i2cpHost, port=i2cpPort)
+            session.on_message = self.on_message
+            log(4, ("Connecting session on dest '%s'" % destb64[:40]))
+            try:
+                session.connect()
+            except net.i2p.client.I2PSessionException:
+                self.samSend('SESSION', 'STATUS', RESULT='I2P_ERROR', MESSAGE='Failed_to_connect_to_i2cp_port')
+                logException(3, 'Failed to connect I2PSession')
+                return
+            log(4, ("Session on dest '%s' now live" % destb64[:40]))
+            localsessions[destb64] = session
+            globalsessions[destb64] = session
+            self.samSession = session
+        else:
+            localsessions[destb64] = globalsessions[destb64] = None
+            sock = self.samSock = I2PSocket(dest)
+            thread.start_new_thread(self.threadSocketListener, (sock, dest))
+        self.samSend('SESSION', 'STATUS', RESULT='OK')
+    else:
+        self.samSend('SESSION', 'STATUS', RESULT='I2P_ERROR', MESSAGE=("Invalid_command_'SESSION_%s'" % subtopic))
+        return

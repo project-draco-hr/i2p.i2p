@@ -1,0 +1,33 @@
+def __init__(self, **kw):
+    '\n        Versatile constructor\n        \n        Keywords (choose only one option):\n            - (none) - create a whole new dest\n            - dest, private - wrap an existing I2P java dest with private stream\n              (private is a byte array)\n            - bin - reconstitute a public-only dest from a binary string\n            - binfile - reconstitute public-only from a binary file\n            - binprivate - reconsistitute private dest from binary string\n            - binfileprivate - reconsistitute private dest from binary file pathname\n            - base64 - reconstitute public-only from base64 string\n            - base64file - reconstitute public-only from file containing base64\n            - base64private - reconstitute private from string containing base64\n            - base64fileprivate - reconstitute private from file containing base64\n    \n        also:\n            - client - a java net.i2p.client.I2PClient object\n              (avoids need for temporary client object when creating new dests)\n        '
+    dest = i2p.data.Destination()
+    JavaWrapper.__init__(self, dest)
+    self._private = None
+    if kw.has_key('dest'):
+        self._item = kw['dest']
+        if kw.has_key('private'):
+            self._private = kw['private']
+    elif kw.has_key('bin'):
+        self.fromBin(kw['bin'])
+    elif kw.has_key('binfile'):
+        self.fromBinFilePrivate(kw['binfile'])
+    elif kw.has_key('binprivate'):
+        self.fromBinPrivate(kw['binprivate'])
+    elif kw.has_key('binfileprivate'):
+        self.fromBinFilePrivate(kw['binfileprivate'])
+    elif kw.has_key('base64'):
+        self.fromBase64(kw['base64'])
+    elif kw.has_key('base64file'):
+        self.fromBase64File(kw['base64file'])
+    elif kw.has_key('base64private'):
+        self.fromBase64Private(kw['base64private'])
+    elif kw.has_key('base64fileprivate'):
+        self.fromBase64FilePrivate(kw['base64fileprivate'])
+    else:
+        if kw.has_key('client'):
+            client = kw['client']
+        else:
+            client = clientFactory.createClient()
+        bytestream = java.io.ByteArrayOutputStream()
+        self._item = client.createDestination(bytestream)
+        self._private = bytestream.toByteArray()

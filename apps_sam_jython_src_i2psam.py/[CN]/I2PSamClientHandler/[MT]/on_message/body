@@ -1,0 +1,19 @@
+def on_message(self, msg):
+    '\n        This callback gets plugged into the I2PSession object,\n        so we can asychronously notify our client when stuff arrives\n        '
+    if (self.samSessionStyle == 'RAW'):
+        self.samSend('RAW', 'RECEIVE', msg)
+    elif (self.samSessionStyle == 'DATAGRAM'):
+        remdestBin = msg[:self.samDestPubBinLen]
+        log(4, ('remdestBin=%s' % repr(remdestBin)))
+        sig = msg[self.samDestPubBinLen:(self.samDestPubBinLen + self.samSigLen)]
+        log(4, ('sig=%s' % repr(sig)))
+        data = msg[(self.samDestPubBinLen + self.samSigLen):]
+        log(4, ('data=%s' % repr(data)))
+        hashed = shahash(((remdestBin + self.samDestPubBin) + data))
+        log(4, ('hashed=%s' % repr(hashed)))
+        remdest = I2PDestination(bin=remdestBin)
+        if remdest.verify(hashed, sig):
+            log(4, 'sig from peer is valid')
+            self.samSend('DATAGRAM', 'RECEIVE', data, DESTINATION=remdest.toBase64())
+        else:
+            log(4, 'DATAGRAM sig from peer is invalid')
