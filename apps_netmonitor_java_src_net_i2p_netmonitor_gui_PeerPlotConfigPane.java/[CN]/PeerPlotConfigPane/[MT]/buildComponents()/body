@@ -1,0 +1,54 @@
+{
+  _peer=new JLabel("Router: " + _config.getPeerName());
+  _toggleAll=new JButton("Show all");
+  _toggleAll.setBackground(_background);
+  _toggleAll.addActionListener(new ActionListener(){
+    public void actionPerformed(    ActionEvent evt){
+      _config.disableEvents();
+      for (int i=0; i < _options.length; i++) {
+        for (int j=0; j < _options[i]._statAttributes.size(); j++) {
+          JCheckBox box=(JCheckBox)_options[i]._statAttributes.get(j);
+          String statName=_options[i].getStatName();
+          String attrName=box.getText();
+          if (_toggleAll.getText().equals("Show all")) {
+            box.setSelected(true);
+            _config.getSeriesConfig().setShouldPlotValue(statName,attrName,true);
+          }
+ else {
+            box.setSelected(false);
+            _config.getSeriesConfig().setShouldPlotValue(statName,attrName,false);
+          }
+        }
+      }
+      if (_toggleAll.getText().equals("Show all"))       _toggleAll.setText("Hide all");
+ else       _toggleAll.setText("Show all");
+      _config.enableEvents();
+      _config.fireUpdate();
+    }
+  }
+);
+  Set statNames=_config.getSummary().getStatNames();
+  List options=new ArrayList(statNames.size());
+  for (Iterator iter=statNames.iterator(); iter.hasNext(); ) {
+    String statName=(String)iter.next();
+    List data=_config.getSummary().getData(statName);
+    if ((data != null) && (data.size() > 0)) {
+      PeerStat stat=(PeerStat)data.get(0);
+      String attributes[]=stat.getValueDescriptions();
+      OptionGroup group=new OptionGroup(statName,attributes);
+      options.add(group);
+    }
+  }
+  TreeMap orderedOptions=new TreeMap();
+  for (int i=0; i < options.size(); i++) {
+    OptionGroup grp=(OptionGroup)options.get(i);
+    orderedOptions.put(grp.getStatName(),grp);
+  }
+  _options=new OptionGroup[options.size()];
+  int i=0;
+  for (Iterator iter=orderedOptions.values().iterator(); iter.hasNext(); ) {
+    OptionGroup grp=(OptionGroup)iter.next();
+    _options[i]=grp;
+    i++;
+  }
+}

@@ -1,0 +1,33 @@
+{
+  _log.debug("Running import");
+  File dataDir=new File(getExportDir());
+  if (!dataDir.exists())   return;
+  File dataFiles[]=dataDir.listFiles(new FilenameFilter(){
+    public boolean accept(    File f,    String name){
+      return name.endsWith(".txt");
+    }
+  }
+);
+  if (dataFiles == null)   return;
+  for (int i=0; i < dataFiles.length; i++) {
+    FileInputStream fis=null;
+    boolean delete=false;
+    try {
+      fis=new FileInputStream(dataFiles[i]);
+      PeerSummaryReader.getInstance().read(this,fis);
+    }
+ catch (    IOException ioe) {
+      _log.error("Error reading the data file " + dataFiles[i].getAbsolutePath(),ioe);
+      delete=true;
+    }
+ finally {
+      if (fis != null)       try {
+        fis.close();
+      }
+ catch (      IOException ioe) {
+      }
+      if (delete)       dataFiles[i].delete();
+    }
+  }
+  _log.debug(dataFiles.length + " summaries imported");
+}
