@@ -1,33 +1,3 @@
 {
-  List tunnels=new ArrayList(criteria.getMinimumTunnelsRequired());
-  for (Iterator iter=pool.getFreeTunnels().iterator(); iter.hasNext(); ) {
-    TunnelId id=(TunnelId)iter.next();
-    TunnelInfo info=pool.getFreeTunnel(id);
-    if (info == null)     continue;
-    if (info.getIsReady()) {
-      if (isAlmostExpired(pool,id,POOL_USE_SAFETY_MARGIN)) {
-        if (_log.shouldLog(Log.INFO))         _log.info("Tunnel " + id + " is almost expired");
-      }
- else {
-        tunnels.add(id);
-      }
-    }
- else {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Inbound tunnel " + id + " is not ready?! "+ new Date(info.getSettings().getExpiration()));
-    }
-  }
-  boolean rebuilt=false;
-  for (int i=tunnels.size(); i < criteria.getMinimumTunnelsRequired(); i++) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("Building fake tunnels because the inbound tunnels weren't sufficient");
-    pool.buildFakeTunnels();
-    rebuilt=true;
-  }
-  if (rebuilt)   return selectInboundTunnelIds(pool,criteria);
-  List ordered=randomize(pool,tunnels);
-  List rv=new ArrayList(criteria.getMinimumTunnelsRequired());
-  for (Iterator iter=ordered.iterator(); iter.hasNext() && (rv.size() < criteria.getMinimumTunnelsRequired()); ) {
-    rv.add(iter.next());
-  }
-  if (_log.shouldLog(Log.INFO))   _log.info("Selecting inbound tunnelIds [tunnelIds ready: " + tunnels.size() + ", rv: "+ rv+ "]");
-  return rv;
+  return selectInboundTunnelIds(pool,criteria,true);
 }
