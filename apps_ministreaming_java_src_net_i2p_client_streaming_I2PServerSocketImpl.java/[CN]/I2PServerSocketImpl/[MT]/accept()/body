@@ -1,10 +1,16 @@
 {
-  while (cached == null) {
-    myWait();
+  I2PSocket ret;
+synchronized (acceptLock) {
+    while ((cached == null) && !closing) {
+      myWait();
+    }
+    if (closing) {
+      throw new ConnectException("I2PServerSocket closed");
+    }
+    ret=cached;
+    cached=null;
+    acceptLock.notifyAll();
   }
-  I2PSocket ret=cached;
-  cached=null;
-  notifyAll();
   _log.debug("TIMING: handed out accept result " + ret.hashCode());
   return ret;
 }
