@@ -1,23 +1,16 @@
 {
   while (_alive) {
-    Job rv=null;
-    int ready=0;
 synchronized (_readyJobs) {
-      ready=_readyJobs.size();
-      if (ready > 0)       rv=(Job)_readyJobs.remove(0);
-    }
-    if (rv != null) {
-      return rv;
-    }
- else {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("No jobs pending, waiting");
-    }
-    try {
-synchronized (_runnerLock) {
-        _runnerLock.wait();
+      if (_readyJobs.size() > 0) {
+        return (Job)_readyJobs.remove(0);
       }
-    }
- catch (    InterruptedException ie) {
+ else {
+        try {
+          _readyJobs.wait();
+        }
+ catch (        InterruptedException ie) {
+        }
+      }
     }
   }
   if (_log.shouldLog(Log.WARN))   _log.warn("No longer alive, returning null");

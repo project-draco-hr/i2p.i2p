@@ -1,7 +1,6 @@
 {
   if (job == null)   return;
   if (job instanceof JobImpl)   ((JobImpl)job).addedToQueue();
-  boolean isReady=false;
   long numReady=0;
   boolean alreadyExists=false;
 synchronized (_readyJobs) {
@@ -18,7 +17,9 @@ synchronized (_timedJobs) {
     if (_log.shouldLog(Log.WARN))     _log.warn("Dropping job due to overload!  # ready jobs: " + numReady + ": job = "+ job);
     job.dropped();
     _context.statManager().addRateData("jobQueue.droppedJobs",1,1);
-    awaken(1);
+synchronized (_readyJobs) {
+      _readyJobs.notifyAll();
+    }
     return;
   }
   if (!alreadyExists) {
@@ -27,7 +28,7 @@ synchronized (_timedJobs) {
       if (job instanceof JobImpl)       ((JobImpl)job).madeReady();
 synchronized (_readyJobs) {
         _readyJobs.add(job);
-        isReady=true;
+        _readyJobs.notifyAll();
       }
     }
  else {
@@ -39,9 +40,6 @@ synchronized (_timedJobs) {
   }
  else {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Not adding already enqueued job " + job.getName());
-  }
-  if (isReady) {
-    awaken(1);
   }
   return;
 }
