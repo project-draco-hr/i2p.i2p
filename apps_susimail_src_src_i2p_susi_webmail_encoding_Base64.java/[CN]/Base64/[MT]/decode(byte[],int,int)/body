@@ -1,0 +1,36 @@
+{
+  byte out[]=new byte[length * 3 / 4 + 1];
+  int written=0;
+  while (length > 0) {
+    if (in[offset] == '\r' || in[offset] == '\n' || in[offset] == ' ' || in[offset] == '\t') {
+      offset++;
+      length--;
+      continue;
+    }
+    if (length >= 4) {
+      byte b1=decodeByte(in[offset++]);
+      byte b2=decodeByte(in[offset++]);
+      out[written++]=(byte)((b1 << 2) | ((b2 >> 4) & 3));
+      byte b3=in[offset++];
+      if (b3 != '=') {
+        b3=decodeByte(b3);
+        out[written++]=(byte)(((b2 & 15) << 4) | ((b3 >> 2) & 15));
+      }
+      byte b4=in[offset++];
+      if (b4 != '=') {
+        b4=decodeByte(b4);
+        out[written++]=(byte)(((b3 & 3) << 6) | b4 & 63);
+      }
+      length-=4;
+    }
+ else {
+      System.err.println("");
+      throw new DecodingException("Decoding base64 failed (trailing garbage).");
+    }
+  }
+  ReadBuffer readBuffer=new ReadBuffer();
+  readBuffer.content=out;
+  readBuffer.offset=0;
+  readBuffer.length=written;
+  return readBuffer;
+}

@@ -1,0 +1,72 @@
+{
+  DateFormat dateFormatter=new SimpleDateFormat(Config.getProperty(DATEFORMAT,"mm/dd/yyyy HH:mm:ss"));
+  DateFormat mailDateFormatter=new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss Z",Locale.ENGLISH);
+  error="";
+  if (header != null) {
+    boolean ok=true;
+    Encoding html=EncodingFactory.getEncoding("HTML");
+    if (html == null) {
+      error+="HTML encoder not found.<br>";
+      ok=false;
+    }
+    Encoding hl=EncodingFactory.getEncoding("HEADERLINE");
+    if (hl == null) {
+      error+="Header line encoder not found.<br>";
+      ok=false;
+    }
+    if (ok) {
+      try {
+        ReadBuffer decoded=hl.decode(header);
+        BufferedReader reader=new BufferedReader(new InputStreamReader(new ByteArrayInputStream(decoded.content,decoded.offset,decoded.length),"ISO-8859-1"));
+        String line;
+        while ((line=reader.readLine()) != null) {
+          if (line.length() == 0)           break;
+          if (line.startsWith("From:")) {
+            sender=line.substring(5).trim();
+            formattedSender=getAddress(sender);
+            shortSender=formattedSender.trim();
+            if (shortSender.length() > 40) {
+              shortSender=shortSender.substring(0,37).trim() + "...";
+            }
+            shortSender=html.encode(shortSender);
+          }
+ else           if (line.startsWith("Date:")) {
+            dateString=line.substring(5).trim();
+            try {
+              date=mailDateFormatter.parse(dateString);
+              formattedDate=dateFormatter.format(date);
+              quotedDate=html.encode(dateString);
+            }
+ catch (            ParseException e) {
+              date=null;
+              e.printStackTrace();
+            }
+          }
+ else           if (line.startsWith("Subject:")) {
+            subject=line.substring(8).trim();
+            formattedSubject=subject;
+            shortSubject=formattedSubject;
+            if (formattedSubject.length() > 60)             shortSubject=formattedSubject.substring(0,57).trim() + "...";
+            shortSubject=html.encode(shortSubject);
+          }
+ else           if (line.toLowerCase().startsWith("Reply-To:")) {
+            reply=Mail.getAddress(line.substring(9).trim());
+          }
+ else           if (line.startsWith("To:")) {
+            ArrayList list=new ArrayList();
+            Mail.getRecipientsFromList(list,line.substring(3).trim(),true);
+            to=list.toArray();
+          }
+ else           if (line.startsWith("Cc:")) {
+            ArrayList list=new ArrayList();
+            Mail.getRecipientsFromList(list,line.substring(3).trim(),true);
+            cc=list.toArray();
+          }
+        }
+      }
+ catch (      Exception e) {
+        error+="Error parsing mail header: " + e.getClass().getName() + "<br>";
+      }
+    }
+  }
+}

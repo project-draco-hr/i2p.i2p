@@ -1,0 +1,37 @@
+{
+  Debug.debug(Debug.DEBUG,"connect()");
+  clear();
+  if (socket != null && socket.isConnected())   close();
+  try {
+    socket=new Socket(host,port);
+  }
+ catch (  UnknownHostException e) {
+    lastError=e.getMessage();
+    return;
+  }
+catch (  IOException e) {
+    lastError=e.getMessage();
+    return;
+  }
+  if (socket != null) {
+    try {
+      if (sendCmd1a("") && sendCmd1a("USER " + user) && sendCmd1a("PASS " + pass)&& sendCmd1a("STAT")) {
+        int i=lastLine.indexOf(" ",5);
+        mails=Integer.parseInt(i != -1 ? lastLine.substring(4,i) : lastLine.substring(4));
+        connected=true;
+        updateUIDLs();
+        updateSizes();
+      }
+ else {
+        lastError=new String(lastLine);
+        close();
+      }
+    }
+ catch (    NumberFormatException e1) {
+      lastError="Error getting number of messages: " + e1.getCause();
+    }
+catch (    IOException e1) {
+      lastError="Error while opening mailbox: " + e1.getCause();
+    }
+  }
+}

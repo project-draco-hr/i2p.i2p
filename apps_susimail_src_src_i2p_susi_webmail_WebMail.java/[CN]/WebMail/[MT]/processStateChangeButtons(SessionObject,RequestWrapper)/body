@@ -1,0 +1,143 @@
+{
+  if (sessionObject.state == STATE_AUTH)   processLogin(sessionObject,request);
+  if (sessionObject.state != STATE_AUTH)   processLogout(sessionObject,request);
+  if (sessionObject.state == STATE_NEW) {
+    if (buttonPressed(request,CANCEL))     sessionObject.state=STATE_LIST;
+ else     if (buttonPressed(request,SEND))     if (sendMail(sessionObject,request))     sessionObject.state=STATE_LIST;
+  }
+  if (sessionObject.state == STATE_SHOW) {
+    if (buttonPressed(request,LIST)) {
+      sessionObject.state=STATE_LIST;
+    }
+  }
+  if (sessionObject.state == STATE_SHOW || sessionObject.state == STATE_LIST) {
+    if (buttonPressed(request,NEW)) {
+      sessionObject.state=STATE_NEW;
+    }
+    boolean reply=false;
+    boolean replyAll=false;
+    boolean forward=false;
+    sessionObject.replyTo=null;
+    sessionObject.replyCC=null;
+    sessionObject.body=null;
+    sessionObject.subject=null;
+    if (buttonPressed(request,REPLY))     reply=true;
+    if (buttonPressed(request,REPLYALL)) {
+      replyAll=true;
+    }
+    if (buttonPressed(request,FORWARD)) {
+      forward=true;
+    }
+    if (reply || replyAll || forward) {
+      String uidl=null;
+      if (sessionObject.state == STATE_LIST) {
+        int pos=getCheckedMessage(request);
+        uidl=(String)sessionObject.folder.getElementAtPosXonCurrentPage(pos);
+      }
+ else {
+        uidl=sessionObject.showUIDL;
+      }
+      if (uidl != null) {
+        Mail mail=sessionObject.mailCache.getMail(uidl,MailCache.FETCH_ALL);
+        if (mail.part == null) {
+          mail.part=new MailPart();
+          mail.part.parse(mail.body);
+        }
+        if (mail.part != null) {
+          if (reply || replyAll) {
+            if (mail.reply != null && Mail.validateAddress(mail.reply))             sessionObject.replyTo=Mail.getAddress(mail.reply);
+ else             if (mail.sender != null && Mail.validateAddress(mail.sender))             sessionObject.replyTo=Mail.getAddress(mail.sender);
+            sessionObject.subject="Re: " + mail.formattedSubject;
+            StringWriter text=new StringWriter();
+            PrintWriter pw=new PrintWriter(text);
+            pw.println("On " + mail.formattedDate + " "+ sessionObject.replyTo+ " wrote:");
+            StringWriter text2=new StringWriter();
+            PrintWriter pw2=new PrintWriter(text2);
+            showPart(pw2,mail.part,0,TEXT_ONLY);
+            pw2.flush();
+            String[] lines=text2.toString().split("\r\n");
+            for (int i=0; i < lines.length; i++)             pw.println("> " + lines[i]);
+            pw.flush();
+            sessionObject.body=text.toString();
+          }
+          if (replyAll) {
+            StringBuffer buf=new StringBuffer();
+            String pad="";
+            if (mail.to != null) {
+              for (int i=0; i < mail.to.length; i++) {
+                buf.append(pad);
+                buf.append((String)mail.to[i]);
+                pad=", ";
+              }
+            }
+            if (mail.cc != null) {
+              for (int i=0; i < mail.cc.length; i++) {
+                buf.append(pad);
+                buf.append((String)mail.cc[i]);
+                pad=", ";
+              }
+            }
+            if (buf.length() > 0)             sessionObject.replyCC=buf.toString();
+          }
+          if (forward) {
+            sessionObject.subject="FWD: " + mail.formattedSubject;
+            String sender=null;
+            if (mail.reply != null && Mail.validateAddress(mail.reply))             sender=Mail.getAddress(mail.reply);
+ else             if (mail.sender != null && Mail.validateAddress(mail.sender))             sender=Mail.getAddress(mail.sender);
+            StringWriter text=new StringWriter();
+            PrintWriter pw=new PrintWriter(text);
+            pw.println();
+            pw.println();
+            pw.println();
+            pw.println("---- begin forwarded mail ----");
+            pw.println("From: " + sender);
+            if (mail.to != null) {
+              String pad="To: ";
+              for (int i=0; i < mail.to.length; i++) {
+                pw.println(pad);
+                pw.println((String)mail.to[i]);
+                pad="    ";
+              }
+            }
+            if (mail.cc != null) {
+              String pad="Cc: ";
+              for (int i=0; i < mail.cc.length; i++) {
+                pw.println(pad);
+                pw.println((String)mail.cc[i]);
+                pad="    ";
+              }
+            }
+            if (mail.dateString != null)             pw.print("Date: " + mail.dateString);
+            pw.println();
+            showPart(pw,mail.part,0,TEXT_ONLY);
+            pw.println("----  end forwarded mail  ----");
+            pw.flush();
+            sessionObject.body=text.toString();
+          }
+          sessionObject.state=STATE_NEW;
+        }
+ else {
+          sessionObject.error+="Could not fetch mail body.<br>";
+        }
+      }
+    }
+  }
+  if (sessionObject.state == STATE_LIST) {
+    String show=request.getParameter(SHOW);
+    if (show != null && show.length() > 0) {
+      try {
+        int id=Integer.parseInt(show);
+        if (id >= 0 && id < sessionObject.folder.getPageSize()) {
+          String uidl=(String)sessionObject.folder.getElementAtPosXonCurrentPage(id);
+          if (uidl != null) {
+            sessionObject.state=STATE_SHOW;
+            sessionObject.showUIDL=uidl;
+          }
+        }
+      }
+ catch (      NumberFormatException nfe) {
+        sessionObject.error+="Message id not valid.<br>";
+      }
+    }
+  }
+}

@@ -1,0 +1,57 @@
+{
+  RequestWrapper request=new RequestWrapper(httpRequest);
+  SessionObject sessionObject=null;
+  String subtitle="";
+  HttpSession httpSession=request.getSession(true);
+  sessionObject=getSessionObject(httpSession);
+synchronized (sessionObject) {
+    sessionObject.error="";
+    sessionObject.info="";
+    sessionObject.pageChanged=false;
+    sessionObject.showAttachment=null;
+    processStateChangeButtons(sessionObject,request);
+    if (sessionObject.state != STATE_AUTH)     processGenericButtons(sessionObject,request);
+    if (sessionObject.state == STATE_LIST) {
+      processFolderButtons(sessionObject,request);
+      for (Iterator it=sessionObject.folder.currentPageIterator(); it != null && it.hasNext(); ) {
+        String uidl=(String)it.next();
+        Mail mail=sessionObject.mailCache.getMail(uidl,MailCache.FETCH_HEADER);
+        if (mail != null && mail.error.length() > 0) {
+          sessionObject.error+=mail.error;
+          mail.error="";
+        }
+      }
+    }
+    if (sessionObject.state == STATE_SHOW) {
+      processMessageButtons(sessionObject,request);
+      Mail mail=sessionObject.mailCache.getMail(sessionObject.showUIDL,MailCache.FETCH_ALL);
+      if (mail != null && mail.error.length() > 0) {
+        sessionObject.error+=mail.error;
+        mail.error="";
+      }
+    }
+    if (sessionObject.state == STATE_NEW)     processComposeButtons(sessionObject,request);
+    if (sessionObject.state != STATE_AUTH)     sessionObject.folder.setElements(sessionObject.mailbox.getUIDLs());
+    if (!sendAttachment(sessionObject,response)) {
+      PrintWriter out=response.getWriter();
+      if (sessionObject.state == STATE_AUTH)       subtitle="Login";
+ else       if (sessionObject.state == STATE_LIST)       subtitle="" + sessionObject.mailbox.getNumMails() + " Messages";
+ else       if (sessionObject.state == STATE_SHOW)       subtitle="Show Message";
+      response.setContentType("text/html");
+      out.println("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\">\n<html>");
+      out.println("<head>\n<title>susimail v0." + version + " - "+ subtitle+ "</title>\n<link rel=\"stylesheet\" type=\"text/css\" href=\"css.css\">\n</head>\n<body>\n<p><img src=\"susimail.png\" alt=\"Susimail\"><br>&nbsp;</p>\n<form method=\"POST\" enctype=\"multipart/form-data\" action=\""+ myself+ "\">");
+      if (sessionObject.error != null && sessionObject.error.length() > 0) {
+        out.println("<p class=\"error\">" + sessionObject.error + "</p>");
+      }
+      if (sessionObject.info != null && sessionObject.info.length() > 0) {
+        out.println("<p class=\"info\">" + sessionObject.info + "</p>");
+      }
+      if (sessionObject.state == STATE_AUTH)       showLogin(out);
+ else       if (sessionObject.state == STATE_LIST)       showFolder(out,sessionObject,request);
+ else       if (sessionObject.state == STATE_SHOW)       showMessage(out,sessionObject);
+ else       if (sessionObject.state == STATE_NEW)       showCompose(out,sessionObject,request);
+      out.println("</form>\n<p class=\"footer\">susimail v0." + version + " "+ (RELEASE ? "release" : "development")+ " &copy; 2004 <a href=\"mailto:susi23@mail.2ip\">susi</a></body>\n</html>");
+      out.flush();
+    }
+  }
+}

@@ -1,0 +1,66 @@
+{
+  if (buttonPressed(request,NEW_UPLOAD)) {
+    String filename=request.getFilename(NEW_FILENAME);
+    int i=filename.lastIndexOf("/");
+    if (i != -1)     filename=filename.substring(i + 1);
+    i=filename.lastIndexOf("\\");
+    if (i != -1)     filename=filename.substring(i + 1);
+    if (filename != null && filename.length() > 0) {
+      InputStream in=request.getInputStream(NEW_FILENAME);
+      int l;
+      try {
+        l=in.available();
+        if (l > 0) {
+          byte buf[]=new byte[l];
+          in.read(buf);
+          Attachment attachment=new Attachment();
+          attachment.setFileName(filename);
+          String contentType=request.getContentType(NEW_FILENAME);
+          Encoding encoding;
+          String encodeTo;
+          if (contentType.toLowerCase().startsWith("text/"))           encodeTo="quoted-printable";
+ else           encodeTo="base64";
+          encoding=EncodingFactory.getEncoding(encodeTo);
+          try {
+            if (encoding != null) {
+              attachment.setData(encoding.encode(buf));
+              attachment.setTransferEncoding(encodeTo);
+              attachment.setContentType(contentType);
+              if (sessionObject.attachments == null)               sessionObject.attachments=new ArrayList();
+              sessionObject.attachments.add(attachment);
+            }
+ else {
+              sessionObject.error+="No Encoding found for " + encodeTo + "<br>";
+            }
+          }
+ catch (          EncodingException e1) {
+            sessionObject.error+="Could not encode data: " + e1.getMessage();
+          }
+        }
+      }
+ catch (      IOException e) {
+        sessionObject.error+="Error reading uploaded file: " + e.getMessage() + "<br>";
+      }
+    }
+  }
+ else   if (sessionObject.attachments != null && buttonPressed(request,DELETE_ATTACHMENT)) {
+    for (Enumeration e=request.getParameterNames(); e.hasMoreElements(); ) {
+      String parameter=(String)e.nextElement();
+      if (parameter.startsWith("check") && request.getParameter(parameter).compareTo("1") == 0) {
+        String number=parameter.substring(5);
+        try {
+          int n=Integer.parseInt(number);
+          for (int i=0; i < sessionObject.attachments.size(); i++) {
+            Attachment attachment=(Attachment)sessionObject.attachments.get(i);
+            if (attachment.hashCode() == n) {
+              sessionObject.attachments.remove(i);
+              break;
+            }
+          }
+        }
+ catch (        NumberFormatException nfe) {
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,106 @@
+{
+  String br=html ? "<br>\r\n" : "\r\n";
+  if (html) {
+    out.println("<!-- ");
+    for (int i=0; i < mailPart.headerLines.length; i++)     out.println(mailPart.headerLines[i]);
+    out.println("-->");
+  }
+  if (mailPart.multipart) {
+    if (mailPart.type.compareTo("multipart/alternative") == 0) {
+      MailPart chosen=null;
+      for (ListIterator li=mailPart.parts.listIterator(); li.hasNext(); ) {
+        MailPart subPart=(MailPart)li.next();
+        if (subPart.type != null && subPart.type.compareTo("text/plain") == 0)         chosen=subPart;
+      }
+      if (chosen != null) {
+        showPart(out,chosen,level + 1,html);
+        return;
+      }
+    }
+    for (ListIterator li=mailPart.parts.listIterator(); li.hasNext(); ) {
+      MailPart part=(MailPart)li.next();
+      showPart(out,part,level + 1,html);
+    }
+  }
+ else   if (mailPart.message) {
+    for (ListIterator li=mailPart.parts.listIterator(); li.hasNext(); ) {
+      MailPart part=(MailPart)li.next();
+      showPart(out,part,level + 1,html);
+    }
+  }
+ else {
+    boolean showBody=false;
+    boolean prepareAttachment=false;
+    String reason="";
+    StringBuffer body=null;
+    String ident=quoteHTML((mailPart.description != null ? mailPart.description + ", " : "") + (mailPart.filename != null ? mailPart.filename + ", " : "") + (mailPart.name != null ? mailPart.name + ", " : "")+ (mailPart.type != null ? mailPart.type : "unknown"));
+    if (level == 0 && mailPart.version == null) {
+      showBody=true;
+    }
+    if (showBody == false && mailPart.type != null) {
+      if (mailPart.type.compareTo("text/plain") == 0) {
+        showBody=true;
+      }
+ else       prepareAttachment=true;
+    }
+    if (showBody) {
+      String encoding=mailPart.encoding;
+      if (encoding == null) {
+        encoding="7bit";
+        reason+="Warning: no transfer encoding found, fallback to 7bit." + br;
+      }
+      Encoding e=EncodingFactory.getEncoding(encoding);
+      if (e == null) {
+        showBody=false;
+        reason+="No encoder found for encoding '" + quoteHTML(encoding) + "'.";
+      }
+ else {
+        String charset=mailPart.charset;
+        if (charset == null) {
+          charset="US-ASCII";
+          reason+="Warning: no charset found, fallback to US-ASCII." + br;
+        }
+        try {
+          ReadBuffer decoded=e.decode(mailPart.buffer.content,mailPart.beginBody,mailPart.end - mailPart.beginBody);
+          BufferedReader reader=new BufferedReader(new InputStreamReader(new ByteArrayInputStream(decoded.content,decoded.offset,decoded.length),charset));
+          body=new StringBuffer();
+          String line;
+          while ((line=reader.readLine()) != null) {
+            body.append(quoteHTML(line));
+            body.append(br);
+          }
+        }
+ catch (        UnsupportedEncodingException uee) {
+          showBody=false;
+          reason="Charset '" + quoteHTML(mailPart.charset) + "' not supported."+ br;
+        }
+catch (        Exception e1) {
+          showBody=false;
+          reason+="Part (" + ident + ") not shown, because of "+ e1.getClass().getName()+ br;
+        }
+      }
+    }
+    if (html)     out.println("<tr class=\"mailbody\"><td colspan=\"2\">");
+    if (reason != null && reason.length() > 0) {
+      if (html)       out.println("<p class=\"info\">");
+      out.println(reason);
+      if (html)       out.println("</p>");
+    }
+    if (showBody) {
+      if (html)       out.println("<p class=\"mailbody\">");
+      out.println(body.toString());
+      if (html)       out.println("</p>");
+    }
+    if (prepareAttachment) {
+      if (html) {
+        out.println("<p class=\"mailbody\">");
+        out.println("<a target=\"_blank\" href=\"" + myself + "?"+ DOWNLOAD+ "="+ mailPart.hashCode()+ "\">Download</a> attachment ("+ ident+ "). File is packed into a zipfile for security reasons.");
+        out.println("</p>");
+      }
+ else {
+        out.println("Attachment (" + ident + ").");
+      }
+    }
+    if (html)     out.println("</td></tr>");
+  }
+}

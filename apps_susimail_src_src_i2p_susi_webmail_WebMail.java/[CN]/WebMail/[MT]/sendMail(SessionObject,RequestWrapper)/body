@@ -1,0 +1,104 @@
+{
+  boolean ok=true;
+  String from=request.getParameter(NEW_FROM);
+  String to=request.getParameter(NEW_TO);
+  String cc=request.getParameter(NEW_CC);
+  String bcc=request.getParameter(NEW_BCC);
+  String subject=request.getParameter(NEW_SUBJECT,"no subject");
+  String text=request.getParameter(NEW_TEXT,"");
+  String prop=Config.getProperty(CONFIG_SENDER_FIXED,"true");
+  String domain=Config.getProperty(CONFIG_SENDER_DOMAIN,"mail.i2p");
+  if (prop.compareToIgnoreCase("false") != 0) {
+    from="<" + sessionObject.user + "@"+ domain+ ">";
+  }
+  ArrayList toList=new ArrayList();
+  ArrayList ccList=new ArrayList();
+  ArrayList bccList=new ArrayList();
+  ArrayList recipients=new ArrayList();
+  String sender=null;
+  if (from == null || !Mail.validateAddress(from)) {
+    ok=false;
+    sessionObject.error+="Found no valid sender address.<br>";
+  }
+ else {
+    sender=Mail.getAddress(from);
+    if (sender == null || sender.length() == 0) {
+      ok=false;
+      sessionObject.error+="Found no valid address in '" + quoteHTML(from) + "'.<br>";
+    }
+  }
+  ok=Mail.getRecipientsFromList(toList,to,ok);
+  ok=Mail.getRecipientsFromList(ccList,cc,ok);
+  ok=Mail.getRecipientsFromList(bccList,bcc,ok);
+  recipients.addAll(toList);
+  recipients.addAll(ccList);
+  recipients.addAll(bccList);
+  String bccToSelf=request.getParameter(NEW_BCC_TO_SELF);
+  if (bccToSelf != null && bccToSelf.compareTo("1") == 0)   recipients.add(sender);
+  if (recipients.size() == 0) {
+    ok=false;
+    sessionObject.error+="No recipients found.<br>";
+  }
+  Encoding qp=EncodingFactory.getEncoding("quoted-printable");
+  Encoding hl=EncodingFactory.getEncoding("HEADERLINE");
+  if (qp == null) {
+    ok=false;
+    sessionObject.error+="Quoted printable encoder not available.";
+  }
+  if (hl == null) {
+    ok=false;
+    sessionObject.error+="Header line encoder not available.";
+  }
+  if (ok) {
+    StringBuffer body=new StringBuffer();
+    body.append("From: " + from + "\r\n");
+    Mail.appendRecipients(body,toList,"To: ");
+    Mail.appendRecipients(body,ccList,"To: ");
+    body.append("Subject: ");
+    try {
+      body.append(hl.encode(subject));
+    }
+ catch (    EncodingException e) {
+      ok=false;
+      sessionObject.error+=e.getMessage();
+    }
+    String boundary="_=" + (int)(Math.random() * Integer.MAX_VALUE) + ""+ (int)(Math.random() * Integer.MAX_VALUE);
+    boolean multipart=false;
+    if (sessionObject.attachments != null && sessionObject.attachments.size() > 0) {
+      multipart=true;
+      body.append("\r\nMIME-Version: 1.0\r\nContent-type: multipart/mixed; boundary=\"" + boundary + "\"\r\n\r\n");
+    }
+ else {
+      body.append("\r\nMIME-Version: 1.0\r\nContent-type: text/plain; charset=\"iso-8859-1\"\r\nContent-Transfer-Encoding: quoted-printable\r\n\r\n");
+    }
+    try {
+      if (multipart)       body.append("--" + boundary + "\r\nContent-type: text/plain; charset=\"iso-8859-1\"\r\nContent-Transfer-Encoding: quoted-printable\r\n\r\n");
+      body.append(qp.encode(text));
+    }
+ catch (    EncodingException e) {
+      ok=false;
+      sessionObject.error+=e.getMessage();
+    }
+    if (multipart) {
+      for (Iterator it=sessionObject.attachments.iterator(); it.hasNext(); ) {
+        Attachment attachment=(Attachment)it.next();
+        body.append("\r\n--" + boundary + "\r\nContent-type: "+ attachment.getContentType()+ "\r\nContent-Disposition: attachment; filename=\""+ attachment.getFileName()+ "\"\r\nContent-Transfer-Encoding: "+ attachment.getTransferEncoding()+ "\r\n\r\n");
+        body.append(attachment.getData());
+      }
+      body.append("\r\n--" + boundary + "--\r\n");
+    }
+    sessionObject.sentMail=body.toString();
+    SMTPClient relay=new SMTPClient();
+    if (ok) {
+      if (relay.sendMail(sessionObject.host,sessionObject.smtpPort,sessionObject.user,sessionObject.pass,sender,recipients.toArray(),body.toString())) {
+        sessionObject.info+="Mail sent.";
+        if (sessionObject.attachments != null)         sessionObject.attachments.clear();
+      }
+ else {
+        ok=false;
+        sessionObject.error+=relay.error;
+      }
+    }
+  }
+  return ok;
+}

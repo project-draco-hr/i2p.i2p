@@ -1,0 +1,92 @@
+{
+  if (sessionObject.state == STATE_AUTH) {
+    String login=request.getParameter(LOGIN);
+    String user=request.getParameter(USER);
+    String pass=request.getParameter(PASS);
+    String host=request.getParameter(HOST);
+    String pop3Port=request.getParameter(POP3);
+    String smtpPort=request.getParameter(SMTP);
+    String fixedPorts=Config.getProperty(CONFIG_PORTS_FIXED,"true");
+    if (fixedPorts.compareToIgnoreCase("false") != 0) {
+      host=Config.getProperty(CONFIG_HOST,DEFAULT_HOST);
+      pop3Port=Config.getProperty(CONFIG_PORTS_POP3,"" + DEFAULT_POP3PORT);
+      smtpPort=Config.getProperty(CONFIG_PORTS_SMTP,"" + DEFAULT_SMTPPORT);
+    }
+    boolean doContinue=true;
+    if (buttonPressed(request,LOGIN)) {
+      if (user == null || user.length() == 0) {
+        sessionObject.error+="Need username for authentication.<br>";
+        doContinue=false;
+      }
+      if (pass == null || pass.length() == 0) {
+        sessionObject.error+="Need password for authentication.<br>";
+        doContinue=false;
+      }
+      if (host == null || host.length() == 0) {
+        sessionObject.error+="Need hostname for connect.<br>";
+        doContinue=false;
+      }
+      int pop3PortNo=0;
+      if (pop3Port == null || pop3Port.length() == 0) {
+        sessionObject.error+="Need port number for pop3 connect.<br>";
+        doContinue=false;
+      }
+ else {
+        try {
+          pop3PortNo=Integer.parseInt(pop3Port);
+          if (pop3PortNo < 0 || pop3PortNo > 65535) {
+            sessionObject.error+="POP3 port number is not in range 0..65535.<br>";
+            doContinue=false;
+          }
+        }
+ catch (        NumberFormatException nfe) {
+          sessionObject.error+="POP3 port number is invalid.<br>";
+          doContinue=false;
+        }
+      }
+      int smtpPortNo=0;
+      if (smtpPort == null || smtpPort.length() == 0) {
+        sessionObject.error+="Need port number for smtp connect.<br>";
+        doContinue=false;
+      }
+ else {
+        try {
+          smtpPortNo=Integer.parseInt(smtpPort);
+          if (smtpPortNo < 0 || smtpPortNo > 65535) {
+            sessionObject.error+="SMTP port number is not in range 0..65535.<br>";
+            doContinue=false;
+          }
+        }
+ catch (        NumberFormatException nfe) {
+          sessionObject.error+="SMTP port number is invalid.<br>";
+          doContinue=false;
+        }
+      }
+      if (doContinue) {
+        sessionObject.mailbox=new POP3MailBox(host,pop3PortNo,user,pass);
+        if (sessionObject.mailbox.isConnected()) {
+          sessionObject.user=user;
+          sessionObject.pass=pass;
+          sessionObject.host=host;
+          sessionObject.smtpPort=smtpPortNo;
+          sessionObject.state=STATE_LIST;
+          sessionObject.mailCache=new MailCache(sessionObject.mailbox);
+          sessionObject.folder=new Folder();
+          sessionObject.folder.setElements(sessionObject.mailbox.getUIDLs());
+          sessionObject.folder.addSorter(SORT_ID,new IDSorter(sessionObject.mailCache));
+          sessionObject.folder.addSorter(SORT_SENDER,new SenderSorter(sessionObject.mailCache));
+          sessionObject.folder.addSorter(SORT_SUBJECT,new SubjectSorter(sessionObject.mailCache));
+          sessionObject.folder.addSorter(SORT_DATE,new DateSorter(sessionObject.mailCache));
+          sessionObject.folder.addSorter(SORT_SIZE,new SizeSorter(sessionObject.mailCache));
+          sessionObject.folder.setSortingDirection(Folder.DOWN);
+          sessionObject.reallyDelete=false;
+        }
+ else {
+          sessionObject.error+=sessionObject.mailbox.lastError();
+          sessionObject.mailbox.close();
+          sessionObject.mailbox=null;
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,32 @@
+{
+  out.println(button(SEND,"Send") + button(CANCEL,"Cancel") + spacer+ (sessionObject.attachments != null && sessionObject.attachments.size() > 0 ? button(DELETE_ATTACHMENT,"Delete Attachment") : button2(DELETE_ATTACHMENT,"Delete Attachment"))+ spacer+ button(RELOAD,"Reload Config")+ spacer+ button(LOGOUT,"Logout"));
+  String from=(String)request.getParameter(NEW_FROM);
+  String fixed=Config.getProperty(CONFIG_SENDER_FIXED,"true");
+  if (from == null || fixed.compareToIgnoreCase("false") != 0) {
+    String domain=Config.getProperty(CONFIG_SENDER_DOMAIN,"mail.i2p");
+    from="<" + sessionObject.user + "@"+ domain+ ">";
+  }
+  String to=request.getParameter(NEW_TO,sessionObject.replyTo != null ? sessionObject.replyTo : "");
+  String cc=request.getParameter(NEW_CC,sessionObject.replyCC != null ? sessionObject.replyCC : "");
+  String bcc=request.getParameter(NEW_BCC,"");
+  String subject=request.getParameter(NEW_SUBJECT,sessionObject.subject != null ? sessionObject.subject : "");
+  String text=request.getParameter(NEW_TEXT,sessionObject.body != null ? sessionObject.body : "");
+  String bccToSelf=Config.getProperty(CONFIG_BCC_TO_SELF,"true");
+  sessionObject.replyTo=null;
+  sessionObject.replyCC=null;
+  sessionObject.subject=null;
+  sessionObject.body=null;
+  out.println("<table cellspacing=\"0\" cellpadding=\"5\">\n" + "<tr><td colspan=\"2\"><hr></td></tr>\n" + "<tr><td align=\"right\">From:</td><td><input type=\"text\" size=\"80\" name=\"" + NEW_FROM + "\" value=\""+ from+ "\" "+ (fixed.compareToIgnoreCase("false") != 0 ? "disabled" : "")+ "></td></tr>\n"+ "<tr><td align=\"right\">To:</td><td><input type=\"text\" size=\"80\" name=\""+ NEW_TO+ "\" value=\""+ to+ "\"></td></tr>\n"+ "<tr><td align=\"right\">Cc:</td><td><input type=\"text\" size=\"80\" name=\""+ NEW_CC+ "\" value=\""+ cc+ "\"></td></tr>\n"+ "<tr><td align=\"right\">Bcc:</td><td><input type=\"text\" size=\"80\" name=\""+ NEW_BCC+ "\" value=\""+ bcc+ "\"></td></tr>\n"+ "<tr><td align=\"right\">Subject:</td><td><input type=\"text\" size=\"80\" name=\""+ NEW_SUBJECT+ "\" value=\""+ subject+ "\"></td></tr>\n"+ "<tr><td>&nbsp;</td><td><input type=\"checkbox\" name=\""+ NEW_BCC_TO_SELF+ "\" value=\"1\""+ (bccToSelf.compareToIgnoreCase("false") != 0 ? "checked" : "")+ ">Bcc to self</td></tr>\n"+ "<tr><td colspan=\"2\"><textarea cols=\""+ Config.getProperty(CONFIG_COMPOSER_COLS,80)+ "\" rows=\""+ Config.getProperty(CONFIG_COMPOSER_ROWS,10)+ "\" name=\""+ NEW_TEXT+ "\">"+ text+ "</textarea>"+ "<tr><td colspan=\"2\"><hr></td></tr>\n"+ "<tr><td align=\"right\">New Attachment:</td><td><input type=\"file\" name=\""+ NEW_FILENAME+ "\" value=\"\"><input type=\"submit\" name=\""+ NEW_UPLOAD+ "\" value=\"Upload File\"></td></tr>");
+  if (sessionObject.attachments != null && sessionObject.attachments.size() > 0) {
+    boolean wroteHeader=false;
+    for (Iterator it=sessionObject.attachments.iterator(); it.hasNext(); ) {
+      if (!wroteHeader) {
+        out.println("<tr><td colspan=\"2\">Attachments:</td></tr>");
+        wroteHeader=true;
+      }
+      Attachment attachment=(Attachment)it.next();
+      out.println("<tr><td colspan=\"2\"><input type=\"checkbox\" name=\"check" + attachment.hashCode() + "\" value=\"1\">&nbsp;"+ attachment.getFileName()+ "</td></tr>");
+    }
+  }
+  out.println("</table>");
+}

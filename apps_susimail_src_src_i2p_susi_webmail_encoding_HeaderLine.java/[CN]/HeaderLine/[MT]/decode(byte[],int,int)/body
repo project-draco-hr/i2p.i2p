@@ -1,0 +1,84 @@
+{
+  byte[] out=new byte[length];
+  int written=0;
+  int end=offset + length;
+  if (end > in.length)   throw new DecodingException("Index out of bound.");
+  boolean linebreak=false;
+  boolean lastCharWasQuoted=false;
+  while (length-- > 0) {
+    byte c=in[offset++];
+    if (c == '=') {
+      if (length > 0) {
+        if (in[offset] == '?') {
+          int f2=offset + 1;
+          for (; f2 < end && in[f2] != '?'; f2++)           ;
+          if (f2 < end) {
+            int f3=f2 + 1;
+            for (; f3 < end && in[f3] != '?'; f3++)             ;
+            if (f3 < end) {
+              int f4=f3 + 1;
+              for (; f4 < end && in[f4] != '?'; f4++)               ;
+              if (f4 < end - 1 && in[f4 + 1] == '=') {
+                String enc=(in[f2 + 1] == 'Q' || in[f2 + 1] == 'q') ? "quoted-printable" : ((in[f2 + 1] == 'B' || in[f2 + 1] == 'b') ? "base64" : null);
+                if (enc != null) {
+                  Encoding e=EncodingFactory.getEncoding(enc);
+                  if (e != null) {
+                    ReadBuffer tmp=null;
+                    try {
+                      tmp=e.decode(in,f3 + 1,f4 - f3 - 1);
+                      for (int j=0; j < tmp.length; j++) {
+                        byte d=tmp.content[tmp.offset + j];
+                        out[written++]=(d == '_' ? 32 : d);
+                      }
+                      int distance=f4 + 2 - offset;
+                      offset+=distance;
+                      length-=distance;
+                      lastCharWasQuoted=true;
+                      continue;
+                    }
+ catch (                    Exception e1) {
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+ else     if (c == '\r') {
+      if (length > 0 && in[offset] == '\n') {
+        linebreak=true;
+        length--;
+        offset++;
+        continue;
+      }
+    }
+    if (linebreak) {
+      linebreak=false;
+      if (c != ' ' && c != '\t') {
+        out[written++]='\r';
+        out[written++]='\n';
+      }
+ else {
+        if (!lastCharWasQuoted)         out[written++]=' ';
+        while (length > 0 && (in[offset] == ' ' || in[offset] == '\t')) {
+          offset++;
+          length--;
+        }
+        continue;
+      }
+    }
+    out[written++]=c;
+    lastCharWasQuoted=false;
+  }
+  if (linebreak) {
+    out[written++]='\r';
+    out[written++]='\n';
+  }
+  ReadBuffer readBuffer=new ReadBuffer();
+  readBuffer.content=out;
+  readBuffer.offset=0;
+  readBuffer.length=written;
+  return readBuffer;
+}

@@ -1,0 +1,44 @@
+{
+  boolean shown=false;
+  if (sessionObject.showAttachment != null) {
+    MailPart part=sessionObject.showAttachment;
+    ReadBuffer content=part.buffer;
+    if (part.encoding != null) {
+      Encoding encoding=EncodingFactory.getEncoding(part.encoding);
+      if (encoding != null) {
+        try {
+          content=encoding.decode(part.buffer.content,part.beginBody + 2,part.end - part.beginBody - 2);
+        }
+ catch (        DecodingException e) {
+          sessionObject.error+="Error decoding content: " + e.getMessage() + "<br>";
+          content=null;
+        }
+      }
+ else {
+        sessionObject.error+="Error decoding content: No encoder found.";
+        content=null;
+      }
+    }
+    if (content != null) {
+      try {
+        ZipOutputStream zip=new ZipOutputStream(response.getOutputStream());
+        String name;
+        if (part.filename != null)         name=part.filename;
+ else         if (part.name != null)         name=part.name;
+ else         name="part" + part.hashCode();
+        String name2=name.replaceAll("\\.","_");
+        response.setContentType("application/zip; name=\"" + name2 + ".zip\"");
+        response.addHeader("Content-Disposition:","attachment; filename=\"" + name2 + ".zip\"");
+        ZipEntry entry=new ZipEntry(name);
+        zip.putNextEntry(entry);
+        zip.write(content.content,content.offset,content.length);
+        zip.finish();
+        shown=true;
+      }
+ catch (      IOException e) {
+        e.printStackTrace();
+      }
+    }
+  }
+  return shown;
+}
