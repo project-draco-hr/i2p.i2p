@@ -4,41 +4,8 @@
   long numDropped=0;
   long numTimedOut=0;
 synchronized (_updateLock) {
-    List toTimeout=new ArrayList(4);
-    List toDrop=new ArrayList(4);
-    for (Iterator iter=_pendingPings.keySet().iterator(); iter.hasNext(); ) {
-      Long when=(Long)iter.next();
-      if (when.longValue() < dropBefore)       toDrop.add(when);
- else       if (when.longValue() < timeoutBefore)       toTimeout.add(when);
- else       break;
-    }
-    for (Iterator iter=toDrop.iterator(); iter.hasNext(); ) {
-      _pendingPings.remove(iter.next());
-    }
-    List toAdd=new ArrayList(toTimeout.size());
-    for (Iterator iter=toTimeout.iterator(); iter.hasNext(); ) {
-      Long when=(Long)iter.next();
-      EventDataPoint data=(EventDataPoint)_pendingPings.remove(when);
-      data.setWasPonged(false);
-      toAdd.add(data);
-    }
-    numDropped=toDrop.size();
-    numTimedOut=toDrop.size();
-    toDrop.clear();
-    for (Iterator iter=_dataPoints.keySet().iterator(); iter.hasNext(); ) {
-      Long when=(Long)iter.next();
-      if (when.longValue() < dropBefore)       toDrop.add(when);
- else       break;
-    }
-    for (Iterator iter=toDrop.iterator(); iter.hasNext(); ) {
-      _dataPoints.remove(iter.next());
-    }
-    numDropped+=toDrop.size();
-    for (Iterator iter=toAdd.iterator(); iter.hasNext(); ) {
-      EventDataPoint data=(EventDataPoint)iter.next();
-      _dataPoints.put(new Long(data.getPingSent()),data);
-    }
-    numTimedOut+=toAdd.size();
+    numDropped=locked_dropExpired(dropBefore);
+    numTimedOut=locked_timeoutPending(timeoutBefore);
   }
   _lostRate.addData(numTimedOut,0);
   _receiveRate.coallesceStats();
