@@ -1,0 +1,25 @@
+{
+  List old=null;
+  long keepAfter=_context.clock().now() - SHITLIST_TIME;
+  for (Iterator iter=_badKeyDates.keySet().iterator(); iter.hasNext(); ) {
+    Long when=(Long)iter.next();
+    Hash key=(Hash)_badKeyDates.get(when);
+    if (when.longValue() < keepAfter) {
+      if (old == null)       old=new ArrayList(4);
+      old.add(when);
+    }
+ else {
+      break;
+    }
+  }
+  if (old != null) {
+    for (int i=0; i < old.size(); i++) {
+      Long when=(Long)old.get(i);
+      Hash key=(Hash)_badKeyDates.remove(when);
+      _badKeys.remove(key);
+    }
+  }
+  if (_badKeys.size() > 0) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Cleaning up shitlist: " + _badKeys.size() + " remain after removing "+ (old != null ? old.size() : 0));
+  }
+}
