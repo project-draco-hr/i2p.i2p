@@ -1,0 +1,30 @@
+def threadRxPackets(self):
+    '\n        Sits on a select() loop, processing incoming datagrams\n        and actioning them appropriately.\n        '
+    self.isRunning_rx = True
+    self.log(3, 'KCore packet receiver thread running')
+    try:
+        while self.isRunning:
+            socks = [node.sock for node in self.nodes]
+            if desperatelyDebugging:
+                set_trace()
+            try:
+                (inlist, outlist, errlist) = self.select(socks, [], [], 1)
+            except KeyboardInterrupt:
+                self.isRunning = 0
+                return
+            self.log(5, ('\ninlist=%s' % repr(inlist)))
+            if inlist:
+                self.log(5, 'got one or more sockets with inbound data')
+                for sock in inlist:
+                    node = self.nodeWhichOwnsSock(sock)
+                    if (node != None):
+                        node._doRx()
+            elif self.fg:
+                return
+            else:
+                time.sleep(0.1)
+    except:
+        traceback.print_exc()
+        self.log(1, 'core handler thread crashed')
+    self.isRunning_rx = False
+    self.log(3, 'core handler thread terminated')

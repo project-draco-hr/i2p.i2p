@@ -1,0 +1,23 @@
+def checkEndOfRound(self):
+    "\n        Checks if we've hit the end of a query round.\n        If so, and if either:\n            - we've got some closer peers, OR\n            - we've heard from less than maxBucketSize peers,\n        fire off more queries\n        \n        Otherwise, return the best available\n        "
+    peerTab = self.peerTab
+    if core.fg:
+        set_trace()
+    if (peerTab.count('start', 'queried') > 0):
+        return
+    self.log(2, '********** query round ended')
+    self.numRounds += 1
+    if ((self.type == 'findData') or self.gotAnyCloser() or (peerTab.count('closest') < maxBucketSize)):
+        self.log(4, 'starting another round')
+        peerTab.changeState('replied', 'closest')
+        peerTab.changeState('recommended', 'start')
+        self.log(2, 'culling to k peers')
+        if (peerTab.count('closest') > maxBucketSize):
+            peerTab.sort()
+            excess = peerTab.select('closest')[maxBucketSize:]
+            excess.changeState('closest', 'toofar')
+            pass
+        self.sendSomeQueries()
+    if (peerTab.count('start', 'queried') == 0):
+        self.returnTheBestWeGot()
+    return

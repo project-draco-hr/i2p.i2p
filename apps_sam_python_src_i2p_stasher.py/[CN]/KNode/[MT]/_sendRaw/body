@@ -1,0 +1,19 @@
+def _sendRaw(self, peer, **kw):
+    "\n        Serialises keywords passed, and sends this as a datagram\n        to node 'peer'\n        "
+    dist = self.id.distance(peer.id)
+    self.buckets[dist].justSeenPeer(peer)
+    self.addref(peer)
+    params = dict(kw)
+    msgId = params.get('msgId', None)
+    if (msgId == None):
+        msgId = params['msgId'] = self._msgIdAlloc()
+    objenc = messageEncode(params)
+    self.log(5, ('node %s waiting for send lock' % self.name))
+    self.log(5, ('node %s got send lock' % self.name))
+    try:
+        self.sock.sendto(objenc, 0, peer.dest)
+    except:
+        traceback.print_exc()
+    self.log(5, ('node %s released send lock' % self.name))
+    self.log(4, ('node %s sent %s to peer %s' % (self.name, params, peer.dest)))
+    return msgId
