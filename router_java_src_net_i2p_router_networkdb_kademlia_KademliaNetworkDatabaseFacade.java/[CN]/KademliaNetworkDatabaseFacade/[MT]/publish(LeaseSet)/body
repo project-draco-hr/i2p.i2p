@@ -11,10 +11,14 @@
 synchronized (_explicitSendKeys) {
     _explicitSendKeys.add(h);
   }
-  Job j=null;
+  RepublishLeaseSetJob j=null;
 synchronized (_publishingLeaseSets) {
-    boolean isNew=_publishingLeaseSets.add(h);
-    if (isNew)     j=new RepublishLeaseSetJob(_context,this,h);
+    j=(RepublishLeaseSetJob)_publishingLeaseSets.get(h);
+    if (j == null) {
+      j=new RepublishLeaseSetJob(_context,this,h);
+      _publishingLeaseSets.put(h,j);
+    }
   }
-  if (j != null)   _context.jobQueue().addJob(j);
+  j.getTiming().setStartAfter(_context.clock().now());
+  _context.jobQueue().addJob(j);
 }

@@ -1,5 +1,20 @@
 {
   DataStructure ds=_facade.lookupLeaseSetLocally(_state.getTarget());
-  if (ds == null)   ds=_facade.lookupRouterInfoLocally(_state.getTarget());
-  if (ds != null)   getContext().jobQueue().addJob(new StoreJob(getContext(),_facade,_state.getTarget(),ds,null,null,RESEND_TIMEOUT,_state.getSuccessful()));
+  if (ds == null) {
+    ds=_facade.lookupRouterInfoLocally(_state.getTarget());
+    if (ds != null)     getContext().jobQueue().addJob(new StoreJob(getContext(),_facade,_state.getTarget(),ds,null,null,RESEND_TIMEOUT,_state.getSuccessful()));
+  }
+ else {
+    Set sendTo=_state.getFailed();
+    sendTo.addAll(_state.getPending());
+    int numSent=0;
+    for (Iterator iter=sendTo.iterator(); iter.hasNext(); ) {
+      Hash peer=(Hash)iter.next();
+      RouterInfo peerInfo=_facade.lookupRouterInfoLocally(peer);
+      if (peerInfo == null)       continue;
+      if (resend(peerInfo,(LeaseSet)ds))       numSent++;
+      if (numSent >= MAX_LEASE_RESEND)       break;
+    }
+    getContext().statManager().addRateData("netDb.republishQuantity",numSent,numSent);
+  }
 }
