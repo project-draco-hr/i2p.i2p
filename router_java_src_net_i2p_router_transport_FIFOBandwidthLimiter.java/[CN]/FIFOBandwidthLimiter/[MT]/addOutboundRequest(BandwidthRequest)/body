@@ -1,0 +1,23 @@
+{
+synchronized (_pendingOutboundRequests) {
+    if ((_pendingOutboundRequests.size() <= 0) && ((request.getRequestedOutboundBytes() <= _availableOutboundBytes) || (_outboundUnlimited))) {
+      if (!_outboundUnlimited)       _availableOutboundBytes-=request.getRequestedOutboundBytes();
+      _totalAllocatedOutboundBytes+=request.getRequestedOutboundBytes();
+      if (_log.shouldLog(Log.INFO))       _log.info("Granting outbound request " + request.getRequestName() + " immediately for "+ request.getRequestedOutboundBytes());
+      request.grantRequest();
+      return;
+    }
+ else {
+      _pendingOutboundRequests.add(request);
+    }
+  }
+synchronized (request.getAvailabilityMonitor()) {
+    while (!request.alreadyGranted()) {
+      try {
+        request.getAvailabilityMonitor().wait();
+      }
+ catch (      InterruptedException ie) {
+      }
+    }
+  }
+}

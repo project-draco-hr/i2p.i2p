@@ -40,11 +40,13 @@ synchronized (_toBeSent) {
     msg.timestamp("TCPConnection.runner.processSlice fetched");
     byte data[]=msg.getMessageData();
     if (data == null) {
-      if (_log.shouldLog(Log.ERROR))       _log.error("wtf, for some reason, an I2NPMessage couldn't be serialized...");
+      if (_log.shouldLog(Log.WARN))       _log.warn("message " + msg.getMessageType() + "/"+ msg.getMessageId()+ "expired before it could be sent");
+      _transport.afterSend(msg,false,false);
       return true;
     }
     msg.timestamp("TCPConnection.runner.processSlice before sending " + data.length + " bytes");
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Sending " + data.length + " bytes in the slice... to "+ _remoteIdentity.getHash().toBase64());
+    long exp=msg.getMessage().getMessageExpiration().getTime();
     long beforeWrite=0;
     try {
 synchronized (_out) {
@@ -57,11 +59,10 @@ synchronized (_out) {
       if (_log.shouldLog(Log.ERROR))       _log.error("IO error writing out a " + data.length + " byte message to "+ _remoteIdentity.getHash().toBase64());
       return false;
     }
-    long exp=msg.getMessage().getMessageExpiration().getTime();
     long end=_context.clock().now();
     long timeLeft=exp - end;
     msg.timestamp("TCPConnection.runner.processSlice sent and flushed");
-    if (_log.shouldLog(Log.INFO))     _log.info("Message " + msg.getMessage().getClass().getName() + " (expiring in "+ timeLeft+ "ms) sent to "+ _remoteIdentity.getHash().toBase64()+ " from "+ _context.routerHash().toBase64()+ " over connection "+ _id+ " with "+ data.length+ " bytes in "+ (end - afterExpire)+ "ms (write took "+ (end - beforeWrite)+ "ms, prepare took "+ (beforeWrite - afterExpire)+ "ms)");
+    if (_log.shouldLog(Log.INFO))     _log.info("Message " + msg.getMessageType() + " (expiring in "+ timeLeft+ "ms) sent to "+ _remoteIdentity.getHash().toBase64()+ " from "+ _context.routerHash().toBase64()+ " over connection "+ _id+ " with "+ data.length+ " bytes in "+ (end - afterExpire)+ "ms (write took "+ (end - beforeWrite)+ "ms, prepare took "+ (beforeWrite - afterExpire)+ "ms)");
     if (timeLeft < 2 * 1000) {
       if (_log.shouldLog(Log.DEBUG))       _log.warn("Very little time left... time to send [" + (end - start) + "] time left ["+ timeLeft+ "] to "+ _remoteIdentity.getHash().toBase64()+ "\n"+ msg.toString(),msg.getCreatedBy());
     }

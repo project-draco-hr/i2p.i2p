@@ -1,0 +1,21 @@
+{
+synchronized (_pendingInboundRequests) {
+    while (_pendingInboundRequests.size() > 0) {
+      BandwidthRequest req=(BandwidthRequest)_pendingInboundRequests.get(0);
+      if ((req.getRequestedInboundBytes() <= _availableInboundBytes) || (_inboundUnlimited)) {
+        _pendingInboundRequests.remove(0);
+        if (!_inboundUnlimited)         _availableInboundBytes-=req.getRequestedInboundBytes();
+        _totalAllocatedInboundBytes+=req.getRequestedInboundBytes();
+        if (_log.shouldLog(Log.INFO))         _log.info("Granting inbound request " + req.getRequestName() + " for "+ req.getRequestedInboundBytes()+ " bytes (waited "+ (_context.clock().now() - req.getRequestTime())+ "ms) pending "+ _pendingInboundRequests.size());
+synchronized (req.getAvailabilityMonitor()) {
+          req.grantRequest();
+          req.getAvailabilityMonitor().notifyAll();
+        }
+      }
+ else {
+        if (_log.shouldLog(Log.WARN))         _log.warn("Still denying the first inbound request (" + req.getRequestName() + " for "+ req.getRequestedInboundBytes()+ " bytes (available "+ _availableInboundBytes+ "/"+ _availableOutboundBytes+ " in/out) (waited "+ (_context.clock().now() - req.getRequestTime())+ "ms so far) pending "+ (_pendingInboundRequests.size()));
+        return;
+      }
+    }
+  }
+}
