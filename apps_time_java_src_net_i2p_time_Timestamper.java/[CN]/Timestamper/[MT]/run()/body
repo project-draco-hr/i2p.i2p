@@ -1,19 +1,24 @@
 {
   if (_log.shouldLog(Log.INFO))   _log.info("Starting up timestamper");
-  while (true) {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Querying servers " + _serverList);
-    long now=NtpClient.currentTime(_serverList);
-    if (now < 0) {
-      _log.error("Unable to contact any of the NTP servers - network disconnect?");
-    }
+  try {
+    while (true) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Querying servers " + _serverList);
+      long now=NtpClient.currentTime(_serverList);
+      if (now < 0) {
+        _log.error("Unable to contact any of the NTP servers - network disconnect?");
+      }
  else {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Stamp time");
-      stampTime(now);
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Stamp time");
+        stampTime(now);
+      }
+      try {
+        Thread.sleep(DELAY_MS);
+      }
+ catch (      InterruptedException ie) {
+      }
     }
-    try {
-      Thread.sleep(DELAY_MS);
-    }
- catch (    InterruptedException ie) {
-    }
+  }
+ catch (  Throwable t) {
+    _log.log(Log.CRIT,"Timestamper died!",t);
   }
 }
