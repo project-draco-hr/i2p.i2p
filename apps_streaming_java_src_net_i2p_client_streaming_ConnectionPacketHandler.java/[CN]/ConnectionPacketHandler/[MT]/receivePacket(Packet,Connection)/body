@@ -2,7 +2,7 @@
   boolean ok=verifyPacket(packet,con);
   if (!ok) {
     if ((!packet.isFlagSet(Packet.FLAG_RESET)) && (_log.shouldLog(Log.ERROR)))     _log.error("Packet does NOT verify: " + packet);
-    _cache.release(packet.getPayload());
+    packet.releasePayload();
     return;
   }
   if (con.getHardDisconnected()) {
@@ -13,7 +13,7 @@
  else {
       if (_log.shouldLog(Log.WARN))       _log.warn("Received a packet after hard disconnect, ignoring: " + packet + " on "+ con);
     }
-    _cache.release(packet.getPayload());
+    packet.releasePayload();
     return;
   }
   if (packet.isFlagSet(Packet.FLAG_MAX_PACKET_SIZE_INCLUDED)) {
@@ -86,7 +86,7 @@
       con.ackImmediately();
     }
   }
-  if (ackOnly) {
-    _cache.release(packet.getPayload());
+  if (ackOnly || !isNew) {
+    packet.releasePayload();
   }
 }
