@@ -18,6 +18,7 @@
   }
  else {
     if (_log.shouldLog(Log.INFO))     _log.info("Failed to send message " + msg.getMessageType() + " to "+ msg.getTarget().getIdentity().getHash().toBase64()+ " with transport "+ getStyle()+ " (details: "+ msg+ ")");
+    if (msg.getExpiration() < _context.clock().now())     _context.statManager().addRateData("transport.expiredOnQueueLifetime",lifetime,lifetime);
     if (allowRequeue) {
       if ((msg.getExpiration() <= 0) || (msg.getExpiration() > _context.clock().now())) {
         _context.outNetMessagePool().add(msg);
@@ -63,6 +64,6 @@
   }
  else {
     _context.profileManager().messageFailed(msg.getTarget().getIdentity().getHash(),getStyle());
-    _context.statManager().updateFrequency("transport.sendMessageFailureFrequency");
+    _context.statManager().addRateData("transport.sendMessageFailureLifetime",lifetime,lifetime);
   }
 }

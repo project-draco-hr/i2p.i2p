@@ -35,5 +35,8 @@ synchronized (_out) {
   if (end - afterExpire > 1000) {
     if (_log.shouldLog(Log.WARN))     _log.warn("Actual sending took too long ( " + (end - afterExpire) + "ms) sending "+ data.length+ " bytes to "+ _remoteIdentity.getHash().toBase64());
   }
+  if (data.length > 2 * 1024)   _context.statManager().addRateData("tcp.writeTimeLarge",end - beforeWrite,end - beforeWrite);
+ else   _context.statManager().addRateData("tcp.writeTimeSmall",end - beforeWrite,end - beforeWrite);
+  if (end - beforeWrite > 1 * 1024)   _context.statManager().addRateData("tcp.writeTimeSlow",end - beforeWrite,end - beforeWrite);
   return true;
 }
