@@ -2,6 +2,7 @@
   ArrayList readyJobs=null;
   ArrayList timedJobs=null;
   ArrayList activeJobs=new ArrayList(4);
+  ArrayList justFinishedJobs=new ArrayList(4);
 synchronized (_readyJobs) {
     readyJobs=new ArrayList(_readyJobs);
   }
@@ -12,7 +13,13 @@ synchronized (_queueRunners) {
     for (Iterator iter=_queueRunners.values().iterator(); iter.hasNext(); ) {
       JobQueueRunner runner=(JobQueueRunner)iter.next();
       Job job=runner.getCurrentJob();
-      if (job != null)       activeJobs.add(job.getName());
+      if (job != null) {
+        activeJobs.add(job.getName());
+      }
+ else {
+        job=runner.getLastJob();
+        justFinishedJobs.add(job.getName());
+      }
     }
   }
   StringBuffer buf=new StringBuffer(20 * 1024);
@@ -25,6 +32,11 @@ synchronized (_queueRunners) {
   buf.append("# active jobs: ").append(activeJobs.size()).append("<ol>\n");
   for (int i=0; i < activeJobs.size(); i++) {
     buf.append("<li>").append(activeJobs.get(i)).append("</li>\n");
+  }
+  buf.append("</ol>\n");
+  buf.append("# just finished jobs: ").append(justFinishedJobs.size()).append("<ol>\n");
+  for (int i=0; i < justFinishedJobs.size(); i++) {
+    buf.append("<li>").append(justFinishedJobs.get(i)).append("</li>\n");
   }
   buf.append("</ol>\n");
   buf.append("# ready/waiting jobs: ").append(readyJobs.size()).append(" <i>(lots of these mean there's likely a big problem)</i><ol>\n");
