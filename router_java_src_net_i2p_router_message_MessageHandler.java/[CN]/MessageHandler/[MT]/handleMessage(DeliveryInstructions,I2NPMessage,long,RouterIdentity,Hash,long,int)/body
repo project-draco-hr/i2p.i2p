@@ -1,0 +1,37 @@
+{
+switch (instructions.getDeliveryMode()) {
+case DeliveryInstructions.DELIVERY_MODE_LOCAL:
+    _log.debug("Instructions for LOCAL DELIVERY");
+  if (message.getType() == DataMessage.MESSAGE_TYPE) {
+    handleLocalDestination(instructions,message,fromHash);
+  }
+ else {
+    handleLocalRouter(message,from,fromHash);
+  }
+break;
+case DeliveryInstructions.DELIVERY_MODE_ROUTER:
+if (_log.shouldLog(Log.DEBUG)) _log.debug("Instructions for ROUTER DELIVERY to " + instructions.getRouter().toBase64());
+if (_context.routerHash().equals(instructions.getRouter())) {
+handleLocalRouter(message,from,fromHash);
+}
+ else {
+handleRemoteRouter(message,instructions,expiration,priority);
+}
+break;
+case DeliveryInstructions.DELIVERY_MODE_DESTINATION:
+if (_log.shouldLog(Log.DEBUG)) _log.debug("Instructions for DESTINATION DELIVERY to " + instructions.getDestination().toBase64());
+if (_context.clientManager().isLocal(instructions.getDestination())) {
+handleLocalDestination(instructions,message,fromHash);
+}
+ else {
+_log.error("Instructions requests forwarding on to a non-local destination.  Not yet supported");
+}
+break;
+case DeliveryInstructions.DELIVERY_MODE_TUNNEL:
+if (_log.shouldLog(Log.DEBUG)) _log.debug("Instructions for TUNNEL DELIVERY to" + instructions.getTunnelId().getTunnelId() + " on "+ instructions.getRouter().toBase64());
+handleTunnel(instructions,expiration,message,priority);
+break;
+default :
+_log.error("Message has instructions that are not yet implemented: mode = " + instructions.getDeliveryMode());
+}
+}

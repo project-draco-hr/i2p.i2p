@@ -1,21 +1,17 @@
 {
   if (_createMsg == null) {
-    _createMsg=buildTunnelCreate(_participant,_inboundGateway,_replyPeer);
-    return true;
-  }
- else   if (_statusMsg == null) {
-    _statusMsg=buildDeliveryStatusMessage();
+    _createMsg=buildTunnelCreate(_participant,_inboundGateway);
     return true;
   }
  else   if (_garlicMessage == null) {
-    _garlicMessage=buildGarlicMessage(_createMsg,_statusMsg,_replyPeer,_inboundGateway,_target,_wrappedKey,_wrappedTags,_wrappedTo);
+    _garlicMessage=buildGarlicMessage(_createMsg,_inboundGateway,_target,_wrappedKey,_wrappedTags,_wrappedTo);
     return true;
   }
  else {
-    if (_log.shouldLog(Log.INFO))     _log.info("Sending tunnel create to " + _target.getIdentity().getHash().toBase64() + " with replies through "+ _replyPeer.getIdentity().getHash().toBase64()+ " to inbound gateway "+ _inboundGateway.getGateway().toBase64()+ " : "+ _inboundGateway.getTunnelId().getTunnelId());
+    if (_log.shouldLog(Log.INFO))     _log.info("Sending tunnel create to " + _target.getIdentity().getHash().toBase64() + " to inbound gateway "+ _inboundGateway.getGateway().toBase64()+ " : "+ _inboundGateway.getTunnelId().getTunnelId());
     ReplyJob onReply=new Success(_participant,_wrappedKey,_wrappedTags,_wrappedTo);
-    Job onFail=new Failure(_participant,_replyPeer.getIdentity().getHash());
-    MessageSelector selector=new Selector(_participant,_statusMsg.getMessageId());
+    Job onFail=new Failure(_participant);
+    MessageSelector selector=new Selector(_participant);
     SendTunnelMessageJob j=new SendTunnelMessageJob(getContext(),_garlicMessage,_outboundTunnel,_target.getIdentity().getHash(),null,null,onReply,onFail,selector,_timeoutMs,PRIORITY);
     getContext().jobQueue().addJob(j);
     return false;
