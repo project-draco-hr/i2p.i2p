@@ -10,6 +10,8 @@
     int len;
     while ((len=in.read(buffer)) != -1) {
       out.write(buffer,0,len);
+      if (_toI2P)       totalSent+=len;
+ else       totalReceived+=len;
       if (len > 0)       updateActivity();
       if (in.available() == 0) {
         if (_log.shouldLog(Log.DEBUG))         _log.debug(direction + ": " + len+ " bytes flushed through to "+ i2ps.getPeerDestination().calculateHash().toBase64().substring(0,6));
@@ -49,10 +51,10 @@ catch (  IOException ex) {
       if (_log.shouldLog(Log.WARN))       _log.warn(direction + ": Error closing input stream",ex);
     }
     try {
-      out.close();
+      out.flush();
     }
- catch (    IOException ex) {
-      if (_log.shouldLog(Log.WARN))       _log.warn(direction + ": Error closing output stream",ex);
+ catch (    IOException ioe) {
+      if (_log.shouldLog(Log.WARN))       _log.warn(direction + ": Error flushing to close",ioe);
     }
 synchronized (finishLock) {
       finished=true;
