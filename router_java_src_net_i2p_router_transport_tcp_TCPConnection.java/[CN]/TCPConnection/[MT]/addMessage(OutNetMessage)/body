@@ -12,12 +12,11 @@ synchronized (_toBeSent) {
       _toBeSent.add(msg);
     }
     totalPending=_toBeSent.size();
-    if (fail) {
-      pending.append(totalPending).append(": ");
-      for (int i=0; i < totalPending; i++) {
-        OutNetMessage cur=(OutNetMessage)_toBeSent.get(i);
-        pending.append(cur.getMessage().getClass().getName()).append(" ");
-      }
+    pending.append(totalPending).append(": ");
+    for (int i=0; i < totalPending; i++) {
+      OutNetMessage cur=(OutNetMessage)_toBeSent.get(i);
+      pending.append(cur.getMessage().getClass().getName());
+      pending.append(" added ").append(cur.getLifetime()).append(" ms ago, ");
     }
     _toBeSent.notifyAll();
   }
@@ -42,7 +41,7 @@ synchronized (_toBeSent) {
   if (slicesTooLong()) {
     if (_log.shouldLog(Log.ERROR)) {
       long sliceTime=_context.clock().now() - _lastSliceRun;
-      _log.error("onAdd: Slices are taking too long (" + sliceTime + "ms) - perhaps the remote side is disconnected or hung? remote="+ _remoteIdentity.getHash().toBase64());
+      _log.error("onAdd: Slices are taking too long (" + sliceTime + "ms) - perhaps the remote side is disconnected or hung? remote="+ _remoteIdentity.getHash().toBase64()+ " pending: "+ pending.toString());
     }
     closeConnection();
   }
