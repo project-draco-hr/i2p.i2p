@@ -13,7 +13,7 @@ synchronized (_toBeSent) {
         }
       }
       remaining=_toBeSent.size();
-      if (remaining <= 0)       return;
+      if (remaining <= 0)       return true;
       msg=(OutNetMessage)_toBeSent.remove(0);
       remaining--;
       if ((msg.getExpiration() > 0) && (msg.getExpiration() < start)) {
@@ -27,7 +27,7 @@ synchronized (_toBeSent) {
     if (_log.shouldLog(Log.WARN))     _log.warn("Message timed out while sitting on the TCP Connection's queue!  was too slow by: " + (start - msg.getExpiration()) + "ms to "+ _remoteIdentity.getHash().toBase64()+ ": "+ msg);
     msg.timestamp("TCPConnection.runner.processSlice expired");
     _transport.afterSend(msg,false);
-    return;
+    return true;
   }
   if (remaining > 0) {
     if (_log.shouldLog(Log.INFO))     _log.info("After pulling off a pending message, there are still " + remaining + " messages queued up for sending to "+ _remoteIdentity.getHash().toBase64());
@@ -35,35 +35,39 @@ synchronized (_toBeSent) {
   long afterExpire=_context.clock().now();
   if (msg != null) {
     msg.timestamp("TCPConnection.runner.processSlice fetched");
+    byte data[]=msg.getMessageData();
+    if (data == null) {
+      if (_log.shouldLog(Log.ERROR))       _log.error("wtf, for some reason, an I2NPMessage couldn't be serialized...");
+      return true;
+    }
+    msg.timestamp("TCPConnection.runner.processSlice before sending " + data.length + " bytes");
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Sending " + data.length + " bytes in the slice... to "+ _remoteIdentity.getHash().toBase64());
     try {
-      byte data[]=msg.getMessageData();
-      msg.timestamp("TCPConnection.runner.processSlice before sending " + data.length + " bytes");
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Sending " + data.length + " bytes in the slice... to "+ _remoteIdentity.getHash().toBase64());
 synchronized (_out) {
         _out.write(data);
         _out.flush();
       }
-      msg.timestamp("TCPConnection.runner.processSlice sent and flushed");
-      long end=_context.clock().now();
-      long timeLeft=msg.getMessage().getMessageExpiration().getTime() - end;
-      if (_log.shouldLog(Log.INFO))       _log.info("Message " + msg.getMessage().getClass().getName() + " (expiring in "+ timeLeft+ "ms) sent to "+ _remoteIdentity.getHash().toBase64()+ " from "+ _context.routerHash().toBase64()+ " over connection "+ _id+ " with "+ data.length+ " bytes in "+ (end - start)+ "ms");
-      if (timeLeft < 10 * 1000) {
-        if (_log.shouldLog(Log.DEBUG))         _log.warn("Very little time left... time to send [" + (end - start) + "] time left ["+ timeLeft+ "] to "+ _remoteIdentity.getHash().toBase64()+ "\n"+ msg.toString(),msg.getCreatedBy());
-      }
-      long lifetime=msg.getLifetime();
-      if (lifetime > 10 * 1000) {
-        if (_log.shouldLog(Log.WARN))         _log.warn("The processing of the message took way too long (" + lifetime + "ms) - time to send ("+ (end - start)+ "), time left ("+ timeLeft+ ") to "+ _remoteIdentity.getHash().toBase64()+ "\n"+ msg.toString());
-      }
-      _transport.afterSend(msg,true);
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Processing slice - message sent completely: " + msg.getMessage().getClass().getName() + " to "+ _remoteIdentity.getHash().toBase64());
-      if (end - afterExpire > 1000) {
-        if (_log.shouldLog(Log.WARN))         _log.warn("Actual sending took too long ( " + (end - afterExpire) + "ms) sending "+ data.length+ " bytes to "+ _remoteIdentity.getHash().toBase64());
-      }
     }
  catch (    IOException ioe) {
-      msg.timestamp("TCPConnection.runner.processSlice failed to send/flushflushed");
-      _transport.afterSend(msg,false);
-      throw ioe;
+      if (_log.shouldLog(Log.ERROR))       _log.error("IO error writing out a " + data.length + " byte message to "+ _remoteIdentity.getHash().toBase64());
+      return false;
+    }
+    msg.timestamp("TCPConnection.runner.processSlice sent and flushed");
+    long end=_context.clock().now();
+    long timeLeft=msg.getMessage().getMessageExpiration().getTime() - end;
+    if (_log.shouldLog(Log.INFO))     _log.info("Message " + msg.getMessage().getClass().getName() + " (expiring in "+ timeLeft+ "ms) sent to "+ _remoteIdentity.getHash().toBase64()+ " from "+ _context.routerHash().toBase64()+ " over connection "+ _id+ " with "+ data.length+ " bytes in "+ (end - start)+ "ms");
+    if (timeLeft < 10 * 1000) {
+      if (_log.shouldLog(Log.DEBUG))       _log.warn("Very little time left... time to send [" + (end - start) + "] time left ["+ timeLeft+ "] to "+ _remoteIdentity.getHash().toBase64()+ "\n"+ msg.toString(),msg.getCreatedBy());
+    }
+    long lifetime=msg.getLifetime();
+    if (lifetime > 10 * 1000) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("The processing of the message took way too long (" + lifetime + "ms) - time to send ("+ (end - start)+ "), time left ("+ timeLeft+ ") to "+ _remoteIdentity.getHash().toBase64()+ "\n"+ msg.toString());
+    }
+    _transport.afterSend(msg,true);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Processing slice - message sent completely: " + msg.getMessage().getClass().getName() + " to "+ _remoteIdentity.getHash().toBase64());
+    if (end - afterExpire > 1000) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Actual sending took too long ( " + (end - afterExpire) + "ms) sending "+ data.length+ " bytes to "+ _remoteIdentity.getHash().toBase64());
     }
   }
+  return true;
 }
