@@ -4,7 +4,7 @@ def main():
     argv = sys.argv
     argc = len(argv)
     try:
-        (opts, args) = getopt.getopt(sys.argv[1:], 'h?vV:S:C:sd:f', ['help', 'version', 'samaddr=', 'clientaddr=', 'verbosity=', 'status', 'datadir=', 'foreground'])
+        (opts, args) = getopt.getopt(sys.argv[1:], 'h?vV:S:C:sd:f', ['help', 'version', 'samaddr=', 'clientaddr=', 'verbosity=', 'status', 'datadir=', 'foreground', 'shortversion'])
     except:
         traceback.print_exc(file=sys.stdout)
         usage('You entered an invalid option')
@@ -30,12 +30,16 @@ def main():
             dumpStatus()
         elif (opt in ['-d', '--datadir']):
             dataDir = val
+        elif (opt == '--shortversion'):
+            sys.stdout.write(('%s' % version))
+            sys.stdout.flush()
+            sys.exit(0)
     if (len(args) == 0):
         err('No command given')
         usage(0, 1)
     cmd = args.pop(0)
     argc = len(args)
-    if (cmd not in ['help', '_start', 'start', 'stop', 'hello', 'get', 'put', 'addref', 'getref']):
+    if (cmd not in ['help', '_start', 'start', 'stop', 'hello', 'get', 'put', 'addref', 'getref', 'pingall']):
         err(("Illegal command '%s'" % cmd))
         usage(0, 1)
     if (cmd == 'help'):
@@ -190,3 +194,9 @@ def main():
             outfile.flush()
             outfile.close()
             sys.exit(0)
+    elif (cmd == 'pingall'):
+        if (logVerbosity > 2):
+            print ('Pinging all peers, waiting %s seconds for results' % timeout['ping'])
+        res = client.pingall()
+        print res
+        sys.exit(0)
