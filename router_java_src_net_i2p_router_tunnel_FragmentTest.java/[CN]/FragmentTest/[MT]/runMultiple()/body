@@ -1,18 +1,22 @@
 {
-  DataMessage m=new DataMessage(_context);
-  byte data[]=new byte[2048];
-  _context.random().nextBytes(data);
-  m.setData(data);
-  m.setUniqueId(42);
-  m.setMessageExpiration(_context.clock().now() + 60 * 1000);
+  TunnelGateway.Pending pending=createPending(2048,false,false);
   ArrayList messages=new ArrayList();
-  TunnelGateway.Pending pending=new TunnelGateway.Pending(m,null,null);
   messages.add(pending);
-  TrivialPreprocessor pre=new TrivialPreprocessor(_context);
+  TunnelGateway.QueuePreprocessor pre=createPreprocessor(_context);
   SenderImpl sender=new SenderImpl();
-  FragmentHandler handler=new FragmentHandler(_context,new DefragmentedReceiverImpl(m));
+  DefragmentedReceiverImpl handleReceiver=new DefragmentedReceiverImpl(pending.getData());
+  FragmentHandler handler=new FragmentHandler(_context,handleReceiver);
   ReceiverImpl receiver=new ReceiverImpl(handler,0);
-  byte msg[]=m.toByteArray();
+  byte msg[]=pending.getData();
   _log.debug("SEND(" + msg.length + "): "+ Base64.encode(msg)+ " "+ _context.sha().calculateHash(msg).toBase64());
-  pre.preprocessQueue(messages,new SenderImpl(),receiver);
+  boolean keepGoing=true;
+  while (keepGoing) {
+    keepGoing=pre.preprocessQueue(messages,new SenderImpl(),receiver);
+    if (keepGoing)     try {
+      Thread.sleep(100);
+    }
+ catch (    InterruptedException ie) {
+    }
+  }
+  if (handleReceiver.receivedOk())   _log.info("received OK");
 }

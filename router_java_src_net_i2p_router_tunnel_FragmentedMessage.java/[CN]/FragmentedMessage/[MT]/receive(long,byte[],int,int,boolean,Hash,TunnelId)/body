@@ -4,7 +4,10 @@
   if (offset + length > payload.length)   throw new RuntimeException("Length is impossible (" + length + "/"+ offset+ " out of "+ payload.length+ ") for messageId "+ messageId);
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Receive message " + messageId + " with "+ length+ " bytes (last? "+ isLast+ ") targetting "+ toRouter+ " / "+ toTunnel+ " offset="+ offset);
   _messageId=messageId;
-  ByteArray ba=new ByteArray(payload,offset,length);
+  ByteArray ba=_cache.acquire();
+  System.arraycopy(payload,offset,ba.getData(),0,length);
+  ba.setValid(length);
+  ba.setOffset(0);
   if (_log.shouldLog(Log.DEBUG))   _log.debug("fragment[0/" + offset + "/"+ length+ "]: "+ Base64.encode(ba.getData(),ba.getOffset(),ba.getValid()));
   _fragments[0]=ba;
   _lastReceived=isLast;

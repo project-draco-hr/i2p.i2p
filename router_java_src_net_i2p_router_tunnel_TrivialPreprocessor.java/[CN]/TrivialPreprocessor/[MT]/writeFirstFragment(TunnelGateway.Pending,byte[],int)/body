@@ -1,0 +1,40 @@
+{
+  boolean fragmented=false;
+  int origOffset=offset;
+  int instructionsLength=getInstructionsSize(msg);
+  int payloadLength=msg.getData().length - msg.getOffset();
+  if (offset + payloadLength + instructionsLength+ IV_SIZE+ 1+ 4 > PREPROCESSED_SIZE) {
+    fragmented=true;
+    instructionsLength+=4;
+    payloadLength=PREPROCESSED_SIZE - IV_SIZE - 1- 4- instructionsLength- offset;
+    if (payloadLength <= 0)     throw new RuntimeException("Fragment too small! payloadLen=" + payloadLength + " target.length="+ target.length+ " offset="+ offset+ " msg.length="+ msg.getData().length+ " msg.offset="+ msg.getOffset()+ " instructionsLength="+ instructionsLength+ " for "+ msg);
+  }
+  if (payloadLength <= 0)   throw new RuntimeException("Full size too small! payloadLen=" + payloadLength + " target.length="+ target.length+ " offset="+ offset+ " msg.length="+ msg.getData().length+ " msg.offset="+ msg.getOffset()+ " instructionsLength="+ instructionsLength+ " for "+ msg);
+  target[offset]=0x0;
+  if (msg.getToTunnel() != null)   target[offset]|=MASK_TUNNEL;
+ else   if (msg.getToRouter() != null)   target[offset]|=MASK_ROUTER;
+  if (fragmented)   target[offset]|=MASK_FRAGMENTED;
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("CONTROL: " + Integer.toHexString(target[offset]));
+  offset++;
+  if (msg.getToTunnel() != null) {
+    DataHelper.toLong(target,offset,4,msg.getToTunnel().getTunnelId());
+    offset+=4;
+  }
+  if (msg.getToRouter() != null) {
+    System.arraycopy(msg.getToRouter().getData(),0,target,offset,Hash.HASH_LENGTH);
+    offset+=Hash.HASH_LENGTH;
+  }
+  if (fragmented) {
+    DataHelper.toLong(target,offset,4,msg.getMessageId());
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("writing messageId= " + msg.getMessageId() + " at offset "+ offset);
+    offset+=4;
+  }
+  DataHelper.toLong(target,offset,2,payloadLength);
+  offset+=2;
+  System.arraycopy(msg.getData(),msg.getOffset(),target,offset,payloadLength);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("initial fragment[" + msg.getMessageId() + "/"+ msg.getFragmentNumber()+ "/"+ (PREPROCESSED_SIZE - offset - payloadLength)+ "/"+ payloadLength+ "]: "+ Base64.encode(target,offset,payloadLength));
+  offset+=payloadLength;
+  msg.setOffset(msg.getOffset() + payloadLength);
+  msg.incrementFragmentNumber();
+  return offset;
+}

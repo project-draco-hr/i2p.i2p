@@ -1,0 +1,25 @@
+{
+  boolean isLast=true;
+  int instructionsLength=getInstructionsSize(msg);
+  int payloadLength=msg.getData().length - msg.getOffset();
+  if (payloadLength + instructionsLength + IV_SIZE+ 1+ 4 > PREPROCESSED_SIZE) {
+    isLast=false;
+    payloadLength=PREPROCESSED_SIZE - IV_SIZE - 1- 4- instructionsLength;
+  }
+  target[offset]=0x0;
+  target[offset]|=MASK_IS_SUBSEQUENT;
+  target[offset]|=(byte)(msg.getFragmentNumber() << 1);
+  if (isLast)   target[offset]|=1;
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("CONTROL: " + Integer.toHexString((int)target[offset]) + "/"+ Base64.encode(target,offset,1)+ " at offset "+ offset);
+  offset++;
+  DataHelper.toLong(target,offset,4,msg.getMessageId());
+  offset+=4;
+  DataHelper.toLong(target,offset,2,payloadLength);
+  offset+=2;
+  System.arraycopy(msg.getData(),msg.getOffset(),target,offset,payloadLength);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("subsequent fragment[" + msg.getMessageId() + "/"+ msg.getFragmentNumber()+ "/"+ offset+ "/"+ payloadLength+ "]: "+ Base64.encode(target,offset,payloadLength));
+  offset+=payloadLength;
+  msg.incrementFragmentNumber();
+  msg.setOffset(msg.getOffset() + payloadLength);
+  return offset;
+}
