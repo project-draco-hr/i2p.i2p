@@ -1,0 +1,39 @@
+{
+  if (_xorCache == null) {
+synchronized (this) {
+      if (_xorCache == null)       _xorCache=new HashMap(MAX_CACHED_XOR);
+    }
+  }
+  byte[] distance=(byte[])_xorCache.get(key);
+  if (distance == null) {
+    int cached=0;
+synchronized (_xorCache) {
+      int toRemove=_xorCache.size() + 1 - MAX_CACHED_XOR;
+      if (toRemove > 0) {
+        Set keys=new HashSet(toRemove);
+        for (Iterator iter=_xorCache.keySet().iterator(); iter.hasNext(); )         keys.add(iter.next());
+        for (Iterator iter=keys.iterator(); iter.hasNext(); )         _xorCache.remove(iter.next());
+      }
+      distance=DataHelper.xor(key.getData(),getData());
+      _xorCache.put(key,(Object)distance);
+      cached=_xorCache.size();
+    }
+    if (false && (_log.shouldLog(Log.DEBUG))) {
+      StringBuffer buf=new StringBuffer(128);
+      buf.append("miss [").append(cached).append("] from ");
+      buf.append(DataHelper.toHexString(getData())).append(" to ");
+      buf.append(DataHelper.toHexString(key.getData()));
+      _log.debug(buf.toString(),new Exception());
+    }
+  }
+ else {
+    if (false && (_log.shouldLog(Log.DEBUG))) {
+      StringBuffer buf=new StringBuffer(128);
+      buf.append("hit from ");
+      buf.append(DataHelper.toHexString(getData())).append(" to ");
+      buf.append(DataHelper.toHexString(key.getData()));
+      _log.debug(buf.toString());
+    }
+  }
+  return distance;
+}
