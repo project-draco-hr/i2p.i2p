@@ -2,14 +2,20 @@
   if (_log.shouldLog(Log.INFO))   _log.info("Starting up timestamper");
   try {
     while (true) {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Querying servers " + _serverList);
-      try {
-        long now=NtpClient.currentTime(_serverList);
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("Stamp time");
-        stampTime(now);
+      String enabled=System.getProperty("timestamper.enabled");
+      if ((enabled == null) || (!"true".equals(enabled))) {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Not stamping the time");
       }
- catch (      IllegalArgumentException iae) {
-        _log.log(Log.CRIT,"Unable to reach any of the NTP servers - network disconnected?");
+ else {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Querying servers " + _serverList);
+        try {
+          long now=NtpClient.currentTime(_serverList);
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("Stamp time");
+          stampTime(now);
+        }
+ catch (        IllegalArgumentException iae) {
+          _log.log(Log.CRIT,"Unable to reach any of the NTP servers - network disconnected?");
+        }
       }
       try {
         Thread.sleep(DELAY_MS);
