@@ -1,0 +1,47 @@
+{
+  Properties props=new Properties();
+  String responseLine=null;
+  int lastEnd=-1;
+  for (int i=0; i < _headerBuffer.getValid(); i++) {
+    if (isNL(_headerBuffer.getData()[i])) {
+      if (lastEnd == -1) {
+        responseLine=new String(_headerBuffer.getData(),0,i + 1);
+      }
+ else {
+        for (int j=lastEnd + 1; j < i; j++) {
+          if (_headerBuffer.getData()[j] == ':') {
+            String key=new String(_headerBuffer.getData(),lastEnd + 1,j - (lastEnd + 1));
+            String val=new String(_headerBuffer.getData(),j + 2,i - (j + 2));
+            props.setProperty(key,val);
+            break;
+          }
+        }
+      }
+      lastEnd=i;
+    }
+  }
+  if (responseLine == null)   throw new IOException("No HTTP response line, with props=" + props);
+  responseLine=filterHeaders(responseLine,props);
+  responseLine=(responseLine.trim() + "\n");
+  if (_log.shouldLog(Log.DEBUG)) {
+    StringBuffer msg=new StringBuffer(responseLine.length() + props.size() * 64);
+    msg.append("HTTP response: first line [").append(responseLine.trim());
+    msg.append("] options: \n");
+    for (Iterator iter=props.keySet().iterator(); iter.hasNext(); ) {
+      String key=(String)iter.next();
+      String val=props.getProperty(key);
+      msg.append('[').append(key.trim()).append("]=[").append(val.trim()).append("]\n");
+    }
+    _log.debug(msg.toString());
+  }
+  out.write(responseLine.getBytes());
+  for (Iterator iter=props.keySet().iterator(); iter.hasNext(); ) {
+    String key=(String)iter.next();
+    String val=props.getProperty(key);
+    String line=key.trim() + ": " + val.trim()+ "\n";
+    out.write(line.getBytes());
+  }
+  out.write("\n".getBytes());
+  if (_headerBuffer.getData().length == CACHE_SIZE)   _cache.release(_headerBuffer);
+ else   _headerBuffer=null;
+}

@@ -1,13 +1,14 @@
 {
   if (size > Packet.MAX_PAYLOAD_SIZE)   throw new IllegalArgumentException("size is too large (" + size + ")");
   boolean ackOnly=isAckOnly(con,size);
+  boolean isFirst=(con.getAckedPackets() <= 0) && (con.getUnackedPacketsSent() <= 0);
   PacketLocal packet=new PacketLocal(_context,con.getRemotePeer(),con);
   ByteArray data=new ByteArray(new byte[size]);
   if (size > 0)   System.arraycopy(buf,off,data.getData(),0,size);
   data.setValid(size);
   data.setOffset(0);
   packet.setPayload(data);
-  if (ackOnly && !forceIncrement)   packet.setSequenceNum(0);
+  if ((ackOnly && !forceIncrement) && (!isFirst))   packet.setSequenceNum(0);
  else   packet.setSequenceNum(con.getNextOutboundPacketNum());
   packet.setSendStreamId(con.getSendStreamId());
   packet.setReceiveStreamId(con.getReceiveStreamId());
@@ -17,7 +18,7 @@
   if (con.getOptions().getProfile() == ConnectionOptions.PROFILE_INTERACTIVE)   packet.setFlag(Packet.FLAG_PROFILE_INTERACTIVE,true);
  else   packet.setFlag(Packet.FLAG_PROFILE_INTERACTIVE,false);
   packet.setFlag(Packet.FLAG_SIGNATURE_REQUESTED,con.getOptions().getRequireFullySigned());
-  if ((!ackOnly) && (packet.getSequenceNum() <= 0)) {
+  if (isFirst) {
     packet.setFlag(Packet.FLAG_SYNCHRONIZE);
     packet.setOptionalFrom(con.getSession().getMyDestination());
     packet.setOptionalMaxSize(con.getOptions().getMaxMessageSize());
