@@ -1,12 +1,17 @@
 {
-  while ((!_eofFound) && (_readyBuf.size() <= 0)) {
-    refill(READ_SIZE);
+  while ((!_eofFound) && (_decryptedSize <= 0)) {
+    refill();
   }
-  Integer nval=getNext();
-  if (nval != null) {
-    return nval.intValue();
+  if (_decryptedSize > 0) {
+    int c=_decryptedBuf[0];
+    System.arraycopy(_decryptedBuf,1,_decryptedBuf,0,_decryptedBuf.length - 1);
+    _decryptedSize--;
+    return c;
   }
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("No byte available.  eof? " + _eofFound);
-  if (_eofFound)   return -1;
-  throw new IOException("Not EOF, but none available?  " + _readyBuf.size() + "/"+ _encryptedBuf.size()+ "/"+ _cumulativeRead+ "... impossible");
+ else   if (_eofFound) {
+    return -1;
+  }
+ else {
+    throw new IOException("Not EOF, but none available?  " + _decryptedSize + "/"+ _writesSinceDecrypt+ "/"+ _cumulativeRead+ "... impossible");
+  }
 }

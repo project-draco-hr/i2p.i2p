@@ -1,7 +1,18 @@
 {
-  byte buf[]=new byte[len];
-  int read=read(buf);
-  if (read == -1)   return -1;
-  System.arraycopy(buf,0,dest,off,read);
-  return read;
+  for (int i=0; i < len; i++) {
+    int val=read();
+    if (val == -1) {
+      if (_eofFound && (i == 0)) {
+        if (_log.shouldLog(Log.DEBUG))         _log.info("EOF? " + _eofFound + "\nread="+ i+ " decryptedSize="+ _decryptedSize+ " \nencryptedSize="+ _writesSinceDecrypt+ " \ntotal="+ _cumulativeRead+ " \npadding="+ _cumulativePaddingStripped+ " \nprepared="+ _cumulativePrepared);
+        return -1;
+      }
+ else {
+        if (i != len)         if (_log.shouldLog(Log.DEBUG))         _log.info("non-terminal eof: " + _eofFound + " i="+ i+ " len="+ len);
+      }
+      return i;
+    }
+    dest[off + i]=(byte)val;
+  }
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Read the full buffer of size " + len);
+  return len;
 }
