@@ -2,14 +2,14 @@
   TunnelId inTunnelId=getInboundTunnelId();
   if (inTunnelId == null) {
     _log.error("No tunnels to get search replies through!  wtf!");
-    getContext().jobQueue().addJob(new FailedJob(router));
+    getContext().jobQueue().addJob(new FailedJob(getContext(),router));
     return;
   }
   TunnelInfo inTunnel=getContext().tunnelManager().getTunnelInfo(inTunnelId);
   RouterInfo inGateway=getContext().netDb().lookupRouterInfoLocally(inTunnel.getThisHop());
   if (inGateway == null) {
     _log.error("We can't find the gateway to our inbound tunnel?! wtf");
-    getContext().jobQueue().addJob(new FailedJob(router));
+    getContext().jobQueue().addJob(new FailedJob(getContext(),router));
     return;
   }
   long expiration=getContext().clock().now() + PER_PEER_TIMEOUT;
@@ -17,12 +17,12 @@
   TunnelId outTunnelId=getOutboundTunnelId();
   if (outTunnelId == null) {
     _log.error("No tunnels to send search out through!  wtf!");
-    getContext().jobQueue().addJob(new FailedJob(router));
+    getContext().jobQueue().addJob(new FailedJob(getContext(),router));
     return;
   }
   if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": Sending leaseSet search to " + router.getIdentity().getHash().toBase64()+ " for "+ msg.getSearchKey().toBase64()+ " w/ replies through ["+ msg.getFrom().toBase64()+ "] via tunnel ["+ msg.getReplyTunnel()+ "]");
   SearchMessageSelector sel=new SearchMessageSelector(getContext(),router,_expiration,_state);
   SearchUpdateReplyFoundJob reply=new SearchUpdateReplyFoundJob(getContext(),router,_state,_facade,this);
-  SendTunnelMessageJob j=new SendTunnelMessageJob(getContext(),msg,outTunnelId,router.getIdentity().getHash(),null,null,reply,new FailedJob(router),sel,PER_PEER_TIMEOUT,SEARCH_PRIORITY);
+  SendTunnelMessageJob j=new SendTunnelMessageJob(getContext(),msg,outTunnelId,router.getIdentity().getHash(),null,null,reply,new FailedJob(getContext(),router),sel,PER_PEER_TIMEOUT,SEARCH_PRIORITY);
   getContext().jobQueue().addJob(j);
 }

@@ -6,14 +6,14 @@
   Hash us=getContext().routerHash();
   _secondaryId=getReplyTunnel();
   if (_secondaryId == null) {
-    getContext().jobQueue().addJob(new TestFailedJob());
+    getContext().jobQueue().addJob(new TestFailedJob(getContext()));
     return;
   }
   TunnelInfo inboundInfo=_pool.getTunnelInfo(_secondaryId);
   inboundInfo.setLastTested(getContext().clock().now());
   long timeout=getTunnelTestTimeout();
-  TestFailedJob failureJob=new TestFailedJob();
+  TestFailedJob failureJob=new TestFailedJob(getContext());
   MessageSelector selector=new TestMessageSelector(msg.getMessageId(),info.getTunnelId().getTunnelId(),timeout);
-  SendTunnelMessageJob testJob=new SendTunnelMessageJob(getContext(),msg,info.getTunnelId(),us,_secondaryId,null,new TestSuccessfulJob(timeout),failureJob,selector,timeout,TEST_PRIORITY);
+  SendTunnelMessageJob testJob=new SendTunnelMessageJob(getContext(),msg,info.getTunnelId(),us,_secondaryId,null,new TestSuccessfulJob(getContext(),timeout),failureJob,selector,timeout,TEST_PRIORITY);
   getContext().jobQueue().addJob(testJob);
 }

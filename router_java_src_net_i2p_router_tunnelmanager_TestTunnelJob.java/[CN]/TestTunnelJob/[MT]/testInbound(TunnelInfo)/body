@@ -5,14 +5,14 @@
   msg.setMessageId(_nonce);
   _secondaryId=getOutboundTunnel();
   if (_secondaryId == null) {
-    getContext().jobQueue().addJob(new TestFailedJob());
+    getContext().jobQueue().addJob(new TestFailedJob(getContext()));
     return;
   }
   TunnelInfo outboundInfo=_pool.getTunnelInfo(_secondaryId);
   outboundInfo.setLastTested(getContext().clock().now());
   long timeout=getTunnelTestTimeout();
-  TestFailedJob failureJob=new TestFailedJob();
+  TestFailedJob failureJob=new TestFailedJob(getContext());
   MessageSelector selector=new TestMessageSelector(msg.getMessageId(),info.getTunnelId().getTunnelId(),timeout);
-  SendTunnelMessageJob j=new SendTunnelMessageJob(getContext(),msg,_secondaryId,info.getThisHop(),info.getTunnelId(),null,new TestSuccessfulJob(timeout),failureJob,selector,timeout,TEST_PRIORITY);
+  SendTunnelMessageJob j=new SendTunnelMessageJob(getContext(),msg,_secondaryId,info.getThisHop(),info.getTunnelId(),null,new TestSuccessfulJob(getContext(),timeout),failureJob,selector,timeout,TEST_PRIORITY);
   getContext().jobQueue().addJob(j);
 }
