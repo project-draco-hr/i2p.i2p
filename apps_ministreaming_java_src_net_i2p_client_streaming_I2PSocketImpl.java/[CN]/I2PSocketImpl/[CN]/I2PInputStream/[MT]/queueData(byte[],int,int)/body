@@ -1,6 +1,22 @@
 {
   if (_log.shouldLog(Log.DEBUG))   _log.debug(getPrefix() + "Insert " + len+ " bytes into queue: "+ hashCode());
 synchronized (bc) {
+    if (_options.getMaxBufferSize() > 0) {
+      int waited=0;
+      while (bc.getCurrentSize() + len > _options.getMaxBufferSize()) {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Buffer size exceeded: pending " + bc.getCurrentSize() + " limit "+ _options.getMaxBufferSize());
+        if ((_options.getWriteTimeout() > 0) && (waited > _options.getWriteTimeout())) {
+          throw new InterruptedIOException("Waited " + waited + "ms to write "+ len+ " with a buffer at "+ bc.getCurrentSize());
+        }
+        if (inStreamClosed)         throw new IOException("Stream closed while writing");
+        try {
+          bc.wait(1000);
+          waited+=1000;
+        }
+ catch (        InterruptedException ie) {
+        }
+      }
+    }
     bc.append(data,off,len);
   }
 synchronized (I2PInputStream.this) {

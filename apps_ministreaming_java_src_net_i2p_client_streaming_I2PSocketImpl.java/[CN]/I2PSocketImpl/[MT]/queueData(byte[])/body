@@ -1,4 +1,18 @@
 {
   _bytesRead+=data.length;
-  in.queueData(data);
+  try {
+    in.queueData(data);
+  }
+ catch (  InterruptedIOException iie) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Queue overflow, closing the stream",iie);
+    try {
+      close();
+    }
+ catch (    IOException ioe) {
+      if (_log.shouldLog(Log.ERROR))       _log.error("Error closing the stream due to overflow",ioe);
+    }
+  }
+catch (  IOException ioe) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Connection closed while writing to the socket",ioe);
+  }
 }

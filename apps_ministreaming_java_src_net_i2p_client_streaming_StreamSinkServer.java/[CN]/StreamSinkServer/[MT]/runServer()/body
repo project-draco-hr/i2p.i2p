@@ -1,0 +1,40 @@
+{
+  I2PSocketManager mgr=I2PSocketManagerFactory.createManager();
+  Destination dest=mgr.getSession().getMyDestination();
+  System.out.println("Listening for connections on: " + dest.calculateHash().toBase64());
+  FileOutputStream fos=null;
+  try {
+    fos=new FileOutputStream(_destFile);
+    dest.writeBytes(fos);
+  }
+ catch (  IOException ioe) {
+    _log.error("Error writing out our destination to " + _destFile,ioe);
+    return;
+  }
+catch (  DataFormatException dfe) {
+    _log.error("Error formatting the destination",dfe);
+    return;
+  }
+ finally {
+    if (fos != null)     try {
+      fos.close();
+    }
+ catch (    IOException ioe) {
+    }
+  }
+  I2PServerSocket sock=mgr.getServerSocket();
+  while (true) {
+    try {
+      I2PSocket curSock=sock.accept();
+      handle(curSock);
+    }
+ catch (    I2PException ie) {
+      _log.error("Error accepting connection",ie);
+      return;
+    }
+catch (    ConnectException ce) {
+      _log.error("Connection already dropped",ce);
+      return;
+    }
+  }
+}
