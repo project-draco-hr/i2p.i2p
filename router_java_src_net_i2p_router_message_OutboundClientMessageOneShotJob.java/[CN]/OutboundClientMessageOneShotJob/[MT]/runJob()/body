@@ -1,21 +1,22 @@
 {
   if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": Send outbound client message job beginning");
   buildClove();
-  if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": Clove built");
+  if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": Clove built to " + _toString);
   long timeoutMs=_overallExpiration - getContext().clock().now();
-  if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": preparing to search for the leaseSet");
+  if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": preparing to search for the leaseSet for " + _toString);
   Hash key=_to.calculateHash();
   SendJob success=new SendJob(getContext());
   LookupLeaseSetFailedJob failed=new LookupLeaseSetFailedJob(getContext());
-  if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": Send outbound client message - sending off leaseSet lookup job");
   LeaseSet ls=getContext().netDb().lookupLeaseSetLocally(key);
   if (ls != null) {
     getContext().statManager().addRateData("client.leaseSetFoundLocally",1,0);
     _leaseSetLookupBegin=-1;
+    if (_log.shouldLog(Log.DEBUG))     _log.debug(getJobId() + ": Send outbound client message - leaseSet found locally for " + _toString);
     success.runJob();
   }
  else {
     _leaseSetLookupBegin=getContext().clock().now();
+    if (_log.shouldLog(Log.DEBUG))     _log.debug(getJobId() + ": Send outbound client message - sending off leaseSet lookup job for " + _toString);
     getContext().netDb().lookupLeaseSet(key,success,failed,timeoutMs);
   }
 }
