@@ -1,0 +1,24 @@
+{
+  if (_log.shouldLog(Log.INFO))   _log.info("message available [" + msgId + "/"+ size+ " bytes]");
+  try {
+    byte data[]=session.receiveMessage(msgId);
+    I2PDatagramDissector dissector=new I2PDatagramDissector();
+    dissector.loadI2PDatagram(data);
+    try {
+      MyI2PMessage msg=new MyI2PMessage(dissector.getSender(),dissector.getPayload());
+      _node.handleMessage(msg);
+    }
+ catch (    IllegalArgumentException iae) {
+      if (_log.shouldLog(Log.ERROR))       _log.error("Message is a valid datagram but invalid MyI2P message",iae);
+    }
+  }
+ catch (  I2PSessionException ise) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Error retrieving message payload for message " + msgId,ise);
+  }
+catch (  I2PInvalidDatagramException iide) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Message received was not a valid repliable datagram",iide);
+  }
+catch (  DataFormatException dfe) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Message received was a corrupt repliable datagram",dfe);
+  }
+}

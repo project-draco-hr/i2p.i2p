@@ -1,0 +1,43 @@
+{
+  String classname=config.getProperty(prefix + "classname");
+  String type=config.getProperty(prefix + "type");
+  if (type == null)   return false;
+  Properties opts=new Properties();
+  int i=0;
+  while (true) {
+    String name=config.getProperty(prefix + "option." + i+ ".name");
+    String value=config.getProperty(prefix + "option." + i+ ".value");
+    if ((name == null) || (name.trim().length() <= 0) || (value == null)|| (value.trim().length() <= 0))     break;
+    opts.setProperty(name.trim(),value.trim());
+    i++;
+  }
+  try {
+    Class cls=Class.forName(classname);
+    Object obj=cls.newInstance();
+    if (obj instanceof Service) {
+      Service service=(Service)obj;
+      service.setType(type);
+      service.setOptions(opts);
+      service.setNode(this);
+      service.setContext(_context);
+synchronized (_services) {
+        _services.put(type,service);
+      }
+      if (_log.shouldLog(Log.INFO))       _log.info("Service " + type + " loaded");
+      return true;
+    }
+ else {
+      if (_log.shouldLog(Log.ERROR))       _log.error("Error loading service " + type + ": not a service ["+ classname+ "]");
+    }
+  }
+ catch (  ClassNotFoundException cnfe) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Error loading service " + type + ": class "+ classname+ " is invalid",cnfe);
+  }
+catch (  InstantiationException ie) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Error instantiating service " + type + ": class "+ classname+ " could not be created",ie);
+  }
+catch (  IllegalAccessException iae) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Error creating service " + type + ": class "+ classname+ " could not be accessed",iae);
+  }
+  return false;
+}

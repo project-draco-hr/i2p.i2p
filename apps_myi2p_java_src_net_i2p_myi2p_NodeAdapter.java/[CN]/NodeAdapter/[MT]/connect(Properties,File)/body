@@ -1,0 +1,56 @@
+{
+  I2PClient client=I2PClientFactory.createClient();
+  if (!keyFile.exists()) {
+    File parent=keyFile.getParentFile();
+    if (parent != null)     parent.mkdirs();
+    FileOutputStream fos=null;
+    try {
+      fos=new FileOutputStream(keyFile);
+      Destination dest=client.createDestination(fos);
+      if (_log.shouldLog(Log.INFO))       _log.info("New destination created [" + dest.calculateHash().toBase64() + "] with keys at "+ keyFile);
+    }
+ catch (    IOException ioe) {
+      if (_log.shouldLog(Log.ERROR))       _log.error("Error writing new keystream to " + keyFile,ioe);
+      return false;
+    }
+catch (    I2PException ie) {
+      if (_log.shouldLog(Log.ERROR))       _log.error("Internal error creating new destination",ie);
+      return false;
+    }
+ finally {
+      if (fos != null)       try {
+        fos.close();
+      }
+ catch (      IOException ioe) {
+      }
+    }
+  }
+  FileInputStream fis=null;
+  try {
+    fis=new FileInputStream(keyFile);
+    _session=client.createSession(fis,config);
+    if (_session == null) {
+      _log.error("wtf, why did it create a null session?");
+      return false;
+    }
+    _session.setSessionListener(this);
+    _session.connect();
+    if (_log.shouldLog(Log.INFO))     _log.info("I2P session created");
+    return true;
+  }
+ catch (  IOException ioe) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Unable to read the keystream from " + keyFile,ioe);
+    return false;
+  }
+catch (  I2PSessionException ise) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Unable to connect to the router",ise);
+    return false;
+  }
+ finally {
+    if (fis != null)     try {
+      fis.close();
+    }
+ catch (    IOException ioe) {
+    }
+  }
+}

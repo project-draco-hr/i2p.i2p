@@ -1,0 +1,38 @@
+{
+  _peer=from;
+  int index=0;
+  while (index < dgramPayload.length) {
+    if (index >= MESSAGE_PREFIX.length)     break;
+    if (dgramPayload[index] != MESSAGE_PREFIX[index])     throw new IllegalArgumentException("Invalid payload (not a MyI2P message)");
+    index++;
+  }
+  StringBuffer service=new StringBuffer(8);
+  while (index < dgramPayload.length) {
+    if (dgramPayload[index] == ' ') {
+      _service=service.toString();
+      index++;
+      break;
+    }
+ else     if (dgramPayload[index] == '\n') {
+      throw new IllegalArgumentException("Ran into newline while reading the service");
+    }
+ else {
+      service.append((char)dgramPayload[index]);
+      index++;
+    }
+  }
+  StringBuffer type=new StringBuffer(8);
+  while (index < dgramPayload.length) {
+    if (dgramPayload[index] == '\n') {
+      _type=type.toString();
+      index++;
+      break;
+    }
+ else {
+      service.append((char)dgramPayload[index]);
+      index++;
+    }
+  }
+  _payload=new byte[dgramPayload.length - index];
+  System.arraycopy(dgramPayload,index,_payload,0,_payload.length);
+}
