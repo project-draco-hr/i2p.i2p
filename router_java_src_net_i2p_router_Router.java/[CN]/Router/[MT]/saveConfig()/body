@@ -2,7 +2,14 @@
   FileOutputStream fos=null;
   try {
     fos=new FileOutputStream(_configFilename);
-    _config.store(fos,"I2P Router config");
+    TreeSet ordered=new TreeSet(_config.keySet());
+    StringBuffer buf=new StringBuffer(8 * 1024);
+    for (Iterator iter=ordered.iterator(); iter.hasNext(); ) {
+      String key=(String)iter.next();
+      String val=_config.getProperty(key);
+      buf.append(key).append('=').append(val).append('\n');
+    }
+    fos.write(buf.toString().getBytes());
   }
  catch (  IOException ioe) {
     if (_log.shouldLog(Log.ERROR))     _log.error("Error saving the config to " + _configFilename,ioe);
