@@ -1,6 +1,10 @@
 {
   int read=in.read(dest,off,len);
-  if (_pullFromOutbound)   _context.bandwidthLimiter().requestOutbound(read,_peerSource);
- else   _context.bandwidthLimiter().requestInbound(read,_peerSource);
+  FIFOBandwidthLimiter.Request req=null;
+  if (_pullFromOutbound)   req=_context.bandwidthLimiter().requestOutbound(read,_peerSource);
+ else   req=_context.bandwidthLimiter().requestInbound(read,_peerSource);
+  while ((req.getPendingInboundRequested() > 0) || (req.getPendingOutboundRequested() > 0)) {
+    req.waitForNextAllocation();
+  }
   return read;
 }

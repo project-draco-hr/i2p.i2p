@@ -3,6 +3,15 @@
   if (src == null)   return;
   if (len <= 0)   return;
   if (len + off > src.length)   throw new IllegalArgumentException("wtf are you thinking?  len=" + len + ", off="+ off+ ", data="+ src.length);
-  _context.bandwidthLimiter().requestOutbound(len,_peerTarget);
-  out.write(src,off,len);
+  FIFOBandwidthLimiter.Request req=_context.bandwidthLimiter().requestOutbound(len,_peerTarget);
+  int written=0;
+  while (written < len) {
+    int allocated=len - req.getPendingOutboundRequested();
+    int toWrite=allocated - written;
+    if (toWrite > 0) {
+      out.write(src,off + written,toWrite);
+      written+=toWrite;
+    }
+    req.waitForNextAllocation();
+  }
 }

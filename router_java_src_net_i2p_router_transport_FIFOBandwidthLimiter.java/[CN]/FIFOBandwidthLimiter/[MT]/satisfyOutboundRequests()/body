@@ -1,21 +1,44 @@
 {
+  List satisfied=null;
 synchronized (_pendingOutboundRequests) {
     while (_pendingOutboundRequests.size() > 0) {
-      BandwidthRequest req=(BandwidthRequest)_pendingOutboundRequests.get(0);
-      if ((req.getRequestedOutboundBytes() <= _availableOutboundBytes) || (_outboundUnlimited)) {
+      SimpleRequest req=(SimpleRequest)_pendingOutboundRequests.get(0);
+      if (_outboundUnlimited) {
+        int allocated=req.getPendingOutboundRequested();
+        _totalAllocatedOutboundBytes+=allocated;
+        req.allocateBytes(0,allocated);
+        if (satisfied == null)         satisfied=new ArrayList(2);
+        satisfied.add(req);
+        if (_log.shouldLog(Log.INFO))         _log.info("Granting outbound request " + req.getRequestName() + " fully for "+ req.getTotalOutboundRequested()+ " bytes (waited "+ (_context.clock().now() - req.getRequestTime())+ "ms) pending "+ _pendingOutboundRequests.size());
         _pendingOutboundRequests.remove(0);
-        if (!_outboundUnlimited)         _availableOutboundBytes-=req.getRequestedOutboundBytes();
-        _totalAllocatedOutboundBytes+=req.getRequestedOutboundBytes();
-        if (_log.shouldLog(Log.INFO))         _log.info("Granting outbound request " + req.getRequestName() + " for "+ req.getRequestedOutboundBytes()+ " bytes (waited "+ (_context.clock().now() - req.getRequestTime())+ "ms) pending "+ (_pendingOutboundRequests.size() - 1));
-synchronized (req.getAvailabilityMonitor()) {
-          req.grantRequest();
-          req.getAvailabilityMonitor().notifyAll();
+      }
+ else       if (_availableOutboundBytes > 0) {
+        int requested=req.getPendingOutboundRequested();
+        int allocated=0;
+        if (_availableOutboundBytes > requested)         allocated=requested;
+ else         allocated=_availableOutboundBytes;
+        _availableOutboundBytes-=allocated;
+        req.allocateBytes(0,allocated);
+        if (satisfied == null)         satisfied=new ArrayList(2);
+        satisfied.add(req);
+        if (req.getPendingOutboundRequested() > 0) {
+          if (_log.shouldLog(Log.INFO))           _log.info("Allocating " + allocated + " bytes outbound as a partial grant to "+ req.getRequestName()+ " (wanted "+ req.getTotalOutboundRequested()+ " bytes, waited "+ (_context.clock().now() - req.getRequestTime())+ "ms) pending "+ _pendingOutboundRequests.size());
+        }
+ else {
+          if (_log.shouldLog(Log.INFO))           _log.info("Allocating " + allocated + " bytes outbound to finish the partial grant to "+ req.getRequestName()+ " (total "+ req.getTotalOutboundRequested()+ " bytes, waited "+ (_context.clock().now() - req.getRequestTime())+ "ms) pending "+ _pendingOutboundRequests.size());
+          _pendingOutboundRequests.remove(0);
         }
       }
  else {
-        if (_log.shouldLog(Log.WARN))         _log.warn("Still denying the first outbound request (" + req.getRequestName() + " for "+ req.getRequestedOutboundBytes()+ " bytes (available "+ _availableInboundBytes+ "/"+ _availableOutboundBytes+ " in/out) (waited "+ (_context.clock().now() - req.getRequestTime())+ "ms so far) pending "+ (_pendingOutboundRequests.size()));
-        return;
+        if (_log.shouldLog(Log.WARN))         _log.warn("Still denying the first outbound request (" + req.getRequestName() + " for "+ req.getTotalOutboundRequested()+ " bytes (available "+ _availableInboundBytes+ "/"+ _availableOutboundBytes+ " in/out) (waited "+ (_context.clock().now() - req.getRequestTime())+ "ms so far) pending "+ (_pendingOutboundRequests.size()));
+        break;
       }
+    }
+  }
+  if (satisfied != null) {
+    for (int i=0; i < satisfied.size(); i++) {
+      SimpleRequest req=(SimpleRequest)satisfied.get(i);
+      req.notifyAllocation();
     }
   }
 }

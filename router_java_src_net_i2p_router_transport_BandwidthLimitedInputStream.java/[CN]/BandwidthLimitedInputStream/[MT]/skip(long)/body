@@ -1,6 +1,10 @@
 {
   long skip=in.skip(numBytes);
-  if (_pullFromOutbound)   _context.bandwidthLimiter().requestOutbound((int)skip,_peerSource);
- else   _context.bandwidthLimiter().requestInbound((int)skip,_peerSource);
+  FIFOBandwidthLimiter.Request req=null;
+  if (_pullFromOutbound)   req=_context.bandwidthLimiter().requestOutbound((int)skip,_peerSource);
+ else   req=_context.bandwidthLimiter().requestInbound((int)skip,_peerSource);
+  while ((req.getPendingInboundRequested() > 0) || (req.getPendingOutboundRequested() > 0)) {
+    req.waitForNextAllocation();
+  }
   return skip;
 }

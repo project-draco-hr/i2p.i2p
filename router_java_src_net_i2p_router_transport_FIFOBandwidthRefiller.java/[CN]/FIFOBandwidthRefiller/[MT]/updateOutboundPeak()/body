@@ -2,9 +2,15 @@
   String outBwStr=_context.getProperty(PROP_OUTBOUND_BANDWIDTH_PEAK);
   if ((outBwStr != null) && (outBwStr.trim().length() > 0) && (!(outBwStr.equals(String.valueOf(_limiter.getMaxOutboundBytes()))))) {
     try {
-      long out=Long.parseLong(outBwStr);
-      if (out >= MIN_OUTBOUND_BANDWIDTH_PEAK)       _limiter.setMaxOutboundBytes(out * 1024);
- else       _limiter.setMaxOutboundBytes(MIN_OUTBOUND_BANDWIDTH_PEAK * 1024);
+      int out=Integer.parseInt(outBwStr);
+      if (out >= MIN_OUTBOUND_BANDWIDTH_PEAK) {
+        if (out < _outboundKBytesPerSecond)         _limiter.setMaxOutboundBytes(_outboundKBytesPerSecond * 1024);
+ else         _limiter.setMaxOutboundBytes(out * 1024);
+      }
+ else {
+        if (MIN_OUTBOUND_BANDWIDTH_PEAK < _outboundKBytesPerSecond)         _limiter.setMaxOutboundBytes(_outboundKBytesPerSecond * 1024);
+ else         _limiter.setMaxOutboundBytes(MIN_OUTBOUND_BANDWIDTH_PEAK * 1024);
+      }
     }
  catch (    NumberFormatException nfe) {
       if (_log.shouldLog(Log.WARN))       _log.warn("Invalid outbound bandwidth burst limit [" + outBwStr + "]");
