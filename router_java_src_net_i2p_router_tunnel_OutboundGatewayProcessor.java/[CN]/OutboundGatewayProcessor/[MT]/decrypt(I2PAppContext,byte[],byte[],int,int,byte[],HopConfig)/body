@@ -1,0 +1,15 @@
+{
+  ctx.aes().decryptBlock(orig,offset,config.getIVKey(),orig,offset);
+  int numBlocks=(length - HopProcessor.IV_LENGTH) / HopProcessor.IV_LENGTH;
+  byte prev[]=iv;
+  System.arraycopy(orig,offset,prev,0,HopProcessor.IV_LENGTH);
+  for (int i=0; i < numBlocks; i++) {
+    int off=(i + 1) * HopProcessor.IV_LENGTH + offset;
+    System.arraycopy(orig,off,cur,0,HopProcessor.IV_LENGTH);
+    ctx.aes().decryptBlock(orig,off,config.getLayerKey(),orig,off);
+    DataHelper.xor(prev,0,orig,off,orig,off,HopProcessor.IV_LENGTH);
+    byte xf[]=prev;
+    prev=cur;
+    cur=xf;
+  }
+}

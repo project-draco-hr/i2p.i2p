@@ -1,0 +1,23 @@
+{
+  if (prev != null) {
+    if (_config.getReceiveFrom() == null)     _config.setReceiveFrom(prev);
+    if (!_config.getReceiveFrom().equals(prev)) {
+      if (_log.shouldLog(Log.ERROR))       _log.error("Invalid previous peer - attempted hostile loop?  from " + prev + ", expected "+ _config.getReceiveFrom());
+      return false;
+    }
+  }
+  byte iv[]=new byte[IV_LENGTH];
+  System.arraycopy(orig,offset,iv,0,IV_LENGTH);
+  boolean okIV=_validator.receiveIV(iv);
+  if (!okIV) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Invalid IV received on tunnel " + _config.getReceiveTunnelId());
+    return false;
+  }
+  if (_log.shouldLog(Log.DEBUG)) {
+  }
+  encrypt(orig,offset,length);
+  updateIV(orig,offset);
+  if (_log.shouldLog(Log.DEBUG)) {
+  }
+  return true;
+}
