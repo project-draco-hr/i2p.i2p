@@ -5,4 +5,12 @@
     if (_log.shouldLog(Log.INFO))     _log.info("Connection disconnect complete from dead, drop the con " + toString());
     _connectionManager.removeConnection(this);
   }
+synchronized (_outboundPackets) {
+    for (Iterator iter=_outboundPackets.values().iterator(); iter.hasNext(); ) {
+      PacketLocal pl=(PacketLocal)iter.next();
+      pl.cancelled();
+    }
+    _outboundPackets.clear();
+    _outboundPackets.notifyAll();
+  }
 }
