@@ -1,0 +1,41 @@
+{
+  while (!_runner.getIsDead()) {
+    List messages=null;
+    long beforeCheckSync=_context.clock().now();
+    long inCheckSync=0;
+    int remaining=0;
+synchronized (_messagesToWrite) {
+      inCheckSync=_context.clock().now();
+      if (_messagesToWrite.size() > 0) {
+        messages=new ArrayList(_messagesToWrite.size());
+        messages.addAll(_messagesToWrite);
+        _messagesToWrite.clear();
+      }
+ else {
+        try {
+          _messagesToWrite.wait();
+        }
+ catch (        InterruptedException ie) {
+        }
+        if (_messagesToWrite.size() > 0) {
+          messages=new ArrayList(_messagesToWrite.size());
+          messages.addAll(_messagesToWrite);
+          _messagesToWrite.clear();
+        }
+      }
+      remaining=_messagesToWrite.size();
+    }
+    long afterCheckSync=_context.clock().now();
+    if (messages != null) {
+      for (int i=0; i < messages.size(); i++) {
+        I2CPMessage msg=(I2CPMessage)messages.get(i);
+        _runner.writeMessage(msg);
+        long afterWriteMessage=_context.clock().now();
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("writeMessage: check sync took " + (inCheckSync - beforeCheckSync) + "ms, writemessage took "+ (afterWriteMessage - afterCheckSync)+ "ms,  time since addMessage(): "+ (afterCheckSync - _lastAdded)+ " for "+ msg.getClass().getName()+ " remaining - "+ remaining);
+      }
+    }
+ else {
+      if (_log.shouldLog(Log.WARN))       _log.warn("dont writeMessage: check sync took " + (inCheckSync - beforeCheckSync) + "ms, "+ "time since addMessage(): "+ (afterCheckSync - _lastAdded)+ " remaining - "+ remaining);
+    }
+  }
+}
