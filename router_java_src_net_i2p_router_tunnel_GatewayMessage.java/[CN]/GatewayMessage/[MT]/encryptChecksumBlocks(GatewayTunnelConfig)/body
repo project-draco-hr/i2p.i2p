@@ -1,26 +1,22 @@
 {
   for (int column=0; column < COLUMNS; column++) {
     int hash=_order[column];
-    System.arraycopy(_H[hash],0,_eH[column][hash],0,Hash.HASH_LENGTH);
+    System.arraycopy(_H[hash],0,_eH[column][hash],0,COLUMN_WIDTH);
     for (int row=hash; row > 0; row--) {
       SessionKey key=cfg.getSessionKey(row);
       if (column == 0) {
         DataHelper.xor(_eIV[row - 1],0,_eH[column][row],0,_eH[column][row - 1],0,IV_SIZE);
       }
  else {
-        DataHelper.xor(_eH[column - 1][row - 1],IV_SIZE,_eH[column][row],0,_eH[column][row - 1],0,IV_SIZE);
+        DataHelper.xor(_eH[column - 1][row - 1],0,_eH[column][row],0,_eH[column][row - 1],0,IV_SIZE);
       }
       _context.aes().encryptBlock(_eH[column][row - 1],0,key,_eH[column][row - 1],0);
-      DataHelper.xor(_eH[column][row - 1],0,_eH[column][row],IV_SIZE,_eH[column][row - 1],IV_SIZE,IV_SIZE);
-      _context.aes().encryptBlock(_eH[column][row - 1],IV_SIZE,key,_eH[column][row - 1],IV_SIZE);
     }
     for (int row=hash + 1; row < HASH_ROWS; row++) {
       SessionKey key=cfg.getSessionKey(row);
       _context.aes().decryptBlock(_eH[column][row - 1],0,key,_eH[column][row],0);
       if (column == 0)       DataHelper.xor(_eIV[row - 1],0,_eH[column][row],0,_eH[column][row],0,IV_SIZE);
- else       DataHelper.xor(_eH[column - 1][row - 1],IV_SIZE,_eH[column][row],0,_eH[column][row],0,IV_SIZE);
-      _context.aes().decryptBlock(_eH[column][row - 1],IV_SIZE,key,_eH[column][row],IV_SIZE);
-      DataHelper.xor(_eH[column][row - 1],0,_eH[column][row],IV_SIZE,_eH[column][row],IV_SIZE,IV_SIZE);
+ else       DataHelper.xor(_eH[column - 1][row - 1],0,_eH[column][row],0,_eH[column][row],0,IV_SIZE);
     }
   }
   if (_log.shouldLog(Log.DEBUG)) {
@@ -28,7 +24,7 @@
     for (int peer=0; peer < HASH_ROWS; peer++) {
       for (int column=0; column < COLUMNS; column++) {
         try {
-          _log.debug("_eH[" + column + "]["+ peer+ "] = "+ Base64.encode(_eH[column][peer])+ (peer == 0 ? "" : DataHelper.eq(_H[peer - 1],_eH[column][peer]) ? " CLEARTEXT" : ""));
+          _log.debug("_eH[" + column + "]["+ peer+ "] = "+ Base64.encode(_eH[column][peer])+ (peer == 0 ? "" : DataHelper.eq(_H[peer - 1],0,_eH[column][peer],0,COLUMN_WIDTH) ? " CLEARTEXT" : ""));
         }
  catch (        Exception e) {
           e.printStackTrace();

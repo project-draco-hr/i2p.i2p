@@ -1,14 +1,12 @@
 {
-  for (int i=0; i < COLUMNS; i++)   System.arraycopy(_eH[i][HASH_ROWS - 1],0,_preV,i * Hash.HASH_LENGTH,Hash.HASH_LENGTH);
+  for (int i=0; i < COLUMNS; i++)   System.arraycopy(_eH[i][HASH_ROWS - 1],0,_preV,i * COLUMN_WIDTH,COLUMN_WIDTH);
   Hash v=_context.sha().calculateHash(_preV);
-  System.arraycopy(v.getData(),0,_V,0,Hash.HASH_LENGTH);
+  System.arraycopy(v.getData(),0,_V,0,VERIFICATION_WIDTH);
   if (_log.shouldLog(Log.DEBUG))   _log.debug("_V final = " + Base64.encode(_V));
   for (int i=HOPS - 1; i > 0; i--) {
     SessionKey key=cfg.getSessionKey(i);
-    DataHelper.xor(_V,0,_eH[COLUMNS - 1][i - 1],IV_SIZE,_V,0,IV_SIZE);
+    DataHelper.xor(_V,0,_eH[COLUMNS - 1][i - 1],0,_V,0,IV_SIZE);
     _context.aes().encryptBlock(_V,0,key,_V,0);
-    DataHelper.xor(_V,0,_V,IV_SIZE,_V,IV_SIZE,IV_SIZE);
-    _context.aes().encryptBlock(_V,IV_SIZE,key,_V,IV_SIZE);
     if (_log.shouldLog(Log.DEBUG))     _log.debug("_V at peer " + i + " = "+ Base64.encode(_V));
   }
 }
