@@ -1,4 +1,5 @@
 {
+  HashSet unsetKeys=new HashSet(_context.router().getConfigMap().keySet());
   if (_config != null) {
     BufferedReader reader=new BufferedReader(new InputStreamReader(new ByteArrayInputStream(_config.getBytes())));
     String line=null;
@@ -10,11 +11,17 @@
         String key=line.substring(0,eq).trim();
         String val=line.substring(eq + 1).trim();
         _context.router().setConfigSetting(key,val);
+        unsetKeys.remove(key);
       }
     }
  catch (    IOException ioe) {
       addFormError("Error updating the configuration (IOERROR) - please see the error logs");
       return;
+    }
+    Iterator cleaner=unsetKeys.iterator();
+    while (cleaner.hasNext()) {
+      String unsetKey=(String)cleaner.next();
+      _context.router().removeConfigSetting(unsetKey);
     }
     boolean saved=_context.router().saveConfig();
     if (saved)     addFormNotice("Configuration saved successfully");
