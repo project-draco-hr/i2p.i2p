@@ -3,27 +3,36 @@
   int totalPending=0;
   boolean fail=false;
   long beforeAdd=_context.clock().now();
+  StringBuffer pending=new StringBuffer(64);
 synchronized (_toBeSent) {
     if ((_maxQueuedMessages > 0) && (_toBeSent.size() >= _maxQueuedMessages)) {
       fail=true;
     }
  else {
       _toBeSent.add(msg);
-      totalPending=_toBeSent.size();
+    }
+    totalPending=_toBeSent.size();
+    if (fail) {
+      pending.append(totalPending).append(": ");
+      for (int i=0; i < totalPending; i++) {
+        OutNetMessage cur=(OutNetMessage)_toBeSent.get(i);
+        pending.append(cur.getMessage().getClass().getName()).append(" ");
+      }
     }
     _toBeSent.notifyAll();
   }
   long afterAdd=_context.clock().now();
   _context.statManager().addRateData("tcp.queueSize",totalPending - 1,0);
   if (fail) {
-    if (_log.shouldLog(Log.ERROR))     _log.error("too many queued messages to " + _remoteIdentity.getHash().toBase64() + ": "+ totalPending);
+    if (_log.shouldLog(Log.ERROR))     _log.error("too many queued messages to " + _remoteIdentity.getHash().toBase64() + ": "+ pending.toString());
+    _context.profileManager().commErrorOccurred(_remoteIdentity.getHash());
     msg.timestamp("TCPConnection.addMessage exceeded max queued");
     _transport.afterSend(msg,false);
     return;
   }
   long diff=afterAdd - beforeAdd;
   if (diff > 500) {
-    if (_log.shouldLog(Log.ERROR))     _log.error("Lock contention adding a message: " + diff + "ms");
+    if (_log.shouldLog(Log.WARN))     _log.warn("Lock contention adding a message: " + diff + "ms to "+ _remoteIdentity.getHash().toBase64()+ ": "+ totalPending);
   }
   msg.timestamp("TCPConnection.addMessage after toBeSent.add and notify");
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Add message with toBeSent.size = " + totalPending + " to "+ _remoteIdentity.getHash().toBase64());
