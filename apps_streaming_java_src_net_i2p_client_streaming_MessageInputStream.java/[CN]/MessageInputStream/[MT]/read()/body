@@ -1,0 +1,38 @@
+{
+  if (_locallyClosed)   throw new IOException("Already locally closed");
+synchronized (_dataLock) {
+    if (_readyDataBlocks.size() <= 0) {
+      if ((_notYetReadyBlocks.size() <= 0) && (_closeReceived)) {
+        return -1;
+      }
+ else {
+        if (_readTimeout < 0) {
+          try {
+            _dataLock.wait();
+          }
+ catch (          InterruptedException ie) {
+          }
+        }
+ else         if (_readTimeout > 0) {
+          try {
+            _dataLock.wait(_readTimeout);
+          }
+ catch (          InterruptedException ie) {
+          }
+        }
+ else {
+        }
+        if (_readyDataBlocks.size() <= 0) {
+          throw new InterruptedIOException("Timeout reading");
+        }
+      }
+    }
+    ByteArray cur=(ByteArray)_readyDataBlocks.get(0);
+    byte rv=cur.getData()[_readyDataBlockIndex++];
+    if (cur.getData().length <= _readyDataBlockIndex) {
+      _readyDataBlockIndex=0;
+      _readyDataBlocks.remove(0);
+    }
+    return (rv < 0 ? rv + 256 : rv);
+  }
+}

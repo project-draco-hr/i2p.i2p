@@ -1,0 +1,55 @@
+{
+  int cur=offset;
+  System.arraycopy(_sendStreamId,0,buffer,cur,_sendStreamId.length);
+  cur+=_sendStreamId.length;
+  System.arraycopy(_receiveStreamId,0,buffer,cur,_receiveStreamId.length);
+  cur+=_receiveStreamId.length;
+  DataHelper.toLong(buffer,cur,4,_sequenceNum);
+  cur+=4;
+  DataHelper.toLong(buffer,cur,4,_ackThrough);
+  cur+=4;
+  if (_nacks != null) {
+    DataHelper.toLong(buffer,cur,1,_nacks.length);
+    cur++;
+    for (int i=0; i < _nacks.length; i++) {
+      DataHelper.toLong(buffer,cur,4,_nacks[i]);
+      cur+=4;
+    }
+  }
+ else {
+    DataHelper.toLong(buffer,cur,1,0);
+    cur++;
+  }
+  DataHelper.toLong(buffer,cur,1,_resendDelay);
+  cur++;
+  DataHelper.toLong(buffer,cur,2,_flags);
+  cur+=2;
+  int optionSize=0;
+  if (isFlagSet(FLAG_DELAY_REQUESTED))   optionSize+=1;
+  if (isFlagSet(FLAG_FROM_INCLUDED))   optionSize+=_optionFrom.size();
+  if (isFlagSet(FLAG_MAX_PACKET_SIZE_INCLUDED))   optionSize+=2;
+  if (isFlagSet(FLAG_SIGNATURE_INCLUDED))   optionSize+=Signature.SIGNATURE_BYTES;
+  DataHelper.toLong(buffer,cur,2,optionSize);
+  cur+=2;
+  if (isFlagSet(FLAG_DELAY_REQUESTED)) {
+    DataHelper.toLong(buffer,cur,1,_optionDelay);
+    cur++;
+  }
+  if (isFlagSet(FLAG_FROM_INCLUDED)) {
+    cur+=_optionFrom.writeBytes(buffer,cur);
+  }
+  if (isFlagSet(FLAG_MAX_PACKET_SIZE_INCLUDED)) {
+    DataHelper.toLong(buffer,cur,2,_optionMaxSize);
+    cur+=2;
+  }
+  if (isFlagSet(FLAG_SIGNATURE_INCLUDED)) {
+    if (includeSig)     System.arraycopy(_optionSignature.getData(),0,buffer,cur,Signature.SIGNATURE_BYTES);
+ else     Arrays.fill(buffer,cur,Signature.SIGNATURE_BYTES,(byte)0x0);
+    cur+=Signature.SIGNATURE_BYTES;
+  }
+  if (_payload != null) {
+    System.arraycopy(_payload,0,buffer,cur,_payload.length);
+    cur+=_payload.length;
+  }
+  return cur - offset;
+}

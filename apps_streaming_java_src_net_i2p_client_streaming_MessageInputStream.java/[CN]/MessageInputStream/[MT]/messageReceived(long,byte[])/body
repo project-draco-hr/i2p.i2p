@@ -1,0 +1,18 @@
+{
+synchronized (_dataLock) {
+    if (messageId <= _highestReadyBlockId)     return;
+    if (_highestReadyBlockId + 1 == messageId) {
+      if (!_locallyClosed)       _readyDataBlocks.add(new ByteArray(payload));
+      _highestReadyBlockId=messageId;
+      while (_notYetReadyBlocks.containsKey(new Long(_highestReadyBlockId + 1))) {
+        _readyDataBlocks.add(_notYetReadyBlocks.get(new Long(_highestReadyBlockId + 1)));
+        _highestReadyBlockId++;
+      }
+      _dataLock.notifyAll();
+    }
+ else {
+      if (_locallyClosed)       _notYetReadyBlocks.put(new Long(messageId),new ByteArray(null));
+ else       _notYetReadyBlocks.put(new Long(messageId),new ByteArray(payload));
+    }
+  }
+}
