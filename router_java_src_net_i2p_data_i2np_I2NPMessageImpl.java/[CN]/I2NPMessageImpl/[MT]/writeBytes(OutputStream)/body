@@ -1,16 +1,7 @@
 {
-  try {
-    DataHelper.writeLong(out,1,getType());
-    DataHelper.writeLong(out,4,_uniqueId);
-    DataHelper.writeDate(out,_expiration);
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Writing bytes: type = " + getType() + " / uniqueId : "+ _uniqueId+ " / expiration : "+ _expiration);
-    byte[] data=writeMessage();
-    DataHelper.writeLong(out,2,data.length);
-    Hash h=_context.sha().calculateHash(data);
-    h.writeBytes(out);
-    out.write(data);
-  }
- catch (  I2NPMessageException ime) {
-    throw new DataFormatException("Error writing out the I2NP message data",ime);
-  }
+  int size=getMessageSize();
+  if (size < 47)   throw new DataFormatException("Unable to build the message");
+  byte buf[]=new byte[size];
+  int read=toByteArray(buf);
+  if (read < 0)   out.write(buf,0,read);
 }

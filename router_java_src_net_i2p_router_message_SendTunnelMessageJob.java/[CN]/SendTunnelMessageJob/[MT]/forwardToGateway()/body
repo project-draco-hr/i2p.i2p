@@ -1,22 +1,10 @@
 {
   TunnelMessage msg=new TunnelMessage(getContext());
-  try {
-    ByteArrayOutputStream baos=new ByteArrayOutputStream(1024);
-    _message.writeBytes(baos);
-    msg.setData(baos.toByteArray());
-    msg.setTunnelId(_tunnelId);
-    msg.setMessageExpiration(new Date(_expiration));
-    getContext().jobQueue().addJob(new SendMessageDirectJob(getContext(),msg,_destRouter,_onSend,_onReply,_onFailure,_selector,(int)(_expiration - getContext().clock().now()),_priority));
-    String bodyType=_message.getClass().getName();
-    getContext().messageHistory().wrap(bodyType,_message.getUniqueId(),TunnelMessage.class.getName(),msg.getUniqueId());
-  }
- catch (  IOException ioe) {
-    if (_log.shouldLog(Log.ERROR))     _log.error("Error writing out the tunnel message to send to the tunnel",ioe);
-    if (_onFailure != null)     getContext().jobQueue().addJob(_onFailure);
-  }
-catch (  DataFormatException dfe) {
-    if (_log.shouldLog(Log.ERROR))     _log.error("Error writing out the tunnel message to send to the tunnel",dfe);
-    if (_onFailure != null)     getContext().jobQueue().addJob(_onFailure);
-  }
+  msg.setData(_message.toByteArray());
+  msg.setTunnelId(_tunnelId);
+  msg.setMessageExpiration(new Date(_expiration));
+  getContext().jobQueue().addJob(new SendMessageDirectJob(getContext(),msg,_destRouter,_onSend,_onReply,_onFailure,_selector,(int)(_expiration - getContext().clock().now()),_priority));
+  String bodyType=_message.getClass().getName();
+  getContext().messageHistory().wrap(bodyType,_message.getUniqueId(),TunnelMessage.class.getName(),msg.getUniqueId());
   return;
 }

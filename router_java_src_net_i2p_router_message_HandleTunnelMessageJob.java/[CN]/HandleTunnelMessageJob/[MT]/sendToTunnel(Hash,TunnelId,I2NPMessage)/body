@@ -2,18 +2,8 @@
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Sending on to requested tunnel " + id.getTunnelId() + " on router "+ router.toBase64());
   TunnelMessage msg=new TunnelMessage(getContext());
   msg.setTunnelId(id);
-  try {
-    ByteArrayOutputStream baos=new ByteArrayOutputStream(1024);
-    body.writeBytes(baos);
-    msg.setData(baos.toByteArray());
-    getContext().jobQueue().addJob(new SendMessageDirectJob(getContext(),msg,router,FORWARD_TIMEOUT,FORWARD_PRIORITY));
-    String bodyType=body.getClass().getName();
-    getContext().messageHistory().wrap(bodyType,body.getUniqueId(),TunnelMessage.class.getName(),msg.getUniqueId());
-  }
- catch (  DataFormatException dfe) {
-    if (_log.shouldLog(Log.ERROR))     _log.error("Error writing out the message to forward to the tunnel",dfe);
-  }
-catch (  IOException ioe) {
-    if (_log.shouldLog(Log.ERROR))     _log.error("Error writing out the message to forward to the tunnel",ioe);
-  }
+  msg.setData(body.toByteArray());
+  getContext().jobQueue().addJob(new SendMessageDirectJob(getContext(),msg,router,FORWARD_TIMEOUT,FORWARD_PRIORITY));
+  String bodyType=body.getClass().getName();
+  getContext().messageHistory().wrap(bodyType,body.getUniqueId(),TunnelMessage.class.getName(),msg.getUniqueId());
 }

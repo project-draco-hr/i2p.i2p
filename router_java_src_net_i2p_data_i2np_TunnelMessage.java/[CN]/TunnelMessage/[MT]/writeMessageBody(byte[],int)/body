@@ -1,0 +1,30 @@
+{
+  if ((_tunnelId == null) || (_data == null))   throw new I2NPMessageException("Not enough data to write out (id=" + _tunnelId + " data="+ _data+ ")");
+  if (_data.length <= 0)   throw new I2NPMessageException("Not enough data to write out (data.length=" + _data.length + ")");
+  byte id[]=DataHelper.toLong(4,_tunnelId.getTunnelId());
+  System.arraycopy(id,0,out,curIndex,4);
+  curIndex+=4;
+  byte len[]=DataHelper.toLong(4,_data.length);
+  System.arraycopy(len,0,out,curIndex,4);
+  curIndex+=4;
+  System.arraycopy(_data,0,out,curIndex,_data.length);
+  curIndex+=_data.length;
+  if ((_verification == null) || (_encryptedInstructions == null)) {
+    byte flag[]=DataHelper.toLong(1,FLAG_DONT_INCLUDESTRUCTURE);
+    out[curIndex++]=flag[0];
+  }
+ else {
+    byte flag[]=DataHelper.toLong(1,FLAG_INCLUDESTRUCTURE);
+    out[curIndex++]=flag[0];
+    System.arraycopy(_verification.getMessageHash().getData(),0,out,curIndex,Hash.HASH_LENGTH);
+    curIndex+=Hash.HASH_LENGTH;
+    System.arraycopy(_verification.getAuthorizationSignature().getData(),0,out,curIndex,Signature.SIGNATURE_BYTES);
+    curIndex+=Signature.SIGNATURE_BYTES;
+    len=DataHelper.toLong(2,_encryptedInstructions.length);
+    System.arraycopy(len,0,out,curIndex,2);
+    curIndex+=2;
+    System.arraycopy(_encryptedInstructions,0,out,curIndex,_encryptedInstructions.length);
+    curIndex+=_encryptedInstructions.length;
+  }
+  return curIndex;
+}

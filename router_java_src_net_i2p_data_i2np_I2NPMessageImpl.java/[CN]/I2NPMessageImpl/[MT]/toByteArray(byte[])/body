@@ -1,0 +1,23 @@
+{
+  long start=_context.clock().now();
+  byte prefix[][]=new byte[][]{DataHelper.toLong(1,getType()),DataHelper.toLong(4,_uniqueId),DataHelper.toDate(_expiration),new byte[2],new byte[Hash.HASH_LENGTH]};
+  byte suffix[][]=new byte[][]{};
+  try {
+    int writtenLen=toByteArray(buffer,prefix,suffix);
+    int prefixLen=1 + 4 + 8+ 2+ Hash.HASH_LENGTH;
+    int suffixLen=0;
+    int payloadLen=writtenLen - prefixLen - suffixLen;
+    Hash h=_context.sha().calculateHash(buffer,prefixLen,payloadLen);
+    byte len[]=DataHelper.toLong(2,payloadLen);
+    buffer[1 + 4 + 8]=len[0];
+    buffer[1 + 4 + 8+ 1]=len[1];
+    for (int i=0; i < Hash.HASH_LENGTH; i++)     System.arraycopy(h.getData(),0,buffer,1 + 4 + 8+ 2,Hash.HASH_LENGTH);
+    long time=_context.clock().now() - start;
+    if (time > 50)     _context.statManager().addRateData("i2np.writeTime",time,time);
+    return writtenLen;
+  }
+ catch (  I2NPMessageException ime) {
+    _context.logManager().getLog(getClass()).error("Error writing",ime);
+    throw new IllegalStateException("Unable to serialize the message: " + ime.getMessage());
+  }
+}

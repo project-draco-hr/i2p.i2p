@@ -1,0 +1,32 @@
+{
+  if (_key == null)   throw new I2NPMessageException("Invalid key");
+  if ((_type != KEY_TYPE_LEASESET) && (_type != KEY_TYPE_ROUTERINFO))   throw new I2NPMessageException("Invalid key type");
+  if ((_type == KEY_TYPE_LEASESET) && (_leaseSet == null))   throw new I2NPMessageException("Missing lease set");
+  if ((_type == KEY_TYPE_ROUTERINFO) && (_info == null))   throw new I2NPMessageException("Missing router info");
+  System.arraycopy(_key.getData(),0,out,curIndex,Hash.HASH_LENGTH);
+  curIndex+=Hash.HASH_LENGTH;
+  byte type[]=DataHelper.toLong(1,_type);
+  out[curIndex++]=type[0];
+  byte tok[]=DataHelper.toLong(4,_replyToken);
+  System.arraycopy(tok,0,out,curIndex,4);
+  curIndex+=4;
+  if (_replyToken > 0) {
+    byte id[]=DataHelper.toLong(4,_replyTunnel.getTunnelId());
+    System.arraycopy(id,0,out,curIndex,4);
+    curIndex+=4;
+    System.arraycopy(_replyGateway.getData(),0,out,curIndex,Hash.HASH_LENGTH);
+    curIndex+=Hash.HASH_LENGTH;
+  }
+  if (_type == KEY_TYPE_LEASESET) {
+    System.arraycopy(_leaseSetCache,0,out,curIndex,_leaseSetCache.length);
+    curIndex+=_leaseSetCache.length;
+  }
+ else   if (_type == KEY_TYPE_ROUTERINFO) {
+    byte len[]=DataHelper.toLong(2,_routerInfoCache.length);
+    out[curIndex++]=len[0];
+    out[curIndex++]=len[1];
+    System.arraycopy(_routerInfoCache,0,out,curIndex,_routerInfoCache.length);
+    curIndex+=_routerInfoCache.length;
+  }
+  return curIndex;
+}

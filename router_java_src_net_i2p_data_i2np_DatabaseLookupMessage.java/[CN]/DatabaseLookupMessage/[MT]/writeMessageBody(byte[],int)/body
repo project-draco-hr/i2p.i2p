@@ -1,0 +1,32 @@
+{
+  if (_key == null)   throw new I2NPMessageException("Key being searched for not specified");
+  if (_fromHash == null)   throw new I2NPMessageException("From address not specified");
+  System.arraycopy(_key.getData(),0,out,curIndex,Hash.HASH_LENGTH);
+  curIndex+=Hash.HASH_LENGTH;
+  System.arraycopy(_fromHash.getData(),0,out,curIndex,Hash.HASH_LENGTH);
+  curIndex+=Hash.HASH_LENGTH;
+  if (_replyTunnel != null) {
+    out[curIndex++]=DataHelper.BOOLEAN_TRUE;
+    byte id[]=DataHelper.toLong(4,_replyTunnel.getTunnelId());
+    System.arraycopy(id,0,out,curIndex,4);
+    curIndex+=4;
+  }
+ else {
+    out[curIndex++]=DataHelper.BOOLEAN_FALSE;
+  }
+  if ((_dontIncludePeers == null) || (_dontIncludePeers.size() <= 0)) {
+    out[curIndex++]=0x0;
+    out[curIndex++]=0x0;
+  }
+ else {
+    byte len[]=DataHelper.toLong(2,_dontIncludePeers.size());
+    out[curIndex++]=len[0];
+    out[curIndex++]=len[1];
+    for (Iterator iter=_dontIncludePeers.iterator(); iter.hasNext(); ) {
+      Hash peer=(Hash)iter.next();
+      System.arraycopy(peer.getData(),0,out,curIndex,Hash.HASH_LENGTH);
+      curIndex+=Hash.HASH_LENGTH;
+    }
+  }
+  return curIndex;
+}
