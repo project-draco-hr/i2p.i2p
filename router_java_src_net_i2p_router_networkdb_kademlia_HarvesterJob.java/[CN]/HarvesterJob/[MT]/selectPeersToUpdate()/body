@@ -1,0 +1,22 @@
+{
+  Map routersByAge=new TreeMap();
+  Set peers=_facade.getAllRouters();
+  long now=getContext().clock().now();
+  for (Iterator iter=peers.iterator(); iter.hasNext(); ) {
+    Hash peer=(Hash)iter.next();
+    RouterInfo info=_facade.lookupRouterInfoLocally(peer);
+    if (info != null) {
+      long when=info.getPublished();
+      if (when + MIN_UPDATE_FREQUENCY > now)       continue;
+      while (routersByAge.containsKey(new Long(when)))       when++;
+      routersByAge.put(new Long(when),info.getIdentity().getHash());
+    }
+  }
+  List rv=new ArrayList();
+  for (Iterator iter=routersByAge.values().iterator(); iter.hasNext(); ) {
+    Hash peer=(Hash)iter.next();
+    rv.add(peer);
+    if (rv.size() >= MAX_PER_RUN)     break;
+  }
+  return rv;
+}
