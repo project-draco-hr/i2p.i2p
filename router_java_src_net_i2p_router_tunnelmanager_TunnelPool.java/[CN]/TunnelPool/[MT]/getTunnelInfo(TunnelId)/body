@@ -1,33 +1,58 @@
 {
-  if (!_isLive)   return null;
-  if (id == null)   return null;
+  if (!_isLive) {
+    if (_log.shouldLog(Log.ERROR))     _log.error(toString() + ": Not live, unable to search for tunnel " + id);
+    return null;
+  }
+  if (id == null) {
+    if (_log.shouldLog(Log.ERROR))     _log.error(toString() + ": Id requested is null");
+    return null;
+  }
   boolean typeKnown=id.getType() != TunnelId.TYPE_UNSPECIFIED;
   if ((!typeKnown) || (id.getType() == TunnelId.TYPE_PARTICIPANT)) {
 synchronized (_participatingTunnels) {
-      if (_participatingTunnels.containsKey(id))       return (TunnelInfo)_participatingTunnels.get(id);
+      if (_participatingTunnels.containsKey(id)) {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug(toString() + ": Found tunnel " + id+ " as a participant");
+        return (TunnelInfo)_participatingTunnels.get(id);
+      }
     }
   }
   if ((!typeKnown) || (id.getType() == TunnelId.TYPE_OUTBOUND)) {
 synchronized (_outboundTunnels) {
-      if (_outboundTunnels.containsKey(id))       return (TunnelInfo)_outboundTunnels.get(id);
+      if (_outboundTunnels.containsKey(id)) {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug(toString() + ": Found tunnel " + id+ " as outbound");
+        return (TunnelInfo)_outboundTunnels.get(id);
+      }
     }
   }
   if ((!typeKnown) || (id.getType() == TunnelId.TYPE_INBOUND)) {
 synchronized (_freeInboundTunnels) {
-      if (_freeInboundTunnels.containsKey(id))       return (TunnelInfo)_freeInboundTunnels.get(id);
+      if (_freeInboundTunnels.containsKey(id)) {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug(toString() + ": Found tunnel " + id+ " as a free inbound");
+        return (TunnelInfo)_freeInboundTunnels.get(id);
+      }
     }
   }
 synchronized (_pendingTunnels) {
-    if (_pendingTunnels.containsKey(id))     return (TunnelInfo)_pendingTunnels.get(id);
+    if (_pendingTunnels.containsKey(id)) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug(toString() + ": Found tunnel " + id+ " as a pending tunnel");
+      return (TunnelInfo)_pendingTunnels.get(id);
+    }
   }
   if ((!typeKnown) || (id.getType() == TunnelId.TYPE_INBOUND)) {
 synchronized (_clientPools) {
       for (Iterator iter=_clientPools.values().iterator(); iter.hasNext(); ) {
         ClientTunnelPool pool=(ClientTunnelPool)iter.next();
-        if (pool.isInboundTunnel(id))         return pool.getInboundTunnel(id);
- else         if (pool.isInactiveInboundTunnel(id))         return pool.getInactiveInboundTunnel(id);
+        if (pool.isInboundTunnel(id)) {
+          if (_log.shouldLog(Log.DEBUG))           _log.debug(toString() + ": Found tunnel " + id+ " as an inbound tunnel for the client "+ pool.getDestination().calculateHash().toBase64());
+          return pool.getInboundTunnel(id);
+        }
+ else         if (pool.isInactiveInboundTunnel(id)) {
+          if (_log.shouldLog(Log.DEBUG))           _log.debug(toString() + ": Found tunnel " + id+ " as an inactive inbound tunnel for the client "+ pool.getDestination().calculateHash().toBase64());
+          return pool.getInactiveInboundTunnel(id);
+        }
       }
     }
   }
+  if (_log.shouldLog(Log.DEBUG))   _log.debug(toString() + ": Did NOT find the tunnel " + id);
   return null;
 }
