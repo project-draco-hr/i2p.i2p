@@ -14,13 +14,16 @@
  else {
         for (int j=lastEnd + 1; j < i; j++) {
           if (_headerBuffer.getData()[j] == ':') {
-            String key=new String(_headerBuffer.getData(),lastEnd + 1,j - (lastEnd + 1));
-            String val=new String(_headerBuffer.getData(),j + 2,i - (j + 2));
-            if ("Connection".equals(key)) {
+            int keyLen=j - (lastEnd + 1);
+            int valLen=i - (j + 2);
+            if ((keyLen <= 0) || (valLen <= 0))             throw new IOException("Invalid header @ " + j);
+            String key=new String(_headerBuffer.getData(),lastEnd + 1,keyLen);
+            String val=new String(_headerBuffer.getData(),j + 2,valLen);
+            if ("Connection".equalsIgnoreCase(key)) {
               out.write("Connection: close\n".getBytes());
               connectionSent=true;
             }
- else             if ("Proxy-Connection".equals(key)) {
+ else             if ("Proxy-Connection".equalsIgnoreCase(key)) {
               out.write("Proxy-Connection: close\n".getBytes());
               proxyConnectionSent=true;
             }
