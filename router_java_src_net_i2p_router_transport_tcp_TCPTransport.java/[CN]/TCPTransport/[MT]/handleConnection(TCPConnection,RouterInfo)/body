@@ -1,6 +1,25 @@
 {
   con.setTransport(this);
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Before establishing connection");
+  TCPAddress remAddr=con.getRemoteAddress();
+  if (remAddr != null) {
+synchronized (_connectionAddresses) {
+      if (_connectionAddresses.containsKey(remAddr)) {
+        if (_log.shouldLog(Log.WARN))         _log.warn("refusing connection from " + remAddr + " as it is a dup");
+        con.closeConnection();
+        return false;
+      }
+    }
+    if (_tcpAddress.equals(remAddr)) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("refusing connection to ourselves...");
+      _context.shitlist().shitlistRouter(target.getIdentity().getHash(),"Our old address");
+      _context.netDb().fail(target.getIdentity().getHash());
+      con.closeConnection();
+      return false;
+    }
+  }
+ else {
+  }
   long start=_context.clock().now();
   RouterIdentity ident=con.establishConnection();
   long afterEstablish=_context.clock().now();
@@ -10,15 +29,17 @@
     con.closeConnection();
     return false;
   }
+  if (ident.equals(_context.router().getRouterInfo().getIdentity())) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Dropping established connection with *cough* ourselves: listenHost=[" + _tcpAddress.getHost() + "] listenPort=["+ _tcpAddress.getPort()+ "] remoteHost=["+ remAddr.getHost()+ "] remPort=["+ remAddr.getPort()+ "]");
+    con.closeConnection();
+    return false;
+  }
   if (_log.shouldLog(Log.INFO))   _log.info("Connection established with " + ident + " after "+ (afterEstablish - start)+ "ms");
   if (target != null) {
     if (!target.getIdentity().equals(ident)) {
-      _context.statManager().updateFrequency("tcp.acceptFailureFrequency");
-      if (_log.shouldLog(Log.ERROR))       _log.error("Target changed identities!!!  was " + target.getIdentity().getHash().toBase64() + ", now is "+ ident.getHash().toBase64()+ "!  DROPPING CONNECTION");
-      con.closeConnection();
+      if (_log.shouldLog(Log.WARN))       _log.warn("Target changed identities!  was " + target.getIdentity().getHash().toBase64() + ", now is "+ ident.getHash().toBase64()+ "!");
       _context.netDb().fail(target.getIdentity().getHash());
       _context.shitlist().shitlistRouter(target.getIdentity().getHash(),"Peer changed identities");
-      return false;
     }
  else {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Target is the same as who we connected with");
@@ -26,12 +47,31 @@
   }
   if (ident != null) {
     Set toClose=new HashSet(4);
-    List toAdd=new LinkedList();
+    List toAdd=new ArrayList(1);
+    List cons=null;
 synchronized (_connections) {
       if (!_connections.containsKey(ident))       _connections.put(ident,new ArrayList(2));
-      List cons=(List)_connections.get(ident);
+      cons=(List)_connections.get(ident);
       if (cons.size() > 0) {
-        if (_log.shouldLog(Log.WARN))         _log.warn("Attempted to open additional connections with " + ident.getHash() + ": closing older connections",new Exception("multiple cons"));
+        if (_log.shouldLog(Log.WARN)) {
+          _log.warn("Attempted to open additional connections with " + ident.getHash() + ": closing older connections",new Exception("multiple cons"));
+          StringBuffer buf=new StringBuffer(128);
+          if (remAddr == null)           remAddr=con.getRemoteAddress();
+          buf.append("Connection address: [").append(remAddr.toString()).append(']');
+synchronized (_connectionAddresses) {
+            if (_connectionAddresses.containsKey(remAddr)) {
+              buf.append(" NOT KNOWN in: ");
+            }
+ else {
+              buf.append(" KNOWN IN: ");
+            }
+            for (Iterator iter=_connectionAddresses.keySet().iterator(); iter.hasNext(); ) {
+              TCPAddress curAddr=(TCPAddress)iter.next();
+              buf.append('[').append(curAddr.toString()).append("] ");
+            }
+          }
+          _log.warn(buf.toString());
+        }
         while (cons.size() > 0) {
           TCPConnection oldCon=(TCPConnection)cons.remove(0);
           toAdd.addAll(oldCon.getPendingMessages());
@@ -48,6 +88,9 @@ synchronized (_connections) {
       for (Iterator iter=toRemove.iterator(); iter.hasNext(); ) {
         _connections.remove(iter.next());
       }
+    }
+synchronized (_connectionAddresses) {
+      _connectionAddresses.put(con.getRemoteAddress(),cons);
     }
     if (toAdd.size() > 0) {
       for (Iterator iter=toAdd.iterator(); iter.hasNext(); ) {

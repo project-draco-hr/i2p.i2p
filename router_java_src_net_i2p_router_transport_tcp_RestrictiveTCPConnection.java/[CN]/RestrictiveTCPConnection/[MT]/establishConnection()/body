@@ -49,6 +49,16 @@
     _out=new AESOutputStream(_context,new BufferedOutputStream(new BandwidthLimitedOutputStream(_context,_out,_remoteIdentity),BUF_SIZE),_key,_iv);
     _socket.setSoTimeout(0);
     success=_context.clock().now();
+    for (Iterator iter=_remoteInfo.getAddresses().iterator(); iter.hasNext(); ) {
+      RouterAddress curAddr=(RouterAddress)iter.next();
+      if (TCPTransport.STYLE.equals(curAddr.getTransportStyle())) {
+        _remoteAddress=new TCPAddress(curAddr);
+        break;
+      }
+    }
+    if (_remoteAddress == null) {
+      throw new DataFormatException("wtf, no TCP addresses?  we already verified!");
+    }
     established();
     return _remoteIdentity;
   }

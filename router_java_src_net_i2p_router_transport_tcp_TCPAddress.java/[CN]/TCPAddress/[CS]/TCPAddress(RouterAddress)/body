@@ -1,17 +1,26 @@
 {
   if (addr == null)   throw new IllegalArgumentException("Null router address");
-  _host=addr.getOptions().getProperty(PROP_HOST);
-  String port=addr.getOptions().getProperty(PROP_PORT);
-  if ((port != null) && (port.trim().length() > 0)) {
-    try {
-      _port=Integer.parseInt(port);
+  String host=addr.getOptions().getProperty(PROP_HOST);
+  try {
+    InetAddress iaddr=InetAddress.getByName(host);
+    _host=iaddr.getHostAddress();
+    _addr=iaddr;
+    String port=addr.getOptions().getProperty(PROP_PORT);
+    if ((port != null) && (port.trim().length() > 0)) {
+      try {
+        _port=Integer.parseInt(port);
+      }
+ catch (      NumberFormatException nfe) {
+        _log.error("Invalid port [" + port + "]",nfe);
+        _port=-1;
+      }
     }
- catch (    NumberFormatException nfe) {
-      _log.error("Invalid port [" + port + "]",nfe);
+ else {
       _port=-1;
     }
   }
- else {
+ catch (  UnknownHostException uhe) {
+    _host=null;
     _port=-1;
   }
 }

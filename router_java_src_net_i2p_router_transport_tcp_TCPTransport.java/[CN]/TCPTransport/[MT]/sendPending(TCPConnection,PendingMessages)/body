@@ -10,10 +10,19 @@
   if (_log.shouldLog(Log.INFO))   _log.info("Connection established, now queueing up " + pending.getMessageCount() + " messages to be sent");
 synchronized (_msgs) {
     _msgs.remove(pending.getPeer());
+  }
+  if (pending.getPeer().equals(con.getRemoteRouterIdentity().calculateHash())) {
     OutNetMessage msg=null;
     while ((msg=pending.getNextMessage()) != null) {
       msg.timestamp("TCPTransport.sendPending to con.addMessage");
       con.addMessage(msg);
+    }
+  }
+ else {
+    OutNetMessage msg=null;
+    while ((msg=pending.getNextMessage()) != null) {
+      msg.timestamp("TCPTransport.sendPending connected to a different peer");
+      afterSend(msg,false,false);
     }
   }
 }

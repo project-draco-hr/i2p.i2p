@@ -10,6 +10,16 @@
       _in=new AESInputStream(_context,new BandwidthLimitedInputStream(_context,_in,_remoteIdentity),_key,_iv);
       _out=new AESOutputStream(_context,new BandwidthLimitedOutputStream(_context,_out,_remoteIdentity),_key,_iv);
       _socket.setSoTimeout(0);
+      for (Iterator iter=_remoteInfo.getAddresses().iterator(); iter.hasNext(); ) {
+        RouterAddress curAddr=(RouterAddress)iter.next();
+        if (TCPTransport.STYLE.equals(curAddr.getTransportStyle())) {
+          _remoteAddress=new TCPAddress(curAddr);
+          break;
+        }
+      }
+      if (_remoteAddress == null) {
+        throw new DataFormatException("wtf, peer " + _remoteIdentity.calculateHash().toBase64() + " unreachable?  we already verified!");
+      }
       established();
       return _remoteIdentity;
     }
