@@ -29,7 +29,7 @@
     allowMatches=false;
   }
  else {
-    HandlerJobBuilder builder=(HandlerJobBuilder)_handlerJobBuilders.get(new Integer(type));
+    HandlerJobBuilder builder=_handlerJobBuilders[type];
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Add message to the inNetMessage pool - builder: " + builder + " message class: "+ messageBody.getClass().getName());
     if (builder != null) {
       Job job=builder.createJob(messageBody,fromRouter,fromRouterHash);
@@ -70,8 +70,11 @@
           if (_log.shouldLog(Log.INFO))           _log.info("Dropping slow db lookup response: " + messageBody);
           _context.statManager().addRateData("inNetPool.droppedDbLookupResponseMessage",1,0);
         }
+ else         if (type == DatabaseLookupMessage.MESSAGE_TYPE) {
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("Dropping netDb lookup due to throttling");
+        }
  else {
-          if (_log.shouldLog(Log.ERROR))           _log.error("Message " + messageBody + " expiring on "+ (messageBody != null ? (messageBody.getMessageExpiration() + "") : " [unknown]")+ " was not handled by a HandlerJobBuilder - DROPPING: "+ messageBody,new Exception("DROPPED MESSAGE"));
+          if (_log.shouldLog(Log.WARN))           _log.warn("Message expiring on " + (messageBody != null ? (messageBody.getMessageExpiration() + "") : " [unknown]") + " was not handled by a HandlerJobBuilder - DROPPING: "+ messageBody);
           _context.statManager().addRateData("inNetPool.dropped",1,0);
         }
       }

@@ -3,8 +3,10 @@
   msg.setData(encrypted);
   msg.setTunnelId(_config.getConfig(0).getSendTunnel());
   if (_log.shouldLog(Log.DEBUG))   _log.debug("received encrypted, sending out " + _config + ": "+ msg);
-  RouterInfo ri=_context.netDb().lookupRouterInfoLocally(_config.getPeer(1));
+  RouterInfo ri=_nextHopCache;
+  if (ri == null)   ri=_context.netDb().lookupRouterInfoLocally(_config.getPeer(1));
   if (ri != null) {
+    _nextHopCache=ri;
     send(msg,ri);
   }
  else {

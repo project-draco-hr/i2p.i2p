@@ -1,3 +1,20 @@
 {
-  remove(_config);
+  HopConfig cur=null;
+  Long nextTime=null;
+  long now=getContext().clock().now();
+synchronized (LeaveTunnel.this) {
+    if (_configs.size() <= 0)     return;
+    nextTime=(Long)_times.get(0);
+    if (nextTime.longValue() <= now) {
+      cur=(HopConfig)_configs.remove(0);
+      _times.remove(0);
+      if (_times.size() > 0)       nextTime=(Long)_times.get(0);
+ else       nextTime=null;
+    }
+  }
+  if (cur != null)   remove(cur);
+  if (nextTime != null) {
+    getTiming().setStartAfter(nextTime.longValue());
+    getContext().jobQueue().addJob(LeaveTunnel.this);
+  }
 }

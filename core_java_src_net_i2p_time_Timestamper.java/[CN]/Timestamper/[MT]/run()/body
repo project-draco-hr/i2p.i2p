@@ -7,7 +7,7 @@
   _log=_context.logManager().getLog(Timestamper.class);
   if (_log.shouldLog(Log.INFO))   _log.info("Starting timestamper");
   if (_log.shouldLog(Log.INFO))   _log.info("Starting up timestamper");
-  boolean alreadyBitched=false;
+  boolean lastFailed=false;
   try {
     while (true) {
       updateConfig();
@@ -19,14 +19,15 @@ synchronized (_servers) {
         }
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Querying servers " + _servers);
         try {
-          queryTime(serverList);
+          lastFailed=!queryTime(serverList);
         }
  catch (        IllegalArgumentException iae) {
-          if (!alreadyBitched)           _log.log(Log.CRIT,"Unable to reach any of the NTP servers - network disconnected?");
-          alreadyBitched=true;
+          if (!lastFailed)           _log.log(Log.CRIT,"Unable to reach any of the NTP servers - network disconnected?");
+          lastFailed=true;
         }
       }
       long sleepTime=_context.random().nextInt(_queryFrequency) + _queryFrequency;
+      if (lastFailed)       sleepTime=30 * 1000;
       try {
         Thread.sleep(sleepTime);
       }

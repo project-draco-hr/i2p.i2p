@@ -7,7 +7,7 @@ synchronized (_outboundGateways) {
   }
   if (gw != null) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("dispatch outbound through " + outboundTunnel.getTunnelId() + ": "+ msg);
-    if (msg.getMessageExpiration() < before) {
+    if (msg.getMessageExpiration() < before - Router.CLOCK_FUDGE_FACTOR) {
       if (_log.shouldLog(Log.ERROR))       _log.error("why are you sending a tunnel message that expired " + (before - msg.getMessageExpiration()) + "ms ago? "+ msg,new Exception("cause"));
       return;
     }
@@ -17,7 +17,8 @@ synchronized (_outboundGateways) {
   }
  else {
     _context.messageHistory().droppedTunnelGatewayMessageUnknown(msg.getUniqueId(),outboundTunnel.getTunnelId());
-    if (_log.shouldLog(Log.ERROR))     _log.error("no matching outbound tunnel for id=" + outboundTunnel + ": existing = "+ _outboundGateways.keySet());
+    int level=(_context.router().getUptime() > 10 * 60 * 1000 ? Log.ERROR : Log.WARN);
+    if (_log.shouldLog(level))     _log.log(level,"no matching outbound tunnel for id=" + outboundTunnel + ": existing = "+ _outboundGateways.size());
   }
   long dispatchTime=_context.clock().now() - before;
   if (gw instanceof TunnelGatewayZeroHop)   _context.statManager().addRateData("tunnel.dispatchOutboundZeroHopTime",dispatchTime,dispatchTime);
