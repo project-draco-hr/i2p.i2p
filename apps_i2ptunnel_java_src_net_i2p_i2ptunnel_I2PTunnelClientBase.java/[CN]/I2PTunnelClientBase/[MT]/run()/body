@@ -1,0 +1,33 @@
+{
+  try {
+    InetAddress addr=getListenHost(l);
+    if (addr == null)     return;
+    ss=new ServerSocket(localPort,0,addr);
+    if (localPort == 0) {
+      localPort=ss.getLocalPort();
+    }
+    notifyEvent("clientLocalPort",new Integer(ss.getLocalPort()));
+    l.log("Listening for clients on port " + localPort + " of "+ I2PTunnel.listenHost);
+synchronized (this) {
+      listenerReady=true;
+      notify();
+    }
+synchronized (startLock) {
+      while (!startRunning) {
+        try {
+          startLock.wait();
+        }
+ catch (        InterruptedException ie) {
+        }
+      }
+    }
+    while (true) {
+      Socket s=ss.accept();
+      manageConnection(s);
+    }
+  }
+ catch (  IOException ex) {
+    _log.error("Error listening for connections",ex);
+    notifyEvent("openBaseClientResult","error");
+  }
+}

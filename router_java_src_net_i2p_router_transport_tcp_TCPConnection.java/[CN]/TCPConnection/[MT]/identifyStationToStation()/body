@@ -1,0 +1,31 @@
+{
+  ByteArrayOutputStream baos=new ByteArrayOutputStream(512);
+  _myIdentity.writeBytes(baos);
+  Hash keyHash=SHA256Generator.getInstance().calculateHash(_key.getData());
+  keyHash.writeBytes(baos);
+  Signature sig=DSAEngine.getInstance().sign(baos.toByteArray(),_signingKey);
+  sig.writeBytes(baos);
+  byte encr[]=AESEngine.getInstance().safeEncrypt(baos.toByteArray(),_key,_iv,1024);
+  DataHelper.writeLong(_out,2,encr.length);
+  _out.write(encr);
+  int rlen=(int)DataHelper.readLong(_in,2);
+  byte pencr[]=new byte[rlen];
+  int read=DataHelper.read(_in,pencr);
+  if (read != rlen)   throw new DataFormatException("Not enough data in peer ident");
+  byte decr[]=AESEngine.getInstance().safeDecrypt(pencr,_key,_iv);
+  if (decr == null)   throw new DataFormatException("Unable to decrypt - failed exchange?");
+  ByteArrayInputStream bais=new ByteArrayInputStream(decr);
+  _remoteIdentity=new RouterIdentity();
+  _remoteIdentity.readBytes(bais);
+  Hash peerKeyHash=new Hash();
+  peerKeyHash.readBytes(bais);
+  if (!peerKeyHash.equals(keyHash)) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Peer tried to spoof!");
+    return false;
+  }
+  Signature rsig=new Signature();
+  rsig.readBytes(bais);
+  byte signedData[]=new byte[decr.length - rsig.getData().length];
+  System.arraycopy(decr,0,signedData,0,signedData.length);
+  return DSAEngine.getInstance().verifySignature(rsig,signedData,_remoteIdentity.getSigningPublicKey());
+}

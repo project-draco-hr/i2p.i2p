@@ -1,0 +1,26 @@
+{
+  TunnelCreateMessage msg=new TunnelCreateMessage();
+  msg.setCertificate(new Certificate(Certificate.CERTIFICATE_TYPE_NULL,null));
+  msg.setConfigurationKey(participant.getConfigurationKey());
+  msg.setIncludeDummyTraffic(participant.getSettings().getIncludeDummy());
+  msg.setMaxAvgBytesPerMin(participant.getSettings().getBytesPerMinuteAverage());
+  msg.setMaxAvgMessagesPerMin(participant.getSettings().getMessagesPerMinuteAverage());
+  msg.setMaxPeakBytesPerMin(participant.getSettings().getBytesPerMinutePeak());
+  msg.setMaxPeakMessagesPerMin(participant.getSettings().getMessagesPerMinutePeak());
+  msg.setNextRouter(participant.getNextHop());
+  if (participant.getNextHop() == null)   msg.setParticipantType(TunnelCreateMessage.PARTICIPANT_TYPE_ENDPOINT);
+ else   if (participant.getSigningKey() != null)   msg.setParticipantType(TunnelCreateMessage.PARTICIPANT_TYPE_GATEWAY);
+ else   msg.setParticipantType(TunnelCreateMessage.PARTICIPANT_TYPE_OTHER);
+  msg.setReorderMessages(participant.getSettings().getReorder());
+  SourceRouteBlock replyBlock=buildReplyBlock(replyGateway,replyPeer);
+  if (replyBlock == null)   return null;
+  msg.setReplyBlock(replyBlock);
+  long duration=participant.getSettings().getExpiration() - Clock.getInstance().now();
+  if (duration == 0)   duration=1;
+  msg.setTunnelDurationSeconds(duration / 1000);
+  msg.setTunnelId(participant.getTunnelId());
+  msg.setTunnelKey(participant.getEncryptionKey());
+  msg.setVerificationPrivateKey(participant.getSigningKey());
+  msg.setVerificationPublicKey(participant.getVerificationKey());
+  return msg;
+}

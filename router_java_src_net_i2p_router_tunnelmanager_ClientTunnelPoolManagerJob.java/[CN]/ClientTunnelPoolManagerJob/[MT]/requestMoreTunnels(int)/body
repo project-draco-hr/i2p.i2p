@@ -1,0 +1,31 @@
+{
+  int allocated=0;
+  TreeMap goodEnoughTunnels=new TreeMap();
+  int maxLength=_tunnelPool.getLongestTunnelLength();
+  for (Iterator iter=_tunnelPool.getFreeTunnels().iterator(); iter.hasNext() && allocated < numTunnels; ) {
+    TunnelId id=(TunnelId)iter.next();
+    TunnelInfo info=_tunnelPool.getFreeTunnel(id);
+    if (info != null) {
+      if (isGoodEnough(info,maxLength)) {
+        goodEnoughTunnels.put(new Long(0 - info.getSettings().getExpiration()),id);
+      }
+    }
+  }
+  for (Iterator iter=goodEnoughTunnels.values().iterator(); iter.hasNext() && allocated < numTunnels; ) {
+    TunnelId id=(TunnelId)iter.next();
+    TunnelInfo info=_tunnelPool.getTunnelInfo(id);
+    if (info.getLength() < _clientPool.getClientSettings().getDepthInbound()) {
+      continue;
+    }
+    boolean ok=_tunnelPool.allocateTunnel(id,_clientPool.getDestination());
+    if (ok) {
+      allocated++;
+    }
+  }
+  if (allocated < numTunnels) {
+    requestCustomTunnels(numTunnels - allocated);
+  }
+ else {
+    _log.debug("Sufficient tunnels exist in the client pool for " + _clientPool.getDestination().calculateHash() + " w3wt");
+  }
+}

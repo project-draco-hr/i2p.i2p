@@ -1,0 +1,19 @@
+{
+  I2PThread t=new I2PThread(new Runnable(){
+    public void run(){
+      _log.debug("Submitting data");
+      MessageHistory.getInstance().setPauseFlushes(true);
+      String filename=MessageHistory.getInstance().getFilename();
+      send(filename);
+      MessageHistory.getInstance().setPauseFlushes(false);
+      Job job=new SubmitMessageHistoryJob();
+      job.getTiming().setStartAfter(Clock.getInstance().now() + getRequeueDelay());
+      JobQueue.getInstance().addJob(job);
+    }
+  }
+);
+  t.setName("SubmitData");
+  t.setPriority(I2PThread.MIN_PRIORITY);
+  t.setDaemon(true);
+  t.start();
+}

@@ -1,0 +1,40 @@
+{
+  if (_pool.isStopped()) {
+    if ((_pool.getInactiveInboundTunnelIds().size() <= 0) && (_pool.getInboundTunnelIds().size() <= 0)) {
+      if (_log.shouldLog(Log.INFO))       _log.info("No more tunnels and the client has stopped, so no need to manage the leaseSet any more for " + _pool.getDestination().calculateHash());
+      return;
+    }
+ else {
+      if (_log.shouldLog(Log.INFO))       _log.info("Client " + _pool.getDestination().calculateHash() + " is stopped, but they still have some tunnels, so don't stop maintaining the leaseSet");
+      requeue(RECHECK_DELAY);
+      return;
+    }
+  }
+  int available=_pool.getSafePoolSize();
+  if (available >= _pool.getClientSettings().getNumInboundTunnels()) {
+    if (_forceRequestLease) {
+      _log.info("Forced to request a new lease (reconnected client perhaps?)");
+      _forceRequestLease=false;
+      requestNewLeaseSet();
+    }
+ else     if (_currentLeaseSet == null) {
+      _log.info("No leaseSet is known - request a new one");
+      requestNewLeaseSet();
+    }
+ else     if (tunnelsChanged()) {
+      _log.info("Tunnels changed from the old leaseSet - request a new one: [pool = " + _pool.getInboundTunnelIds() + " old leaseSet: "+ _currentLeaseSet);
+      requestNewLeaseSet();
+    }
+ else     if (Clock.getInstance().now() > _lastCreated + _pool.getClientSettings().getInboundDuration()) {
+      _log.info("We've exceeded the client's requested duration (limit = " + new Date(_lastCreated + _pool.getClientSettings().getInboundDuration()) + " / "+ _pool.getClientSettings().getInboundDuration()+ ") - request a new leaseSet");
+      requestNewLeaseSet();
+    }
+ else {
+      _log.debug("The current LeaseSet is fine, noop");
+    }
+  }
+ else {
+    _log.warn("Insufficient safe inbound tunnels exist for the client (" + available + " available, "+ _pool.getClientSettings().getNumInboundTunnels()+ " required) - no leaseSet requested");
+  }
+  requeue(RECHECK_DELAY);
+}

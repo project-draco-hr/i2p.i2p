@@ -1,0 +1,20 @@
+{
+  boolean valid=MessageValidator.getInstance().validateMessage(message.getUniqueId(),message.getMessageExpiration().getTime());
+  if (!valid) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Duplicate / expired client message received [" + message.getUniqueId() + " expiring on "+ message.getMessageExpiration()+ "]");
+    MessageHistory.getInstance().droppedOtherMessage(message);
+    MessageHistory.getInstance().messageProcessingError(message.getUniqueId(),message.getClass().getName(),"Duplicate/expired client message");
+    return;
+  }
+  _log.debug("Handle " + message.getClass().getName() + " to a local destination - build a ClientMessage and pool it");
+  ClientMessage msg=new ClientMessage();
+  msg.setDestinationHash(instructions.getDestination());
+  Payload payload=new Payload();
+  payload.setEncryptedData(((DataMessage)message).getData());
+  msg.setPayload(payload);
+  MessageReceptionInfo info=new MessageReceptionInfo();
+  info.setFromPeer(fromHash);
+  msg.setReceptionInfo(info);
+  MessageHistory.getInstance().receivePayloadMessage(message.getUniqueId());
+  ClientMessagePool.getInstance().add(msg);
+}

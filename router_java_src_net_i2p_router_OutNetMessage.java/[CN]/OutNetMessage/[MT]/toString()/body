@@ -1,0 +1,37 @@
+{
+  StringBuffer buf=new StringBuffer(128);
+  buf.append("[OutNetMessage contains ");
+  if (_message == null) {
+    buf.append("*no message*");
+  }
+ else {
+    buf.append("a ").append(_messageSize).append(" byte ");
+    buf.append(_message.getClass().getName());
+  }
+  buf.append(" expiring on ").append(new Date(_expiration));
+  buf.append(" failed delivery on transports ").append(_failedTransports);
+  if (_target == null)   buf.append(" targetting no one in particular...");
+ else   buf.append(" targetting ").append(_target.getIdentity().getHash().toBase64());
+  if (_onReply != null)   buf.append(" with onReply job: ").append(_onReply);
+  if (_onSend != null)   buf.append(" with onSend job: ").append(_onSend);
+  if (_onFailedReply != null)   buf.append(" with onFailedReply job: ").append(_onFailedReply);
+  if (_onFailedSend != null)   buf.append(" with onFailedSend job: ").append(_onFailedSend);
+  buf.append(" {timestamps: \n");
+synchronized (_timestamps) {
+    long lastWhen=-1;
+    for (int i=0; i < _timestampOrder.size(); i++) {
+      String name=(String)_timestampOrder.get(i);
+      Long when=(Long)_timestamps.get(name);
+      buf.append("\t[");
+      long diff=when.longValue() - lastWhen;
+      if ((lastWhen > 0) && (diff > 500))       buf.append("**");
+      if (lastWhen > 0)       buf.append(diff);
+ else       buf.append(0);
+      buf.append("ms: \t").append(name).append('=').append(formatDate(when.longValue())).append("]\n");
+      lastWhen=when.longValue();
+    }
+  }
+  buf.append("}");
+  buf.append("]");
+  return buf.toString();
+}

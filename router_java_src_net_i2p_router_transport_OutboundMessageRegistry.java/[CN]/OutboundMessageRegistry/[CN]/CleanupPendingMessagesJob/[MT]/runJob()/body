@@ -1,0 +1,58 @@
+{
+  List toRemove=new ArrayList();
+  long now=Clock.getInstance().now();
+  Map messages=null;
+synchronized (_pendingMessages) {
+    messages=(Map)_pendingMessages.clone();
+  }
+  long afterCreate=Clock.getInstance().now();
+  for (Iterator iter=messages.keySet().iterator(); iter.hasNext(); ) {
+    Long exp=(Long)iter.next();
+    OutNetMessage msg=(OutNetMessage)messages.get(exp);
+    if (msg.getExpiration() < now) {
+      toRemove.add(exp);
+    }
+  }
+  long findRemove=Clock.getInstance().now();
+  long removeTime=0;
+  long loopTime=0;
+  for (Iterator iter=toRemove.iterator(); iter.hasNext(); ) {
+    long beforeRemove=Clock.getInstance().now();
+    Long exp=(Long)iter.next();
+    OutNetMessage msg=null;
+synchronized (_pendingMessages) {
+      msg=(OutNetMessage)_pendingMessages.remove(exp);
+    }
+    long afterRemove=Clock.getInstance().now();
+    long diff=afterRemove - beforeRemove;
+    if (diff > 500)     _log.error("Synchronize during remove took too long " + diff + "ms");
+    removeTime+=diff;
+    if (msg != null) {
+      MessageHistory.getInstance().replyTimedOut(msg);
+      Job fail=msg.getOnFailedReplyJob();
+      if (fail != null) {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Removing message with selector " + msg.getReplySelector() + ": "+ msg.getMessage().getClass().getName()+ " and firing fail job: "+ fail.getClass().getName());
+        JobQueue.getInstance().addJob(fail);
+      }
+ else {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Removing message with selector " + msg.getReplySelector() + " and not firing any job");
+      }
+    }
+    long doneLoop=Clock.getInstance().now();
+    long ldiff=doneLoop - beforeRemove;
+    if (ldiff > 500)     _log.error("Loop took too long [" + ldiff + "ms]");
+    loopTime+=ldiff;
+  }
+  long cleanupDelay=Clock.getInstance().now() - now;
+  long findTime=findRemove - afterCreate;
+  long syncTime=afterCreate - now;
+  String warn=cleanupDelay + "ms (syncTime = " + syncTime+ "ms, findTime ="+ findTime+ "ms, removeTime = "+ removeTime+ "ms, loopTime = "+ loopTime+ ")";
+  if (cleanupDelay > 1000) {
+    _log.error("Cleanup took too long! " + warn);
+    MessageHistory.getInstance().messageProcessingError(-1,OutboundMessageRegistry.CleanupPendingMessagesJob.class.getName(),"Cleanup took too long: " + warn);
+  }
+ else {
+    _log.debug("Cleanup was quick: " + warn);
+  }
+  requeue(CLEANUP_DELAY);
+}

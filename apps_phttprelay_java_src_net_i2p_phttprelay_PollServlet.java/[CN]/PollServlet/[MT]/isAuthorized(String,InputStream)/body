@@ -1,0 +1,31 @@
+{
+  RouterIdentity ident=null;
+  try {
+    ident=getRouterIdentity(target);
+  }
+ catch (  DataFormatException dfe) {
+    log("Identity was not valid",dfe);
+  }
+  if (ident == null) {
+    log("Identity not registered");
+    return false;
+  }
+  try {
+    long val=DataHelper.readLong(in,4);
+    Signature sig=new Signature();
+    sig.readBytes(in);
+    ByteArrayOutputStream baos=new ByteArrayOutputStream();
+    DataHelper.writeLong(baos,4,val);
+    if (DSAEngine.getInstance().verifySignature(sig,baos.toByteArray(),ident.getSigningPublicKey())) {
+      return true;
+    }
+ else {
+      log("Signature does NOT match");
+      return false;
+    }
+  }
+ catch (  DataFormatException dfe) {
+    log("Format error reading the nonce and signature",dfe);
+    return false;
+  }
+}

@@ -1,0 +1,20 @@
+{
+  if (true) {
+    selectAllNotFailingPeers(howMany,exclude,matches);
+    return;
+  }
+  if (matches.size() < howMany) {
+synchronized (_reorganizeLock) {
+      for (Iterator iter=_notFailingPeers.keySet().iterator(); iter.hasNext(); ) {
+        Hash peer=(Hash)iter.next();
+        if ((exclude != null) && exclude.contains(peer))         continue;
+        if (matches.contains(peer))         continue;
+        PeerProfile prof=(PeerProfile)_notFailingPeers.get(peer);
+        if (prof.getIsActive())         matches.add(peer);
+        if (matches.size() >= howMany)         return;
+      }
+    }
+  }
+  if (matches.size() < howMany)   selectAllNotFailingPeers(howMany,exclude,matches);
+  return;
+}

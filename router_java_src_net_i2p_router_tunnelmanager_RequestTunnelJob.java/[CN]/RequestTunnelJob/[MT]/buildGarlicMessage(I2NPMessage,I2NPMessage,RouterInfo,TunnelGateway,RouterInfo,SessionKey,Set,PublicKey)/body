@@ -1,0 +1,27 @@
+{
+  GarlicConfig config=buildGarlicConfig(data,status,replyPeer,replyTunnel,target);
+  PublicKey rcptKey=config.getRecipientPublicKey();
+  if (rcptKey == null) {
+    if (config.getRecipient() == null) {
+      throw new IllegalArgumentException("Null recipient specified");
+    }
+ else     if (config.getRecipient().getIdentity() == null) {
+      throw new IllegalArgumentException("Null recipient.identity specified");
+    }
+ else     if (config.getRecipient().getIdentity().getPublicKey() == null) {
+      throw new IllegalArgumentException("Null recipient.identity.publicKey specified");
+    }
+ else     rcptKey=config.getRecipient().getIdentity().getPublicKey();
+  }
+  if (wrappedTo != null)   wrappedTo.setData(rcptKey.getData());
+  long start=Clock.getInstance().now();
+  GarlicMessage message=GarlicMessageBuilder.buildMessage(config,wrappedKey,wrappedTags);
+  long end=Clock.getInstance().now();
+  if ((end - start) > 1000) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Took more than a second (" + (end - start) + "ms) to create the garlic for the tunnel");
+  }
+ else {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Took LESS than a second (" + (end - start) + "ms) to create the garlic for the tunnel!");
+  }
+  return message;
+}

@@ -1,0 +1,18 @@
+{
+  if (matches.size() < howMany) {
+    int orig=matches.size();
+    int needed=howMany - orig;
+    List selected=new ArrayList(needed);
+synchronized (_reorganizeLock) {
+      for (Iterator iter=_strictReliabilityOrder.iterator(); selected.size() < needed && iter.hasNext(); ) {
+        PeerProfile prof=(PeerProfile)iter.next();
+        if (matches.contains(prof.getPeer()) || (exclude != null && exclude.contains(prof.getPeer())) || _failingPeers.containsKey(prof.getPeer()))         continue;
+ else         selected.add(prof.getPeer());
+      }
+    }
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Selecting all not failing found " + (matches.size() - orig) + " new peers: "+ selected);
+    matches.addAll(selected);
+  }
+  if (matches.size() < howMany)   selectFailingPeers(howMany,exclude,matches);
+  return;
+}

@@ -1,0 +1,31 @@
+{
+  if (_state.completed())   return;
+  int toCheck=PARALLELIZATION - _state.getPending().size();
+  if (toCheck <= 0) {
+    return;
+  }
+  if (toCheck > PARALLELIZATION)   toCheck=PARALLELIZATION;
+  List closestHashes=getClosestRouters(_state.getTarget(),toCheck,_state.getAttempted());
+  if ((closestHashes == null) || (closestHashes.size() <= 0)) {
+    if (_state.getPending().size() <= 0) {
+      fail();
+    }
+ else {
+      return;
+    }
+  }
+ else {
+    _state.addPending(closestHashes);
+    _log.info("Continue sending key " + _state.getTarget() + " to "+ closestHashes);
+    for (Iterator iter=closestHashes.iterator(); iter.hasNext(); ) {
+      Hash peer=(Hash)iter.next();
+      DataStructure ds=_facade.getDataStore().get(peer);
+      if ((ds == null) || !(ds instanceof RouterInfo)) {
+        _log.warn("Error selecting closest hash that wasnt a router! " + peer + " : "+ ds);
+      }
+ else {
+        sendStore((RouterInfo)ds);
+      }
+    }
+  }
+}

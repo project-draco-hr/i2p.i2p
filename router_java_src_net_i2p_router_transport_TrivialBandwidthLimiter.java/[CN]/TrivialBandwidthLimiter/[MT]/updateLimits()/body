@@ -1,0 +1,46 @@
+{
+  String inBwStr=Router.getInstance().getConfigSetting(PROP_INBOUND_BANDWIDTH);
+  String outBwStr=Router.getInstance().getConfigSetting(PROP_OUTBOUND_BANDWIDTH);
+  if (true) {
+    inBwStr="-60";
+    outBwStr="-60";
+  }
+  long oldReceive=_maxReceiveBytesPerMinute;
+  long oldSend=_maxSendBytesPerMinute;
+  _log.debug("Read limits [" + inBwStr + " in, "+ outBwStr+ " out] vs current ["+ oldReceive+ " in, "+ oldSend+ " out]");
+  if ((inBwStr != null) && (inBwStr.trim().length() > 0)) {
+    try {
+      long in=Long.parseLong(inBwStr);
+      if (in >= 0) {
+        _maxReceiveBytesPerMinute=in;
+        MAX_IN_POOL=10 * _maxReceiveBytesPerMinute;
+      }
+    }
+ catch (    NumberFormatException nfe) {
+      _log.warn("Invalid inbound bandwidth limit [" + inBwStr + "], keeping as "+ _maxReceiveBytesPerMinute);
+    }
+  }
+ else {
+    _log.warn("Inbound bandwidth limits not specified in the config via " + PROP_INBOUND_BANDWIDTH);
+  }
+  if ((outBwStr != null) && (outBwStr.trim().length() > 0)) {
+    try {
+      long out=Long.parseLong(outBwStr);
+      if (out >= 0) {
+        _maxSendBytesPerMinute=out;
+        MAX_OUT_POOL=10 * _maxSendBytesPerMinute;
+      }
+    }
+ catch (    NumberFormatException nfe) {
+      _log.warn("Invalid outbound bandwidth limit [" + outBwStr + "], keeping as "+ _maxSendBytesPerMinute);
+    }
+  }
+ else {
+    _log.warn("Outbound bandwidth limits not specified in the config via " + PROP_OUTBOUND_BANDWIDTH);
+  }
+  if ((oldReceive != _maxReceiveBytesPerMinute) || (oldSend != _maxSendBytesPerMinute)) {
+    _log.info("Max receive bytes per minute: " + _maxReceiveBytesPerMinute + ", max send per minute: "+ _maxSendBytesPerMinute);
+    _availableReceive=_maxReceiveBytesPerMinute;
+    _availableSend=_maxSendBytesPerMinute;
+  }
+}

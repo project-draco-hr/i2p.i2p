@@ -1,0 +1,34 @@
+{
+  _log.info("Starting up the kademlia network database");
+  RouterInfo ri=Router.getInstance().getRouterInfo();
+  String dbDir=Router.getInstance().getConfigSetting(PROP_DB_DIR);
+  if (dbDir == null) {
+    _log.info("No DB dir specified [" + PROP_DB_DIR + "], using ["+ DEFAULT_DB_DIR+ "]");
+    dbDir=DEFAULT_DB_DIR;
+  }
+  _kb=new KBucketSet(ri.getIdentity().getHash());
+  _ds=new PersistentDataStore(dbDir,this);
+  _explicitSendKeys=new HashSet(64);
+  _passiveSendKeys=new HashSet(64);
+  _exploreKeys=new HashSet(64);
+  _lastSent=new HashMap(1024);
+  InNetMessagePool.getInstance().registerHandlerJobBuilder(DatabaseLookupMessage.MESSAGE_TYPE,new DatabaseLookupMessageHandler());
+  InNetMessagePool.getInstance().registerHandlerJobBuilder(DatabaseStoreMessage.MESSAGE_TYPE,new DatabaseStoreMessageHandler());
+  InNetMessagePool.getInstance().registerHandlerJobBuilder(DatabaseSearchReplyMessage.MESSAGE_TYPE,new DatabaseSearchReplyMessageHandler());
+  _initialized=true;
+  _started=System.currentTimeMillis();
+  JobQueue.getInstance().addJob(new DataPublisherJob(this));
+  JobQueue.getInstance().addJob(new ExpireLeasesJob(this));
+  JobQueue.getInstance().addJob(new ExpireRoutersJob(this));
+  if (!_quiet) {
+    JobQueue.getInstance().addJob(new DataRepublishingSelectorJob(this));
+    JobQueue.getInstance().addJob(new ExploreKeySelectorJob(this));
+    JobQueue.getInstance().addJob(new StartExplorersJob(this));
+  }
+ else {
+    _log.warn("Operating in quiet mode - not exploring or pushing data proactively, simply reactively");
+    _log.warn("This should NOT be used in production");
+  }
+  JobQueue.getInstance().addJob(new PublishLocalRouterInfoJob());
+  publish(ri);
+}

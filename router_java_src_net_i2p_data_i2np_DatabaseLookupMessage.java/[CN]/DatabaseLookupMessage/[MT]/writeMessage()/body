@@ -1,0 +1,30 @@
+{
+  if (_key == null)   throw new I2NPMessageException("Key being searched for not specified");
+  if (_from == null)   throw new I2NPMessageException("From address not specified");
+  ByteArrayOutputStream os=new ByteArrayOutputStream(32);
+  try {
+    _key.writeBytes(os);
+    _from.writeBytes(os);
+    if (_replyTunnel != null) {
+      DataHelper.writeBoolean(os,Boolean.TRUE);
+      _replyTunnel.writeBytes(os);
+    }
+ else {
+      DataHelper.writeBoolean(os,Boolean.FALSE);
+    }
+    if ((_dontIncludePeers == null) || (_dontIncludePeers.size() <= 0)) {
+      DataHelper.writeLong(os,2,0);
+    }
+ else {
+      DataHelper.writeLong(os,2,_dontIncludePeers.size());
+      for (Iterator iter=_dontIncludePeers.iterator(); iter.hasNext(); ) {
+        Hash peer=(Hash)iter.next();
+        peer.writeBytes(os);
+      }
+    }
+  }
+ catch (  DataFormatException dfe) {
+    throw new I2NPMessageException("Error writing out the message data",dfe);
+  }
+  return os.toByteArray();
+}

@@ -1,0 +1,21 @@
+{
+  boolean valid=MessageValidator.getInstance().validateMessage(msg.getUniqueId(),msg.getMessageExpiration().getTime());
+  if (!valid) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Duplicate data message received [" + msg.getUniqueId() + " expiring on "+ msg.getMessageExpiration()+ "]");
+    MessageHistory.getInstance().droppedOtherMessage(msg);
+    MessageHistory.getInstance().messageProcessingError(msg.getUniqueId(),msg.getClass().getName(),"Duplicate payload");
+    return;
+  }
+  ClientMessage cmsg=new ClientMessage();
+  Payload payload=new Payload();
+  payload.setEncryptedData(msg.getData());
+  MessageReceptionInfo info=new MessageReceptionInfo();
+  info.setFromPeer(_fromHash);
+  info.setFromTunnel(_message.getTunnelId());
+  cmsg.setDestination(dest);
+  cmsg.setDestinationHash(destHash);
+  cmsg.setPayload(payload);
+  cmsg.setReceptionInfo(info);
+  MessageHistory.getInstance().receivePayloadMessage(msg.getUniqueId());
+  ClientMessagePool.getInstance().add(cmsg);
+}

@@ -1,0 +1,56 @@
+{
+  if (cmd.startsWith("-t ")) {
+    cmd=cmd.substring(3);
+    int pos=cmd.indexOf(" ");
+    if (pos == -1) {
+      l.log("Syntax error");
+      return;
+    }
+ else {
+      timeout=Long.parseLong(cmd.substring(0,pos));
+      cmd=cmd.substring(pos + 1);
+    }
+  }
+  if (cmd.startsWith("-m ")) {
+    cmd=cmd.substring(3);
+    int pos=cmd.indexOf(" ");
+    if (pos == -1) {
+      l.log("Syntax error");
+      return;
+    }
+ else {
+      MAX_SIMUL_PINGS=Integer.parseInt(cmd.substring(0,pos));
+      cmd=cmd.substring(pos + 1);
+    }
+  }
+  if (cmd.startsWith("-c ")) {
+    countPing=true;
+    cmd=cmd.substring(3);
+  }
+  if (cmd.equals("-h")) {
+    cmd="-l hosts.txt";
+  }
+  if (cmd.startsWith("-l ")) {
+    BufferedReader br=new BufferedReader(new FileReader(cmd.substring(3)));
+    String line;
+    List pingHandlers=new ArrayList();
+    while ((line=br.readLine()) != null) {
+      if (line.startsWith("#"))       continue;
+      if (line.startsWith(";"))       continue;
+      if (line.startsWith("!"))       continue;
+      if (line.indexOf("=") != -1) {
+        line=line.substring(0,line.indexOf("="));
+      }
+      pingHandlers.add(new PingHandler(line));
+    }
+    br.close();
+    for (Iterator it=pingHandlers.iterator(); it.hasNext(); ) {
+      Thread t=(Thread)it.next();
+      t.join();
+    }
+  }
+ else {
+    Thread t=new PingHandler(cmd);
+    t.join();
+  }
+}

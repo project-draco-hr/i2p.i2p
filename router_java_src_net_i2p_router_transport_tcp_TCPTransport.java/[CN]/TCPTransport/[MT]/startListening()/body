@@ -1,0 +1,47 @@
+{
+  RouterAddress address=new RouterAddress();
+  address.setTransportStyle(getStyle());
+  address.setCost(10);
+  address.setExpiration(null);
+  Properties options=new Properties();
+  if (_address != null) {
+    options.setProperty(TCPAddress.PROP_HOST,_listenHost);
+    options.setProperty(TCPAddress.PROP_PORT,_listenPort + "");
+  }
+  address.setOptions(options);
+  if (_address != null) {
+    try {
+      TCPAddress addr=new TCPAddress();
+      addr.setHost(_listenHost);
+      addr.setPort(_listenPort);
+      TCPListener listener=new TCPListener(this);
+      listener.setAddress(addr);
+      _listeners.add(listener);
+      listener.startListening();
+    }
+ catch (    NumberFormatException nfe) {
+      if (_log.shouldLog(Log.ERROR))       _log.error("Error parsing port number",nfe);
+    }
+    addCurrentAddress(address);
+  }
+  String str=Router.getInstance().getConfigSetting(PROP_ESTABLISHERS);
+  if (str != null) {
+    try {
+      _numConnectionEstablishers=Integer.parseInt(str);
+    }
+ catch (    NumberFormatException nfe) {
+      if (_log.shouldLog(Log.ERROR))       _log.error("Invalid number of connection establishers [" + str + "]");
+      _numConnectionEstablishers=DEFAULT_ESTABLISHERS;
+    }
+  }
+ else {
+    _numConnectionEstablishers=DEFAULT_ESTABLISHERS;
+  }
+  _running=true;
+  for (int i=0; i < _numConnectionEstablishers; i++) {
+    Thread t=new I2PThread(new ConnEstablisher(i));
+    t.setDaemon(true);
+    t.start();
+  }
+  return address;
+}

@@ -1,0 +1,42 @@
+{
+  long startEstablish=0;
+  long socketCreated=0;
+  long conCreated=0;
+  long conEstablished=0;
+  try {
+    for (Iterator iter=target.getAddresses().iterator(); iter.hasNext(); ) {
+      RouterAddress addr=(RouterAddress)iter.next();
+      startEstablish=Clock.getInstance().now();
+      if (getStyle().equals(addr.getTransportStyle())) {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Establishing a connection with address " + addr);
+        Socket s=createSocket(addr);
+        socketCreated=Clock.getInstance().now();
+        if (s == null) {
+          if (_log.shouldLog(Log.WARN))           _log.warn("Unable to establish a socket in time to " + addr);
+          ProfileManager.getInstance().commErrorOccurred(target.getIdentity().getHash());
+          return false;
+        }
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Socket created");
+        if (s != null) {
+          TCPConnection con=new RestrictiveTCPConnection(s,_myIdentity,_signingKey,true);
+          conCreated=Clock.getInstance().now();
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("TCPConnection created");
+          boolean established=handleConnection(con,target);
+          conEstablished=Clock.getInstance().now();
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("connection handled");
+          return established;
+        }
+      }
+    }
+  }
+ catch (  Throwable t) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Unexpected error establishing the connection",t);
+  }
+ finally {
+    long diff=conEstablished - startEstablish;
+    if (((diff > 6000) || (conEstablished == 0)) && (_log.shouldLog(Log.WARN))) {
+      _log.warn("establishConnection took too long: socketCreate: " + (socketCreated - startEstablish) + "ms conCreated: "+ (conCreated - socketCreated)+ "ms conEstablished: "+ (conEstablished - conCreated)+ "ms overall: "+ diff);
+    }
+  }
+  return false;
+}

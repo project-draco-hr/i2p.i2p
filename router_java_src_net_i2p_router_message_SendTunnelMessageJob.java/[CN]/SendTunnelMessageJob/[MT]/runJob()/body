@@ -1,0 +1,41 @@
+{
+  TunnelInfo info=TunnelManagerFacade.getInstance().getTunnelInfo(_tunnelId);
+  if (info == null) {
+    _log.debug("Message for unknown tunnel [" + _tunnelId + "] received, forward to "+ _destRouter);
+    if ((_tunnelId == null) || (_destRouter == null)) {
+      _log.error("Someone br0ke us.  where is this message supposed to go again?",getAddedBy());
+      return;
+    }
+    TunnelMessage msg=new TunnelMessage();
+    try {
+      ByteArrayOutputStream baos=new ByteArrayOutputStream(1024);
+      _message.writeBytes(baos);
+      msg.setData(baos.toByteArray());
+      msg.setTunnelId(_tunnelId);
+      msg.setMessageExpiration(new Date(_expiration));
+      JobQueue.getInstance().addJob(new SendMessageDirectJob(msg,_destRouter,_onSend,_onReply,_onFailure,_selector,_expiration,_priority));
+      String bodyType=_message.getClass().getName();
+      MessageHistory.getInstance().wrap(bodyType,_message.getUniqueId(),TunnelMessage.class.getName(),msg.getUniqueId());
+    }
+ catch (    IOException ioe) {
+      _log.error("Error writing out the tunnel message to send to the tunnel",ioe);
+    }
+catch (    DataFormatException dfe) {
+      _log.error("Error writing out the tunnel message to send to the tunnel",dfe);
+    }
+    return;
+  }
+  if (isEndpoint(info)) {
+    _log.info("Tunnel message where we're both the gateway and the endpoint - honor instructions");
+    honorInstructions(info);
+    return;
+  }
+ else   if (isGateway(info)) {
+    handleAsGateway(info);
+    return;
+  }
+ else {
+    handleAsParticipant(info);
+    return;
+  }
+}

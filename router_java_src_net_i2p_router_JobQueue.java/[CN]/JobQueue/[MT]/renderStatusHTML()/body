@@ -1,0 +1,48 @@
+{
+  LinkedList readyJobs=new LinkedList();
+  LinkedList timedJobs=new LinkedList();
+  LinkedList activeJobs=new LinkedList();
+synchronized (_readyJobs) {
+    readyJobs.addAll(_readyJobs);
+  }
+synchronized (_timedJobs) {
+    timedJobs.addAll(_timedJobs);
+  }
+synchronized (_queueRunners) {
+    for (Iterator iter=_queueRunners.values().iterator(); iter.hasNext(); ) {
+      JobQueueRunner runner=(JobQueueRunner)iter.next();
+      Job job=runner.getCurrentJob();
+      if (job != null)       activeJobs.add(job.getName());
+    }
+  }
+  StringBuffer buf=new StringBuffer();
+  buf.append("<h2>JobQueue</h2>");
+  buf.append("# runners: ");
+synchronized (_queueRunners) {
+    buf.append(_queueRunners.size());
+  }
+  buf.append("<br />\n");
+  buf.append("# active jobs: ").append(activeJobs.size()).append("<ol>\n");
+  for (int i=0; i < activeJobs.size(); i++) {
+    buf.append("<li>").append(activeJobs.get(i)).append("</li>\n");
+  }
+  buf.append("</ol>\n");
+  buf.append("# ready/waiting jobs: ").append(readyJobs.size()).append(" <i>(lots of these mean there's likely a big problem)</i><ol>\n");
+  for (int i=0; i < readyJobs.size(); i++) {
+    buf.append("<li>").append(readyJobs.get(i)).append("</li>\n");
+  }
+  buf.append("</ol>\n");
+  buf.append("# timed jobs: ").append(timedJobs.size()).append("<ol>\n");
+  TreeMap ordered=new TreeMap();
+  for (int i=0; i < timedJobs.size(); i++) {
+    Job j=(Job)timedJobs.get(i);
+    ordered.put(new Long(j.getTiming().getStartAfter()),j);
+  }
+  for (Iterator iter=ordered.values().iterator(); iter.hasNext(); ) {
+    Job j=(Job)iter.next();
+    buf.append("<li>").append(j.getName()).append(" @ ").append(new Date(j.getTiming().getStartAfter())).append("</li>\n");
+  }
+  buf.append("</ol>\n");
+  buf.append(getJobStats());
+  return buf.toString();
+}

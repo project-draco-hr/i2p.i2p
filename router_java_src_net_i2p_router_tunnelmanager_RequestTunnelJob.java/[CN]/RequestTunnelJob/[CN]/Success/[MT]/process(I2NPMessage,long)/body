@@ -1,0 +1,36 @@
+{
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Running success status job (tunnel = " + _tunnel + " msg = "+ message+ ")");
+  if (message.getType() == DeliveryStatusMessage.MESSAGE_TYPE) {
+    if (_log.shouldLog(Log.INFO))     _log.info("Tunnel creation message acknowledged for tunnel " + _tunnel.getTunnelId() + " at router "+ _tunnel.getThisHop().toBase64());
+  }
+ else {
+    TunnelCreateStatusMessage msg=(TunnelCreateStatusMessage)message;
+    if (_successCompleted) {
+      _log.info("Already completed in the Success task [skipping " + msg.getStatus() + "]");
+      return;
+    }
+switch (msg.getStatus()) {
+case TunnelCreateStatusMessage.STATUS_FAILED_CERTIFICATE:
+case TunnelCreateStatusMessage.STATUS_FAILED_DELETED:
+case TunnelCreateStatusMessage.STATUS_FAILED_DUPLICATE_ID:
+case TunnelCreateStatusMessage.STATUS_FAILED_OVERLOADED:
+      if (_log.shouldLog(Log.WARN))       _log.warn("Tunnel creation failed for tunnel " + _tunnel.getTunnelId() + " at router "+ _tunnel.getThisHop().toBase64()+ " with status "+ msg.getStatus());
+    ProfileManager.getInstance().tunnelRejected(_tunnel.getThisHop(),responseTime);
+  MessageHistory.getInstance().tunnelRejected(_tunnel.getThisHop(),_tunnel.getTunnelId(),null,"refused");
+fail();
+_successCompleted=true;
+break;
+case TunnelCreateStatusMessage.STATUS_SUCCESS:
+if (_log.shouldLog(Log.DEBUG)) _log.debug("Tunnel creation succeeded for tunnel " + _tunnel.getTunnelId() + " at router "+ _tunnel.getThisHop().toBase64());
+if ((_wrappedKey != null) && (_wrappedKey.getData() != null) && (_wrappedTags != null)&& (_wrappedTags.size() > 0)&& (_wrappedTo != null)) {
+SessionKeyManager.getInstance().tagsDelivered(_wrappedTo,_wrappedKey,_wrappedTags);
+if (_log.shouldLog(Log.INFO)) _log.info("Delivered tags successfully to " + _tunnel.getThisHop().toBase64() + "!  # tags: "+ _wrappedTags.size());
+}
+_tunnel.setIsReady(true);
+ProfileManager.getInstance().tunnelJoined(_tunnel.getThisHop(),responseTime);
+peerSuccess(_tunnel);
+_successCompleted=true;
+break;
+}
+}
+}

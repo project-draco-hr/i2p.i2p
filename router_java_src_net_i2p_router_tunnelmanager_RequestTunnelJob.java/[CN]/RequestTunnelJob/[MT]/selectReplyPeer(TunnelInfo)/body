@@ -1,0 +1,26 @@
+{
+  PeerSelectionCriteria criteria=new PeerSelectionCriteria();
+  criteria.setMaximumRequired(1);
+  criteria.setMinimumRequired(1);
+  criteria.setPurpose(PeerSelectionCriteria.PURPOSE_SOURCE_ROUTE);
+  List peerHashes=PeerManagerFacade.getInstance().selectPeers(criteria);
+  RouterInfo peerInfo=null;
+  for (int i=0; (i < peerHashes.size()) && (peerInfo == null); i++) {
+    Hash peerHash=(Hash)peerHashes.get(i);
+    peerInfo=NetworkDatabaseFacade.getInstance().lookupRouterInfoLocally(peerHash);
+    if (peerInfo == null) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Selected a peer [" + peerHash + "] we don't have info on locally... trying another");
+    }
+ else {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Peer [" + peerHash.toBase64() + "] is known locally, keep it in the list of replyPeers");
+      break;
+    }
+  }
+  if (peerInfo == null) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("No peers know for a reply (out of " + peerHashes.size() + ") - using ourself");
+    return Router.getInstance().getRouterInfo();
+  }
+ else {
+    return peerInfo;
+  }
+}

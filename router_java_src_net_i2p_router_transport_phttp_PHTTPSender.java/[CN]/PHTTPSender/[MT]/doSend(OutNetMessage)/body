@@ -1,0 +1,40 @@
+{
+  long delay=BandwidthLimiter.getInstance().calculateDelayOutbound(msg.getTarget().getIdentity(),(int)msg.getMessageSize());
+  _log.debug("Delaying [" + delay + "ms]");
+  try {
+    Thread.sleep(delay);
+  }
+ catch (  InterruptedException ie) {
+  }
+  _log.debug("Continuing with sending");
+  URL sendURL=getURL(msg);
+  if (sendURL == null) {
+    _log.debug("No URL to send");
+    return false;
+  }
+ else {
+    _log.debug("Sending to " + sendURL.toExternalForm());
+    HttpURLConnection con=(HttpURLConnection)sendURL.openConnection();
+    con.setRequestMethod("POST");
+    con.setUseCaches(false);
+    con.setDoOutput(true);
+    con.setDoInput(true);
+    byte data[]=getData(msg);
+    if (data == null)     return false;
+    BandwidthLimiter.getInstance().delayOutbound(msg.getTarget().getIdentity(),data.length + 512);
+    con.setRequestProperty("Content-length","" + data.length);
+    OutputStream out=con.getOutputStream();
+    out.write(data);
+    out.flush();
+    _log.debug("Data sent, before reading");
+    String checkURL=getCheckURL(con);
+    if (checkURL != null) {
+      _log.debug("Message sent");
+      return checkDelivery(checkURL,msg);
+    }
+ else {
+      _log.warn("Target not known or unable to send to " + msg.getTarget().getIdentity().getHash().toBase64());
+      return false;
+    }
+  }
+}

@@ -1,0 +1,75 @@
+{
+  if (_selector != null)   createFakeOutNetMessage();
+  if (_onSend != null) {
+    _log.debug("Firing onSend as we're honoring the instructions");
+    JobQueue.getInstance().addJob(_onSend);
+  }
+  RouterIdentity ident=Router.getInstance().getRouterInfo().getIdentity();
+  if (_destRouter != null) {
+    I2NPMessage msg=null;
+    if (_targetTunnelId != null) {
+      _log.debug("Forward " + _message.getClass().getName() + " message off to remote tunnel "+ _targetTunnelId.getTunnelId()+ " on router "+ _destRouter.toBase64());
+      TunnelMessage tmsg=new TunnelMessage();
+      tmsg.setEncryptedDeliveryInstructions(null);
+      tmsg.setTunnelId(_targetTunnelId);
+      tmsg.setVerificationStructure(null);
+      ByteArrayOutputStream baos=new ByteArrayOutputStream(1024);
+      try {
+        _message.writeBytes(baos);
+      }
+ catch (      IOException ioe) {
+        _log.error("Error writing out the message to be forwarded...??",ioe);
+      }
+catch (      DataFormatException dfe) {
+        _log.error("Error writing message to be forwarded...???",dfe);
+      }
+      tmsg.setData(baos.toByteArray());
+      msg=tmsg;
+    }
+ else {
+      _log.debug("Forward " + _message.getClass().getName() + " message off to remote router "+ _destRouter.toBase64());
+      msg=_message;
+    }
+    long now=Clock.getInstance().now();
+    _expiration=now + Router.CLOCK_FUDGE_FACTOR;
+    if (_expiration - 30 * 1000 < now) {
+      _log.error("Why are we trying to send a " + _message.getClass().getName() + " message with "+ (_expiration - now)+ "ms left?",getAddedBy());
+    }
+    String bodyType=_message.getClass().getName();
+    MessageHistory.getInstance().wrap(bodyType,_message.getUniqueId(),TunnelMessage.class.getName(),msg.getUniqueId());
+    JobQueue.getInstance().addJob(new SendMessageDirectJob(msg,_destRouter,_onSend,_onReply,_onFailure,null,_expiration,_priority));
+  }
+ else {
+    if ((info.getDestination() == null) || !(_message instanceof DataMessage)) {
+      _log.debug("Destination is null or its not a DataMessage - pass it off to the InNetMessagePool");
+      InNetMessage msg=new InNetMessage();
+      msg.setFromRouter(ident);
+      msg.setFromRouterHash(ident.getHash());
+      msg.setMessage(_message);
+      msg.setReplyBlock(null);
+      InNetMessagePool.getInstance().add(msg);
+    }
+ else {
+      _log.debug("Destination is not null and it is a DataMessage - pop it into the ClientMessagePool");
+      DataMessage msg=(DataMessage)_message;
+      boolean valid=MessageValidator.getInstance().validateMessage(msg.getUniqueId(),msg.getMessageExpiration().getTime());
+      if (!valid) {
+        if (_log.shouldLog(Log.WARN))         _log.warn("Duplicate data message received [" + msg.getUniqueId() + " expiring on "+ msg.getMessageExpiration()+ "]");
+        MessageHistory.getInstance().droppedOtherMessage(msg);
+        MessageHistory.getInstance().messageProcessingError(msg.getUniqueId(),msg.getClass().getName(),"Duplicate");
+        return;
+      }
+      Payload payload=new Payload();
+      payload.setEncryptedData(msg.getData());
+      MessageReceptionInfo receptionInfo=new MessageReceptionInfo();
+      receptionInfo.setFromPeer(ident.getHash());
+      receptionInfo.setFromTunnel(_tunnelId);
+      ClientMessage clientMessage=new ClientMessage();
+      clientMessage.setDestination(info.getDestination());
+      clientMessage.setPayload(payload);
+      clientMessage.setReceptionInfo(receptionInfo);
+      ClientMessagePool.getInstance().add(clientMessage);
+      MessageHistory.getInstance().receivePayloadMessage(msg.getUniqueId());
+    }
+  }
+}

@@ -1,0 +1,33 @@
+{
+  TunnelInfo info=TunnelManagerFacade.getInstance().getTunnelInfo(replyTunnel);
+  if ((info == null) || (info.getSigningKey() != null)) {
+    if (_log.shouldLog(Log.INFO))     _log.info("Sending reply through " + replyTunnel + " on "+ toPeer);
+    JobQueue.getInstance().addJob(new SendTunnelMessageJob(message,replyTunnel,toPeer,null,null,null,null,null,REPLY_TIMEOUT,MESSAGE_PRIORITY));
+  }
+ else {
+    if (_log.shouldLog(Log.INFO))     _log.info("Want to reply to a db request via a tunnel, but we're a participant in the reply!  so send it to the gateway");
+    if ((toPeer == null) || (replyTunnel == null)) {
+      if (_log.shouldLog(Log.ERROR))       _log.error("Someone br0ke us.  where is this message supposed to go again?",getAddedBy());
+      return;
+    }
+    long expiration=REPLY_TIMEOUT + Clock.getInstance().now();
+    TunnelMessage msg=new TunnelMessage();
+    try {
+      ByteArrayOutputStream baos=new ByteArrayOutputStream(1024);
+      message.writeBytes(baos);
+      msg.setData(baos.toByteArray());
+      msg.setTunnelId(replyTunnel);
+      msg.setMessageExpiration(new Date(expiration));
+      JobQueue.getInstance().addJob(new SendMessageDirectJob(msg,toPeer,null,null,null,null,expiration,MESSAGE_PRIORITY));
+      String bodyType=message.getClass().getName();
+      MessageHistory.getInstance().wrap(bodyType,message.getUniqueId(),TunnelMessage.class.getName(),msg.getUniqueId());
+    }
+ catch (    IOException ioe) {
+      if (_log.shouldLog(Log.ERROR))       _log.error("Error writing out the tunnel message to send to the tunnel",ioe);
+    }
+catch (    DataFormatException dfe) {
+      if (_log.shouldLog(Log.ERROR))       _log.error("Error writing out the tunnel message to send to the tunnel",dfe);
+    }
+    return;
+  }
+}

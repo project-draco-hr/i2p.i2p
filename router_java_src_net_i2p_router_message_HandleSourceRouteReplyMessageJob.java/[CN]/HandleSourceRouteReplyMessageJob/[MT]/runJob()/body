@@ -1,0 +1,29 @@
+{
+  try {
+    long before=Clock.getInstance().now();
+    _message.decryptHeader(KeyManager.getInstance().getPrivateKey());
+    long after=Clock.getInstance().now();
+    if ((after - before) > 1000) {
+      _log.warn("Took more than a second (" + (after - before) + ") to decrypt the sourceRoute header");
+    }
+ else {
+      _log.debug("Took LESS than a second (" + (after - before) + ") to decrypt the sourceRoute header");
+    }
+  }
+ catch (  DataFormatException dfe) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Error decrypting the source route message's header (message " + _message.getUniqueId() + ")",dfe);
+    if (_log.shouldLog(Log.WARN))     _log.warn("Message header could not be decrypted: " + _message,getAddedBy());
+    MessageHistory.getInstance().messageProcessingError(_message.getUniqueId(),_message.getClass().getName(),"Source route message header could not be decrypted");
+    return;
+  }
+  if (!isValid()) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Error validating source route message, dropping: " + _message);
+    return;
+  }
+  DeliveryInstructions instructions=_message.getDecryptedInstructions();
+  long now=Clock.getInstance().now();
+  long expiration=_message.getDecryptedExpiration();
+  if (expiration < now + 10 * 1000)   expiration=now + 60 * 1000;
+  boolean requestAck=false;
+  MessageHandler.getInstance().handleMessage(instructions,_message.getMessage(),requestAck,null,_message.getDecryptedMessageId(),_from,_fromHash,expiration,PRIORITY);
+}

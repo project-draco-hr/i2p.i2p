@@ -1,0 +1,18 @@
+{
+  _started=Clock.getInstance().now();
+  Runtime.getRuntime().addShutdownHook(new ShutdownHook());
+  I2PThread.setOOMEventListener(new I2PThread.OOMEventListener(){
+    public void outOfMemory(    OutOfMemoryError oom){
+      _log.log(Log.CRIT,"Thread ran out of memory",oom);
+      shutdown();
+    }
+  }
+);
+  setupHandlers();
+  startupQueue();
+  JobQueue.getInstance().addJob(new CoallesceStatsJob());
+  JobQueue.getInstance().addJob(new UpdateRoutingKeyModifierJob());
+  warmupCrypto();
+  SessionKeyPersistenceHelper.getInstance().startup();
+  JobQueue.getInstance().addJob(new StartupJob());
+}

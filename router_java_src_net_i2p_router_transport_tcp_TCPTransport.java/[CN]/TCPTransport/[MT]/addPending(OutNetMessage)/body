@@ -1,0 +1,21 @@
+{
+synchronized (_msgs) {
+    Hash target=msg.getTarget().getIdentity().getHash();
+    PendingMessages msgs=(PendingMessages)_msgs.get(target);
+    if (msgs == null) {
+      msgs=new PendingMessages(msg.getTarget());
+      msgs.addPending(msg);
+      _msgs.put(target,msgs);
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Adding a pending to new " + target.toBase64());
+    }
+ else {
+      msgs.addPending(msg);
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Adding a pending to existing " + target.toBase64());
+    }
+    int level=Log.INFO;
+    if (msgs.getMessageCount() > 1)     level=Log.WARN;
+    if (_log.shouldLog(level))     _log.log(level,"Add message to " + target.toBase64() + ", making a total of "+ msgs.getMessageCount()+ " for them, with another "+ (_msgs.size() - 1)+ " peers pending establishment");
+    _msgs.notifyAll();
+  }
+  msg.timestamp("TCPTransport.addPending finished and notified");
+}

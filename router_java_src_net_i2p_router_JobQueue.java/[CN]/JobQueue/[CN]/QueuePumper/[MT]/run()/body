@@ -1,0 +1,31 @@
+{
+  try {
+    while (_alive) {
+      while (_paused) {
+        try {
+          Thread.sleep(1000);
+        }
+ catch (        InterruptedException ie) {
+        }
+      }
+      long now=Clock.getInstance().now();
+      if (now > _lastLimitUpdated + MAX_LIMIT_UPDATE_DELAY) {
+        if (_log.shouldLog(Log.INFO))         _log.info("Updating the limits");
+        updateMaxLimit();
+        updateTimingLimits();
+        _lastLimitUpdated=now;
+      }
+      int numMadeReady=checkJobTimings();
+      awaken(numMadeReady);
+      try {
+        Thread.sleep(500);
+      }
+ catch (      InterruptedException ie) {
+      }
+    }
+  }
+ catch (  Throwable t) {
+    Clock.getInstance().removeUpdateListener(this);
+    if (_log.shouldLog(Log.ERROR))     _log.error("wtf, pumper killed",t);
+  }
+}

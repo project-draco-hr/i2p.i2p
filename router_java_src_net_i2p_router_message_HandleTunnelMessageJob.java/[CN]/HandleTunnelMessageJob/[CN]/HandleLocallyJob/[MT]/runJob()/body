@@ -1,0 +1,16 @@
+{
+  if (_body instanceof DataMessage) {
+    if (_log.shouldLog(Log.WARN))     _log.debug("Deliver the message to a local client, as its a payload message and we know the destination");
+    if (_log.shouldLog(Log.INFO))     _log.info("Message for tunnel " + _info.getTunnelId() + " received at the gateway (us), but its a 0 length tunnel and the message is a DataMessage, so send it to "+ _info.getDestination().calculateHash().toBase64());
+    deliverMessage(_info.getDestination(),null,(DataMessage)_body);
+  }
+ else {
+    if (_log.shouldLog(Log.INFO))     _log.info("Message for tunnel " + _info.getTunnelId() + " received at the gateway (us), but its a 0 length tunnel though it is a "+ _body.getClass().getName()+ ", so process it locally");
+    InNetMessage msg=new InNetMessage();
+    msg.setFromRouter(_from);
+    msg.setFromRouterHash(_fromHash);
+    msg.setMessage(_body);
+    InNetMessagePool.getInstance().add(msg);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Message added to Inbound network pool for local processing: " + _message);
+  }
+}

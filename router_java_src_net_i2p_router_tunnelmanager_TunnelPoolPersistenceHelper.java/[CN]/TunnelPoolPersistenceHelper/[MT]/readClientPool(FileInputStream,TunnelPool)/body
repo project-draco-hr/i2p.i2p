@@ -1,0 +1,26 @@
+{
+  Destination dest=new Destination();
+  dest.readBytes(fin);
+  ClientTunnelSettings settings=new ClientTunnelSettings();
+  Properties props=DataHelper.readProperties(fin);
+  settings.readFromProperties(props);
+  HashSet activeTunnels=new HashSet();
+  int numActiveTunnels=(int)DataHelper.readLong(fin,2);
+  for (int i=0; i < numActiveTunnels; i++) {
+    TunnelInfo info=new TunnelInfo();
+    info.readBytes(fin);
+    activeTunnels.add(info);
+  }
+  HashSet inactiveTunnels=new HashSet();
+  int numInactiveTunnels=(int)DataHelper.readLong(fin,2);
+  for (int i=0; i < numInactiveTunnels; i++) {
+    TunnelInfo info=new TunnelInfo();
+    info.readBytes(fin);
+    inactiveTunnels.add(info);
+  }
+  ClientTunnelPool cpool=new ClientTunnelPool(dest,settings,pool);
+  cpool.setActiveTunnels(activeTunnels);
+  cpool.setInactiveTunnels(inactiveTunnels);
+  pool.addClientPool(cpool);
+  cpool.startPool();
+}

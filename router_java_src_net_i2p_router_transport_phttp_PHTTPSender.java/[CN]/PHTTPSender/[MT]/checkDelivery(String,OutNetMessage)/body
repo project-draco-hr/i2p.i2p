@@ -1,0 +1,36 @@
+{
+  long now=Clock.getInstance().now();
+  long expiration=msg.getExpiration();
+  if (expiration <= now)   expiration=now + HARD_TIMEOUT;
+  _log.debug("Check delivery [expiration = " + new Date(expiration) + "]");
+  try {
+    URL checkStatusURL=new URL(checkURLStr);
+    long delay=RECHECK_DELAY;
+    do {
+      BandwidthLimiter.getInstance().delayOutbound(msg.getTarget().getIdentity(),512);
+      BandwidthLimiter.getInstance().delayInbound(msg.getTarget().getIdentity(),512);
+      _log.debug("Checking delivery at " + checkURLStr);
+      HttpURLConnection con=(HttpURLConnection)checkStatusURL.openConnection();
+      con.setRequestMethod("GET");
+      con.setDoInput(true);
+      con.setDoOutput(false);
+      con.setUseCaches(false);
+      con.connect();
+      boolean isPending=getIsPending(con);
+      if (!isPending) {
+        _log.info("Check delivery successful for message " + msg.getMessage().getClass().getName());
+        return true;
+      }
+      if (now + delay > expiration)       delay=expiration - now - 30;
+      _log.debug("Still pending (wait " + delay + "ms)");
+      Thread.sleep(delay);
+      now=Clock.getInstance().now();
+    }
+ while (now < expiration);
+    _log.warn("Timeout for checking delivery to " + checkURLStr + " for message "+ msg.getMessage().getClass().getName());
+  }
+ catch (  Throwable t) {
+    _log.debug("Error checking for delivery",t);
+  }
+  return false;
+}

@@ -1,0 +1,31 @@
+{
+  ByteArrayOutputStream os=new ByteArrayOutputStream(32);
+  try {
+    DataHelper.writeLong(os,1,_participantType);
+    if (_participantType != PARTICIPANT_TYPE_ENDPOINT) {
+      _nextRouter.writeBytes(os);
+    }
+    _tunnelId.writeBytes(os);
+    DataHelper.writeLong(os,4,_tunnelDuration);
+    _configKey.writeBytes(os);
+    DataHelper.writeLong(os,4,_maxPeakMessagesPerMin);
+    DataHelper.writeLong(os,4,_maxAvgMessagesPerMin);
+    DataHelper.writeLong(os,4,_maxPeakBytesPerMin);
+    DataHelper.writeLong(os,4,_maxAvgBytesPerMin);
+    long flags=getFlags();
+    DataHelper.writeLong(os,1,flags);
+    _verificationPubKey.writeBytes(os);
+    if (_participantType == PARTICIPANT_TYPE_GATEWAY) {
+      _verificationPrivKey.writeBytes(os);
+    }
+    if ((_participantType == PARTICIPANT_TYPE_ENDPOINT) || (_participantType == PARTICIPANT_TYPE_GATEWAY)) {
+      _tunnelKey.writeBytes(os);
+    }
+    _certificate.writeBytes(os);
+    _replyBlock.writeBytes(os);
+  }
+ catch (  Throwable t) {
+    throw new I2NPMessageException("Error writing out the message data",t);
+  }
+  return os.toByteArray();
+}

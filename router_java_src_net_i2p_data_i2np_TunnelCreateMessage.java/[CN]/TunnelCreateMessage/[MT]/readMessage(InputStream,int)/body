@@ -1,0 +1,39 @@
+{
+  if (type != MESSAGE_TYPE)   throw new I2NPMessageException("Message type is incorrect for this message");
+  try {
+    _participantType=(int)DataHelper.readLong(in,1);
+    if (_participantType != PARTICIPANT_TYPE_ENDPOINT) {
+      _nextRouter=new Hash();
+      _nextRouter.readBytes(in);
+    }
+    _tunnelId=new TunnelId();
+    _tunnelId.readBytes(in);
+    _tunnelDuration=DataHelper.readLong(in,4);
+    _configKey=new TunnelConfigurationSessionKey();
+    _configKey.readBytes(in);
+    _maxPeakMessagesPerMin=DataHelper.readLong(in,4);
+    _maxAvgMessagesPerMin=DataHelper.readLong(in,4);
+    _maxPeakBytesPerMin=DataHelper.readLong(in,4);
+    _maxAvgBytesPerMin=DataHelper.readLong(in,4);
+    int flags=(int)DataHelper.readLong(in,1);
+    _includeDummyTraffic=flagsIncludeDummy(flags);
+    _reorderMessages=flagsReorder(flags);
+    _verificationPubKey=new TunnelSigningPublicKey();
+    _verificationPubKey.readBytes(in);
+    if (_participantType == PARTICIPANT_TYPE_GATEWAY) {
+      _verificationPrivKey=new TunnelSigningPrivateKey();
+      _verificationPrivKey.readBytes(in);
+    }
+    if ((_participantType == PARTICIPANT_TYPE_ENDPOINT) || (_participantType == PARTICIPANT_TYPE_GATEWAY)) {
+      _tunnelKey=new TunnelSessionKey();
+      _tunnelKey.readBytes(in);
+    }
+    _certificate=new Certificate();
+    _certificate.readBytes(in);
+    _replyBlock=new SourceRouteBlock();
+    _replyBlock.readBytes(in);
+  }
+ catch (  DataFormatException dfe) {
+    throw new I2NPMessageException("Unable to load the message data",dfe);
+  }
+}

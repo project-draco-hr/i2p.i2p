@@ -1,0 +1,38 @@
+{
+  long start=Clock.getInstance().now();
+  if (!_initialized)   return null;
+  if (!key.equals(leaseSet.getDestination().calculateHash())) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Invalid store attempt! key does not match leaseSet.destination!  key = " + key + ", leaseSet = "+ leaseSet);
+    return null;
+  }
+ else   if (!leaseSet.verifySignature()) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Invalid leaseSet signature!  leaseSet = " + leaseSet);
+    return null;
+  }
+ else   if (leaseSet.getEarliestLeaseDate() <= Clock.getInstance().now()) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Old leaseSet!  not storing it: " + leaseSet);
+    return null;
+  }
+  LeaseSet rv=null;
+  if (_ds.isKnown(key))   rv=(LeaseSet)_ds.get(key);
+  _ds.put(key,leaseSet);
+synchronized (_lastSent) {
+    if (!_lastSent.containsKey(key))     _lastSent.put(key,new Long(0));
+  }
+  if (rv != null) {
+    for (int i=0; i < rv.getLeaseCount(); i++) {
+      Lease old=rv.getLease(i);
+      for (int j=0; j < leaseSet.getLeaseCount(); j++) {
+        Lease cur=leaseSet.getLease(j);
+        if (cur.getTunnelId().getTunnelId() == old.getTunnelId().getTunnelId()) {
+          cur.setNumFailure(old.getNumFailure());
+          cur.setNumSuccess(old.getNumSuccess());
+          break;
+        }
+      }
+    }
+  }
+  long end=Clock.getInstance().now();
+  _log.debug("Store leaseSet took [" + (end - start) + "ms]");
+  return rv;
+}

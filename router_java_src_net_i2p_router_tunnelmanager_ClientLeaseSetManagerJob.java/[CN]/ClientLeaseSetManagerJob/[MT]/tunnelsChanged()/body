@@ -1,0 +1,23 @@
+{
+  long furthestInFuture=0;
+  Set currentIds=new HashSet(_currentLeaseSet.getLeaseCount());
+  for (int i=0; i < _currentLeaseSet.getLeaseCount(); i++) {
+    Lease lease=(Lease)_currentLeaseSet.getLease(i);
+    currentIds.add(lease.getTunnelId());
+    if (lease.getEndDate().getTime() > furthestInFuture)     furthestInFuture=lease.getEndDate().getTime();
+  }
+  Set avail=_pool.getInboundTunnelIds();
+  avail.removeAll(currentIds);
+  for (Iterator iter=avail.iterator(); iter.hasNext(); ) {
+    TunnelId id=(TunnelId)iter.next();
+    TunnelInfo info=_pool.getInboundTunnel(id);
+    if ((id != null) && (info != null) && (info.getSettings() != null)) {
+      if (info.getSettings().getExpiration() > furthestInFuture) {
+        _log.debug("Tunnel " + id.getTunnelId() + " expires "+ (info.getSettings().getExpiration() - furthestInFuture)+ "ms after any of the existing ones do");
+        return true;
+      }
+    }
+  }
+  _log.debug("None of the available tunnels expire after the existing lease set's tunnels");
+  return false;
+}

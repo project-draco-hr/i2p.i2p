@@ -1,0 +1,27 @@
+{
+  if (message.getSessionConfig().verifySignature()) {
+    _log.debug("Signature verified correctly on create session message");
+  }
+ else {
+    _log.error("Signature verification *FAILED* on a create session message.  Hijack attempt?");
+    _runner.disconnectClient("Invalid signature on CreateSessionMessage");
+    return;
+  }
+  SessionStatusMessage msg=new SessionStatusMessage();
+  SessionId sessionId=new SessionId();
+  sessionId.setSessionId(getNextSessionId());
+  _runner.setSessionId(sessionId);
+  msg.setSessionId(sessionId);
+  msg.setStatus(SessionStatusMessage.STATUS_CREATED);
+  try {
+    _runner.doSend(msg);
+    _runner.sessionEstablished(message.getSessionConfig());
+  }
+ catch (  I2CPMessageException ime) {
+    _log.error("Error writing out the session status message",ime);
+  }
+catch (  IOException ioe) {
+    _log.error("Error writing out the session status message",ioe);
+  }
+  JobQueue.getInstance().addJob(new CreateSessionJob(_runner));
+}

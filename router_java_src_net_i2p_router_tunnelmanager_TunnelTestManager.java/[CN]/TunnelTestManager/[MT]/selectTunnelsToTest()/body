@@ -1,0 +1,34 @@
+{
+  Set allIds=getAllIds();
+  Set toTest=new HashSet(allIds.size());
+  long now=Clock.getInstance().now();
+  for (Iterator iter=allIds.iterator(); iter.hasNext(); ) {
+    TunnelId id=(TunnelId)iter.next();
+    TunnelInfo info=_pool.getTunnelInfo(id);
+    if ((info != null) && (info.getSettings() != null)) {
+      if (info.getSettings().getExpiration() <= 0) {
+      }
+ else       if (!info.getIsReady()) {
+      }
+ else       if (info.getSettings().getExpiration() < now + MINIMUM_RETEST_DELAY) {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Tunnel " + id.getTunnelId() + " will be expiring within the current period ("+ new Date(info.getSettings().getExpiration())+ "), so skip testing it");
+      }
+ else       if (info.getSettings().getCreated() + MINIMUM_RETEST_DELAY < now) {
+        double probability=TESTS_PER_DURATION / (allIds.size() * CHANCES_PER_DURATION);
+        if (RandomSource.getInstance().nextInt(10) <= (probability * 10d)) {
+          toTest.add(id);
+        }
+ else {
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("Tunnel " + id.getTunnelId() + " could be tested, but probabilistically isn't going to be");
+        }
+      }
+ else {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Tunnel " + id.getTunnelId() + " was just created ("+ new Date(info.getSettings().getCreated())+ "), wait until the next pass to test it");
+      }
+    }
+ else {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Hmm, a normally testable tunnel [" + id.getTunnelId() + "] didn't have info or settings: "+ info);
+    }
+  }
+  return toTest;
+}

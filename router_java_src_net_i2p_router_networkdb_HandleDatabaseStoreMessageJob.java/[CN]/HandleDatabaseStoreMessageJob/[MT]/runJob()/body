@@ -1,0 +1,15 @@
+{
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Handling database store message");
+  boolean wasNew=false;
+  if (_message.getValueType() == DatabaseStoreMessage.KEY_TYPE_LEASESET)   wasNew=(null == NetworkDatabaseFacade.getInstance().store(_message.getKey(),_message.getLeaseSet()));
+ else   if (_message.getValueType() == DatabaseStoreMessage.KEY_TYPE_ROUTERINFO) {
+    if (_log.shouldLog(Log.INFO))     _log.info("Handling dbStore of router " + _message.getKey() + " with publishDate of "+ new Date(_message.getRouterInfo().getPublished()));
+    wasNew=(null == NetworkDatabaseFacade.getInstance().store(_message.getKey(),_message.getRouterInfo()));
+    ProfileManager.getInstance().heardAbout(_message.getKey());
+  }
+ else {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Invalid DatabaseStoreMessage data type - " + _message.getValueType() + ": "+ _message);
+  }
+  if (_from != null)   _fromHash=_from.getHash();
+  if (_fromHash != null)   ProfileManager.getInstance().dbStoreReceived(_fromHash,wasNew);
+}

@@ -1,0 +1,71 @@
+{
+  addConnectionEventListener(lsnr);
+  boolean gui=true;
+  boolean checkRunByE=true;
+  ;
+  boolean cli=true;
+  boolean dontDie=true;
+  for (int i=0; i < args.length; i++) {
+    if (args[i].equals("-die")) {
+      dontDie=false;
+      gui=false;
+      cli=false;
+      checkRunByE=false;
+    }
+ else     if (args[i].equals("-nogui")) {
+      gui=false;
+      _log.warn("The `-nogui' option of I2PTunnel is deprecated.\n" + "Use `-cli', `-nocli' (aka `-wait') or `-die' instead.");
+    }
+ else     if (args[i].equals("-cli")) {
+      gui=false;
+      cli=true;
+      checkRunByE=false;
+    }
+ else     if (args[i].equals("-nocli") || args[i].equals("-wait")) {
+      gui=false;
+      cli=false;
+      checkRunByE=false;
+    }
+ else     if (args[i].equals("-e")) {
+      runCommand(args[i + 1],this);
+      i++;
+      if (checkRunByE) {
+        checkRunByE=false;
+        cli=false;
+      }
+    }
+ else     if (new File(args[i]).exists()) {
+      runCommand("run " + args[i],this);
+    }
+ else {
+      System.out.println("Unknown parameter " + args[i]);
+    }
+  }
+  if (gui) {
+    new I2PTunnelGUI(this);
+  }
+ else   if (cli) {
+    try {
+      System.out.println("Enter 'help' for help.");
+      BufferedReader r=new BufferedReader(new InputStreamReader(System.in));
+      while (true) {
+        System.out.print("I2PTunnel>");
+        String cmd=r.readLine();
+        if (cmd == null)         break;
+        runCommand(cmd,this);
+      }
+    }
+ catch (    IOException ex) {
+      ex.printStackTrace();
+    }
+  }
+  while (dontDie) {
+synchronized (this) {
+      try {
+        wait();
+      }
+ catch (      InterruptedException ie) {
+      }
+    }
+  }
+}

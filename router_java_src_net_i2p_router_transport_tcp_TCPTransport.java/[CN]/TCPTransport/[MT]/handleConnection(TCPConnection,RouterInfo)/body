@@ -1,0 +1,78 @@
+{
+  con.setTransport(this);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Before establishing connection");
+  long start=Clock.getInstance().now();
+  RouterIdentity ident=con.establishConnection();
+  long afterEstablish=Clock.getInstance().now();
+  long startRunning=0;
+  if (ident == null) {
+    StatManager.getInstance().updateFrequency("tcp.acceptFailureFrequency");
+    con.closeConnection();
+    return false;
+  }
+  if (_log.shouldLog(Log.INFO))   _log.info("Connection established with " + ident);
+  if (target != null) {
+    if (!target.getIdentity().equals(ident)) {
+      StatManager.getInstance().updateFrequency("tcp.acceptFailureFrequency");
+      if (_log.shouldLog(Log.ERROR))       _log.error("Target changed identities!!!  was " + target.getIdentity().getHash().toBase64() + ", now is "+ ident.getHash().toBase64()+ "!  DROPPING CONNECTION");
+      con.closeConnection();
+      NetworkDatabaseFacade.getInstance().fail(target.getIdentity().getHash());
+      return false;
+    }
+ else {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Target is the same as who we connected with");
+    }
+  }
+  if (ident != null) {
+    Set toClose=new HashSet(4);
+    List toAdd=new LinkedList();
+synchronized (_connections) {
+      if (!_connections.containsKey(ident))       _connections.put(ident,new ArrayList(2));
+      List cons=(List)_connections.get(ident);
+      if (cons.size() > 0) {
+        if (_log.shouldLog(Log.WARN))         _log.warn("Attempted to open additional connections with " + ident.getHash() + ": closing older connections",new Exception("multiple cons"));
+        while (cons.size() > 0) {
+          TCPConnection oldCon=(TCPConnection)cons.remove(0);
+          toAdd.addAll(oldCon.getPendingMessages());
+          toClose.add(oldCon);
+        }
+      }
+      cons.add(con);
+      Set toRemove=new HashSet();
+      for (Iterator iter=_connections.keySet().iterator(); iter.hasNext(); ) {
+        RouterIdentity cur=(RouterIdentity)iter.next();
+        List all=(List)_connections.get(cur);
+        if (all.size() <= 0)         toRemove.add(ident);
+      }
+      for (Iterator iter=toRemove.iterator(); iter.hasNext(); ) {
+        _connections.remove(iter.next());
+      }
+    }
+    if (toAdd.size() > 0) {
+      for (Iterator iter=toAdd.iterator(); iter.hasNext(); ) {
+        OutNetMessage msg=(OutNetMessage)iter.next();
+        con.addMessage(msg);
+      }
+      if (_log.shouldLog(Log.INFO))       _log.info("Transferring " + toAdd.size() + " messages from old cons to the newly established con");
+    }
+    Shitlist.getInstance().unshitlistRouter(ident.getHash());
+    con.runConnection();
+    startRunning=Clock.getInstance().now();
+    if (toClose.size() > 0) {
+      for (Iterator iter=toClose.iterator(); iter.hasNext(); ) {
+        TCPConnection oldCon=(TCPConnection)iter.next();
+        if (_log.shouldLog(Log.INFO))         _log.info("Closing old duplicate connection " + oldCon.toString(),new Exception("Closing old con"));
+        oldCon.closeConnection();
+        StatManager.getInstance().addRateData("tcp.connectionLifetime",oldCon.getLifetime(),0);
+      }
+    }
+    long done=Clock.getInstance().now();
+    long diff=done - start;
+    if ((diff > 3 * 1000) && (_log.shouldLog(Log.WARN))) {
+      _log.warn("handleConnection took too long: " + diff + "ms with "+ (afterEstablish - start)+ "ms to establish "+ (startRunning - afterEstablish)+ "ms to start running "+ (done - startRunning)+ "ms to cleanup");
+    }
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("runConnection called on the con");
+  }
+  StatManager.getInstance().updateFrequency("tcp.acceptSuccessFrequency");
+  return true;
+}

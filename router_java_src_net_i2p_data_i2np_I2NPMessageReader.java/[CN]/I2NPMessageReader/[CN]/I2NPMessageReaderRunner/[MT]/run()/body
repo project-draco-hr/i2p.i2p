@@ -1,0 +1,30 @@
+{
+  while (_stayAlive) {
+    while (_doRun) {
+      try {
+        I2NPMessage msg=_handler.readMessage(_stream);
+        if (msg != null) {
+          long msToRead=_handler.getLastReadTime();
+          _listener.messageReceived(I2NPMessageReader.this,msg,msToRead);
+        }
+      }
+ catch (      I2NPMessageException ime) {
+        _listener.readError(I2NPMessageReader.this,ime);
+        _listener.disconnected(I2NPMessageReader.this);
+        cancelRunner();
+      }
+catch (      IOException ioe) {
+        _log.warn("IO Error handling message",ioe);
+        _listener.disconnected(I2NPMessageReader.this);
+        cancelRunner();
+      }
+    }
+    if (!_doRun) {
+      try {
+        Thread.sleep(500);
+      }
+ catch (      InterruptedException ie) {
+      }
+    }
+  }
+}

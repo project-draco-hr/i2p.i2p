@@ -1,0 +1,36 @@
+{
+  long beforeSync=Clock.getInstance().now();
+  try {
+synchronized (_pendingMessages) {
+      if (_pendingMessages.containsValue(msg)) {
+        Long found=null;
+        for (Iterator iter=_pendingMessages.keySet().iterator(); iter.hasNext(); ) {
+          Long exp=(Long)iter.next();
+          Object val=_pendingMessages.get(exp);
+          if (val.equals(msg)) {
+            found=exp;
+            break;
+          }
+        }
+        if (found != null) {
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("Unregistered message " + msg.getReplySelector() + ": "+ msg,new Exception("Who unregistered?"));
+          _pendingMessages.remove(found);
+        }
+ else {
+          _log.error("Arg, couldn't find the message that we... thought we could find?",new Exception("WTF"));
+        }
+      }
+    }
+  }
+  finally {
+    long delay=Clock.getInstance().now() - beforeSync;
+    String warn=delay + "ms";
+    if (delay > 1000) {
+      _log.error("Synchronizing in the registry.unRegister took too long!  " + warn);
+      MessageHistory.getInstance().messageProcessingError(msg.getMessage().getUniqueId(),msg.getMessage().getClass().getName(),"Unregister took too long: " + warn);
+    }
+ else {
+      _log.debug("Synchronizing in the registry.unRegister was quick:  " + warn);
+    }
+  }
+}

@@ -1,0 +1,19 @@
+{
+  super();
+  long timeoutMs=OVERALL_TIMEOUT_MS_DEFAULT;
+  String param=msg.getSenderConfig().getOptions().getProperty(OVERALL_TIMEOUT_MS_PARAM);
+  if (param == null)   param=Router.getInstance().getConfigSetting(OVERALL_TIMEOUT_MS_PARAM);
+  if (param != null) {
+    try {
+      timeoutMs=Long.parseLong(param);
+    }
+ catch (    NumberFormatException nfe) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Invalid client message timeout specified [" + param + "], defaulting to "+ OVERALL_TIMEOUT_MS_DEFAULT,nfe);
+      timeoutMs=OVERALL_TIMEOUT_MS_DEFAULT;
+    }
+  }
+  _overallExpiration=timeoutMs + Clock.getInstance().now();
+  _status=new OutboundClientMessageStatus(msg);
+  _nextStep=new NextStepJob();
+  _lookupLeaseSetFailed=new LookupLeaseSetFailedJob();
+}

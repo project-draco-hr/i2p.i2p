@@ -1,0 +1,57 @@
+{
+  boolean log=false;
+  msg.timestamp("afterSend(" + sendSuccessful + ")");
+  if (!sendSuccessful)   msg.transportFailed(getStyle());
+  long lifetime=msg.getLifetime();
+  if (lifetime > 5000) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("afterSend: [success=" + sendSuccessful + "]\n"+ msg.toString());
+  }
+ else {
+    if (_log.shouldLog(Log.INFO))     _log.info("afterSend: [success=" + sendSuccessful + "]\n"+ msg.toString());
+  }
+  if (sendSuccessful) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Send message " + msg.getMessage().getClass().getName() + " to "+ msg.getTarget().getIdentity().getHash().toBase64()+ " with transport "+ getStyle()+ " successfully");
+    Job j=msg.getOnSendJob();
+    if (j != null)     JobQueue.getInstance().addJob(j);
+    log=true;
+  }
+ else {
+    if (_log.shouldLog(Log.INFO))     _log.info("Failed to send message " + msg.getMessage().getClass().getName() + " to "+ msg.getTarget().getIdentity().getHash().toBase64()+ " with transport "+ getStyle()+ " (details: "+ msg+ ")");
+    if ((msg.getExpiration() <= 0) || (msg.getExpiration() > Clock.getInstance().now())) {
+      OutNetMessagePool.getInstance().add(msg);
+    }
+ else {
+      if (_log.shouldLog(Log.INFO))       _log.info("No more time left (" + new Date(msg.getExpiration()) + ", expiring without sending successfully the "+ msg.getMessage().getClass().getName());
+      if (msg.getOnFailedSendJob() != null)       JobQueue.getInstance().addJob(msg.getOnFailedSendJob());
+      MessageSelector selector=msg.getReplySelector();
+      if (selector != null) {
+        OutboundMessageRegistry.getInstance().unregisterPending(msg);
+      }
+      log=true;
+    }
+  }
+  if (log) {
+    I2NPMessage dmsg=msg.getMessage();
+    String type=dmsg.getClass().getName();
+    MessageHistory.getInstance().sendMessage(type,dmsg.getUniqueId(),dmsg.getMessageExpiration(),msg.getTarget().getIdentity().getHash(),sendSuccessful);
+  }
+  long now=Clock.getInstance().now();
+  long sendTime=now - msg.getSendBegin();
+  long allTime=now - msg.getCreated();
+  if (allTime > 5 * 1000) {
+    if (_log.shouldLog(Log.INFO))     _log.info("Took too long from preperation to afterSend(ok? " + sendSuccessful + "): "+ allTime+ "ms "+ " after failing on: "+ msg.getFailedTransports()+ " and succeeding on "+ getStyle());
+    if (allTime > 60 * 1000) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("WTF, more than a minute slow? " + msg.getMessage().getClass().getName() + " of id "+ msg.getMessage().getUniqueId()+ " (send begin on "+ new Date(msg.getSendBegin())+ " / created on "+ new Date(msg.getCreated())+ "): "+ msg,msg.getCreatedBy());
+      MessageHistory.getInstance().messageProcessingError(msg.getMessage().getUniqueId(),msg.getMessage().getClass().getName(),"Took too long to send [" + allTime + "ms]");
+    }
+  }
+  StatManager.getInstance().addRateData("transport.sendProcessingTime",msg.getLifetime(),msg.getLifetime());
+  if (sendSuccessful) {
+    ProfileManager.getInstance().messageSent(msg.getTarget().getIdentity().getHash(),getStyle(),sendTime,msg.getMessageSize());
+    StatManager.getInstance().addRateData("transport.sendMessageSize",msg.getMessageSize(),sendTime);
+  }
+ else {
+    ProfileManager.getInstance().messageFailed(msg.getTarget().getIdentity().getHash(),getStyle());
+    StatManager.getInstance().updateFrequency("transport.sendMessageFailureFrequency");
+  }
+}

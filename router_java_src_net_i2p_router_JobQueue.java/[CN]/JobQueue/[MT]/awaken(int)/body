@@ -1,0 +1,23 @@
+{
+  for (int i=0; i < numMadeReady; i++) {
+synchronized (_runnerLock) {
+      _runnerLock.notify();
+    }
+  }
+  int numRunners=0;
+synchronized (_queueRunners) {
+    numRunners=_queueRunners.size();
+  }
+  if (numRunners > 1) {
+    if (numMadeReady > numRunners) {
+      if (numMadeReady < _maxRunners) {
+        _log.info("Too much job contention (" + numMadeReady + " ready and waiting, "+ numRunners+ " runners exist), adding "+ numMadeReady+ " new runners (with max "+ _maxRunners+ ")");
+        runQueue(numMadeReady);
+      }
+ else {
+        _log.info("Too much job contention (" + numMadeReady + " ready and waiting, "+ numRunners+ " runners exist), increasing to our max of "+ _maxRunners+ " runners");
+        runQueue(_maxRunners);
+      }
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  long now=Clock.getInstance().now();
+  List jobsToEnqueue=new ArrayList();
+synchronized (_messageLists) {
+    for (Iterator iter=_messageLists.values().iterator(); iter.hasNext(); ) {
+      List toRemove=new ArrayList();
+      List messages=(List)iter.next();
+      for (Iterator msgIter=messages.iterator(); msgIter.hasNext(); ) {
+        OutNetMessage msg=(OutNetMessage)msgIter.next();
+        if (msg.getExpiration() <= now) {
+          _log.warn("Outbound network message expired: " + msg);
+          toRemove.add(msg);
+          jobsToEnqueue.add(msg.getOnFailedSendJob());
+        }
+      }
+      messages.removeAll(toRemove);
+    }
+  }
+  for (int i=0; i < jobsToEnqueue.size(); i++) {
+    Job j=(Job)jobsToEnqueue.get(i);
+    JobQueue.getInstance().addJob(j);
+  }
+}

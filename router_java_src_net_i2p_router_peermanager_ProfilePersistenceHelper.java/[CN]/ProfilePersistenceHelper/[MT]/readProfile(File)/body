@@ -1,0 +1,32 @@
+{
+  Hash peer=getHash(file.getName());
+  try {
+    if (peer == null)     return null;
+    PeerProfile profile=new PeerProfile(peer);
+    Properties props=new Properties();
+    loadProps(props,file);
+    profile.setReliabilityBonus(getLong(props,"reliabilityBonus"));
+    profile.setIntegrationBonus(getLong(props,"integrationBonus"));
+    profile.setSpeedBonus(getLong(props,"speedBonus"));
+    profile.setLastHeardAbout(getLong(props,"lastHeardAbout"));
+    profile.setFirstHeardAbout(getLong(props,"firstHeardAbout"));
+    profile.setLastSendSuccessful(getLong(props,"lastSentToSuccessfully"));
+    profile.setLastSendFailed(getLong(props,"lastFailedSend"));
+    profile.setLastHeardFrom(getLong(props,"lastHeardFrom"));
+    profile.getTunnelHistory().load(props);
+    profile.getDBHistory().load(props);
+    profile.getCommError().load(props,"commError",true);
+    profile.getDbIntroduction().load(props,"dbIntroduction",true);
+    profile.getDbResponseTime().load(props,"dbResponseTime",true);
+    profile.getReceiveSize().load(props,"receiveSize",true);
+    profile.getSendFailureSize().load(props,"sendFailureSize",true);
+    profile.getSendSuccessSize().load(props,"tunnelCreateResponseTime",true);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Loaded the profile for " + peer.toBase64() + " from "+ file.getName());
+    return profile;
+  }
+ catch (  IllegalArgumentException iae) {
+    _log.error("Error loading profile from " + file.getName(),iae);
+    file.delete();
+    return null;
+  }
+}

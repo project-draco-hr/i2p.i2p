@@ -1,0 +1,119 @@
+{
+  OutputStream out=null;
+  String targetRequest=null;
+  boolean usingWWWProxy=false;
+  InactivityTimeoutThread timeoutThread=null;
+  try {
+    out=s.getOutputStream();
+    BufferedReader br=new BufferedReader(new InputStreamReader(s.getInputStream(),"ISO-8859-1"));
+    String line, method=null, protocol=null, host=null, destination=null;
+    StringBuffer newRequest=new StringBuffer();
+    while ((line=br.readLine()) != null) {
+      if (method == null) {
+        int pos=line.indexOf(" ");
+        if (pos == -1)         break;
+        method=line.substring(0,pos);
+        String request=line.substring(pos + 1);
+        if (request.startsWith("/") && System.getProperty("i2ptunnel.noproxy") != null) {
+          request="http://i2p" + request;
+        }
+        pos=request.indexOf("//");
+        if (pos == -1) {
+          method=null;
+          break;
+        }
+        protocol=request.substring(0,pos + 2);
+        request=request.substring(pos + 2);
+        targetRequest=request;
+        pos=request.indexOf("/");
+        if (pos == -1) {
+          method=null;
+          break;
+        }
+        host=request.substring(0,pos);
+        if (host.toLowerCase().endsWith(".i2p")) {
+          destination=host;
+          host=getHostName(destination);
+          line=method + " " + request.substring(pos);
+        }
+ else         if (host.indexOf(".") != -1) {
+          destination=wwwProxy;
+          usingWWWProxy=true;
+        }
+ else {
+          request=request.substring(pos + 1);
+          pos=request.indexOf("/");
+          destination=request.substring(0,pos);
+          line=method + " " + request.substring(pos);
+        }
+        boolean isValid=usingWWWProxy || isSupportedAddress(host,protocol);
+        if (!isValid) {
+          if (_log.shouldLog(Log.INFO))           _log.info("notValid(" + host + ")");
+          method=null;
+          destination=null;
+          break;
+        }
+ else         if (!usingWWWProxy) {
+          if (_log.shouldLog(Log.INFO))           _log.info("host=getHostName(" + destination + ")");
+          host=getHostName(destination);
+        }
+        if (_log.shouldLog(Log.DEBUG)) {
+          _log.debug("METHOD:" + method + ":");
+          _log.debug("PROTOC:" + protocol + ":");
+          _log.debug("HOST  :" + host + ":");
+          _log.debug("DEST  :" + destination + ":");
+        }
+      }
+ else       if (line.startsWith("Host: ") && !usingWWWProxy) {
+        line="Host: " + host;
+        if (_log.shouldLog(Log.INFO))         _log.info("Setting host = " + host);
+      }
+      newRequest.append(line).append("\r\n");
+      if (line.length() == 0)       break;
+    }
+    while (br.ready()) {
+      int i=br.read();
+      if (i != -1) {
+        newRequest.append((char)i);
+      }
+    }
+    if (method == null || destination == null) {
+      l.log("No HTTP method found in the request.");
+      if (out != null) {
+        out.write(ERR_REQUEST_DENIED);
+        out.write("<p /><i>Generated on: ".getBytes());
+        out.write(new Date().toString().getBytes());
+        out.write("</i></body></html>\n".getBytes());
+        out.flush();
+      }
+      s.close();
+      return;
+    }
+    Destination dest=I2PTunnel.destFromName(destination);
+    if (dest == null) {
+      l.log("Could not resolve " + destination + ".");
+      writeErrorMessage(ERR_DESTINATION_UNKNOWN,out,targetRequest,usingWWWProxy,destination);
+      s.close();
+      return;
+    }
+    String remoteID;
+    I2PSocket i2ps=createI2PSocket(dest);
+    byte[] data=newRequest.toString().getBytes("ISO-8859-1");
+    I2PTunnelRunner runner=new I2PTunnelRunner(s,i2ps,sockLock,data);
+    timeoutThread=new InactivityTimeoutThread(runner,out,targetRequest,usingWWWProxy,s);
+    timeoutThread.start();
+  }
+ catch (  IOException ex) {
+    if (timeoutThread != null)     timeoutThread.disable();
+    _log.error("Error sending syn",ex);
+    handleHTTPClientException(ex,out,targetRequest,usingWWWProxy,wwwProxy);
+    closeSocket(s);
+  }
+catch (  I2PException ex) {
+    if (timeoutThread != null)     timeoutThread.disable();
+    _log.info("Error sending syn",ex);
+    l.log("Unable to reach peer");
+    handleHTTPClientException(ex,out,targetRequest,usingWWWProxy,wwwProxy);
+    closeSocket(s);
+  }
+}

@@ -1,0 +1,28 @@
+{
+  Set tunnels=new HashSet();
+  List peerLists=null;
+  if (!useFake) {
+    List peerHashes=selectOutboundPeers(settings.getNumOutboundTunnels(),settings.getDepthOutbound());
+    _log.debug("Peer hashes selected: " + peerHashes.size());
+    peerLists=randomizeLists(peerHashes,settings.getNumOutboundTunnels(),settings.getDepthOutbound());
+  }
+ else {
+    peerLists=new ArrayList(0);
+  }
+  if (peerLists.size() <= 0) {
+    for (int i=0; i < settings.getNumOutboundTunnels(); i++) {
+      TunnelInfo tunnel=configureOutboundTunnel(settings,new ArrayList());
+      tunnels.add(tunnel);
+      _log.info("Dummy outbound tunnel " + tunnel.getTunnelId() + " configured ("+ tunnel+ ")");
+    }
+  }
+ else {
+    for (Iterator iter=peerLists.iterator(); iter.hasNext(); ) {
+      List peerList=(List)iter.next();
+      TunnelInfo tunnel=configureOutboundTunnel(settings,peerList);
+      tunnels.add(tunnel);
+      _log.info("Real outbound tunnel " + tunnel.getTunnelId() + " configured ("+ tunnel+ ")");
+    }
+  }
+  return tunnels;
+}

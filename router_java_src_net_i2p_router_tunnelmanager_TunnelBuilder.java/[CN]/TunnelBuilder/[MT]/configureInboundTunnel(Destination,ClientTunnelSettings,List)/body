@@ -1,0 +1,64 @@
+{
+  SessionKey encryptionKey=KeyGenerator.getInstance().generateSessionKey();
+  Object kp[]=KeyGenerator.getInstance().generateSigningKeypair();
+  SigningPublicKey pubkey=(SigningPublicKey)kp[0];
+  SigningPrivateKey privkey=(SigningPrivateKey)kp[1];
+  long duration=settings.getInboundDuration();
+  if (duration <= 0)   duration=DEFAULT_TUNNEL_DURATION;
+  long expiration=Clock.getInstance().now() + duration;
+  TunnelSettings tunnelSettings=new TunnelSettings();
+  tunnelSettings.setBytesPerMinuteAverage(settings.getBytesPerMinuteInboundAverage());
+  tunnelSettings.setBytesPerMinutePeak(settings.getBytesPerMinuteInboundPeak());
+  tunnelSettings.setDepth(peerHashList.size() + 1);
+  tunnelSettings.setExpiration(expiration);
+  tunnelSettings.setIncludeDummy(settings.getIncludeDummyInbound());
+  tunnelSettings.setMessagesPerMinuteAverage(settings.getMessagesPerMinuteInboundAverage());
+  tunnelSettings.setMessagesPerMinutePeak(settings.getMessagesPerMinuteInboundPeak());
+  tunnelSettings.setReorder(settings.getReorderInbound());
+  TunnelId id=new TunnelId();
+  id.setTunnelId(RandomSource.getInstance().nextInt(Integer.MAX_VALUE));
+  id.setType(TunnelId.TYPE_INBOUND);
+  TunnelInfo first=null;
+  TunnelInfo prev=null;
+  for (int i=0; i < peerHashList.size(); i++) {
+    Hash peer=(Hash)peerHashList.get(i);
+    TunnelInfo cur=new TunnelInfo();
+    cur.setThisHop(peer);
+    cur.setConfigurationKey(KeyGenerator.getInstance().generateSessionKey());
+    cur.setDestination(null);
+    if (i == 0) {
+      cur.setEncryptionKey(encryptionKey);
+      cur.setSigningKey(privkey);
+    }
+    cur.setSettings(tunnelSettings);
+    cur.setTunnelId(id);
+    cur.setVerificationKey(pubkey);
+    if (prev != null) {
+      prev.setNextHop(peer);
+      prev.setNextHopInfo(cur);
+    }
+ else {
+      first=cur;
+    }
+    prev=cur;
+  }
+  TunnelInfo last=new TunnelInfo();
+  last.setThisHop(Router.getInstance().getRouterInfo().getIdentity().getHash());
+  last.setDestination(dest);
+  last.setEncryptionKey(encryptionKey);
+  last.setSettings(tunnelSettings);
+  last.setTunnelId(id);
+  last.setVerificationKey(pubkey);
+  last.setSigningKey(privkey);
+  last.setConfigurationKey(KeyGenerator.getInstance().generateSessionKey());
+  TunnelInfo cur=first;
+  if (cur == null) {
+    first=last;
+  }
+ else {
+    while (cur.getNextHopInfo() != null)     cur=cur.getNextHopInfo();
+    cur.setNextHop(last.getThisHop());
+    cur.setNextHopInfo(last);
+  }
+  return first;
+}

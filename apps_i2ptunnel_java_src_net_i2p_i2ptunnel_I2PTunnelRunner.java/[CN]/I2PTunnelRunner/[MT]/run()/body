@@ -1,0 +1,45 @@
+{
+  startedOn=Clock.getInstance().now();
+  try {
+    InputStream in=s.getInputStream();
+    OutputStream out=new BufferedOutputStream(s.getOutputStream(),NETWORK_BUFFER_SIZE);
+    InputStream i2pin=i2ps.getInputStream();
+    OutputStream i2pout=new BufferedOutputStream(i2ps.getOutputStream(),MAX_PACKET_SIZE);
+    if (initialData != null) {
+synchronized (slock) {
+        i2pout.write(initialData);
+        i2pout.flush();
+      }
+    }
+    Thread t1=new StreamForwarder(in,i2pout);
+    Thread t2=new StreamForwarder(i2pin,out);
+synchronized (finishLock) {
+      while (!finished) {
+        finishLock.wait();
+      }
+    }
+    s.close();
+    s=null;
+    i2ps.close();
+    i2ps=null;
+    t1.join();
+    t2.join();
+  }
+ catch (  InterruptedException ex) {
+    _log.error("Interrupted",ex);
+  }
+catch (  IOException ex) {
+    ex.printStackTrace();
+    _log.error("Error forwarding",ex);
+  }
+ finally {
+    try {
+      if (s != null)       s.close();
+      if (i2ps != null)       i2ps.close();
+    }
+ catch (    IOException ex) {
+      ex.printStackTrace();
+      _log.error("Could not close socket",ex);
+    }
+  }
+}

@@ -1,0 +1,38 @@
+{
+  try {
+    FileInputStream fis=null;
+    boolean corrupt=false;
+    try {
+      fis=new FileInputStream(_leaseFile);
+      LeaseSet ls=new LeaseSet();
+      ls.readBytes(fis);
+      if (ls.isCurrent(Router.CLOCK_FUDGE_FACTOR)) {
+        _log.info("Reading in new LeaseSet: " + ls.getDestination().calculateHash());
+        accept(ls);
+      }
+ else {
+        _log.warn("Expired LeaseSet found for " + ls.getDestination().calculateHash() + ": Deleting");
+        corrupt=true;
+      }
+    }
+ catch (    DataFormatException dfe) {
+      _log.warn("Error reading the leaseSet from " + _leaseFile.getAbsolutePath(),dfe);
+      corrupt=true;
+    }
+catch (    FileNotFoundException fnfe) {
+      _log.debug("Deleted prior to read.. a race during expiration / load");
+      corrupt=false;
+    }
+ finally {
+      if (fis != null)       try {
+        fis.close();
+      }
+ catch (      IOException ioe) {
+      }
+    }
+    if (corrupt)     _leaseFile.delete();
+  }
+ catch (  IOException ioe) {
+    _log.warn("Error reading the leaseSet from " + _leaseFile.getAbsolutePath(),ioe);
+  }
+}

@@ -1,0 +1,18 @@
+{
+  long now=Clock.getInstance().now();
+  long expire=now - EXPIRE_BUFFER - Router.CLOCK_FUDGE_FACTOR;
+  for (Iterator iter=_pool.getFreeTunnels().iterator(); iter.hasNext(); ) {
+    TunnelId id=(TunnelId)iter.next();
+    TunnelInfo info=_pool.getFreeTunnel(id);
+    if ((info != null) && (info.getSettings() != null)) {
+      if (info.getSettings().getExpiration() < expire) {
+        _log.info("Expiring free inbound tunnel " + id + " ["+ new Date(info.getSettings().getExpiration())+ "] (expire = "+ new Date(expire)+ ")");
+        _pool.removeFreeTunnel(id);
+      }
+ else       if (info.getSettings().getExpiration() < now) {
+        _log.info("It is past the expiration for free inbound tunnel " + id + " but not yet the buffer, mark it as no longer ready");
+        info.setIsReady(false);
+      }
+    }
+  }
+}

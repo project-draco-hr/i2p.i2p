@@ -1,0 +1,33 @@
+{
+  File dir=new File(outDir);
+  if (!dir.exists())   dir.mkdirs();
+  int numSuccess=0;
+  for (int i=1; numSuccess < numRouters; i++) {
+    RouterInfo ri=createRouterInfo(i);
+    String hash=ri.getIdentity().getHash().toBase64();
+    if (!hash.startsWith("fwI")) {
+      System.out.print(".");
+      if ((i % 100) == 0)       System.out.println();
+      continue;
+    }
+    System.out.println("Router " + i + " created: \t"+ hash);
+    numSuccess++;
+    FileOutputStream fos=null;
+    try {
+      fos=new FileOutputStream(new File(dir,"routerInfo-" + hash + ".dat"));
+      ri.writeBytes(fos);
+    }
+ catch (    Exception e) {
+      System.err.println("Error writing router - " + e.getMessage());
+      e.printStackTrace();
+      return;
+    }
+ finally {
+      if (fos != null)       try {
+        fos.close();
+      }
+ catch (      Exception e) {
+      }
+    }
+  }
+}

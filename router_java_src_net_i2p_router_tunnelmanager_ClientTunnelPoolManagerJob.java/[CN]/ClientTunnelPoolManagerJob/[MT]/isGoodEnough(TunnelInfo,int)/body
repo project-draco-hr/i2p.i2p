@@ -1,0 +1,36 @@
+{
+  if (!info.getIsReady()) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Refusing tunnel " + info.getTunnelId() + " because it isn't ready");
+    return false;
+  }
+  long expireAfter=Clock.getInstance().now() + POOL_CHECK_DELAY + _tunnelPool.getTunnelCreationTimeout() * 2;
+  if (info.getSettings().getExpiration() <= expireAfter) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Refusing tunnel " + info.getTunnelId() + " because it is going to expire soon");
+    return false;
+  }
+  int length=info.getLength();
+  if (_clientPool.getClientSettings().getEnforceStrictMinimumLength()) {
+    if (length < _clientPool.getClientSettings().getDepthInbound()) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Refusing tunnel " + info.getTunnelId() + " because it is too short (length = "+ length+ ", wanted = "+ _clientPool.getClientSettings().getDepthInbound()+ ")");
+      return false;
+    }
+ else {
+    }
+  }
+ else {
+    if (length < _clientPool.getClientSettings().getDepthInbound() && (length < max)) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Refusing tunnel " + info.getTunnelId() + " because it is too short (length = "+ length+ ", wanted = "+ _clientPool.getClientSettings().getDepthInbound()+ ")");
+      return false;
+    }
+ else {
+    }
+  }
+  if (info.getDestination() != null) {
+    if (!_clientPool.getDestination().equals(info.getDestination())) {
+      if (_log.shouldLog(Log.INFO))       _log.info("Refusing tunnel " + info.getTunnelId() + " because it was requested specifically for another destination ["+ info.getDestination().calculateHash()+ "]");
+      return false;
+    }
+  }
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Accepting tunnel " + info.getTunnelId());
+  return true;
+}

@@ -1,0 +1,23 @@
+{
+  TunnelVerificationStructure vstruct=_message.getVerificationStructure();
+  if (vstruct == null) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Verification structure missing.  invalid");
+    return false;
+  }
+  if ((info.getVerificationKey() == null) || (info.getVerificationKey().getKey() == null)) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("wtf, no verification key for the tunnel? " + info,getAddedBy());
+    return false;
+  }
+  if (!vstruct.verifySignature(info.getVerificationKey().getKey())) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Received a tunnel message with an invalid signature!");
+    return false;
+  }
+  Hash msgHash=SHA256Generator.getInstance().calculateHash(_message.getData());
+  if (msgHash.equals(vstruct.getMessageHash())) {
+    return true;
+  }
+ else {
+    if (_log.shouldLog(Log.ERROR))     _log.error("validateMessage: Signed hash does not match real hash.  Data has been tampered with!");
+    return false;
+  }
+}

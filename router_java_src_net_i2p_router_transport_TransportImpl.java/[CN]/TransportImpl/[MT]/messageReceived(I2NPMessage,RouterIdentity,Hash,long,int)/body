@@ -1,0 +1,31 @@
+{
+  if (_log.shouldLog(Log.INFO)) {
+    StringBuffer buf=new StringBuffer(128);
+    buf.append("Message received: ").append(inMsg.getClass().getName());
+    buf.append(" in ").append(msToReceive).append("ms containing ").append(bytesReceived).append(" bytes ");
+    buf.append(" from ");
+    if (remoteIdentHash != null) {
+      buf.append(remoteIdentHash.toBase64());
+    }
+ else     if (remoteIdent != null) {
+      buf.append(remoteIdent.getHash().toBase64());
+    }
+ else {
+      buf.append("[unknown]");
+    }
+    buf.append(" and forwarding to listener: ");
+    if (_listener != null)     buf.append(_listener);
+    _log.info(buf.toString());
+  }
+  if (remoteIdent != null)   remoteIdentHash=remoteIdent.getHash();
+  if (remoteIdentHash != null) {
+    ProfileManager.getInstance().messageReceived(remoteIdentHash,getStyle(),msToReceive,bytesReceived);
+    StatManager.getInstance().addRateData("transport.receiveMessageSize",bytesReceived,msToReceive);
+  }
+  if (_listener != null) {
+    _listener.messageReceived(inMsg,remoteIdent,remoteIdentHash);
+  }
+ else {
+    if (_log.shouldLog(Log.ERROR))     _log.error("WTF! Null listener! this = " + toString(),new Exception("Null listener"));
+  }
+}

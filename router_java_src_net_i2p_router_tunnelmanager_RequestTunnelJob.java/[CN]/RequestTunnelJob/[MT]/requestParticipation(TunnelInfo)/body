@@ -1,0 +1,36 @@
+{
+  RouterInfo target=NetworkDatabaseFacade.getInstance().lookupRouterInfoLocally(participant.getThisHop());
+  if (target == null) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Error - no db info known for participant " + participant.getThisHop());
+    fail();
+    return;
+  }
+  if (target.getIdentity().getHash().equals(Router.getInstance().getRouterInfo().getIdentity().getHash())) {
+    okLocalParticipation(participant);
+    return;
+  }
+  TunnelId outboundTunnel=selectOutboundTunnel();
+  if (outboundTunnel == null) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("No outbound tunnels!  unable to request a new tunnel!");
+    fail();
+    return;
+  }
+  RouterInfo replyPeer=selectReplyPeer(participant);
+  if (replyPeer == null) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("No reply peers available!  unable to request a new tunnel!");
+    fail();
+    return;
+  }
+  TunnelGateway inboundGateway=selectInboundGateway(participant,replyPeer);
+  if (inboundGateway == null) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Unable to find an inbound gateway");
+    fail();
+    return;
+  }
+  SessionKey wrappedKey=new SessionKey();
+  Set wrappedTags=new HashSet(64);
+  PublicKey wrappedTo=new PublicKey();
+  RequestState state=new RequestState(wrappedKey,wrappedTags,wrappedTo,participant,inboundGateway,replyPeer,outboundTunnel,target);
+  Request r=new Request(state);
+  JobQueue.getInstance().addJob(r);
+}

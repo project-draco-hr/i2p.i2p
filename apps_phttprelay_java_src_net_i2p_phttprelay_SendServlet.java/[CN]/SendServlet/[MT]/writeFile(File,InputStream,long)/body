@@ -1,0 +1,30 @@
+{
+  long remaining=len;
+  FileOutputStream fos=null;
+  try {
+    fos=new FileOutputStream(file);
+    byte buf[]=new byte[4096];
+    while (remaining > 0) {
+      int read=in.read(buf);
+      if (read == -1)       break;
+      remaining-=read;
+      if (read > 0)       fos.write(buf,0,read);
+    }
+  }
+  finally {
+    if (fos != null) {
+      try {
+        fos.close();
+      }
+ catch (      IOException ioe) {
+      }
+    }
+    if (remaining != 0) {
+      log("Invalid remaining bytes [" + remaining + " out of "+ len+ "] - perhaps message was cancelled partway through delivery?  deleting "+ file.getAbsolutePath());
+      boolean deleted=file.delete();
+      if (!deleted)       log("!!!Error deleting temporary file " + file.getAbsolutePath());
+      return false;
+    }
+  }
+  return true;
+}

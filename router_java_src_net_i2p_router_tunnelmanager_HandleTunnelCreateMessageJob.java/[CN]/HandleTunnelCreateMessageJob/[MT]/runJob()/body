@@ -1,0 +1,29 @@
+{
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Handling tunnel create");
+  TunnelInfo info=new TunnelInfo();
+  info.setConfigurationKey(_message.getConfigurationKey());
+  info.setEncryptionKey(_message.getTunnelKey());
+  info.setNextHop(_message.getNextRouter());
+  TunnelSettings settings=new TunnelSettings();
+  settings.setBytesPerMinuteAverage(_message.getMaxAvgBytesPerMin());
+  settings.setBytesPerMinutePeak(_message.getMaxPeakBytesPerMin());
+  settings.setMessagesPerMinuteAverage(_message.getMaxAvgMessagesPerMin());
+  settings.setMessagesPerMinutePeak(_message.getMaxPeakMessagesPerMin());
+  settings.setExpiration(_message.getTunnelDurationSeconds() * 1000 + Clock.getInstance().now());
+  settings.setIncludeDummy(_message.getIncludeDummyTraffic());
+  settings.setReorder(_message.getReorderMessages());
+  info.setSettings(settings);
+  info.setSigningKey(_message.getVerificationPrivateKey());
+  info.setThisHop(Router.getInstance().getRouterInfo().getIdentity().getHash());
+  info.setTunnelId(_message.getTunnelId());
+  info.setVerificationKey(_message.getVerificationPublicKey());
+  info.getTunnelId().setType(TunnelId.TYPE_PARTICIPANT);
+  if (_message.getNextRouter() == null) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("We're the endpoint, don't test the \"next\" peer [duh]");
+    boolean ok=TunnelManagerFacade.getInstance().joinTunnel(info);
+    sendReply(ok);
+  }
+ else {
+    NetworkDatabaseFacade.getInstance().lookupRouterInfo(info.getNextHop(),new TestJob(info),new JoinJob(info,false),TIMEOUT);
+  }
+}

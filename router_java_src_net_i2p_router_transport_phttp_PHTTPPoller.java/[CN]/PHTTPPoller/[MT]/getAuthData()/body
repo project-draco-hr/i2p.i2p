@@ -1,0 +1,27 @@
+{
+  try {
+    ByteArrayOutputStream baos=new ByteArrayOutputStream(4);
+    long nonce=RandomSource.getInstance().nextInt(Integer.MAX_VALUE);
+    _log.debug("Creating nonce with value [" + nonce + "]");
+    DataHelper.writeLong(baos,4,nonce);
+    byte nonceData[]=baos.toByteArray();
+    Signature sig=DSAEngine.getInstance().sign(nonceData,_transport.getMySigningKey());
+    baos=new ByteArrayOutputStream(512);
+    DataHelper.writeLong(baos,4,nonce);
+    sig.writeBytes(baos);
+    byte data[]=baos.toByteArray();
+    return data;
+  }
+ catch (  NumberFormatException nfe) {
+    _log.error("Error writing the authentication data",nfe);
+    return null;
+  }
+catch (  DataFormatException dfe) {
+    _log.error("Error formatting the authentication data",dfe);
+    return null;
+  }
+catch (  IOException ioe) {
+    _log.error("Error writing the authentication data",ioe);
+    return null;
+  }
+}

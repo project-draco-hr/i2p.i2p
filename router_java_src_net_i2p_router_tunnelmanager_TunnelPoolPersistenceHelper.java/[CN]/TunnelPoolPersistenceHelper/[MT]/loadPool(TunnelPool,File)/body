@@ -1,0 +1,49 @@
+{
+  if (!f.exists())   return;
+  FileInputStream fin=null;
+  try {
+    fin=new FileInputStream(f);
+    int numFree=(int)DataHelper.readLong(fin,2);
+    for (int i=0; i < numFree; i++) {
+      TunnelInfo info=new TunnelInfo();
+      info.readBytes(fin);
+      pool.addFreeTunnel(info);
+    }
+    int numOut=(int)DataHelper.readLong(fin,2);
+    for (int i=0; i < numOut; i++) {
+      TunnelInfo info=new TunnelInfo();
+      info.readBytes(fin);
+      pool.addOutboundTunnel(info);
+    }
+    int numParticipating=(int)DataHelper.readLong(fin,2);
+    for (int i=0; i < numParticipating; i++) {
+      TunnelInfo info=new TunnelInfo();
+      info.readBytes(fin);
+      pool.addParticipatingTunnel(info);
+    }
+    int numPending=(int)DataHelper.readLong(fin,2);
+    for (int i=0; i < numPending; i++) {
+      TunnelInfo info=new TunnelInfo();
+      info.readBytes(fin);
+      pool.addPendingTunnel(info);
+    }
+    int numClients=(int)DataHelper.readLong(fin,2);
+    for (int i=0; i < numClients; i++) {
+      readClientPool(fin,pool);
+    }
+  }
+ catch (  IOException ioe) {
+    _log.error("Error reading tunnel pool from " + f.getName(),ioe);
+  }
+catch (  DataFormatException dfe) {
+    _log.error("Error formatting tunnels from " + f.getName(),dfe);
+  }
+ finally {
+    if (fin != null)     try {
+      fin.close();
+    }
+ catch (    IOException ioe) {
+    }
+    _log.debug("Tunnel pool state written to " + f.getName());
+  }
+}

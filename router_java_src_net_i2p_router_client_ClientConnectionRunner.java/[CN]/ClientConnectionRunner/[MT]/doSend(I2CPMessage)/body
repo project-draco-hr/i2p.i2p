@@ -1,0 +1,29 @@
+{
+  if (_out == null)   throw new I2CPMessageException("Output stream is not initialized");
+  long before=Clock.getInstance().now();
+  try {
+synchronized (_out) {
+      msg.writeMessage(_out);
+      _out.flush();
+    }
+  }
+ catch (  I2CPMessageException ime) {
+    _log.error("Message exception sending I2CP message",ime);
+    throw ime;
+  }
+catch (  IOException ioe) {
+    _log.error("IO exception sending I2CP message",ioe);
+    throw ioe;
+  }
+catch (  Throwable t) {
+    _log.log(Log.CRIT,"Unhandled exception sending I2CP message",t);
+    throw new IOException("Unhandled exception sending I2CP message: " + t.getMessage());
+  }
+ finally {
+    long after=Clock.getInstance().now();
+    long lag=after - before;
+    if (lag > 300) {
+      _log.error("synchronization on the i2cp message send took too long (" + lag + "ms): "+ msg,new Exception("I2CP Lag"));
+    }
+  }
+}

@@ -1,0 +1,23 @@
+{
+  long now=Clock.getInstance().now();
+  long numMinutes=((now - _lastResync) / MINUTE) + 1;
+  _availableReceive+=numMinutes * _maxReceiveBytesPerMinute;
+  _availableSend+=numMinutes * _maxSendBytesPerMinute;
+  _lastResync=now;
+  _log.debug("Adding " + (numMinutes * _maxReceiveBytesPerMinute) + " bytes to availableReceive");
+  _log.debug("Adding " + (numMinutes * _maxSendBytesPerMinute) + " bytes to availableSend");
+  if (_availableReceive > MAX_IN_POOL) {
+    _log.debug("Trimming available receive to " + MAX_IN_POOL);
+    _availableReceive=MAX_IN_POOL;
+  }
+  if (_availableSend > MAX_OUT_POOL) {
+    _log.debug("Trimming available send to " + MAX_OUT_POOL);
+    _availableSend=MAX_OUT_POOL;
+  }
+  getTiming().setStartAfter(now + MINUTE);
+  JobQueue.getInstance().addJob(UpdateBWJob.this);
+  if (now > _lastReadConfig + READ_CONFIG_DELAY) {
+    updateLimits();
+    _lastReadConfig=now;
+  }
+}

@@ -1,0 +1,46 @@
+{
+  if ((name == null) || (name.trim().length() <= 0))   throw new DataFormatException("Empty destination provided");
+  if (name.startsWith("file:")) {
+    Destination result=new Destination();
+    byte content[]=null;
+    FileInputStream in=null;
+    try {
+      in=new FileInputStream(name.substring("file:".length()));
+      byte buf[]=new byte[1024];
+      int read=DataHelper.read(in,buf);
+      content=new byte[read];
+      System.arraycopy(buf,0,content,0,read);
+    }
+ catch (    IOException ioe) {
+      System.out.println(ioe.getMessage());
+      return null;
+    }
+ finally {
+      if (in != null)       try {
+        in.close();
+      }
+ catch (      IOException io) {
+      }
+    }
+    try {
+      result.fromByteArray(content);
+      return result;
+    }
+ catch (    Exception ex) {
+      if (_log.shouldLog(Log.INFO))       _log.info("File is not a binary destination - trying base64");
+      try {
+        byte decoded[]=Base64.decode(new String(content));
+        result.fromByteArray(decoded);
+        return result;
+      }
+ catch (      DataFormatException dfe) {
+        if (_log.shouldLog(Log.WARN))         _log.warn("File is not a base64 destination either - failing!");
+        return null;
+      }
+    }
+  }
+ else {
+    NamingService inst=NamingService.getInstance();
+    return inst.lookup(name);
+  }
+}

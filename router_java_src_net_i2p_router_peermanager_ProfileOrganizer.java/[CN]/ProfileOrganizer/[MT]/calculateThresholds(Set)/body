@@ -1,0 +1,25 @@
+{
+  double totalReliability=0;
+  int numActive=0;
+  for (Iterator iter=allPeers.iterator(); iter.hasNext(); ) {
+    PeerProfile profile=(PeerProfile)iter.next();
+    if (_us.equals(profile.getPeer()))     continue;
+    if ((!profile.getIsActive()) || (profile.getIsFailing()))     continue;
+    numActive++;
+    if (profile.getReliabilityValue() > 0)     totalReliability+=profile.getReliabilityValue();
+  }
+  _thresholdReliabilityValue=0.5d * avg(totalReliability,numActive);
+  numActive=0;
+  double totalIntegration=0;
+  double totalSpeed=0;
+  for (Iterator iter=allPeers.iterator(); iter.hasNext(); ) {
+    PeerProfile profile=(PeerProfile)iter.next();
+    if (_us.equals(profile.getPeer()))     continue;
+    if ((!profile.getIsActive()) || (profile.getReliabilityValue() < _thresholdReliabilityValue) || (profile.getIsFailing()))     continue;
+    numActive++;
+    if (profile.getIntegrationValue() > 0)     totalIntegration+=profile.getIntegrationValue();
+    if (profile.getSpeedValue() > 0)     totalSpeed+=profile.getSpeedValue();
+  }
+  _thresholdIntegrationValue=1.0d * avg(totalIntegration,numActive);
+  _thresholdSpeedValue=1.0d * avg(totalSpeed,numActive);
+}

@@ -1,0 +1,25 @@
+{
+  Properties stats=new Properties();
+  stats.setProperty("router.version",RouterVersion.VERSION);
+  stats.setProperty("router.id",RouterVersion.ID);
+  stats.setProperty("coreVersion",CoreVersion.VERSION);
+  stats.setProperty("core.id",CoreVersion.ID);
+  if (_includePeerRankings) {
+    stats.putAll(ProfileManager.getInstance().summarizePeers(_publishedStats));
+    includeRate("transport.sendProcessingTime",stats);
+    includeRate("tcp.queueSize",stats);
+    includeRate("jobQueue.jobLag",stats);
+    includeRate("jobQueue.jobRun",stats);
+    includeRate("crypto.elGamal.encrypt",stats);
+    includeRate("jobQueue.readyJobs",stats);
+    includeRate("jobQueue.droppedJobs",stats);
+    stats.setProperty("stat_uptime",DataHelper.formatDuration(Router.getInstance().getUptime()));
+    stats.setProperty("stat__rateKey","avg;maxAvg;pctLifetime;[sat;satLim;maxSat;maxSatLim;][num;lifetimeFreq;maxFreq]");
+    _log.debug("Publishing peer rankings");
+  }
+ else {
+    _log.debug("Not publishing peer rankings");
+  }
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Building status: " + stats);
+  return stats;
+}

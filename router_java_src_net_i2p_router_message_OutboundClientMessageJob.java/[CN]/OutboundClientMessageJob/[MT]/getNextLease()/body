@@ -1,0 +1,45 @@
+{
+  LeaseSet ls=_status.getLeaseSet();
+  if (ls == null) {
+    ls=NetworkDatabaseFacade.getInstance().lookupLeaseSetLocally(_status.getTo().calculateHash());
+    if (ls == null) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Lookup locally didn't find the leaseSet");
+      return null;
+    }
+ else {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Lookup locally DID find the leaseSet");
+    }
+    _status.setLeaseSet(ls);
+  }
+  long now=Clock.getInstance().now();
+  List leases=new ArrayList(4);
+  for (int i=0; i < ls.getLeaseCount(); i++) {
+    Lease lease=ls.getLease(i);
+    if (lease.isExpired(Router.CLOCK_FUDGE_FACTOR)) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("getNextLease() - expired lease! - " + lease);
+      continue;
+    }
+    if (!_status.alreadySent(lease.getRouterIdentity().getHash(),lease.getTunnelId())) {
+      leases.add(lease);
+    }
+ else {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("getNextLease() - skipping lease we've already sent it down - " + lease);
+    }
+  }
+  Collections.shuffle(leases);
+  TreeMap orderedLeases=new TreeMap();
+  for (Iterator iter=leases.iterator(); iter.hasNext(); ) {
+    Lease lease=(Lease)iter.next();
+    long id=lease.getNumFailure();
+    while (orderedLeases.containsKey(new Long(id)))     id++;
+    orderedLeases.put(new Long(id),lease);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("getNextLease() - ranking lease we havent sent it down as " + id);
+  }
+  if (orderedLeases.size() <= 0) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("No leases in the ordered set found! all = " + leases.size());
+    return null;
+  }
+ else {
+    return (Lease)orderedLeases.get(orderedLeases.firstKey());
+  }
+}

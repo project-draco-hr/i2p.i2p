@@ -1,0 +1,65 @@
+{
+  int socksVer=in.readByte() & 0xff;
+  if (socksVer != SOCKS_VERSION_5) {
+    _log.debug("error in SOCKS5 request (protocol != 5? wtf?)");
+    throw new SOCKSException("Invalid protocol version in request");
+  }
+  int command=in.readByte() & 0xff;
+switch (command) {
+case Command.CONNECT:
+    break;
+case Command.BIND:
+  _log.debug("BIND command is not supported!");
+sendRequestReply(Reply.COMMAND_NOT_SUPPORTED,AddressType.DOMAINNAME,null,"0.0.0.0",0,out);
+throw new SOCKSException("BIND command not supported");
+case Command.UDP_ASSOCIATE:
+_log.debug("UDP ASSOCIATE command is not supported!");
+sendRequestReply(Reply.COMMAND_NOT_SUPPORTED,AddressType.DOMAINNAME,null,"0.0.0.0",0,out);
+throw new SOCKSException("UDP ASSOCIATE command not supported");
+default :
+_log.debug("unknown command in request (" + Integer.toHexString(command) + ")");
+throw new SOCKSException("Invalid command in request");
+}
+{
+byte rsv=in.readByte();
+}
+int addressType=in.readByte() & 0xff;
+switch (addressType) {
+case AddressType.IPV4:
+connHostName=new String("");
+for (int i=0; i < 4; ++i) {
+int octet=in.readByte() & 0xff;
+connHostName+=Integer.toString(octet);
+if (i != 3) {
+connHostName+=".";
+}
+}
+_log.warn("IPV4 address type in request: " + connHostName + ". Is your client secure?");
+break;
+case AddressType.DOMAINNAME:
+{
+int addrLen=in.readByte() & 0xff;
+if (addrLen == 0) {
+_log.debug("0-sized address length? wtf?");
+throw new SOCKSException("Illegal DOMAINNAME length");
+}
+byte addr[]=new byte[addrLen];
+in.readFully(addr);
+connHostName=new String(addr);
+}
+_log.debug("DOMAINNAME address type in request: " + connHostName);
+break;
+case AddressType.IPV6:
+_log.warn("IP V6 address type in request! Is your client secure?" + " (IPv6 is not supported, anyway :-)");
+sendRequestReply(Reply.ADDRESS_TYPE_NOT_SUPPORTED,AddressType.DOMAINNAME,null,"0.0.0.0",0,out);
+throw new SOCKSException("IPV6 addresses not supported");
+default :
+_log.debug("unknown address type in request (" + Integer.toHexString(command) + ")");
+throw new SOCKSException("Invalid addresses type in request");
+}
+connPort=in.readUnsignedShort();
+if (connPort == 0) {
+_log.debug("trying to connect to TCP port 0?  Dropping!");
+throw new SOCKSException("Invalid port number in request");
+}
+}

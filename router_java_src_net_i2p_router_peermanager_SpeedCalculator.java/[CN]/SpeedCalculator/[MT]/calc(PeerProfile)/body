@@ -1,0 +1,12 @@
+{
+  double dbResponseTime=profile.getDbResponseTime().getRate(60 * 1000).getLifetimeAverageValue();
+  double tunnelResponseTime=profile.getTunnelCreateResponseTime().getRate(60 * 1000).getLifetimeAverageValue();
+  double roundTripRate=Math.max(dbResponseTime,tunnelResponseTime);
+  double sendRate=calcSendRate(profile);
+  double receiveRate=calcReceiveRate(profile);
+  double val=60000.0d - 0.1 * roundTripRate + sendRate + receiveRate;
+  if ((roundTripRate == 0.0d) && (sendRate == 0.0d))   val=0.0;
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("roundTripRate: " + roundTripRate + "ms sendRate: "+ sendRate+ "bytes/second, receiveRate: "+ receiveRate+ "bytes/second, val: "+ val+ " for "+ profile.getPeer().toBase64());
+  val+=profile.getSpeedBonus();
+  return val;
+}

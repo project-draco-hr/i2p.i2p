@@ -1,0 +1,37 @@
+{
+  if (_socket == null) {
+    _log.error("Unable to start listening, since the socket was not bound.  Already running?");
+    return;
+  }
+  _log.debug("Running");
+  try {
+    while (_keepAccepting) {
+      Socket socket=_socket.accept();
+      _log.debug("Client accepted");
+      if (socket != null) {
+        Thread t=new I2PThread(new TunnelManagerClientRunner(this,socket));
+        t.setName("TunnelManager Client");
+        t.setPriority(I2PThread.MIN_PRIORITY);
+        t.start();
+      }
+    }
+  }
+ catch (  IOException ioe) {
+    _log.error("Error accepting connections",ioe);
+  }
+catch (  Exception e) {
+    _log.error("Other error?!",e);
+  }
+ finally {
+    if (_socket != null)     try {
+      _socket.close();
+    }
+ catch (    IOException ioe) {
+    }
+  }
+  try {
+    Thread.sleep(5000);
+  }
+ catch (  InterruptedException ie) {
+  }
+}

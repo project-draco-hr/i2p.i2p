@@ -1,0 +1,25 @@
+{
+  if (_log.shouldLog(Log.INFO))   _log.info("Connection closed with " + con.getRemoteRouterIdentity());
+  StringBuffer buf=new StringBuffer(256);
+  buf.append("Still connected to: ");
+synchronized (_connections) {
+    List cons=(List)_connections.get(con.getRemoteRouterIdentity());
+    if ((cons != null) && (cons.size() > 0)) {
+      cons.remove(con);
+      long lifetime=con.getLifetime();
+      if (_log.shouldLog(Log.INFO))       _log.info("Connection closed (with remaining) after lifetime " + lifetime);
+      StatManager.getInstance().addRateData("tcp.connectionLifetime",lifetime,0);
+    }
+    Set toRemove=new HashSet();
+    for (Iterator iter=_connections.keySet().iterator(); iter.hasNext(); ) {
+      RouterIdentity ident=(RouterIdentity)iter.next();
+      List all=(List)_connections.get(ident);
+      if (all.size() > 0)       buf.append(ident.getHash().toBase64()).append(" ");
+ else       toRemove.add(ident);
+    }
+    for (Iterator iter=toRemove.iterator(); iter.hasNext(); ) {
+      _connections.remove(iter.next());
+    }
+  }
+  if (_log.shouldLog(Log.INFO))   _log.info(buf.toString());
+}

@@ -1,0 +1,14 @@
+{
+  long now=Clock.getInstance().now();
+  long expire=now - EXPIRE_BUFFER - Router.CLOCK_FUDGE_FACTOR;
+  for (Iterator iter=_pool.getPendingTunnels().iterator(); iter.hasNext(); ) {
+    TunnelId id=(TunnelId)iter.next();
+    TunnelInfo info=_pool.getPendingTunnel(id);
+    if ((info != null) && (info.getSettings() != null)) {
+      if (info.getSettings().getExpiration() < expire) {
+        _log.info("Expiring pending tunnel " + id + " ["+ new Date(info.getSettings().getExpiration())+ "]");
+        _pool.removePendingTunnel(id);
+      }
+    }
+  }
+}

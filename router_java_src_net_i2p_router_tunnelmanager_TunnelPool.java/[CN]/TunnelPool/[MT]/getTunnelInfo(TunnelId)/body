@@ -1,0 +1,33 @@
+{
+  if (!_isLive)   return null;
+  if (id == null)   return null;
+  boolean typeKnown=id.getType() != TunnelId.TYPE_UNSPECIFIED;
+  if ((!typeKnown) || (id.getType() == TunnelId.TYPE_PARTICIPANT)) {
+synchronized (_participatingTunnels) {
+      if (_participatingTunnels.containsKey(id))       return (TunnelInfo)_participatingTunnels.get(id);
+    }
+  }
+  if ((!typeKnown) || (id.getType() == TunnelId.TYPE_OUTBOUND)) {
+synchronized (_outboundTunnels) {
+      if (_outboundTunnels.containsKey(id))       return (TunnelInfo)_outboundTunnels.get(id);
+    }
+  }
+  if ((!typeKnown) || (id.getType() == TunnelId.TYPE_INBOUND)) {
+synchronized (_freeInboundTunnels) {
+      if (_freeInboundTunnels.containsKey(id))       return (TunnelInfo)_freeInboundTunnels.get(id);
+    }
+  }
+synchronized (_pendingTunnels) {
+    if (_pendingTunnels.containsKey(id))     return (TunnelInfo)_pendingTunnels.get(id);
+  }
+  if ((!typeKnown) || (id.getType() == TunnelId.TYPE_INBOUND)) {
+synchronized (_clientPools) {
+      for (Iterator iter=_clientPools.values().iterator(); iter.hasNext(); ) {
+        ClientTunnelPool pool=(ClientTunnelPool)iter.next();
+        if (pool.isInboundTunnel(id))         return pool.getInboundTunnel(id);
+ else         if (pool.isInactiveInboundTunnel(id))         return pool.getInactiveInboundTunnel(id);
+      }
+    }
+  }
+  return null;
+}

@@ -1,0 +1,26 @@
+{
+synchronized (_reorganizeLock) {
+    Set allPeers=new HashSet(_failingPeers.size() + _notFailingPeers.size() + _reliablePeers.size()+ _fastAndReliablePeers.size());
+    allPeers.addAll(_failingPeers.values());
+    allPeers.addAll(_notFailingPeers.values());
+    allPeers.addAll(_reliablePeers.values());
+    allPeers.addAll(_fastAndReliablePeers.values());
+    _failingPeers.clear();
+    _notFailingPeers.clear();
+    _reliablePeers.clear();
+    _fastAndReliablePeers.clear();
+    calculateThresholds(allPeers);
+    for (Iterator iter=allPeers.iterator(); iter.hasNext(); ) {
+      PeerProfile profile=(PeerProfile)iter.next();
+      locked_placeProfile(profile);
+    }
+    Set reordered=new TreeSet(InverseReliabilityComparator._comparator);
+    reordered.addAll(_strictReliabilityOrder);
+    _strictReliabilityOrder=reordered;
+    locked_unfailAsNecessary();
+  }
+  if (_log.shouldLog(Log.DEBUG)) {
+    _log.debug("Profiles reorganized.  averages: [integration: " + _thresholdIntegrationValue + ", reliability: "+ _thresholdReliabilityValue+ ", speed: "+ _thresholdSpeedValue+ "]");
+    _log.debug("Strictly organized: " + _strictReliabilityOrder);
+  }
+}

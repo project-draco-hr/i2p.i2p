@@ -1,0 +1,46 @@
+{
+  _running=true;
+  int curDelay=0;
+  while ((_running) && (curDelay < MAX_FAIL_DELAY)) {
+    try {
+      _log.info("Starting up listening for connections on port " + _port);
+      _socket=new ServerSocket(_port);
+      curDelay=0;
+      while (_running) {
+        try {
+          Socket socket=_socket.accept();
+          _log.debug("Connection received");
+          runConnection(socket);
+        }
+ catch (        IOException ioe) {
+          _log.error("Server error accepting",ioe);
+        }
+catch (        Throwable t) {
+          _log.error("Fatal error running client listener - killing the thread!",t);
+          return;
+        }
+      }
+    }
+ catch (    IOException ioe) {
+      _log.error("Error listening on port " + _port,ioe);
+    }
+    if (_socket != null) {
+      try {
+        _socket.close();
+      }
+ catch (      IOException ioe) {
+      }
+      _socket=null;
+    }
+    _log.error("Error listening, waiting " + _nextFailDelay + "ms before we try again");
+    try {
+      Thread.sleep(_nextFailDelay);
+    }
+ catch (    InterruptedException ie) {
+    }
+    curDelay+=_nextFailDelay;
+    _nextFailDelay*=5;
+  }
+  _log.error("CANCELING ADMIN LISTENER.  delay = " + curDelay,new Exception("ADMIN LISTENER cancelled!!!"));
+  _running=false;
+}

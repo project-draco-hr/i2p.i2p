@@ -1,0 +1,32 @@
+{
+  BigInteger myPub=_builder.getMyPublicValue();
+  try {
+    _socket.setSoTimeout(ESTABLISHMENT_TIMEOUT);
+    exchangeKey();
+    boolean ok=identifyStationToStation();
+    if (!ok)     throw new DataFormatException("Station to station identification failed!  MITM?");
+ else {
+      if (_log.shouldLog(Log.INFO))       _log.info("TCP connection " + _id + " established with "+ _remoteIdentity.getHash().toBase64());
+      _in=new AESInputStream(new BandwidthLimitedInputStream(_in,_remoteIdentity),_key,_iv);
+      _out=new AESOutputStream(new BandwidthLimitedOutputStream(_out,_remoteIdentity),_key,_iv);
+      _socket.setSoTimeout(0);
+      established();
+      return _remoteIdentity;
+    }
+  }
+ catch (  IOException ioe) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Error establishing connection",ioe);
+    closeConnection();
+    return null;
+  }
+catch (  DataFormatException dfe) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Error establishing connection",dfe);
+    closeConnection();
+    return null;
+  }
+catch (  Throwable t) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("jrandom is paranoid so we're catching it all during establishConnection",t);
+    closeConnection();
+    return null;
+  }
+}

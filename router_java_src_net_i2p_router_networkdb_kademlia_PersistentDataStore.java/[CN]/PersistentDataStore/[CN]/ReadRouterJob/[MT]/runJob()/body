@@ -1,0 +1,34 @@
+{
+  try {
+    FileInputStream fis=null;
+    boolean corrupt=false;
+    try {
+      fis=new FileInputStream(_routerFile);
+      RouterInfo ri=new RouterInfo();
+      ri.readBytes(fis);
+      if (ri.isValid()) {
+        _log.info("Reading in new RouterInfo: " + ri.getIdentity().getHash());
+        accept(ri);
+      }
+ else {
+        _log.warn("Invalid routerInfo found for " + ri.getIdentity().getHash() + ": "+ ri);
+        corrupt=true;
+      }
+    }
+ catch (    DataFormatException dfe) {
+      _log.warn("Error reading the routerInfo from " + _routerFile.getAbsolutePath(),dfe);
+      corrupt=true;
+    }
+ finally {
+      if (fis != null)       try {
+        fis.close();
+      }
+ catch (      IOException ioe) {
+      }
+    }
+    if (corrupt)     _routerFile.delete();
+  }
+ catch (  IOException ioe) {
+    _log.warn("Error reading the RouterInfo from " + _routerFile.getAbsolutePath(),ioe);
+  }
+}

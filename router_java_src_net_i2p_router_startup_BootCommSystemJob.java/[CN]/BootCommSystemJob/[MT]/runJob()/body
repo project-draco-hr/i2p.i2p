@@ -1,0 +1,20 @@
+{
+  CommSystemFacade.getInstance().startup();
+  TunnelManagerFacade.getInstance().startup();
+  PeerManagerFacade.getInstance().startup();
+  Job bootDb=new BootNetworkDbJob();
+  boolean useTrusted=false;
+  String useTrustedStr=Router.getInstance().getConfigSetting(PROP_USE_TRUSTED_LINKS);
+  if (useTrustedStr != null) {
+    useTrusted=Boolean.TRUE.toString().equalsIgnoreCase(useTrustedStr);
+  }
+  if (useTrusted) {
+    _log.debug("Using trusted links...");
+    JobQueue.getInstance().addJob(new BuildTrustedLinksJob(bootDb));
+    return;
+  }
+ else {
+    _log.debug("Not using trusted links - boot db");
+    JobQueue.getInstance().addJob(bootDb);
+  }
+}

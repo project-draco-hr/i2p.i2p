@@ -1,0 +1,21 @@
+{
+  if ((!forceReinitialize) && (_instance != null))   return;
+  if (Router.getInstance().getRouterInfo() == null) {
+    ReinitializeJob j=ReinitializeJob.getInstance();
+    j.getTiming().setStartAfter(Clock.getInstance().now() + 5000);
+    JobQueue.getInstance().addJob(j);
+  }
+ else {
+    String filename=null;
+    filename=Router.getInstance().getConfigSetting(PROP_MESSAGE_HISTORY_FILENAME);
+    if ((filename == null) || (filename.trim().length() <= 0))     filename=DEFAULT_MESSAGE_HISTORY_FILENAME;
+    MessageHistory hist=new MessageHistory(Router.getInstance().getRouterInfo().getIdentity().getHash(),filename);
+    setInstance(hist);
+    hist.updateSettings();
+    getInstance().addEntry(getInstance().getPrefix() + "** Router initialized (started up or changed identities)");
+    JobQueue.getInstance().addJob(new WriteJob());
+    SubmitMessageHistoryJob histJob=new SubmitMessageHistoryJob();
+    histJob.getTiming().setStartAfter(Clock.getInstance().now() + 2 * 60 * 1000);
+    JobQueue.getInstance().addJob(histJob);
+  }
+}

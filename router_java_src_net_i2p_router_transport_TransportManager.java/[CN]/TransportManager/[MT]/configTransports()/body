@@ -1,0 +1,27 @@
+{
+  RouterIdentity ident=Router.getInstance().getRouterInfo().getIdentity();
+  Set addresses=CommSystemFacade.getInstance().createAddresses();
+  RouterAddress tcpAddr=null;
+  RouterAddress phttpAddr=null;
+  for (Iterator iter=addresses.iterator(); iter.hasNext(); ) {
+    RouterAddress addr=(RouterAddress)iter.next();
+    if (TCPTransport.STYLE.equals(addr.getTransportStyle())) {
+      tcpAddr=addr;
+    }
+    if (PHTTPTransport.STYLE.equals(addr.getTransportStyle())) {
+      phttpAddr=addr;
+    }
+  }
+  String disableTCP=Router.getInstance().getConfigSetting(PROP_DISABLE_TCP);
+  if ((disableTCP != null) && (Boolean.TRUE.toString().equalsIgnoreCase(disableTCP))) {
+    _log.info("Explicitly disabling the TCP transport!");
+  }
+ else {
+    Transport t=new TCPTransport(ident,_myIdentitySigningKey,tcpAddr);
+    t.setListener(this);
+    _transports.add(t);
+  }
+  Transport t=new PHTTPTransport(ident,_myIdentitySigningKey,phttpAddr);
+  t.setListener(this);
+  _transports.add(t);
+}

@@ -1,0 +1,32 @@
+{
+  long now=Clock.getInstance().now();
+  if (_expiration == 0)   _expiration=now + DEFAULT_TIMEOUT;
+  if (_expiration - 30 * 1000 < now) {
+    _log.info("Soon to expire sendDirect of " + _message.getClass().getName() + " [expiring in "+ (_expiration - now)+ "]",getAddedBy());
+  }
+  if (_expiration < now) {
+    _log.warn("Timed out sending message " + _message + " directly (expiration = "+ new Date(_expiration)+ ") to "+ _targetHash.toBase64(),getAddedBy());
+    return;
+  }
+  if (_router != null) {
+    _log.debug("Router specified, sending");
+    send();
+  }
+ else {
+    _router=NetworkDatabaseFacade.getInstance().lookupRouterInfoLocally(_targetHash);
+    if (_router != null) {
+      _log.debug("Router not specified but lookup found it");
+      send();
+    }
+ else {
+      if (!_alreadySearched) {
+        _log.debug("Router not specified, so we're looking for it...");
+        NetworkDatabaseFacade.getInstance().lookupRouterInfo(_targetHash,this,this,_expiration - Clock.getInstance().now());
+        _alreadySearched=true;
+      }
+ else {
+        _log.error("Unable to find the router to send to: " + _targetHash + " message: "+ _message,getAddedBy());
+      }
+    }
+  }
+}

@@ -1,0 +1,26 @@
+{
+  ByteArrayOutputStream reps=new ByteArrayOutputStream();
+  DataOutputStream dreps=new DataOutputStream(reps);
+  dreps.write(SOCKS_VERSION_5);
+  dreps.write(replyCode);
+  dreps.write(0x00);
+  dreps.write(addressType);
+switch (addressType) {
+case AddressType.IPV4:
+    dreps.write(inetAddr.getAddress());
+  break;
+case AddressType.DOMAINNAME:
+dreps.writeByte(domainName.length());
+dreps.writeBytes(domainName);
+break;
+default :
+_log.error("unknown address type passed to sendReply() (" + Integer.toHexString(addressType) + ")! wtf?");
+return;
+}
+dreps.writeShort(bindPort);
+byte[] reply=reps.toByteArray();
+if (_log.shouldLog(Log.DEBUG)) {
+_log.debug("Sending request reply:\n" + HexDump.dump(reply));
+}
+out.write(reply);
+}

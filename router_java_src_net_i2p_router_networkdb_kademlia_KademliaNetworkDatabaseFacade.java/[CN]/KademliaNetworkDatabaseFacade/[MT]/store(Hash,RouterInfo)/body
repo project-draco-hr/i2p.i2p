@@ -1,0 +1,33 @@
+{
+  long start=Clock.getInstance().now();
+  if (!_initialized)   return null;
+  if (!key.equals(routerInfo.getIdentity().getHash())) {
+    _log.error("Invalid store attempt! key does not match routerInfo.identity!  key = " + key + ", router = "+ routerInfo);
+    return null;
+  }
+ else   if (!routerInfo.isValid()) {
+    _log.error("Invalid routerInfo signature!  forged router structure!  router = " + routerInfo);
+    return null;
+  }
+ else   if (!routerInfo.isCurrent(ExpireRoutersJob.EXPIRE_DELAY)) {
+    int existing=_kb.size();
+    if (existing >= MIN_REMAINING_ROUTERS) {
+      _log.info("Not storing expired router for " + key.toBase64());
+      return null;
+    }
+ else {
+      _log.warn("Even though the peer is old, we have only " + existing + " peers left (curPeer: "+ key.toBase64()+ " published on "+ new Date(routerInfo.getPublished()));
+    }
+  }
+  RouterInfo rv=null;
+  if (_ds.isKnown(key))   rv=(RouterInfo)_ds.get(key);
+  if (_log.shouldLog(Log.INFO))   _log.info("RouterInfo " + key.toBase64() + " is stored with "+ routerInfo.getOptions().size()+ " options on "+ new Date(routerInfo.getPublished()));
+  _ds.put(key,routerInfo);
+synchronized (_lastSent) {
+    if (!_lastSent.containsKey(key))     _lastSent.put(key,new Long(0));
+  }
+  _kb.add(key);
+  long end=Clock.getInstance().now();
+  _log.debug("Store routerInfo took [" + (end - start) + "ms]");
+  return rv;
+}

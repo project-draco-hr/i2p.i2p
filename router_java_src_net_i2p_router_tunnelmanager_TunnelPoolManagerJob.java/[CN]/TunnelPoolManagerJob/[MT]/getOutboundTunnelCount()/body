@@ -1,0 +1,18 @@
+{
+  Set outboundTunnels=_pool.getOutboundTunnels();
+  int outbound=0;
+  long mustExpireAfter=Clock.getInstance().now() + EXPIRE_FUDGE_PERIOD;
+  for (Iterator iter=outboundTunnels.iterator(); iter.hasNext(); ) {
+    TunnelId id=(TunnelId)iter.next();
+    TunnelInfo info=_pool.getOutboundTunnel(id);
+    if ((info != null) && (info.getIsReady())) {
+      if (info.getSettings().getExpiration() > mustExpireAfter) {
+        outbound++;
+      }
+ else {
+        _log.info("Outbound tunnel " + id + " is expiring in the upcoming period, consider it not-free");
+      }
+    }
+  }
+  return outbound;
+}

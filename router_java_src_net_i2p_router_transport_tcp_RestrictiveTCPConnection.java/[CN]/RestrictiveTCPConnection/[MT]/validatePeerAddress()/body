@@ -1,0 +1,42 @@
+{
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Before sending my addresses");
+  TCPAddress me[]=_transport.getMyAddresses();
+  ByteArrayOutputStream baos=new ByteArrayOutputStream(256);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Sending " + me.length + " addresses");
+  DataHelper.writeLong(baos,1,me.length);
+  for (int i=0; i < me.length; i++) {
+    DataHelper.writeString(baos,me[i].getHost());
+    DataHelper.writeLong(baos,2,me[i].getPort());
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Sent my address [" + me[i].getHost() + ":"+ me[i].getPort()+ "]");
+  }
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Sent my " + me.length + " addresses");
+  byte encr[]=AESEngine.getInstance().safeEncrypt(baos.toByteArray(),_key,_iv,256);
+  DataHelper.writeLong(_out,2,encr.length);
+  _out.write(encr);
+  int rlen=(int)DataHelper.readLong(_in,2);
+  byte pencr[]=new byte[rlen];
+  int read=DataHelper.read(_in,pencr);
+  if (read != rlen)   throw new DataFormatException("Not enough data in peer addresses");
+  byte decr[]=AESEngine.getInstance().safeDecrypt(pencr,_key,_iv);
+  if (decr == null)   throw new DataFormatException("Unable to decrypt - invalid addresses?");
+  ByteArrayInputStream bais=new ByteArrayInputStream(decr);
+  long numAddresses=DataHelper.readLong(bais,1);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Peer will send us " + numAddresses + " addresses");
+  TCPAddress peer[]=new TCPAddress[(int)numAddresses];
+  for (int i=0; i < peer.length; i++) {
+    String host=DataHelper.readString(bais);
+    int port=(int)DataHelper.readLong(bais,2);
+    peer[i]=new TCPAddress(host,port);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Received peer address [" + peer[i].getHost() + ":"+ peer[i].getPort()+ "]");
+  }
+  if (weInitiatedConnection()) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("We initiated the connection, so no need to validate");
+    return true;
+  }
+ else {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("We received the connection, so validate");
+    boolean valid=validatePeerAddresses(peer);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("We received the connection, validated? " + valid);
+    return valid;
+  }
+}

@@ -1,0 +1,36 @@
+{
+  try {
+    Destination dest=I2PTunnel.destFromName(destination);
+    if (dest == null) {
+synchronized (lock) {
+        l.log("Unresolvable: " + destination + "");
+      }
+      return;
+    }
+    int cnt=countPing ? CPING_COUNT : PING_COUNT;
+    StringBuffer pingResults=new StringBuffer(2 * cnt + destination.length() + 3);
+    for (int i=0; i < cnt; i++) {
+      boolean sent;
+      sent=ping(dest);
+      if (countPing) {
+        if (!sent) {
+          pingResults.append(i).append(" ");
+          break;
+        }
+ else         if (i == cnt - 1) {
+          pingResults.append("+ ");
+        }
+      }
+ else {
+        pingResults.append(sent ? "+ " : "- ");
+      }
+    }
+    pingResults.append("  ").append(destination);
+synchronized (lock) {
+      l.log(pingResults.toString());
+    }
+  }
+ catch (  I2PException ex) {
+    _log.error("Error pinging " + destination,ex);
+  }
+}

@@ -1,0 +1,44 @@
+{
+  byte[] buffer=new byte[NETWORK_BUFFER_SIZE];
+  try {
+    int len;
+    while ((len=in.read(buffer)) != -1) {
+      out.write(buffer,0,len);
+      if (len > 0)       updateActivity();
+      if (in.available() == 0) {
+        try {
+          Thread.sleep(I2PTunnel.PACKET_DELAY);
+        }
+ catch (        InterruptedException e) {
+          e.printStackTrace();
+        }
+      }
+      if (in.available() == 0) {
+        out.flush();
+      }
+    }
+  }
+ catch (  SocketException ex) {
+synchronized (finishLock) {
+      if (!finished)       _log.error("Error reading and writing",ex);
+ else       _log.warn("You may ignore this",ex);
+    }
+  }
+catch (  IOException ex) {
+    if (!finished)     _log.error("Error forwarding",ex);
+ else     _log.warn("You may ignore this",ex);
+  }
+ finally {
+    try {
+      out.close();
+      in.close();
+    }
+ catch (    IOException ex) {
+      _log.error("Error closing streams",ex);
+    }
+synchronized (finishLock) {
+      finished=true;
+      finishLock.notifyAll();
+    }
+  }
+}

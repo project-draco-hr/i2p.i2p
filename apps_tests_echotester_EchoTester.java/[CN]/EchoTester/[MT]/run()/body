@@ -1,0 +1,58 @@
+{
+  try {
+    while (true) {
+      Socket s;
+      try {
+        s=new Socket(host,port);
+      }
+ catch (      ConnectException ex) {
+        eta.disconnected(true);
+        Thread.sleep(PACKET_DELAY);
+        continue;
+      }
+      System.out.println("41: Connected to " + host + ":"+ port);
+synchronized (lock) {
+        nextUnreceived=nextPacket;
+      }
+      Thread t=new ResponseReaderThread(s);
+      Writer w=new BufferedWriter(new OutputStreamWriter(s.getOutputStream()));
+      while (true) {
+        long no;
+synchronized (lock) {
+          no=nextPacket++;
+        }
+        try {
+          w.write(no + " " + System.currentTimeMillis()+ "\n");
+          w.flush();
+        }
+ catch (        SocketException ex) {
+          break;
+        }
+        Thread.sleep(PACKET_DELAY);
+      }
+      s.close();
+      t.join();
+synchronized (lock) {
+        if (readerRunning) {
+          System.out.println("*** WHY IS THIS THREAD STILL" + " RUNNING?");
+        }
+        while (nextUnreceived < nextPacket) {
+          nextUnreceived++;
+          eta.packetLossOccurred(true);
+        }
+        if (nextUnreceived > nextPacket) {
+          System.out.println("*** WTF? " + nextUnreceived + " > "+ nextPacket);
+        }
+      }
+      eta.disconnected(false);
+    }
+  }
+ catch (  InterruptedException ex) {
+    ex.printStackTrace();
+    System.exit(1);
+  }
+catch (  IOException ex) {
+    ex.printStackTrace();
+    System.exit(1);
+  }
+}

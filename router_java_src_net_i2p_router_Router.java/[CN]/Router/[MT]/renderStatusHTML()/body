@@ -1,0 +1,145 @@
+{
+  StringBuffer buf=new StringBuffer();
+  buf.append("<html><head><title>I2P Router Console</title></head><body>\n");
+  buf.append("<h1>Router console</h1>\n");
+  buf.append("<i><a href=\"/routerConsole.html\">console</a> | <a href=\"/routerStats.html\">stats</a></i><br>\n");
+  buf.append("<form action=\"/routerConsole.html\">");
+  buf.append("<select name=\"go\" onChange='location.href=this.value'>");
+  buf.append("<option value=\"/routerConsole.html#bandwidth\">Bandwidth</option>\n");
+  buf.append("<option value=\"/routerConsole.html#clients\">Clients</option>\n");
+  buf.append("<option value=\"/routerConsole.html#transports\">Transports</option>\n");
+  buf.append("<option value=\"/routerConsole.html#profiles\">Peer Profiles</option>\n");
+  buf.append("<option value=\"/routerConsole.html#tunnels\">Tunnels</option>\n");
+  buf.append("<option value=\"/routerConsole.html#jobs\">Jobs</option>\n");
+  buf.append("<option value=\"/routerConsole.html#shitlist\">Shitlist</option>\n");
+  buf.append("<option value=\"/routerConsole.html#pending\">Pending messages</option>\n");
+  buf.append("<option value=\"/routerConsole.html#netdb\">Network Database</option>\n");
+  buf.append("<option value=\"/routerConsole.html#logs\">Log messages</option>\n");
+  buf.append("</select>");
+  buf.append("</form>");
+  buf.append("<hr />\n");
+  if ((_routerInfo != null) && (_routerInfo.getIdentity() != null))   buf.append("<b>Router: </b> ").append(_routerInfo.getIdentity().getHash().toBase64()).append("<br />\n");
+  buf.append("<b>As of: </b> ").append(new Date(Clock.getInstance().now())).append(" (uptime: ").append(DataHelper.formatDuration(getUptime())).append(") <br />\n");
+  buf.append("<b>Started on: </b> ").append(new Date(getWhenStarted())).append("<br />\n");
+  buf.append("<b>Clock offset: </b> ").append(Clock.getInstance().getOffset()).append("ms (OS time: ").append(new Date(Clock.getInstance().now() - Clock.getInstance().getOffset())).append(")<br />\n");
+  long tot=Runtime.getRuntime().totalMemory() / 1024;
+  long free=Runtime.getRuntime().freeMemory() / 1024;
+  buf.append("<b>Memory:</b> In use: ").append((tot - free)).append("KB Free: ").append(free).append("KB <br />\n");
+  buf.append("<b>Version:</b> Router: ").append(RouterVersion.VERSION).append(" / SDK: ").append(CoreVersion.VERSION).append("<br />\n");
+  if (_higherVersionSeen)   buf.append("<b><font color=\"red\">HIGHER VERSION SEEN</font><b> - please <a href=\"http://i2p.dnsalias.net/\">check</a> to see if there is a new release out<br />\n");
+  buf.append("<hr /><a name=\"bandwidth\"> </a><h2>Bandwidth</h2>\n");
+  long sent=BandwidthLimiter.getInstance().getTotalSendBytes();
+  long received=BandwidthLimiter.getInstance().getTotalReceiveBytes();
+  buf.append("<ul>");
+  buf.append("<li> ").append(sent).append(" bytes sent, ");
+  buf.append(received).append(" bytes received</li>");
+  DecimalFormat fmt=new DecimalFormat("##0.00");
+  long lifetime=Clock.getInstance().now() - Clock.getInstance().getOffset() - getWhenStarted();
+  lifetime/=1000;
+  if ((sent > 0) && (received > 0)) {
+    double sendKBps=sent / (lifetime * 1024.0);
+    double receivedKBps=received / (lifetime * 1024.0);
+    buf.append("<li>Lifetime rate: ");
+    buf.append(fmt.format(sendKBps)).append("KBps sent ");
+    buf.append(fmt.format(receivedKBps)).append("KBps received");
+    buf.append("</li>");
+  }
+  RateStat sendRate=StatManager.getInstance().getRate("transport.sendMessageSize");
+  for (int i=0; i < sendRate.getPeriods().length; i++) {
+    Rate rate=sendRate.getRate(sendRate.getPeriods()[i]);
+    double bytes=rate.getLastTotalValue() + rate.getCurrentTotalValue();
+    long ms=rate.getLastTotalEventTime() + rate.getLastTotalEventTime();
+    if (ms <= 0) {
+      bytes=0;
+      ms=1;
+    }
+    buf.append("<li>");
+    buf.append(DataHelper.formatDuration(rate.getPeriod())).append(" instantaneous send avg: ");
+    double bps=bytes * 1000.0d / ms;
+    if (bps > 2048) {
+      bps/=1024.0d;
+      buf.append(fmt.format(bps)).append(" KBps");
+    }
+ else {
+      buf.append(fmt.format(bps)).append(" Bps");
+    }
+    buf.append(" over ").append((long)bytes).append(" bytes");
+    buf.append("</li><li>");
+    buf.append(DataHelper.formatDuration(rate.getPeriod())).append(" period send avg: ");
+    bps=bytes * 1000.0d / (2 * rate.getPeriod());
+    if (bps > 2048) {
+      bps/=1024.0d;
+      buf.append(fmt.format(bps)).append(" KBps");
+    }
+ else {
+      buf.append(fmt.format(bps)).append(" Bps");
+    }
+    buf.append(" over ").append((long)bytes).append(" bytes");
+    buf.append("</li>");
+  }
+  RateStat receiveRate=StatManager.getInstance().getRate("transport.receiveMessageSize");
+  for (int i=0; i < receiveRate.getPeriods().length; i++) {
+    Rate rate=receiveRate.getRate(receiveRate.getPeriods()[i]);
+    double bytes=rate.getLastTotalValue() + rate.getCurrentTotalValue();
+    long ms=rate.getLastTotalEventTime() + rate.getLastTotalEventTime();
+    if (ms <= 0) {
+      bytes=0;
+      ms=1;
+    }
+    buf.append("<li>");
+    buf.append(DataHelper.formatDuration(rate.getPeriod())).append(" instantaneous receive avg: ");
+    double bps=bytes * 1000.0d / ms;
+    if (bps > 2048) {
+      bps/=1024.0d;
+      buf.append(fmt.format(bps)).append(" KBps ");
+    }
+ else {
+      buf.append(fmt.format(bps)).append(" Bps ");
+    }
+    buf.append(" over ").append((long)bytes).append(" bytes");
+    buf.append("</li><li>");
+    buf.append(DataHelper.formatDuration(rate.getPeriod())).append(" period receive avg: ");
+    bps=bytes * 1000.0d / (2 * rate.getPeriod());
+    if (bps > 2048) {
+      bps/=1024.0d;
+      buf.append(fmt.format(bps)).append(" KBps");
+    }
+ else {
+      buf.append(fmt.format(bps)).append(" Bps");
+    }
+    buf.append(" over ").append((long)bytes).append(" bytes");
+    buf.append("</li>");
+  }
+  buf.append("</ul>\n");
+  buf.append("<i>Instantaneous averages count how fast the transfers go when we're trying to transfer data, ");
+  buf.append("while period averages count how fast the transfers go across the entire period, even when we're not ");
+  buf.append("trying to transfer data.  Lifetime averages count how many elephants there are on the moon [like anyone reads this text]</i>");
+  buf.append("\n");
+  buf.append("<hr /><a name=\"clients\"> </a>\n");
+  buf.append(ClientManagerFacade.getInstance().renderStatusHTML());
+  buf.append("\n<hr /><a name=\"transports\"> </a>\n");
+  buf.append(CommSystemFacade.getInstance().renderStatusHTML());
+  buf.append("\n<hr /><a name=\"profiles\"> </a>\n");
+  buf.append(PeerManagerFacade.getInstance().renderStatusHTML());
+  buf.append("\n<hr /><a name=\"tunnels\"> </a>\n");
+  buf.append(TunnelManagerFacade.getInstance().renderStatusHTML());
+  buf.append("\n<hr /><a name=\"jobs\"> </a>\n");
+  buf.append(JobQueue.getInstance().renderStatusHTML());
+  buf.append("\n<hr /><a name=\"shitlist\"> </a>\n");
+  buf.append(Shitlist.getInstance().renderStatusHTML());
+  buf.append("\n<hr /><a name=\"pending\"> </a>\n");
+  buf.append(OutboundMessageRegistry.getInstance().renderStatusHTML());
+  buf.append("\n<hr /><a name=\"netdb\"> </a>\n");
+  buf.append(NetworkDatabaseFacade.getInstance().renderStatusHTML());
+  buf.append("\n<hr /><a name=\"logs\"> </a>\n");
+  List msgs=LogConsoleBuffer.getInstance().getMostRecentMessages();
+  buf.append("\n<h2>Most recent console messages:</h2><table border=\"1\">\n");
+  for (Iterator iter=msgs.iterator(); iter.hasNext(); ) {
+    String msg=(String)iter.next();
+    buf.append("<tr><td valign=\"top\" align=\"left\"><pre>").append(msg);
+    buf.append("</pre></td></tr>\n");
+  }
+  buf.append("</table>");
+  buf.append("</body></html>\n");
+  return buf.toString();
+}

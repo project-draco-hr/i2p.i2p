@@ -1,0 +1,24 @@
+{
+  if (isKnown(clove.getCloveId())) {
+    _log.error("Duplicate garlic clove received - replay attack in progress? [cloveId = " + clove.getCloveId() + " expiration = "+ clove.getExpiration());
+    return false;
+  }
+ else {
+    _log.debug("Clove " + clove.getCloveId() + " expiring on "+ clove.getExpiration()+ " is not known");
+  }
+  long now=Clock.getInstance().now();
+  if (clove.getExpiration().getTime() < now) {
+    if (clove.getExpiration().getTime() < now + Router.CLOCK_FUDGE_FACTOR) {
+      _log.warn("Expired garlic received, but within our fudge factor [" + clove.getExpiration() + "]");
+    }
+ else {
+      if (_log.shouldLog(Log.DEBUG))       _log.error("Expired garlic clove received - replay attack in progress? [cloveId = " + clove.getCloveId() + " expiration = "+ clove.getExpiration()+ " now = "+ (new Date(Clock.getInstance().now())));
+      return false;
+    }
+  }
+synchronized (_cloves) {
+    _cloves.put(new Long(clove.getCloveId()),clove.getExpiration());
+  }
+  cleanupCloves();
+  return true;
+}

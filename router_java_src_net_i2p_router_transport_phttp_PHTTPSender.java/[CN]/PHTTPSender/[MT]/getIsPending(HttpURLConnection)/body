@@ -1,0 +1,32 @@
+{
+  int len=con.getContentLength();
+  int rc=con.getResponseCode();
+  BufferedReader reader=new BufferedReader(new InputStreamReader(con.getInputStream()));
+  String statusLine=reader.readLine();
+  if (statusLine == null) {
+    _log.warn("Server didn't send back a status line [len = " + len + ", rc = "+ rc+ "]");
+    return false;
+  }
+  boolean statusPending=false;
+  if (!statusLine.startsWith(PROP_STATUS)) {
+    _log.warn("Response does not begin with status [" + statusLine + "]");
+    return false;
+  }
+ else {
+    String statVal=statusLine.substring(PROP_STATUS.length() + 1);
+    statusPending=STATUS_PENDING.equals(statVal);
+    if (statVal.startsWith(STATUS_CLOCKSKEW)) {
+      long skew=Long.MAX_VALUE;
+      String skewStr=statVal.substring(STATUS_CLOCKSKEW.length() + 1);
+      try {
+        skew=Long.parseLong(skewStr);
+      }
+ catch (      Throwable t) {
+        _log.error("Unable to decode the clock skew [" + skewStr + "]");
+        skew=Long.MAX_VALUE;
+      }
+      _log.error("Clock skew talking with phttp relay: " + skew + "ms (remote-local)");
+    }
+    return statusPending;
+  }
+}

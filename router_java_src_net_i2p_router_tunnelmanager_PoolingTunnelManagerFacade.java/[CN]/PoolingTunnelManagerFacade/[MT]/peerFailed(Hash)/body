@@ -1,0 +1,15 @@
+{
+  int numFailed=0;
+  for (Iterator iter=_pool.getManagedTunnelIds().iterator(); iter.hasNext(); ) {
+    TunnelId id=(TunnelId)iter.next();
+    TunnelInfo info=(TunnelInfo)_pool.getTunnelInfo(id);
+    if (isParticipant(info,peer)) {
+      _log.info("Peer " + peer.toBase64() + " failed and they participate in tunnel "+ id.getTunnelId()+ ".  Marking the tunnel as not ready!");
+      info.setIsReady(false);
+      numFailed++;
+      long lifetime=Clock.getInstance().now() - info.getCreated();
+      StatManager.getInstance().addRateData("tunnel.failAfterTime",lifetime,lifetime);
+    }
+  }
+  _log.info("On peer " + peer.toBase64() + " failure, "+ numFailed+ " tunnels were killed");
+}

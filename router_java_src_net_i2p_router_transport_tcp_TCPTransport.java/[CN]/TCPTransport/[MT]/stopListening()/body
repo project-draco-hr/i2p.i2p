@@ -1,0 +1,22 @@
+{
+  if (_log.shouldLog(Log.ERROR))   _log.error("Stop listening called!  No more TCP",new Exception("Die tcp, die"));
+  _running=false;
+  for (int i=0; i < _listeners.size(); i++) {
+    TCPListener lsnr=(TCPListener)_listeners.get(i);
+    lsnr.stopListening();
+  }
+  Set allCons=new HashSet();
+synchronized (_connections) {
+    for (Iterator iter=_connections.values().iterator(); iter.hasNext(); ) {
+      List cons=(List)iter.next();
+      for (Iterator citer=cons.iterator(); citer.hasNext(); ) {
+        TCPConnection con=(TCPConnection)citer.next();
+        allCons.add(con);
+      }
+    }
+  }
+  for (Iterator iter=allCons.iterator(); iter.hasNext(); ) {
+    TCPConnection con=(TCPConnection)iter.next();
+    con.closeConnection();
+  }
+}

@@ -1,0 +1,16 @@
+{
+  DatabaseStoreMessage msg=new DatabaseStoreMessage();
+  msg.setKey(_state.getTarget());
+  if (_state.getData() instanceof RouterInfo)   msg.setRouterInfo((RouterInfo)_state.getData());
+ else   if (_state.getData() instanceof LeaseSet)   msg.setLeaseSet((LeaseSet)_state.getData());
+ else   throw new IllegalArgumentException("Storing an unknown data type! " + _state.getData());
+  msg.setMessageExpiration(new Date(Clock.getInstance().now() + _timeoutMs));
+  if (router.getIdentity().equals(Router.getInstance().getRouterInfo().getIdentity())) {
+    _log.error("Dont send store to ourselves - why did we try?");
+    return;
+  }
+ else {
+    _log.debug("Send store to " + router.getIdentity().getHash().toBase64());
+  }
+  sendStore(msg,router,_expiration);
+}

@@ -1,0 +1,27 @@
+{
+  try {
+    _socket=new Socket(_host,_port);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Socket created (but we're not sending the flag, since we're just testing them)");
+    int val=_socket.getInputStream().read();
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Value read: [" + val + "] == flag? ["+ I2P_FLAG+ "]");
+    _socket.close();
+    _socket=null;
+    _established=(val == I2P_FLAG);
+    return;
+  }
+ catch (  UnknownHostException uhe) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Error establishing connection to " + _host + ':'+ _port,uhe);
+    return;
+  }
+catch (  IOException ioe) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Error establishing connection to " + _host + ':'+ _port+ ": "+ ioe.getMessage());
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Error establishing",ioe);
+    _socket=null;
+    return;
+  }
+ finally {
+synchronized (this) {
+      notifyAll();
+    }
+  }
+}

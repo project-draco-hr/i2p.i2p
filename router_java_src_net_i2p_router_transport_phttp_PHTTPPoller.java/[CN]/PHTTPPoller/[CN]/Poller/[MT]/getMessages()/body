@@ -1,0 +1,100 @@
+{
+  byte authData[]=getAuthData();
+  if (authData == null)   return 0;
+  BandwidthLimiter.getInstance().delayOutbound(null,authData.length + 512);
+  try {
+    _log.debug("Before opening " + _pollURL.toExternalForm());
+    HttpURLConnection con=(HttpURLConnection)_pollURL.openConnection();
+    con.setRequestMethod("POST");
+    con.setUseCaches(false);
+    con.setDoOutput(true);
+    con.setDoInput(true);
+    ByteArrayOutputStream baos=new ByteArrayOutputStream(authData.length + 64);
+    String target=_transport.getMyIdentity().getHash().toBase64();
+    baos.write("target=".getBytes());
+    baos.write(target.getBytes());
+    baos.write("&".getBytes());
+    baos.write(authData);
+    byte data[]=baos.toByteArray();
+    con.setRequestProperty("Content-length","" + data.length);
+    con.getOutputStream().write(data);
+    _log.debug("Data sent, before reading results of poll for [" + target + "]");
+    con.connect();
+    int rc=con.getResponseCode();
+    _log.debug("Response code: " + rc);
+switch (rc) {
+case 200:
+      _log.debug("Polling can progress");
+    break;
+case 401:
+  _log.error("Signature failed during polling???");
+return 0;
+case 404:
+_log.error("Not registered with the relay - reregistering (in case they failed)");
+_transport.registerWithRelay();
+return 0;
+default :
+_log.error("Invalid error code returned: " + rc);
+return 0;
+}
+InputStream in=con.getInputStream();
+Date peerTime=DataHelper.readDate(in);
+long offset=peerTime.getTime() - System.currentTimeMillis();
+if (_transport.getTrustTime()) {
+_log.info("Updating time offset to " + offset + " (old offset: "+ Clock.getInstance().getOffset()+ ")");
+Clock.getInstance().setOffset(offset);
+}
+boolean shouldReject=shouldRejectMessages();
+if (shouldReject) {
+_log.debug("Rejecting any messages [we just checked in so we could get the time]");
+return 0;
+}
+int numMessages=(int)DataHelper.readLong(in,2);
+if ((numMessages > 100) || (numMessages < 0)) {
+_log.error("Invalid # messages specified [" + numMessages + "], skipping");
+return 0;
+}
+int bytesRead=512;
+int numSuccessful=0;
+for (int i=0; i < numMessages; i++) {
+_log.debug("Receiving message " + (i + 1) + " of "+ numMessages+ " pending");
+long len=DataHelper.readLong(in,4);
+byte msgBuf[]=new byte[(int)len];
+int read=DataHelper.read(in,msgBuf);
+if (read == -1) {
+_log.error("Unable to read the message as we encountered an EOF");
+return i - 1;
+}
+ else if (read != len) {
+_log.error("Unable to read the message fully [" + read + " read, "+ len+ " expected]");
+return i - 1;
+}
+ else {
+bytesRead+=4 + read;
+try {
+I2NPMessage msg=_handler.readMessage(new ByteArrayInputStream(msgBuf));
+if (msg == null) {
+_log.warn("PHTTP couldn't read a message from the peer out of a " + len + " byte buffer");
+}
+ else {
+_log.info("Receive message " + (i + 1) + " of "+ numMessages+ ": "+ msg.getClass().getName());
+_transport.messageReceived(msg,null,null,_handler.getLastReadTime(),(int)len);
+numSuccessful++;
+}
+}
+ catch (IOException ioe) {
+_log.warn("Unable to read the message fully",ioe);
+}
+catch (I2NPMessageException ime) {
+_log.warn("Poorly formatted message",ime);
+}
+}
+}
+BandwidthLimiter.getInstance().delayInbound(null,bytesRead);
+return numSuccessful;
+}
+ catch (Throwable t) {
+_log.debug("Error polling",t);
+return 0;
+}
+}

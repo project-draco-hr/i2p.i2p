@@ -1,0 +1,31 @@
+{
+  Set peers=new HashSet(numPeers);
+  ProfileOrganizer.getInstance().selectFastAndReliablePeers(numPeers,null,peers);
+  Properties props=new Properties();
+  for (Iterator iter=peers.iterator(); iter.hasNext(); ) {
+    Hash peer=(Hash)iter.next();
+    PeerProfile prof=getProfile(peer);
+    if (prof == null)     continue;
+    StringBuffer buf=new StringBuffer(64);
+    buf.append("status: ");
+    if (ProfileOrganizer.getInstance().isFastAndReliable(peer)) {
+      buf.append("fastReliable");
+    }
+ else     if (ProfileOrganizer.getInstance().isReliable(peer)) {
+      buf.append("reliable");
+    }
+ else     if (ProfileOrganizer.getInstance().isFailing(peer)) {
+      buf.append("failing");
+    }
+ else {
+      buf.append("notFailing");
+    }
+    if (ProfileOrganizer.getInstance().isWellIntegrated(peer))     buf.append("Integrated ");
+ else     buf.append(" ");
+    buf.append("reliability: ").append(num(prof.getReliabilityValue())).append(" ");
+    buf.append("speed: ").append(num(prof.getSpeedValue())).append(" ");
+    buf.append("integration: ").append(num(prof.getIntegrationValue()));
+    props.setProperty("profile." + peer.toBase64().replace('=','_'),buf.toString());
+  }
+  return props;
+}

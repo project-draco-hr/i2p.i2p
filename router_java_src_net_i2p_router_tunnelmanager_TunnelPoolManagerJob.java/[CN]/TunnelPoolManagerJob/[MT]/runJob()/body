@@ -1,0 +1,47 @@
+{
+  try {
+    if (!_pool.isLive())     return;
+    boolean built=false;
+    int targetClients=_pool.getTargetClients();
+    int targetInboundTunnels=targetClients * _pool.getPoolSettings().getNumInboundTunnels() + 3;
+    int targetOutboundTunnels=targetClients * _pool.getPoolSettings().getNumOutboundTunnels() + 3;
+    int curFreeInboundTunnels=getFreeTunnelCount();
+    if (curFreeInboundTunnels < targetInboundTunnels) {
+      _log.info("Insufficient free inbound tunnels (" + curFreeInboundTunnels + ", not "+ targetInboundTunnels+ "), requesting more");
+      requestInboundTunnels(targetInboundTunnels - curFreeInboundTunnels);
+      built=true;
+    }
+ else {
+      if (_builtOnLastRun) {
+        _log.debug("Sufficient inbound tunnels (" + curFreeInboundTunnels + ")");
+      }
+ else {
+        _log.info("Building another inbound tunnel, cuz tunnels r k00l");
+        requestInboundTunnels(1);
+        built=true;
+      }
+    }
+    int curOutboundTunnels=getOutboundTunnelCount();
+    if (curOutboundTunnels < targetOutboundTunnels) {
+      _log.info("Insufficient outbound tunnels (" + curOutboundTunnels + ", not "+ targetOutboundTunnels+ "), requesting more");
+      requestOutboundTunnels(targetOutboundTunnels - curOutboundTunnels);
+      built=true;
+    }
+ else {
+      if (_builtOnLastRun) {
+        _log.debug("Sufficient outbound tunnels (" + curOutboundTunnels + ")");
+      }
+ else {
+        _log.info("Building another outbound tunnel, since gravity still works");
+        requestOutboundTunnels(1);
+        built=true;
+      }
+    }
+    _pool.buildFakeTunnels();
+    _builtOnLastRun=built;
+  }
+ catch (  Throwable t) {
+    _log.log(Log.CRIT,"Unhandled exception managing the tunnel pool",t);
+  }
+  requeue(POOL_CHECK_DELAY);
+}

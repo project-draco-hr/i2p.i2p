@@ -1,0 +1,62 @@
+{
+  long start=Clock.getInstance().now();
+  long success=0;
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Establishing connection...");
+  BigInteger myPub=_builder.getMyPublicValue();
+  try {
+    _socket.setSoTimeout(ESTABLISHMENT_TIMEOUT);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Before key exchange...");
+    exchangeKey();
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Key exchanged...");
+    boolean ok=identifyStationToStation();
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("After station to station [" + ok + "]...");
+    if (!ok)     throw new DataFormatException("Station to station identification failed!  MITM?");
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("before validateVersion...");
+    boolean versionOk=validateVersion();
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("after validateVersion [" + versionOk + "]...");
+    if (!versionOk) {
+      NetworkDatabaseFacade.getInstance().fail(_remoteIdentity.getHash());
+      Shitlist.getInstance().shitlistRouter(_remoteIdentity.getHash());
+      throw new DataFormatException("Peer uses an invalid version!  dropping");
+    }
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("before validateTime...");
+    boolean timeOk=validateTime();
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("after validateTime [" + timeOk + "]...");
+    if (!timeOk) {
+      Shitlist.getInstance().shitlistRouter(_remoteIdentity.getHash());
+      throw new DataFormatException("Peer is too far out of sync with the current router's clock!  dropping");
+    }
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("before validate peer address...");
+    boolean peerReachable=validatePeerAddress();
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("after validatePeerAddress [" + peerReachable + "]...");
+    if (!peerReachable) {
+      Shitlist.getInstance().shitlistRouter(_remoteIdentity.getHash());
+      throw new DataFormatException("Peer provided us with an unreachable router address, and we can't handle restricted routes yet!  dropping");
+    }
+    if (_log.shouldLog(Log.INFO))     _log.info("TCP connection " + _id + " established with "+ _remoteIdentity.getHash().toBase64());
+    _in=new AESInputStream(new BandwidthLimitedInputStream(_in,_remoteIdentity),_key,_iv);
+    _out=new AESOutputStream(new BandwidthLimitedOutputStream(_out,_remoteIdentity),_key,_iv);
+    _socket.setSoTimeout(0);
+    success=Clock.getInstance().now();
+    established();
+    return _remoteIdentity;
+  }
+ catch (  IOException ioe) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Error establishing connection with " + _socket.getInetAddress().getHostAddress() + ":"+ _socket.getPort(),ioe);
+    closeConnection();
+    return null;
+  }
+catch (  DataFormatException dfe) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Error establishing connection with " + _socket.getInetAddress().getHostAddress() + ":"+ _socket.getPort(),dfe);
+    closeConnection();
+    return null;
+  }
+catch (  Throwable t) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("jrandom is paranoid so we're catching it all during establishConnection " + _socket.getInetAddress().getHostAddress() + ":"+ _socket.getPort(),t);
+    closeConnection();
+    return null;
+  }
+ finally {
+    if (success > 0)     StatManager.getInstance().addRateData("tcp.establishConnectionTime",success - start,success - start);
+  }
+}

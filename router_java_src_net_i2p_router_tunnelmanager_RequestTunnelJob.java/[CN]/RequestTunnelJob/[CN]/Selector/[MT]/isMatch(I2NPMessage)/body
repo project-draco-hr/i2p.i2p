@@ -1,0 +1,34 @@
+{
+  if (message.getType() == TunnelCreateStatusMessage.MESSAGE_TYPE) {
+    TunnelCreateStatusMessage msg=(TunnelCreateStatusMessage)message;
+    if (_tunnel.getThisHop().equals(msg.getFromHash())) {
+      if (_tunnel.getTunnelId().equals(msg.getTunnelId())) {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Matches the tunnel create status message");
+        _statusFound=true;
+        return true;
+      }
+ else {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Status message from peer [" + msg.getFromHash().toBase64() + "], with wrong tunnelId ["+ msg.getTunnelId()+ "] not ["+ _tunnel.getTunnelId().getTunnelId()+ "]");
+        return false;
+      }
+    }
+ else {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Status message from the wrong peer [" + msg.getFromHash().toBase64() + "], not ["+ _tunnel.getThisHop().toBase64()+ "]");
+      return false;
+    }
+  }
+ else   if (message.getType() == DeliveryStatusMessage.MESSAGE_TYPE) {
+    if (((DeliveryStatusMessage)message).getMessageId() == _ackId) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Matches the ping message tied to the tunnel create status message");
+      _ackFound=true;
+      return true;
+    }
+ else {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Message is a delivery status message, but with the wrong id");
+      return false;
+    }
+  }
+ else {
+    return false;
+  }
+}

@@ -1,0 +1,30 @@
+{
+  while (_alive) {
+    while (_paused) {
+      try {
+        Thread.sleep(30);
+      }
+ catch (      InterruptedException ie) {
+      }
+    }
+    Job rv=null;
+    int ready=0;
+synchronized (_readyJobs) {
+      ready=_readyJobs.size();
+      if (ready > 0)       rv=(Job)_readyJobs.remove(0);
+    }
+    if (rv != null) {
+      awaken(ready - 1);
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Using a ready job after waking up " + (ready - 1) + " others");
+      return rv;
+    }
+    try {
+synchronized (_runnerLock) {
+        _runnerLock.wait(1000);
+      }
+    }
+ catch (    InterruptedException ie) {
+    }
+  }
+  return null;
+}

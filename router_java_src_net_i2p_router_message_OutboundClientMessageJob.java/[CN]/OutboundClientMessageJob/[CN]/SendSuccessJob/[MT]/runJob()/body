@@ -1,0 +1,19 @@
+{
+  long sendTime=Clock.getInstance().now() - _status.getStart();
+  boolean alreadySuccessful=_status.success();
+  MessageId msgId=_status.getMessage().getMessageId();
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("SUCCESS!  Message delivered completely for message " + msgId + " after "+ sendTime+ "ms [for "+ _status.getMessage().getMessageId()+ "]");
+  if ((_key != null) && (_tags != null) && (_tags.size() > 0)) {
+    SessionKeyManager.getInstance().tagsDelivered(_status.getLeaseSet().getEncryptionKey(),_key,_tags);
+  }
+  if (alreadySuccessful) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Success is a duplicate for " + _status.getMessage().getMessageId() + ", dont notify again...");
+    return;
+  }
+  long dataMsgId=_status.getClove().getId();
+  MessageHistory.getInstance().sendPayloadMessage(dataMsgId,true,sendTime);
+  ClientManagerFacade.getInstance().messageDeliveryStatusUpdate(_status.getFrom(),msgId,true);
+  _lease.setNumSuccess(_lease.getNumSuccess() + 1);
+  StatManager.getInstance().addRateData("client.sendMessageSize",_status.getMessage().getPayload().getSize(),sendTime);
+  StatManager.getInstance().addRateData("client.sendAttemptAverage",_status.getNumSent(),sendTime);
+}

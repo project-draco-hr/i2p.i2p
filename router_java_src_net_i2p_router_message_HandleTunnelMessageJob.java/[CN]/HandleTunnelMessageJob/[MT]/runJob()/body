@@ -1,0 +1,80 @@
+{
+  TunnelId id=_message.getTunnelId();
+  TunnelInfo info=TunnelManagerFacade.getInstance().getTunnelInfo(id);
+  if (info == null) {
+    Hash from=_fromHash;
+    if (_from != null)     from=_from.getHash();
+    MessageHistory.getInstance().droppedTunnelMessage(id,from);
+    _log.error("Received a message for an unknown tunnel [" + id.getTunnelId() + "], dropping it: "+ _message,getAddedBy());
+    StatManager.getInstance().updateFrequency("tunnel.unknownTunnelFrequency");
+    return;
+  }
+  info=getUs(info);
+  if (info == null) {
+    _log.error("We are not part of a known tunnel?? wtf!  drop.",getAddedBy());
+    StatManager.getInstance().updateFrequency("tunnel.unknownTunnelFrequency");
+    return;
+  }
+ else {
+    _log.debug("Tunnel message received for tunnel: \n" + info);
+  }
+  if (_message.getVerificationStructure() == null) {
+    if (info.getSigningKey() != null) {
+      if (info.getNextHop() != null) {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("We are the gateway to tunnel " + id.getTunnelId());
+        byte data[]=_message.getData();
+        I2NPMessage msg=getBody(data);
+        JobQueue.getInstance().addJob(new HandleGatewayMessageJob(msg,info,data.length));
+        return;
+      }
+ else {
+        if (_log.shouldLog(Log.WARN))         _log.debug("We are the gateway and the endpoint for tunnel " + id.getTunnelId());
+        if (_log.shouldLog(Log.WARN))         _log.debug("Process locally");
+        if (info.getDestination() != null) {
+          if (!ClientManagerFacade.getInstance().isLocal(info.getDestination())) {
+            if (_log.shouldLog(Log.WARN))             _log.warn("Received a message on a tunnel allocated to a client that has disconnected - dropping it!");
+            if (_log.shouldLog(Log.DEBUG))             _log.debug("Dropping message for disconnected client: " + _message);
+            MessageHistory.getInstance().droppedOtherMessage(_message);
+            MessageHistory.getInstance().messageProcessingError(_message.getUniqueId(),_message.getClass().getName(),"Disconnected client");
+            return;
+          }
+        }
+        I2NPMessage body=getBody(_message.getData());
+        if (body != null) {
+          JobQueue.getInstance().addJob(new HandleLocallyJob(body,info));
+          return;
+        }
+ else {
+          if (_log.shouldLog(Log.ERROR))           _log.error("Body is null!  content of message.getData() = [" + DataHelper.toString(_message.getData()) + "]",getAddedBy());
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("Message that failed: " + _message,getAddedBy());
+          return;
+        }
+      }
+    }
+ else {
+      if (_log.shouldLog(Log.ERROR))       _log.error("Received a message that we are not the gateway for on tunnel " + id.getTunnelId() + " without a verification structure: "+ _message,getAddedBy());
+      return;
+    }
+  }
+ else {
+    TunnelVerificationStructure struct=_message.getVerificationStructure();
+    boolean ok=struct.verifySignature(info.getVerificationKey().getKey());
+    if (!ok) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Failed tunnel verification!  Spoofing / tagging attack?  " + _message,getAddedBy());
+      return;
+    }
+ else {
+      if (info.getNextHop() != null) {
+        if (_log.shouldLog(Log.INFO))         _log.info("Message for tunnel " + id.getTunnelId() + " received where we're not the gateway and there are remaining hops, so forward it on to "+ info.getNextHop().toBase64()+ " via SendTunnelMessageJob");
+        StatManager.getInstance().addRateData("tunnel.relayMessageSize",_message.getData().length,0);
+        JobQueue.getInstance().addJob(new SendMessageDirectJob(_message,info.getNextHop(),Clock.getInstance().now() + FORWARD_TIMEOUT,FORWARD_PRIORITY));
+        return;
+      }
+ else {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("No more hops, unwrap and follow the instructions");
+        JobQueue.getInstance().addJob(new HandleEndpointJob(info));
+        return;
+      }
+    }
+  }
+}

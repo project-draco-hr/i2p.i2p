@@ -1,0 +1,23 @@
+{
+  int numLeft=0;
+synchronized (_toBeRequested) {
+    numLeft=_toBeRequested.size();
+  }
+  if (numLeft <= 0) {
+    if (_log.shouldLog(Log.INFO))     _log.info("Peer (" + peer.getThisHop().toBase64() + ") successful: mark the tunnel as completely ready [inbound? "+ _isInbound+ "]");
+    _complete=true;
+    if (_isInbound)     _pool.addFreeTunnel(_tunnelGateway);
+ else     _pool.addOutboundTunnel(_tunnelGateway);
+    _tunnelGateway.setIsReady(true);
+    StatManager.getInstance().updateFrequency("tunnel.buildFrequency");
+  }
+ else {
+    if (_log.shouldLog(Log.DEBUG)) {
+      StringBuffer buf=new StringBuffer(128);
+      buf.append("Hop to ").append(peer.getThisHop().toBase64()).append(" successful for tunnel ").append(peer.getTunnelId().getTunnelId());
+      buf.append(", but ").append(numLeft).append(" are pending");
+      _log.debug(buf.toString());
+    }
+    JobQueue.getInstance().addJob(this);
+  }
+}

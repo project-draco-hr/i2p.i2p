@@ -1,0 +1,38 @@
+{
+  StringBuffer buf=new StringBuffer();
+  Map cons=new HashMap();
+synchronized (_connections) {
+    cons.putAll(_connections);
+  }
+  int established=0;
+  buf.append("<b>TCP Transport</b> <i>(").append(cons.size()).append(" connections)</i><br />\n");
+  buf.append("<ul>");
+  for (Iterator iter=cons.keySet().iterator(); iter.hasNext(); ) {
+    buf.append("<li>");
+    RouterIdentity ident=(RouterIdentity)iter.next();
+    List curCons=(List)cons.get(ident);
+    buf.append("Connections to ").append(ident.getHash().toBase64()).append(": ").append(curCons.size()).append("<br/><ul>\n");
+    for (int i=0; i < curCons.size(); i++) {
+      TCPConnection con=(TCPConnection)curCons.get(i);
+      if (con.getLifetime() > 0) {
+        established++;
+        buf.append("<li>Connection ").append(con.getId()).append(": pending # messages to be sent: ").append(con.getPendingMessageCount()).append(" lifetime: ").append(DataHelper.formatDuration(con.getLifetime())).append("</li>\n");
+      }
+ else {
+        buf.append("<li>Connection ").append(con.getId()).append(": [connection in progress]</li>\n");
+      }
+    }
+    buf.append("</ul>\n");
+    buf.append("</li>\n");
+  }
+  buf.append("</ul>\n");
+  if (established == 0) {
+    buf.append("<b><font color=\"red\">No TCP connections</font></b><ul>");
+    buf.append("<li>Is your publicly reachable IP address / hostname <b>").append(_listenHost).append("</b>?</li>\n");
+    buf.append("<li>Is your firewall / NAT open to receive connections on port <b>").append(_listenPort).append("</b>?</li>\n");
+    buf.append("<li>Do you have any reachable peer references (see down below for \"Routers\", ");
+    buf.append("    or check your netDb directory - you want at least two routers, since one of them is your own)</li>\n");
+    buf.append("</ul>\n");
+  }
+  return buf.toString();
+}

@@ -1,0 +1,37 @@
+{
+  if (_dead)   return;
+  MessageStatusMessage msg=new MessageStatusMessage();
+  msg.setMessageId(_messageId);
+  msg.setSessionId(_sessionId);
+  msg.setNonce(2);
+  msg.setSize(0);
+  if (_success)   msg.setStatus(MessageStatusMessage.STATUS_SEND_GUARANTEED_SUCCESS);
+ else   msg.setStatus(MessageStatusMessage.STATUS_SEND_GUARANTEED_FAILURE);
+  if (!alreadyAccepted(_messageId)) {
+    _log.warn("Almost send an update for message " + _messageId + " to "+ MessageStatusMessage.getStatusString(msg.getStatus())+ " for session ["+ _sessionId.getSessionId()+ "] before they knew the messageId!  delaying .5s");
+    _lastTried=Clock.getInstance().now();
+    requeue(REQUEUE_DELAY);
+    return;
+  }
+synchronized (_alreadyProcessed) {
+    if (_alreadyProcessed.contains(_messageId)) {
+      _log.warn("Status already updated");
+      return;
+    }
+ else {
+      _alreadyProcessed.add(_messageId);
+      while (_alreadyProcessed.size() > 10)       _alreadyProcessed.remove(0);
+    }
+  }
+  if (_lastTried > 0)   _log.info("Updating message status for message " + _messageId + " to "+ MessageStatusMessage.getStatusString(msg.getStatus())+ " for session ["+ _sessionId.getSessionId()+ "] (with nonce=2), retrying after ["+ (Clock.getInstance().now() - _lastTried)+ "]",getAddedBy());
+ else   _log.debug("Updating message status for message " + _messageId + " to "+ MessageStatusMessage.getStatusString(msg.getStatus())+ " for session ["+ _sessionId.getSessionId()+ "] (with nonce=2)");
+  try {
+    doSend(msg);
+  }
+ catch (  I2CPMessageException ime) {
+    _log.warn("Error updating the status for message ID " + _messageId,ime);
+  }
+catch (  IOException ioe) {
+    _log.warn("Error updating the status for message ID " + _messageId,ioe);
+  }
+}

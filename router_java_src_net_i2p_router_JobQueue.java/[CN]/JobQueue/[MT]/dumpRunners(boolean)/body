@@ -1,0 +1,24 @@
+{
+  if (!asError && (!_log.shouldLog(Log.DEBUG)))   return;
+  if (asError && (!_log.shouldLog(Log.WARN)))   return;
+  StringBuffer buf=new StringBuffer(1024);
+  buf.append("Queue runners:\n");
+synchronized (_queueRunners) {
+    for (Iterator iter=_queueRunners.values().iterator(); iter.hasNext(); ) {
+      JobQueueRunner runner=(JobQueueRunner)iter.next();
+      Job job=runner.getCurrentJob();
+      int id=runner.getRunnerId();
+      buf.append("* Runner ").append(id).append(": \t");
+      if (job == null)       buf.append("no job\n");
+ else       buf.append(job.getName()).append('\n');
+    }
+  }
+synchronized (_timedJobs) {
+    buf.append("** Timed jobs: \t").append(_timedJobs.size()).append('\n');
+  }
+synchronized (_readyJobs) {
+    buf.append("** Ready jobs: \t").append(_readyJobs.size()).append('\n');
+  }
+  if (asError)   _log.warn(buf.toString());
+ else   _log.debug(buf.toString());
+}

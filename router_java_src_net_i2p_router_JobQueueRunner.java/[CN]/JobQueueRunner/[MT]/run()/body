@@ -1,0 +1,48 @@
+{
+  long lastActive=Clock.getInstance().now();
+  ;
+  while ((_keepRunning) && (JobQueue.getInstance().isAlive())) {
+    try {
+      Job job=JobQueue.getInstance().getNext();
+      if (job == null)       continue;
+      long now=Clock.getInstance().now();
+      long enqueuedTime=0;
+      if (job instanceof JobImpl) {
+        long when=((JobImpl)job).getMadeReadyOn();
+        if (when <= 0) {
+          _log.error("Job was not made ready?! " + job,new Exception("Not made ready?!"));
+        }
+ else {
+          enqueuedTime=now - when;
+        }
+      }
+      long betweenJobs=now - lastActive;
+      StatManager.getInstance().addRateData("jobQueue.jobRunnerInactive",betweenJobs,betweenJobs);
+      _currentJob=job;
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Runner " + _id + " running job "+ job.getJobId()+ ": "+ job.getName());
+      long origStartAfter=job.getTiming().getStartAfter();
+      long doStart=Clock.getInstance().now();
+      job.getTiming().start();
+      runCurrentJob();
+      job.getTiming().end();
+      long duration=job.getTiming().getActualEnd() - job.getTiming().getActualStart();
+      long beforeUpdate=Clock.getInstance().now();
+      JobQueue.getInstance().updateStats(job,doStart,origStartAfter,duration);
+      long diff=Clock.getInstance().now() - beforeUpdate;
+      StatManager.getInstance().addRateData("jobQueue.jobRun",duration,duration);
+      StatManager.getInstance().addRateData("jobQueue.jobLag",doStart - origStartAfter,0);
+      StatManager.getInstance().addRateData("jobQueue.jobWait",enqueuedTime,enqueuedTime);
+      if (diff > 100) {
+        if (_log.shouldLog(Log.WARN))         _log.warn("Updating statistics for the job took too long [" + diff + "ms]");
+      }
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Job duration " + duration + "ms for "+ job.getName()+ " with lag of "+ (doStart - origStartAfter)+ "ms");
+      lastActive=Clock.getInstance().now();
+      _currentJob=null;
+    }
+ catch (    Throwable t) {
+      if (_log.shouldLog(Log.CRIT))       _log.log(Log.CRIT,"WTF, error running?",t);
+    }
+  }
+  if (_log.shouldLog(Log.CRIT))   _log.log(Log.CRIT,"Queue runner " + _id + " exiting");
+  JobQueue.getInstance().removeRunner(_id);
+}

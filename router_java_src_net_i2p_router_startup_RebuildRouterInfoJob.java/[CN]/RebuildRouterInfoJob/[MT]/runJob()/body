@@ -1,0 +1,21 @@
+{
+  _log.debug("Testing to rebuild router info");
+  String infoFile=Router.getInstance().getConfigSetting(Router.PROP_INFO_FILENAME);
+  if (infoFile == null) {
+    _log.debug("Info filename not configured, defaulting to " + Router.PROP_INFO_FILENAME_DEFAULT);
+    infoFile=Router.PROP_INFO_FILENAME_DEFAULT;
+  }
+  String keyFilename=Router.getInstance().getConfigSetting(Router.PROP_KEYS_FILENAME);
+  if (keyFilename == null)   keyFilename=Router.PROP_KEYS_FILENAME_DEFAULT;
+  File keyFile=new File(keyFilename);
+  File info=new File(infoFile);
+  if (!info.exists() || !keyFile.exists()) {
+    _log.info("Router info file [" + info.getAbsolutePath() + "] or private key file ["+ keyFile.getAbsolutePath()+ "] deleted, rebuilding");
+    rebuildRouterInfo();
+  }
+ else {
+    _log.debug("Router info file [" + info.getAbsolutePath() + "] exists, not rebuilding");
+  }
+  getTiming().setStartAfter(Clock.getInstance().now() + REBUILD_DELAY);
+  JobQueue.getInstance().addJob(this);
+}

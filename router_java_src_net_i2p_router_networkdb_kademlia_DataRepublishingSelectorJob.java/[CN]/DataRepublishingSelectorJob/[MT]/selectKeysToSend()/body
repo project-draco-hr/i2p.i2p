@@ -1,0 +1,29 @@
+{
+  Set alreadyQueued=new HashSet(128);
+  alreadyQueued.addAll(_facade.getPassivelySendKeys());
+  int toAdd=MAX_PASSIVE_POOL_SIZE - alreadyQueued.size();
+  _log.debug("Keys we need to queue up to fill the passive send pool: " + toAdd);
+  if (toAdd <= 0)   return new HashSet();
+  alreadyQueued.addAll(_facade.getExplicitSendKeys());
+  Set keys=_facade.getDataStore().getKeys();
+  keys.removeAll(alreadyQueued);
+  _log.debug("Total number of keys in the datastore: " + keys.size());
+  TreeMap toSend=new TreeMap();
+  for (Iterator iter=keys.iterator(); iter.hasNext(); ) {
+    Hash key=(Hash)iter.next();
+    Long lastPublished=_facade.getLastSent(key);
+    long publishRank=rankPublishNeed(key,lastPublished);
+    _log.debug("Publish rank for " + key + ": "+ publishRank);
+    if (publishRank > 0) {
+      while (toSend.containsKey(new Long(publishRank)))       publishRank++;
+      toSend.put(new Long(publishRank),key);
+    }
+  }
+  Set rv=new HashSet(toAdd);
+  for (Iterator iter=toSend.values().iterator(); iter.hasNext(); ) {
+    if (rv.size() > toAdd)     break;
+    Hash key=(Hash)iter.next();
+    rv.add(key);
+  }
+  return rv;
+}

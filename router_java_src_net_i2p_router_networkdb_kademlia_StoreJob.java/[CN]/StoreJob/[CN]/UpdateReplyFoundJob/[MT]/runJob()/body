@@ -1,0 +1,20 @@
+{
+  _log.info("Reply from " + _peer + " with message "+ _message);
+  if (_message.getType() == DeliveryStatusMessage.MESSAGE_TYPE) {
+    long delay=_state.confirmed(_peer);
+    ProfileManager.getInstance().dbStoreSent(_peer,delay);
+    if ((_sentKey != null) && (_sentKey.getData() != null) && (_sentTags != null)&& (_sentTags.size() > 0)&& (_toKey != null)) {
+      SessionKeyManager.getInstance().tagsDelivered(_toKey,_sentKey,_sentTags);
+      _log.info("Delivered tags successfully to " + _peer + "!  # tags: "+ _sentTags.size());
+    }
+    if (_state.getSuccessful().size() >= REDUNDANCY) {
+      succeed();
+    }
+ else {
+      sendNext();
+    }
+  }
+ else {
+    _log.error("Selector matched to an UpdateReplyFoundJob with a message that isnt a DeliveryStatusMessage!  " + _message);
+  }
+}

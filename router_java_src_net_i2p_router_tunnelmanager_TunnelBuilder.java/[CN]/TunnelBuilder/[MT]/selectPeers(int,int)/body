@@ -1,0 +1,18 @@
+{
+  PeerSelectionCriteria criteria=new PeerSelectionCriteria();
+  int maxNeeded=numTunnels * numPerTunnel;
+  int minNeeded=numPerTunnel;
+  criteria.setMaximumRequired(maxNeeded);
+  criteria.setMinimumRequired(minNeeded);
+  criteria.setPurpose(PeerSelectionCriteria.PURPOSE_TUNNEL);
+  List peers=PeerManagerFacade.getInstance().selectPeers(criteria);
+  List rv=new ArrayList(peers.size());
+  for (Iterator iter=peers.iterator(); iter.hasNext(); ) {
+    Hash peer=(Hash)iter.next();
+    if (null != NetworkDatabaseFacade.getInstance().lookupRouterInfoLocally(peer))     rv.add(peer);
+ else {
+      _log.warn("peer manager selected a peer we don't know about - drop it");
+    }
+  }
+  return rv;
+}

@@ -1,0 +1,40 @@
+{
+  if (profile.getSendSuccessSize().getRate(60 * 60 * 1000).getLifetimeEventCount() < 0)   return profile.getReliabilityBonus();
+  long val=0;
+  val+=profile.getSendSuccessSize().getRate(60 * 1000).getCurrentEventCount() * 5;
+  val+=profile.getSendSuccessSize().getRate(60 * 1000).getLastEventCount() * 2;
+  val+=profile.getSendSuccessSize().getRate(60 * 60 * 1000).getLastEventCount();
+  val+=profile.getSendSuccessSize().getRate(60 * 60 * 1000).getCurrentEventCount();
+  val+=profile.getTunnelCreateResponseTime().getRate(60 * 1000).getCurrentEventCount() * 10;
+  val+=profile.getTunnelCreateResponseTime().getRate(60 * 1000).getLastEventCount() * 5;
+  val+=profile.getTunnelCreateResponseTime().getRate(60 * 60 * 1000).getCurrentEventCount();
+  val+=profile.getTunnelCreateResponseTime().getRate(60 * 60 * 1000).getLastEventCount();
+  val-=profile.getSendFailureSize().getRate(60 * 1000).getLastEventCount() * 5;
+  val-=profile.getSendFailureSize().getRate(60 * 60 * 1000).getCurrentEventCount() * 2;
+  val-=profile.getSendFailureSize().getRate(60 * 60 * 1000).getLastEventCount() * 2;
+  val-=profile.getDBHistory().getFailedLookupRate().getRate(60 * 1000).getCurrentEventCount() * 10;
+  val-=profile.getDBHistory().getFailedLookupRate().getRate(60 * 1000).getLastEventCount() * 5;
+  val-=profile.getCommError().getRate(60 * 1000).getCurrentEventCount() * 200;
+  val-=profile.getCommError().getRate(60 * 1000).getLastEventCount() * 200;
+  val-=profile.getCommError().getRate(60 * 60 * 1000).getCurrentEventCount() * 50;
+  val-=profile.getCommError().getRate(60 * 60 * 1000).getLastEventCount() * 50;
+  val-=profile.getCommError().getRate(24 * 60 * 60* 1000).getCurrentEventCount() * 10;
+  long now=Clock.getInstance().now();
+  long timeSinceRejection=now - profile.getTunnelHistory().getLastRejected();
+  if (timeSinceRejection > 60 * 60 * 1000) {
+  }
+ else   if (timeSinceRejection > 10 * 60 * 1000) {
+    val-=10;
+  }
+ else   if (timeSinceRejection > 60 * 1000) {
+    val-=50;
+  }
+ else {
+    val-=100;
+  }
+  if ((profile.getLastSendSuccessful() > 0) && (now - 24 * 60 * 60* 1000 > profile.getLastSendSuccessful())) {
+    val-=1000;
+  }
+  val+=profile.getReliabilityBonus();
+  return val;
+}

@@ -1,0 +1,72 @@
+{
+  HashSet matches=new HashSet(4);
+  long beforeSync=Clock.getInstance().now();
+  Map messages=null;
+synchronized (_pendingMessages) {
+    messages=(Map)_pendingMessages.clone();
+  }
+  long matchTime=0;
+  long continueTime=0;
+  int numMessages=messages.size();
+  long afterSync1=Clock.getInstance().now();
+  ArrayList matchedRemove=new ArrayList(32);
+  for (Iterator iter=messages.keySet().iterator(); iter.hasNext(); ) {
+    Long exp=(Long)iter.next();
+    OutNetMessage msg=(OutNetMessage)messages.get(exp);
+    MessageSelector selector=msg.getReplySelector();
+    if (selector != null) {
+      long before=Clock.getInstance().now();
+      boolean isMatch=selector.isMatch(message);
+      long after=Clock.getInstance().now();
+      long diff=after - before;
+      if (diff > 100) {
+        if (_log.shouldLog(Log.WARN))         _log.warn("Matching with selector took too long (" + diff + "ms) : "+ selector.getClass().getName());
+      }
+      matchTime+=diff;
+      if (isMatch) {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Selector matches [" + selector);
+        matches.add(msg);
+        long beforeCon=Clock.getInstance().now();
+        boolean continueMatching=selector.continueMatching();
+        long afterCon=Clock.getInstance().now();
+        long diffCon=afterCon - beforeCon;
+        if (diffCon > 100) {
+          if (_log.shouldLog(Log.WARN))           _log.warn("Error continueMatching on a match took too long (" + diffCon + "ms) : "+ selector.getClass().getName());
+        }
+        continueTime+=diffCon;
+        if (continueMatching) {
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("Continue matching");
+        }
+ else {
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("Stop matching selector " + selector + " for message "+ msg.getMessage().getClass().getName());
+          matchedRemove.add(exp);
+        }
+      }
+ else {
+      }
+    }
+  }
+  long afterSearch=Clock.getInstance().now();
+  for (Iterator iter=matchedRemove.iterator(); iter.hasNext(); ) {
+    Long expiration=(Long)iter.next();
+    OutNetMessage m=null;
+    long before=Clock.getInstance().now();
+synchronized (_pendingMessages) {
+      m=(OutNetMessage)_pendingMessages.remove(expiration);
+    }
+    long diff=Clock.getInstance().now() - before;
+    if (diff > 500)     _log.error("Took too long syncing on remove (" + diff + "ms");
+    if (m != null) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Removing message with selector " + m.getReplySelector().getClass().getName() + " :"+ m.getReplySelector().toString());
+    }
+  }
+  long delay=Clock.getInstance().now() - beforeSync;
+  long search=afterSearch - afterSync1;
+  long sync=afterSync1 - beforeSync;
+  int level=Log.DEBUG;
+  if (delay > 1000)   level=Log.ERROR;
+  if (_log.shouldLog(level)) {
+    _log.log(level,"getMessages took " + delay + "ms with search time of "+ search+ "ms (match: "+ matchTime+ "ms, continue: "+ continueTime+ "ms, #: "+ numMessages+ ") and sync time of "+ sync+ "ms for "+ matchedRemove.size()+ " removed, "+ matches.size()+ " matches");
+  }
+  return new ArrayList(matches);
+}

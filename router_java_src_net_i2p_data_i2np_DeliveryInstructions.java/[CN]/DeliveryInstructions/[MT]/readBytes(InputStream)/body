@@ -1,0 +1,44 @@
+{
+  long flags=DataHelper.readLong(in,1);
+  _log.debug("Read flags: " + flags + " mode: "+ flagMode(flags));
+  if (flagEncrypted(flags)) {
+    SessionKey k=new SessionKey();
+    k.readBytes(in);
+    setEncryptionKey(k);
+    setEncrypted(true);
+  }
+ else {
+    setEncrypted(false);
+  }
+  setDeliveryMode(flagMode(flags));
+switch (flagMode(flags)) {
+case FLAG_MODE_LOCAL:
+    break;
+case FLAG_MODE_DESTINATION:
+  Hash destHash=new Hash();
+destHash.readBytes(in);
+setDestination(destHash);
+break;
+case FLAG_MODE_ROUTER:
+Hash routerHash=new Hash();
+routerHash.readBytes(in);
+setRouter(routerHash);
+break;
+case FLAG_MODE_TUNNEL:
+Hash tunnelRouterHash=new Hash();
+tunnelRouterHash.readBytes(in);
+setRouter(tunnelRouterHash);
+TunnelId id=new TunnelId();
+id.readBytes(in);
+setTunnelId(id);
+break;
+}
+if (flagDelay(flags)) {
+long delay=DataHelper.readLong(in,4);
+setDelayRequested(true);
+setDelaySeconds(delay);
+}
+ else {
+setDelayRequested(false);
+}
+}

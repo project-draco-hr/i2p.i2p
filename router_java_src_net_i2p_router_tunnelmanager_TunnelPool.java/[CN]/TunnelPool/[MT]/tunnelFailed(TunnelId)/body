@@ -1,0 +1,19 @@
+{
+  if (!_isLive)   return;
+  if (_log.shouldLog(Log.INFO))   _log.info("Tunnel " + id + " marked as not ready, since it /failed/",new Exception("Failed tunnel"));
+  TunnelInfo info=getTunnelInfo(id);
+  if (info == null)   return;
+  MessageHistory.getInstance().tunnelFailed(info.getTunnelId());
+  info.setIsReady(false);
+  Hash us=Router.getInstance().getRouterInfo().getIdentity().getHash();
+  long lifetime=Clock.getInstance().now() - info.getCreated();
+  while (info != null) {
+    if (!info.getThisHop().equals(us)) {
+      ProfileManager.getInstance().tunnelFailed(info.getThisHop());
+    }
+    info=info.getNextHopInfo();
+  }
+  StatManager.getInstance().addRateData("tunnel.failAfterTime",lifetime,lifetime);
+  StatManager.getInstance().updateFrequency("tunnel.failFrequency");
+  buildFakeTunnels();
+}

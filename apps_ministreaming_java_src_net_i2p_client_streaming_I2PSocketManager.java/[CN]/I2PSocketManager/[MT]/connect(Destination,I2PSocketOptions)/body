@@ -1,0 +1,54 @@
+{
+  String localID, lcID;
+  I2PSocketImpl s;
+synchronized (lock) {
+    localID=makeID(_outSockets);
+    lcID=getReadableForm(localID);
+    s=new I2PSocketImpl(peer,this,true,localID);
+    _outSockets.put(s.getLocalID(),s);
+  }
+  try {
+    ByteArrayOutputStream pubkey=new ByteArrayOutputStream();
+    _session.getMyDestination().writeBytes(pubkey);
+    String remoteID;
+    byte[] packet=makePacket((byte)0xA1,localID,pubkey.toByteArray());
+    boolean sent=false;
+synchronized (_session) {
+      sent=_session.sendMessage(peer,packet);
+    }
+    if (!sent) {
+      _log.info("Unable to send & receive ack for SYN packet");
+synchronized (lock) {
+        _outSockets.remove(s.getLocalID());
+      }
+      throw new I2PException("Unable to reach peer");
+    }
+    remoteID=s.getRemoteID(true,options.getConnectTimeout());
+    if ("".equals(remoteID)) {
+      throw new I2PException("Unable to reach peer");
+    }
+    _log.debug("TIMING: s given out for remoteID " + getReadableForm(remoteID));
+    return s;
+  }
+ catch (  InterruptedIOException ioe) {
+    _log.error("Timeout waiting for ack from syn for id " + getReadableForm(lcID),ioe);
+synchronized (lock) {
+      _outSockets.remove(s.getLocalID());
+    }
+    throw new I2PException("Timeout waiting for ack");
+  }
+catch (  IOException ex) {
+    _log.error("Error sending syn on id " + getReadableForm(lcID),ex);
+synchronized (lock) {
+      _outSockets.remove(s.getLocalID());
+    }
+    throw new I2PException("IOException occurred");
+  }
+catch (  I2PException ex) {
+    _log.info("Error sending syn on id " + getReadableForm(lcID),ex);
+synchronized (lock) {
+      _outSockets.remove(s.getLocalID());
+    }
+    throw ex;
+  }
+}

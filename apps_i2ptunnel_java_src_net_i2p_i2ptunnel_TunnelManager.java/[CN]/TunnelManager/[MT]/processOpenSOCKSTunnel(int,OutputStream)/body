@@ -1,0 +1,24 @@
+{
+  BufferLogger buf=new BufferLogger();
+  _tunnel.runCommand("sockstunnel " + listenPort,buf);
+  Integer taskId=(Integer)_tunnel.waitEventValue("sockstunnelTaskId");
+  if (taskId.intValue() < 0) {
+    out.write("error\n".getBytes());
+    buf.ignoreFurtherActions();
+    return;
+  }
+  String rv=(String)_tunnel.waitEventValue("openSOCKSTunnelResult");
+  if (rv.equals("error")) {
+    out.write((rv + "\n").getBytes());
+    buf.ignoreFurtherActions();
+    return;
+  }
+  if (listenPort != 0) {
+    out.write((rv + " [" + taskId.intValue()+ "]\n").getBytes());
+    buf.ignoreFurtherActions();
+    return;
+  }
+  Integer port=(Integer)_tunnel.waitEventValue("clientLocalPort");
+  out.write((rv + " " + port.intValue()+ " ["+ taskId.intValue()+ "]\n").getBytes());
+  buf.ignoreFurtherActions();
+}

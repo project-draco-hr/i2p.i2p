@@ -1,0 +1,22 @@
+{
+  if (_dead)   return;
+  _log.error("Stop the I2CP connection!  current leaseSet: " + _currentLeaseSet,new Exception("Stop client connection"));
+  _dead=true;
+  if (_reader != null)   _reader.stopReading();
+  if (_socket != null)   try {
+    _socket.close();
+  }
+ catch (  IOException ioe) {
+  }
+synchronized (_messages) {
+    _messages.clear();
+  }
+  _manager.unregisterConnection(this);
+  if (_currentLeaseSet != null)   NetworkDatabaseFacade.getInstance().unpublish(_currentLeaseSet);
+  _leaseRequest=null;
+synchronized (_alreadyProcessed) {
+    _alreadyProcessed.clear();
+  }
+  _config=null;
+  _manager=null;
+}

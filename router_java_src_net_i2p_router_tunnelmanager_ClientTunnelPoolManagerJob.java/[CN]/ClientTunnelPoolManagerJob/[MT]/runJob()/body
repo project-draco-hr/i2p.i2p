@@ -1,0 +1,38 @@
+{
+  try {
+    if (_clientPool.isStopped()) {
+      if (ClientManagerFacade.getInstance().isLocal(_clientPool.getDestination())) {
+        if (_log.shouldLog(Log.INFO))         _log.info("Client " + _clientPool.getDestination().calculateHash().toBase64() + " was stopped, but reconnected!  restarting it");
+        _clientPool.startPool();
+        return;
+      }
+ else {
+        if ((_clientPool.getInactiveInboundTunnelIds().size() > 0) || (_clientPool.getInboundTunnelIds().size() > 0)) {
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("There are tunnels left, though the client is still disconnected: " + _clientPool.getDestination().calculateHash());
+          requeue(POOL_CHECK_DELAY);
+          return;
+        }
+ else {
+          if (_log.shouldLog(Log.INFO))           _log.info("No more tunnels left and the client has disconnected: " + _clientPool.getDestination().calculateHash());
+          _tunnelPool.removeClientPool(_clientPool.getDestination());
+          return;
+        }
+      }
+    }
+    if (!ClientManagerFacade.getInstance().isLocal(_clientPool.getDestination())) {
+      _log.info("Client " + _clientPool.getDestination().calculateHash() + " is no longer connected, stop the pool");
+      _clientPool.stopPool();
+      requeue(POOL_CHECK_DELAY);
+      return;
+    }
+    int requestedPoolSize=_clientPool.getClientSettings().getNumInboundTunnels();
+    int safePoolSize=_clientPool.getSafePoolSize(POOL_CHECK_DELAY);
+    if (safePoolSize < requestedPoolSize) {
+      requestMoreTunnels(requestedPoolSize - safePoolSize);
+    }
+  }
+ catch (  Exception t) {
+    _log.log(Log.CRIT,"Unhandled exception managing the client tunnel pool",t);
+  }
+  requeue(POOL_CHECK_DELAY);
+}

@@ -1,0 +1,31 @@
+{
+  BufferedReader reader=new BufferedReader(new InputStreamReader(con.getInputStream()));
+  String statusLine=reader.readLine();
+  if (statusLine == null) {
+    _log.error("Null response line when checking URL");
+    return null;
+  }
+  boolean statusOk=false;
+  if (!statusLine.startsWith(PROP_STATUS)) {
+    _log.warn("Response does not begin with status [" + statusLine + "]");
+    return null;
+  }
+ else {
+    String statVal=statusLine.substring(PROP_STATUS.length() + 1);
+    statusOk=STATUS_OK.equals(statVal);
+    if (!statusOk) {
+      _log.info("Status was not ok for sending [" + statVal + "]");
+      return null;
+    }
+  }
+  String checkURL=reader.readLine();
+  if (!checkURL.startsWith(PROP_CHECK_URL)) {
+    _log.warn("Incorrect OK response: " + checkURL);
+    return null;
+  }
+ else {
+    String checkURLStr=checkURL.substring(PROP_CHECK_URL.length() + 1);
+    _log.debug("Check URL = [" + checkURLStr + "]");
+    return checkURLStr;
+  }
+}

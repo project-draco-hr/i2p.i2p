@@ -1,0 +1,33 @@
+{
+  if (args.length == 3) {
+    InetAddress serverHost=null;
+    int portNum=-1;
+    try {
+      serverHost=InetAddress.getByName(args[0]);
+    }
+ catch (    UnknownHostException uhe) {
+      l.log("unknown host");
+      _log.error("Error resolving " + args[0],uhe);
+      notifyEvent("serverTaskId",new Integer(-1));
+      return;
+    }
+    try {
+      portNum=Integer.parseInt(args[1]);
+    }
+ catch (    NumberFormatException nfe) {
+      l.log("invalid port");
+      _log.error("Port specified is not valid: " + args[1],nfe);
+      notifyEvent("serverTaskId",new Integer(-1));
+      return;
+    }
+    I2PTunnelTask task;
+    task=new I2PTunnelServer(serverHost,portNum,args[2],l,(EventDispatcher)this);
+    addtask(task);
+    notifyEvent("serverTaskId",new Integer(task.getId()));
+  }
+ else {
+    l.log("textserver <host> <port> <privkey>");
+    l.log("  creates a server that sends all incoming data\n" + "  of its destination to host:port.");
+    notifyEvent("textserverTaskId",new Integer(-1));
+  }
+}

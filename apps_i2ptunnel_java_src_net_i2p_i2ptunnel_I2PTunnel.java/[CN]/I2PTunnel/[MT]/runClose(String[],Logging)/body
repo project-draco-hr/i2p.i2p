@@ -1,0 +1,46 @@
+{
+  if (args.length == 0 || args.length > 2) {
+    l.log("close [forced] <jobnumber>|all");
+    l.log("   stop running tasks. either only one or all.\n" + "   use 'forced' to also stop tasks with active connections.\n" + "   use the 'list' command to show the job numbers");
+    notifyEvent("closeResult","error");
+  }
+ else {
+    int argindex=0;
+    boolean forced=false;
+    if (args[argindex].equalsIgnoreCase("forced")) {
+      forced=true;
+      argindex++;
+    }
+    if (args[argindex].equalsIgnoreCase("all")) {
+      List curTasks=null;
+synchronized (tasks) {
+        curTasks=new LinkedList(tasks);
+      }
+      boolean error=false;
+      for (int i=0; i < curTasks.size(); i++) {
+        I2PTunnelTask t=(I2PTunnelTask)curTasks.get(i);
+        if (!closetask(t,forced,l)) {
+          notifyEvent("closeResult","error");
+          error=true;
+        }
+ else         if (!error) {
+          notifyEvent("closeResult","ok");
+        }
+      }
+    }
+ else {
+      try {
+        if (!closetask(Integer.parseInt(args[argindex]),forced,l)) {
+          notifyEvent("closeResult","error");
+        }
+ else {
+          notifyEvent("closeResult","ok");
+        }
+      }
+ catch (      NumberFormatException ex) {
+        l.log("Incorrect job number: " + args[argindex]);
+        notifyEvent("closeResult","error");
+      }
+    }
+  }
+}

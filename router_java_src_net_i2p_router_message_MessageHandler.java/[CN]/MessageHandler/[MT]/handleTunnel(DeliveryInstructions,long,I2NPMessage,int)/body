@@ -1,0 +1,29 @@
+{
+  Hash to=instructions.getRouter();
+  long timeoutMs=expiration - Clock.getInstance().now();
+  TunnelId tunnelId=instructions.getTunnelId();
+  if (!Router.getInstance().getRouterInfo().getIdentity().getHash().equals(to)) {
+    boolean valid=MessageValidator.getInstance().validateMessage(message.getUniqueId(),message.getMessageExpiration().getTime());
+    if (!valid) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Duplicate / expired tunnel message received [" + message.getUniqueId() + " expiring on "+ message.getMessageExpiration()+ "]");
+      MessageHistory.getInstance().droppedOtherMessage(message);
+      MessageHistory.getInstance().messageProcessingError(message.getUniqueId(),message.getClass().getName(),"Duplicate/expired");
+      return;
+    }
+  }
+  _log.info("Handle " + message.getClass().getName() + " to send to remote tunnel "+ tunnelId.getTunnelId()+ " on router "+ to.toBase64());
+  TunnelMessage msg=new TunnelMessage();
+  ByteArrayOutputStream baos=new ByteArrayOutputStream(1024);
+  try {
+    message.writeBytes(baos);
+    msg.setData(baos.toByteArray());
+    msg.setTunnelId(tunnelId);
+    _log.debug("Placing message of type " + message.getClass().getName() + " into the new tunnel message bound for "+ tunnelId.getTunnelId()+ " on "+ to.toBase64());
+    JobQueue.getInstance().addJob(new SendMessageDirectJob(msg,to,expiration,priority));
+    String bodyType=message.getClass().getName();
+    MessageHistory.getInstance().wrap(bodyType,message.getUniqueId(),TunnelMessage.class.getName(),msg.getUniqueId());
+  }
+ catch (  Exception e) {
+    _log.warn("Unable to forward on according to the instructions to the remote tunnel",e);
+  }
+}

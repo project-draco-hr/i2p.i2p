@@ -1,0 +1,29 @@
+{
+  if (info == null) {
+    _log.error("Null tunnel",new Exception("Null tunnel"));
+    StatManager.getInstance().updateFrequency("tunnel.rejectRequestFrequency");
+    return false;
+  }
+  if (info.getSettings() == null) {
+    _log.error("Null settings!",new Exception("settings are null"));
+    StatManager.getInstance().updateFrequency("tunnel.rejectRequestFrequency");
+    return false;
+  }
+  if (info.getSettings().getExpiration() == 0) {
+    _log.info("No expiration for tunnel " + info.getTunnelId().getTunnelId(),new Exception("No expiration"));
+    StatManager.getInstance().updateFrequency("tunnel.rejectRequestFrequency");
+    return false;
+  }
+ else {
+    if (info.getSettings().getExpiration() < Clock.getInstance().now()) {
+      _log.warn("Already expired - " + new Date(info.getSettings().getExpiration()),new Exception("Already expired"));
+      StatManager.getInstance().updateFrequency("tunnel.rejectRequestFrequency");
+      return false;
+    }
+  }
+  _log.debug("Joining tunnel: " + info);
+  boolean ok=_pool.addParticipatingTunnel(info);
+  if (!ok)   StatManager.getInstance().updateFrequency("tunnel.rejectRequestFrequency");
+ else   StatManager.getInstance().updateFrequency("tunnel.acceptRequestFrequency");
+  return ok;
+}

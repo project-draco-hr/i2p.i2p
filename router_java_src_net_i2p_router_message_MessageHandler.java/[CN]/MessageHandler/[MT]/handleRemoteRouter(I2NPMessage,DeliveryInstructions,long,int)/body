@@ -1,0 +1,12 @@
+{
+  boolean valid=MessageValidator.getInstance().validateMessage(message.getUniqueId(),message.getMessageExpiration().getTime());
+  if (!valid) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Duplicate / expired message received to remote router [" + message.getUniqueId() + " expiring on "+ message.getMessageExpiration()+ "]");
+    MessageHistory.getInstance().droppedOtherMessage(message);
+    MessageHistory.getInstance().messageProcessingError(message.getUniqueId(),message.getClass().getName(),"Duplicate/expired to remote router");
+    return;
+  }
+  _log.info("Handle " + message.getClass().getName() + " to a remote router "+ instructions.getRouter().toBase64()+ " - fire a SendMessageDirectJob");
+  SendMessageDirectJob j=new SendMessageDirectJob(message,instructions.getRouter(),expiration,priority);
+  JobQueue.getInstance().addJob(j);
+}

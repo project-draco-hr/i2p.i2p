@@ -1,0 +1,45 @@
+{
+  ByteArrayOutputStream baos=new ByteArrayOutputStream(64);
+  try {
+    if (getEncrypted()) {
+      if (_encryptionKey == null)       throw new DataFormatException("Encryption key is not set");
+      _encryptionKey.writeBytes(baos);
+      _log.debug("IsEncrypted");
+    }
+ else {
+      _log.debug("Is NOT Encrypted");
+    }
+switch (getDeliveryMode()) {
+case FLAG_MODE_LOCAL:
+      _log.debug("mode = local");
+    break;
+case FLAG_MODE_DESTINATION:
+  if (_destinationHash == null)   throw new DataFormatException("Destination hash is not set");
+_destinationHash.writeBytes(baos);
+_log.debug("mode = destination, hash = " + _destinationHash);
+break;
+case FLAG_MODE_ROUTER:
+if (_routerHash == null) throw new DataFormatException("Router hash is not set");
+_routerHash.writeBytes(baos);
+_log.debug("mode = router, routerHash = " + _routerHash);
+break;
+case FLAG_MODE_TUNNEL:
+if ((_routerHash == null) || (_tunnelId == null)) throw new DataFormatException("Router hash or tunnel ID is not set");
+_routerHash.writeBytes(baos);
+_tunnelId.writeBytes(baos);
+_log.debug("mode = tunnel, tunnelId = " + _tunnelId.getTunnelId() + ", routerHash = "+ _routerHash);
+break;
+}
+if (getDelayRequested()) {
+_log.debug("delay requested: " + getDelaySeconds());
+DataHelper.writeLong(baos,4,getDelaySeconds());
+}
+ else {
+_log.debug("delay NOT requested");
+}
+}
+ catch (IOException ioe) {
+throw new DataFormatException("Unable to write out additional info",ioe);
+}
+return baos.toByteArray();
+}

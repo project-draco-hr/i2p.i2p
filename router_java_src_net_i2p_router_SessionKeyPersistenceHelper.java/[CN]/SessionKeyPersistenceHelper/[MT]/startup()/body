@@ -1,0 +1,27 @@
+{
+  SessionKeyManager mgr=SessionKeyManager.getInstance();
+  if (mgr instanceof PersistentSessionKeyManager) {
+    PersistentSessionKeyManager manager=(PersistentSessionKeyManager)mgr;
+    File f=new File(SESSION_KEY_FILE);
+    if (f.exists()) {
+      FileInputStream fin=null;
+      try {
+        fin=new FileInputStream(f);
+        manager.loadState(fin);
+        int expired=manager.aggressiveExpire();
+        _log.debug("Session keys loaded [not error] with " + expired + " sets immediately expired");
+      }
+ catch (      Throwable t) {
+        _log.error("Error reading in session key data",t);
+      }
+ finally {
+        if (fin != null)         try {
+          fin.close();
+        }
+ catch (        IOException ioe) {
+        }
+      }
+    }
+    JobQueue.getInstance().addJob(new SessionKeyWriterJob());
+  }
+}

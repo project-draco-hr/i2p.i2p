@@ -1,0 +1,22 @@
+{
+  boolean newJobsReady=false;
+  long now=Clock.getInstance().now();
+  LinkedList toAdd=new LinkedList();
+synchronized (_timedJobs) {
+    for (int i=0; i < _timedJobs.size(); i++) {
+      Job j=(Job)_timedJobs.get(i);
+      if (j.getTiming().getStartAfter() <= now) {
+        if (j instanceof JobImpl)         ((JobImpl)j).madeReady();
+        toAdd.add(j);
+        _timedJobs.remove(i);
+        i--;
+      }
+    }
+  }
+  int ready=0;
+synchronized (_readyJobs) {
+    _readyJobs.addAll(toAdd);
+    ready=_readyJobs.size();
+  }
+  return ready;
+}
