@@ -1,0 +1,66 @@
+{
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("initial begins at " + offset + " for "+ length);
+  int type=(preprocessed[offset] & MASK_TYPE) >>> 5;
+  boolean fragmented=(0 != (preprocessed[offset] & MASK_FRAGMENTED));
+  boolean extended=(0 != (preprocessed[offset] & MASK_EXTENDED));
+  offset++;
+  TunnelId tunnelId=null;
+  Hash router=null;
+  long messageId=-1;
+  if (type == TYPE_TUNNEL) {
+    long id=DataHelper.fromLong(preprocessed,offset,4);
+    tunnelId=new TunnelId(id);
+    offset+=4;
+  }
+  if ((type == TYPE_ROUTER) || (type == TYPE_TUNNEL)) {
+    byte h[]=new byte[Hash.HASH_LENGTH];
+    System.arraycopy(preprocessed,offset,h,0,Hash.HASH_LENGTH);
+    router=new Hash(h);
+    offset+=Hash.HASH_LENGTH;
+  }
+  if (fragmented) {
+    messageId=DataHelper.fromLong(preprocessed,offset,4);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("reading messageId " + messageId + " at offset "+ offset+ " type = "+ type+ "tunnelId = "+ tunnelId);
+    offset+=4;
+  }
+  if (extended) {
+    int extendedSize=(int)DataHelper.fromLong(preprocessed,offset,1);
+    offset++;
+    offset+=extendedSize;
+  }
+  int size=(int)DataHelper.fromLong(preprocessed,offset,2);
+  offset+=2;
+  boolean isNew=false;
+  FragmentedMessage msg=null;
+  if (fragmented) {
+synchronized (_fragmentedMessages) {
+      msg=(FragmentedMessage)_fragmentedMessages.get(new Long(messageId));
+      if (msg == null) {
+        msg=new FragmentedMessage(_context);
+        _fragmentedMessages.put(new Long(messageId),msg);
+        isNew=true;
+      }
+    }
+  }
+ else {
+    msg=new FragmentedMessage(_context);
+  }
+  if (isNew && fragmented) {
+    RemoveFailed evt=new RemoveFailed(msg);
+    msg.setExpireEvent(evt);
+    _log.debug("In " + MAX_DEFRAGMENT_TIME + " dropping "+ messageId);
+    SimpleTimer.getInstance().addEvent(evt,MAX_DEFRAGMENT_TIME);
+  }
+  msg.receive(messageId,preprocessed,offset,size,!fragmented,router,tunnelId);
+  if (msg.isComplete()) {
+    if (fragmented) {
+synchronized (_fragmentedMessages) {
+        _fragmentedMessages.remove(new Long(messageId));
+      }
+    }
+    if (msg.getExpireEvent() != null)     SimpleTimer.getInstance().removeEvent(msg.getExpireEvent());
+    receiveComplete(msg);
+  }
+  offset+=size;
+  return offset;
+}

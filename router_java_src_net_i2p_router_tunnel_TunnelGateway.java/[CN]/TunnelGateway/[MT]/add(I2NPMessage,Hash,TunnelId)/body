@@ -1,0 +1,19 @@
+{
+  boolean delayedFlush=false;
+  Pending cur=new Pending(msg,toRouter,toTunnel);
+synchronized (_queue) {
+    _queue.add(cur);
+    delayedFlush=_preprocessor.preprocessQueue(_queue,_sender,_receiver);
+    _lastFlush=_context.clock().now();
+    for (int i=0; i < _queue.size(); i++) {
+      Pending m=(Pending)_queue.get(i);
+      if (m.getExpiration() < _lastFlush) {
+        _queue.remove(i);
+        i--;
+      }
+    }
+  }
+  if (delayedFlush) {
+    SimpleTimer.getInstance().addEvent(_delayedFlush,_flushFrequency);
+  }
+}

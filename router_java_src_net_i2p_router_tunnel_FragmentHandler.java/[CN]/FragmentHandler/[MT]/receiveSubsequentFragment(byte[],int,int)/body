@@ -1,0 +1,36 @@
+{
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("subsequent begins at " + offset + " for "+ length);
+  int fragmentNum=((preprocessed[offset] & MASK_FRAGMENT_NUM) >>> 1);
+  boolean isLast=(0 != (preprocessed[offset] & 1));
+  offset++;
+  long messageId=DataHelper.fromLong(preprocessed,offset,4);
+  offset+=4;
+  int size=(int)DataHelper.fromLong(preprocessed,offset,2);
+  offset+=2;
+  boolean isNew=false;
+  FragmentedMessage msg=null;
+synchronized (_fragmentedMessages) {
+    msg=(FragmentedMessage)_fragmentedMessages.get(new Long(messageId));
+    if (msg == null) {
+      msg=new FragmentedMessage(_context);
+      _fragmentedMessages.put(new Long(messageId),msg);
+      isNew=true;
+    }
+  }
+  if (isNew) {
+    RemoveFailed evt=new RemoveFailed(msg);
+    msg.setExpireEvent(evt);
+    _log.debug("In " + MAX_DEFRAGMENT_TIME + " dropping "+ msg.getMessageId()+ "/"+ fragmentNum);
+    SimpleTimer.getInstance().addEvent(evt,MAX_DEFRAGMENT_TIME);
+  }
+  msg.receive(messageId,fragmentNum,preprocessed,offset,size,isLast);
+  if (msg.isComplete()) {
+synchronized (_fragmentedMessages) {
+      _fragmentedMessages.remove(new Long(messageId));
+    }
+    if (msg.getExpireEvent() != null)     SimpleTimer.getInstance().removeEvent(msg.getExpireEvent());
+    receiveComplete(msg);
+  }
+  offset+=size;
+  return offset;
+}

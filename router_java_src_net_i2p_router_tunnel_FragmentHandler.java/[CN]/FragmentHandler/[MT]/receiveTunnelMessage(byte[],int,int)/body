@@ -1,0 +1,25 @@
+{
+  boolean ok=verifyPreprocessed(preprocessed,offset,length);
+  if (!ok) {
+    _log.error("Unable to verify preprocessed data");
+    return;
+  }
+  offset+=HopProcessor.IV_LENGTH;
+  offset+=4;
+  int padding=0;
+  while (preprocessed[offset] != (byte)0x00) {
+    offset++;
+    padding++;
+  }
+  offset++;
+  if (_log.shouldLog(Log.DEBUG)) {
+    _log.debug("Fragments begin at offset=" + offset + " padding="+ padding);
+    _log.debug("fragments: " + Base64.encode(preprocessed,offset,preprocessed.length - offset));
+  }
+  try {
+    while (offset < length)     offset=receiveFragment(preprocessed,offset,length);
+  }
+ catch (  Exception e) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Corrupt fragment received: offset = " + offset,e);
+  }
+}

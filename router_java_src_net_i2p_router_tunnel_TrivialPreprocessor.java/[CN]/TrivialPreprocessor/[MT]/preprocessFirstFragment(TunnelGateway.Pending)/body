@@ -1,0 +1,75 @@
+{
+  boolean fragmented=false;
+  byte iv[]=new byte[IV_SIZE];
+  _context.random().nextBytes(iv);
+  byte target[]=new byte[PREPROCESSED_SIZE];
+  int instructionsLength=getInstructionsSize(msg);
+  int payloadLength=msg.getData().length;
+  if (payloadLength + instructionsLength + IV_SIZE+ 1+ 4 > PREPROCESSED_SIZE) {
+    fragmented=true;
+    instructionsLength+=4;
+    payloadLength=PREPROCESSED_SIZE - IV_SIZE - 1- 4- instructionsLength;
+  }
+  int offset=0;
+  target[offset]=0x0;
+  if (msg.getToTunnel() != null)   target[offset]|=MASK_TUNNEL;
+ else   if (msg.getToRouter() != null)   target[offset]|=MASK_ROUTER;
+  if (fragmented)   target[offset]|=MASK_FRAGMENTED;
+  _log.debug("CONTROL: " + Integer.toHexString(target[offset]));
+  offset++;
+  if (msg.getToTunnel() != null) {
+    DataHelper.toLong(target,offset,4,msg.getToTunnel().getTunnelId());
+    offset+=4;
+  }
+  if (msg.getToRouter() != null) {
+    System.arraycopy(msg.getToRouter().getData(),0,target,offset,Hash.HASH_LENGTH);
+    offset+=Hash.HASH_LENGTH;
+  }
+  if (fragmented) {
+    DataHelper.toLong(target,offset,4,msg.getMessageId());
+    _log.debug("writing messageId= " + msg.getMessageId() + " at offset "+ offset);
+    offset+=4;
+  }
+  DataHelper.toLong(target,offset,2,payloadLength);
+  offset+=2;
+  System.arraycopy(msg.getData(),0,target,offset,payloadLength);
+  _log.debug("fragment[" + msg.getFragmentNumber() + "/"+ (PREPROCESSED_SIZE - offset - payloadLength)+ "/"+ payloadLength+ "]: "+ Base64.encode(target,offset,payloadLength));
+  offset+=payloadLength;
+  System.arraycopy(iv,0,target,offset,IV_SIZE);
+  Hash h=_context.sha().calculateHash(target,0,offset + IV_SIZE);
+  _log.debug("before shift: " + Base64.encode(target));
+  int distance=PREPROCESSED_SIZE - offset;
+  System.arraycopy(target,0,target,distance,offset);
+  _log.debug("fragments begin at " + distance + " (size="+ payloadLength+ " offset="+ offset+ ")");
+  java.util.Arrays.fill(target,0,distance,(byte)0x0);
+  _log.debug("after shift: " + Base64.encode(target));
+  offset=0;
+  System.arraycopy(iv,0,target,offset,IV_SIZE);
+  offset+=IV_SIZE;
+  System.arraycopy(h.getData(),0,target,offset,4);
+  offset+=4;
+  if (!fragmented) {
+    int numPadBytes=PREPROCESSED_SIZE - IV_SIZE - 4- 1- payloadLength- instructionsLength;
+    for (int i=0; i < numPadBytes; i++) {
+      if (false) {
+        target[offset]=0x0;
+        offset++;
+      }
+ else {
+        byte rnd=(byte)_context.random().nextInt();
+        if (rnd != 0x0) {
+          target[offset]=rnd;
+          offset++;
+        }
+ else {
+          i--;
+        }
+      }
+    }
+  }
+  target[offset]=0x0;
+  offset++;
+  msg.setOffset(payloadLength);
+  msg.incrementFragmentNumber();
+  return target;
+}

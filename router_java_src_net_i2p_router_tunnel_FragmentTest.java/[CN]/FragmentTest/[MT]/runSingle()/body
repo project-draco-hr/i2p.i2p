@@ -1,0 +1,18 @@
+{
+  DataMessage m=new DataMessage(_context);
+  byte data[]=new byte[949];
+  _context.random().nextBytes(data);
+  m.setData(data);
+  m.setUniqueId(42);
+  m.setMessageExpiration(new Date(_context.clock().now() + 60 * 1000));
+  ArrayList messages=new ArrayList();
+  TunnelGateway.Pending pending=new TunnelGateway.Pending(m,null,null);
+  messages.add(pending);
+  TrivialPreprocessor pre=new TrivialPreprocessor(_context);
+  SenderImpl sender=new SenderImpl();
+  FragmentHandler handler=new FragmentHandler(_context,new DefragmentedReceiverImpl(m));
+  ReceiverImpl receiver=new ReceiverImpl(handler,0);
+  byte msg[]=m.toByteArray();
+  _log.debug("SEND(" + msg.length + "): "+ Base64.encode(msg)+ " "+ _context.sha().calculateHash(msg).toBase64());
+  pre.preprocessQueue(messages,new SenderImpl(),receiver);
+}

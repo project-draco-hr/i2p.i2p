@@ -1,0 +1,12 @@
+{
+  int paddingEnd=HopProcessor.IV_LENGTH + 4;
+  while (preprocessed[offset + paddingEnd] != (byte)0x00)   paddingEnd++;
+  paddingEnd++;
+  byte preV[]=new byte[length - offset - paddingEnd + HopProcessor.IV_LENGTH];
+  System.arraycopy(preprocessed,offset + paddingEnd,preV,0,preV.length - HopProcessor.IV_LENGTH);
+  System.arraycopy(preprocessed,0,preV,preV.length - HopProcessor.IV_LENGTH,HopProcessor.IV_LENGTH);
+  Hash v=_context.sha().calculateHash(preV);
+  boolean eq=DataHelper.eq(v.getData(),0,preprocessed,offset + HopProcessor.IV_LENGTH,4);
+  if (!eq)   _log.error("Endpoint data doesn't match:\n" + Base64.encode(preprocessed,offset + paddingEnd,preV.length - HopProcessor.IV_LENGTH));
+  return eq;
+}

@@ -1,0 +1,55 @@
+{
+  boolean isLast=true;
+  byte iv[]=new byte[IV_SIZE];
+  _context.random().nextBytes(iv);
+  byte target[]=new byte[PREPROCESSED_SIZE];
+  int instructionsLength=getInstructionsSize(msg);
+  int payloadLength=msg.getData().length - msg.getOffset();
+  if (payloadLength + instructionsLength + IV_SIZE+ 1+ 4 > PREPROCESSED_SIZE) {
+    isLast=false;
+    payloadLength=PREPROCESSED_SIZE - IV_SIZE - 1- 4- instructionsLength;
+  }
+  int offset=0;
+  target[offset]=0x0;
+  target[offset]|=MASK_IS_SUBSEQUENT;
+  target[offset]|=(byte)(msg.getFragmentNumber() << 1);
+  if (isLast)   target[offset]|=1;
+  _log.debug("CONTROL: " + Integer.toHexString((int)target[offset]) + "/"+ Base64.encode(target,offset,1)+ " at offset "+ offset);
+  offset++;
+  DataHelper.toLong(target,offset,4,msg.getMessageId());
+  offset+=4;
+  DataHelper.toLong(target,offset,2,payloadLength);
+  offset+=2;
+  System.arraycopy(msg.getData(),msg.getOffset(),target,offset,payloadLength);
+  _log.debug("fragment[" + msg.getFragmentNumber() + "/"+ offset+ "/"+ payloadLength+ "]: "+ Base64.encode(target,offset,payloadLength));
+  offset+=payloadLength;
+  System.arraycopy(iv,0,target,offset,IV_SIZE);
+  Hash h=_context.sha().calculateHash(target,0,offset + IV_SIZE);
+  int distance=PREPROCESSED_SIZE - offset;
+  System.arraycopy(target,0,target,distance,offset);
+  _log.debug("fragments begin at " + distance + " (size="+ payloadLength+ " offset="+ offset+ ")");
+  offset=0;
+  System.arraycopy(iv,0,target,0,IV_SIZE);
+  offset+=IV_SIZE;
+  System.arraycopy(h.getData(),0,target,offset,4);
+  offset+=4;
+  if (isLast) {
+    int numPadBytes=PREPROCESSED_SIZE - IV_SIZE - 4- 1- payloadLength- instructionsLength;
+    for (int i=0; i < numPadBytes; i++) {
+      byte rnd=(byte)_context.random().nextInt();
+      if (rnd != 0x0) {
+        target[offset]=rnd;
+        offset++;
+      }
+ else {
+        i--;
+      }
+    }
+    _log.debug("# pad bytes: " + numPadBytes);
+  }
+  target[offset]=0x0;
+  offset++;
+  msg.setOffset(msg.getOffset() + payloadLength);
+  msg.incrementFragmentNumber();
+  return target;
+}
