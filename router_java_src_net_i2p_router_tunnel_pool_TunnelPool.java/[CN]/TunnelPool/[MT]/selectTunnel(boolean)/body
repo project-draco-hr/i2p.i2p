@@ -1,5 +1,12 @@
 {
+  long period=_context.clock().now();
+  period-=period % SELECTION_PERIOD;
 synchronized (_tunnels) {
+    if (_lastSelectionPeriod == period) {
+      if ((_lastSelected != null) && (_lastSelected.getExpiration() > period) && (_tunnels.contains(_lastSelected)))       return _lastSelected;
+    }
+    _lastSelectionPeriod=period;
+    _lastSelected=null;
     if (_tunnels.size() <= 0) {
       if (_log.shouldLog(Log.WARN))       _log.warn(toString() + ": No tunnels to select from");
     }
@@ -8,6 +15,7 @@ synchronized (_tunnels) {
       for (int i=0; i < _tunnels.size(); i++) {
         TunnelInfo info=(TunnelInfo)_tunnels.get(i);
         if (info.getExpiration() > _context.clock().now()) {
+          _lastSelected=info;
           return info;
         }
       }
