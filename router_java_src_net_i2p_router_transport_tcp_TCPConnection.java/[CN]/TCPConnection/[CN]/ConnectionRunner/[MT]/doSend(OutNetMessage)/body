@@ -1,0 +1,39 @@
+{
+  msg.timestamp("TCPConnection.runner.doSend fetched");
+  long afterExpire=_context.clock().now();
+  byte data[]=msg.getMessageData();
+  if (data == null) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("message " + msg.getMessageType() + "/"+ msg.getMessageId()+ " expired before it could be sent");
+    _transport.afterSend(msg,false,false);
+    return true;
+  }
+  msg.timestamp("TCPConnection.runner.doSend before sending " + data.length + " bytes");
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Sending " + data.length + " bytes to "+ _remoteIdentity.getHash().toBase64());
+  long exp=msg.getMessage().getMessageExpiration().getTime();
+  long beforeWrite=0;
+  try {
+synchronized (_out) {
+      beforeWrite=_context.clock().now();
+      _out.write(data);
+      _out.flush();
+    }
+  }
+ catch (  IOException ioe) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("IO error writing out a " + data.length + " byte message to "+ _remoteIdentity.getHash().toBase64());
+    return false;
+  }
+  long end=_context.clock().now();
+  long timeLeft=exp - end;
+  msg.timestamp("TCPConnection.runner.doSend sent and flushed");
+  if (_log.shouldLog(Log.INFO))   _log.info("Message " + msg.getMessageType() + " (expiring in "+ timeLeft+ "ms) sent to "+ _remoteIdentity.getHash().toBase64()+ " from "+ _context.routerHash().toBase64()+ " over connection "+ _id+ " with "+ data.length+ " bytes in "+ (end - afterExpire)+ "ms (write took "+ (end - beforeWrite)+ "ms, prepare took "+ (beforeWrite - afterExpire)+ "ms)");
+  long lifetime=msg.getLifetime();
+  if (lifetime > 10 * 1000) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("The processing of the message took way too long (" + lifetime + "ms) - time left ("+ timeLeft+ ") to "+ _remoteIdentity.getHash().toBase64()+ "\n"+ msg.toString());
+  }
+  _transport.afterSend(msg,true);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("doSend - message sent completely: " + msg.getMessageSize() + " byte "+ msg.getMessageType()+ " message to "+ _remoteIdentity.getHash().toBase64());
+  if (end - afterExpire > 1000) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Actual sending took too long ( " + (end - afterExpire) + "ms) sending "+ data.length+ " bytes to "+ _remoteIdentity.getHash().toBase64());
+  }
+  return true;
+}

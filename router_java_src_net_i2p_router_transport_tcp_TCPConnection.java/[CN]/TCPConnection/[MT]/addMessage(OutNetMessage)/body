@@ -4,12 +4,21 @@
   boolean fail=false;
   long beforeAdd=_context.clock().now();
   StringBuffer pending=new StringBuffer(64);
+  List removed=null;
 synchronized (_toBeSent) {
     for (int i=0; i < _toBeSent.size(); i++) {
       OutNetMessage cur=(OutNetMessage)_toBeSent.get(i);
       if (cur.getExpiration() < beforeAdd) {
-        fail=true;
-        break;
+        if (cur.getLifetime() > MIN_MESSAGE_LIFETIME_FOR_PENALTY) {
+          fail=true;
+          break;
+        }
+ else {
+          if (removed == null)           removed=new ArrayList(2);
+          removed.add(cur);
+          _toBeSent.remove(i);
+          i--;
+        }
       }
     }
     if (!fail) {
@@ -29,29 +38,30 @@ synchronized (_toBeSent) {
   }
   long afterAdd=_context.clock().now();
   _context.statManager().addRateData("tcp.queueSize",totalPending - 1,0);
+  if (removed != null) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("messages expired on the queue to " + _remoteIdentity.getHash().toBase64() + " but they weren't that old: "+ removed.size());
+    for (int i=0; i < removed.size(); i++) {
+      OutNetMessage cur=(OutNetMessage)removed.get(i);
+      msg.timestamp("TCPConnection.addMessage expired but not our fault");
+      _transport.afterSend(cur,false);
+    }
+  }
   if (fail) {
     if (_log.shouldLog(Log.ERROR))     _log.error("messages expired on the queue to " + _remoteIdentity.getHash().toBase64() + ": "+ pending.toString());
     _context.profileManager().commErrorOccurred(_remoteIdentity.getHash());
     msg.timestamp("TCPConnection.addMessage saw an expired queued message");
     _transport.afterSend(msg,false);
     closeConnection();
-    return;
   }
-  long diff=afterAdd - beforeAdd;
-  if (diff > 500) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("Lock contention adding a message: " + diff + "ms to "+ _remoteIdentity.getHash().toBase64()+ ": "+ totalPending);
-  }
-  msg.timestamp("TCPConnection.addMessage after toBeSent.add and notify");
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Add message with toBeSent.size = " + totalPending + " to "+ _remoteIdentity.getHash().toBase64());
-  if (totalPending <= 0) {
-    if (_log.shouldLog(Log.ERROR))     _log.error("WTF, total pending after adding " + msg.getMessage().getClass().getName() + " <= 0! "+ msg);
-  }
-  if (slicesTooLong()) {
-    msg.timestamp("TCPTransport.addMessage noticed slices were taking too long");
-    if (_log.shouldLog(Log.ERROR)) {
-      long sliceTime=_context.clock().now() - _lastSliceRun;
-      _log.error("onAdd: Slices are taking too long (" + sliceTime + "ms) - perhaps the remote side is disconnected or hung? remote="+ _remoteIdentity.getHash().toBase64()+ " pending: "+ pending.toString());
+ else {
+    long diff=afterAdd - beforeAdd;
+    if (diff > 500) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Lock contention adding a message: " + diff + "ms to "+ _remoteIdentity.getHash().toBase64()+ ": "+ totalPending);
     }
-    closeConnection();
+    msg.timestamp("TCPConnection.addMessage after toBeSent.add and notify");
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Add message with toBeSent.size = " + totalPending + " to "+ _remoteIdentity.getHash().toBase64());
+    if (totalPending <= 0) {
+      if (_log.shouldLog(Log.ERROR))       _log.error("WTF, total pending after adding " + msg.getMessage().getClass().getName() + " <= 0! "+ msg);
+    }
   }
 }

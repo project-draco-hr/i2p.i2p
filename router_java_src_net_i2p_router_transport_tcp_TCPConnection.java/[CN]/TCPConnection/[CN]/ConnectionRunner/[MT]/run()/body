@@ -1,13 +1,13 @@
 {
   _running=true;
   while (_running) {
-    long startSlice=_context.clock().now();
-    _lastSliceRun=startSlice;
-    boolean processOk=processSlice();
-    if (!processOk) {
-      closeConnection();
-      return;
+    OutNetMessage nextMessage=getNext();
+    if (nextMessage != null) {
+      boolean sent=doSend(nextMessage);
+      if (!sent) {
+        _running=false;
+      }
     }
-    long endSlice=_context.clock().now();
   }
+  closeConnection();
 }

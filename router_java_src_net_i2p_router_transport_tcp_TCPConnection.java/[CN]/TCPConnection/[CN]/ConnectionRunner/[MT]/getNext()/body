@@ -1,0 +1,23 @@
+{
+  OutNetMessage msg=null;
+  while (msg == null) {
+synchronized (_toBeSent) {
+      if (_toBeSent.size() <= 0) {
+        try {
+          _toBeSent.wait();
+        }
+ catch (        InterruptedException ie) {
+        }
+      }
+      boolean ancientFound=locked_expireOldMessages();
+      if (ancientFound) {
+        _running=false;
+        return null;
+      }
+      if (_toBeSent.size() > 0) {
+        msg=(OutNetMessage)_toBeSent.remove(0);
+      }
+    }
+  }
+  return msg;
+}
