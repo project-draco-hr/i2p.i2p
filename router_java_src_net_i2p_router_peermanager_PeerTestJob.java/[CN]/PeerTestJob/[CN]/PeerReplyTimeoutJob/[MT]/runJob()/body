@@ -1,0 +1,20 @@
+{
+  if (getShouldFailPeer())   _context.profileManager().dbLookupFailed(_peer.getIdentity().getHash());
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("failed peer test for " + _peer.getIdentity().getHash().toBase64() + " using outbound tunnel "+ _sendTunnel.getTunnelId().getTunnelId()+ " and inbound tunnel "+ _replyTunnel.getTunnelId().getTunnelId());
+  if (getShouldFailTunnels()) {
+    _sendTunnel.setLastTested(_context.clock().now());
+    _replyTunnel.setLastTested(_context.clock().now());
+    TunnelInfo cur=_replyTunnel;
+    while (cur != null) {
+      Hash peer=cur.getThisHop();
+      if ((peer != null) && (!_context.routerHash().equals(peer)))       _context.profileManager().tunnelFailed(peer);
+      cur=cur.getNextHopInfo();
+    }
+    cur=_sendTunnel;
+    while (cur != null) {
+      Hash peer=cur.getThisHop();
+      if ((peer != null) && (!_context.routerHash().equals(peer)))       _context.profileManager().tunnelFailed(peer);
+      cur=cur.getNextHopInfo();
+    }
+  }
+}

@@ -1,0 +1,20 @@
+{
+  PeerSelectionCriteria criteria=new PeerSelectionCriteria();
+  criteria.setMinimumRequired(getTestConcurrency());
+  criteria.setMaximumRequired(getTestConcurrency());
+  criteria.setPurpose(PeerSelectionCriteria.PURPOSE_TEST);
+  Set peerHashes=_manager.selectPeers(criteria);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Peer selection found " + peerHashes.size() + " peers");
+  Set peers=new HashSet(peerHashes.size());
+  for (Iterator iter=peerHashes.iterator(); iter.hasNext(); ) {
+    Hash peer=(Hash)iter.next();
+    RouterInfo peerInfo=_context.netDb().lookupRouterInfoLocally(peer);
+    if (peerInfo != null) {
+      peers.add(peerInfo);
+    }
+ else {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Test peer " + peer.toBase64() + " had no local routerInfo?");
+    }
+  }
+  return peers;
+}
