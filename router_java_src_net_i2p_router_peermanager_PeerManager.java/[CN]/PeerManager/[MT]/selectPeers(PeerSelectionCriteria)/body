@@ -1,45 +1,26 @@
 {
-  int numPasses=0;
-  List rv=new ArrayList(criteria.getMinimumRequired());
+  Set peers=new HashSet(criteria.getMinimumRequired());
   Set exclude=new HashSet(1);
   exclude.add(_context.routerHash());
-  while (rv.size() < criteria.getMinimumRequired()) {
-    Set curVals=new HashSet(criteria.getMinimumRequired());
 switch (criteria.getPurpose()) {
 case PeerSelectionCriteria.PURPOSE_TEST:
-      _organizer.selectHighCapacityPeers(criteria.getMinimumRequired(),exclude,curVals);
-    break;
+    _organizer.selectHighCapacityPeers(criteria.getMinimumRequired(),exclude,peers);
+  break;
 case PeerSelectionCriteria.PURPOSE_TUNNEL:
-  _organizer.selectFastPeers(criteria.getMaximumRequired(),exclude,curVals);
+_organizer.selectFastPeers(criteria.getMaximumRequired(),exclude,peers);
 break;
 case PeerSelectionCriteria.PURPOSE_SOURCE_ROUTE:
-_organizer.selectHighCapacityPeers(criteria.getMinimumRequired(),exclude,curVals);
+_organizer.selectHighCapacityPeers(criteria.getMinimumRequired(),exclude,peers);
 break;
 case PeerSelectionCriteria.PURPOSE_GARLIC:
-_organizer.selectHighCapacityPeers(criteria.getMinimumRequired(),exclude,curVals);
+_organizer.selectHighCapacityPeers(criteria.getMinimumRequired(),exclude,peers);
 break;
 default :
 break;
 }
-if (curVals.size() <= 0) {
-if (_log.shouldLog(Log.WARN)) _log.warn("We ran out of peers when looking for reachable ones after finding " + rv.size() + " with "+ _organizer.countWellIntegratedPeers()+ "/"+ _organizer.countHighCapacityPeers()+ "/"+ _organizer.countFastPeers()+ " integrated/high capacity/fast peers");
-break;
+if (peers.size() <= 0) {
+if (_log.shouldLog(Log.WARN)) _log.warn("We ran out of peers when looking for reachable ones after finding " + peers.size() + " with "+ _organizer.countWellIntegratedPeers()+ "/"+ _organizer.countHighCapacityPeers()+ "/"+ _organizer.countFastPeers()+ " integrated/high capacity/fast peers");
 }
- else {
-for (Iterator iter=curVals.iterator(); iter.hasNext(); ) {
-Hash peer=(Hash)iter.next();
-if (null != _context.netDb().lookupRouterInfoLocally(peer)) {
-if (_log.shouldLog(Log.DEBUG)) _log.debug("Peer " + peer.toBase64() + " is locally known, so we'll allow its selection");
-if (!rv.contains(peer)) rv.add(peer);
-}
- else {
-if (_log.shouldLog(Log.DEBUG)) _log.debug("Peer " + peer.toBase64() + " is NOT locally known, disallowing its selection");
-}
-}
-exclude.addAll(curVals);
-}
-numPasses++;
-}
-if (_log.shouldLog(Log.INFO)) _log.info("Peers selected after " + numPasses + ": "+ rv);
-return rv;
+if (_log.shouldLog(Log.INFO)) _log.info("Peers selected: " + peers);
+return new ArrayList(peers);
 }
