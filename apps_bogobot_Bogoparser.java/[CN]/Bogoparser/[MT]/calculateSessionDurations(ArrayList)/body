@@ -1,0 +1,36 @@
+{
+  ArrayList calculatedSessionDurations=new ArrayList();
+  for (int i=0; i + 1 < sortedSessionsByQuitReasonOrDuration.size(); i+=2) {
+    String joinsEntry=(String)sortedSessionsByQuitReasonOrDuration.get(i);
+    String[] joinsEntryFields=joinsEntry.split(" ");
+    String quitsEntry=(String)sortedSessionsByQuitReasonOrDuration.get(i + 1);
+    Pattern p=Pattern.compile("^([^ ]+) [^ ]+ ([^ ]+) (.*)$");
+    Matcher m=p.matcher(quitsEntry);
+    if (m.matches()) {
+      String currentJoinTime=joinsEntryFields[0];
+      String currentNick=m.group(2);
+      String currentQuitReason=m.group(3);
+      String currentQuitTime=m.group(1);
+      long joinsTimeInMilliseconds;
+      long quitsTimeInMilliseconds;
+      long sessionLengthInMilliseconds;
+      joinsTimeInMilliseconds=Long.parseLong(currentJoinTime);
+      quitsTimeInMilliseconds=Long.parseLong(currentQuitTime);
+      sessionLengthInMilliseconds=quitsTimeInMilliseconds - joinsTimeInMilliseconds;
+      String hours="" + sessionLengthInMilliseconds / 1000 / 60/ 60;
+      String minutes="" + (sessionLengthInMilliseconds / 1000 / 60) % 60;
+      if (hours.length() < 2)       hours="0" + hours;
+      if (hours.length() < 3)       hours="0" + hours;
+      if (minutes.length() < 2)       minutes="0" + minutes;
+      int columnPadding=19 - currentNick.length();
+      String columnPaddingString=" ";
+      for (int j=0; j < columnPadding; j++)       columnPaddingString=columnPaddingString + " ";
+      calculatedSessionDurations.add(sessionLengthInMilliseconds + " " + currentNick+ columnPaddingString+ " online "+ hours+ " hours "+ minutes+ " minutes "+ currentQuitReason);
+    }
+ else {
+      System.out.println("\r\nError: Unexpected entry in logfile: " + quitsEntry);
+      System.exit(1);
+    }
+  }
+  return calculatedSessionDurations;
+}
