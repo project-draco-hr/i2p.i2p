@@ -1,24 +1,26 @@
 {
-  FileOutputStream out=null;
-  try {
-    out=new FileOutputStream(persistFilename);
-    for (Iterator iter=nameToPrivKeys.keySet().iterator(); iter.hasNext(); ) {
-      String name=(String)iter.next();
-      String privKeys=(String)nameToPrivKeys.get(name);
-      out.write(name.getBytes());
-      out.write('=');
-      out.write(privKeys.getBytes());
-      out.write('\n');
-    }
-  }
- catch (  IOException ioe) {
-    _log.error("Error writing out the SAM keys to " + persistFilename,ioe);
-  }
- finally {
-    if (out != null)     try {
-      out.close();
+synchronized (nameToPrivKeys) {
+    FileOutputStream out=null;
+    try {
+      out=new FileOutputStream(persistFilename);
+      for (Iterator iter=nameToPrivKeys.keySet().iterator(); iter.hasNext(); ) {
+        String name=(String)iter.next();
+        String privKeys=(String)nameToPrivKeys.get(name);
+        out.write(name.getBytes());
+        out.write('=');
+        out.write(privKeys.getBytes());
+        out.write('\n');
+      }
     }
  catch (    IOException ioe) {
+      _log.error("Error writing out the SAM keys to " + persistFilename,ioe);
+    }
+ finally {
+      if (out != null)       try {
+        out.close();
+      }
+ catch (      IOException ioe) {
+      }
     }
   }
 }

@@ -1,5 +1,5 @@
 {
-  _log.info("\n\nTesting Bob\n\n\n");
+  _log.info("\n\nTesting " + sessionName + "\n\n\n");
   try {
     Socket s=new Socket(host,port);
     OutputStream out=s.getOutputStream();
@@ -7,22 +7,22 @@
     BufferedReader reader=new BufferedReader(new InputStreamReader(s.getInputStream()));
     String line=reader.readLine();
     _log.debug("line read for valid version: " + line);
-    String req="SESSION CREATE STYLE=STREAM DESTINATION=Bob " + conOptions + "\n";
+    String req="SESSION CREATE STYLE=STREAM DESTINATION=" + sessionName + " "+ conOptions+ "\n";
     out.write(req.getBytes());
     line=reader.readLine();
-    _log.info("Response to creating the session with destination Bob: " + line);
+    _log.info("Response to creating the session with destination " + sessionName + ": "+ line);
     req="STREAM CONNECT ID=42 DESTINATION=" + _alice + "\n";
     out.write(req.getBytes());
     line=reader.readLine();
-    _log.info("Response to the stream connect from Bob to Alice: " + line);
+    _log.info("Response to the stream connect from " + sessionName + " to Alice: "+ line);
     StringTokenizer tok=new StringTokenizer(line);
     String maj=tok.nextToken();
     String min=tok.nextToken();
     Properties props=SAMUtils.parseParams(tok);
+    _log.info("props = " + props);
     String result=props.getProperty("RESULT");
     if (!("OK".equals(result))) {
       _log.error("Unable to connect!");
-      _dead=true;
       return;
     }
     try {
@@ -31,20 +31,23 @@
  catch (    InterruptedException ie) {
     }
     req="STREAM SEND ID=42 SIZE=10\nBlahBlah!!";
+    _log.info("Sending data");
     out.write(req.getBytes());
+    out.flush();
     try {
       Thread.sleep(20 * 1000);
     }
  catch (    InterruptedException ie) {
     }
+    _log.info("Sending close");
     req="STREAM CLOSE ID=42\n";
     out.write(req.getBytes());
+    out.flush();
     try {
-      Thread.sleep(3 * 1000);
+      Thread.sleep(30 * 1000);
     }
  catch (    InterruptedException ie) {
     }
-    _dead=true;
     s.close();
   }
  catch (  Exception e) {
