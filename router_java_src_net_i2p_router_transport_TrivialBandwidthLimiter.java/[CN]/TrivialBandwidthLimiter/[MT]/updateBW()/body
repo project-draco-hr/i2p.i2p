@@ -1,0 +1,26 @@
+{
+  long now=_context.clock().now();
+  long numMs=(now - _lastResync);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Updating bandwidth after " + numMs + " (available in="+ _inboundAvailable+ ", out="+ _outboundAvailable+ ", rate in="+ _inboundKBytesPerSecond+ ", out="+ _outboundKBytesPerSecond+ ")");
+  if (numMs > 1000) {
+    long inboundToAdd=1024 * _inboundKBytesPerSecond * (numMs / 1000);
+    long outboundToAdd=1024 * _outboundKBytesPerSecond * (numMs / 1000);
+    if (inboundToAdd < 0)     inboundToAdd=0;
+    if (outboundToAdd < 0)     outboundToAdd=0;
+    _inboundAvailable+=inboundToAdd;
+    _outboundAvailable+=outboundToAdd;
+    if (_inboundAvailable > _inboundBurstBytes)     _inboundAvailable=_inboundBurstBytes;
+    if (_outboundAvailable > _outboundBurstBytes)     _outboundAvailable=_outboundBurstBytes;
+    if (_log.shouldLog(Log.DEBUG)) {
+      _log.debug("Adding " + inboundToAdd + " bytes to inboundAvailable (current: "+ _inboundAvailable+ ")");
+      _log.debug("Adding " + outboundToAdd + " bytes to outboundAvailable (current: "+ _outboundAvailable+ ")");
+    }
+    if (inboundToAdd > 0) synchronized (_inboundWaitLock) {
+      _inboundWaitLock.notify();
+    }
+    if (outboundToAdd > 0) synchronized (_outboundWaitLock) {
+      _outboundWaitLock.notify();
+    }
+  }
+  _lastResync=now;
+}

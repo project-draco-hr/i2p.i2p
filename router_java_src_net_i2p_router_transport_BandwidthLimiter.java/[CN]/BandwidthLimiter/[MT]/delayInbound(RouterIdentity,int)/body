@@ -1,12 +1,15 @@
 {
-  long ms=calculateDelayInbound(peer,numBytes);
-  if (ms > 0) {
-    _log.debug("Delaying inbound " + ms + "ms for "+ numBytes+ " bytes");
+  while (calculateDelayInbound(peer,numBytes) > 0) {
     try {
-      Thread.sleep(ms);
+synchronized (_inboundWaitLock) {
+        _inboundWaitLock.wait(10 * 1000);
+      }
     }
  catch (    InterruptedException ie) {
     }
+  }
+synchronized (_inboundWaitLock) {
+    _inboundWaitLock.notify();
   }
   consumeInbound(peer,numBytes);
 }

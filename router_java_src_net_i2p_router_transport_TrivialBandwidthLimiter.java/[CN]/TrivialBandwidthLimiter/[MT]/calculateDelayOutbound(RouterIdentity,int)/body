@@ -1,11 +1,17 @@
 {
-  if (_maxSendBytesPerMinute <= 0)   return 0;
-  if (_availableSend - numBytes > 0) {
+  if (_outboundKBytesPerSecond <= 0)   return 0;
+  if (_outboundAvailable - numBytes > 0) {
     return 0;
   }
  else {
-    long val=MINUTE * (numBytes - _availableSend) / _maxSendBytesPerMinute;
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("DelayOutbound: " + val + " for "+ numBytes+ " (avail="+ _availableSend+ ", max="+ _maxSendBytesPerMinute+ ")");
-    return val;
+    long avail=_outboundAvailable;
+    double val=1000.0 * (((double)numBytes - (double)avail) / ((double)_outboundKBytesPerSecond * 1024.0));
+    long rv=(long)Math.ceil(val);
+    if ((rv > 0) && (rv < _minNonZeroDelay))     rv=_minNonZeroDelay;
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("DelayOutbound: " + rv + " for "+ numBytes+ " (avail="+ avail+ ", max="+ _outboundBurstBytes+ ", kbps="+ _outboundKBytesPerSecond+ ")");
+    if (rv < _replenishFrequency) synchronized (_updateBwLock) {
+      _updateBwLock.notify();
+    }
+    return rv;
   }
 }

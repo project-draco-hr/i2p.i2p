@@ -1,11 +1,16 @@
 {
-  if (_maxReceiveBytesPerMinute <= 0)   return 0;
-  if (_availableReceive - numBytes > 0) {
+  if (_inboundKBytesPerSecond <= 0)   return 0;
+  if (_inboundAvailable - numBytes > 0) {
     return 0;
   }
  else {
-    long val=MINUTE * (numBytes - _availableReceive) / _maxReceiveBytesPerMinute;
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("DelayInbound: " + val + " for "+ numBytes+ " (avail="+ _availableReceive+ ", max="+ _maxReceiveBytesPerMinute+ ")");
-    return val;
+    double val=1000.0 * (((double)numBytes - (double)_inboundAvailable) / ((double)_inboundKBytesPerSecond * 1024));
+    long rv=(long)Math.ceil(val);
+    if ((rv > 0) && (rv < _minNonZeroDelay))     rv=_minNonZeroDelay;
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("DelayInbound: " + rv + " for "+ numBytes+ " (avail="+ _inboundAvailable+ ", max="+ _inboundBurstBytes+ ", kbps="+ _inboundKBytesPerSecond+ ")");
+    if (rv < _replenishFrequency) synchronized (_updateBwLock) {
+      _updateBwLock.notify();
+    }
+    return rv;
   }
 }

@@ -1,12 +1,15 @@
 {
-  long ms=calculateDelayOutbound(peer,numBytes);
-  if (ms > 0) {
-    _log.debug("Delaying outbound " + ms + "ms for "+ numBytes+ " bytes");
+  while (calculateDelayOutbound(peer,numBytes) > 0) {
     try {
-      Thread.sleep(ms);
+synchronized (_outboundWaitLock) {
+        _outboundWaitLock.wait(10 * 1000);
+      }
     }
  catch (    InterruptedException ie) {
     }
+  }
+synchronized (_outboundWaitLock) {
+    _outboundWaitLock.notify();
   }
   consumeOutbound(peer,numBytes);
 }
