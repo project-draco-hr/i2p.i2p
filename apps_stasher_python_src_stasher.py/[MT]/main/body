@@ -4,13 +4,14 @@ def main():
     argv = sys.argv
     argc = len(argv)
     try:
-        (opts, args) = getopt.getopt(sys.argv[1:], 'h?vV:S:C:sd:', ['help', 'version', 'samaddr=', 'clientaddr=', 'verbosity=', 'status', 'datadir='])
+        (opts, args) = getopt.getopt(sys.argv[1:], 'h?vV:S:C:sd:f', ['help', 'version', 'samaddr=', 'clientaddr=', 'verbosity=', 'status', 'datadir=', 'foreground'])
     except:
         traceback.print_exc(file=sys.stdout)
         usage('You entered an invalid option')
     daemonise = True
     verbosity = 2
     debug = False
+    foreground = False
     for (opt, val) in opts:
         if (opt in ['-h', '-?', '--help']):
             usage(True)
@@ -19,6 +20,8 @@ def main():
             sys.exit(0)
         elif (opt in ['-V', '--verbosity']):
             logVerbosity = int(val)
+        elif (opt in ['-f', '--foreground']):
+            foreground = True
         elif (opt in ['-S', '--samaddr']):
             samAddr = val
         elif (opt in ['-C', '--clientaddr']):
@@ -37,6 +40,8 @@ def main():
         usage(0, 1)
     if (cmd == 'help'):
         usage()
+    if (foreground and (cmd == 'start')):
+        cmd = '_start'
     if (cmd == '_start'):
         if (argc not in [0, 1]):
             err('start: bad argument count')
