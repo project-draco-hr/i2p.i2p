@@ -48,6 +48,13 @@ synchronized (_toBeSent) {
   }
   if (fail) {
     if (_log.shouldLog(Log.ERROR))     _log.error("messages expired on the queue to " + _remoteIdentity.getHash().toBase64() + ": "+ pending.toString());
+    if (_out instanceof BandwidthLimitedOutputStream) {
+      BandwidthLimitedOutputStream o=(BandwidthLimitedOutputStream)_out;
+      FIFOBandwidthLimiter.Request req=o.getCurrentRequest();
+      if (req != null) {
+        if (_log.shouldLog(Log.ERROR))         _log.error("When the messages timed out, our outbound con requested " + req.getTotalOutboundRequested() + " bytes ("+ req.getPendingOutboundRequested()+ " pending) after waiting "+ (_context.clock().now() - req.getRequestTime())+ "ms");
+      }
+    }
     _context.profileManager().commErrorOccurred(_remoteIdentity.getHash());
     msg.timestamp("TCPConnection.addMessage saw an expired queued message");
     _transport.afterSend(msg,false);
