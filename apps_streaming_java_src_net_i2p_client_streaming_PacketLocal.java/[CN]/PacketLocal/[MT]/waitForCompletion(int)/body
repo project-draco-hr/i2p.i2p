@@ -2,11 +2,11 @@
   long expiration=_context.clock().now() + maxWaitMs;
   while (true) {
     long timeRemaining=expiration - _context.clock().now();
-    if ((timeRemaining <= 0) && (maxWaitMs > 0))     return;
+    if ((timeRemaining <= 0) && (maxWaitMs > 0))     break;
     try {
 synchronized (this) {
-        if (_ackOn > 0)         return;
-        if (_cancelledOn > 0)         return;
+        if (_ackOn > 0)         break;
+        if (_cancelledOn > 0)         break;
         if (timeRemaining > 60 * 1000)         timeRemaining=60 * 1000;
  else         if (timeRemaining <= 0)         timeRemaining=10 * 1000;
         wait(timeRemaining);
@@ -15,4 +15,5 @@ synchronized (this) {
  catch (    InterruptedException ie) {
     }
   }
+  if (!writeSuccessful())   releasePayload();
 }

@@ -8,6 +8,14 @@
   SendJob success=new SendJob(getContext());
   LookupLeaseSetFailedJob failed=new LookupLeaseSetFailedJob(getContext());
   if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": Send outbound client message - sending off leaseSet lookup job");
-  getContext().netDb().lookupLeaseSet(key,success,failed,timeoutMs);
-  if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": after sending off leaseSet lookup job");
+  LeaseSet ls=getContext().netDb().lookupLeaseSetLocally(key);
+  if (ls != null) {
+    getContext().statManager().addRateData("client.leaseSetFoundLocally",1,0);
+    _leaseSetLookupBegin=-1;
+    success.runJob();
+  }
+ else {
+    _leaseSetLookupBegin=getContext().clock().now();
+    getContext().netDb().lookupLeaseSet(key,success,failed,timeoutMs);
+  }
 }

@@ -6,8 +6,13 @@
   int window=_connection.getOptions().getWindowSize();
   boolean accepted=_connection.packetSendChoke(maxWaitMs);
   long after=_context.clock().now();
-  if (accepted)   _acceptedOn=after;
- else   _acceptedOn=-1;
+  if (accepted) {
+    _acceptedOn=after;
+  }
+ else {
+    _acceptedOn=-1;
+    releasePayload();
+  }
   int afterQueued=_connection.getUnackedPacketsSent();
   if ((after - before > 1000) && (_log.shouldLog(Log.DEBUG)))   _log.debug("Took " + (after - before) + "ms to get "+ (accepted ? " accepted" : " rejected")+ (_cancelledOn > 0 ? " and CANCELLED" : "")+ ", queued behind "+ queued+ " with a window size of "+ window+ ", finally accepted with "+ afterQueued+ " queued: "+ toString());
 }
