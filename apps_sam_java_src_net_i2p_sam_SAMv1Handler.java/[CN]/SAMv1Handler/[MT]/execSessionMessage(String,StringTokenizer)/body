@@ -1,0 +1,66 @@
+{
+  Properties props=null;
+  if (opcode.equals("CREATE")) {
+    if ((rawSession != null) || (datagramSession != null) || (streamSession != null)) {
+      _log.debug("Trying to create a session, but one still exists");
+      return false;
+    }
+    props=SAMUtils.parseParams(tok);
+    if (props == null) {
+      return false;
+    }
+    String dest=props.getProperty("DESTINATION");
+    if (dest == null) {
+      _log.debug("SESSION DESTINATION parameter not specified");
+      return false;
+    }
+    props.remove("DESTINATION");
+    String style=props.getProperty("STYLE");
+    if (style == null) {
+      _log.debug("SESSION STYLE parameter not specified");
+      return false;
+    }
+    props.remove("STYLE");
+    try {
+      if (style.equals("RAW")) {
+        try {
+          if (dest.equals("TRANSIENT")) {
+            _log.debug("TRANSIENT destination requested");
+            ByteArrayOutputStream priv=new ByteArrayOutputStream();
+            SAMUtils.genRandomKey(priv,null);
+            dest=Base64.encode(priv.toByteArray());
+          }
+          rawSession=new SAMRawSession(dest,props,this);
+          writeBytes(("SESSION STATUS RESULT=OK DESTINATION=" + dest + "\n").getBytes("ISO-8859-1"));
+        }
+ catch (        DataFormatException e) {
+          _log.debug("Invalid destination specified");
+          writeBytes(("SESSION STATUS RESULT=INVALID_KEY DESTINATION=" + dest + "\n").getBytes("ISO-8859-1"));
+          return true;
+        }
+catch (        I2PSessionException e) {
+          _log.debug("I2P error when instantiating RAW session",e);
+          writeBytes(("SESSION STATUS RESULT=I2P_ERROR DESTINATION=" + dest + "\n").getBytes("ISO-8859-1"));
+          return true;
+        }
+      }
+ else {
+        _log.debug("Unrecognized SESSION STYLE: \"" + style + "\"");
+        return false;
+      }
+    }
+ catch (    UnsupportedEncodingException e) {
+      _log.error("Caught UnsupportedEncodingException (" + e.getMessage() + ")");
+      return false;
+    }
+catch (    IOException e) {
+      _log.error("Caught IOException while parsing SESSION message (" + e.getMessage() + ")");
+      return false;
+    }
+    return true;
+  }
+ else {
+    _log.debug("Unrecognized SESSION message opcode: \"" + opcode + "\"");
+    return false;
+  }
+}

@@ -1,0 +1,27 @@
+{
+  if (opcode.equals("GENERATE")) {
+    if (tok.countTokens() > 0) {
+      _log.debug("Bad format in DEST GENERATE message");
+      return false;
+    }
+    try {
+      ByteArrayOutputStream priv=new ByteArrayOutputStream();
+      ByteArrayOutputStream pub=new ByteArrayOutputStream();
+      SAMUtils.genRandomKey(priv,pub);
+      writeBytes(("DEST REPLY" + " PUB=" + Base64.encode(pub.toByteArray()) + " PRIV="+ Base64.encode(priv.toByteArray())+ "\n").getBytes("ISO-8859-1"));
+    }
+ catch (    UnsupportedEncodingException e) {
+      _log.error("Caught UnsupportedEncodingException (" + e.getMessage() + ")");
+      return false;
+    }
+catch (    IOException e) {
+      _log.debug("IOException while executing DEST message",e);
+      return false;
+    }
+  }
+ else {
+    _log.debug("Unrecognized DEST message opcode: \"" + opcode + "\"");
+    return false;
+  }
+  return true;
+}

@@ -1,0 +1,36 @@
+{
+  Properties props=null;
+  if (opcode.equals("LOOKUP")) {
+    props=SAMUtils.parseParams(tok);
+    if (props == null) {
+      return false;
+    }
+    String name=props.getProperty("NAME");
+    if (name == null) {
+      _log.debug("Name to resolve not specified");
+      return false;
+    }
+    try {
+      ByteArrayOutputStream pubKey=new ByteArrayOutputStream();
+      Destination dest=SAMUtils.lookupHost(name,pubKey);
+      if (dest == null) {
+        writeBytes("NAMING REPLY RESULT=KEY_NOT_FOUND\n".getBytes("ISP-8859-1"));
+        return true;
+      }
+      writeBytes(("NAMING REPLY RESULT=OK NAME=" + name + " VALUE="+ Base64.encode(pubKey.toByteArray())+ "\n").getBytes("ISO-8859-1"));
+      return true;
+    }
+ catch (    UnsupportedEncodingException e) {
+      _log.error("Caught UnsupportedEncodingException (" + e.getMessage() + ")");
+      return false;
+    }
+catch (    IOException e) {
+      _log.debug("Caught IOException while parsing NAMING message",e);
+      return false;
+    }
+  }
+ else {
+    _log.debug("Unrecognized NAMING message opcode: \"" + opcode + "\"");
+    return false;
+  }
+}

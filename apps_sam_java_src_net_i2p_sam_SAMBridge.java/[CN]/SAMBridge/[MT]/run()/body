@@ -1,0 +1,36 @@
+{
+  try {
+    while (acceptConnections) {
+      Socket s=serverSocket.accept();
+      _log.debug("New connection from " + s.getInetAddress().toString() + ":"+ s.getPort());
+      try {
+        SAMHandler handler=SAMHandlerFactory.createSAMHandler(s);
+        if (handler == null) {
+          _log.debug("SAM handler has not been instantiated");
+          try {
+            s.close();
+          }
+ catch (          IOException e) {
+          }
+          continue;
+        }
+        handler.startHandling();
+      }
+ catch (      SAMException e) {
+        _log.error("SAM error: " + e.getMessage());
+        s.close();
+      }
+    }
+  }
+ catch (  Exception e) {
+    _log.error("Unexpected error while listening for connections",e);
+  }
+ finally {
+    try {
+      _log.debug("Shutting down, closing server socket");
+      serverSocket.close();
+    }
+ catch (    IOException e) {
+    }
+  }
+}

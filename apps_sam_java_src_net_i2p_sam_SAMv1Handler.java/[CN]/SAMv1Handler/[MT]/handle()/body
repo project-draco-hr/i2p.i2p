@@ -1,0 +1,87 @@
+{
+  String msg, domain, opcode;
+  boolean canContinue=false;
+  ByteArrayOutputStream buf=new ByteArrayOutputStream(IN_BUFSIZE);
+  StringTokenizer tok;
+  this.thread.setName("SAMv1Handler");
+  _log.debug("SAM handling started");
+  try {
+    InputStream in=socket.getInputStream();
+    int b=-1;
+    while (true) {
+      if (shouldStop()) {
+        _log.debug("Stop request found");
+        break;
+      }
+      while ((b=in.read()) != -1) {
+        if (b == '\n') {
+          break;
+        }
+        buf.write(b);
+      }
+      if (b == -1) {
+        _log.debug("Connection closed by client");
+        break;
+      }
+      msg=buf.toString("ISO-8859-1");
+      if (_log.shouldLog(Log.DEBUG)) {
+        _log.debug("New message received: " + msg);
+      }
+      buf.reset();
+      tok=new StringTokenizer(msg," ");
+      if (tok.countTokens() < 2) {
+        _log.debug("Error in message format");
+        break;
+      }
+      domain=tok.nextToken();
+      opcode=tok.nextToken();
+      _log.debug("Parsing (domain: \"" + domain + "\"; opcode: \""+ opcode+ "\")");
+      if (domain.equals("RAW")) {
+        canContinue=execRawMessage(opcode,tok);
+      }
+ else       if (domain.equals("SESSION")) {
+        canContinue=execSessionMessage(opcode,tok);
+      }
+ else       if (domain.equals("DEST")) {
+        canContinue=execDestMessage(opcode,tok);
+      }
+ else       if (domain.equals("NAMING")) {
+        canContinue=execNamingMessage(opcode,tok);
+      }
+ else {
+        _log.debug("Unrecognized message domain: \"" + domain + "\"");
+        break;
+      }
+      if (!canContinue) {
+        break;
+      }
+    }
+  }
+ catch (  UnsupportedEncodingException e) {
+    _log.error("Caught UnsupportedEncodingException (" + e.getMessage() + ")");
+  }
+catch (  IOException e) {
+    _log.debug("Caught IOException (" + e.getMessage() + ")");
+  }
+catch (  Exception e) {
+    _log.error("Unexpected exception",e);
+  }
+ finally {
+    _log.debug("Stopping handler");
+    try {
+      this.socket.close();
+    }
+ catch (    IOException e) {
+      _log.error("Error closing socket: " + e.getMessage());
+    }
+    if (rawSession != null) {
+      rawSession.close();
+    }
+    if (datagramSession != null) {
+      datagramSession.close();
+    }
+    if (streamSession != null) {
+      streamSession.close();
+    }
+  }
+}
