@@ -1,0 +1,22 @@
+{
+  if (_log.shouldLog(Log.INFO))   _log.info("Outbound built successfully: " + cfg);
+  if (cfg.getLength() > 1) {
+    TunnelGateway.QueuePreprocessor preproc=new TrivialRouterPreprocessor(_context);
+    TunnelGateway.Sender sender=new OutboundSender(_context,cfg);
+    TunnelGateway.Receiver receiver=new OutboundReceiver(_context,cfg);
+    TunnelGateway gw=new TunnelGateway(_context,preproc,sender,receiver);
+    TunnelId outId=cfg.getConfig(0).getSendTunnel();
+synchronized (_outboundGateways) {
+      _outboundGateways.put(outId,gw);
+    }
+    _context.statManager().addRateData("tunnel.joinOutboundGateway",1,0);
+  }
+ else {
+    TunnelGatewayZeroHop gw=new TunnelGatewayZeroHop(_context,cfg);
+    TunnelId outId=cfg.getConfig(0).getSendTunnel();
+synchronized (_outboundGateways) {
+      _outboundGateways.put(outId,gw);
+    }
+    _context.statManager().addRateData("tunnel.joinOutboundGatewayZeroHop",1,0);
+  }
+}

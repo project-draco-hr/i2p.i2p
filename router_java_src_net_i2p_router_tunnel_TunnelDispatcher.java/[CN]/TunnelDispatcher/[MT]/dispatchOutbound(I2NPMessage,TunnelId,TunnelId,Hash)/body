@@ -1,0 +1,25 @@
+{
+  if (outboundTunnel == null)   throw new IllegalArgumentException("wtf, null outbound tunnel?");
+  long before=_context.clock().now();
+  TunnelGateway gw=null;
+synchronized (_outboundGateways) {
+    gw=(TunnelGateway)_outboundGateways.get(outboundTunnel);
+  }
+  if (gw != null) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("dispatch outbound through " + outboundTunnel.getTunnelId() + ": "+ msg);
+    if (msg.getMessageExpiration() < before) {
+      if (_log.shouldLog(Log.ERROR))       _log.error("why are you sending a tunnel message that expired " + (before - msg.getMessageExpiration()) + "ms ago? "+ msg,new Exception("cause"));
+      return;
+    }
+    gw.add(msg,targetPeer,targetTunnel);
+    if (targetTunnel == null)     _context.statManager().addRateData("tunnel.dispatchOutboundPeer",1,0);
+ else     _context.statManager().addRateData("tunnel.dispatchOutboundTunnel",1,0);
+  }
+ else {
+    _context.messageHistory().droppedTunnelGatewayMessageUnknown(msg.getUniqueId(),outboundTunnel.getTunnelId());
+    if (_log.shouldLog(Log.ERROR))     _log.error("no matching outbound tunnel for id=" + outboundTunnel + ": existing = "+ _outboundGateways.keySet());
+  }
+  long dispatchTime=_context.clock().now() - before;
+  if (gw instanceof TunnelGatewayZeroHop)   _context.statManager().addRateData("tunnel.dispatchOutboundZeroHopTime",dispatchTime,dispatchTime);
+ else   _context.statManager().addRateData("tunnel.dispatchOutboundTime",dispatchTime,dispatchTime);
+}

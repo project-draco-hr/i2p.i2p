@@ -1,0 +1,29 @@
+{
+  long before=_context.clock().now();
+  TunnelParticipant participant=null;
+synchronized (_participants) {
+    participant=(TunnelParticipant)_participants.get(msg.getTunnelId());
+  }
+  if (participant != null) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("dispatch to participant " + participant + ": "+ msg.getUniqueId()+ " from "+ recvFrom.toBase64().substring(0,4));
+    participant.dispatch(msg,recvFrom);
+    _context.statManager().addRateData("tunnel.dispatchParticipant",1,0);
+  }
+ else {
+    OutboundTunnelEndpoint endpoint=null;
+synchronized (_outboundEndpoints) {
+      endpoint=(OutboundTunnelEndpoint)_outboundEndpoints.get(msg.getTunnelId());
+    }
+    if (endpoint != null) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("dispatch where we are the outbound endpoint: " + endpoint + ": "+ msg+ " from "+ recvFrom.toBase64().substring(0,4));
+      endpoint.dispatch(msg,recvFrom);
+      _context.statManager().addRateData("tunnel.dispatchEndpoint",1,0);
+    }
+ else {
+      _context.messageHistory().droppedTunnelDataMessageUnknown(msg.getUniqueId(),msg.getTunnelId().getTunnelId());
+      if (_log.shouldLog(Log.ERROR))       _log.error("no matching participant/endpoint for id=" + msg.getTunnelId().getTunnelId() + ": existing = "+ _participants.keySet()+ " / "+ _outboundEndpoints.keySet());
+    }
+  }
+  long dispatchTime=_context.clock().now() - before;
+  _context.statManager().addRateData("tunnel.dispatchDataTime",dispatchTime,dispatchTime);
+}

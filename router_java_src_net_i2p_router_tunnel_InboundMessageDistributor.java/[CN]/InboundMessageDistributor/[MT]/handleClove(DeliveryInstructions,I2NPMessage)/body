@@ -1,0 +1,40 @@
+{
+switch (instructions.getDeliveryMode()) {
+case DeliveryInstructions.DELIVERY_MODE_LOCAL:
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("local delivery instructions for clove: " + data.getClass().getName());
+  if (data instanceof GarlicMessage) {
+    _receiver.receive((GarlicMessage)data);
+    return;
+  }
+ else {
+    _context.inNetMessagePool().add(data,null,null);
+    return;
+  }
+case DeliveryInstructions.DELIVERY_MODE_DESTINATION:
+if (!(data instanceof DataMessage)) {
+  if (_log.shouldLog(Log.ERROR))   _log.error("cant send a " + data.getClass().getName() + " to a destination");
+}
+ else if ((_client != null) && (_client.equals(instructions.getDestination()))) {
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("data message came down a tunnel for " + _client.toBase64().substring(0,4));
+  DataMessage dm=(DataMessage)data;
+  Payload payload=new Payload();
+  payload.setEncryptedData(dm.getData());
+  ClientMessage m=new ClientMessage();
+  m.setDestinationHash(_client);
+  m.setPayload(payload);
+  _context.clientManager().messageReceived(m);
+}
+ else {
+  if (_log.shouldLog(Log.ERROR))   _log.error("this data message came down a tunnel for " + (_client == null ? "no one" : _client.toBase64().substring(0,4)) + " but targetted "+ instructions.getDestination().toBase64().substring(0,4));
+}
+return;
+case DeliveryInstructions.DELIVERY_MODE_ROUTER:
+case DeliveryInstructions.DELIVERY_MODE_TUNNEL:
+if (_log.shouldLog(Log.INFO)) _log.info("clove targetted " + instructions.getRouter() + ":"+ instructions.getTunnelId()+ ", treat recursively to prevent leakage");
+distribute(data,instructions.getRouter(),instructions.getTunnelId());
+return;
+default :
+if (_log.shouldLog(Log.ERROR)) _log.error("Unknown instruction " + instructions.getDeliveryMode() + ": "+ instructions);
+return;
+}
+}

@@ -1,0 +1,17 @@
+{
+  if (_log.shouldLog(Log.INFO))   _log.info("Joining as participant: " + cfg);
+  TunnelId recvId=cfg.getReceiveTunnel();
+  TunnelParticipant participant=new TunnelParticipant(_context,cfg,new HopProcessor(_context,cfg,_validator));
+synchronized (_participants) {
+    _participants.put(recvId,participant);
+  }
+  int numParticipants=0;
+synchronized (_participatingConfig) {
+    _participatingConfig.put(recvId,cfg);
+    numParticipants=_participatingConfig.size();
+  }
+  _context.statManager().addRateData("tunnel.participatingTunnels",numParticipants,0);
+  _context.statManager().addRateData("tunnel.joinParticipant",1,0);
+  if (cfg.getExpiration() > _lastParticipatingExpiration)   _lastParticipatingExpiration=cfg.getExpiration();
+  _context.jobQueue().addJob(new LeaveTunnel(_context,cfg));
+}

@@ -1,0 +1,50 @@
+{
+  out.write("<h2><a name=\"exploratory\">Exploratory tunnels</a> (<a href=\"/configtunnels.jsp#exploratory\">config</a>):</h2>\n");
+  renderPool(out,_inboundExploratory,_outboundExploratory);
+  List destinations=null;
+synchronized (_clientInboundPools) {
+    destinations=new ArrayList(_clientInboundPools.keySet());
+  }
+  for (int i=0; i < destinations.size(); i++) {
+    Hash client=(Hash)destinations.get(i);
+    TunnelPool in=null;
+    TunnelPool outPool=null;
+synchronized (_clientInboundPools) {
+      in=(TunnelPool)_clientInboundPools.get(client);
+    }
+synchronized (_clientOutboundPools) {
+      outPool=(TunnelPool)_clientOutboundPools.get(client);
+    }
+    String name=(in != null ? in.getSettings().getDestinationNickname() : null);
+    if ((name == null) && (outPool != null))     name=outPool.getSettings().getDestinationNickname();
+    if (name == null)     name=client.toBase64().substring(0,4);
+    out.write("<h2><a name=\"" + client.toBase64().substring(0,4) + "\">Client tunnels</a> for "+ name+ " (<a href=\"/configtunnels.jsp#"+ client.toBase64().substring(0,4)+ "\">config</a>):</h2>\n");
+    renderPool(out,in,outPool);
+  }
+  List participating=_context.tunnelDispatcher().listParticipatingTunnels();
+  out.write("<h2><a name=\"participating\">Participating tunnels</a>:</h2><table border=\"1\">\n");
+  out.write("<tr><td><b>Receive on</b></td><td><b>From</b></td><td>" + "<b>Send on</b></td><td><b>To</b></td><td><b>Expiration</b></td>" + "<td><b>Usage</b></td></tr>\n");
+  long processed=0;
+  RateStat rs=_context.statManager().getRate("tunnel.participatingMessageCount");
+  if (rs != null)   processed=(long)rs.getRate(10 * 60 * 1000).getLifetimeTotalValue();
+  for (int i=0; i < participating.size(); i++) {
+    HopConfig cfg=(HopConfig)participating.get(i);
+    out.write("<tr>");
+    if (cfg.getReceiveTunnel() != null)     out.write("<td>" + cfg.getReceiveTunnel().getTunnelId() + "</td>");
+ else     out.write("<td>n/a</td>");
+    if (cfg.getReceiveFrom() != null)     out.write("<td>" + cfg.getReceiveFrom().toBase64().substring(0,4) + "</td>");
+ else     out.write("<td>n/a</td>");
+    if (cfg.getSendTunnel() != null)     out.write("<td>" + cfg.getSendTunnel().getTunnelId() + "</td>");
+ else     out.write("<td>n/a</td>");
+    if (cfg.getSendTo() != null)     out.write("<td>" + cfg.getSendTo().toBase64().substring(0,4) + "</td>");
+ else     out.write("<td>n/a</td>");
+    long timeLeft=cfg.getExpiration() - _context.clock().now();
+    if (timeLeft > 0)     out.write("<td>" + DataHelper.formatDuration(timeLeft) + "</td>");
+ else     out.write("<td>(grace period)</td>");
+    out.write("<td>" + cfg.getProcessedMessagesCount() + "KB</td>");
+    out.write("</tr>\n");
+    processed+=cfg.getProcessedMessagesCount();
+  }
+  out.write("</table>\n");
+  out.write("Lifetime bandwidth usage: " + processed + "KB<br />\n");
+}

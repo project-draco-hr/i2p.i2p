@@ -1,0 +1,29 @@
+{
+  Hash dest=client.calculateHash();
+  settings.getInboundSettings().setDestination(dest);
+  settings.getOutboundSettings().setDestination(dest);
+  TunnelPool inbound=null;
+  TunnelPool outbound=null;
+synchronized (_clientInboundPools) {
+    inbound=(TunnelPool)_clientInboundPools.get(dest);
+    if (inbound == null) {
+      inbound=new TunnelPool(_context,this,settings.getInboundSettings(),new ClientPeerSelector(),new TunnelBuilder());
+      _clientInboundPools.put(dest,inbound);
+    }
+ else {
+      inbound.setSettings(settings.getInboundSettings());
+    }
+  }
+synchronized (_clientOutboundPools) {
+    outbound=(TunnelPool)_clientOutboundPools.get(dest);
+    if (outbound == null) {
+      outbound=new TunnelPool(_context,this,settings.getOutboundSettings(),new ClientPeerSelector(),new TunnelBuilder());
+      _clientOutboundPools.put(dest,outbound);
+    }
+ else {
+      outbound.setSettings(settings.getOutboundSettings());
+    }
+  }
+  inbound.startup();
+  outbound.startup();
+}

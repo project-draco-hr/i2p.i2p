@@ -1,0 +1,35 @@
+{
+  Log log=ctx.logManager().getLog(TunnelBuilder.class);
+  TunnelPoolSettings settings=pool.getSettings();
+  long expiration=ctx.clock().now() + settings.getDuration();
+  List peers=null;
+  if (fake) {
+    peers=new ArrayList(1);
+    peers.add(ctx.routerHash());
+  }
+ else {
+    peers=pool.getSelector().selectPeers(ctx,settings);
+  }
+  if ((peers == null) || (peers.size() <= 0)) {
+    if (peers == null) {
+      if (log.shouldLog(Log.ERROR))       log.error("No peers to put in the new tunnel! selectPeers returned null!  boo, hiss!  fake=" + fake);
+    }
+ else {
+      if (log.shouldLog(Log.ERROR))       log.error("No peers to put in the new tunnel! selectPeers returned an empty list?!  fake=" + fake);
+    }
+    return null;
+  }
+  PooledTunnelCreatorConfig cfg=new PooledTunnelCreatorConfig(ctx,peers.size(),settings.isInbound(),settings.getDestination());
+  for (int i=0; i < peers.size(); i++) {
+    int j=peers.size() - 1 - i;
+    cfg.setPeer(j,(Hash)peers.get(i));
+    HopConfig hop=cfg.getConfig(j);
+    hop.setExpiration(expiration);
+    hop.setIVKey(ctx.keyGenerator().generateSessionKey());
+    hop.setLayerKey(ctx.keyGenerator().generateSessionKey());
+  }
+  cfg.setExpiration(expiration);
+  Log l=ctx.logManager().getLog(TunnelBuilder.class);
+  if (l.shouldLog(Log.DEBUG))   l.debug("Config contains " + peers + ": "+ cfg);
+  return cfg;
+}

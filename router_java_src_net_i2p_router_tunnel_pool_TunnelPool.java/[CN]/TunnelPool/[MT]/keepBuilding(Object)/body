@@ -1,0 +1,24 @@
+{
+  boolean connected=true;
+  boolean rv=false;
+  int remaining=0;
+  int wanted=_settings.getQuantity() + _settings.getBackupQuantity();
+  if ((_settings.getDestination() != null) && (!_context.clientManager().isLocal(_settings.getDestination())))   connected=false;
+synchronized (_tokens) {
+    if (!connected) {
+      _tokens.remove(token);
+      rv=false;
+    }
+ else {
+      rv=_tokens.contains(token);
+    }
+    remaining=_tokens.size();
+  }
+  if (remaining <= 0) {
+    _manager.removeTunnels(_settings.getDestination());
+  }
+  if (!rv) {
+    if (_log.shouldLog(Log.INFO))     _log.info(toString() + ": keepBuilding does NOT want building to continue (want " + wanted+ ", have "+ remaining);
+  }
+  return rv;
+}

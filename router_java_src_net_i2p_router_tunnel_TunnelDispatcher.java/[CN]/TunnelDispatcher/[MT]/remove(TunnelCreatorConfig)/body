@@ -1,0 +1,22 @@
+{
+  if (cfg.isInbound()) {
+    TunnelId recvId=cfg.getConfig(cfg.getLength() - 1).getReceiveTunnel();
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("removing our own inbound " + cfg);
+    boolean removed=false;
+synchronized (_participants) {
+      removed=(null != _participants.remove(recvId));
+    }
+    if (!removed) {
+synchronized (_inboundGateways) {
+        _inboundGateways.remove(recvId);
+      }
+    }
+  }
+ else {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("removing our own outbound " + cfg);
+    TunnelId outId=cfg.getConfig(0).getSendTunnel();
+synchronized (_outboundGateways) {
+      _outboundGateways.remove(outId);
+    }
+  }
+}

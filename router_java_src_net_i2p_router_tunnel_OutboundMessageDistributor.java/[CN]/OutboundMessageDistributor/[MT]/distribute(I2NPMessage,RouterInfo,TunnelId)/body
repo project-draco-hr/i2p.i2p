@@ -1,0 +1,24 @@
+{
+  I2NPMessage m=msg;
+  if (tunnel != null) {
+    TunnelGatewayMessage t=new TunnelGatewayMessage(_context);
+    t.setMessage(msg);
+    t.setTunnelId(tunnel);
+    t.setMessageExpiration(m.getMessageExpiration());
+    m=t;
+  }
+  if (_context.routerHash().equals(target.getIdentity().calculateHash())) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("queueing inbound message to ourselves: " + m);
+    _context.inNetMessagePool().add(m,null,null);
+    return;
+  }
+ else {
+    OutNetMessage out=new OutNetMessage(_context);
+    out.setExpiration(_context.clock().now() + MAX_DISTRIBUTE_TIME);
+    out.setTarget(target);
+    out.setMessage(m);
+    out.setPriority(400);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("queueing outbound message to " + target.getIdentity().calculateHash().toBase64().substring(0,4));
+    _context.outNetMessagePool().add(out);
+  }
+}

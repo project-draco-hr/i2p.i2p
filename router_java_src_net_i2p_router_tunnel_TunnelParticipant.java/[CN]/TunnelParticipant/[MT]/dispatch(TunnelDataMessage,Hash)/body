@@ -1,0 +1,26 @@
+{
+  boolean ok=false;
+  if (_processor != null)   ok=_processor.process(msg.getData(),0,msg.getData().length,recvFrom);
+ else   if (_inboundEndpointProcessor != null)   ok=_inboundEndpointProcessor.retrievePreprocessedData(msg.getData(),0,msg.getData().length,recvFrom);
+  if (!ok) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Failed to dispatch " + msg + ": processor="+ _processor+ " inboundEndpoint="+ _inboundEndpointProcessor);
+    return;
+  }
+  if ((_config != null) && (_config.getSendTo() != null)) {
+    _config.incrementProcessedMessages();
+    RouterInfo ri=_context.netDb().lookupRouterInfoLocally(_config.getSendTo());
+    if (ri != null) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Send off to nextHop directly (" + _config.getSendTo().toBase64().substring(0,4) + " for "+ msg);
+      send(_config,msg,ri);
+    }
+ else {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Lookup the nextHop (" + _config.getSendTo().toBase64().substring(0,4) + " for "+ msg);
+      _context.netDb().lookupRouterInfo(_config.getSendTo(),new SendJob(msg),new TimeoutJob(msg),10 * 1000);
+    }
+  }
+ else {
+    _inboundEndpointProcessor.getConfig().incrementProcessedMessages();
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Receive fragment: on " + _config + ": "+ msg);
+    _handler.receiveTunnelMessage(msg.getData(),0,msg.getData().length);
+  }
+}

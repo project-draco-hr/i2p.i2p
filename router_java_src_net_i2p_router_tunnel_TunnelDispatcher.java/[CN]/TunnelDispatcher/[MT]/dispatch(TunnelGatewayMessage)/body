@@ -1,0 +1,22 @@
+{
+  long before=_context.clock().now();
+  TunnelGateway gw=null;
+synchronized (_inboundGateways) {
+    gw=(TunnelGateway)_inboundGateways.get(msg.getTunnelId());
+  }
+  if (gw != null) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("dispatch where we are the inbound gateway: " + gw + ": "+ msg);
+    if ((msg.getMessageExpiration() < before - Router.CLOCK_FUDGE_FACTOR) || (msg.getMessage().getMessageExpiration() < before - Router.CLOCK_FUDGE_FACTOR)) {
+      if (_log.shouldLog(Log.ERROR))       _log.error("Not dispatching a gateway message for tunnel " + msg.getTunnelId().getTunnelId() + " as the wrapper's expiration is in "+ DataHelper.formatDuration(msg.getMessageExpiration() - before)+ " and/or the content's expiration is in "+ DataHelper.formatDuration(msg.getMessage().getMessageExpiration() - before)+ " with messageId "+ msg.getUniqueId()+ "/"+ msg.getMessage().getUniqueId()+ " and message type "+ msg.getMessage().getClass().getName());
+      return;
+    }
+    gw.add(msg);
+    _context.statManager().addRateData("tunnel.dispatchInbound",1,0);
+  }
+ else {
+    _context.messageHistory().droppedTunnelGatewayMessageUnknown(msg.getUniqueId(),msg.getTunnelId().getTunnelId());
+    if (_log.shouldLog(Log.ERROR))     _log.error("no matching tunnel for id=" + msg.getTunnelId().getTunnelId() + ": gateway message expiring in "+ DataHelper.formatDuration(msg.getMessageExpiration() - _context.clock().now())+ "/"+ DataHelper.formatDuration(msg.getMessage().getMessageExpiration() - _context.clock().now())+ " messageId "+ msg.getUniqueId()+ "/"+ msg.getMessage().getUniqueId()+ " messageType: "+ msg.getMessage().getClass().getName()+ " existing = "+ _inboundGateways.keySet());
+  }
+  long dispatchTime=_context.clock().now() - before;
+  _context.statManager().addRateData("tunnel.dispatchGatewayTime",dispatchTime,dispatchTime);
+}

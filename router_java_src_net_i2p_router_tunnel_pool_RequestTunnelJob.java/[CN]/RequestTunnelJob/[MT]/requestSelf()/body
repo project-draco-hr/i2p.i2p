@@ -1,0 +1,45 @@
+{
+  if (_config.isInbound()) {
+    long id=getContext().random().nextLong(TunnelId.MAX_ID_VALUE);
+    _currentConfig.setReceiveTunnelId(DataHelper.toLong(4,id));
+    if (_config.getLength() > 1) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Requesting ourselves to join an inbound tunnel, receiving on " + _currentConfig.getReceiveTunnel() + ": "+ _config);
+      RequestTunnelJob req=new RequestTunnelJob(getContext(),_config,_onCreated,_onFailed,_currentHop - 1,_isFake);
+      if (_isFake)       req.runJob();
+ else       getContext().jobQueue().addJob(req);
+    }
+ else     if (_onCreated != null) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Requesting ourselves to join a 0 hop inbound tunnel, receiving on " + _currentConfig.getReceiveTunnel() + ": "+ _config);
+      if (_onCreated != null) {
+        if (_isFake)         _onCreated.runJob();
+ else         getContext().jobQueue().addJob(_onCreated);
+      }
+      getContext().statManager().addRateData("tunnel.buildSuccess",1,0);
+    }
+  }
+ else {
+    if (_config.getLength() <= 1) {
+      byte id[]=new byte[4];
+      getContext().random().nextBytes(id);
+      _config.getConfig(0).setSendTunnelId(id);
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Requesting ourselves to join an outbound tunnel, sending on " + _config.getConfig(0).getSendTunnel() + ": "+ _config);
+    }
+ else {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Requesting ourselves to join an outbound tunnel, sending on " + _config.getConfig(1).getReceiveTunnel() + ": "+ _config);
+      _config.getConfig(0).setSendTunnelId(_config.getConfig(1).getReceiveTunnelId());
+      if (_config.getConfig(0).getSendTunnelId() == null) {
+        _log.error("wtf, next hop: " + _config.getConfig(1) + " didn't give us a tunnel to send to, but they passed on to us?");
+        if (_onFailed != null) {
+          if (_isFake)           _onFailed.runJob();
+ else           getContext().jobQueue().addJob(_onFailed);
+        }
+        return;
+      }
+    }
+    if (_onCreated != null) {
+      if (_isFake)       _onCreated.runJob();
+ else       getContext().jobQueue().addJob(_onCreated);
+      getContext().statManager().addRateData("tunnel.buildSuccess",1,0);
+    }
+  }
+}

@@ -1,0 +1,30 @@
+{
+  int target=_settings.getQuantity() + _settings.getBackupQuantity();
+  int oldTokenCount=0;
+  List newTokens=null;
+synchronized (_tokens) {
+    oldTokenCount=_tokens.size();
+    while (_tokens.size() > target)     _tokens.remove(0);
+    if (_tokens.size() < target) {
+      int wanted=target - _tokens.size();
+      newTokens=new ArrayList(wanted);
+      for (int i=0; i < wanted; i++) {
+        Object token=new Object();
+        newTokens.add(token);
+        _tokens.add(token);
+      }
+    }
+  }
+  if (newTokens != null) {
+    if (_log.shouldLog(Log.INFO))     _log.info(toString() + ": refreshing builders, previously had " + oldTokenCount+ ", want a total of "+ target+ ", creating "+ newTokens.size()+ " new ones.");
+    for (int i=0; i < newTokens.size(); i++) {
+      Object token=newTokens.get(i);
+      if (_log.shouldLog(Log.DEBUG))       _log.debug(toString() + ": Building a tunnel with the token " + token);
+      _builder.buildTunnel(_context,this,token);
+    }
+    return newTokens.size();
+  }
+ else {
+    return 0;
+  }
+}

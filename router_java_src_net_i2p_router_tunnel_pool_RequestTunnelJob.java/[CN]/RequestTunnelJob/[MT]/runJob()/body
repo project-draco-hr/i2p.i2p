@@ -1,0 +1,22 @@
+{
+  _currentConfig=_config.getConfig(_currentHop);
+  Hash peer=_config.getPeer(_currentHop);
+  if (getContext().routerHash().equals(peer)) {
+    requestSelf();
+  }
+ else {
+    if (_currentPeer == null) {
+      _currentPeer=getContext().netDb().lookupRouterInfoLocally(peer);
+      if (_currentPeer == null) {
+        _lookups++;
+        if (_lookups > 1) {
+          peerFail(0);
+          return;
+        }
+        getContext().netDb().lookupRouterInfo(peer,this,this,LOOKUP_TIMEOUT);
+        return;
+      }
+    }
+    requestRemote(peer);
+  }
+}
