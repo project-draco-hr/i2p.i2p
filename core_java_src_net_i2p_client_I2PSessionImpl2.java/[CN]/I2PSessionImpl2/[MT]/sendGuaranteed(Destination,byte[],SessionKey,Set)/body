@@ -41,11 +41,8 @@ synchronized (_sendingStates) {
   boolean found=state.received(MessageStatusMessage.STATUS_SEND_GUARANTEED_SUCCESS);
   boolean accepted=state.received(MessageStatusMessage.STATUS_SEND_ACCEPTED);
   if ((!accepted) || (state.getMessageId() == null)) {
-    if (_log.shouldLog(Log.ERROR))     _log.error("State with nonce " + state.getNonce() + " was not accepted?  (no messageId!!)");
+    if (_log.shouldLog(Log.ERROR))     _log.error("State with nonce " + state.getNonce() + " was not accepted?  (no messageId!! found="+ found+ " msgId="+ state.getMessageId()+ ")",new Exception("Race on accept/success status messages?"));
     nackTags(state);
-    if (_log.shouldLog(Log.CRIT))     _log.log(Log.CRIT,"Disconnecting/reconnecting because we never were accepted!");
-    disconnect();
-    return false;
   }
   if (_log.shouldLog(Log.DEBUG))   _log.debug("After waitFor sending state " + state.getMessageId().getMessageId() + " / "+ state.getNonce()+ " found = "+ found);
   if (found) {
