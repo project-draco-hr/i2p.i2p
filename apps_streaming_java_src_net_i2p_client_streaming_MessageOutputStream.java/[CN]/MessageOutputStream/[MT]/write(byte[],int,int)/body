@@ -1,6 +1,8 @@
 {
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("write(b[], " + off + ", "+ len+ ") ");
   int cur=off;
   int remaining=len;
+  long begin=_context.clock().now();
   while (remaining > 0) {
     WriteStatus ws=null;
 synchronized (_dataLock) {
@@ -11,6 +13,10 @@ synchronized (_dataLock) {
         cur+=remaining;
         _written+=remaining;
         remaining=0;
+        _lastBuffered=_context.clock().now();
+        if (_passiveFlushDelay > 0) {
+          SimpleTimer.getInstance().addEvent(_flusher,_passiveFlushDelay);
+        }
       }
  else {
         int toWrite=_buf.length - _valid;
@@ -26,15 +32,22 @@ synchronized (_dataLock) {
         _written+=_valid;
         _valid=0;
         throwAnyError();
+        _lastFlushed=_context.clock().now();
       }
     }
     if (ws != null) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Waiting " + _writeTimeout + "ms for accept of "+ ws);
       ws.waitForAccept(_writeTimeout);
       if (!ws.writeAccepted()) {
         if (_writeTimeout > 0)         throw new InterruptedIOException("Write not accepted within timeout");
  else         throw new IOException("Write not accepted into the queue");
       }
     }
+ else {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Queued " + len + " without sending to the receiver");
+    }
   }
+  long elapsed=_context.clock().now() - begin;
+  if ((elapsed > 10 * 1000) && (_log.shouldLog(Log.DEBUG)))   _log.debug("wtf, took " + elapsed + "ms to write to the stream?",new Exception("foo"));
   throwAnyError();
 }
