@@ -5,28 +5,34 @@
   long beforeAdd=_context.clock().now();
   StringBuffer pending=new StringBuffer(64);
 synchronized (_toBeSent) {
-    if ((_maxQueuedMessages > 0) && (_toBeSent.size() >= _maxQueuedMessages)) {
-      fail=true;
+    for (int i=0; i < _toBeSent.size(); i++) {
+      OutNetMessage cur=(OutNetMessage)_toBeSent.get(i);
+      if (cur.getExpiration() < beforeAdd) {
+        fail=true;
+        break;
+      }
     }
- else {
+    if (!fail) {
       _toBeSent.add(msg);
     }
     totalPending=_toBeSent.size();
     pending.append(totalPending).append(": ");
-    for (int i=0; i < totalPending; i++) {
-      OutNetMessage cur=(OutNetMessage)_toBeSent.get(i);
-      pending.append(cur.getMessageSize()).append(" byte ");
-      pending.append(cur.getMessageType()).append(" message added");
-      pending.append(" added ").append(cur.getLifetime()).append(" ms ago, ");
+    if (fail) {
+      for (int i=0; i < totalPending; i++) {
+        OutNetMessage cur=(OutNetMessage)_toBeSent.get(i);
+        pending.append(cur.getMessageSize()).append(" byte ");
+        pending.append(cur.getMessageType()).append(" message added");
+        pending.append(" added ").append(cur.getLifetime()).append(" ms ago, ");
+      }
     }
     _toBeSent.notifyAll();
   }
   long afterAdd=_context.clock().now();
   _context.statManager().addRateData("tcp.queueSize",totalPending - 1,0);
   if (fail) {
-    if (_log.shouldLog(Log.ERROR))     _log.error("too many queued messages to " + _remoteIdentity.getHash().toBase64() + ": "+ pending.toString());
+    if (_log.shouldLog(Log.ERROR))     _log.error("messages expired on the queue to " + _remoteIdentity.getHash().toBase64() + ": "+ pending.toString());
     _context.profileManager().commErrorOccurred(_remoteIdentity.getHash());
-    msg.timestamp("TCPConnection.addMessage exceeded max queued");
+    msg.timestamp("TCPConnection.addMessage saw an expired queued message");
     _transport.afterSend(msg,false);
     closeConnection();
     return;
