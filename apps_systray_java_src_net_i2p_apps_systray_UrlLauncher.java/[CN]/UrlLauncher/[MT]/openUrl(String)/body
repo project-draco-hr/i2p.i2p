@@ -11,8 +11,26 @@
       if (_shellCommand.executeSilentAndWaitTimed("iexplore " + url,5))       return true;
     }
  else     if (osName.startsWith("Windows")) {
-      if (_shellCommand.executeSilentAndWaitTimed("rundll32 url.dll,FileProtocolHandler " + url,5))       return true;
-      if (_shellCommand.executeSilentAndWaitTimed("\"C:\\Program Files\\Internet Explorer\\iexplore.exe\" " + url,5))       return true;
+      String browserString="\"C:\\Program Files\\Internet Explorer\\iexplore.exe\"";
+      BufferedReader bufferedReader=null;
+      _shellCommand.executeSilentAndWaitTimed("regedit /E default_browser.reg \"HKEY_CLASSES_ROOT\\http\\shell\\open\\command\"",5);
+      try {
+        bufferedReader=new BufferedReader(new InputStreamReader(new FileInputStream("default_browser.reg")));
+        for (String line; (line=bufferedReader.readLine()) != null; ) {
+          if (line.startsWith("@=\"")) {
+            browserString=line.substring(3,line.toLowerCase().indexOf(".exe") + 3);
+          }
+        }
+      }
+ catch (      Exception e) {
+      }
+      try {
+        bufferedReader.close();
+      }
+ catch (      IOException e) {
+      }
+      new File("default_browser.reg").delete();
+      if (_shellCommand.executeSilentAndWaitTimed(browserString + " " + url,5))       return true;
     }
  else {
       if (_shellCommand.executeSilentAndWaitTimed("konqueror " + url,5))       return true;
