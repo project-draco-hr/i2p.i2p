@@ -7,7 +7,7 @@
   this.thread.setName("SAMv1Handler");
   _log.debug("SAM handling started");
   try {
-    InputStream in=socket.getInputStream();
+    InputStream in=getClientSocketInputStream();
     int b=-1;
     while (true) {
       if (shouldStop()) {
@@ -43,6 +43,9 @@
       if (domain.equals("STREAM")) {
         canContinue=execStreamMessage(opcode,props);
       }
+ else       if (domain.equals("DATAGRAM")) {
+        canContinue=execDatagramMessage(opcode,props);
+      }
  else       if (domain.equals("RAW")) {
         canContinue=execRawMessage(opcode,props);
       }
@@ -76,7 +79,7 @@ catch (  Exception e) {
  finally {
     _log.debug("Stopping handler");
     try {
-      this.socket.close();
+      closeClientSocket();
     }
  catch (    IOException e) {
       _log.error("Error closing socket: " + e.getMessage());
