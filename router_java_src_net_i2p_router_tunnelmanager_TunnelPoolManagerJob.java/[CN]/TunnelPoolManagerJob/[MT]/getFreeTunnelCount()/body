@@ -1,6 +1,7 @@
 {
   Set freeTunnels=_pool.getFreeTunnels();
   int free=0;
+  int tooShort=0;
   int minLength=_pool.getPoolSettings().getDepthInbound();
   long mustExpireAfter=getContext().clock().now() + EXPIRE_FUDGE_PERIOD;
   for (Iterator iter=freeTunnels.iterator(); iter.hasNext(); ) {
@@ -17,7 +18,7 @@
           }
         }
  else {
-          free++;
+          tooShort++;
         }
       }
  else {
@@ -25,5 +26,11 @@
       }
     }
   }
-  return free;
+  if (free <= 0) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("No free tunnels that are long enough, but there are " + tooShort + " shorter ones");
+    return tooShort;
+  }
+ else {
+    return free;
+  }
 }
