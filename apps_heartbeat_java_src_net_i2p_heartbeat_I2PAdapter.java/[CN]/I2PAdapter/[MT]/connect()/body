@@ -1,0 +1,36 @@
+{
+  I2PClient client=I2PClientFactory.createClient();
+  Destination us=null;
+  File destFile=new File(_privateDestFile);
+  us=verifyDestination(client,destFile);
+  if (us == null)   return false;
+  FileInputStream fin=null;
+  try {
+    fin=new FileInputStream(destFile);
+    Properties options=getOptions();
+    I2PSession session=client.createSession(fin,options);
+    I2PListener lsnr=new I2PListener();
+    session.setSessionListener(lsnr);
+    session.connect();
+    _localDest=session.getMyDestination();
+    if (_log.shouldLog(Log.INFO))     _log.info("I2CP Session created and connected as " + _localDest.calculateHash().toBase64());
+    _session=session;
+    _i2pListener=lsnr;
+  }
+ catch (  I2PSessionException ise) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Error connecting",ise);
+    return false;
+  }
+catch (  IOException ioe) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Error loading the destionation",ioe);
+    return false;
+  }
+ finally {
+    if (fin != null)     try {
+      fin.close();
+    }
+ catch (    IOException ioe) {
+    }
+  }
+  return true;
+}

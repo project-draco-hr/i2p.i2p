@@ -1,0 +1,29 @@
+{
+  if (_session == null)   throw new IllegalStateException("Not connected to the router");
+  ByteArrayOutputStream baos=new ByteArrayOutputStream(data.length + 768);
+  try {
+    _localDest.writeBytes(baos);
+    DataHelper.writeLong(baos,2,seriesNum);
+    DataHelper.writeLong(baos,1,TYPE_PONG);
+    DataHelper.writeDate(baos,sentOn);
+    DataHelper.writeDate(baos,new Date(Clock.getInstance().now()));
+    DataHelper.writeLong(baos,2,data.length);
+    baos.write(data);
+    boolean sent=_session.sendMessage(peer,baos.toByteArray());
+    if (!sent) {
+      if (_log.shouldLog(Log.ERROR))       _log.error("Error sending the pong to " + peer.calculateHash().toBase64() + " for series "+ seriesNum+ " which was sent on "+ sentOn);
+    }
+ else {
+      if (_log.shouldLog(Log.INFO))       _log.info("Pong sent to " + peer.calculateHash().toBase64() + " for series "+ seriesNum+ " which was sent on "+ sentOn);
+    }
+  }
+ catch (  IOException ioe) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Error sending the ping",ioe);
+  }
+catch (  DataFormatException dfe) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Error writing out the pong message",dfe);
+  }
+catch (  I2PSessionException ise) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Error writing out the pong message",ise);
+  }
+}

@@ -1,0 +1,26 @@
+{
+  if (_log.shouldLog(Log.INFO))   _log.info("Starting engine talking to peer " + _data.getConfig().getPeer().calculateHash().toBase64());
+  long nextSend=Clock.getInstance().now();
+  long nextWrite=Clock.getInstance().now();
+  while (_active) {
+    if (Clock.getInstance().now() >= nextSend) {
+      doSend();
+      nextSend=Clock.getInstance().now() + _data.getConfig().getSendFrequency() * 1000;
+    }
+    if (Clock.getInstance().now() >= nextWrite) {
+      boolean written=writer.persist(_data);
+      if (!written) {
+        if (_log.shouldLog(Log.ERROR))         _log.error("Unable to write the client state data");
+      }
+ else {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Client state data written");
+      }
+    }
+    _data.cleanup();
+    try {
+      Thread.sleep(1000);
+    }
+ catch (    InterruptedException ie) {
+    }
+  }
+}

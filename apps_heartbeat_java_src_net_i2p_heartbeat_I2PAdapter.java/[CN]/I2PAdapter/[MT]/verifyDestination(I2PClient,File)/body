@@ -1,0 +1,64 @@
+{
+  Destination us=null;
+  FileInputStream fin=null;
+  if (destFile.exists()) {
+    try {
+      fin=new FileInputStream(destFile);
+      us=new Destination();
+      us.readBytes(fin);
+      if (_log.shouldLog(Log.INFO))       _log.info("Existing destination loaded: [" + us.toBase64() + "]");
+    }
+ catch (    IOException ioe) {
+      if (fin != null)       try {
+        fin.close();
+      }
+ catch (      IOException ioe2) {
+      }
+      fin=null;
+      destFile.delete();
+      us=null;
+    }
+catch (    DataFormatException dfe) {
+      if (fin != null)       try {
+        fin.close();
+      }
+ catch (      IOException ioe2) {
+      }
+      fin=null;
+      destFile.delete();
+      us=null;
+    }
+ finally {
+      if (fin != null)       try {
+        fin.close();
+      }
+ catch (      IOException ioe2) {
+      }
+      fin=null;
+    }
+  }
+  if (us == null) {
+    FileOutputStream fos=null;
+    try {
+      fos=new FileOutputStream(destFile);
+      us=client.createDestination(fos);
+      if (_log.shouldLog(Log.INFO))       _log.info("New destination created: [" + us.toBase64() + "]");
+    }
+ catch (    IOException ioe) {
+      if (_log.shouldLog(Log.ERROR))       _log.error("Error writing out the destination keys being created",ioe);
+      return null;
+    }
+catch (    I2PException ie) {
+      if (_log.shouldLog(Log.ERROR))       _log.error("Error creating the destination",ie);
+      return null;
+    }
+ finally {
+      if (fos != null)       try {
+        fos.close();
+      }
+ catch (      IOException ioe) {
+      }
+    }
+  }
+  return us;
+}

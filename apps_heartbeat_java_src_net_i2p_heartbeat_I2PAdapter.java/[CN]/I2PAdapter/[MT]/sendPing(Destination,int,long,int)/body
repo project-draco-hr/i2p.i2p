@@ -1,0 +1,31 @@
+{
+  if (_session == null)   throw new IllegalStateException("Not connected to the router");
+  ByteArrayOutputStream baos=new ByteArrayOutputStream(size);
+  try {
+    _localDest.writeBytes(baos);
+    DataHelper.writeLong(baos,2,seriesNum);
+    DataHelper.writeLong(baos,1,TYPE_PING);
+    DataHelper.writeDate(baos,new Date(now));
+    int padding=size - baos.size();
+    byte paddingData[]=new byte[padding];
+    Arrays.fill(paddingData,(byte)0x2A);
+    DataHelper.writeLong(baos,2,padding);
+    baos.write(paddingData);
+    boolean sent=_session.sendMessage(peer,baos.toByteArray());
+    if (!sent) {
+      if (_log.shouldLog(Log.ERROR))       _log.error("Error sending the ping to " + peer.calculateHash().toBase64() + " for series "+ seriesNum);
+    }
+ else {
+      if (_log.shouldLog(Log.INFO))       _log.info("Ping sent to " + peer.calculateHash().toBase64() + " for series "+ seriesNum);
+    }
+  }
+ catch (  IOException ioe) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Error sending the ping",ioe);
+  }
+catch (  DataFormatException dfe) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Error writing out the ping message",dfe);
+  }
+catch (  I2PSessionException ise) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Error writing out the ping message",ise);
+  }
+}
