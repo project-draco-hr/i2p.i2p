@@ -1,37 +1,3 @@
 {
-  if (_log.shouldLog(Log.INFO)) {
-    if (_ident != null)     _log.info("Connection between " + _ident.getHash().toBase64().substring(0,6) + " and "+ _context.routerHash().toBase64().substring(0,6)+ " closed",new Exception("Closed by"));
- else     _log.info("Connection between " + _remoteAddress + " and "+ _context.routerHash().toBase64().substring(0,6)+ " closed",new Exception("Closed by"));
-  }
-  if (_closed)   return;
-  _closed=true;
-synchronized (_pendingMessages) {
-    _pendingMessages.notifyAll();
-  }
-  if (_runner != null)   _runner.stopRunning();
-  if (_reader != null)   _reader.stopReading();
-  if (_in != null)   try {
-    _in.close();
-  }
- catch (  IOException ioe) {
-  }
-  if (_out != null)   try {
-    _out.close();
-  }
- catch (  IOException ioe) {
-  }
-  if (_socket != null)   try {
-    _socket.close();
-  }
- catch (  IOException ioe) {
-  }
-  List msgs=clearPendingMessages();
-  for (int i=0; i < msgs.size(); i++) {
-    OutNetMessage msg=(OutNetMessage)msgs.get(i);
-    msg.timestamp("closeConnection");
-    _transport.afterSend(msg,false,true,-1);
-  }
-  _context.profileManager().commErrorOccurred(_ident.getHash());
-  _transport.addConnectionErrorMessage("Connection closed with " + _ident.getHash().toBase64().substring(0,6) + " after "+ DataHelper.formatDuration(getLifetime()));
-  _transport.connectionClosed(this);
+  closeConnection(true);
 }
