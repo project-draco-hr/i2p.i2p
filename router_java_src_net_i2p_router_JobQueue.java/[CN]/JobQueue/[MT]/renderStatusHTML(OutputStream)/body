@@ -3,12 +3,19 @@
   ArrayList timedJobs=null;
   ArrayList activeJobs=new ArrayList(1);
   ArrayList justFinishedJobs=new ArrayList(4);
+  out.write("<!-- jobQueue rendering -->\n".getBytes());
+  out.flush();
 synchronized (_readyJobs) {
     readyJobs=new ArrayList(_readyJobs);
   }
+  out.write("<!-- jobQueue rendering: after readyJobs sync -->\n".getBytes());
+  out.flush();
 synchronized (_timedJobs) {
     timedJobs=new ArrayList(_timedJobs);
   }
+  out.write("<!-- jobQueue rendering: after timedJobs sync -->\n".getBytes());
+  out.flush();
+  int numRunners=0;
 synchronized (_queueRunners) {
     for (Iterator iter=_queueRunners.values().iterator(); iter.hasNext(); ) {
       JobQueueRunner runner=(JobQueueRunner)iter.next();
@@ -21,13 +28,13 @@ synchronized (_queueRunners) {
         justFinishedJobs.add(job);
       }
     }
+    numRunners=_queueRunners.size();
   }
+  out.write("<!-- jobQueue rendering: after queueRunners sync -->\n".getBytes());
+  out.flush();
   StringBuffer buf=new StringBuffer(32 * 1024);
   buf.append("<h2>JobQueue</h2>");
-  buf.append("# runners: ");
-synchronized (_queueRunners) {
-    buf.append(_queueRunners.size());
-  }
+  buf.append("# runners: ").append(numRunners);
   buf.append("<br />\n");
   long now=_context.clock().now();
   buf.append("# active jobs: ").append(activeJobs.size()).append("<ol>\n");
@@ -63,6 +70,10 @@ synchronized (_queueRunners) {
     buf.append(new Date(j.getTiming().getStartAfter())).append("</li>\n");
   }
   buf.append("</ol>\n");
+  out.write("<!-- jobQueue rendering: after main buffer, before stats -->\n".getBytes());
+  out.flush();
   getJobStats(buf);
+  out.write("<!-- jobQueue rendering: after stats -->\n".getBytes());
+  out.flush();
   out.write(buf.toString().getBytes());
 }

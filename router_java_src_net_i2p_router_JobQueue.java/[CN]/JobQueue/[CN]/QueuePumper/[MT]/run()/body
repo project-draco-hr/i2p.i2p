@@ -19,20 +19,23 @@ synchronized (_timedJobs) {
             if ((timeToWait <= 0) || (timeLeft < timeToWait))             timeToWait=timeLeft;
           }
         }
-        if (toAdd == null) {
-          if (_log.shouldLog(Log.DEBUG))           _log.debug("Waiting " + timeToWait + " before rechecking the timed queue");
-          try {
-            _timedJobs.wait(timeToWait);
-          }
- catch (          InterruptedException ie) {
-          }
-        }
       }
       if (toAdd != null) {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Not waiting - we have " + toAdd.size() + " newly ready jobs");
 synchronized (_readyJobs) {
           for (int i=0; i < toAdd.size(); i++)           _readyJobs.add(toAdd.get(i));
         }
         awaken(toAdd.size());
+      }
+ else {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Waiting " + timeToWait + " before rechecking the timed queue");
+        try {
+synchronized (_timedJobs) {
+            _timedJobs.wait(timeToWait);
+          }
+        }
+ catch (        InterruptedException ie) {
+        }
       }
     }
   }
