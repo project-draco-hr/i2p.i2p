@@ -1,20 +1,34 @@
 {
-  List cur=new ArrayList(1000);
+  int writeStart=-1;
+  int writeEnd=-1;
   while (true) {
 synchronized (_events) {
-      if (_events.size() < _flushFrequency) {
-        try {
+      if (_eventNext > _lastWrite) {
+        if (_eventNext - _lastWrite < _flushFrequency)         try {
           _events.wait(30 * 1000);
         }
  catch (        InterruptedException ie) {
         }
       }
-      cur.addAll(_events);
-      _events.clear();
+ else {
+        if (_events.length - 1 - _lastWrite + _eventNext < _flushFrequency)         try {
+          _events.wait(30 * 1000);
+        }
+ catch (        InterruptedException ie) {
+        }
+      }
+      writeStart=(_lastWrite + 1) % _events.length;
+      writeEnd=_eventNext;
+      _lastWrite=(writeEnd == 0 ? _events.length - 1 : writeEnd - 1);
     }
-    if (cur.size() > 0) {
-      writeEvents(cur);
-      cur.clear();
+    if (writeStart != writeEnd) {
+      try {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("writing " + writeStart + "->"+ writeEnd);
+        writeEvents(writeStart,writeEnd);
+      }
+ catch (      Exception e) {
+        _log.error("error writing " + writeStart + "->"+ writeEnd,e);
+      }
     }
   }
 }

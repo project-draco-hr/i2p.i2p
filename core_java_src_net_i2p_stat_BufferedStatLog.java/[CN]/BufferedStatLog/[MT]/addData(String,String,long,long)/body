@@ -1,6 +1,14 @@
 {
 synchronized (_events) {
-    _events.add(new StatEvent(scope,stat,value,duration));
-    if (_events.size() > _flushFrequency)     _events.notifyAll();
+    _events[_eventNext].init(scope,stat,value,duration);
+    _eventNext=(_eventNext + 1) % _events.length;
+    if (_eventNext == _lastWrite)     _lastWrite=(_lastWrite + 1) % _events.length;
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("AddData next=" + _eventNext + " lastWrite="+ _lastWrite);
+    if (_eventNext > _lastWrite) {
+      if (_eventNext - _lastWrite >= _flushFrequency)       _events.notifyAll();
+    }
+ else {
+      if (_events.length - 1 - _lastWrite + _eventNext >= _flushFrequency)       _events.notifyAll();
+    }
   }
 }
