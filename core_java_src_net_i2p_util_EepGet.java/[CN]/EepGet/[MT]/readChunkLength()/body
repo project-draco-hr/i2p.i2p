@@ -1,0 +1,26 @@
+{
+  StringBuffer buf=new StringBuffer(8);
+  int nl=0;
+  while (true) {
+    int cur=_proxyIn.read();
+switch (cur) {
+case -1:
+      throw new IOException("Chunk ended too soon");
+case '\n':
+case '\r':
+    nl++;
+default :
+  buf.append((char)cur);
+}
+if (nl >= 2) break;
+}
+String len=buf.toString().trim();
+try {
+long bytes=Long.parseLong(len,16);
+_bytesRemaining=bytes;
+if (_log.shouldLog(Log.DEBUG)) _log.debug("Chunked length: " + bytes);
+}
+ catch (NumberFormatException nfe) {
+throw new IOException("Invalid chunk length [" + len + "]");
+}
+}
