@@ -16,7 +16,7 @@ synchronized (_toBeSent) {
   long afterAdd=Clock.getInstance().now();
   StatManager.getInstance().addRateData("tcp.queueSize",totalPending - 1,0);
   if (fail) {
-    if (_log.shouldLog(Log.ERROR))     _log.error("too many queued messages");
+    if (_log.shouldLog(Log.ERROR))     _log.error("too many queued messages to " + _remoteIdentity.getHash().toBase64());
     msg.timestamp("TCPConnection.addMessage exceeded max queued");
     _transport.afterSend(msg,false);
     return;
@@ -31,7 +31,10 @@ synchronized (_toBeSent) {
     if (_log.shouldLog(Log.ERROR))     _log.error("WTF, total pending after adding " + msg.getMessage().getClass().getName() + " <= 0! "+ msg);
   }
   if (slicesTooLong()) {
-    if (_log.shouldLog(Log.ERROR))     _log.error("onAdd: Slices are taking too long (" + (Clock.getInstance().now() - _lastSliceRun) + "ms) - perhaps the remote side is disconnected or hung? remote="+ _remoteIdentity.getHash().toBase64());
+    if (_log.shouldLog(Log.ERROR)) {
+      long sliceTime=Clock.getInstance().now() - _lastSliceRun;
+      _log.error("onAdd: Slices are taking too long (" + sliceTime + "ms) - perhaps the remote side is disconnected or hung? remote="+ _remoteIdentity.getHash().toBase64());
+    }
     closeConnection();
   }
 }
