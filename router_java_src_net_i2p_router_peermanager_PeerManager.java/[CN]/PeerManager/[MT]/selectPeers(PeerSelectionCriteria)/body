@@ -10,9 +10,7 @@ case PeerSelectionCriteria.PURPOSE_TEST:
       _organizer.selectHighCapacityPeers(criteria.getMinimumRequired(),exclude,curVals);
     break;
 case PeerSelectionCriteria.PURPOSE_TUNNEL:
-  int num=_organizer.countFastPeers();
-if (num <= 0) num=criteria.getMaximumRequired();
-_organizer.selectFastPeers(num,exclude,curVals);
+  _organizer.selectFastPeers(criteria.getMaximumRequired(),exclude,curVals);
 break;
 case PeerSelectionCriteria.PURPOSE_SOURCE_ROUTE:
 _organizer.selectHighCapacityPeers(criteria.getMinimumRequired(),exclude,curVals);
@@ -43,22 +41,5 @@ exclude.addAll(curVals);
 numPasses++;
 }
 if (_log.shouldLog(Log.INFO)) _log.info("Peers selected after " + numPasses + ": "+ rv);
-if (criteria.getPurpose() == PeerSelectionCriteria.PURPOSE_TUNNEL) {
-TreeMap ordered=new TreeMap();
-for (Iterator iter=rv.iterator(); iter.hasNext(); ) {
-Hash peer=(Hash)iter.next();
-PeerProfile prof=_organizer.getProfile(peer);
-long when=prof.getTunnelHistory().getLastAgreedTo();
-while (ordered.containsKey(new Long(when))) when++;
-ordered.put(new Long(when),peer);
-}
-rv.clear();
-for (Iterator iter=ordered.values().iterator(); iter.hasNext(); ) {
-if (rv.size() >= criteria.getMaximumRequired()) break;
-Hash peer=(Hash)iter.next();
-rv.add(peer);
-}
-if (_log.shouldLog(Log.INFO)) _log.info("Peers selected after " + numPasses + ", sorted for a tunnel: "+ rv);
-}
 return rv;
 }
