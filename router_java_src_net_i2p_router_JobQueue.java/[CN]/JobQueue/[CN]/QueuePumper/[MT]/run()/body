@@ -4,7 +4,7 @@
       long now=_context.clock().now();
       long timeToWait=0;
       ArrayList toAdd=null;
-synchronized (_timedJobs) {
+synchronized (_jobLock) {
         for (int i=0; i < _timedJobs.size(); i++) {
           Job j=(Job)_timedJobs.get(i);
           long timeLeft=j.getTiming().getStartAfter() - now;
@@ -19,24 +19,20 @@ synchronized (_timedJobs) {
             if ((timeToWait <= 0) || (timeLeft < timeToWait))             timeToWait=timeLeft;
           }
         }
-      }
-      if (toAdd != null) {
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("Not waiting - we have " + toAdd.size() + " newly ready jobs");
-synchronized (_readyJobs) {
+        if (toAdd != null) {
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("Not waiting - we have " + toAdd.size() + " newly ready jobs");
           for (int i=0; i < toAdd.size(); i++)           _readyJobs.add(toAdd.get(i));
-          _readyJobs.notifyAll();
+          _jobLock.notifyAll();
         }
-      }
  else {
-        if (timeToWait < 100)         timeToWait=100;
-        if (timeToWait > 10 * 1000)         timeToWait=10 * 1000;
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("Waiting " + timeToWait + " before rechecking the timed queue");
-        try {
-synchronized (_timedJobs) {
-            _timedJobs.wait(timeToWait);
+          if (timeToWait < 100)           timeToWait=100;
+          if (timeToWait > 10 * 1000)           timeToWait=10 * 1000;
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("Waiting " + timeToWait + " before rechecking the timed queue");
+          try {
+            _jobLock.wait(timeToWait);
           }
-        }
- catch (        InterruptedException ie) {
+ catch (          InterruptedException ie) {
+          }
         }
       }
     }

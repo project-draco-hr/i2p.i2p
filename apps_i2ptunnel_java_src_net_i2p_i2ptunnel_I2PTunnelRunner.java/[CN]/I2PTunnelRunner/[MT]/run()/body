@@ -4,15 +4,14 @@
     OutputStream out=new BufferedOutputStream(s.getOutputStream(),NETWORK_BUFFER_SIZE);
     i2ps.setSocketErrorListener(this);
     InputStream i2pin=i2ps.getInputStream();
-    OutputStream i2pout=new BufferedOutputStream(i2ps.getOutputStream(),MAX_PACKET_SIZE);
+    OutputStream i2pout=i2ps.getOutputStream();
     if (initialData != null) {
 synchronized (slock) {
         i2pout.write(initialData);
-        i2pout.flush();
       }
     }
-    Thread t1=new StreamForwarder(in,i2pout);
-    Thread t2=new StreamForwarder(i2pin,out);
+    Thread t1=new StreamForwarder(in,i2pout,"toI2P");
+    Thread t2=new StreamForwarder(i2pin,out,"fromI2P");
 synchronized (finishLock) {
       while (!finished) {
         finishLock.wait();
@@ -26,14 +25,13 @@ synchronized (finishLock) {
     t2.join();
   }
  catch (  InterruptedException ex) {
-    _log.error("Interrupted",ex);
+    if (_log.shouldLog(Log.ERROR))     _log.error("Interrupted",ex);
   }
 catch (  IOException ex) {
-    ex.printStackTrace();
-    _log.debug("Error forwarding",ex);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Error forwarding",ex);
   }
 catch (  Exception e) {
-    _log.error("Internal error",e);
+    if (_log.shouldLog(Log.ERROR))     _log.error("Internal error",e);
   }
  finally {
     try {
@@ -41,8 +39,7 @@ catch (  Exception e) {
       if (i2ps != null)       i2ps.close();
     }
  catch (    IOException ex) {
-      ex.printStackTrace();
-      _log.error("Could not close socket",ex);
+      if (_log.shouldLog(Log.ERROR))       _log.error("Could not close socket",ex);
     }
   }
 }
