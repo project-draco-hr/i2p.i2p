@@ -1,12 +1,5 @@
 {
   while (_alive) {
-    while (_paused) {
-      try {
-        Thread.sleep(30);
-      }
- catch (      InterruptedException ie) {
-      }
-    }
     Job rv=null;
     int ready=0;
 synchronized (_readyJobs) {
@@ -14,9 +7,12 @@ synchronized (_readyJobs) {
       if (ready > 0)       rv=(Job)_readyJobs.remove(0);
     }
     if (rv != null) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Waking up " + (ready - 1) + " job runners (and running one)");
       awaken(ready - 1);
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Using a ready job after waking up " + (ready - 1) + " others");
       return rv;
+    }
+ else {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("No jobs pending, waiting a second");
     }
     try {
 synchronized (_runnerLock) {
@@ -26,5 +22,6 @@ synchronized (_runnerLock) {
  catch (    InterruptedException ie) {
     }
   }
+  if (_log.shouldLog(Log.WARN))   _log.warn("No longer alive, returning null");
   return null;
 }
