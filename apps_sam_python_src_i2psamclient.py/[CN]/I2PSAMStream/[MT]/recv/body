@@ -1,0 +1,20 @@
+def recv(self, size):
+    '\n        Retrieves n bytes from peer\n        '
+    chunks = []
+    while (self.isOpen and (size > 0)):
+        if self.inbuf:
+            chunk = self.inbuf[:size]
+            chunklen = len(chunk)
+            self.inbuf = self.inbuf[chunklen:]
+            chunks.append(chunk)
+            size -= chunklen
+        else:
+            log(4, 'I2PSAMStream.recv: replenishing input buffer')
+            buf = self.qIncomingData.get()
+            if (buf == ''):
+                self.isOpen = 0
+                break
+            else:
+                log(4, ('I2PSAMStream: queue returned %s' % repr(buf)))
+                self.inbuf += buf
+    return ''.join(chunks)

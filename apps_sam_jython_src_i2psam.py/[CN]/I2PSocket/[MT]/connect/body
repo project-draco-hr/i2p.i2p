@@ -1,16 +1,20 @@
 def connect(self, remdest):
     '\n        Connects to a remote destination\n    \n        This has one totally major difference from the normal socket\n        paradigm, and that is that you can have n outbound connections\n        to different dests.\n        '
+    if self.sockmgr:
+        raise I2PSocketError('.sockmgr already present - have you already called listen/connect?')
     if (self.dest is None):
+        log(4, 'connect: creating whole new dest')
         self.dest = I2PDestination()
     self._createSockmgr()
     opts = net.i2p.client.streaming.I2PSocketOptions()
     try:
+        log(4, ('trying to connect to %s' % remdest.toBase64()))
         sock = self.sock = self.sockmgr.connect(remdest._item, opts)
         self.remdest = remdest
     except:
         logException(2, 'apparent exception, continuing...')
     self.instream = sock.getInputStream()
     self.outstream = sock.getOutputStream()
-    sockobj = I2PSocket(dest=self.dest, remdest=remdest, sock=sock, instream=instream, outstream=outstream)
+    sockobj = I2PSocket(dest=self.dest, remdest=remdest, sock=sock, instream=self.instream, outstream=self.outstream)
     self._connected = 1
     return sockobj

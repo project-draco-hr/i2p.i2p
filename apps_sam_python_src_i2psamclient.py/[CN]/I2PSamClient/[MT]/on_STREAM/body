@@ -1,2 +1,30 @@
 def on_STREAM(self, topic, subtopic, args):
-    '\n        Handles STREAM messages from server\n        '
+    '\n        Handles STREAM messages from server\n    \n        STREAM STATUS\n        RESULT=$result\n        ID=$id\n        [MESSAGE=...]\n    \n        STREAM CONNECTED\n        DESTINATION=$base64key\n        ID=$id\n    \n        STREAM RECEIVED\n        ID=$id\n        SIZE=$numBytes\n[$numBytes of data]\n    \n        STREAM CLOSED\n        RESULT=$result\n        ID=$id\n        [MESSAGE=...]\n        '
+    log(4, ('got %s %s %s' % (topic, subtopic, args)))
+    id = int(args['ID'])
+    if (subtopic == 'STATUS'):
+        self.streamConnectReplies[id].put(args)
+        return
+    if (subtopic == 'CONNECTED'):
+        dest = args['DESTINATION']
+        conn = I2PSAMStream(self, id, dest)
+        self.streams[id] = conn
+        self.qNewStreams.put(conn)
+        return
+    elif (subtopic == 'RECEIVED'):
+        data = args['DATA']
+        conn = self.streams.get(id, None)
+        if (not conn):
+            log(2, ("got data, but don't recall any conn with id %s" % id))
+            return
+        conn._notifyIncomingData(data)
+        log(4, "wrote data to conn's inbound queue")
+        return
+    elif (subtopic == 'CLOSED'):
+        conn = self.streams.get(id, None)
+        if (not conn):
+            return
+        conn._notifyIncomingData('')
+        conn.isOpen = 0
+        del self.streams[id]
+        return

@@ -9,11 +9,22 @@ def on_STREAM(self, topic, subtopic, args):
     write = self.wfile.write
     flush = self.wfile.flush
     if (subtopic == 'CONNECT'):
-        remdest = I2PDestionation(b64=args['DESTINATION'])
-        id = args['ID']
+        remdest = I2PDestination(base64=args['DESTINATION'])
+        id = int(args['ID'])
         try:
+            log(4, ('Trying to connect to remote peer %s...' % args['DESTINATION']))
             sock = self.samSock.connect(remdest)
+            log(4, ('Connected to remote peer %s...' % args['DESTINATION']))
             self.localstreams[id] = sock
             self.samSend('STREAM', 'STATUS', RESULT='OK', ID=id)
+            thread.start_new_thread(self.threadSocketReceiver, (sock, id))
         except:
-            self.samSend('STREAM', 'STATUS', RESULT='I2P_ERROR', MESSAGE='exception_on_connect')
+            log(4, ('Failed to connect to remote peer %s...' % args['DESTINATION']))
+            self.samSend('STREAM', 'STATUS', RESULT='I2P_ERROR', MESSAGE='exception_on_connect', ID=id)
+    elif (subtopic == 'SEND'):
+        id = int(args['ID'])
+        try:
+            sock = self.localstreams[id]
+            sock.send(args['DATA'])
+        except:
+            logException(4, 'send failed')

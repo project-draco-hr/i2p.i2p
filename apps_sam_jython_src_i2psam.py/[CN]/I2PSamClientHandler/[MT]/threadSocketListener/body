@@ -1,12 +1,16 @@
 def threadSocketListener(self, sock, dest):
     '\n        Listens for incoming socket connections, and\n        notifies the client accordingly\n        '
     destb64 = dest.toBase64()
-    log(4, ('Listening for connections to %s...' % destb64[:40]))
+    log(4, ('Listening for connections to %s...' % destb64))
+    sock.bind()
     sock.listen()
     while 1:
+        log(4, ('Awaiting next connection to %s...' % destb64))
         newsock = sock.accept()
+        log(4, ('Got connection to %s...' % destb64))
         id = (- self.server.samAllocId())
         self.localstreams[id] = self.globalstreams[id] = newsock
+        thread.start_new_thread(self.threadSocketReceiver, (newsock, id))
         remdest = newsock.remdest
         remdest_b64 = remdest.toBase64()
         self.samSend('STREAM', 'CONNECTED', DESTINATION=remdest_b64, ID=id)
