@@ -21,14 +21,14 @@ synchronized (_session) {
 synchronized (lock) {
         _outSockets.remove(s.getLocalID());
       }
-      throw new I2PException("Unable to reach peer");
+      throw new I2PException("Error sending through I2P network");
     }
     remoteID=s.getRemoteID(true,options.getConnectTimeout());
     if (remoteID == null) {
-      throw new I2PException("Peer refused connection");
+      throw new ConnectException("Connection refused by peer");
     }
     if ("".equals(remoteID)) {
-      throw new I2PException("Unable to reach peer");
+      throw new NoRouteToHostException("Unable to reach peer");
     }
     _log.debug("TIMING: s given out for remoteID " + getReadableForm(remoteID));
     return s;
@@ -38,14 +38,20 @@ synchronized (lock) {
 synchronized (lock) {
       _outSockets.remove(s.getLocalID());
     }
-    throw new I2PException("Timeout waiting for ack");
+    throw new InterruptedException("Timeout waiting for ack");
+  }
+catch (  ConnectException ex) {
+    throw ex;
+  }
+catch (  NoRouteToHostException ex) {
+    throw ex;
   }
 catch (  IOException ex) {
     _log.error("Error sending syn on id " + getReadableForm(lcID),ex);
 synchronized (lock) {
       _outSockets.remove(s.getLocalID());
     }
-    throw new I2PException("IOException occurred");
+    throw new I2PException("Unhandled IOException occurred");
   }
 catch (  I2PException ex) {
     _log.info("Error sending syn on id " + getReadableForm(lcID),ex);
