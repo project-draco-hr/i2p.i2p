@@ -1,5 +1,16 @@
 {
   File cfgFile=new File(_location);
+  if (!cfgFile.exists()) {
+    if (!_alreadyNoticedMissingConfig) {
+      if (_log.shouldLog(Log.ERROR))       _log.error("Log file " + _location + " does not exist");
+      System.err.println("Log file " + _location + " does not exist");
+      _alreadyNoticedMissingConfig=true;
+    }
+    parseConfig(new Properties());
+    updateLimits();
+    return;
+  }
+  _alreadyNoticedMissingConfig=false;
   if ((_configLastRead > 0) && (_configLastRead >= cfgFile.lastModified())) {
     if (_log.shouldLog(Log.INFO))     _log.info("Short circuiting config read (last read: " + (_context.clock().now() - _configLastRead) + "ms ago, config file modified "+ (_context.clock().now() - cfgFile.lastModified())+ "ms ago");
     return;
