@@ -1,15 +1,18 @@
 {
-  if (_log.shouldLog(Log.INFO))   _log.info("Testing outbound tunnel " + info);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Testing outbound tunnel " + info);
   DeliveryStatusMessage msg=new DeliveryStatusMessage(_context);
   msg.setArrival(new Date(_context.clock().now()));
   msg.setMessageId(_nonce);
   Hash us=_context.routerHash();
-  TunnelId inboundTunnelId=getReplyTunnel();
-  if (inboundTunnelId == null) {
+  _secondaryId=getReplyTunnel();
+  if (_secondaryId == null) {
+    _context.jobQueue().addJob(new TestFailedJob());
     return;
   }
+  TunnelInfo inboundInfo=_pool.getTunnelInfo(_secondaryId);
+  inboundInfo.setLastTested(_context.clock().now());
   TestFailedJob failureJob=new TestFailedJob();
   MessageSelector selector=new TestMessageSelector(msg.getMessageId(),info.getTunnelId().getTunnelId());
-  SendTunnelMessageJob testJob=new SendTunnelMessageJob(_context,msg,info.getTunnelId(),us,inboundTunnelId,null,new TestSuccessfulJob(),failureJob,selector,TEST_TIMEOUT,TEST_PRIORITY);
+  SendTunnelMessageJob testJob=new SendTunnelMessageJob(_context,msg,info.getTunnelId(),us,_secondaryId,null,new TestSuccessfulJob(),failureJob,selector,TEST_TIMEOUT,TEST_PRIORITY);
   _context.jobQueue().addJob(testJob);
 }

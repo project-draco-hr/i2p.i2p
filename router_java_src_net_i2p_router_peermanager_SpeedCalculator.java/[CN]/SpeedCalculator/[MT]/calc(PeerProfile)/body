@@ -1,12 +1,34 @@
 {
-  double dbResponseTime=profile.getDbResponseTime().getRate(60 * 1000).getLifetimeAverageValue();
-  double tunnelResponseTime=profile.getTunnelCreateResponseTime().getRate(60 * 1000).getLifetimeAverageValue();
-  double roundTripRate=Math.max(dbResponseTime,tunnelResponseTime);
-  double sendRate=calcSendRate(profile);
-  double receiveRate=calcReceiveRate(profile);
-  double val=60000.0d - 0.1 * roundTripRate + sendRate + receiveRate;
-  if ((roundTripRate == 0.0d) && (sendRate == 0.0d))   val=0.0;
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("roundTripRate: " + roundTripRate + "ms sendRate: "+ sendRate+ "bytes/second, receiveRate: "+ receiveRate+ "bytes/second, val: "+ val+ " for "+ profile.getPeer().toBase64());
-  val+=profile.getSpeedBonus();
-  return val;
+  long threshold=getEventThreshold();
+  boolean tunnelTestOnly=getUseTunnelTestOnly();
+  long period=10 * 60 * 1000;
+  long events=getEventCount(profile,period,tunnelTestOnly);
+  if (events < threshold) {
+    period=60 * 60 * 1000l;
+    events=getEventCount(profile,period,tunnelTestOnly);
+    if (events < threshold) {
+      period=24 * 60 * 60* 1000;
+      events=getEventCount(profile,period,tunnelTestOnly);
+      if (events < threshold) {
+        period=-1;
+        events=getEventCount(profile,period,tunnelTestOnly);
+      }
+    }
+  }
+  double measuredRoundTripTime=getMeasuredRoundTripTime(profile,period,tunnelTestOnly);
+  double measuredRTPerMinute=0;
+  if (measuredRoundTripTime > 0)   measuredRTPerMinute=(60000.0d / measuredRoundTripTime);
+  double estimatedRTPerMinute=0;
+  double estimatedRoundTripTime=0;
+  if (!tunnelTestOnly) {
+    estimatedRoundTripTime=getEstimatedRoundTripTime(profile,period);
+    if (estimatedRoundTripTime > 0)     estimatedRTPerMinute=(60000.0d / estimatedRoundTripTime);
+  }
+  double estimateFactor=getEstimateFactor(threshold,events);
+  double rv=(1 - estimateFactor) * measuredRTPerMinute + (estimateFactor) * estimatedRTPerMinute;
+  if (_log.shouldLog(Log.DEBUG)) {
+    _log.debug("\n\nrv: " + rv + " events: "+ events+ " threshold: "+ threshold+ " period: "+ period+ " useTunnelTestOnly? "+ tunnelTestOnly+ "\n"+ "measuredRTT: "+ measuredRoundTripTime+ " measured events per minute: "+ measuredRTPerMinute+ "\n"+ "estimateRTT: "+ estimatedRoundTripTime+ " estimated events per minute: "+ estimatedRTPerMinute+ "\n"+ "estimateFactor: "+ estimateFactor+ "\n"+ "for peer: "+ profile.getPeer().toBase64());
+  }
+  rv+=profile.getSpeedBonus();
+  return rv;
 }

@@ -1,0 +1,30 @@
+{
+  if (period < 0) {
+    Rate dbResponseRate=profile.getDbResponseTime().getRate(60 * 60 * 1000l);
+    Rate tunnelResponseRate=profile.getTunnelCreateResponseTime().getRate(60 * 60 * 1000l);
+    Rate tunnelTestRate=profile.getTunnelTestResponseTime().getRate(60 * 60 * 1000l);
+    long dbResponses=tunnelTestOnly ? 0 : dbResponseRate.getLifetimeEventCount();
+    long tunnelResponses=tunnelTestOnly ? 0 : tunnelResponseRate.getLifetimeEventCount();
+    long tunnelTests=tunnelTestRate.getLifetimeEventCount();
+    double dbResponseTime=tunnelTestOnly ? 0 : dbResponseRate.getLifetimeAverageValue();
+    double tunnelResponseTime=tunnelTestOnly ? 0 : tunnelResponseRate.getLifetimeAverageValue();
+    double tunnelTestTime=tunnelTestRate.getLifetimeAverageValue();
+    long events=dbResponses + tunnelResponses + tunnelTests;
+    if (events <= 0)     return 0;
+    return (dbResponses * dbResponseTime + tunnelResponses * tunnelResponseTime + tunnelTests * tunnelTestTime) / events;
+  }
+ else {
+    Rate dbResponseRate=profile.getDbResponseTime().getRate(period);
+    Rate tunnelResponseRate=profile.getTunnelCreateResponseTime().getRate(period);
+    Rate tunnelTestRate=profile.getTunnelTestResponseTime().getRate(period);
+    long dbResponses=tunnelTestOnly ? 0 : dbResponseRate.getCurrentEventCount();
+    long tunnelResponses=tunnelTestOnly ? 0 : tunnelResponseRate.getCurrentEventCount();
+    long tunnelTests=tunnelTestRate.getCurrentEventCount();
+    double dbResponseTime=tunnelTestOnly ? 0 : dbResponseRate.getAverageValue();
+    double tunnelResponseTime=tunnelTestOnly ? 0 : tunnelResponseRate.getAverageValue();
+    double tunnelTestTime=tunnelTestRate.getAverageValue();
+    long events=dbResponses + tunnelResponses + tunnelTests;
+    if (events <= 0)     return 0;
+    return (dbResponses * dbResponseTime + tunnelResponses * tunnelResponseTime + tunnelTests * tunnelTestTime) / events;
+  }
+}

@@ -14,12 +14,13 @@
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Tunnel " + id.getTunnelId() + " will be expiring within the current period ("+ new Date(info.getSettings().getExpiration())+ "), so skip testing it");
       }
  else       if (info.getSettings().getCreated() + MINIMUM_RETEST_DELAY < now) {
-        double probability=TESTS_PER_DURATION / (allIds.size() * CHANCES_PER_DURATION);
-        if (_context.random().nextInt(10) <= (probability * 10d)) {
-          toTest.add(id);
-        }
+        if (info.getLastTested() + MINIMUM_RETEST_DELAY < now) {
+          if (_context.random().nextBoolean()) {
+            toTest.add(id);
+          }
  else {
-          if (_log.shouldLog(Log.DEBUG))           _log.debug("Tunnel " + id.getTunnelId() + " could be tested, but probabilistically isn't going to be");
+            if (_log.shouldLog(Log.DEBUG))             _log.debug("We could have tested tunnel " + id.getTunnelId() + ", but randomly decided not to.");
+          }
         }
       }
  else {
