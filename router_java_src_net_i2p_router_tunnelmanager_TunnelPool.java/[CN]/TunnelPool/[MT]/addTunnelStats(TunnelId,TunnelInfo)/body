@@ -8,7 +8,10 @@ case TunnelId.TYPE_OUTBOUND:
   _context.statManager().addRateData("tunnel.outboundMessagesProcessed",info.getMessagesProcessed(),info.getSettings().getExpiration() - info.getSettings().getCreated());
 break;
 case TunnelId.TYPE_PARTICIPANT:
-_context.statManager().addRateData("tunnel.participatingMessagesProcessed",info.getMessagesProcessed(),info.getSettings().getExpiration() - info.getSettings().getCreated());
+long numMsgs=info.getMessagesProcessed();
+long lastAvg=(long)_context.statManager().getRate("tunnel.participatingMessagesProcessed").getRate(10 * 60 * 1000l).getAverageValue();
+_context.statManager().addRateData("tunnel.participatingMessagesProcessed",numMsgs,info.getSettings().getExpiration() - info.getSettings().getCreated());
+if (numMsgs > lastAvg) _context.statManager().addRateData("tunnel.participatingMessagesProcessedActive",numMsgs - lastAvg,info.getSettings().getExpiration() - info.getSettings().getCreated());
 break;
 case TunnelId.TYPE_UNSPECIFIED:
 default :
