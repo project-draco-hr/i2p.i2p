@@ -4,21 +4,17 @@
   }
   ByteCache cache=ByteCache.getInstance(1024,4);
   ByteArray ba=cache.acquire();
+  int remaining=size;
   try {
-    int remaining=size;
     byte buf[]=ba.getData();
     while (remaining > 0) {
       int read=in.read(buf,0,remaining > buf.length ? buf.length : remaining);
       if (read == -1)       throw new IOException("Insufficient data from the SAM client (" + remaining + "/"+ size+ ")");
-      i2pSocketOS.write(buf,0,read);
+ else       if (read > 0)       i2pSocketOS.write(buf,0,read);
       remaining-=read;
     }
   }
- catch (  IOException e) {
-    _log.error("Error sending data through I2P socket",e);
-    return false;
-  }
- finally {
+  finally {
     cache.release(ba);
   }
   return true;

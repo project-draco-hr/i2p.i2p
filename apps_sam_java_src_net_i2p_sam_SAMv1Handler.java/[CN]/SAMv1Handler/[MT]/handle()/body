@@ -1,7 +1,8 @@
 {
-  String msg, domain, opcode;
+  String msg=null;
+  String domain=null;
+  String opcode=null;
   boolean canContinue=false;
-  ByteArrayOutputStream buf=new ByteArrayOutputStream(IN_BUFSIZE);
   StringTokenizer tok;
   Properties props;
   this.thread.setName("SAMv1Handler " + _id);
@@ -14,21 +15,14 @@
         _log.debug("Stop request found");
         break;
       }
-      while ((b=in.read()) != -1) {
-        if (b == '\n') {
-          break;
-        }
-        buf.write(b);
-      }
-      if (b == -1) {
+      msg=DataHelper.readLine(in);
+      if (msg == null) {
         _log.debug("Connection closed by client");
         break;
       }
-      msg=buf.toString("ISO-8859-1").trim();
       if (_log.shouldLog(Log.DEBUG)) {
         _log.debug("New message received: [" + msg + "]");
       }
-      buf.reset();
       tok=new StringTokenizer(msg," ");
       if (tok.countTokens() < 2) {
         _log.debug("Error in message format");
@@ -68,14 +62,11 @@
       }
     }
   }
- catch (  UnsupportedEncodingException e) {
-    _log.error("Caught UnsupportedEncodingException (" + e.getMessage() + ")",e);
-  }
-catch (  IOException e) {
-    _log.debug("Caught IOException (" + e.getMessage() + ")",e);
+ catch (  IOException e) {
+    _log.debug("Caught IOException (" + e.getMessage() + ") for message ["+ msg+ "]",e);
   }
 catch (  Exception e) {
-    _log.error("Unexpected exception",e);
+    _log.error("Unexpected exception for message [" + msg + "]",e);
   }
  finally {
     _log.debug("Stopping handler");
