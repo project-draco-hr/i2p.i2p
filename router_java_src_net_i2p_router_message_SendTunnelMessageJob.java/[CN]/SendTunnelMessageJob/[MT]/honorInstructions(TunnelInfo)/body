@@ -6,70 +6,9 @@
   }
   RouterIdentity ident=_context.router().getRouterInfo().getIdentity();
   if (_destRouter != null) {
-    I2NPMessage msg=null;
-    if (_targetTunnelId != null) {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Forward " + _message.getClass().getName() + " message off to remote tunnel "+ _targetTunnelId.getTunnelId()+ " on router "+ _destRouter.toBase64());
-      TunnelMessage tmsg=new TunnelMessage(_context);
-      tmsg.setEncryptedDeliveryInstructions(null);
-      tmsg.setTunnelId(_targetTunnelId);
-      tmsg.setVerificationStructure(null);
-      ByteArrayOutputStream baos=new ByteArrayOutputStream(1024);
-      try {
-        _message.writeBytes(baos);
-      }
- catch (      IOException ioe) {
-        if (_log.shouldLog(Log.ERROR))         _log.error("Error writing out the message to be forwarded...??",ioe);
-      }
-catch (      DataFormatException dfe) {
-        if (_log.shouldLog(Log.ERROR))         _log.error("Error writing message to be forwarded...???",dfe);
-      }
-      tmsg.setData(baos.toByteArray());
-      msg=tmsg;
-    }
- else {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Forward " + _message.getClass().getName() + " message off to remote router "+ _destRouter.toBase64());
-      msg=_message;
-    }
-    long now=_context.clock().now();
-    _expiration=now + Router.CLOCK_FUDGE_FACTOR;
-    if (_expiration - 30 * 1000 < now) {
-      if (_log.shouldLog(Log.ERROR))       _log.error("Why are we trying to send a " + _message.getClass().getName() + " message with "+ (_expiration - now)+ "ms left?",getAddedBy());
-    }
-    String bodyType=_message.getClass().getName();
-    _context.messageHistory().wrap(bodyType,_message.getUniqueId(),TunnelMessage.class.getName(),msg.getUniqueId());
-    _context.jobQueue().addJob(new SendMessageDirectJob(_context,msg,_destRouter,_onSend,_onReply,_onFailure,null,_expiration,_priority));
+    honorSendRemote(info,ident);
   }
  else {
-    if ((info.getDestination() == null) || !(_message instanceof DataMessage)) {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Destination is null or its not a DataMessage - pass it off to the InNetMessagePool");
-      InNetMessage msg=new InNetMessage(_context);
-      msg.setFromRouter(ident);
-      msg.setFromRouterHash(ident.getHash());
-      msg.setMessage(_message);
-      msg.setReplyBlock(null);
-      _context.inNetMessagePool().add(msg);
-    }
- else {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Destination is not null and it is a DataMessage - pop it into the ClientMessagePool");
-      DataMessage msg=(DataMessage)_message;
-      boolean valid=_context.messageValidator().validateMessage(msg.getUniqueId(),msg.getMessageExpiration().getTime());
-      if (!valid) {
-        if (_log.shouldLog(Log.WARN))         _log.warn("Duplicate data message received [" + msg.getUniqueId() + " expiring on "+ msg.getMessageExpiration()+ "]");
-        _context.messageHistory().droppedOtherMessage(msg);
-        _context.messageHistory().messageProcessingError(msg.getUniqueId(),msg.getClass().getName(),"Duplicate");
-        return;
-      }
-      Payload payload=new Payload();
-      payload.setEncryptedData(msg.getData());
-      MessageReceptionInfo receptionInfo=new MessageReceptionInfo();
-      receptionInfo.setFromPeer(ident.getHash());
-      receptionInfo.setFromTunnel(_tunnelId);
-      ClientMessage clientMessage=new ClientMessage();
-      clientMessage.setDestination(info.getDestination());
-      clientMessage.setPayload(payload);
-      clientMessage.setReceptionInfo(receptionInfo);
-      _context.clientMessagePool().add(clientMessage);
-      _context.messageHistory().receivePayloadMessage(msg.getUniqueId());
-    }
+    honorSendLocal(info,ident);
   }
 }
