@@ -1,0 +1,34 @@
+{
+  _leaseSet=getContext().netDb().lookupLeaseSetLocally(_clientMessage.getDestination().calculateHash());
+  if (_leaseSet == null) {
+    if (_log.shouldLog(Log.WARN))     _log.warn(getJobId() + ": Lookup locally didn't find the leaseSet");
+    return false;
+  }
+  long now=getContext().clock().now();
+  List leases=new ArrayList(_leaseSet.getLeaseCount());
+  for (int i=0; i < _leaseSet.getLeaseCount(); i++) {
+    Lease lease=_leaseSet.getLease(i);
+    if (lease.isExpired(Router.CLOCK_FUDGE_FACTOR)) {
+      if (_log.shouldLog(Log.WARN))       _log.warn(getJobId() + ": getNextLease() - expired lease! - " + lease);
+      continue;
+    }
+ else {
+      leases.add(lease);
+    }
+  }
+  if (leases.size() <= 0) {
+    if (_log.shouldLog(Log.INFO))     _log.info(getJobId() + ": No leases found from: " + _leaseSet);
+    return false;
+  }
+  Collections.shuffle(leases);
+  TreeMap orderedLeases=new TreeMap();
+  for (Iterator iter=leases.iterator(); iter.hasNext(); ) {
+    Lease lease=(Lease)iter.next();
+    long id=lease.getNumFailure();
+    while (orderedLeases.containsKey(new Long(id)))     id++;
+    orderedLeases.put(new Long(id),lease);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug(getJobId() + ": ranking lease we havent sent it down as " + id);
+  }
+  _lease=(Lease)orderedLeases.get(orderedLeases.firstKey());
+  return true;
+}
