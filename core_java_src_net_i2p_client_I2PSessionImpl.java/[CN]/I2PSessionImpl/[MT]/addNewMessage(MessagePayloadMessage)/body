@@ -1,22 +1,13 @@
 {
   _availableMessages.put(new Integer(msg.getMessageId().getMessageId()),msg);
-  final int id=msg.getMessageId().getMessageId();
+  int id=msg.getMessageId().getMessageId();
   byte data[]=msg.getPayload().getUnencryptedData();
   if ((data == null) || (data.length <= 0)) {
     if (_log.shouldLog(Log.ERROR))     _log.error(getPrefix() + "addNewMessage of a message with no unencrypted data",new Exception("Empty message"));
   }
  else {
-    final long size=data.length;
-    Thread notifier=new I2PThread(new Runnable(){
-      public void run(){
-        if (_sessionListener != null)         _sessionListener.messageAvailable(I2PSessionImpl.this,id,size);
-      }
-    }
-);
-    long nid=++__notifierId;
-    notifier.setName("Notifier " + nid);
-    notifier.setDaemon(true);
-    notifier.start();
-    if (_log.shouldLog(Log.INFO))     _log.info(getPrefix() + "Notifier " + nid+ " is for session "+ _sessionId+ ", message "+ id+ "]");
+    int size=data.length;
+    _availabilityNotifier.available(id,size);
+    if (_log.shouldLog(Log.INFO))     _log.info(getPrefix() + "Notified availability for session " + _sessionId+ ", message "+ id);
   }
 }
