@@ -3,6 +3,11 @@ synchronized (_connectLock) {
     _connectLock.notifyAll();
   }
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Disconnecting " + toString(),new Exception("discon"));
+  if (!cleanDisconnect) {
+    _hardDisconnected=true;
+    if (_log.shouldLog(Log.WARN))     _log.warn("Hard disconnecting and sending a reset on " + toString(),new Exception("cause"));
+    sendReset();
+  }
   if (cleanDisconnect && _connected) {
     _outputStream.closeInternal();
     _inputStream.close();

@@ -4,6 +4,16 @@
     if ((!packet.isFlagSet(Packet.FLAG_RESET)) && (_log.shouldLog(Log.ERROR)))     _log.error("Packet does NOT verify: " + packet);
     return;
   }
+  if (con.getHardDisconnected()) {
+    if ((packet.getSequenceNum() > 0) || (packet.getPayloadSize() > 0) || (packet.isFlagSet(Packet.FLAG_SYNCHRONIZE))|| (packet.isFlagSet(Packet.FLAG_CLOSE))) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Received a data packet after hard disconnect: " + packet + " on "+ con);
+      con.sendReset();
+    }
+ else {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Received a packet after hard disconnect, ignoring: " + packet + " on "+ con);
+    }
+    return;
+  }
   con.packetReceived();
   long ready=con.getInputStream().getHighestReadyBockId();
   int available=con.getOptions().getInboundBufferSize() - con.getInputStream().getTotalReadySize();
@@ -37,7 +47,7 @@
     }
   }
  else {
-    if ((packet.getSequenceNum() > 0) || (packet.getPayloadSize() > 0)) {
+    if ((packet.getSequenceNum() > 0) || (packet.getPayloadSize() > 0) || (packet.isFlagSet(Packet.FLAG_SYNCHRONIZE))) {
       _context.statManager().addRateData("stream.con.receiveDuplicateSize",packet.getPayloadSize(),0);
       con.incrementDupMessagesReceived(1);
       if (_log.shouldLog(Log.WARN))       _log.warn("congestion.. dup " + packet);
