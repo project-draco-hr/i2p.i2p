@@ -1,0 +1,95 @@
+{
+  long length=len * 8;
+  int k=448 - (int)((length + 1) % 512);
+  if (k < 0) {
+    k+=512;
+  }
+  int padbytes=k / 8;
+  int wordlength=len / 4 + padbytes / 4 + 3;
+  int[] M0=new int[wordlength];
+  int wordcount=0;
+  int x=0;
+  for (x=0; x < (len / 4) * 4; x+=4) {
+    M0[wordcount]=source[x + start] << 24 >>> 24 << 24;
+    M0[wordcount]|=source[x + start + 1] << 24 >>> 24 << 16;
+    M0[wordcount]|=source[x + start + 2] << 24 >>> 24 << 8;
+    M0[wordcount]|=source[x + start + 3] << 24 >>> 24 << 0;
+    wordcount++;
+  }
+switch (len - (wordcount + 1) * 4 + 4) {
+case 0:
+    M0[wordcount]|=0x80000000;
+  break;
+case 1:
+M0[wordcount]=source[x + start] << 24 >>> 24 << 24;
+M0[wordcount]|=0x00800000;
+break;
+case 2:
+M0[wordcount]=source[x + start] << 24 >>> 24 << 24;
+M0[wordcount]|=source[x + start + 1] << 24 >>> 24 << 16;
+M0[wordcount]|=0x00008000;
+break;
+case 3:
+M0[wordcount]=source[x + start] << 24 >>> 24 << 24;
+M0[wordcount]|=source[x + start + 1] << 24 >>> 24 << 16;
+M0[wordcount]|=source[x + start + 2] << 24 >>> 24 << 8;
+M0[wordcount]|=0x00000080;
+break;
+}
+M0[wordlength - 2]=(int)(length >>> 32);
+M0[wordlength - 1]=(int)(length);
+int[] H=new int[8];
+for (x=0; x < 8; x++) {
+H[x]=H0[x];
+}
+int blocks=M0.length / 16;
+for (int bl=0; bl < blocks; bl++) {
+int a=H[0];
+int b=H[1];
+int c=H[2];
+int d=H[3];
+int e=H[4];
+int f=H[5];
+int g=H[6];
+int h=H[7];
+int[] W=new int[64];
+for (x=0; x < 64; x++) {
+if (x < 16) {
+W[x]=M0[bl * 16 + x];
+}
+ else {
+W[x]=add(o1(W[x - 2]),add(W[x - 7],add(o0(W[x - 15]),W[x - 16])));
+}
+}
+for (x=0; x < 64; x++) {
+int T1=add(h,add(e1(e),add(Ch(e,f,g),add(K[x],W[x]))));
+int T2=add(e0(a),Maj(a,b,c));
+h=g;
+g=f;
+f=e;
+e=add(d,T1);
+d=c;
+c=b;
+b=a;
+a=add(T1,T2);
+}
+H[0]=add(a,H[0]);
+H[1]=add(b,H[1]);
+H[2]=add(c,H[2]);
+H[3]=add(d,H[3]);
+H[4]=add(e,H[4]);
+H[5]=add(f,H[5]);
+H[6]=add(g,H[6]);
+H[7]=add(h,H[7]);
+}
+byte[] hashbytes=new byte[32];
+for (x=0; x < 8; x++) {
+hashbytes[x * 4]=(byte)(H[x] << 0 >>> 24);
+hashbytes[x * 4 + 1]=(byte)(H[x] << 8 >>> 24);
+hashbytes[x * 4 + 2]=(byte)(H[x] << 16 >>> 24);
+hashbytes[x * 4 + 3]=(byte)(H[x] << 24 >>> 24);
+}
+Hash hash=new Hash();
+hash.setData(hashbytes);
+return hash;
+}
