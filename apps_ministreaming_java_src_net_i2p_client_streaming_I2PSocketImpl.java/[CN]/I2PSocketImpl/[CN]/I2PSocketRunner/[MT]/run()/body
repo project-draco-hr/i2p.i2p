@@ -9,7 +9,7 @@
       packetsHandled++;
     }
     if ((bc.getCurrentSize() > 0) && (packetsHandled > 1)) {
-      _log.error("A SCARY MONSTER HAS EATEN SOME DATA! " + "(input stream: " + in.hashCode() + "; "+ "queue size: "+ bc.getCurrentSize()+ ")");
+      _log.error(getPrefix() + "A SCARY MONSTER HAS EATEN SOME DATA! " + "(input stream: "+ in.hashCode()+ "; "+ "queue size: "+ bc.getCurrentSize()+ ")");
     }
 synchronized (flagLock) {
       closed2=true;
@@ -19,22 +19,23 @@ synchronized (flagLock) {
       sc=sendClose;
     }
     if (sc) {
-      if (_log.shouldLog(Log.INFO))       _log.info("Sending close packet: " + outgoing);
+      if (_log.shouldLog(Log.INFO))       _log.info(getPrefix() + "Sending close packet: (we started? " + outgoing+ ") after reading "+ _bytesRead+ " and writing "+ _bytesWritten);
       byte[] packet=I2PSocketManager.makePacket(getMask(0x02),remoteID,new byte[0]);
       boolean sent=manager.getSession().sendMessage(remote,packet);
       if (!sent) {
-        _log.error("Error sending close packet to peer");
+        _log.error(getPrefix() + "Error sending close packet to peer");
+        errorOccurred();
       }
     }
     manager.removeSocket(I2PSocketImpl.this);
   }
  catch (  InterruptedIOException ex) {
-    _log.error("BUG! read() operations should not timeout!",ex);
+    _log.error(getPrefix() + "BUG! read() operations should not timeout!",ex);
   }
 catch (  IOException ex) {
-    _log.error("Error running - **INCONSISTENT STATE!!!**",ex);
+    _log.error(getPrefix() + "Error running - **INCONSISTENT STATE!!!**",ex);
   }
 catch (  I2PException ex) {
-    _log.error("Error running - **INCONSISTENT STATE!!!**",ex);
+    _log.error(getPrefix() + "Error running - **INCONSISTENT STATE!!!**",ex);
   }
 }

@@ -1,5 +1,4 @@
 {
-  _log.debug("*Syn!");
   Destination d=new Destination();
   d.fromByteArray(payload);
   I2PSocketImpl s=null;
@@ -12,6 +11,7 @@ synchronized (lock) {
       s.setRemoteID(id);
     }
   }
+  _log.debug("*Syn! for socket " + s);
   if (!acceptConnections) {
     byte[] packet=makePacket((byte)CLOSE_OUT,id,toBytes(newLocalID));
     boolean replySentOk=false;
@@ -29,7 +29,7 @@ synchronized (_session) {
     boolean replySentOk=false;
     replySentOk=_session.sendMessage(d,packet);
     if (!replySentOk) {
-      if (_log.shouldLog(Log.WARN))       _log.warn("Error sending reply to " + d.calculateHash().toBase64() + " in response to a new con message",new Exception("Failed creation"));
+      if (_log.shouldLog(Log.WARN))       _log.warn("Error sending reply to " + d.calculateHash().toBase64() + " in response to a new con message for socket "+ s,new Exception("Failed creation"));
       s.internalClose();
     }
   }
@@ -38,7 +38,7 @@ synchronized (_session) {
     packet[0]=CLOSE_OUT;
     boolean nackSent=session.sendMessage(d,packet);
     if (!nackSent) {
-      _log.warn("Error sending NACK for session creation");
+      _log.warn("Error sending NACK for session creation for socket " + s);
     }
     s.internalClose();
   }

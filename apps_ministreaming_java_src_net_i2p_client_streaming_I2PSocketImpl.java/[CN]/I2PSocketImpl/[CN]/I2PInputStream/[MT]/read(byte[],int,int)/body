@@ -1,5 +1,5 @@
 {
-  _log.debug("Read called: " + this.hashCode());
+  if (_log.shouldLog(Log.DEBUG))   _log.debug(getPrefix() + "Read called: " + this.hashCode());
   if (len == 0)   return 0;
   long dieAfter=System.currentTimeMillis() + readTimeout;
   byte[] read=bc.startToByteArray(len);
@@ -7,7 +7,7 @@
   while (read.length == 0) {
 synchronized (flagLock) {
       if (closed) {
-        _log.debug("Closed is set, so closing stream: " + hashCode());
+        if (_log.shouldLog(Log.DEBUG))         _log.debug(getPrefix() + "Closed is set after reading " + _bytesRead+ " and writing "+ _bytesWritten+ ", so closing stream: "+ hashCode());
         return -1;
       }
     }
@@ -22,14 +22,14 @@ synchronized (flagLock) {
  catch (    InterruptedException ex) {
     }
     if ((readTimeout >= 0) && (System.currentTimeMillis() >= dieAfter)) {
-      throw new InterruptedIOException("Timeout reading from I2PSocket (" + readTimeout + " msecs)");
+      throw new InterruptedIOException(getPrefix() + "Timeout reading from I2PSocket (" + readTimeout+ " msecs)");
     }
     read=bc.startToByteArray(len);
   }
   if (read.length > len)   throw new RuntimeException("BUG");
   System.arraycopy(read,0,b,off,read.length);
   if (_log.shouldLog(Log.DEBUG)) {
-    _log.debug("Read from I2PInputStream " + hashCode() + " returned "+ read.length+ " bytes");
+    _log.debug(getPrefix() + "Read from I2PInputStream " + hashCode()+ " returned "+ read.length+ " bytes");
   }
   return read.length;
 }
