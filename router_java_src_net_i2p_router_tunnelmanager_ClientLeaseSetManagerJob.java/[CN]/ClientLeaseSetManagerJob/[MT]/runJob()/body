@@ -35,6 +35,12 @@
   }
  else {
     _log.warn("Insufficient safe inbound tunnels exist for the client (" + available + " available, "+ _pool.getClientSettings().getNumInboundTunnels()+ " required) - no leaseSet requested");
+    if (_currentLeaseSet != null) {
+      long howOld=getContext().clock().now() - _currentLeaseSet.getEarliestLeaseDate();
+      if (howOld > 0) {
+        getContext().statManager().addRateData("client.leaseSetExpired",howOld,0);
+      }
+    }
   }
   requeue(RECHECK_DELAY);
 }
