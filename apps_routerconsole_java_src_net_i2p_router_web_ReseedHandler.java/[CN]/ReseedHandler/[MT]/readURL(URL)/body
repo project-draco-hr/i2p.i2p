@@ -1,5 +1,5 @@
 {
-  ByteArrayOutputStream baos=new ByteArrayOutputStream(1024);
+  ByteArrayOutputStream baos=new ByteArrayOutputStream(4 * 1024);
   String hostname=url.getHost();
   int port=url.getPort();
   if (port < 0)   port=80;
@@ -7,16 +7,30 @@
   OutputStream out=s.getOutputStream();
   InputStream in=s.getInputStream();
   String request=getRequest(url);
-  System.out.println("Sending to " + hostname + ":"+ port+ ": "+ request);
   out.write(request.getBytes());
   out.flush();
-  byte buf[]=new byte[1024];
+  int consecutiveNL=0;
   while (true) {
-    int read=in.read(buf);
-    if (read < 0)     break;
-    baos.write(buf,0,read);
-  }
-  in.close();
-  s.close();
-  return baos.toByteArray();
+    int cur=in.read();
+switch (cur) {
+case -1:
+      return null;
+case '\n':
+case '\r':
+    consecutiveNL++;
+  break;
+default :
+consecutiveNL=0;
+}
+if (consecutiveNL == 4) break;
+}
+byte buf[]=new byte[1024];
+while (true) {
+int read=in.read(buf);
+if (read < 0) break;
+baos.write(buf,0,read);
+}
+in.close();
+s.close();
+return baos.toByteArray();
 }
