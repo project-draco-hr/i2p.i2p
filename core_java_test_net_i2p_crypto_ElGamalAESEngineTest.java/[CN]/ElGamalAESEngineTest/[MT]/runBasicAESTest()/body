@@ -1,0 +1,27 @@
+{
+  try {
+    SessionKey sessionKey=KeyGenerator.getInstance().generateSessionKey();
+    Hash h=SHA256Generator.getInstance().calculateHash(sessionKey.getData());
+    byte iv[]=new byte[16];
+    System.arraycopy(h.getData(),0,iv,0,16);
+    String msg="Hello world01234012345678901234501234567890123450123456789012345";
+    h=SHA256Generator.getInstance().calculateHash(msg.getBytes());
+    _log.debug("Hash of entire aes block before encryption: \n" + DataHelper.toString(h.getData(),32));
+    byte aesEncr[]=AESEngine.getInstance().encrypt(msg.getBytes(),sessionKey,iv);
+    byte aesDecr[]=AESEngine.getInstance().decrypt(aesEncr,sessionKey,iv);
+    h=SHA256Generator.getInstance().calculateHash(aesDecr);
+    _log.debug("Hash of entire aes block after decryption: \n" + DataHelper.toString(h.getData(),32));
+    if (msg.equals(new String(aesDecr))) {
+      _log.debug("**AES Basic test passed!\n\n");
+    }
+  }
+ catch (  Exception e) {
+    _log.error("Error",e);
+    try {
+      Thread.sleep(5000);
+    }
+ catch (    InterruptedException ie) {
+    }
+    System.exit(0);
+  }
+}

@@ -1,0 +1,19 @@
+{
+  byte[] msg=new byte[400];
+  RandomSource.getInstance().nextBytes(msg);
+  SessionKey key=SessionKeyManager.getInstance().getCurrentKey(pubKey);
+  if (key == null)   key=SessionKeyManager.getInstance().createSession(pubKey);
+  long beforeE=Clock.getInstance().now();
+  byte[] encrypted=ElGamalAESEngine.encrypt(msg,pubKey,key,1024);
+  long afterE=Clock.getInstance().now();
+  byte[] decrypted=ElGamalAESEngine.decrypt(encrypted,privKey);
+  long afterD=Clock.getInstance().now();
+  if (!DataHelper.eq(msg,decrypted)) {
+    _log.error("WTF, D(E(val)) != val");
+    return null;
+  }
+  long rv[]=new long[2];
+  rv[0]=afterE - beforeE;
+  rv[1]=afterD - afterE;
+  return rv;
+}
