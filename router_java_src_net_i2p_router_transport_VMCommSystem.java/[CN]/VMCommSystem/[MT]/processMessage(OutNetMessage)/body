@@ -14,6 +14,9 @@
     _context.profileManager().messageSent(msg.getTarget().getIdentity().getHash(),"vm",sendTime,msg.getMessageSize());
     byte data[]=msg.getMessageData();
     _context.statManager().addRateData("transport.sendMessageSize",data.length,sendTime);
+    if (data.length < 1024)     _context.statManager().addRateData("transport.sendMessageSmall",1,sendTime);
+ else     if (data.length <= 4096)     _context.statManager().addRateData("transport.sendMessageMedium",1,sendTime);
+ else     _context.statManager().addRateData("transport.sendMessageLarge",1,sendTime);
     peerSys.receive(data,_context.routerHash());
     sendSuccessful=true;
   }
@@ -22,5 +25,6 @@
     String type=dmsg.getClass().getName();
     _context.messageHistory().sendMessage(type,dmsg.getUniqueId(),dmsg.getMessageExpiration(),msg.getTarget().getIdentity().getHash(),sendSuccessful);
   }
+  msg.discardData();
   _context.statManager().addRateData("transport.sendProcessingTime",msg.getLifetime(),msg.getLifetime());
 }
