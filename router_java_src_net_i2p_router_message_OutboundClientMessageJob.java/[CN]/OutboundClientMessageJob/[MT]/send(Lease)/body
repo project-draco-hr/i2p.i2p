@@ -8,20 +8,20 @@
     replyLeaseSet=_context.netDb().lookupLeaseSetLocally(_status.getFrom().calculateHash());
   }
   GarlicMessage msg=OutboundClientMessageJobHelper.createGarlicMessage(_context,token,_overallExpiration,key,_status.getClove(),_status.getTo(),sessKey,tags,true,replyLeaseSet);
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("send(lease) - token expected " + token);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": send(lease) - token expected " + token);
   _status.sent(lease.getRouterIdentity().getHash(),lease.getTunnelId());
   SendSuccessJob onReply=new SendSuccessJob(lease,sessKey,tags);
   SendTimeoutJob onFail=new SendTimeoutJob(lease);
   ReplySelector selector=new ReplySelector(token);
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Placing GarlicMessage into the new tunnel message bound for " + lease.getTunnelId() + " on "+ lease.getRouterIdentity().getHash().toBase64());
+  if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": Placing GarlicMessage into the new tunnel message bound for " + lease.getTunnelId()+ " on "+ lease.getRouterIdentity().getHash().toBase64());
   TunnelId outTunnelId=selectOutboundTunnel();
   if (outTunnelId != null) {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Sending tunnel message out " + outTunnelId + " to "+ lease.getTunnelId()+ " on "+ lease.getRouterIdentity().getHash().toBase64());
+    if (_log.shouldLog(Log.DEBUG))     _log.debug(getJobId() + ": Sending tunnel message out " + outTunnelId+ " to "+ lease.getTunnelId()+ " on "+ lease.getRouterIdentity().getHash().toBase64());
     SendTunnelMessageJob j=new SendTunnelMessageJob(_context,msg,outTunnelId,lease.getRouterIdentity().getHash(),lease.getTunnelId(),null,onReply,onFail,selector,SEND_TIMEOUT_MS,SEND_PRIORITY);
     _context.jobQueue().addJob(j);
   }
  else {
-    if (_log.shouldLog(Log.ERROR))     _log.error("Could not find any outbound tunnels to send the payload through... wtf?");
-    _context.jobQueue().addJob(onFail);
+    if (_log.shouldLog(Log.ERROR))     _log.error(getJobId() + ": Could not find any outbound tunnels to send the payload through... wtf?");
+    dieFatal();
   }
 }
