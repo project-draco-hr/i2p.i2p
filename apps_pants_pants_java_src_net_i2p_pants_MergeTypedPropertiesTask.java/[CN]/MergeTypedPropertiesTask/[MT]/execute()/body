@@ -1,0 +1,21 @@
+{
+  StringTokenizer strtokBoolean=new StringTokenizer(_booleanList,",");
+  StringTokenizer strtokString=new StringTokenizer(_stringList,",");
+  String property="";
+  if (_inputFile == null)   throw new BuildException("Error: 'mergetypedproperties' task requires 'input' attribute");
+  if (_outputFile == null)   throw new BuildException("Error: 'mergetypedproperties' task requires 'output' attribute");
+  try {
+    _propertiesIn.load(new FileInputStream(_inputFile));
+    while (strtokBoolean.hasMoreTokens())     _propertiesOut.setProperty(strtokBoolean.nextToken().trim(),"false");
+    while (strtokString.hasMoreTokens())     _propertiesOut.setProperty(strtokString.nextToken().trim(),"");
+    for (Enumeration enum=_propertiesIn.elements(); enum.hasMoreElements(); ) {
+      property=(String)enum.nextElement();
+      if (_onlyExpected && !_propertiesOut.containsKey(property))       continue;
+ else       _propertiesOut.setProperty(property,_propertiesIn.getProperty(property));
+    }
+    _propertiesOut.store(new FileOutputStream(_inputFile),"This is a temporary file. It is safe to delete it.");
+  }
+ catch (  IOException ioe) {
+    throw new BuildException(ioe);
+  }
+}

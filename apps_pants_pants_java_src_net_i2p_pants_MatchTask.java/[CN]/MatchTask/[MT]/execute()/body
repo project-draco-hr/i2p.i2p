@@ -1,0 +1,41 @@
+{
+  int charRead=0;
+  FileReader fileReader=null;
+  FileWriter fileWriter=null;
+  Matcher matcher=null;
+  Pattern pattern=null;
+  PrintWriter printWriter=null;
+  StringBuffer text=new StringBuffer();
+  if (_inputFile == null)   throw new BuildException("Error: 'match' task requires 'input' attribute");
+  if (_outputFile == null)   throw new BuildException("Error: 'match' task requires 'output' attribute");
+  if (_regex == null)   throw new BuildException("Error: 'match' task requires 'regex' attribute");
+  pattern=Pattern.compile(_regex,_regexFlags);
+  try {
+    fileReader=new FileReader(_inputFile);
+    while ((charRead=fileReader.read()) != -1)     text.append((char)charRead);
+    fileReader.close();
+    matcher=pattern.matcher(text);
+    if (matcher.find()) {
+      printWriter=new PrintWriter(new FileWriter(_outputFile));
+      for (int i=0; i <= matcher.groupCount(); i++)       printWriter.println("group." + Integer.toString(i) + "="+ matcher.group(i));
+      printWriter.flush();
+      printWriter.close();
+    }
+ else {
+      if (_failOnNoMatch) {
+        throw new BuildException("Error: No matches found in " + _inputFile);
+      }
+ else {
+        System.err.println("Warning: No matches found in " + _inputFile);
+        fileWriter=new FileWriter(_outputFile);
+        fileWriter.close();
+      }
+    }
+  }
+ catch (  FileNotFoundException fnfe) {
+    throw new BuildException("File " + _inputFile + " not found",fnfe);
+  }
+catch (  IOException ioe) {
+    throw new BuildException(ioe);
+  }
+}
