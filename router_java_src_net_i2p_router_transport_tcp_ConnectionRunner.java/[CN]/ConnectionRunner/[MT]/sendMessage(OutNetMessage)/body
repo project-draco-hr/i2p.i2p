@@ -27,26 +27,23 @@ catch (  Exception e) {
   if (_lastTimeSend < _context.clock().now() - TIME_SEND_FREQUENCY)   sendTime=true;
   OutputStream out=_con.getOutputStream();
   boolean ok=false;
-  long before=-1;
-  long after=-1;
   try {
 synchronized (out) {
-      before=_context.clock().now();
+      _lastWriteBegin=_context.clock().now();
       out.write(buf,0,written);
       if (sendTime) {
         out.write(buildTimeMessage().toByteArray());
         _lastTimeSend=_context.clock().now();
       }
       out.flush();
-      after=_context.clock().now();
+      _lastWriteEnd=_context.clock().now();
     }
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Just sent message " + msg.getMessageId() + " to "+ msg.getTarget().getIdentity().getHash().toBase64().substring(0,6)+ " writeTime = "+ (after - before)+ "ms"+ " lifetime = "+ msg.getLifetime()+ "ms");
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Just sent message " + msg.getMessageId() + " to "+ msg.getTarget().getIdentity().getHash().toBase64().substring(0,6)+ " writeTime = "+ (_lastWriteEnd - _lastWriteBegin)+ "ms"+ " lifetime = "+ msg.getLifetime()+ "ms");
     ok=true;
   }
  catch (  IOException ioe) {
     if (_log.shouldLog(Log.WARN))     _log.warn("Error writing out the message",ioe);
     _con.closeConnection();
   }
-  _con.sent(msg,ok,after - before);
-  _lastWrite=after;
+  _con.sent(msg,ok,_lastWriteEnd - _lastWriteBegin);
 }
