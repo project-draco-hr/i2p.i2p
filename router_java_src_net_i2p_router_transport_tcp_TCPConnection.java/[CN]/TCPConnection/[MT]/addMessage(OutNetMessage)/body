@@ -15,7 +15,8 @@ synchronized (_toBeSent) {
     pending.append(totalPending).append(": ");
     for (int i=0; i < totalPending; i++) {
       OutNetMessage cur=(OutNetMessage)_toBeSent.get(i);
-      pending.append(cur.getMessage().getClass().getName());
+      pending.append(cur.getMessageSize()).append(" byte ");
+      pending.append(cur.getMessageType()).append(" message added");
       pending.append(" added ").append(cur.getLifetime()).append(" ms ago, ");
     }
     _toBeSent.notifyAll();
@@ -27,6 +28,7 @@ synchronized (_toBeSent) {
     _context.profileManager().commErrorOccurred(_remoteIdentity.getHash());
     msg.timestamp("TCPConnection.addMessage exceeded max queued");
     _transport.afterSend(msg,false);
+    closeConnection();
     return;
   }
   long diff=afterAdd - beforeAdd;
