@@ -4,16 +4,16 @@
   MessageId msgId=_status.getMessage().getMessageId();
   if (_log.shouldLog(Log.DEBUG))   _log.debug("SUCCESS!  Message delivered completely for message " + msgId + " after "+ sendTime+ "ms [for "+ _status.getMessage().getMessageId()+ "]");
   if ((_key != null) && (_tags != null) && (_tags.size() > 0)) {
-    SendSuccessJob.this._context.sessionKeyManager().tagsDelivered(_status.getLeaseSet().getEncryptionKey(),_key,_tags);
+    _context.sessionKeyManager().tagsDelivered(_status.getLeaseSet().getEncryptionKey(),_key,_tags);
   }
   if (alreadySuccessful) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Success is a duplicate for " + _status.getMessage().getMessageId() + ", dont notify again...");
     return;
   }
   long dataMsgId=_status.getClove().getId();
-  SendSuccessJob.this._context.messageHistory().sendPayloadMessage(dataMsgId,true,sendTime);
-  SendSuccessJob.this._context.clientManager().messageDeliveryStatusUpdate(_status.getFrom(),msgId,true);
+  _context.messageHistory().sendPayloadMessage(dataMsgId,true,sendTime);
+  _context.clientManager().messageDeliveryStatusUpdate(_status.getFrom(),msgId,true);
   _lease.setNumSuccess(_lease.getNumSuccess() + 1);
-  SendSuccessJob.this._context.statManager().addRateData("client.sendMessageSize",_status.getMessage().getPayload().getSize(),sendTime);
-  SendSuccessJob.this._context.statManager().addRateData("client.sendAttemptAverage",_status.getNumSent(),sendTime);
+  _context.statManager().addRateData("client.sendMessageSize",_status.getMessage().getPayload().getSize(),sendTime);
+  _context.statManager().addRateData("client.sendAttemptAverage",_status.getNumSent(),sendTime);
 }
