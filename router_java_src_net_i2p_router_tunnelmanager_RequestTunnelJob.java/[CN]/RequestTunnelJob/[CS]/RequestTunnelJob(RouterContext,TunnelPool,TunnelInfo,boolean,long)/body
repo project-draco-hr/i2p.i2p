@@ -5,7 +5,6 @@
   context.statManager().createFrequencyStat("tunnel.buildFailFrequency","How often does a peer in the tunnel fail to join??","Tunnels",new long[]{60 * 1000l,60 * 60 * 1000l,24 * 60 * 60* 1000l});
   _pool=pool;
   _tunnelGateway=tunnelGateway;
-  _toBeRequested=new ArrayList();
   _timeoutMs=timeoutMs;
   _expiration=-1;
   _isInbound=isInbound;
@@ -26,5 +25,13 @@
   }
   _timeoutMs*=participants.size() + 1;
   _toBeRequested=new ArrayList(participants.size());
-  for (int i=participants.size() - 1; i >= 0; i--)   _toBeRequested.add(participants.get(i));
+  for (int i=participants.size() - 1; i >= 0; i--) {
+    TunnelInfo peer=(TunnelInfo)participants.get(i);
+    if (null != _context.netDb().lookupRouterInfoLocally(peer.getThisHop())) {
+      _toBeRequested.add(participants.get(i));
+    }
+ else {
+      if (_log.shouldLog(Log.WARN))       _log.warn("ok who the fuck requested someone we don't know about? (dont answer that");
+    }
+  }
 }
