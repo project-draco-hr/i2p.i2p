@@ -1,18 +1,16 @@
 {
   StringBuffer buf=new StringBuffer(32 * 1024);
-  buf.append("<textarea rows=\"20\" cols=\"80\">");
-  List logs=_context.logManager().getLogs();
-  TreeMap sortedLogs=new TreeMap();
-  for (int i=0; i < logs.size(); i++) {
-    Log l=(Log)logs.get(i);
-    sortedLogs.put(l.getName(),l);
+  Properties limits=_context.logManager().getLimits();
+  TreeSet sortedLogs=new TreeSet();
+  for (Iterator iter=limits.keySet().iterator(); iter.hasNext(); ) {
+    String prefix=(String)iter.next();
+    sortedLogs.add(prefix);
   }
-  int i=0;
-  for (Iterator iter=sortedLogs.values().iterator(); iter.hasNext(); i++) {
-    Log l=(Log)iter.next();
-    buf.append(l.getName()).append('=');
-    buf.append(Log.toLevelString(l.getMinimumPriority()));
-    buf.append("\n");
+  buf.append("<textarea name=\"levels\" rows=\"20\" cols=\"70\">");
+  for (Iterator iter=sortedLogs.iterator(); iter.hasNext(); ) {
+    String prefix=(String)iter.next();
+    String level=limits.getProperty(prefix);
+    buf.append(prefix).append('=').append(level).append('\n');
   }
   buf.append("</textarea><br />\n");
   buf.append("<i>Valid levels are DEBUG, INFO, WARN, ERROR, CRIT</i>\n");
