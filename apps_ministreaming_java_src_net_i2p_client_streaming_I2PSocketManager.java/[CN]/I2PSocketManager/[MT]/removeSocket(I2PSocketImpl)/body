@@ -1,7 +1,9 @@
 {
+  String localId=sock.getLocalID();
+  boolean removed=false;
 synchronized (lock) {
-    _inSockets.remove(sock.getLocalID());
-    _outSockets.remove(sock.getLocalID());
+    removed=(null != _inSockets.remove(localId));
+    removed=removed || (null != _outSockets.remove(localId));
     lock.notify();
   }
   long now=_context.clock().now();
@@ -10,7 +12,7 @@ synchronized (lock) {
   long sent=sock.getBytesSent();
   long recv=sock.getBytesReceived();
   if (_log.shouldLog(Log.DEBUG)) {
-    _log.debug(getName() + ": Removing socket \"" + getReadableForm(sock.getLocalID())+ "\" ["+ sock+ ", send: "+ sent+ ", recv: "+ recv+ ", lifetime: "+ lifetime+ "ms, time since close: "+ timeSinceClose+ ")]",new Exception("removeSocket called"));
+    _log.debug(getName() + ": Removing socket \"" + getReadableForm(localId)+ "\" ["+ sock+ ", send: "+ sent+ ", recv: "+ recv+ ", lifetime: "+ lifetime+ "ms, time since close: "+ timeSinceClose+ " removed? "+ removed+ ")]",new Exception("removeSocket called"));
   }
   _context.statManager().addRateData("streaming.lifetime",lifetime,lifetime);
   _context.statManager().addRateData("streaming.sent",sent,lifetime);
