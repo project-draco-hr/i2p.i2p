@@ -9,7 +9,18 @@
     if (info.getNextHop() != null) {
       if (_log.shouldLog(Log.INFO))       _log.info("Message for tunnel " + info.getTunnelId().getTunnelId() + " received where we're not the gateway and there are remaining hops, so forward it on to "+ info.getNextHop().toBase64()+ " via SendTunnelMessageJob");
       getContext().statManager().addRateData("tunnel.relayMessageSize",_message.getData().length,0);
-      SendMessageDirectJob j=new SendMessageDirectJob(getContext(),_message,info.getNextHop(),(int)(_message.getMessageExpiration().getTime() - getContext().clock().now()),FORWARD_PRIORITY);
+      TunnelMessage msg=new TunnelMessage(getContext());
+      msg.setData(_message.getData());
+      msg.setEncryptedDeliveryInstructions(_message.getEncryptedDeliveryInstructions());
+      msg.setTunnelId(info.getNextHopId());
+      msg.setVerificationStructure(_message.getVerificationStructure());
+      msg.setMessageExpiration(_message.getMessageExpiration());
+      int timeoutMs=(int)(_message.getMessageExpiration().getTime() - getContext().clock().now());
+      if (timeoutMs < 1000) {
+        if (_log.shouldLog(Log.ERROR))         _log.error("Message " + _message.getUniqueId() + " is valid and we would pass it on through tunnel "+ info.getTunnelId().getTunnelId()+ ", but its too late (expired "+ timeoutMs+ "ms ago)");
+        return;
+      }
+      SendMessageDirectJob j=new SendMessageDirectJob(getContext(),msg,info.getNextHop(),timeoutMs,FORWARD_PRIORITY);
       getContext().jobQueue().addJob(j);
       return;
     }
