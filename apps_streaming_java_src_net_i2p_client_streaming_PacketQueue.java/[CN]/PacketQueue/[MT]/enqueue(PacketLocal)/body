@@ -16,14 +16,21 @@
   long end=0;
   boolean sent=false;
   try {
+    int size=0;
 synchronized (this) {
       Arrays.fill(_buf,(byte)0x0);
-      int size=0;
       if (packet.shouldSign())       size=packet.writeSignedPacket(_buf,0,_context,_session.getPrivateKey());
  else       size=packet.writePacket(_buf,0);
       begin=_context.clock().now();
       sent=_session.sendMessage(packet.getTo(),_buf,0,size,keyUsed,tagsSent);
       end=_context.clock().now();
+    }
+    _context.statManager().addRateData("stream.con.sendMessageSize",size,packet.getLifetime());
+    if (packet.getNumSends() > 1)     _context.statManager().addRateData("stream.con.sendDuplicateSize",size,packet.getLifetime());
+    Connection con=packet.getConnection();
+    if (con != null) {
+      con.incrementBytesSent(size);
+      if (packet.getNumSends() > 1)       con.incrementDupMessagesSent(1);
     }
   }
  catch (  I2PSessionException ise) {

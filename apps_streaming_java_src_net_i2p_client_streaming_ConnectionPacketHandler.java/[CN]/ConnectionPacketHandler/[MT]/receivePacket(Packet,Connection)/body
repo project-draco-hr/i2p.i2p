@@ -8,6 +8,7 @@
     return;
   }
   con.getOptions().setChoke(0);
+  _context.statManager().addRateData("stream.con.receiveMessageSize",packet.getPayloadSize(),0);
   boolean isNew=con.getInputStream().messageReceived(packet.getSequenceNum(),packet.getPayload());
   if ((packet.getSequenceNum() == 0) && (packet.getPayloadSize() > 0)) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("seq=0 && size=" + packet.getPayloadSize() + ": isNew? "+ isNew+ " packet: "+ packet+ " con: "+ con);
@@ -15,6 +16,7 @@
   if (packet.isFlagSet(Packet.FLAG_CLOSE) && packet.isFlagSet(Packet.FLAG_SIGNATURE_INCLUDED))   con.closeReceived();
   if (isNew) {
     con.incrementUnackedPacketsReceived();
+    con.incrementBytesReceived(packet.getPayloadSize());
     if (packet.isFlagSet(Packet.FLAG_DELAY_REQUESTED) && (packet.getOptionalDelay() <= 0)) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Scheduling immediate ack for " + packet);
       con.setNextSendTime(_context.clock().now() + con.getOptions().getSendAckDelay());
@@ -28,6 +30,8 @@
   }
  else {
     if ((packet.getSequenceNum() > 0) || (packet.getPayloadSize() > 0)) {
+      _context.statManager().addRateData("stream.con.receiveDuplicateSize",packet.getPayloadSize(),0);
+      con.incrementDupMessagesReceived(1);
       if (_log.shouldLog(Log.WARN))       _log.warn("congestion.. dup " + packet);
       SimpleTimer.getInstance().addEvent(new AckDup(con),con.getOptions().getSendAckDelay());
       con.setNextSendTime(_context.clock().now() + con.getOptions().getSendAckDelay());
@@ -51,6 +55,7 @@
       if (p.getAckTime() > highestRTT) {
         highestRTT=p.getAckTime();
       }
+      _context.statManager().addRateData("stream.sendsBeforeAck",p.getNumSends(),p.getAckTime());
       if (p.getNumSends() > 1)       numResends++;
       if ((p.getKeyUsed() != null) && (p.getTagsSent() != null) && (p.getTagsSent().size() > 0)) {
         _context.sessionKeyManager().tagsDelivered(p.getTo().getPublicKey(),p.getKeyUsed(),p.getTagsSent());
@@ -60,6 +65,7 @@
     if (highestRTT > 0) {
       con.getOptions().updateRTT(highestRTT);
     }
+    _context.statManager().addRateData("stream.con.packetsAckedPerMessageReceived",acked.size(),highestRTT);
   }
   boolean fastAck=adjustWindow(con,isNew,packet.getSequenceNum(),numResends,(acked != null ? acked.size() : 0));
   con.eventOccurred();
