@@ -1,7 +1,9 @@
 {
-  FIFOBandwidthLimiter.Request req=null;
-  if (_pullFromOutbound)   req=_context.bandwidthLimiter().requestOutbound(1,_peerSource);
- else   req=_context.bandwidthLimiter().requestInbound(1,_peerSource);
-  req.waitForNextAllocation();
+  if (_pullFromOutbound)   _currentRequest=_context.bandwidthLimiter().requestOutbound(1,_peerSource);
+ else   _currentRequest=_context.bandwidthLimiter().requestInbound(1,_peerSource);
+  _currentRequest.waitForNextAllocation();
+synchronized (this) {
+    _currentRequest=null;
+  }
   return in.read();
 }

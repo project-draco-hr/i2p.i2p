@@ -1,10 +1,16 @@
 {
   int read=in.read(dest,off,len);
-  FIFOBandwidthLimiter.Request req=null;
-  if (_pullFromOutbound)   req=_context.bandwidthLimiter().requestOutbound(read,_peerSource);
- else   req=_context.bandwidthLimiter().requestInbound(read,_peerSource);
-  while ((req.getPendingInboundRequested() > 0) || (req.getPendingOutboundRequested() > 0)) {
-    req.waitForNextAllocation();
+  if (_pullFromOutbound)   _currentRequest=_context.bandwidthLimiter().requestOutbound(read,_peerSource);
+ else   _currentRequest=_context.bandwidthLimiter().requestInbound(read,_peerSource);
+  while ((_currentRequest.getPendingInboundRequested() > 0) || (_currentRequest.getPendingOutboundRequested() > 0)) {
+    _currentRequest.waitForNextAllocation();
+    if (_currentRequest.getAborted()) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Request aborted while trying to read " + len + " (actually read "+ read+ ")");
+      break;
+    }
+  }
+synchronized (this) {
+    _currentRequest=null;
   }
   return read;
 }
