@@ -1,6 +1,6 @@
 {
   int numPasses=0;
-  Set rv=new HashSet(criteria.getMinimumRequired());
+  List rv=new ArrayList(criteria.getMinimumRequired());
   Set exclude=new HashSet(1);
   exclude.add(_context.routerHash());
   while (rv.size() < criteria.getMinimumRequired()) {
@@ -10,7 +10,9 @@ case PeerSelectionCriteria.PURPOSE_TEST:
       _organizer.selectHighCapacityPeers(criteria.getMinimumRequired(),exclude,curVals);
     break;
 case PeerSelectionCriteria.PURPOSE_TUNNEL:
-  _organizer.selectFastPeers(criteria.getMinimumRequired(),exclude,curVals);
+  int num=_organizer.countFastPeers();
+if (num <= 0) num=criteria.getMaximumRequired();
+_organizer.selectFastPeers(num,exclude,curVals);
 break;
 case PeerSelectionCriteria.PURPOSE_SOURCE_ROUTE:
 _organizer.selectHighCapacityPeers(criteria.getMinimumRequired(),exclude,curVals);
@@ -30,7 +32,7 @@ for (Iterator iter=curVals.iterator(); iter.hasNext(); ) {
 Hash peer=(Hash)iter.next();
 if (null != _context.netDb().lookupRouterInfoLocally(peer)) {
 if (_log.shouldLog(Log.DEBUG)) _log.debug("Peer " + peer.toBase64() + " is locally known, so we'll allow its selection");
-rv.add(peer);
+if (!rv.contains(peer)) rv.add(peer);
 }
  else {
 if (_log.shouldLog(Log.DEBUG)) _log.debug("Peer " + peer.toBase64() + " is NOT locally known, disallowing its selection");
@@ -41,5 +43,22 @@ exclude.addAll(curVals);
 numPasses++;
 }
 if (_log.shouldLog(Log.INFO)) _log.info("Peers selected after " + numPasses + ": "+ rv);
+if (criteria.getPurpose() == PeerSelectionCriteria.PURPOSE_TUNNEL) {
+TreeMap ordered=new TreeMap();
+for (Iterator iter=rv.iterator(); iter.hasNext(); ) {
+Hash peer=(Hash)iter.next();
+PeerProfile prof=_organizer.getProfile(peer);
+long when=prof.getTunnelHistory().getLastAgreedTo();
+while (ordered.containsKey(new Long(when))) when++;
+ordered.put(new Long(when),peer);
+}
+rv.clear();
+for (Iterator iter=ordered.values().iterator(); iter.hasNext(); ) {
+if (rv.size() >= criteria.getMaximumRequired()) break;
+Hash peer=(Hash)iter.next();
+rv.add(peer);
+}
+if (_log.shouldLog(Log.INFO)) _log.info("Peers selected after " + numPasses + ", sorted for a tunnel: "+ rv);
+}
 return rv;
 }
