@@ -1,0 +1,27 @@
+{
+  int numBlocks=(_payload != null ? _payload.length / 16 : 0);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("# payload blocks: " + numBlocks);
+  for (int i=HOPS - 1; i >= 0; i--) {
+    SessionKey key=cfg.getSessionKey(i);
+    if ((_payload != null) && (_payload.length > 0)) {
+      Hash h=_context.sha().calculateHash(_payload);
+      System.arraycopy(h.getData(),0,_H[i],0,Hash.HASH_LENGTH);
+      DataHelper.xor(_iv[i],0,_payload,0,_payload,0,IV_SIZE);
+      _context.aes().encryptBlock(_payload,0,key,_payload,0);
+      for (int j=1; j < numBlocks; j++) {
+        DataHelper.xor(_payload,(j - 1) * IV_SIZE,_payload,j * IV_SIZE,_payload,j * IV_SIZE,IV_SIZE);
+        _context.aes().encryptBlock(_payload,j * IV_SIZE,key,_payload,j * IV_SIZE);
+      }
+      System.arraycopy(_payload,_payload.length - IV_SIZE,_eIV[i],0,IV_SIZE);
+    }
+ else {
+      Hash h=_context.sha().calculateHash(EMPTY);
+      System.arraycopy(h.getData(),0,_H[i],0,Hash.HASH_LENGTH);
+      System.arraycopy(_iv,0,_eIV[i],0,IV_SIZE);
+    }
+  }
+  if (_log.shouldLog(Log.DEBUG)) {
+    for (int i=0; i < HOPS; i++)     _log.debug("_eIV[" + i + "] = "+ Base64.encode(_eIV[i]));
+    for (int i=0; i < HOPS; i++)     _log.debug("_H[" + i + "] = "+ Base64.encode(_H[i]));
+  }
+}

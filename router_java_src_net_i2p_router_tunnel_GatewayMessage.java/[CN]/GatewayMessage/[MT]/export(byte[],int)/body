@@ -1,0 +1,17 @@
+{
+  if (!_encrypted)   throw new IllegalStateException("Not yet encrypted - please call encrypt");
+  if (target == null)   throw new NullPointerException("Target is null");
+  if (target.length - offset < getExportedSize())   throw new IllegalArgumentException("target is too small");
+  int cur=offset;
+  System.arraycopy(_iv[0],0,target,cur,IV_SIZE);
+  cur+=IV_SIZE;
+  System.arraycopy(_payload,0,target,cur,_payload.length);
+  cur+=_payload.length;
+  for (int column=0; column < COLUMNS; column++) {
+    System.arraycopy(_eH[column][0],0,target,cur,Hash.HASH_LENGTH);
+    cur+=Hash.HASH_LENGTH;
+  }
+  System.arraycopy(_V,0,target,cur,Hash.HASH_LENGTH);
+  cur+=Hash.HASH_LENGTH;
+  return cur;
+}

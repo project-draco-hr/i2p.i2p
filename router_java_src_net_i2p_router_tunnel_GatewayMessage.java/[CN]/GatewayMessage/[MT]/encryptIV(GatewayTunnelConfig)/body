@@ -1,0 +1,12 @@
+{
+  _context.random().nextBytes(_iv[0]);
+  for (int i=0; i < HOPS - 1; i++) {
+    SessionKey key=cfg.getSessionKey(i);
+    _context.aes().decryptBlock(_iv[i],0,key,_iv[i + 1],0);
+    Hash h=_context.sha().calculateHash(_iv[i + 1]);
+    System.arraycopy(h.getData(),0,_iv[i + 1],0,IV_SIZE);
+  }
+  if (_log.shouldLog(Log.DEBUG)) {
+    for (int i=0; i < HOPS; i++)     _log.debug("_iv[" + i + "] = "+ Base64.encode(_iv[i]));
+  }
+}

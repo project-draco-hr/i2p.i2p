@@ -1,0 +1,18 @@
+{
+  Log log=getLog(ctx);
+  int matchFound=-1;
+  int off=data.length - (GatewayMessage.HOPS + 1) * Hash.HASH_LENGTH;
+  for (int i=0; i < GatewayMessage.HOPS; i++) {
+    if (DataHelper.eq(payloadHash.getData(),0,data,off,Hash.HASH_LENGTH)) {
+      matchFound=i;
+      break;
+    }
+    off+=Hash.HASH_LENGTH;
+  }
+  if (log.shouldLog(Log.DEBUG)) {
+    off=data.length - (GatewayMessage.HOPS + 1) * Hash.HASH_LENGTH;
+    for (int i=0; i < HOPS; i++)     log.debug("checksum[" + i + "] = "+ Base64.encode(data,off + i * Hash.HASH_LENGTH,Hash.HASH_LENGTH)+ (i == matchFound ? " * MATCH" : ""));
+    log.debug("verification = " + Base64.encode(data,data.length - Hash.HASH_LENGTH,Hash.HASH_LENGTH));
+  }
+  return matchFound != -1;
+}
