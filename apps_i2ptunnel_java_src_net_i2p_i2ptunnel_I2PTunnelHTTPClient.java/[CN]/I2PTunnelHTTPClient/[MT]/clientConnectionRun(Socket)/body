@@ -10,6 +10,7 @@
     StringBuffer newRequest=new StringBuffer();
     while ((line=br.readLine()) != null) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Line=[" + line + "]");
+      if (line.startsWith("Connection: ") || line.startsWith("Keep-Alive: ") || line.startsWith("Proxy-Connection: "))       continue;
       if (method == null) {
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Method is null for [" + line + "]");
         int pos=line.indexOf(" ");
@@ -73,8 +74,13 @@
           if (_log.shouldLog(Log.INFO))           _log.info("Setting host = " + host);
         }
       }
-      newRequest.append(line).append("\r\n");
-      if (line.length() == 0)       break;
+      if (line.length() == 0) {
+        newRequest.append("Connection: close\r\n\r\n");
+        break;
+      }
+ else {
+        newRequest.append(line).append("\r\n");
+      }
     }
     if (_log.shouldLog(Log.DEBUG))     _log.debug("NewRequest header: [" + newRequest.toString() + "]");
     while (br.ready()) {
