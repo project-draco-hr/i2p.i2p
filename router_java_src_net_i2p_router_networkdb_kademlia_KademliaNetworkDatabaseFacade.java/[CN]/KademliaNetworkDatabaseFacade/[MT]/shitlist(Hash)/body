@@ -1,9 +1,15 @@
 {
 synchronized (_badKeys) {
     locked_cleanupShitlist();
-    _badKeys.add(key);
-    long when=_context.clock().now();
-    while (_badKeyDates.containsKey(new Long(when)))     when++;
-    _badKeyDates.put(new Long(when),key);
+    boolean wasNew=_badKeys.add(key);
+    if (wasNew) {
+      long when=_context.clock().now();
+      while (_badKeyDates.containsKey(new Long(when)))       when++;
+      _badKeyDates.put(new Long(when),key);
+      _log.info("Shitlist " + key.toBase64() + " - new shitlist");
+    }
+ else {
+      _log.info("Shitlist " + key.toBase64() + " - already shitlisted");
+    }
   }
 }
