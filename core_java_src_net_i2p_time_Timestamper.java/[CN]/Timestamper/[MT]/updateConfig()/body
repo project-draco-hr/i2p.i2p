@@ -1,0 +1,31 @@
+{
+  String serverList=_context.getProperty(PROP_SERVER_LIST);
+  if ((serverList == null) || (serverList.trim().length() <= 0))   serverList=DEFAULT_SERVER_LIST;
+synchronized (_servers) {
+    StringTokenizer tok=new StringTokenizer(serverList,",");
+    while (tok.hasMoreTokens()) {
+      String val=(String)tok.nextToken();
+      val=val.trim();
+      if (val.length() > 0)       _servers.add(val);
+    }
+  }
+  String freq=_context.getProperty(PROP_QUERY_FREQUENCY);
+  if ((freq == null) || (freq.trim().length() <= 0))   freq=DEFAULT_QUERY_FREQUENCY + "";
+  try {
+    int ms=Integer.parseInt(freq);
+    if (ms > 60 * 1000) {
+      _queryFrequency=ms;
+    }
+ else {
+      if ((_log != null) && (_log.shouldLog(Log.ERROR)))       _log.error("Query frequency once every " + ms + "ms is too fast!");
+      _queryFrequency=DEFAULT_QUERY_FREQUENCY;
+    }
+  }
+ catch (  NumberFormatException nfe) {
+    if ((_log != null) && (_log.shouldLog(Log.WARN)))     _log.warn("Invalid query frequency [" + freq + "], falling back on "+ DEFAULT_QUERY_FREQUENCY);
+    _queryFrequency=DEFAULT_QUERY_FREQUENCY;
+  }
+  String disabled=_context.getProperty(PROP_DISABLED);
+  if (disabled == null)   disabled=DEFAULT_DISABLED + "";
+  _disabled=Boolean.getBoolean(disabled);
+}
