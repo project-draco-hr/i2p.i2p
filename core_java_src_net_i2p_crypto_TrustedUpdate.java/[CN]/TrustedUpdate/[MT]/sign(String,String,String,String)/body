@@ -1,0 +1,25 @@
+{
+  byte[] headerUpdateVersion={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+  byte[] updateVersionBytes={};
+  if (updateVersion.length() > 16)   updateVersion=updateVersion.substring(0,16);
+  try {
+    updateVersionBytes=updateVersion.getBytes("UTF-8");
+  }
+ catch (  UnsupportedEncodingException e) {
+  }
+  for (int i=0; i < updateVersionBytes.length; i++)   headerUpdateVersion[i]=updateVersionBytes[i];
+  byte[] data=readFileBytes(inputFile,0,(int)new File(inputFile).length());
+  Signature signature=DSAEngine.getInstance().sign(data,new SigningPrivateKey(readFileBytes(privateKeyFile,0,(int)new File(privateKeyFile).length() - 1)));
+  FileOutputStream fileOutputStream=null;
+  try {
+    fileOutputStream=new FileOutputStream(outputFile);
+    fileOutputStream.write(headerUpdateVersion);
+    fileOutputStream.write(signature.getData());
+    fileOutputStream.write(data);
+    fileOutputStream.close();
+  }
+ catch (  IOException ioe) {
+    if (_log.shouldLog(Log.WARN))     _log.log(Log.WARN,"Error writing signed I2P update file " + outputFile,ioe);
+  }
+  return signature;
+}
