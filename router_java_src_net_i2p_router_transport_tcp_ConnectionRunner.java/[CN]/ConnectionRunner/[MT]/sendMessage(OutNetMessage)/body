@@ -23,6 +23,11 @@ catch (  Exception e) {
     return;
   }
   msg.timestamp("ConnectionRunner.sendMessage data");
+  I2NPMessage timeMessage=null;
+  if (_lastTimeSend < _context.clock().now() - TIME_SEND_FREQUENCY) {
+    timeMessage=buildTimeMessage();
+    _lastTimeSend=_context.clock().now();
+  }
   OutputStream out=_con.getOutputStream();
   boolean ok=false;
   long before=-1;
@@ -31,6 +36,7 @@ catch (  Exception e) {
 synchronized (out) {
       before=_context.clock().now();
       out.write(buf,0,written);
+      if (timeMessage != null)       out.write(timeMessage.toByteArray());
       out.flush();
       after=_context.clock().now();
     }
