@@ -1,8 +1,11 @@
 {
   long begin=_context.clock().now();
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("begin sendBestEffort");
   SessionKey key=_context.sessionKeyManager().getCurrentKey(dest.getPublicKey());
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("key fetched");
   if (key == null)   key=_context.sessionKeyManager().createSession(dest.getPublicKey());
   SessionTag tag=_context.sessionKeyManager().consumeNextAvailableTag(dest.getPublicKey(),key);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("tag consumed");
   Set sentTags=null;
   int oldTags=_context.sessionKeyManager().getAvailableTags(dest.getPublicKey(),key);
   long availTimeLeft=_context.sessionKeyManager().getAvailableTimeLeft(dest.getPublicKey(),key);
@@ -28,7 +31,9 @@
     if (sentTags == null)     sentTags=new HashSet();
     sentTags.addAll(tagsSent);
   }
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("before creating nonce");
   long nonce=_context.random().nextInt(Integer.MAX_VALUE);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("before sync state");
   MessageState state=new MessageState(nonce,getPrefix());
   state.setKey(key);
   state.setTags(sentTags);
@@ -44,6 +49,7 @@
       tagsSent.addAll(sentTags);
     }
   }
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("before sync state");
   long beforeSendingSync=_context.clock().now();
   long inSendingSync=0;
 synchronized (_sendingStates) {
