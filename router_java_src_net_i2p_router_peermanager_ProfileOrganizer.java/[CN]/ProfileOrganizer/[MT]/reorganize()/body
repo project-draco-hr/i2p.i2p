@@ -9,8 +9,11 @@ synchronized (_reorganizeLock) {
     _notFailingPeers.clear();
     _reliablePeers.clear();
     _fastAndReliablePeers.clear();
-    Set reordered=new TreeSet(InverseReliabilityComparator._comparator);
-    reordered.addAll(_strictReliabilityOrder);
+    Set reordered=new TreeSet(_calc);
+    for (Iterator iter=_strictReliabilityOrder.iterator(); iter.hasNext(); ) {
+      PeerProfile prof=(PeerProfile)iter.next();
+      reordered.add(prof);
+    }
     _strictReliabilityOrder=reordered;
     calculateThresholds(allPeers);
     for (Iterator iter=allPeers.iterator(); iter.hasNext(); ) {
@@ -19,9 +22,15 @@ synchronized (_reorganizeLock) {
     }
     locked_unfailAsNecessary();
     locked_promoteFastAsNecessary();
-  }
-  if (_log.shouldLog(Log.DEBUG)) {
-    _log.debug("Profiles reorganized.  averages: [integration: " + _thresholdIntegrationValue + ", reliability: "+ _thresholdReliabilityValue+ ", speed: "+ _thresholdSpeedValue+ "]");
-    _log.debug("Strictly organized: " + _strictReliabilityOrder);
+    if (_log.shouldLog(Log.DEBUG)) {
+      _log.debug("Profiles reorganized.  averages: [integration: " + _thresholdIntegrationValue + ", reliability: "+ _thresholdReliabilityValue+ ", speed: "+ _thresholdSpeedValue+ "]");
+      StringBuffer buf=new StringBuffer(512);
+      for (Iterator iter=_strictReliabilityOrder.iterator(); iter.hasNext(); ) {
+        PeerProfile prof=(PeerProfile)iter.next();
+        buf.append('[').append(prof.toString()).append('=').append(prof.getReliabilityValue()).append("] ");
+      }
+      _log.debug("Strictly organized (most reliable first): " + buf.toString());
+      _log.debug("fast and reliable: " + _fastAndReliablePeers.values());
+    }
   }
 }

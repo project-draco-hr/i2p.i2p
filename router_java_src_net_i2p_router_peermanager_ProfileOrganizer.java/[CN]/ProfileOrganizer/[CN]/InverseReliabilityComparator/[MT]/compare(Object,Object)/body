@@ -2,8 +2,11 @@
   if ((lhs == null) || (rhs == null) || (!(lhs instanceof PeerProfile))|| (!(rhs instanceof PeerProfile)))   throw new ClassCastException("Only profiles can be compared - lhs = " + lhs + " rhs = "+ rhs);
   PeerProfile left=(PeerProfile)lhs;
   PeerProfile right=(PeerProfile)rhs;
-  int diff=(int)(right.getReliabilityValue() - left.getReliabilityValue());
-  if (diff != 0)   return diff;
-  if (left.getPeer().equals(right.getPeer()))   return 0;
- else   return DataHelper.compareTo(right.getPeer().getData(),left.getPeer().getData());
+  double rval=right.getReliabilityValue();
+  double lval=left.getReliabilityValue();
+  if (lval == rval)   return DataHelper.compareTo(right.getPeer().getData(),left.getPeer().getData());
+  boolean rightBigger=rval > lval;
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("The reliability of " + right.getPeer().toBase64() + " and "+ left.getPeer().toBase64()+ " marks "+ (rightBigger ? "right" : "left")+ " as larger: r="+ right.getReliabilityValue()+ " l="+ left.getReliabilityValue());
+  if (rightBigger)   return 1;
+ else   return -1;
 }
