@@ -1,7 +1,10 @@
 {
   if (_log.shouldLog(Log.DEBUG))   _log.debug(getPrefix() + "Received status " + status+ " for msgId "+ msgId+ " / "+ nonce);
   MessageState state=null;
+  long beforeSync=_context.clock().now();
+  long inSync=0;
 synchronized (_sendingStates) {
+    inSync=_context.clock().now();
     for (Iterator iter=_sendingStates.iterator(); iter.hasNext(); ) {
       state=(MessageState)iter.next();
       if (_log.shouldLog(Log.DEBUG))       _log.debug(getPrefix() + "State " + state.getMessageId()+ " / "+ state.getNonce());
@@ -19,6 +22,8 @@ synchronized (_sendingStates) {
       }
     }
   }
+  long afterSync=_context.clock().now();
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("receiveStatus(" + msgId + ", "+ nonce+ ", "+ status+ "): sync: "+ (inSync - beforeSync)+ "ms, check: "+ (afterSync - inSync));
   if (state != null) {
     if (state.getMessageId() == null) {
       MessageId id=new MessageId();

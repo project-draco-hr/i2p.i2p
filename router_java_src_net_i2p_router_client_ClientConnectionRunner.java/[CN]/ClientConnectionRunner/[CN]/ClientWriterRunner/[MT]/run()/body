@@ -1,7 +1,10 @@
 {
   while (!_dead) {
     I2CPMessage msg=null;
+    long beforeCheckSync=_context.clock().now();
+    long inCheckSync=0;
 synchronized (_messagesToWrite) {
+      inCheckSync=_context.clock().now();
       if (_messagesToWrite.size() > 0) {
         msg=(I2CPMessage)_messagesToWrite.remove(0);
       }
@@ -10,10 +13,15 @@ synchronized (_messagesToWrite) {
           _messagesToWrite.wait();
         }
  catch (        InterruptedException ie) {
+          if (_messagesToWrite.size() > 0)           msg=(I2CPMessage)_messagesToWrite.remove(0);
         }
-        if (_messagesToWrite.size() > 0)         msg=(I2CPMessage)_messagesToWrite.remove(0);
       }
     }
-    if (msg != null)     writeMessage(msg);
+    long afterCheckSync=_context.clock().now();
+    if (msg != null) {
+      writeMessage(msg);
+      long afterWriteMessage=_context.clock().now();
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("writeMessage: check sync took " + (inCheckSync - beforeCheckSync) + "ms, writemessage took "+ (afterWriteMessage - afterCheckSync)+ "ms,  time since addMessage(): "+ +(afterCheckSync - _lastAdded));
+    }
   }
 }
