@@ -1,0 +1,41 @@
+def test_select():
+    'Unit test for select (Python and I2P sockets).'
+
+    def connect1(S):
+        'Connect regular Python socket to Google.'
+        ip = pysocket.gethostbyname('www.google.com')
+        S.connect((ip, 80))
+
+    def connect4(S):
+        'Connect I2P Python socket to duck.i2p.'
+        S.connect('duck.i2p')
+
+    def full1(S):
+        'Connect regular Python socket to Google, and send.'
+        connect1(S)
+        S.sendall('GET / HTTP/1.0\r\n\r\n')
+        print S.recv(1)
+
+    def full4(S):
+        'Connect I2P Python socket to duck.i2p, and send.'
+        connect4(S)
+        S.sendall('GET / HTTP/1.0\r\n\r\n')
+        S.recv(1)
+        S.recv(1, (i2p.socket.MSG_PEEK | i2p.socket.MSG_DONTWAIT))
+        S.recv(1, (i2p.socket.MSG_PEEK | i2p.socket.MSG_DONTWAIT))
+
+    def check(S):
+        "Verify that three chars recv()d are 'TTP'."
+        assert (S.recv(3) == 'TTP')
+    try:
+        for t in [0.0, 1.0]:
+            minitest_select([], [2, 3, 5, 6], [], t)
+            minitest_select([], [1, 2, 3, 4, 5, 6], [], t, f1=connect1, f4=connect4)
+            minitest_select([], [1, 2, 3, 5, 6], [], t, f1=connect1)
+            minitest_select([], [2, 3, 4, 5, 6], [], t, f4=connect4)
+            minitest_select([1, 4], [1, 2, 3, 4, 5, 6], [], t, f1=full1, f4=full4, c1=check, c4=check)
+    except:
+        print 'Unit test failed for i2p.select.select().'
+        traceback.print_exc()
+        sys.exit()
+    print 'i2p.select.select():      OK'

@@ -1,0 +1,38 @@
+def minitest_select(rans, wans, eans, timeout, f1=None, f4=None, c1=None, c4=None):
+    "Mini-unit test for select (Python and I2P sockets).\n     Calls f1() on socket S1, f4() on socket S4, uses select()\n     timeout 'timeout'.  rans, wans, and eans should be lists\n     containing indexes 1...6 of the sockets defined below.  The\n     result of i2p.select.select() will be verified against these\n     lists.  After this, calls c1() on S1, and c4() on S4."
+    S1 = pysocket.socket(pysocket.AF_INET, pysocket.SOCK_STREAM)
+    S2 = pysocket.socket(pysocket.AF_INET, pysocket.SOCK_DGRAM)
+    S3 = pysocket.socket(pysocket.AF_INET, pysocket.SOCK_RAW)
+    kw = {'in_depth': 0, 'out_depth': 0, }
+    S4 = socket.socket('Fella', socket.SOCK_STREAM, **kw)
+    S5 = socket.socket('Boar', socket.SOCK_DGRAM, **kw)
+    S6 = socket.socket('Gehka', socket.SOCK_RAW, **kw)
+    if f1:
+        f1(S1)
+    if f4:
+        f4(S4)
+    L = [S1, S2, S3, S4, S5, S6]
+    start = time.time()
+    ans = select.select(L, L, L, timeout)
+    ans1 = select.select(L, [], [], timeout)
+    ans2 = select.select([], L, [], timeout)
+    ans3 = select.select([], [], L, timeout)
+    end = time.time()
+    T = (end - start)
+    ans = [[(L.index(x) + 1) for x in ans[i]] for i in range(3)]
+    ans1 = [[(L.index(x) + 1) for x in ans1[i]] for i in range(3)]
+    ans2 = [[(L.index(x) + 1) for x in ans2[i]] for i in range(3)]
+    ans3 = [[(L.index(x) + 1) for x in ans3[i]] for i in range(3)]
+    print ans1[0], rans
+    assert (ans1[0] == rans)
+    print ans2[1], wans
+    assert (ans2[1] == wans)
+    print ans3[2], eans
+    assert (ans3[2] == eans)
+    print ans, [rans, wans, eans]
+    assert (ans == [rans, wans, eans])
+    assert (T < ((4 * timeout) + 0.1))
+    if c1:
+        c1(S1)
+    if c4:
+        c4(S4)
