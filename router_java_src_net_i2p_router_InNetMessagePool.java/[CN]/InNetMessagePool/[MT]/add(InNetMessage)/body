@@ -3,8 +3,8 @@
   boolean valid=MessageValidator.getInstance().validateMessage(msg.getMessage().getUniqueId(),exp.getTime());
   if (!valid) {
     if (_log.shouldLog(Log.WARN))     _log.warn("Duplicate message received [" + msg.getMessage().getUniqueId() + " expiring on "+ exp+ "]: "+ msg.getMessage().getClass().getName());
-    StatManager.getInstance().updateFrequency("inNetPool.dropped");
-    StatManager.getInstance().updateFrequency("inNetPool.duplicate");
+    StatManager.getInstance().addRateData("inNetPool.dropped",1,0);
+    StatManager.getInstance().addRateData("inNetPool.duplicate",1,0);
     MessageHistory.getInstance().droppedOtherMessage(msg.getMessage());
     MessageHistory.getInstance().messageProcessingError(msg.getMessage().getUniqueId(),msg.getMessage().getClass().getName(),"Duplicate/expired");
     return -1;
@@ -43,7 +43,7 @@ synchronized (_messages) {
     if (size == -1) {
       MessageHistory.getInstance().droppedOtherMessage(msg.getMessage());
       if (_log.shouldLog(Log.ERROR))       _log.error("Message " + msg.getMessage() + " was not handled by a HandlerJobBuilder - DROPPING: "+ msg,new Exception("DROPPED MESSAGE"));
-      StatManager.getInstance().updateFrequency("inNetPool.dropped");
+      StatManager.getInstance().addRateData("inNetPool.dropped",1,0);
     }
  else {
       String mtype=msg.getMessage().getClass().getName();
