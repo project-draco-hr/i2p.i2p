@@ -1,13 +1,12 @@
 {
   WriteStatus ws=null;
 synchronized (_dataLock) {
-    if (_buf == null)     throw new IOException("closed (buffer went away)");
     ws=target.writeData(_buf,0,_valid);
     _written+=_valid;
     _valid=0;
     _dataLock.notifyAll();
   }
-  if (blocking) {
+  if (blocking && ws != null) {
     ws.waitForAccept(_writeTimeout);
     if (ws.writeFailed())     throw new IOException("Flush available failed");
  else     if (!ws.writeAccepted())     throw new InterruptedIOException("Flush available timed out");

@@ -1,5 +1,9 @@
 {
-  if (!_connected)   return;
+  if (_packet.getAckTime() > 0)   return;
+  if (!_connected) {
+    _packet.cancelled();
+    return;
+  }
   boolean resend=false;
 synchronized (_outboundPackets) {
     if (_outboundPackets.containsKey(new Long(_packet.getSequenceNum())))     resend=true;
@@ -31,11 +35,13 @@ synchronized (_outboundPackets) {
     _outboundQueue.enqueue(_packet);
     if (numSends > _options.getMaxResends()) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Too many resends");
+      _packet.cancelled();
       disconnect(false);
     }
  else {
-      long timeout=_options.getRTT() << (numSends - 1);
-      if (timeout < MIN_RESEND_DELAY)       timeout=MIN_RESEND_DELAY;
+      long rtt=_options.getRTT();
+      if (rtt < MIN_RESEND_DELAY)       rtt=MIN_RESEND_DELAY;
+      long timeout=rtt << (numSends - 1);
       if ((timeout > MAX_RESEND_DELAY) || (timeout <= 0))       timeout=MAX_RESEND_DELAY;
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Scheduling resend in " + timeout + "ms for "+ _packet);
       SimpleTimer.getInstance().addEvent(ResendPacketEvent.this,timeout);
