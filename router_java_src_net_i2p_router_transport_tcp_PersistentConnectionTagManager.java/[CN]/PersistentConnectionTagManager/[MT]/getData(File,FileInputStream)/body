@@ -1,0 +1,35 @@
+{
+  byte data[]=new byte[(int)tagFile.length() - 32];
+  int read=DataHelper.read(fin,data);
+  if (read != data.length) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Connection tag file is corrupt (too short), removing it");
+    try {
+      fin.close();
+    }
+ catch (    IOException ioe) {
+    }
+    tagFile.delete();
+    fin=null;
+    return null;
+  }
+  Hash readHash=new Hash();
+  try {
+    readHash.readBytes(fin);
+  }
+ catch (  DataFormatException dfe) {
+    readHash=null;
+  }
+  Hash calcHash=getContext().sha().calculateHash(data);
+  if ((readHash == null) || (!calcHash.equals(readHash))) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Connection tag file is corrupt, removing it");
+    try {
+      fin.close();
+    }
+ catch (    IOException ioe) {
+    }
+    tagFile.delete();
+    fin=null;
+    return null;
+  }
+  return data;
+}

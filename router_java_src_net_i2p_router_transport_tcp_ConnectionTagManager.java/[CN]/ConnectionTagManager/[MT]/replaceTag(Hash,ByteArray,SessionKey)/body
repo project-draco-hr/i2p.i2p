@@ -1,6 +1,15 @@
 {
 synchronized (_lock) {
-    _tags.put(peer,newTag);
-    _keys.put(peer,key);
+    while (_keyByPeer.size() > MAX_CONNECTION_TAGS) {
+      Hash rmPeer=(Hash)_keyByPeer.keySet().iterator().next();
+      ByteArray tag=(ByteArray)_tagByPeer.remove(peer);
+      SessionKey oldKey=(SessionKey)_keyByPeer.remove(peer);
+      rmPeer=(Hash)_peerByTag.remove(tag);
+      if (_log.shouldLog(Log.INFO))       _log.info("Too many tags, dropping the one for " + rmPeer.toBase64().substring(0,6));
+    }
+    _keyByPeer.put(peer,key);
+    _peerByTag.put(newTag,peer);
+    _tagByPeer.put(peer,newTag);
+    saveTags(_keyByPeer,_tagByPeer);
   }
 }

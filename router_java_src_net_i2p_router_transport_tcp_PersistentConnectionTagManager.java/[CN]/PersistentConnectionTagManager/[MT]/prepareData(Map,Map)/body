@@ -1,0 +1,23 @@
+{
+  ByteArrayOutputStream baos=new ByteArrayOutputStream(keyByPeer.size() * 32 * 3 + 32);
+  try {
+    for (Iterator iter=keyByPeer.keySet().iterator(); iter.hasNext(); ) {
+      Hash peer=(Hash)iter.next();
+      SessionKey key=(SessionKey)keyByPeer.get(peer);
+      ByteArray tag=(ByteArray)tagByPeer.get(peer);
+      if ((key == null) || (tag == null))       continue;
+      baos.write(peer.getData());
+      baos.write(key.getData());
+      baos.write(tag.getData());
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Wrote connection tag for " + peer.toBase64().substring(0,6));
+    }
+    byte pre[]=baos.toByteArray();
+    Hash check=getContext().sha().calculateHash(pre);
+    baos.write(check.getData());
+    return baos.toByteArray();
+  }
+ catch (  IOException ioe) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Error preparing the tags",ioe);
+    return null;
+  }
+}

@@ -15,6 +15,7 @@
   System.arraycopy(extra,16,nextTag,0,32);
   _nextConnectionTag=new ByteArray(nextTag);
   if (_log.shouldLog(Log.DEBUG))   _log.debug("\nNew session[X]: key=" + _key.toBase64() + " iv="+ Base64.encode(_iv)+ " nonce="+ Base64.encode(_nonce.getData())+ " socket: "+ _socket);
+  _rawOut=new BufferedOutputStream(_rawOut,ConnectionBuilder.WRITE_BUFFER_SIZE);
   _rawOut=new AESOutputStream(_context,_rawOut,_key,_iv);
   _rawIn=new AESInputStream(_context,_rawIn,_key,_iv);
   try {
@@ -34,7 +35,7 @@ catch (  DataFormatException dfe) {
     byte val[]=new byte[32];
     int read=DataHelper.read(_rawIn,val);
     if (read != 32) {
-      fail("Not enough data to read the verification from " + _target.getIdentity().calculateHash().toBase64().substring(0,6));
+      fail("Not enough data (" + read + ") to read the verification from "+ _target.getIdentity().calculateHash().toBase64().substring(0,6));
       return false;
     }
     Hash expected=_context.sha().calculateHash(_nextConnectionTag.getData());
