@@ -1,0 +1,35 @@
+{
+  I2PClient client=I2PClientFactory.createClient();
+  File keyFile=new File(getPrivKeyFile());
+  if (keyFile.exists()) {
+    log("Not overwriting existing private keys in " + keyFile.getAbsolutePath());
+    return;
+  }
+ else {
+    File parent=keyFile.getParentFile();
+    if ((parent != null) && (!parent.exists()))     parent.mkdirs();
+  }
+  FileOutputStream fos=null;
+  try {
+    fos=new FileOutputStream(keyFile);
+    Destination dest=client.createDestination(fos);
+    String destStr=dest.toBase64();
+    log("Private key created and saved in " + keyFile.getAbsolutePath());
+    log("New destination: " + destStr);
+  }
+ catch (  I2PException ie) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Error creating new destination",ie);
+    log("Error creating new destination: " + ie.getMessage());
+  }
+catch (  IOException ioe) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Error creating writing the destination to " + keyFile.getAbsolutePath(),ioe);
+    log("Error writing the keys to " + keyFile.getAbsolutePath());
+  }
+ finally {
+    if (fos != null)     try {
+      fos.close();
+    }
+ catch (    IOException ioe) {
+    }
+  }
+}
