@@ -1,17 +1,17 @@
 {
   _found=false;
-  TunnelInfo replyTunnel=null;
-  TunnelInfo outTunnel=null;
+  _replyTunnel=null;
+  _outTunnel=null;
   if (_cfg.isInbound()) {
-    replyTunnel=_cfg;
-    outTunnel=getContext().tunnelManager().selectOutboundTunnel();
+    _replyTunnel=_cfg;
+    _outTunnel=getContext().tunnelManager().selectOutboundTunnel();
   }
  else {
-    replyTunnel=getContext().tunnelManager().selectInboundTunnel();
-    outTunnel=_cfg;
+    _replyTunnel=getContext().tunnelManager().selectInboundTunnel();
+    _outTunnel=_cfg;
   }
-  if ((replyTunnel == null) || (outTunnel == null)) {
-    if (_log.shouldLog(Log.ERROR))     _log.error("Insufficient tunnels to test " + _cfg + " with: "+ replyTunnel+ " / "+ outTunnel);
+  if ((_replyTunnel == null) || (_outTunnel == null)) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Insufficient tunnels to test " + _cfg + " with: "+ _replyTunnel+ " / "+ _outTunnel);
     getContext().statManager().addRateData("tunnel.testAborted",_cfg.getLength(),0);
     scheduleRetest();
   }
@@ -26,6 +26,6 @@
     OnTestReply onReply=new OnTestReply(getContext());
     OnTestTimeout onTimeout=new OnTestTimeout(getContext());
     getContext().messageRegistry().registerPending(sel,onReply,onTimeout,3 * testPeriod);
-    sendTest(m,outTunnel,replyTunnel);
+    sendTest(m);
   }
 }
