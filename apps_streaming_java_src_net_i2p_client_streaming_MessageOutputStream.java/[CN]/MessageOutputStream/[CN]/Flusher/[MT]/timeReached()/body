@@ -1,17 +1,6 @@
 {
-  boolean sent=false;
-  WriteStatus ws=null;
-synchronized (_dataLock) {
-    if ((_valid > 0) && (_lastBuffered + _passiveFlushDelay > _context.clock().now())) {
-      if ((_buf != null) && (_dataReceiver != null)) {
-        ws=_dataReceiver.writeData(_buf,0,_valid);
-        _written+=_valid;
-        _valid=0;
-        _lastFlushed=_context.clock().now();
-        _dataLock.notifyAll();
-        sent=true;
-      }
-    }
-  }
-  if (sent && _log.shouldLog(Log.DEBUG))   _log.debug("Passive flush of " + ws);
+  _enqueued=false;
+  long timeLeft=(_lastBuffered + _passiveFlushDelay - _context.clock().now());
+  if (timeLeft > 0)   enqueue();
+ else   doFlush();
 }

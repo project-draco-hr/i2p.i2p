@@ -1,0 +1,30 @@
+{
+  if (_peerDestFiles != null) {
+    for (int i=0; i < _peerDestFiles.length; i++) {
+      try {
+        FileInputStream fin=new FileInputStream(_peerDestFiles[i]);
+        byte dest[]=new byte[1024];
+        int read=DataHelper.read(fin,dest);
+        String remDest=new String(dest,0,read);
+        int con=0;
+        Flooder flooder=null;
+synchronized (_remotePeers) {
+          con=_remotePeers.size() + 1;
+          flooder=new Flooder(con,remDest);
+          _remotePeers.put(new Integer(con),flooder);
+        }
+        byte msg[]=("STREAM CONNECT ID=" + con + " DESTINATION="+ remDest+ "\n").getBytes();
+synchronized (_samOut) {
+          _samOut.write(msg);
+          _samOut.flush();
+        }
+        I2PThread flood=new I2PThread(flooder,"Flood " + con);
+        flood.start();
+        _log.debug("Starting flooder with peer from " + _peerDestFiles[i] + ": "+ con);
+      }
+ catch (      IOException ioe) {
+        _log.error("Unable to read the peer from " + _peerDestFiles[i]);
+      }
+    }
+  }
+}

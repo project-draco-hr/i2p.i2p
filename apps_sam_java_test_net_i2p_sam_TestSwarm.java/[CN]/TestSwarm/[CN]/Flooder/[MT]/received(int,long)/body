@@ -1,0 +1,17 @@
+{
+  _totalReceived+=len;
+  if ((!_outOfSync) && (len % 32 * 1024 != 0)) {
+    _outOfSync=true;
+    if (_log.shouldLog(Log.ERROR))     _log.error("Out of sync (len=" + len + " after "+ (_totalReceived - len)+ ")");
+  }
+  _context.statManager().addRateData("swarm." + getConnectionId() + ".totalReceived",_totalReceived,0);
+  if (value != _lastReceived + 1) {
+    if (!_outOfSync)     _log.error("Received " + value + " when expecting "+ (_lastReceived + 1)+ " on "+ _connectionId+ " with "+ _remoteDestination.substring(0,6));
+ else     _log.debug("(out of sync) Received " + value + " when expecting "+ (_lastReceived + 1)+ " on "+ _connectionId+ " with "+ _remoteDestination.substring(0,6));
+  }
+ else {
+    _log.debug("Received " + value + " on "+ _connectionId+ " after "+ (_context.clock().now() - _lastReceivedOn)+ "ms with "+ _remoteDestination.substring(0,6));
+  }
+  _lastReceived=value;
+  _lastReceivedOn=_context.clock().now();
+}

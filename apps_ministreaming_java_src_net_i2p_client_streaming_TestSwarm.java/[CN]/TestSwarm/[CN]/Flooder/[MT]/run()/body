@@ -1,0 +1,37 @@
+{
+  _started=_context.clock().now();
+  _context.statManager().addRateData("swarm." + _connectionId + ".started",1,0);
+  byte data[]=new byte[32 * 1024];
+  long value=0;
+  long lastSend=_context.clock().now();
+  if (_socket == null) {
+    try {
+      _socket=_manager.connect(_remoteDestination);
+    }
+ catch (    Exception e) {
+      _log.error("Error connecting to " + _remoteDestination.calculateHash().toBase64().substring(0,4));
+      return;
+    }
+  }
+  I2PThread floodListener=new I2PThread(new FloodListener(),"FloodListener" + _connectionId);
+  floodListener.start();
+  try {
+    OutputStream out=_socket.getOutputStream();
+    while (!_closed) {
+      out.write(data);
+      _totalSent+=data.length;
+      _context.statManager().addRateData("swarm." + _connectionId + ".totalSent",_totalSent,0);
+      long now=_context.clock().now();
+      _log.debug("Sending " + _connectionId + " after "+ (now - lastSend));
+      lastSend=now;
+      try {
+        Thread.sleep(20);
+      }
+ catch (      InterruptedException ie) {
+      }
+    }
+  }
+ catch (  Exception e) {
+    _log.error("Error sending",e);
+  }
+}

@@ -1,0 +1,25 @@
+{
+  if (_log.shouldLog(Log.DEBUG)) {
+    _log.debug("Handler " + id + ": sending "+ size+ " bytes");
+  }
+  ByteCache cache=ByteCache.getInstance(1024,4);
+  ByteArray ba=cache.acquire();
+  try {
+    int sent=0;
+    byte buf[]=ba.getData();
+    while (sent < size) {
+      int read=in.read(buf);
+      if (read == -1)       throw new IOException("Insufficient data from the SAM client (" + sent + "/"+ size+ ")");
+      i2pSocketOS.write(buf,0,read);
+      sent+=read;
+    }
+  }
+ catch (  IOException e) {
+    _log.error("Error sending data through I2P socket",e);
+    return false;
+  }
+ finally {
+    cache.release(ba);
+  }
+  return true;
+}

@@ -1,0 +1,23 @@
+{
+  _log.debug("Starting up");
+  File keys=new File(_destFile);
+  if (!keys.exists()) {
+    try {
+      I2PClientFactory.createClient().createDestination(new FileOutputStream(keys));
+    }
+ catch (    Exception e) {
+      _log.error("Error creating a new destination on " + keys,e);
+      return;
+    }
+  }
+  try {
+    _manager=I2PSocketManagerFactory.createManager(new FileInputStream(_destFile),"localhost",10001,null);
+  }
+ catch (  Exception e) {
+    _log.error("Error creatign the manager",e);
+    return;
+  }
+  I2PThread listener=new I2PThread(new Listener(),"Listener");
+  listener.start();
+  connectWithPeers();
+}

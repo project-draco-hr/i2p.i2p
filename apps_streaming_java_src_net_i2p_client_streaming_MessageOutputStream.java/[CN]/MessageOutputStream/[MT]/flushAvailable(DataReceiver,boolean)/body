@@ -1,5 +1,6 @@
 {
   WriteStatus ws=null;
+  long before=System.currentTimeMillis();
 synchronized (_dataLock) {
     ws=target.writeData(_buf,0,_valid);
     _written+=_valid;
@@ -7,10 +8,14 @@ synchronized (_dataLock) {
     _dataLock.notifyAll();
     _lastFlushed=_context.clock().now();
   }
+  long afterBuild=System.currentTimeMillis();
+  if ((afterBuild - before > 1000) && (_log.shouldLog(Log.DEBUG)))   _log.debug("Took " + (afterBuild - before) + "ms to build a packet?  "+ ws);
   if (blocking && ws != null) {
     ws.waitForAccept(_writeTimeout);
     if (ws.writeFailed())     throw new IOException("Flush available failed");
  else     if (!ws.writeAccepted())     throw new InterruptedIOException("Flush available timed out");
   }
+  long afterAccept=System.currentTimeMillis();
+  if ((afterAccept - afterBuild > 1000) && (_log.shouldLog(Log.DEBUG)))   _log.debug("Took " + (afterAccept - afterBuild) + "ms to accept a packet? "+ ws);
   return;
 }

@@ -1,0 +1,50 @@
+{
+  Properties params=new Properties();
+  ByteArrayOutputStream baos=new ByteArrayOutputStream(80);
+  while (_live) {
+    try {
+      int c=-1;
+      while ((c=_inRaw.read()) != -1) {
+        if (c == '\n') {
+          break;
+        }
+        baos.write(c);
+      }
+      if (c == -1) {
+        _log.error("Error reading from the SAM bridge");
+        return;
+      }
+    }
+ catch (    IOException ioe) {
+      _log.error("Error reading from SAM",ioe);
+    }
+    String line=new String(baos.toByteArray());
+    baos.reset();
+    if (line == null) {
+      _log.info("No more data from the SAM bridge");
+      break;
+    }
+    _log.debug("Line read from the bridge: " + line);
+    StringTokenizer tok=new StringTokenizer(line);
+    if (tok.countTokens() < 2) {
+      _log.error("Invalid SAM line: [" + line + "]");
+      _live=false;
+      return;
+    }
+    String major=tok.nextToken();
+    String minor=tok.nextToken();
+    params.clear();
+    while (tok.hasMoreTokens()) {
+      String pair=tok.nextToken();
+      int eq=pair.indexOf('=');
+      if ((eq > 0) && (eq < pair.length() - 1)) {
+        String name=pair.substring(0,eq);
+        String val=pair.substring(eq + 1);
+        while ((val.charAt(0) == '\"') && (val.length() > 0))         val=val.substring(1);
+        while ((val.length() > 0) && (val.charAt(val.length() - 1) == '\"'))         val=val.substring(0,val.length() - 1);
+        params.setProperty(name,val);
+      }
+    }
+    processEvent(major,minor,params);
+  }
+}

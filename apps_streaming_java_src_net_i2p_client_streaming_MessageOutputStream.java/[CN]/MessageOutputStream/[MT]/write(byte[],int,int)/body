@@ -15,7 +15,7 @@ synchronized (_dataLock) {
         remaining=0;
         _lastBuffered=_context.clock().now();
         if (_passiveFlushDelay > 0) {
-          SimpleTimer.getInstance().addEvent(_flusher,_passiveFlushDelay);
+          _flusher.enqueue();
         }
       }
  else {
@@ -39,8 +39,8 @@ synchronized (_dataLock) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Waiting " + _writeTimeout + "ms for accept of "+ ws);
       ws.waitForAccept(_writeTimeout);
       if (!ws.writeAccepted()) {
-        if (_writeTimeout > 0)         throw new InterruptedIOException("Write not accepted within timeout");
- else         throw new IOException("Write not accepted into the queue");
+        if (_writeTimeout > 0)         throw new InterruptedIOException("Write not accepted within timeout: " + ws);
+ else         throw new IOException("Write not accepted into the queue: " + ws);
       }
     }
  else {

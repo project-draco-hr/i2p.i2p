@@ -1,0 +1,26 @@
+{
+  int numResends=0;
+  List acked=con.ackPackets(ackThrough,nacks);
+  if ((acked != null) && (acked.size() > 0)) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug(acked.size() + " of our packets acked with " + packet);
+    int highestRTT=-1;
+    for (int i=0; i < acked.size(); i++) {
+      PacketLocal p=(PacketLocal)acked.get(i);
+      if (p.getAckTime() > highestRTT) {
+        highestRTT=p.getAckTime();
+      }
+      _context.statManager().addRateData("stream.sendsBeforeAck",p.getNumSends(),p.getAckTime());
+      if (p.getNumSends() > 1)       numResends++;
+      if ((p.getKeyUsed() != null) && (p.getTagsSent() != null) && (p.getTagsSent().size() > 0)) {
+        _context.sessionKeyManager().tagsDelivered(p.getTo().getPublicKey(),p.getKeyUsed(),p.getTagsSent());
+      }
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Packet acked after " + p.getAckTime() + "ms: "+ p);
+    }
+    if (highestRTT > 0) {
+      con.getOptions().updateRTT(highestRTT);
+    }
+    _context.statManager().addRateData("stream.con.packetsAckedPerMessageReceived",acked.size(),highestRTT);
+  }
+  if (packet != null)   return adjustWindow(con,isNew,packet.getSequenceNum(),numResends,(acked != null ? acked.size() : 0));
+ else   return adjustWindow(con,false,-1,numResends,(acked != null ? acked.size() : 0));
+}

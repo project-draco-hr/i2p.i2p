@@ -1,0 +1,33 @@
+{
+  _started=_context.clock().now();
+  _context.statManager().addRateData("swarm." + _connectionId + ".started",1,0);
+  byte data[]=new byte[32 * 1024];
+  long value=0;
+  long lastSend=_context.clock().now();
+  while (!_closed) {
+    byte msg[]=("STREAM SEND ID=" + _connectionId + " SIZE="+ data.length+ "\n").getBytes();
+    DataHelper.toLong(data,0,4,value);
+    try {
+synchronized (_samOut) {
+        _samOut.write(msg);
+        _samOut.write(data);
+        _samOut.flush();
+      }
+    }
+ catch (    IOException ioe) {
+      _log.error("Error talking to SAM",ioe);
+      return;
+    }
+    _totalSent+=data.length;
+    _context.statManager().addRateData("swarm." + _connectionId + ".totalSent",_totalSent,0);
+    value++;
+    try {
+      Thread.sleep(20);
+    }
+ catch (    InterruptedException ie) {
+    }
+    long now=_context.clock().now();
+    _log.debug("Sending " + value + " on "+ _connectionId+ " after "+ (now - lastSend));
+    lastSend=now;
+  }
+}

@@ -1,9 +1,13 @@
 {
   if (false)   return true;
   long writeExpire=timeoutMs;
+  long start=_context.clock().now();
+  boolean started=false;
   while (true) {
     long timeLeft=writeExpire - _context.clock().now();
 synchronized (_outboundPackets) {
+      if (!started)       _context.statManager().addRateData("stream.chokeSizeBegin",_outboundPackets.size(),timeoutMs);
+      started=true;
       if (_outboundPackets.size() >= _options.getWindowSize()) {
         if (writeExpire > 0) {
           if (timeLeft <= 0) {
@@ -27,6 +31,7 @@ synchronized (_outboundPackets) {
         }
       }
  else {
+        _context.statManager().addRateData("stream.chokeSizeEnd",_outboundPackets.size(),_context.clock().now() - start);
         return true;
       }
     }

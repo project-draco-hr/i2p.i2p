@@ -1,7 +1,13 @@
 {
   if (_connection == null)   throw new IllegalStateException("Cannot wait for accept with no connection");
-  long expiration=_context.clock().now() + maxWaitMs;
+  long before=_context.clock().now();
+  long expiration=before + maxWaitMs;
+  int queued=_connection.getUnackedPacketsSent();
+  int window=_connection.getOptions().getWindowSize();
   boolean accepted=_connection.packetSendChoke(maxWaitMs);
-  if (accepted)   _acceptedOn=_context.clock().now();
+  long after=_context.clock().now();
+  if (accepted)   _acceptedOn=after;
  else   _acceptedOn=-1;
+  int afterQueued=_connection.getUnackedPacketsSent();
+  if ((after - before > 1000) && (_log.shouldLog(Log.DEBUG)))   _log.debug("Took " + (after - before) + "ms to get "+ (accepted ? " accepted" : " rejected")+ (_cancelledOn > 0 ? " and CANCELLED" : "")+ ", queued behind "+ queued+ " with a window size of "+ window+ ", finally accepted with "+ afterQueued+ " queued: "+ toString());
 }

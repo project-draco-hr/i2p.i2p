@@ -7,10 +7,13 @@
   }
  else {
     _occurredTime=now;
-    if (_occurredEventCount > 100) {
-      _log.log(Log.CRIT,"More than 100 events (" + _occurredEventCount + ") in a second on "+ toString()+ ": scheduler = "+ sched);
+    if ((_occurredEventCount > 1000) && (_log.shouldLog(Log.WARN))) {
+      _log.warn("More than 1000 events (" + _occurredEventCount + ") in a second on "+ toString()+ ": scheduler = "+ sched);
     }
     _occurredEventCount=0;
   }
+  long before=System.currentTimeMillis();
   sched.eventOccurred(this);
+  long elapsed=System.currentTimeMillis() - before;
+  if ((elapsed > 1000) && (_log.shouldLog(Log.WARN)))   _log.warn("Took " + elapsed + "ms to pump through "+ sched);
 }
