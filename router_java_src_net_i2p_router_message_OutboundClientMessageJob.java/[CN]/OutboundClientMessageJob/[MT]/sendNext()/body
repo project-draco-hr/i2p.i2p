@@ -20,6 +20,7 @@
   if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": Send outbound client message - next lease found for [" + _status.getTo().calculateHash().toBase64()+ "] - "+ nextLease);
   if (nextLease == null) {
     if (_log.shouldLog(Log.WARN))     _log.warn(getJobId() + ": No more leases, and we still haven't heard back from the peer" + ", refetching the leaseSet to try again");
+    LeaseSet ls=_status.getLeaseSet();
     _status.setLeaseSet(null);
     long remainingMs=_overallExpiration - getContext().clock().now();
     if (_status.getNumLookups() < MAX_LEASE_LOOKUPS) {
@@ -28,6 +29,7 @@
       _status.clearAlreadySent();
       getContext().netDb().fail(to);
       getContext().netDb().lookupLeaseSet(to,_nextStep,_lookupLeaseSetFailed,remainingMs);
+      if (ls != null)       getContext().jobQueue().addJob(new ShortCircuitSearchJob(ls));
       return;
     }
  else {
