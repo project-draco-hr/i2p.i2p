@@ -1,0 +1,37 @@
+{
+  try {
+    _rawIn=_socket.getInputStream();
+    _rawOut=_socket.getOutputStream();
+  }
+ catch (  IOException ioe) {
+    fail("Error accessing the socket streams from " + _from,ioe);
+    return null;
+  }
+  negotiateProtocol();
+  if ((_agreedProtocol < 0) || (_error != null))   return null;
+  boolean ok=false;
+  if ((_connectionTag != null) && (_key != null))   ok=connectExistingSession();
+ else   ok=connectNewSession();
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("connection ok? " + ok + " error: "+ _error);
+  if (ok && (_error == null)) {
+    establishComplete();
+    if (_log.shouldLog(Log.INFO))     _log.info("Establishment ok... building the con");
+    TCPConnection con=new TCPConnection(_context);
+    con.setInputStream(_connectionIn);
+    con.setOutputStream(_connectionOut);
+    con.setSocket(_socket);
+    con.setRemoteRouterIdentity(_actualPeer.getIdentity());
+    con.setRemoteAddress(_remoteAddress);
+    if (_error == null) {
+      if (_log.shouldLog(Log.INFO))       _log.info("Establishment successful!  returning the con");
+      return con;
+    }
+ else {
+      if (_log.shouldLog(Log.INFO))       _log.info("Establishment ok but we failed?!  error = " + _error);
+      return null;
+    }
+  }
+ else {
+    return null;
+  }
+}

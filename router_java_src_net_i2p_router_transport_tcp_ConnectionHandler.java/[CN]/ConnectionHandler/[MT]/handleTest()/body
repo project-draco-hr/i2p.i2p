@@ -1,0 +1,64 @@
+{
+  try {
+    int numVersions=_rawIn.read();
+    if (numVersions == -1)     throw new IOException("Unable to read versions");
+    if (numVersions > 256)     throw new IOException("Too many versions");
+    int versions[]=new int[numVersions];
+    for (int i=0; i < numVersions; i++) {
+      versions[i]=_rawIn.read();
+      if (versions[i] == -1)       throw new IOException("Not enough versions");
+    }
+    Properties opts=DataHelper.readProperties(_rawIn);
+    int version=0;
+    for (int i=0; i < versions.length && version == 0; i++) {
+      for (int j=0; j < TCPTransport.SUPPORTED_PROTOCOLS.length; j++) {
+        if (TCPTransport.SUPPORTED_PROTOCOLS[j] == versions[i]) {
+          version=versions[i];
+          break;
+        }
+      }
+    }
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("HandleTest: version=" + version + " opts="+ opts);
+    _rawOut.write(0xFF);
+    _rawOut.write(0xFF);
+    _rawOut.write(version);
+    byte ip[]=_from.getBytes();
+    _rawOut.write(ip.length);
+    _rawOut.write(ip);
+    DataHelper.writeDate(_rawOut,new Date(_context.clock().now()));
+    DataHelper.writeProperties(_rawOut,null);
+    _rawOut.flush();
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("HandleTest: result flushed");
+  }
+ catch (  IOException ioe) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Unable to verify test connection from " + _from,ioe);
+  }
+catch (  DataFormatException dfe) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Unable to verify test connection from " + _from,dfe);
+  }
+ finally {
+    if (_rawIn != null)     try {
+      _rawIn.close();
+    }
+ catch (    IOException ioe) {
+    }
+    if (_rawOut != null)     try {
+      _rawOut.close();
+    }
+ catch (    IOException ioe) {
+    }
+    if (_socket != null)     try {
+      _socket.close();
+    }
+ catch (    IOException ioe) {
+    }
+    _socket=null;
+    _rawIn=null;
+    _rawOut=null;
+    _agreedProtocol=-1;
+    _nonce=null;
+    _connectionTag=null;
+    _actualPeer=null;
+    _testComplete=true;
+  }
+}

@@ -1,37 +1,31 @@
 {
-  StringBuffer buf=new StringBuffer();
-  Map cons=new HashMap();
-synchronized (_connections) {
-    cons.putAll(_connections);
-  }
-  int established=0;
-  buf.append("<b>TCP Transport</b> <i>(").append(cons.size()).append(" connections)</i><br />\n");
-  buf.append("<ul>");
-  for (Iterator iter=cons.keySet().iterator(); iter.hasNext(); ) {
-    buf.append("<li>");
-    RouterIdentity ident=(RouterIdentity)iter.next();
-    List curCons=(List)cons.get(ident);
-    buf.append("Connection to ").append(ident.getHash().toBase64()).append(": ");
-    String lifetime=null;
-    for (int i=0; i < curCons.size(); i++) {
-      TCPConnection con=(TCPConnection)curCons.get(i);
-      if (con.getLifetime() > 30 * 1000) {
-        established++;
-        lifetime=DataHelper.formatDuration(con.getLifetime());
-      }
+  StringBuffer buf=new StringBuffer(1024);
+  buf.append("<b>Connections:</b><ul>\n");
+synchronized (_connectionLock) {
+    for (Iterator iter=_connectionsByIdent.values().iterator(); iter.hasNext(); ) {
+      TCPConnection con=(TCPConnection)iter.next();
+      buf.append("<li>");
+      buf.append(con.getRemoteRouterIdentity().getHash().toBase64().substring(0,6));
+      buf.append(": up for ").append(DataHelper.formatDuration(con.getLifetime()));
+      buf.append("</li>\n");
     }
-    if (lifetime != null)     buf.append(lifetime);
- else     buf.append("[pending]");
-    buf.append("</li>\n");
-  }
-  buf.append("</ul>\n");
-  if (established == 0) {
-    buf.append("<b><font color=\"red\">No TCP connections</font></b><ul>");
-    buf.append("<li>Is your publicly reachable IP address / hostname <b>").append(_listenHost).append("</b>?</li>\n");
-    buf.append("<li>Is your firewall / NAT open to receive connections on port <b>").append(_listenPort).append("</b>?</li>\n");
-    buf.append("<li>Do you have any reachable peer references (see down below for \"Routers\", ");
-    buf.append("    or check your netDb directory - you want at least two routers, since one of them is your own)</li>\n");
+    buf.append("</ul>\n");
+    buf.append("<b>Connections being built:</b><ul>\n");
+    for (Iterator iter=_pendingConnectionsByIdent.iterator(); iter.hasNext(); ) {
+      Hash peer=(Hash)iter.next();
+      buf.append("<li>");
+      buf.append(peer.toBase64().substring(0,6));
+      buf.append("</li>\n");
+    }
     buf.append("</ul>\n");
   }
+  buf.append("<b>Most recent connection errors:</b><ul>");
+synchronized (_lastConnectionErrors) {
+    for (int i=_lastConnectionErrors.size() - 1; i >= 0; i--) {
+      String msg=(String)_lastConnectionErrors.get(i);
+      buf.append("<li>").append(msg).append("</li>\n");
+    }
+  }
+  buf.append("</ul>");
   return buf.toString();
 }

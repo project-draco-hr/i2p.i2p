@@ -1,0 +1,37 @@
+{
+  OutNetMessage msg=null;
+  while ((msg == null) && (!_closed)) {
+    List expired=null;
+    long now=_context.clock().now();
+synchronized (_pendingMessages) {
+      for (int i=0; i < _pendingMessages.size(); i++) {
+        OutNetMessage cur=(OutNetMessage)_pendingMessages.get(i);
+        if (cur.getExpiration() < now) {
+          if (expired == null)           expired=new ArrayList(1);
+          expired.add(cur);
+          _pendingMessages.remove(i);
+          i--;
+        }
+      }
+      if (_pendingMessages.size() > 0) {
+        msg=(OutNetMessage)_pendingMessages.remove(0);
+      }
+ else {
+        if (expired == null) {
+          try {
+            _pendingMessages.wait();
+          }
+ catch (          InterruptedException ie) {
+          }
+        }
+      }
+    }
+    if (expired != null) {
+      for (int i=0; i < expired.size(); i++) {
+        OutNetMessage cur=(OutNetMessage)expired.get(i);
+        sent(cur,false,0);
+      }
+    }
+  }
+  return msg;
+}

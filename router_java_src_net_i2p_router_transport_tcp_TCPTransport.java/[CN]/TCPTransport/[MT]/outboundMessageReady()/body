@@ -1,4 +1,23 @@
 {
-  NextJob j=new NextJob();
-  j.runJob();
+  OutNetMessage msg=getNextMessage();
+  if (msg != null) {
+    TCPConnection con=null;
+    boolean newPeer=false;
+synchronized (_connectionLock) {
+      Hash peer=msg.getTarget().getIdentity().calculateHash();
+      con=(TCPConnection)_connectionsByIdent.get(peer);
+      if (con == null) {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("No connections to " + peer.toBase64() + ", request one");
+        List msgs=(List)_pendingMessages.get(peer);
+        if (msgs == null) {
+          msgs=new ArrayList(4);
+          _pendingMessages.put(peer,msgs);
+          newPeer=true;
+        }
+        msgs.add(msg);
+      }
+      if (newPeer)       _connectionLock.notifyAll();
+    }
+    if (con != null)     con.addMessage(msg);
+  }
 }

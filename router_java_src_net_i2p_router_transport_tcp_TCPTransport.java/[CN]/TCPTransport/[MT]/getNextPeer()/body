@@ -1,0 +1,25 @@
+{
+  while (true) {
+synchronized (_connectionLock) {
+      for (Iterator iter=_pendingMessages.keySet().iterator(); iter.hasNext(); ) {
+        Hash peer=(Hash)iter.next();
+        List msgs=(List)_pendingMessages.get(peer);
+        if (_pendingConnectionsByIdent.contains(peer))         continue;
+        if (msgs.size() <= 0)         continue;
+        OutNetMessage msg=(OutNetMessage)msgs.get(0);
+        RouterAddress addr=msg.getTarget().getTargetAddress(STYLE);
+        TCPAddress tcpAddr=new TCPAddress(addr);
+        if (tcpAddr.getPort() <= 0)         continue;
+        if (_pendingConnectionsByAddress.contains(tcpAddr.toString()))         continue;
+        _pendingConnectionsByIdent.add(peer);
+        _pendingConnectionsByAddress.add(tcpAddr.toString());
+        return msg.getTarget();
+      }
+      try {
+        _connectionLock.wait();
+      }
+ catch (      InterruptedException ie) {
+      }
+    }
+  }
+}

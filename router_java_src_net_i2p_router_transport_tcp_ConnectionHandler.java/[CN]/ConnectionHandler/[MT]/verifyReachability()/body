@@ -1,0 +1,41 @@
+{
+  if (_actualPeer == null)   return false;
+  _remoteAddress=new TCPAddress(_actualPeer.getTargetAddress(TCPTransport.STYLE));
+  Socket s=null;
+  try {
+    s=new Socket(_remoteAddress.getAddress(),_remoteAddress.getPort());
+    OutputStream out=s.getOutputStream();
+    InputStream in=s.getInputStream();
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Beginning verification of reachability");
+    out.write(0xFF);
+    out.write(0xFF);
+    out.write(TCPTransport.SUPPORTED_PROTOCOLS.length);
+    for (int i=0; i < TCPTransport.SUPPORTED_PROTOCOLS.length; i++)     out.write(TCPTransport.SUPPORTED_PROTOCOLS[i]);
+    DataHelper.writeProperties(out,null);
+    out.flush();
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Verification of reachability request sent");
+    int ok=in.read();
+    if (ok != 0xFF)     throw new IOException("Unable to verify the peer - invalid response");
+    ok=in.read();
+    if (ok != 0xFF)     throw new IOException("Unable to verify the peer - invalid response");
+    int version=in.read();
+    if (version == -1)     throw new IOException("Unable to verify the peer - invalid version");
+    if (version == 0)     throw new IOException("Unable to verify the peer - no matching version");
+    int numBytes=in.read();
+    if ((numBytes == -1) || (numBytes > 32))     throw new IOException("Unable to verify the peer - invalid num bytes");
+    byte ip[]=new byte[numBytes];
+    int read=DataHelper.read(in,ip);
+    if (read != numBytes)     throw new IOException("Unable to verify the peer - invalid num bytes");
+    Date now=DataHelper.readDate(in);
+    Properties opts=DataHelper.readProperties(in);
+    return true;
+  }
+ catch (  IOException ioe) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Error verifying " + _actualPeer.getIdentity().calculateHash().toBase64().substring(0,6) + "at "+ _remoteAddress,ioe);
+    return false;
+  }
+catch (  DataFormatException dfe) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Error verifying " + _actualPeer.getIdentity().calculateHash().toBase64().substring(0,6) + "at "+ _remoteAddress,dfe);
+    return false;
+  }
+}

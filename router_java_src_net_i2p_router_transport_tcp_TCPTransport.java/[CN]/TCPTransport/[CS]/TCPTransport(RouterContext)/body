@@ -1,0 +1,37 @@
+{
+  super(context);
+  _log=context.logManager().getLog(TCPTransport.class);
+  _listener=new TCPListener(context,this);
+  _myAddress=null;
+  _tagManager=new ConnectionTagManager(context);
+  _connectionsByIdent=new HashMap(16);
+  _connectionsByAddress=new HashMap(16);
+  _pendingConnectionsByIdent=new HashSet(16);
+  _pendingConnectionsByAddress=new HashSet(16);
+  _connectionLock=new Object();
+  _pendingMessages=new HashMap(16);
+  _lastConnectionErrors=new ArrayList();
+  String str=_context.getProperty(PROP_ESTABLISHERS);
+  int establishers=0;
+  if (str != null) {
+    try {
+      establishers=Integer.parseInt(str);
+    }
+ catch (    NumberFormatException nfe) {
+      if (_log.shouldLog(Log.ERROR))       _log.error("Invalid number of connection establishers [" + str + "]");
+      establishers=DEFAULT_ESTABLISHERS;
+    }
+  }
+ else {
+    establishers=DEFAULT_ESTABLISHERS;
+  }
+  _connectionEstablishers=new ArrayList(establishers);
+  for (int i=0; i < establishers; i++) {
+    TCPConnectionEstablisher est=new TCPConnectionEstablisher(_context,this);
+    _connectionEstablishers.add(est);
+    String name=_context.routerHash().toBase64().substring(0,6) + " Est" + i;
+    I2PThread t=new I2PThread(est,name);
+    t.setDaemon(true);
+    t.start();
+  }
+}

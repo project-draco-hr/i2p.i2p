@@ -1,0 +1,100 @@
+{
+  DHSessionKeyBuilder builder=null;
+  try {
+    builder=DHSessionKeyBuilder.exchangeKeys(_rawIn,_rawOut);
+  }
+ catch (  IOException ioe) {
+    fail("Error exchanging keys with " + _target.getIdentity().calculateHash().toBase64().substring(0,6));
+    return false;
+  }
+  _key=builder.getSessionKey();
+  byte extra[]=builder.getExtraBytes().getData();
+  _iv=new byte[16];
+  System.arraycopy(extra,0,_iv,0,16);
+  byte nextTag[]=new byte[32];
+  System.arraycopy(extra,16,nextTag,0,32);
+  _nextConnectionTag=new ByteArray(nextTag);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("\nNew session[X]: key=" + _key.toBase64() + " iv="+ Base64.encode(_iv)+ " nonce="+ Base64.encode(_nonce.getData())+ " socket: "+ _socket);
+  _rawOut=new AESOutputStream(_context,_rawOut,_key,_iv);
+  _rawIn=new AESInputStream(_context,_rawIn,_key,_iv);
+  try {
+    Hash h=_context.sha().calculateHash(_nonce.getData());
+    h.writeBytes(_rawOut);
+    _rawOut.flush();
+  }
+ catch (  IOException ioe) {
+    fail("Error writing the verification to " + _target.getIdentity().calculateHash().toBase64().substring(0,6),ioe);
+    return false;
+  }
+catch (  DataFormatException dfe) {
+    fail("Error writing the verification to " + _target.getIdentity().calculateHash().toBase64().substring(0,6),dfe);
+    return false;
+  }
+  try {
+    byte val[]=new byte[32];
+    int read=DataHelper.read(_rawIn,val);
+    if (read != 32) {
+      fail("Not enough data to read the verification from " + _target.getIdentity().calculateHash().toBase64().substring(0,6));
+      return false;
+    }
+    Hash expected=_context.sha().calculateHash(_nextConnectionTag.getData());
+    if (!DataHelper.eq(expected.getData(),val)) {
+      fail("Verification failed from " + _target.getIdentity().calculateHash().toBase64().substring(0,6));
+      return false;
+    }
+  }
+ catch (  IOException ioe) {
+    fail("Error reading the verification from " + _target.getIdentity().calculateHash().toBase64().substring(0,6),ioe);
+    return false;
+  }
+  try {
+    ByteArrayOutputStream baos=new ByteArrayOutputStream(512);
+    _context.router().getRouterInfo().writeBytes(baos);
+    DataHelper.writeDate(baos,new Date(_context.clock().now()));
+    _rawOut.write(baos.toByteArray());
+    baos.write(_nonce.getData());
+    baos.write(_nextConnectionTag.getData());
+    Signature sig=_context.dsa().sign(baos.toByteArray(),_context.keyManager().getSigningPrivateKey());
+    sig.writeBytes(_rawOut);
+    _rawOut.flush();
+  }
+ catch (  IOException ioe) {
+    fail("Error sending the info to " + _target.getIdentity().calculateHash().toBase64().substring(0,6));
+    return false;
+  }
+catch (  DataFormatException dfe) {
+    fail("Error sending the info to " + _target.getIdentity().calculateHash().toBase64().substring(0,6));
+    return false;
+  }
+  try {
+    RouterInfo peer=new RouterInfo();
+    peer.readBytes(_rawIn);
+    int status=(int)_rawIn.read() & 0xFF;
+    boolean ok=validateStatus(status);
+    if (!ok)     return false;
+    Properties props=DataHelper.readProperties(_rawIn);
+    Signature sig=new Signature();
+    sig.readBytes(_rawIn);
+    ByteArrayOutputStream baos=new ByteArrayOutputStream(512);
+    peer.writeBytes(baos);
+    baos.write(status);
+    DataHelper.writeProperties(baos,props);
+    baos.write(_nonce.getData());
+    baos.write(_nextConnectionTag.getData());
+    ok=_context.dsa().verifySignature(sig,baos.toByteArray(),peer.getIdentity().getSigningPublicKey());
+    if (!ok) {
+      fail("Error verifying info from " + _target.getIdentity().calculateHash().toBase64().substring(0,6) + " (claiming to be "+ peer.getIdentity().calculateHash().toBase64().substring(0,6)+ ")");
+      return false;
+    }
+    _actualPeer=peer;
+    return true;
+  }
+ catch (  IOException ioe) {
+    fail("Error reading the verified info from " + _target.getIdentity().calculateHash().toBase64().substring(0,6) + ": "+ ioe.getMessage());
+    return false;
+  }
+catch (  DataFormatException dfe) {
+    fail("Error reading the verified info from " + _target.getIdentity().calculateHash().toBase64().substring(0,6) + ": "+ dfe.getMessage());
+    return false;
+  }
+}

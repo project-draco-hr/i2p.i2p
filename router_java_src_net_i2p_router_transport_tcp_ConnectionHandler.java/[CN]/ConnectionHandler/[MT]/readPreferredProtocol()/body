@@ -1,0 +1,56 @@
+{
+  try {
+    int numBytes=(int)DataHelper.readLong(_rawIn,2);
+    if (numBytes <= 0)     throw new IOException("Invalid number of bytes in connection");
+    if (numBytes == 0xFFFF) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("ReadProtocol[Y]: test called, handle it");
+      handleTest();
+      return false;
+    }
+ else {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("ReadProtocol[Y]: not a test (line len=" + numBytes + ")");
+    }
+    byte line[]=new byte[numBytes];
+    int read=DataHelper.read(_rawIn,line);
+    if (read != numBytes) {
+      fail("Handshake too short from " + _from);
+      return false;
+    }
+    ByteArrayInputStream bais=new ByteArrayInputStream(line);
+    int numVersions=(int)DataHelper.readLong(bais,1);
+    if ((numVersions <= 0) || (numVersions > 0x8)) {
+      fail("Invalid number of protocol versions from " + _from);
+      return false;
+    }
+    int versions[]=new int[numVersions];
+    for (int i=0; i < numVersions; i++)     versions[i]=(int)DataHelper.readLong(bais,1);
+    for (int i=0; i < numVersions && _agreedProtocol == -1; i++) {
+      for (int j=0; j < TCPTransport.SUPPORTED_PROTOCOLS.length; j++) {
+        if (versions[i] == TCPTransport.SUPPORTED_PROTOCOLS[j]) {
+          _agreedProtocol=versions[i];
+          break;
+        }
+      }
+    }
+    int tag=(int)DataHelper.readLong(bais,1);
+    if (tag == 0x1) {
+      byte tagData[]=new byte[32];
+      read=DataHelper.read(bais,tagData);
+      if (read != 32)       throw new IOException("Not enough data for the tag");
+      _connectionTag=new ByteArray(tagData);
+      _key=_transport.getTagManager().getKey(_connectionTag);
+      if (_key == null)       _connectionTag=null;
+    }
+    Properties opts=DataHelper.readProperties(bais);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("ReadProtocol[Y]: agreed=" + _agreedProtocol + " tag: "+ (_connectionTag != null ? Base64.encode(_connectionTag.getData()) : "none"));
+    return true;
+  }
+ catch (  IOException ioe) {
+    fail("Error reading the handshake from " + _from + ": "+ ioe.getMessage(),ioe);
+    return false;
+  }
+catch (  DataFormatException dfe) {
+    fail("Error reading the handshake from " + _from + ": "+ dfe.getMessage(),dfe);
+    return false;
+  }
+}

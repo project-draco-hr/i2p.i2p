@@ -1,0 +1,114 @@
+{
+  DHSessionKeyBuilder builder=null;
+  try {
+    builder=DHSessionKeyBuilder.exchangeKeys(_rawIn,_rawOut);
+  }
+ catch (  IOException ioe) {
+    fail("Error exchanging keys with " + _from);
+    return false;
+  }
+  _key=builder.getSessionKey();
+  byte extra[]=builder.getExtraBytes().getData();
+  _iv=new byte[16];
+  System.arraycopy(extra,0,_iv,0,16);
+  byte nextTag[]=new byte[32];
+  System.arraycopy(extra,16,nextTag,0,32);
+  _nextConnectionTag=new ByteArray(nextTag);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("\nNew session[Y]: key=" + _key.toBase64() + " iv="+ Base64.encode(_iv)+ " nonce="+ Base64.encode(_nonce.getData())+ " socket: "+ _socket);
+  _rawOut=new AESOutputStream(_context,_rawOut,_key,_iv);
+  _rawIn=new AESInputStream(_context,_rawIn,_key,_iv);
+  try {
+    Hash h=new Hash();
+    h.readBytes(_rawIn);
+    Hash expected=_context.sha().calculateHash(_nonce.getData());
+    if (!expected.equals(h)) {
+      fail("Hash after negotiation from " + _from + " does not match");
+      return false;
+    }
+  }
+ catch (  IOException ioe) {
+    fail("Error reading the hash from " + _from + ": "+ ioe.getMessage(),ioe);
+    return false;
+  }
+catch (  DataFormatException dfe) {
+    fail("Error reading the hash from " + _from + ": "+ dfe.getMessage(),dfe);
+    return false;
+  }
+  try {
+    Hash h=_context.sha().calculateHash(_nextConnectionTag.getData());
+    h.writeBytes(_rawOut);
+    _rawOut.flush();
+  }
+ catch (  IOException ioe) {
+    fail("Error writing the hash to " + _from + ": "+ ioe.getMessage(),ioe);
+    return false;
+  }
+catch (  DataFormatException dfe) {
+    fail("Error writing the hash to " + _from + ": "+ dfe.getMessage(),dfe);
+    return false;
+  }
+  long clockSkew=0;
+  boolean sigOk=false;
+  try {
+    RouterInfo info=new RouterInfo();
+    info.readBytes(_rawIn);
+    Date now=DataHelper.readDate(_rawIn);
+    Signature sig=new Signature();
+    sig.readBytes(_rawIn);
+    ByteArrayOutputStream baos=new ByteArrayOutputStream(512);
+    info.writeBytes(baos);
+    DataHelper.writeDate(baos,now);
+    baos.write(_nonce.getData());
+    baos.write(_nextConnectionTag.getData());
+    sigOk=_context.dsa().verifySignature(sig,baos.toByteArray(),info.getIdentity().getSigningPublicKey());
+    clockSkew=_context.clock().now() - now.getTime();
+    _actualPeer=info;
+  }
+ catch (  IOException ioe) {
+    fail("Error reading the info from " + _from + ": "+ ioe.getMessage(),ioe);
+    return false;
+  }
+catch (  DataFormatException dfe) {
+    fail("Error reading the info from " + _from + ": "+ dfe.getMessage(),dfe);
+    return false;
+  }
+  boolean reachable=verifyReachability();
+  try {
+    ByteArrayOutputStream baos=new ByteArrayOutputStream(512);
+    _context.router().getRouterInfo().writeBytes(baos);
+    Properties props=new Properties();
+    int status=-1;
+    if (!reachable) {
+      status=1;
+    }
+ else     if ((clockSkew > Router.CLOCK_FUDGE_FACTOR) || (clockSkew < 0 - Router.CLOCK_FUDGE_FACTOR)) {
+      status=2;
+      SimpleDateFormat fmt=new SimpleDateFormat("yyyyMMddhhmmssSSS");
+      props.setProperty("SKEW",fmt.format(new Date(_context.clock().now())));
+    }
+ else     if (!sigOk) {
+      status=3;
+    }
+ else {
+      status=0;
+    }
+    baos.write(status);
+    DataHelper.writeProperties(baos,props);
+    byte beginning[]=baos.toByteArray();
+    baos.write(_nonce.getData());
+    baos.write(_nextConnectionTag.getData());
+    Signature sig=_context.dsa().sign(baos.toByteArray(),_context.keyManager().getSigningPrivateKey());
+    _rawOut.write(beginning);
+    sig.writeBytes(_rawOut);
+    _rawOut.flush();
+    return handleStatus(status,clockSkew);
+  }
+ catch (  IOException ioe) {
+    fail("Error writing the info to " + _from + ": "+ ioe.getMessage(),ioe);
+    return false;
+  }
+catch (  DataFormatException dfe) {
+    fail("Error writing the info to " + _from + ": "+ dfe.getMessage(),dfe);
+    return false;
+  }
+}

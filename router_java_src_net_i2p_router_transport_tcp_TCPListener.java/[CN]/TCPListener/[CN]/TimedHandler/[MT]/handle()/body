@@ -1,31 +1,13 @@
 {
   SimpleTimer.getInstance().addEvent(TimedHandler.this,HANDLE_TIMEOUT);
-  try {
-    OutputStream os=_socket.getOutputStream();
-    os.write(SocketCreator.I2P_FLAG);
-    os.flush();
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("listener: I2P flag sent");
-    int val=_socket.getInputStream().read();
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("listener: Value read: [" + val + "] == flag? ["+ SocketCreator.I2P_FLAG+ "]");
-    if (val == -1)     throw new UnsupportedOperationException("Peer disconnected while we were looking for the I2P flag");
-    if (val != SocketCreator.I2P_FLAG) {
-      throw new UnsupportedOperationException("Peer connecting to us didn't send the right I2P byte [" + val + "]");
-    }
-    _receivedIdentByte=true;
-    TCPConnection c=new RestrictiveTCPConnection(_context,_socket,false);
-    _transport.handleConnection(c,null);
+  ConnectionHandler ch=new ConnectionHandler(_context,_transport,_socket);
+  TCPConnection con=ch.receiveConnection();
+  if (con != null) {
+    _wasSuccessful=true;
+    _transport.connectionEstablished(con);
+  }
+ else   if (ch.getTestComplete()) {
     _wasSuccessful=true;
   }
- catch (  UnsupportedOperationException uoe) {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Failed to state they wanted to connect as I2P",uoe);
-    _wasSuccessful=false;
-  }
-catch (  IOException ioe) {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Error listening to the peer",ioe);
-    _wasSuccessful=false;
-  }
-catch (  Throwable t) {
-    if (_log.shouldLog(Log.ERROR))     _log.error("Error handling",t);
-    _wasSuccessful=false;
-  }
+  if (!_wasSuccessful)   _transport.addConnectionErrorMessage(ch.getError());
 }

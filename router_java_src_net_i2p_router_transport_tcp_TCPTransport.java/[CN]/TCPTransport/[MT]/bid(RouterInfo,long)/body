@@ -1,27 +1,12 @@
 {
-  TCPConnection con=getConnection(toAddress.getIdentity());
-  int latencyStartup=0;
-  if (con == null)   latencyStartup=2000;
- else   latencyStartup=0;
-  int sendTime=(int)((dataSize) / (16 * 1024));
-  int bytes=(int)dataSize + 8;
-  if (con != null)   sendTime+=50000 * con.getPendingMessageCount();
   TransportBid bid=new TransportBid();
-  bid.setBandwidthBytes(bytes);
-  bid.setExpiration(new Date(_context.clock().now() + 1000 * 60));
-  bid.setLatencyMs(latencyStartup + sendTime);
+  bid.setBandwidthBytes((int)dataSize);
+  bid.setExpiration(_context.clock().now() + 30 * 1000);
   bid.setMessageSize((int)dataSize);
   bid.setRouter(toAddress);
   bid.setTransport(this);
-  RouterAddress addr=getTargetAddress(toAddress);
-  if (addr == null) {
-    if (con == null) {
-      if (_log.shouldLog(Log.INFO))       _log.info("No address or connection to " + toAddress.getIdentity().getHash().toBase64());
-      return null;
-    }
- else {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("No address, but we're connected to " + toAddress.getIdentity().getHash().toBase64());
-    }
-  }
+  int latency=200;
+  if (!getIsConnected(toAddress.getIdentity()))   latency+=5000;
+  bid.setLatencyMs(latency);
   return bid;
 }

@@ -1,21 +1,9 @@
 {
+  if (_log.shouldLog(Log.INFO))   _log.info("Connection closed",new Exception("Closed by"));
   if (_closed)   return;
   _closed=true;
-  if (_remoteIdentity != null) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("Closing the connection to " + _remoteIdentity.getHash().toBase64(),new Exception("Closed by"));
-  }
- else {
-    if (_socket != null) {
-      if (_log.shouldLog(Log.WARN)) {
-        _log.warn("Closing the unestablished connection with " + _remoteHost + ":"+ _remotePort,new Exception("Closed by"));
-      }
-    }
- else {
-      if (_log.shouldLog(Log.WARN))       _log.warn("Closing the unestablished connection",new Exception("Closed by"));
-    }
-  }
-  if (_reader != null)   _reader.stopReading();
   if (_runner != null)   _runner.stopRunning();
+  if (_reader != null)   _reader.stopReading();
   if (_in != null)   try {
     _in.close();
   }
@@ -31,17 +19,9 @@
   }
  catch (  IOException ioe) {
   }
-  if (_toBeSent != null) {
-    long now=_context.clock().now();
-synchronized (_toBeSent) {
-      for (Iterator iter=_toBeSent.iterator(); iter.hasNext(); ) {
-        OutNetMessage msg=(OutNetMessage)iter.next();
-        msg.timestamp("TCPTransport.closeConnection caused fail");
-        if (_log.shouldLog(Log.WARN))         _log.warn("Connection closed to " + _remoteIdentity.getHash().toBase64() + " while the message was sitting on the TCP Connection's queue!  too slow by: "+ (now - msg.getExpiration())+ "ms: "+ msg);
-        _transport.afterSend(msg,false,false);
-      }
-      _toBeSent.clear();
-    }
+  List msgs=clearPendingMessages();
+  for (int i=0; i < msgs.size(); i++) {
+    OutNetMessage msg=(OutNetMessage)msgs.get(0);
+    _transport.afterSend(msg,false,true,-1);
   }
-  _transport.connectionClosed(this);
 }

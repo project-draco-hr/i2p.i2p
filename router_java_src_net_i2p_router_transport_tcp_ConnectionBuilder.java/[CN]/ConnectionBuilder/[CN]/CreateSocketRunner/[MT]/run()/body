@@ -1,0 +1,24 @@
+{
+  RouterAddress addr=_target.getTargetAddress(_transport.getStyle());
+  if (addr == null) {
+    fail("Peer " + _target.getIdentity().calculateHash().toBase64().substring(0,6) + " has no TCP addresses");
+    return;
+  }
+  TCPAddress tcpAddr=new TCPAddress(addr);
+  if (tcpAddr.getPort() <= 0) {
+    fail("Peer " + _target.getIdentity().calculateHash().toBase64().substring(0,6) + " has an invalid TCP address");
+    return;
+  }
+  try {
+    _socket=new Socket(tcpAddr.getAddress(),tcpAddr.getPort());
+    _rawIn=_socket.getInputStream();
+    _rawOut=_socket.getOutputStream();
+    _error=null;
+    _remoteAddress=tcpAddr;
+    _created=true;
+  }
+ catch (  IOException ioe) {
+    fail("Error contacting " + _target.getIdentity().calculateHash().toBase64().substring(0,6) + " on "+ tcpAddr.toString()+ ": "+ ioe.getMessage());
+    return;
+  }
+}

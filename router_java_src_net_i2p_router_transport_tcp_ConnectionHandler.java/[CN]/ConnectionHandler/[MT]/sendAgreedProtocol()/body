@@ -1,0 +1,36 @@
+{
+  try {
+    ByteArrayOutputStream baos=new ByteArrayOutputStream(128);
+    if (_agreedProtocol <= 0)     baos.write(0x0);
+ else     baos.write(_agreedProtocol);
+    byte ip[]=_from.getBytes();
+    baos.write(ip.length);
+    baos.write(ip);
+    if (_key != null)     baos.write(0x1);
+ else     baos.write(0x0);
+    byte nonce[]=new byte[4];
+    _context.random().nextBytes(nonce);
+    _nonce=new ByteArray(nonce);
+    baos.write(nonce);
+    Properties opts=new Properties();
+    opts.setProperty("foo","bar");
+    DataHelper.writeProperties(baos,opts);
+    byte line[]=baos.toByteArray();
+    DataHelper.writeLong(_rawOut,2,line.length);
+    _rawOut.write(line);
+    _rawOut.flush();
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("SendProtocol[Y]: agreed=" + _agreedProtocol + " IP: "+ _from+ " nonce: "+ Base64.encode(nonce)+ " tag: "+ (_connectionTag != null ? Base64.encode(_connectionTag.getData()) : " none")+ " props: "+ opts+ "\nLine: "+ Base64.encode(line));
+    if (_agreedProtocol <= 0) {
+      fail("Connection from " + _from + " rejected, since no compatible protocols were found");
+      return;
+    }
+  }
+ catch (  IOException ioe) {
+    fail("Error writing the handshake to " + _from + ": "+ ioe.getMessage(),ioe);
+    return;
+  }
+catch (  DataFormatException dfe) {
+    fail("Error writing the handshake to " + _from + ": "+ dfe.getMessage(),dfe);
+    return;
+  }
+}

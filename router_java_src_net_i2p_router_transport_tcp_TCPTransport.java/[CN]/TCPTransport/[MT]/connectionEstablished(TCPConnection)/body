@@ -1,0 +1,44 @@
+{
+  TCPAddress remAddr=con.getRemoteAddress();
+  RouterIdentity ident=con.getRemoteRouterIdentity();
+  if ((remAddr == null) || (ident == null)) {
+    con.closeConnection();
+    return;
+  }
+  List waitingMsgs=null;
+  List oldCons=null;
+synchronized (_connectionLock) {
+    if (_connectionsByAddress.containsKey(remAddr.toString())) {
+      if (oldCons == null)       oldCons=new ArrayList(1);
+      oldCons.add(_connectionsByAddress.remove(remAddr.toString()));
+    }
+    _connectionsByAddress.put(remAddr.toString(),con);
+    if (_connectionsByIdent.containsKey(ident.calculateHash())) {
+      if (oldCons == null)       oldCons=new ArrayList(1);
+      oldCons.add(_connectionsByIdent.remove(ident.calculateHash()));
+    }
+    _connectionsByIdent.put(ident.calculateHash(),con);
+    _pendingConnectionsByAddress.remove(remAddr.toString());
+    _pendingConnectionsByIdent.remove(ident.calculateHash());
+    waitingMsgs=(List)_pendingMessages.remove(ident.calculateHash());
+  }
+  if (oldCons != null) {
+    for (int i=0; i < oldCons.size(); i++) {
+      TCPConnection cur=(TCPConnection)oldCons.get(i);
+      List msgs=cur.clearPendingMessages();
+      for (int j=0; j < msgs.size(); j++) {
+        con.addMessage((OutNetMessage)msgs.get(j));
+      }
+      cur.closeConnection();
+    }
+  }
+  if (waitingMsgs != null) {
+    for (int i=0; i < waitingMsgs.size(); i++) {
+      con.addMessage((OutNetMessage)waitingMsgs.get(i));
+    }
+  }
+  _context.shitlist().unshitlistRouter(ident.calculateHash());
+  con.setTransport(this);
+  con.runConnection();
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Connection set to run");
+}

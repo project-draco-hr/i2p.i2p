@@ -1,15 +1,16 @@
 {
-  for (int i=0; i < CONCURRENT_HANDLERS; i++) {
-    SocketHandler handler=new SocketHandler();
-    _handlers.add(handler);
-    Thread t=new I2PThread(handler);
-    t.setName("Handler" + i + " ["+ _myAddress.getPort()+ "]");
+  TCPAddress addr=_transport.getMyAddress();
+  if (addr != null) {
+    _listener=new ListenerRunner(addr);
+    Thread t=new I2PThread(_listener,"Listener [" + addr.getPort() + "]");
     t.setDaemon(true);
     t.start();
+    for (int i=0; i < CONCURRENT_HANDLERS; i++) {
+      SocketHandler handler=new SocketHandler();
+      _handlers.add(handler);
+      Thread th=new I2PThread(handler,"Handler " + addr.getPort() + ": "+ i);
+      th.setDaemon(true);
+      th.start();
+    }
   }
-  _listener=new ListenerRunner();
-  Thread t=new I2PThread(_listener);
-  t.setName("Listener [" + _myAddress.getPort() + "]");
-  t.setDaemon(true);
-  t.start();
 }
