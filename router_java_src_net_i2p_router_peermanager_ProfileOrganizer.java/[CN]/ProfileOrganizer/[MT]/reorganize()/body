@@ -1,20 +1,20 @@
 {
 synchronized (_reorganizeLock) {
-    Set allPeers=new HashSet(_failingPeers.size() + _notFailingPeers.size() + _reliablePeers.size()+ _fastAndReliablePeers.size());
+    Set allPeers=new HashSet(_failingPeers.size() + _notFailingPeers.size() + _highCapacityPeers.size()+ _fastPeers.size());
     allPeers.addAll(_failingPeers.values());
     allPeers.addAll(_notFailingPeers.values());
-    allPeers.addAll(_reliablePeers.values());
-    allPeers.addAll(_fastAndReliablePeers.values());
+    allPeers.addAll(_highCapacityPeers.values());
+    allPeers.addAll(_fastPeers.values());
     _failingPeers.clear();
     _notFailingPeers.clear();
-    _reliablePeers.clear();
-    _fastAndReliablePeers.clear();
-    Set reordered=new TreeSet(_calc);
-    for (Iterator iter=_strictReliabilityOrder.iterator(); iter.hasNext(); ) {
+    _highCapacityPeers.clear();
+    _fastPeers.clear();
+    Set reordered=new TreeSet(_comp);
+    for (Iterator iter=_strictCapacityOrder.iterator(); iter.hasNext(); ) {
       PeerProfile prof=(PeerProfile)iter.next();
       reordered.add(prof);
     }
-    _strictReliabilityOrder=reordered;
+    _strictCapacityOrder=reordered;
     calculateThresholds(allPeers);
     for (Iterator iter=allPeers.iterator(); iter.hasNext(); ) {
       PeerProfile profile=(PeerProfile)iter.next();
@@ -23,14 +23,14 @@ synchronized (_reorganizeLock) {
     locked_unfailAsNecessary();
     locked_promoteFastAsNecessary();
     if (_log.shouldLog(Log.DEBUG)) {
-      _log.debug("Profiles reorganized.  averages: [integration: " + _thresholdIntegrationValue + ", reliability: "+ _thresholdReliabilityValue+ ", speed: "+ _thresholdSpeedValue+ "]");
+      _log.debug("Profiles reorganized.  averages: [integration: " + _thresholdIntegrationValue + ", capacity: "+ _thresholdCapacityValue+ ", speed: "+ _thresholdSpeedValue+ "]");
       StringBuffer buf=new StringBuffer(512);
-      for (Iterator iter=_strictReliabilityOrder.iterator(); iter.hasNext(); ) {
+      for (Iterator iter=_strictCapacityOrder.iterator(); iter.hasNext(); ) {
         PeerProfile prof=(PeerProfile)iter.next();
-        buf.append('[').append(prof.toString()).append('=').append(prof.getReliabilityValue()).append("] ");
+        buf.append('[').append(prof.toString()).append('=').append(prof.getCapacityValue()).append("] ");
       }
-      _log.debug("Strictly organized (most reliable first): " + buf.toString());
-      _log.debug("fast and reliable: " + _fastAndReliablePeers.values());
+      _log.debug("Strictly organized (highest capacity first): " + buf.toString());
+      _log.debug("fast: " + _fastPeers.values());
     }
   }
 }

@@ -1,0 +1,26 @@
+{
+  RouterContext ctx=new RouterContext(new net.i2p.router.Router());
+  ProfileOrganizer organizer=new ProfileOrganizer(ctx);
+  organizer.setUs(Hash.FAKE_HASH);
+  ProfilePersistenceHelper helper=new ProfilePersistenceHelper(ctx);
+  for (int i=0; i < args.length; i++) {
+    PeerProfile profile=helper.readProfile(new java.io.File(args[i]));
+    if (profile == null) {
+      System.err.println("Could not load profile " + args[i]);
+      continue;
+    }
+    organizer.addProfile(profile);
+  }
+  organizer.reorganize();
+  DecimalFormat fmt=new DecimalFormat("0,000.0");
+  fmt.setPositivePrefix("+");
+  for (Iterator iter=organizer.selectAllPeers().iterator(); iter.hasNext(); ) {
+    Hash peer=(Hash)iter.next();
+    PeerProfile profile=organizer.getProfile(peer);
+    if (!profile.getIsActive())     continue;
+    System.out.println("Peer " + profile.getPeer().toBase64().substring(0,4) + " ["+ (organizer.isFast(peer) ? "F+R" : organizer.isHighCapacity(peer) ? "R  " : organizer.isFailing(peer) ? "X  " : "   ")+ "]: "+ "\t Speed:\t"+ fmt.format(profile.getSpeedValue())+ " Reliability:\t"+ fmt.format(profile.getReliabilityValue())+ " Capacity:\t"+ fmt.format(profile.getCapacityValue())+ " Integration:\t"+ fmt.format(profile.getIntegrationValue())+ " Active?\t"+ profile.getIsActive()+ " Failing?\t"+ profile.getIsFailing());
+  }
+  System.out.println("Thresholds:");
+  System.out.println("Speed:       " + num(organizer.getSpeedThreshold()) + " ("+ organizer.countFastPeers()+ " fast peers)");
+  System.out.println("Capacity:    " + num(organizer.getCapacityThreshold()) + " ("+ organizer.countHighCapacityPeers()+ " reliable peers)");
+}
