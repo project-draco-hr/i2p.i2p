@@ -13,20 +13,17 @@
  catch (    SocketException se) {
     }
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Beginning verification of reachability");
-    out.write(0xFF);
-    out.write(0xFF);
+    DataHelper.writeLong(out,2,FLAG_TEST);
     out.write(TCPTransport.SUPPORTED_PROTOCOLS.length);
     for (int i=0; i < TCPTransport.SUPPORTED_PROTOCOLS.length; i++)     out.write(TCPTransport.SUPPORTED_PROTOCOLS[i]);
     DataHelper.writeProperties(out,null);
     out.flush();
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Verification of reachability request sent");
-    int ok=in.read();
-    if (ok != 0xFF)     throw new IOException("Unable to verify the peer - invalid response");
-    ok=in.read();
-    if (ok != 0xFF)     throw new IOException("Unable to verify the peer - invalid response");
+    int flag=(int)DataHelper.readLong(in,2);
+    if (flag != FLAG_TEST)     throw new IOException("Unable to verify the peer - invalid response");
     int version=in.read();
     if (version == -1)     throw new IOException("Unable to verify the peer - invalid version");
-    if (version == 0)     throw new IOException("Unable to verify the peer - no matching version");
+    if (version == FLAG_PROTOCOL_NONE)     throw new IOException("Unable to verify the peer - no matching version");
     int numBytes=in.read();
     if ((numBytes == -1) || (numBytes > 32))     throw new IOException("Unable to verify the peer - invalid num bytes");
     byte ip[]=new byte[numBytes];

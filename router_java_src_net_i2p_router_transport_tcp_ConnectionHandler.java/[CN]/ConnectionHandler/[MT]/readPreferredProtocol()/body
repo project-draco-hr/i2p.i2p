@@ -2,7 +2,7 @@
   try {
     int numBytes=(int)DataHelper.readLong(_rawIn,2);
     if (numBytes <= 0)     throw new IOException("Invalid number of bytes in connection");
-    if (numBytes == 0xFFFF) {
+    if (numBytes == FLAG_TEST) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("ReadProtocol[Y]: test called, handle it");
       handleTest();
       return false;
@@ -18,7 +18,7 @@
     }
     ByteArrayInputStream bais=new ByteArrayInputStream(line);
     int numVersions=(int)DataHelper.readLong(bais,1);
-    if ((numVersions <= 0) || (numVersions > 0x8)) {
+    if ((numVersions <= 0) || (numVersions > MAX_VERSIONS)) {
       fail("Invalid number of protocol versions from " + _from);
       return false;
     }
@@ -33,7 +33,7 @@
       }
     }
     int tag=(int)DataHelper.readLong(bais,1);
-    if (tag == 0x1) {
+    if (tag == FLAG_TAG_FOLLOWING) {
       byte tagData[]=new byte[32];
       read=DataHelper.read(bais,tagData);
       if (read != 32)       throw new IOException("Not enough data for the tag");

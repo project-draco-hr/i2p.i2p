@@ -1,20 +1,24 @@
 {
-  if (allowAddressUpdate()) {
-    int port=getPort();
-    TCPAddress addr=new TCPAddress(address,port);
-    if (addr.getPort() > 0) {
-      if (allowAddress(addr)) {
-        if (_myAddress != null) {
-          if (addr.getAddress().equals(_myAddress.getAddress())) {
-            return;
+synchronized (_listener) {
+    if (allowAddressUpdate()) {
+      int port=getPort();
+      TCPAddress addr=new TCPAddress(address,port);
+      if (addr.getPort() > 0) {
+        if (allowAddress(addr)) {
+          if (_myAddress != null) {
+            if (addr.getAddress().equals(_myAddress.getAddress())) {
+              return;
+            }
           }
+          if (_log.shouldLog(Log.INFO))           _log.info("Update our local address to " + address);
+          updateAddress(addr);
         }
-        if (_log.shouldLog(Log.INFO))         _log.info("Update our local address to " + address);
-        updateAddress(addr);
+      }
+ else {
+        if (_log.shouldLog(Log.ERROR))         _log.error("Address specified is not valid [" + address + ":"+ port+ "]");
       }
     }
  else {
-      if (_log.shouldLog(Log.ERROR))       _log.error("Address specified is not valid [" + address + ":"+ port+ "]");
     }
   }
 }
