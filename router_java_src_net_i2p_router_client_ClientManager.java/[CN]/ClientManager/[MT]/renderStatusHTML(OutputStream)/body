@@ -1,0 +1,19 @@
+{
+  StringBuffer buf=new StringBuffer(8 * 1024);
+  buf.append("<h2>Clients</h2><ul>");
+  Map runners=null;
+synchronized (_runners) {
+    runners=(Map)_runners.clone();
+  }
+  for (Iterator iter=runners.keySet().iterator(); iter.hasNext(); ) {
+    Destination dest=(Destination)iter.next();
+    ClientConnectionRunner runner=(ClientConnectionRunner)runners.get(dest);
+    buf.append("<li>").append(dest.calculateHash().toBase64()).append("</li>\n");
+    if (runner.getLeaseSet() == null)     buf.append("<font color=\"red\"><b>No leases! If you didn't just start a client, please restart it (and perhaps check your router's logs for ERROR messages)</b></font><br />\n");
+ else     if (runner.getLeaseSet().getEarliestLeaseDate() < _context.clock().now())     buf.append("<font color=\"red\"><b>wtf, lease has already expired!  please wait a minute, and if this message remains, restart your client</b></font><br />\n");
+    buf.append("<pre>\n");
+    buf.append(runner.getLeaseSet()).append("</pre>\n");
+  }
+  buf.append("</ul>\n");
+  out.write(buf.toString().getBytes());
+}

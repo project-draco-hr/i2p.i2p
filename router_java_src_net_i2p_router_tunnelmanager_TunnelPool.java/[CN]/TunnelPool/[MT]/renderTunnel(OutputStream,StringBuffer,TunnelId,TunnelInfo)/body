@@ -1,0 +1,30 @@
+{
+  buf.setLength(0);
+  if (tunnel == null) {
+    buf.append("<li>Tunnel: ").append(id.getTunnelId()).append(" is not known</li>\n");
+  }
+ else {
+    buf.append("<li>Tunnel: ").append(tunnel.getTunnelId()).append("</li><pre>");
+    buf.append("\n\tStyle: ").append(getStyle(id));
+    buf.append("\n\tReady? ").append(tunnel.getIsReady());
+    buf.append("\n\tDest? ").append(getDestination(tunnel));
+    if (tunnel.getSettings() != null)     buf.append("\n\tExpiration: ").append(new Date(tunnel.getSettings().getExpiration()));
+ else     buf.append("\n\tExpiration: none");
+    buf.append("\n\tStart router: ").append(tunnel.getThisHop().toBase64()).append("\n");
+    TunnelInfo t=tunnel.getNextHopInfo();
+    if (t != null) {
+      int hop=1;
+      while (t != null) {
+        buf.append("\tHop ").append(hop).append(": ").append(t.getThisHop().toBase64()).append("\n");
+        t=t.getNextHopInfo();
+        hop++;
+      }
+    }
+ else {
+      if (tunnel.getNextHop() != null)       buf.append("\tNext: ").append(tunnel.getNextHop().toBase64()).append("\n");
+    }
+    buf.append("\n</pre>");
+  }
+  out.write(buf.toString().getBytes());
+  buf.setLength(0);
+}

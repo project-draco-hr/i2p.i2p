@@ -1,0 +1,20 @@
+{
+  StringBuffer buf=new StringBuffer(8192);
+  buf.append("<h2>Pending messages</h2>\n");
+  Map msgs=null;
+synchronized (_pendingMessages) {
+    msgs=(Map)_pendingMessages.clone();
+  }
+  buf.append("<ul>");
+  for (Iterator iter=msgs.keySet().iterator(); iter.hasNext(); ) {
+    Long exp=(Long)iter.next();
+    OutNetMessage msg=(OutNetMessage)msgs.get(exp);
+    buf.append("<li>").append(msg.getMessageType());
+    buf.append(": expiring on ").append(new Date(exp.longValue()));
+    if (msg.getReplySelector() != null)     buf.append(" with reply selector ").append(msg.getReplySelector().toString());
+ else     buf.append(" with NO reply selector?  WTF!");
+    buf.append("</li>\n");
+  }
+  buf.append("</ul>");
+  out.write(buf.toString().getBytes());
+}

@@ -1,0 +1,29 @@
+{
+  long now=_context.clock().now();
+  StringBuffer buf=new StringBuffer(4096);
+  buf.append("<br /><b>Pending bandwidth requests (with ");
+  buf.append(_availableInboundBytes).append('/');
+  buf.append(_availableOutboundBytes).append(" bytes inbound/outbound available):</b><ul>");
+  buf.append("<li>Inbound requests: <ol>");
+synchronized (_pendingInboundRequests) {
+    for (int i=0; i < _pendingInboundRequests.size(); i++) {
+      BandwidthRequest req=(BandwidthRequest)_pendingInboundRequests.get(i);
+      buf.append("<li>").append(req.getRequestName()).append(" for ");
+      buf.append(req.getRequestedInboundBytes()).append(" bytes ");
+      buf.append("requested ").append(now - req.getRequestTime());
+      buf.append("ms ago</li>\n");
+    }
+  }
+  buf.append("</ol></li><li>Outbound requests: <ol>\n");
+synchronized (_pendingOutboundRequests) {
+    for (int i=0; i < _pendingOutboundRequests.size(); i++) {
+      BandwidthRequest req=(BandwidthRequest)_pendingOutboundRequests.get(i);
+      buf.append("<li>").append(req.getRequestName()).append(" for ");
+      buf.append(req.getRequestedOutboundBytes()).append(" bytes ");
+      buf.append("requested ").append(now - req.getRequestTime());
+      buf.append("ms ago</li>\n");
+    }
+  }
+  buf.append("</ol></li></ul>\n");
+  out.write(buf.toString().getBytes());
+}
