@@ -1,0 +1,32 @@
+{
+  String settingsLocation="config.txt";
+  Map settings=new HashMap();
+  String home;
+  if (args.length > 0) {
+    home=args[0];
+  }
+ else {
+    home=".";
+  }
+  try {
+    settings=ConfigParser.parse(new File(home,settingsLocation));
+  }
+ catch (  IOException exp) {
+    System.out.println("Could not load " + settingsLocation);
+  }
+  System.setProperty("proxySet","true");
+  System.setProperty("http.proxyHost",(String)settings.get("proxy_host"));
+  System.setProperty("http.proxyPort",(String)settings.get("proxy_port"));
+  long delay=Long.parseLong((String)settings.get("update_delay"));
+  if (delay < 1) {
+    delay=1;
+  }
+  while (true) {
+    Daemon.update(settings,home);
+    try {
+      Thread.sleep(delay * 60 * 60* 1000);
+    }
+ catch (    InterruptedException exp) {
+    }
+  }
+}
