@@ -1,9 +1,12 @@
 {
-  boolean useBlocking=false;
-synchronized (conLock) {
-    pendingConnections++;
-    if (pendingConnections > 5)     useBlocking=true;
+  if (s == null)   return;
+  if (_numConnectionBuilders <= 0) {
+    new I2PThread(new BlockingRunner(s),"Clinet run").start();
+    return;
   }
-  if (useBlocking)   clientConnectionRun(s);
- else   new ClientConnectionRunner(s,handlerName);
+  if (_maxWaitTime > 0)   SimpleTimer.getInstance().addEvent(new CloseEvent(s),_maxWaitTime);
+synchronized (_waitingSockets) {
+    _waitingSockets.add(s);
+    _waitingSockets.notifyAll();
+  }
 }
