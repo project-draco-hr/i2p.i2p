@@ -7,14 +7,15 @@
     long timeLeft=writeExpire - _context.clock().now();
 synchronized (_outboundPackets) {
       if (!started)       _context.statManager().addRateData("stream.chokeSizeBegin",_outboundPackets.size(),timeoutMs);
+      if (!_connected)       return false;
       started=true;
-      if (_outboundPackets.size() >= _options.getWindowSize()) {
+      if ((_outboundPackets.size() >= _options.getWindowSize()) || (_activeResends > 0)) {
         if (writeExpire > 0) {
           if (timeLeft <= 0) {
-            _log.error("Outbound window is full of " + _outboundPackets.size() + " and we've waited too long ("+ writeExpire+ "ms)");
+            _log.error("Outbound window is full of " + _outboundPackets.size() + " with "+ _activeResends+ " active resends"+ " and we've waited too long ("+ writeExpire+ "ms)");
             return false;
           }
-          if (_log.shouldLog(Log.DEBUG))           _log.debug("Outbound window is full (" + _outboundPackets.size() + "/"+ _options.getWindowSize()+ "), waiting "+ timeLeft);
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("Outbound window is full (" + _outboundPackets.size() + "/"+ _options.getWindowSize()+ "/"+ _activeResends+ "), waiting "+ timeLeft);
           try {
             _outboundPackets.wait(timeLeft);
           }
@@ -22,7 +23,7 @@ synchronized (_outboundPackets) {
           }
         }
  else {
-          if (_log.shouldLog(Log.DEBUG))           _log.debug("Outbound window is full (" + _outboundPackets.size() + "), waiting indefinitely");
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("Outbound window is full (" + _outboundPackets.size() + "/"+ _activeResends+ "), waiting indefinitely");
           try {
             _outboundPackets.wait();
           }
