@@ -4,6 +4,20 @@
   int target=_settings.getQuantity() + _settings.getBackupQuantity();
   int usableTunnels=countUsableTunnels();
   if ((target > usableTunnels) && (_log.shouldLog(Log.INFO)))   _log.info(toString() + ": refreshing builders, previously had " + usableTunnels+ ", want a total of "+ target+ ", creating "+ (target - usableTunnels)+ " new ones.");
-  for (int i=usableTunnels; i < target; i++)   _builder.buildTunnel(_context,this);
-  return (target > usableTunnels ? target - usableTunnels : 0);
+  if (target > usableTunnels) {
+    long minute=_context.clock().now();
+    minute=minute - (minute % 60 * 1000);
+    if (_currentMinute < minute) {
+      _currentMinute=minute;
+      _buildsThisMinute=0;
+    }
+    int build=(target - usableTunnels);
+    if (build > (MAX_BUILDS_PER_MINUTE - _buildsThisMinute))     build=(MAX_BUILDS_PER_MINUTE - _buildsThisMinute);
+    for (int i=0; i < build; i++)     _builder.buildTunnel(_context,this);
+    _buildsThisMinute+=build;
+    return build;
+  }
+ else {
+    return 0;
+  }
 }

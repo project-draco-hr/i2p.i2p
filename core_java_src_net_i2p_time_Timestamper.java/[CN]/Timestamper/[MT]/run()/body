@@ -26,6 +26,10 @@ synchronized (_servers) {
           lastFailed=true;
         }
       }
+      _initialized=true;
+synchronized (this) {
+        notifyAll();
+      }
       long sleepTime=_context.random().nextInt(_queryFrequency) + _queryFrequency;
       if (lastFailed)       sleepTime=30 * 1000;
       try {
@@ -37,5 +41,8 @@ synchronized (_servers) {
   }
  catch (  Throwable t) {
     _log.log(Log.CRIT,"Timestamper died!",t);
+synchronized (this) {
+      notifyAll();
+    }
   }
 }
