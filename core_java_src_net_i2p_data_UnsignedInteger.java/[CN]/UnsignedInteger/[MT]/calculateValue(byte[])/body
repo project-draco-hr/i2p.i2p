@@ -6,6 +6,28 @@
  else   if (data.length == 0) {
     return 0;
   }
-  BigInteger bi=new BigInteger(1,data);
-  return bi.longValue();
+  long rv=0;
+  for (int i=0; i < data.length; i++) {
+    long cur=(long)(data[i] & 0xFF);
+    if (cur < 0)     cur=cur + 256;
+    cur=(cur << (8 * (data.length - i - 1)));
+    rv+=cur;
+  }
+  if (_log.shouldLog(Log.DEBUG)) {
+    BigInteger bi=new BigInteger(1,data);
+    long biVal=bi.longValue();
+    if (biVal != rv) {
+      _log.log(Log.CRIT,"ERR: " + bi.toString(2) + " /\t"+ bi.toString(16)+ " /\t"+ bi.toString()+ " != \n     "+ Long.toBinaryString(rv)+ " /\t"+ Long.toHexString(rv)+ " /\t"+ rv);
+      for (int i=0; i < data.length; i++) {
+        long cur=(long)(data[i] & 0xFF);
+        if (cur < 0)         cur=cur + 256;
+        long shiftBy=(8 * (data.length - i - 1));
+        long old=cur;
+        cur=(cur << shiftBy);
+        _log.log(Log.CRIT,"cur[" + i + "]="+ Long.toHexString(cur)+ " data = "+ Long.toHexString((data[i] & 0xFF))+ " shiftBy: "+ shiftBy+ " old: "+ Long.toHexString(old));
+      }
+      throw new RuntimeException("b0rked on " + bi.toString() + " / "+ rv);
+    }
+  }
+  return rv;
 }
