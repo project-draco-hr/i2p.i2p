@@ -1,10 +1,24 @@
 {
-  BigInteger bi=new BigInteger("" + value);
-  byte buf[]=bi.toByteArray();
-  if ((buf == null) || (buf.length <= 0))   throw new IllegalArgumentException("Value [" + value + "] cannot be transformed");
-  int trim=0;
-  while ((trim < buf.length) && (buf[trim] == 0x00))   trim++;
-  byte rv[]=new byte[buf.length - trim];
-  System.arraycopy(buf,trim,rv,0,rv.length);
+  if (value < 0)   throw new IllegalArgumentException("unsigned integer, and you want a negative? " + value);
+  byte val[]=new byte[8];
+  val[0]=(byte)(value >>> 56);
+  val[1]=(byte)(value >>> 48);
+  val[2]=(byte)(value >>> 40);
+  val[3]=(byte)(value >>> 32);
+  val[4]=(byte)(value >>> 24);
+  val[5]=(byte)(value >>> 16);
+  val[6]=(byte)(value >>> 8);
+  val[7]=(byte)value;
+  int firstNonZero=-1;
+  for (int i=0; i < val.length; i++) {
+    if (val[i] != 0x00) {
+      firstNonZero=i;
+      break;
+    }
+  }
+  if (firstNonZero == 0)   return val;
+  if (firstNonZero == -1)   return new byte[1];
+  byte rv[]=new byte[8 - firstNonZero];
+  System.arraycopy(val,firstNonZero,rv,0,rv.length);
   return rv;
 }
