@@ -39,7 +39,15 @@ synchronized (_outboundPackets) {
         PacketLocal p=(PacketLocal)acked.get(i);
         _outboundPackets.remove(new Long(p.getSequenceNum()));
         _ackedPackets++;
+        if (p.getNumSends() > 1) {
+          _activeResends--;
+          if (_log.shouldLog(Log.WARN))           _log.warn("Active resend of " + p + " successful, # active left: "+ _activeResends);
+        }
       }
+    }
+    if ((_outboundPackets.size() <= 0) && (_activeResends != 0)) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("All outbound packets acked, clearing " + _activeResends);
+      _activeResends=0;
     }
     _outboundPackets.notifyAll();
   }

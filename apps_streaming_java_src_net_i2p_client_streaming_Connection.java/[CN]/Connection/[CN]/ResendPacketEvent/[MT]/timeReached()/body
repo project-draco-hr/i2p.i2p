@@ -5,6 +5,11 @@ synchronized (_outboundPackets) {
     if (_outboundPackets.containsKey(new Long(_packet.getSequenceNum())))     resend=true;
   }
   if ((resend) && (_packet.getAckTime() < 0)) {
+    if ((_activeResends > 0) && (!_currentIsActiveResend)) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Delaying resend of " + _packet + " as there are "+ _activeResends+ " active resends already in play");
+      SimpleTimer.getInstance().addEvent(ResendPacketEvent.this,1000);
+      return;
+    }
     _inputStream.updateAcks(_packet);
     _packet.setOptionalDelay(getOptions().getChoke());
     _packet.setOptionalMaxSize(getOptions().getMaxMessageSize());
@@ -17,8 +22,12 @@ synchronized (_outboundPackets) {
     if (newWindowSize <= 0)     newWindowSize=1;
     getOptions().setWindowSize(newWindowSize);
     int numSends=_packet.getNumSends() + 1;
+    if (numSends == 2) {
+      _activeResends++;
+      _currentIsActiveResend=true;
+    }
     if ((newWindowSize == 1) && (numSends > 2))     _context.sessionKeyManager().failTags(_remotePeer.getPublicKey());
-    if (_log.shouldLog(Log.WARN))     _log.warn("Resend packet " + _packet + " time "+ numSends+ " (wsize "+ newWindowSize+ " lifetime "+ (_context.clock().now() - _packet.getCreatedOn())+ "ms)");
+    if (_log.shouldLog(Log.WARN))     _log.warn("Resend packet " + _packet + " time "+ numSends+ " activeResends: "+ _activeResends+ " (wsize "+ newWindowSize+ " lifetime "+ (_context.clock().now() - _packet.getCreatedOn())+ "ms)");
     _outboundQueue.enqueue(_packet);
     if (numSends > _options.getMaxResends()) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Too many resends");
