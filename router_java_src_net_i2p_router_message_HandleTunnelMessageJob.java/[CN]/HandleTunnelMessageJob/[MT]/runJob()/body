@@ -1,7 +1,9 @@
 {
   TunnelId id=_message.getTunnelId();
-  if (_context.clock().now() >= _message.getMessageExpiration().getTime()) {
+  long excessLag=_context.clock().now() - _message.getMessageExpiration().getTime();
+  if (excessLag > 0) {
     if (_log.shouldLog(Log.ERROR))     _log.error("Accepted message (" + _message.getUniqueId() + ") expired on the queue for tunnel "+ id.getTunnelId()+ " expiring "+ (_context.clock().now() - _message.getMessageExpiration().getTime())+ "ms agp");
+    _context.statManager().addRateData("tunnel.expiredAfterAcceptTime",excessLag,excessLag);
     _context.messageHistory().messageProcessingError(_message.getUniqueId(),TunnelMessage.class.getName(),"tunnel message expired on the queue");
     return;
   }
