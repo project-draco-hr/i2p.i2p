@@ -1,0 +1,31 @@
+{
+  StringBuffer buf=new StringBuffer(8 * 1024);
+  buf.append(PROP_FORMAT).append('=').append(new String(_format)).append('\n');
+  buf.append(PROP_DATEFORMAT).append('=').append(_dateFormatPattern).append('\n');
+  buf.append(PROP_DISPLAYONSCREEN).append('=').append((_displayOnScreen ? "TRUE" : "FALSE")).append('\n');
+  String filenameOverride=_context.getProperty(FILENAME_OVERRIDE_PROP);
+  if (filenameOverride == null)   buf.append(PROP_FILENAME).append('=').append(_baseLogfilename).append('\n');
+ else   buf.append(PROP_FILENAME).append('=').append(DEFAULT_FILENAME).append('\n');
+  if (_fileSize >= 1024 * 1024)   buf.append(PROP_FILESIZE).append('=').append((_fileSize / (1024 * 1024))).append("m\n");
+ else   if (_fileSize >= 1024)   buf.append(PROP_FILESIZE).append('=').append((_fileSize / (1024))).append("k\n");
+ else   if (_fileSize > 0)   buf.append(PROP_FILESIZE).append('=').append(_fileSize).append('\n');
+  buf.append(PROP_ROTATIONLIMIT).append('=').append(_rotationLimit).append('\n');
+  buf.append(PROP_DEFALTLEVEL).append('=').append(Log.toLevelString(_defaultLimit)).append('\n');
+  buf.append(PROP_DISPLAYONSCREENLEVEL).append('=').append(Log.toLevelString(_onScreenLimit)).append('\n');
+  buf.append(PROP_CONSOLEBUFFERSIZE).append('=').append(_consoleBufferSize).append('\n');
+  buf.append("# log limit overrides:\n");
+  TreeMap limits=new TreeMap();
+synchronized (_limits) {
+    for (int i=0; i < _limits.size(); i++) {
+      LogLimit lim=(LogLimit)_limits.get(i);
+      limits.put(lim.getRootName(),Log.toLevelString(lim.getLimit()));
+    }
+  }
+  for (Iterator iter=limits.keySet().iterator(); iter.hasNext(); ) {
+    String path=(String)iter.next();
+    String lim=(String)limits.get(path);
+    buf.append(PROP_RECORD_PREFIX).append(path);
+    buf.append('=').append(lim).append('\n');
+  }
+  return buf.toString();
+}
