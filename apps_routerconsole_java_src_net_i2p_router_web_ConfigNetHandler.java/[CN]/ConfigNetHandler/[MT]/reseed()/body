@@ -1,0 +1,28 @@
+{
+  String seedURL=DEFAULT_SEED_URL;
+  if (_reseedFrom != null)   seedURL=_reseedFrom;
+  try {
+    URL dir=new URL(seedURL);
+    String content=new String(readURL(dir));
+    Set urls=new HashSet();
+    int cur=0;
+    while (true) {
+      int start=content.indexOf("href=\"routerInfo-",cur);
+      if (start < 0)       break;
+      int end=content.indexOf(".dat\">",start);
+      String name=content.substring(start + "href=\"routerInfo-".length(),end);
+      urls.add(name);
+      cur=end + 1;
+    }
+    int fetched=0;
+    for (Iterator iter=urls.iterator(); iter.hasNext(); ) {
+      fetchSeed(seedURL,(String)iter.next());
+      fetched++;
+    }
+    addFormNotice("Reseeded with " + fetched + " peers");
+  }
+ catch (  Throwable t) {
+    _context.logManager().getLog(ConfigNetHandler.class).error("Error reseeding",t);
+    addFormError("Error reseeding (RESEED_EXCEPTION)");
+  }
+}

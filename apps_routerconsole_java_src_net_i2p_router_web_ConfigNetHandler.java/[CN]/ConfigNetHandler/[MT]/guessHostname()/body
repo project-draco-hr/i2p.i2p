@@ -1,0 +1,33 @@
+{
+  BufferedReader reader=null;
+  try {
+    URL url=new URL("http://www.whatismyip.com/");
+    URLConnection con=url.openConnection();
+    con.connect();
+    reader=new BufferedReader(new InputStreamReader(con.getInputStream()));
+    String line=null;
+    while ((line=reader.readLine()) != null) {
+      if (line.startsWith(IP_PREFIX)) {
+        int end=line.indexOf(IP_SUFFIX);
+        if (end == -1) {
+          addFormError("Unable to guess the host (BAD_SUFFIX)");
+          return;
+        }
+        String ip=line.substring(IP_PREFIX.length(),end);
+        addFormNotice("Host guess: " + ip);
+        return;
+      }
+    }
+    addFormError("Unable to guess the host (NO_PREFIX)");
+  }
+ catch (  IOException ioe) {
+    addFormError("Unable to guess the host (IO_ERROR)");
+  }
+ finally {
+    if (reader != null)     try {
+      reader.close();
+    }
+ catch (    IOException ioe) {
+    }
+  }
+}

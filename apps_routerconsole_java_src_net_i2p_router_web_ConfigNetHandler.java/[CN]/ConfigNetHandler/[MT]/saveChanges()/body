@@ -1,0 +1,34 @@
+{
+  boolean restartRequired=false;
+  if ((_hostname != null) && (_hostname.length() > 0)) {
+    String oldHost=_context.router().getConfigSetting(ConfigNetHelper.PROP_I2NP_TCP_HOSTNAME);
+    if ((oldHost == null) || (!oldHost.equalsIgnoreCase(_hostname))) {
+      _context.router().setConfigSetting(ConfigNetHelper.PROP_I2NP_TCP_HOSTNAME,_hostname);
+      addFormNotice("Updating hostname from " + oldHost + " to "+ _hostname);
+      restartRequired=true;
+    }
+  }
+  if ((_port != null) && (_port.length() > 0)) {
+    String oldPort=_context.router().getConfigSetting(ConfigNetHelper.PROP_I2NP_TCP_PORT);
+    if ((oldPort == null) || (!oldPort.equalsIgnoreCase(_port))) {
+      _context.router().setConfigSetting(ConfigNetHelper.PROP_I2NP_TCP_PORT,_port);
+      addFormNotice("Updating TCP port from " + oldPort + " to "+ _port);
+      restartRequired=true;
+    }
+  }
+  updateRates();
+  if (_timeSyncEnabled) {
+    System.setProperty("timestamper.enabled","true");
+  }
+ else {
+    System.setProperty("timestamper.enabled","false");
+  }
+  boolean saved=_context.router().saveConfig();
+  if (saved)   addFormNotice("Configuration saved successfully");
+ else   addFormNotice("Error saving the configuration (applied but not saved) - please see the error logs");
+  if (restartRequired) {
+    addFormNotice("Performing a soft restart");
+    _context.router().restart();
+    addFormNotice("Soft restart complete");
+  }
+}
