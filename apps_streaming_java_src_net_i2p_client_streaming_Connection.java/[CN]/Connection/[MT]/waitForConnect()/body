@@ -1,0 +1,37 @@
+{
+  long expiration=_context.clock().now() + _options.getConnectTimeout();
+  while (true) {
+    if (_connected && (_receiveStreamId != null) && (_sendStreamId != null)) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("waitForConnect(): Connected and we have stream IDs");
+      return;
+    }
+    if (_connectionError != null) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("waitForConnect(): connection error found: " + _connectionError);
+      return;
+    }
+    if (!_connected) {
+      _connectionError="Connection failed";
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("waitForConnect(): not connected");
+      return;
+    }
+    long timeLeft=expiration - _context.clock().now();
+    if ((timeLeft <= 0) && (_options.getConnectTimeout() > 0)) {
+      if (_connectionError == null) {
+        _connectionError="Connection timed out";
+        disconnect(false);
+      }
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("waitForConnect(): timed out: " + _connectionError);
+      return;
+    }
+    if (timeLeft > 60 * 1000)     timeLeft=60 * 1000;
+    if (_options.getConnectTimeout() <= 0)     timeLeft=60 * 1000;
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("waitForConnect(): wait " + timeLeft);
+    try {
+synchronized (_connectLock) {
+        _connectLock.wait(timeLeft);
+      }
+    }
+ catch (    InterruptedException ie) {
+    }
+  }
+}
