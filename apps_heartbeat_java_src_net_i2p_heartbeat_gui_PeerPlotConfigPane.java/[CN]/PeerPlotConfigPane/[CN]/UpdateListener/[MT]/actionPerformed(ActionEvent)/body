@@ -1,0 +1,20 @@
+{
+  PeerPlotConfig.PlotSeriesConfig cfg=getConfig(_minutes);
+  if (cfg == null) {
+    _log.error("wtf, why is there no config for " + _minutes + "?");
+    List configs=_config.getAverageSeriesConfigs();
+    for (int i=0; i < configs.size(); i++) {
+      PeerPlotConfig.PlotSeriesConfig conf=(PeerPlotConfig.PlotSeriesConfig)configs.get(i);
+      _log.debug("We know about " + conf.getPeriod());
+    }
+    return;
+  }
+  cfg.getPlotConfig().disableEvents();
+  _log.debug("Updating data for minutes [" + _line._durationMinutes + "]: send ["+ _line._send.isSelected()+ "/"+ cfg.getPlotSendTime()+ "] recv ["+ _line._recv.isSelected()+ "/"+ cfg.getPlotReceiveTime()+ "] lost ["+ _line._lost.isSelected()+ "/"+ cfg.getPlotLostMessages()+ "]");
+  boolean force=_line._all.isSelected();
+  cfg.setPlotSendTime(_line._send.isSelected() || force);
+  cfg.setPlotReceiveTime(_line._recv.isSelected() || force);
+  cfg.setPlotLostMessages(_line._lost.isSelected() || force);
+  cfg.getPlotConfig().enableEvents();
+  cfg.getPlotConfig().fireUpdate();
+}

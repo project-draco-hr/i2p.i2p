@@ -1,0 +1,31 @@
+{
+  List knownNames=new ArrayList(8);
+  for (int i=0; i < _gui.getMonitor().getState().getTestCount(); i++) {
+    PeerPlotState state=_gui.getMonitor().getState().getTest(i);
+    String title=state.getPlotConfig().getTitle();
+    knownNames.add(state.getPlotConfig().getTitle());
+    if (_configPane.indexOfTab(title) >= 0) {
+      _log.debug("We already know about [" + title + "]");
+    }
+ else {
+      _log.info("The test [" + title + "] is new to us");
+      PeerPlotConfigPane pane=new PeerPlotConfigPane(state.getPlotConfig(),this);
+      _configPane.addTab(state.getPlotConfig().getTitle(),null,new JScrollPane(pane),state.getPlotConfig().getSummary());
+      _configPane.setBackgroundAt(_configPane.getTabCount() - 1,_background);
+      _configPane.setForegroundAt(_configPane.getTabCount() - 1,_foreground);
+    }
+  }
+  List toRemove=new ArrayList(4);
+  for (int i=0; i < _configPane.getTabCount(); i++) {
+    if (knownNames.contains(_configPane.getTitleAt(i))) {
+    }
+ else {
+      toRemove.add(_configPane.getTitleAt(i));
+    }
+  }
+  for (int i=0; i < toRemove.size(); i++) {
+    String title=(String)toRemove.get(i);
+    _log.info("Removing test [" + title + "]");
+    _configPane.removeTabAt(_configPane.indexOfTab(title));
+  }
+}
