@@ -1,0 +1,25 @@
+{
+  Hash peer=msg.getTarget().getIdentity().getHash();
+  VMCommSystem peerSys=(VMCommSystem)_commSystemFacades.get(peer);
+  long now=_context.clock().now();
+  long sendTime=now - msg.getSendBegin();
+  boolean sendSuccessful=false;
+  if (peerSys == null) {
+    _context.jobQueue().addJob(msg.getOnFailedSendJob());
+    _context.statManager().updateFrequency("transport.sendMessageFailureFrequency");
+    _context.profileManager().messageFailed(msg.getTarget().getIdentity().getHash(),"vm");
+  }
+ else {
+    _context.jobQueue().addJob(msg.getOnSendJob());
+    _context.profileManager().messageSent(msg.getTarget().getIdentity().getHash(),"vm",sendTime,msg.getMessageSize());
+    _context.statManager().addRateData("transport.sendMessageSize",msg.getMessageSize(),sendTime);
+    peerSys.receive(msg.getMessage().toByteArray(),_context.routerHash());
+    sendSuccessful=true;
+  }
+  if (true) {
+    I2NPMessage dmsg=msg.getMessage();
+    String type=dmsg.getClass().getName();
+    _context.messageHistory().sendMessage(type,dmsg.getUniqueId(),dmsg.getMessageExpiration(),msg.getTarget().getIdentity().getHash(),sendSuccessful);
+  }
+  _context.statManager().addRateData("transport.sendProcessingTime",msg.getLifetime(),msg.getLifetime());
+}

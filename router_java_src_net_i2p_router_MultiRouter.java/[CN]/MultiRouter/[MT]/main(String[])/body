@@ -1,0 +1,40 @@
+{
+  if ((args == null) || (args.length <= 1)) {
+    usage();
+    return;
+  }
+  _defaultContext=new I2PAppContext(getEnv(args[0]));
+  _log=_defaultContext.logManager().getLog(MultiRouter.class);
+  try {
+    Thread.sleep(5 * 1000);
+  }
+ catch (  InterruptedException ie) {
+  }
+  Runtime.getRuntime().addShutdownHook(new Thread(){
+    public void run(){
+      try {
+        Thread.sleep(15 * 1000);
+      }
+ catch (      InterruptedException ie) {
+      }
+      Runtime.getRuntime().halt(-1);
+    }
+  }
+);
+  for (int i=1; i < args.length; i++) {
+    Router router=new Router(getEnv(args[i]));
+    router.setKillVMOnEnd(false);
+    _routers.add(router);
+    _log.info("Router " + i + " created from "+ args[i]);
+    try {
+      Thread.sleep(1 * 1000);
+    }
+ catch (    InterruptedException ie) {
+    }
+  }
+  for (int i=0; i < _routers.size(); i++) {
+    ((Router)_routers.get(i)).runRouter();
+  }
+  _log.info("All " + _routers.size() + " routers started up");
+  waitForCompletion();
+}
