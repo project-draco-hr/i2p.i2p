@@ -1,13 +1,13 @@
 {
   ByteArrayInputStream dgStream=new ByteArrayInputStream(dgram);
-  byte[] hashedData;
+  byte[] rxTrimmedPayload;
   try {
-    rxSign.readBytes(dgStream);
     rxDest.readBytes(dgStream);
+    rxSign.readBytes(dgStream);
     rxPayloadLen=dgStream.read(rxPayload);
-    hashedData=new byte[dgram.length - Signature.SIGNATURE_BYTES];
-    System.arraycopy(dgram,Signature.SIGNATURE_BYTES,hashedData,0,hashedData.length);
-    rxHashBytes=hashGen.calculateHash(hashedData).toByteArray();
+    rxTrimmedPayload=new byte[rxPayloadLen];
+    System.arraycopy(rxPayload,0,rxTrimmedPayload,0,rxPayloadLen);
+    rxHashBytes=hashGen.calculateHash(rxTrimmedPayload).toByteArray();
   }
  catch (  IOException e) {
     _log.error("Caught IOException - INCONSISTENT STATE!",e);
