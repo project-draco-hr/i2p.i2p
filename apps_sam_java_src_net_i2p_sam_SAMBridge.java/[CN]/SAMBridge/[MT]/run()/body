@@ -2,11 +2,11 @@
   try {
     while (acceptConnections) {
       Socket s=serverSocket.accept();
-      _log.debug("New connection from " + s.getInetAddress().toString() + ":"+ s.getPort());
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("New connection from " + s.getInetAddress().toString() + ":"+ s.getPort());
       try {
-        SAMHandler handler=SAMHandlerFactory.createSAMHandler(s);
+        SAMHandler handler=SAMHandlerFactory.createSAMHandler(s,i2cpProps);
         if (handler == null) {
-          _log.debug("SAM handler has not been instantiated");
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("SAM handler has not been instantiated");
           try {
             s.close();
           }
@@ -17,17 +17,17 @@
         handler.startHandling();
       }
  catch (      SAMException e) {
-        _log.error("SAM error: " + e.getMessage());
+        if (_log.shouldLog(Log.ERROR))         _log.error("SAM error: " + e.getMessage(),e);
         s.close();
       }
     }
   }
  catch (  Exception e) {
-    _log.error("Unexpected error while listening for connections",e);
+    if (_log.shouldLog(Log.ERROR))     _log.error("Unexpected error while listening for connections",e);
   }
  finally {
     try {
-      _log.debug("Shutting down, closing server socket");
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Shutting down, closing server socket");
       serverSocket.close();
     }
  catch (    IOException e) {
