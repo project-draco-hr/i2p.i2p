@@ -1,0 +1,16 @@
+{
+  boolean lively=true;
+  for (Iterator iter=_manager.getRunnerDestinations().iterator(); iter.hasNext(); ) {
+    Destination dest=(Destination)iter.next();
+    ClientConnectionRunner runner=_manager.getRunner(dest);
+    if ((runner == null) || (runner.getIsDead()))     continue;
+    LeaseSet ls=runner.getLeaseSet();
+    if (ls == null)     continue;
+    long howLongAgo=_context.clock().now() - ls.getEarliestLeaseDate();
+    if (howLongAgo > MAX_TIME_TO_REBUILD) {
+      if (_log.shouldLog(Log.ERROR))       _log.error("Client " + dest.calculateHash().toBase64().substring(0,6) + " has a leaseSet that expired "+ DataHelper.formatDuration(howLongAgo));
+      lively=false;
+    }
+  }
+  return lively;
+}
