@@ -4,8 +4,10 @@
   long start=_context.clock().now();
   byte d2[]=new byte[1 + Hash.HASH_LENGTH + data.length];
   d2[0]=(byte)0xFF;
-  Hash hash=_context.sha().calculateHash(data);
+  SHA256EntryCache.CacheEntry cache=_context.sha().cache().acquire(data.length);
+  Hash hash=_context.sha().calculateHash(data,cache);
   System.arraycopy(hash.getData(),0,d2,1,Hash.HASH_LENGTH);
+  _context.sha().cache().release(cache);
   System.arraycopy(data,0,d2,1 + Hash.HASH_LENGTH,data.length);
   long t0=_context.clock().now();
   BigInteger m=new NativeBigInteger(1,d2);

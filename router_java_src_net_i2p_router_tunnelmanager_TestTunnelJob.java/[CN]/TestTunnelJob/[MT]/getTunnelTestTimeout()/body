@@ -4,13 +4,29 @@
   if (rs != null) {
     Rate r=rs.getRate(10 * 60 * 1000);
     if (r != null) {
-      if (r.getLifetimeEventCount() > 0) {
+      if (r.getLifetimeEventCount() > 10) {
         if (r.getLastEventCount() <= 0)         rv=(long)(r.getLifetimeAverageValue() * getTunnelTestDeviationLimit());
  else         rv=(long)(r.getAverageValue() * getTunnelTestDeviationLimit());
       }
     }
   }
-  long min=getMinimumTestTimeout();
-  if (rv < min)   rv=min;
+  rs=getContext().statManager().getRate("tunnel.failAfterTime");
+  if (rs != null) {
+    Rate r=rs.getRate(5 * 60 * 1000);
+    if (r != null) {
+      long failures=r.getLastEventCount() + r.getCurrentEventCount();
+      if (failures > 0) {
+        rv<<=failures;
+        if (_log.shouldLog(Log.WARN))         _log.warn("Tunnels are failing (" + failures + "), so set the timeout to "+ rv);
+      }
+    }
+  }
+  if (rv > MAXIMUM_TEST_TIMEOUT) {
+    rv=MAXIMUM_TEST_TIMEOUT;
+  }
+ else {
+    long min=getMinimumTestTimeout();
+    if (rv < min)     rv=min;
+  }
   return rv;
 }

@@ -1,4 +1,6 @@
 {
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Sending on to requested router " + router.toBase64());
-  getContext().jobQueue().addJob(new SendMessageDirectJob(getContext(),body,router,FORWARD_TIMEOUT,FORWARD_PRIORITY));
+  int timeoutMs=(int)(body.getMessageExpiration().getTime() - getContext().clock().now());
+  if (timeoutMs < 5000)   timeoutMs=FORWARD_TIMEOUT;
+  getContext().jobQueue().addJob(new SendMessageDirectJob(getContext(),body,router,timeoutMs,FORWARD_PRIORITY));
 }

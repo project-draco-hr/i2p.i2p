@@ -1,0 +1,17 @@
+{
+  if (_sessionId == null)   throw new I2CPMessageException("Unable to write out the message, as the session ID has not been defined");
+  if (_messageId == null)   throw new I2CPMessageException("Unable to write out the message, as the message ID has not been defined");
+  if (_payload == null)   throw new I2CPMessageException("Unable to write out the message, as the payload has not been defined");
+  int size=2 + 4 + 4+ _payload.getSize();
+  try {
+    DataHelper.writeLong(out,4,size);
+    DataHelper.writeLong(out,1,getType());
+    DataHelper.writeLong(out,2,_sessionId.getSessionId());
+    DataHelper.writeLong(out,4,_messageId.getMessageId());
+    DataHelper.writeLong(out,4,_payload.getSize());
+    out.write(_payload.getEncryptedData());
+  }
+ catch (  DataFormatException dfe) {
+    throw new I2CPMessageException("Unable to write the message length or type",dfe);
+  }
+}

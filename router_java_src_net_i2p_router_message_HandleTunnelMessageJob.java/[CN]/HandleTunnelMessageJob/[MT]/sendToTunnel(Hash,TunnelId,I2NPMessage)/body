@@ -1,9 +1,22 @@
 {
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Sending on to requested tunnel " + id.getTunnelId() + " on router "+ router.toBase64());
-  TunnelMessage msg=new TunnelMessage(getContext());
-  msg.setTunnelId(id);
-  msg.setData(body.toByteArray());
-  getContext().jobQueue().addJob(new SendMessageDirectJob(getContext(),msg,router,FORWARD_TIMEOUT,FORWARD_PRIORITY));
-  String bodyType=body.getClass().getName();
-  getContext().messageHistory().wrap(bodyType,body.getUniqueId(),TunnelMessage.class.getName(),msg.getUniqueId());
+  int timeoutMs=(int)(body.getMessageExpiration().getTime() - getContext().clock().now());
+  if (timeoutMs < 5000)   timeoutMs=FORWARD_TIMEOUT;
+  TunnelInfo curInfo=getContext().tunnelManager().getTunnelInfo(_message.getTunnelId());
+  if (curInfo.getTunnelId().getType() != TunnelId.TYPE_INBOUND) {
+    TunnelMessage msg=new TunnelMessage(getContext());
+    msg.setTunnelId(id);
+    msg.setData(body.toByteArray());
+    getContext().jobQueue().addJob(new SendMessageDirectJob(getContext(),msg,router,timeoutMs,FORWARD_PRIORITY));
+    String bodyType=body.getClass().getName();
+    getContext().messageHistory().wrap(bodyType,body.getUniqueId(),TunnelMessage.class.getName(),msg.getUniqueId());
+  }
+ else {
+    TunnelId outTunnelId=selectOutboundTunnelId();
+    if (outTunnelId == null) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("No outbound tunnels available to forward the message, dropping it");
+      return;
+    }
+    getContext().jobQueue().addJob(new SendTunnelMessageJob(getContext(),body,outTunnelId,router,id,null,null,null,null,timeoutMs,FORWARD_PRIORITY));
+  }
 }

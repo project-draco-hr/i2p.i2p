@@ -5,35 +5,43 @@
     SessionKey newKey=null;
     Hash readHash=null;
     List tags=new ArrayList();
-    ByteArrayInputStream bais=new ByteArrayInputStream(decrypted);
-    long numTags=DataHelper.readLong(bais,2);
+    int cur=0;
+    long numTags=DataHelper.fromLong(decrypted,cur,2);
+    cur+=2;
     if ((numTags < 0) || (numTags > 65535))     throw new Exception("Invalid number of session tags");
+    if (numTags * SessionTag.BYTE_LENGTH > decrypted.length - 2) {
+      throw new Exception("# tags: " + numTags + " is too many for "+ (decrypted.length - 2));
+    }
     for (int i=0; i < numTags; i++) {
-      byte tag[]=new byte[32];
-      int read=bais.read(tag);
-      if (read != 32)       throw new Exception("Invalid session tag - # tags: " + numTags + " curTag #: "+ i+ " read: "+ read);
+      byte tag[]=new byte[SessionTag.BYTE_LENGTH];
+      System.arraycopy(decrypted,cur,tag,0,SessionTag.BYTE_LENGTH);
+      cur+=SessionTag.BYTE_LENGTH;
       tags.add(new SessionTag(tag));
     }
-    long len=DataHelper.readLong(bais,4);
-    if ((len < 0) || (len > encryptedLen))     throw new Exception("Invalid size of payload");
-    byte hashval[]=new byte[32];
-    int read=bais.read(hashval);
-    if (read != hashval.length)     throw new Exception("Invalid size of hash");
+    long len=DataHelper.fromLong(decrypted,cur,4);
+    cur+=4;
+    if ((len < 0) || (len > decrypted.length - cur - Hash.HASH_LENGTH- 1))     throw new Exception("Invalid size of payload (" + len + ", remaining "+ (decrypted.length - cur)+ ")");
+    byte hashval[]=new byte[Hash.HASH_LENGTH];
+    System.arraycopy(decrypted,cur,hashval,0,Hash.HASH_LENGTH);
+    cur+=Hash.HASH_LENGTH;
     readHash=new Hash();
     readHash.setData(hashval);
-    byte flag=(byte)bais.read();
+    byte flag=decrypted[cur++];
     if (flag == 0x01) {
-      byte rekeyVal[]=new byte[32];
-      read=bais.read(rekeyVal);
-      if (read != rekeyVal.length)       throw new Exception("Invalid size of the rekeyed session key");
+      byte rekeyVal[]=new byte[SessionKey.KEYSIZE_BYTES];
+      System.arraycopy(decrypted,cur,rekeyVal,0,SessionKey.KEYSIZE_BYTES);
+      cur+=SessionKey.KEYSIZE_BYTES;
       newKey=new SessionKey();
       newKey.setData(rekeyVal);
     }
     byte unencrData[]=new byte[(int)len];
-    read=bais.read(unencrData);
-    if (read != unencrData.length)     throw new Exception("Invalid size of the data read");
-    Hash calcHash=_context.sha().calculateHash(unencrData);
-    if (calcHash.equals(readHash)) {
+    System.arraycopy(decrypted,cur,unencrData,0,(int)len);
+    cur+=len;
+    SHA256EntryCache.CacheEntry cache=_context.sha().cache().acquire(unencrData.length);
+    Hash calcHash=_context.sha().calculateHash(unencrData,cache);
+    boolean eq=calcHash.equals(readHash);
+    _context.sha().cache().release(cache);
+    if (eq) {
       foundTags.addAll(tags);
       if (newKey != null)       foundKey.setData(newKey.getData());
       return unencrData;

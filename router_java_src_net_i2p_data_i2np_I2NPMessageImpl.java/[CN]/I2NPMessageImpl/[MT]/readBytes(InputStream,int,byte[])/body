@@ -18,8 +18,11 @@
       }
       cur+=numRead;
     }
-    Hash calc=_context.sha().calculateHash(buffer,0,size);
-    if (!calc.equals(h))     throw new I2NPMessageException("Hash does not match");
+    SHA256EntryCache.CacheEntry cache=_context.sha().cache().acquire(size);
+    Hash calc=_context.sha().calculateHash(buffer,0,size,cache);
+    boolean eq=calc.equals(h);
+    _context.sha().cache().release(cache);
+    if (!eq)     throw new I2NPMessageException("Hash does not match");
     long start=_context.clock().now();
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Reading bytes: type = " + type + " / uniqueId : "+ _uniqueId+ " / expiration : "+ _expiration);
     readMessage(buffer,0,size,type);
