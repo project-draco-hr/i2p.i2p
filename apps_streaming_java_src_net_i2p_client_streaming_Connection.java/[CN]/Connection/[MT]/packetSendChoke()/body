@@ -1,13 +1,15 @@
 {
-  if (true)   return true;
+  if (false)   return true;
   long writeExpire=_options.getWriteTimeout();
-  if (writeExpire > 0)   writeExpire+=_context.clock().now();
   while (true) {
     long timeLeft=writeExpire - _context.clock().now();
 synchronized (_outboundPackets) {
       if (_outboundPackets.size() >= _options.getWindowSize()) {
         if (writeExpire > 0) {
-          if (timeLeft <= 0)           return false;
+          if (timeLeft <= 0) {
+            _log.error("Outbound window is full of " + _outboundPackets.size() + " and we've waited too long ("+ writeExpire+ "ms)");
+            return false;
+          }
           if (_log.shouldLog(Log.DEBUG))           _log.debug("Outbound window is full (" + _outboundPackets.size() + "/"+ _options.getWindowSize()+ "), waiting "+ timeLeft);
           try {
             _outboundPackets.wait(timeLeft);

@@ -17,26 +17,40 @@
     if (packet.getSequenceNum() > 0) {
       con.getOptions().setResendDelay(con.getOptions().getResendDelay() * 2);
       if (_log.shouldLog(Log.WARN))       _log.warn("congestion.. dup " + packet);
+      con.incrementUnackedPacketsReceived();
     }
  else {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("ACK only packet received: " + packet);
     }
   }
+  int numResends=0;
   List acked=con.ackPackets(packet.getAckThrough(),packet.getNacks());
   if ((acked != null) && (acked.size() > 0)) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug(acked.size() + " of our packets acked with " + packet);
     int lowestRtt=-1;
     for (int i=0; i < acked.size(); i++) {
       PacketLocal p=(PacketLocal)acked.get(i);
-      if ((lowestRtt < 0) || (p.getAckTime() < lowestRtt))       lowestRtt=p.getAckTime();
+      if ((lowestRtt < 0) || (p.getAckTime() < lowestRtt)) {
+        if (p.getNumSends() <= 1)         lowestRtt=p.getAckTime();
+      }
+      if (p.getNumSends() > 1)       numResends++;
       if ((p.getKeyUsed() != null) && (p.getTagsSent() != null) && (p.getTagsSent().size() > 0)) {
         _context.sessionKeyManager().tagsDelivered(p.getTo().getPublicKey(),p.getKeyUsed(),p.getTagsSent());
       }
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Packet acked: " + p);
     }
-    int oldRTT=con.getOptions().getRTT();
-    int newRTT=(int)(RTT_DAMPENING * oldRTT + (1 - RTT_DAMPENING) * lowestRtt);
-    con.getOptions().setRTT(newRTT);
+    if (lowestRtt > 0) {
+      int oldRTT=con.getOptions().getRTT();
+      int newRTT=(int)(RTT_DAMPENING * oldRTT + (1 - RTT_DAMPENING) * lowestRtt);
+      con.getOptions().setRTT(newRTT);
+    }
   }
+  boolean fastAck=adjustWindow(con,isNew,packet.getSequenceNum(),numResends);
   con.eventOccurred();
+  if (fastAck) {
+    if (con.getLastSendTime() + con.getOptions().getRTT() < _context.clock().now()) {
+      _log.error("Fast ack for dup " + packet);
+      con.ackImmediately();
+    }
+  }
 }

@@ -13,13 +13,13 @@
 synchronized (_outboundPackets) {
       _outboundPackets.put(new Long(packet.getSequenceNum()),packet);
     }
-    SimpleTimer.getInstance().addEvent(new ResendPacketEvent(packet),_options.getResendDelay());
+    SimpleTimer.getInstance().addEvent(new ResendPacketEvent(packet),_options.getRTT() * 2);
   }
   _lastSendTime=_context.clock().now();
   _outboundQueue.enqueue(packet);
   if (ackOnly) {
     if (packet.getTagsSent().size() > 0) {
-      _log.error("Sending a ping since the ACK we just sent has " + packet.getTagsSent().size() + " tags");
+      _log.warn("Sending a ping since the ACK we just sent has " + packet.getTagsSent().size() + " tags");
       _connectionManager.ping(_remotePeer,_options.getRTT() * 2,false,packet.getKeyUsed(),packet.getTagsSent());
     }
   }

@@ -12,14 +12,14 @@ synchronized (_outboundPackets) {
     _packet.setReceiveStreamId(_receiveStreamId);
     _packet.setSendStreamId(_sendStreamId);
     int numSends=_packet.getNumSends() + 1;
-    if (_log.shouldLog(Log.ERROR))     _log.error("Resend packet " + _packet + " time "+ numSends+ " on "+ Connection.this);
+    if (_log.shouldLog(Log.WARN))     _log.warn("Resend packet " + _packet + " time "+ numSends+ " on "+ Connection.this);
     _outboundQueue.enqueue(_packet);
     if (numSends > _options.getMaxResends()) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Too many resends");
       disconnect(false);
     }
  else {
-      long timeout=_options.getResendDelay() << numSends;
+      long timeout=_options.getRTT() << numSends;
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Scheduling resend in " + timeout + "ms");
       SimpleTimer.getInstance().addEvent(ResendPacketEvent.this,timeout);
     }
