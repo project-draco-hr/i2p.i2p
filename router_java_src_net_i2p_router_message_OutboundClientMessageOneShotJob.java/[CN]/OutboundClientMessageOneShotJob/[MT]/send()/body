@@ -8,7 +8,8 @@
   if (_shouldBundle) {
     replyLeaseSet=getContext().netDb().lookupLeaseSetLocally(_from.calculateHash());
   }
-  GarlicMessage msg=OutboundClientMessageJobHelper.createGarlicMessage(getContext(),token,_overallExpiration,key,_clove,_from.calculateHash(),_to,sessKey,tags,true,replyLeaseSet);
+  _inTunnel=selectInboundTunnel();
+  GarlicMessage msg=OutboundClientMessageJobHelper.createGarlicMessage(getContext(),token,_overallExpiration,key,_clove,_from.calculateHash(),_to,_inTunnel,sessKey,tags,true,replyLeaseSet);
   if (msg == null) {
     if (_log.shouldLog(Log.ERROR))     _log.error(getJobId() + ": Unable to create the garlic message (no tunnels left) to " + _toString);
     dieFatal();
@@ -19,10 +20,10 @@
   SendTimeoutJob onFail=new SendTimeoutJob(getContext());
   ReplySelector selector=new ReplySelector(token);
   if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": Placing GarlicMessage into the new tunnel message bound for " + _toString+ " at "+ _lease.getTunnelId()+ " on "+ _lease.getGateway().toBase64());
-  TunnelInfo outTunnel=selectOutboundTunnel();
-  if (outTunnel != null) {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug(getJobId() + ": Sending tunnel message out " + outTunnel.getSendTunnelId(0)+ " to "+ _toString+ " at "+ _lease.getTunnelId()+ " on "+ _lease.getGateway().toBase64());
-    getContext().jobQueue().addJob(new DispatchJob(getContext(),msg,outTunnel,selector,onReply,onFail,(int)(_overallExpiration - getContext().clock().now())));
+  _outTunnel=selectOutboundTunnel();
+  if (_outTunnel != null) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug(getJobId() + ": Sending tunnel message out " + _outTunnel.getSendTunnelId(0)+ " to "+ _toString+ " at "+ _lease.getTunnelId()+ " on "+ _lease.getGateway().toBase64());
+    getContext().jobQueue().addJob(new DispatchJob(getContext(),msg,selector,onReply,onFail,(int)(_overallExpiration - getContext().clock().now())));
   }
  else {
     if (_log.shouldLog(Log.ERROR))     _log.error(getJobId() + ": Could not find any outbound tunnels to send the payload through... wtf?");

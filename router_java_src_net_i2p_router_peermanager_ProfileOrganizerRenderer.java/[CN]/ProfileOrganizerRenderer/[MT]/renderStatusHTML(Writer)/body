@@ -1,13 +1,13 @@
 {
   Set peers=_organizer.selectAllPeers();
   long hideBefore=_context.clock().now() - 3 * 60 * 60* 1000;
-  TreeMap order=new TreeMap();
+  TreeSet order=new TreeSet(_comparator);
   for (Iterator iter=peers.iterator(); iter.hasNext(); ) {
     Hash peer=(Hash)iter.next();
     if (_organizer.getUs().equals(peer))     continue;
     PeerProfile prof=_organizer.getProfile(peer);
     if (prof.getLastSendSuccessful() <= hideBefore)     continue;
-    order.put(peer.toBase64(),prof);
+    order.add(prof);
   }
   int fast=0;
   int reliable=0;
@@ -25,25 +25,10 @@
   buf.append("<td><b>Failing?</b></td>");
   buf.append("<td>&nbsp;</td>");
   buf.append("</tr>");
-  for (Iterator iter=order.keySet().iterator(); iter.hasNext(); ) {
-    String name=(String)iter.next();
-    PeerProfile prof=(PeerProfile)order.get(name);
+  int prevTier=1;
+  for (Iterator iter=order.iterator(); iter.hasNext(); ) {
+    PeerProfile prof=(PeerProfile)iter.next();
     Hash peer=prof.getPeer();
-    buf.append("<tr>");
-    buf.append("<td><code>");
-    if (prof.getIsFailing()) {
-      buf.append("<font color=\"red\">--").append(peer.toBase64().substring(0,6)).append("</font>");
-    }
- else {
-      if (prof.getIsActive()) {
-        buf.append("<font color=\"blue\">++").append(peer.toBase64().substring(0,6)).append("</font>");
-      }
- else {
-        buf.append("__").append(peer.toBase64().substring(0,6));
-      }
-    }
-    buf.append("</code></td>");
-    buf.append("<td>");
     int tier=0;
     boolean isIntegrated=false;
     if (_organizer.isFast(peer)) {
@@ -65,6 +50,23 @@
       isIntegrated=true;
       integrated++;
     }
+    if (tier != prevTier)     buf.append("<tr><td colspan=\"7\"><hr /></td></tr>\n");
+    prevTier=tier;
+    buf.append("<tr>");
+    buf.append("<td><code>");
+    if (prof.getIsFailing()) {
+      buf.append("<font color=\"red\">--").append(peer.toBase64().substring(0,6)).append("</font>");
+    }
+ else {
+      if (prof.getIsActive()) {
+        buf.append("<font color=\"blue\">++").append(peer.toBase64().substring(0,6)).append("</font>");
+      }
+ else {
+        buf.append("__").append(peer.toBase64().substring(0,6));
+      }
+    }
+    buf.append("</code></td>");
+    buf.append("<td>");
 switch (tier) {
 case 1:
       buf.append("Fast");
