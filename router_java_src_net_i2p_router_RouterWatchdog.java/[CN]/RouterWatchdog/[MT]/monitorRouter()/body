@@ -1,8 +1,16 @@
 {
   boolean ok=verifyJobQueueLiveliness();
   ok=ok && verifyClientLiveliness();
-  if (!ok && shutdownOnHang()) {
-    _log.log(Log.CRIT,"Router hung!  hard restart!");
-    System.exit(Router.EXIT_HARD_RESTART);
+  if (!ok) {
+    dumpStatus();
+    if (shutdownOnHang()) {
+      _log.log(Log.CRIT,"Router hung!  hard restart!");
+      try {
+        Thread.sleep(30 * 1000);
+      }
+ catch (      InterruptedException ie) {
+      }
+      Runtime.getRuntime().halt(Router.EXIT_HARD_RESTART);
+    }
   }
 }
