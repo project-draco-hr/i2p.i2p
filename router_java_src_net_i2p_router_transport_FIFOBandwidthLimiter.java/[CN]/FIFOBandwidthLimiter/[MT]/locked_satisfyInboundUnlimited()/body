@@ -1,0 +1,15 @@
+{
+  List satisfied=null;
+  while (_pendingInboundRequests.size() > 0) {
+    SimpleRequest req=(SimpleRequest)_pendingInboundRequests.remove(0);
+    int allocated=req.getPendingInboundRequested();
+    _totalAllocatedInboundBytes+=allocated;
+    req.allocateBytes(allocated,0);
+    if (satisfied == null)     satisfied=new ArrayList(2);
+    satisfied.add(req);
+    long waited=_context.clock().now() - req.getRequestTime();
+    if (_log.shouldLog(Log.INFO))     _log.info("Granting inbound request " + req.getRequestName() + " fully for "+ req.getTotalInboundRequested()+ " bytes (waited "+ waited+ "ms) pending "+ _pendingInboundRequests.size());
+    if (waited > 10)     _context.statManager().addRateData("bwLimiter.inboundDelayedTime",waited,waited);
+  }
+  return satisfied;
+}

@@ -1,0 +1,30 @@
+{
+  List satisfied=null;
+  for (int i=0; i < _pendingOutboundRequests.size(); i++) {
+    if (_availableOutboundBytes <= 0)     break;
+    SimpleRequest req=(SimpleRequest)_pendingOutboundRequests.get(i);
+    if (req.getAllocationsSinceWait() > 0) {
+      continue;
+    }
+    int requested=req.getPendingOutboundRequested();
+    int allocated=0;
+    if (_availableOutboundBytes > requested)     allocated=requested;
+ else     allocated=_availableOutboundBytes;
+    _availableOutboundBytes-=allocated;
+    _totalAllocatedOutboundBytes+=allocated;
+    req.allocateBytes(0,allocated);
+    if (satisfied == null)     satisfied=new ArrayList(2);
+    satisfied.add(req);
+    long waited=_context.clock().now() - req.getRequestTime();
+    if (req.getPendingOutboundRequested() > 0) {
+      if (_log.shouldLog(Log.INFO))       _log.info("Allocating " + allocated + " bytes outbound as a partial grant to "+ req.getRequestName()+ " (wanted "+ req.getTotalOutboundRequested()+ " bytes, waited "+ waited+ "ms) pending "+ _pendingOutboundRequests.size());
+    }
+ else {
+      if (_log.shouldLog(Log.INFO))       _log.info("Allocating " + allocated + " bytes outbound to finish the partial grant to "+ req.getRequestName()+ " (total "+ req.getTotalOutboundRequested()+ " bytes, waited "+ waited+ "ms) pending "+ _pendingOutboundRequests.size());
+      _pendingOutboundRequests.remove(i);
+      i--;
+      if (waited > 10)       _context.statManager().addRateData("bwLimiter.outboundDelayedTime",waited,waited);
+    }
+  }
+  return satisfied;
+}
