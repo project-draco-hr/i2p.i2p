@@ -23,13 +23,13 @@ synchronized (_session) {
     }
     return;
   }
-  if (_serverSocket.getNewSocket(s)) {
+  if (_serverSocket.addWaitForAccept(s,_acceptTimeout)) {
     _inSockets.put(newLocalID,s);
     byte[] packet=makePacket((byte)ACK,id,toBytes(newLocalID));
     boolean replySentOk=false;
     replySentOk=_session.sendMessage(d,packet);
     if (!replySentOk) {
-      _log.error("Error sending reply to " + d.calculateHash().toBase64() + " in response to a new con message",new Exception("Failed creation"));
+      if (_log.shouldLog(Log.WARN))       _log.warn("Error sending reply to " + d.calculateHash().toBase64() + " in response to a new con message",new Exception("Failed creation"));
       s.internalClose();
     }
   }
@@ -38,7 +38,7 @@ synchronized (_session) {
     packet[0]=CLOSE_OUT;
     boolean nackSent=session.sendMessage(d,packet);
     if (!nackSent) {
-      _log.error("Error sending NACK for session creation");
+      _log.warn("Error sending NACK for session creation");
     }
     s.internalClose();
   }
