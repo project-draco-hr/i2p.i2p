@@ -28,30 +28,40 @@ synchronized (lock) {
     return s;
   }
  catch (  InterruptedIOException ioe) {
-    _log.error("Timeout waiting for ack from syn for id " + getReadableForm(lcID),ioe);
+    if (_log.shouldLog(Log.ERROR))     _log.error("Timeout waiting for ack from syn for id " + getReadableForm(lcID),ioe);
 synchronized (lock) {
       _outSockets.remove(s.getLocalID());
     }
+    s.internalClose();
     throw new InterruptedIOException("Timeout waiting for ack");
   }
 catch (  ConnectException ex) {
+    s.internalClose();
     throw ex;
   }
 catch (  NoRouteToHostException ex) {
+    s.internalClose();
     throw ex;
   }
 catch (  IOException ex) {
-    _log.error("Error sending syn on id " + getReadableForm(lcID),ex);
+    if (_log.shouldLog(Log.ERROR))     _log.error("Error sending syn on id " + getReadableForm(lcID),ex);
 synchronized (lock) {
       _outSockets.remove(s.getLocalID());
     }
+    s.internalClose();
     throw new I2PException("Unhandled IOException occurred");
   }
 catch (  I2PException ex) {
-    _log.info("Error sending syn on id " + getReadableForm(lcID),ex);
+    if (_log.shouldLog(Log.INFO))     _log.info("Error sending syn on id " + getReadableForm(lcID),ex);
 synchronized (lock) {
       _outSockets.remove(s.getLocalID());
     }
+    s.internalClose();
     throw ex;
+  }
+catch (  Exception e) {
+    s.internalClose();
+    _log.error("Unhandled error connecting",e);
+    throw new ConnectException("Unhandled error connecting: " + e.getMessage());
   }
 }
