@@ -15,6 +15,14 @@ synchronized (_connectionLock) {
     }
   }
   con.setReceiveStreamId(receiveId);
-  con.getPacketHandler().receivePacket(synPacket,con);
+  try {
+    con.getPacketHandler().receivePacket(synPacket,con);
+  }
+ catch (  I2PException ie) {
+synchronized (_connectionLock) {
+      _connectionByInboundId.remove(new ByteArray(receiveId));
+    }
+    return null;
+  }
   return con;
 }

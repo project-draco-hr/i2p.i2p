@@ -3,17 +3,16 @@
   _connected=false;
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Disconnecting " + toString(),new Exception("discon"));
   if (cleanDisconnect) {
-    try {
-      _outputStream.close();
-      _inputStream.close();
-    }
- catch (    IOException ioe) {
-      if (_log.shouldLog(Log.WARN))       _log.warn("Error on clean disconnect",ioe);
-    }
+    _outputStream.closeInternal();
+    _inputStream.close();
   }
  else {
     doClose();
 synchronized (_outboundPackets) {
+      for (Iterator iter=_outboundPackets.values().iterator(); iter.hasNext(); ) {
+        PacketLocal pl=(PacketLocal)iter.next();
+        pl.cancelled();
+      }
       _outboundPackets.clear();
       _outboundPackets.notifyAll();
     }

@@ -8,20 +8,34 @@
   boolean ackOnly=false;
   if ((packet.getSequenceNum() == 0) && (!packet.isFlagSet(Packet.FLAG_SYNCHRONIZE))) {
     ackOnly=true;
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("No resend for " + packet);
   }
  else {
+    int remaining=0;
 synchronized (_outboundPackets) {
       _outboundPackets.put(new Long(packet.getSequenceNum()),packet);
+      remaining=_options.getWindowSize() - _outboundPackets.size();
       _outboundPackets.notifyAll();
     }
-    SimpleTimer.getInstance().addEvent(new ResendPacketEvent(packet),_options.getRTT() * 2);
+    if (remaining < 0)     remaining=0;
+    if (packet.isFlagSet(Packet.FLAG_CLOSE) || (remaining < 2)) {
+      packet.setOptionalDelay(0);
+    }
+ else {
+      int delay=_options.getRTT() / 2;
+      packet.setOptionalDelay(delay);
+      _log.debug("Requesting ack delay of " + delay + "ms for packet "+ packet);
+    }
+    packet.setFlag(Packet.FLAG_DELAY_REQUESTED);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Resend in " + (_options.getRTT() * 2) + " for "+ packet);
+    SimpleTimer.getInstance().addEvent(new ResendPacketEvent(packet),(_options.getRTT() * 2 < 5000 ? 5000 : _options.getRTT() * 2));
   }
   _lastSendTime=_context.clock().now();
   _outboundQueue.enqueue(packet);
   if (ackOnly) {
     if (packet.getTagsSent().size() > 0) {
       _log.warn("Sending a ping since the ACK we just sent has " + packet.getTagsSent().size() + " tags");
-      _connectionManager.ping(_remotePeer,_options.getRTT() * 2,false,packet.getKeyUsed(),packet.getTagsSent());
+      _connectionManager.ping(_remotePeer,30 * 1000,false,packet.getKeyUsed(),packet.getTagsSent());
     }
   }
 }

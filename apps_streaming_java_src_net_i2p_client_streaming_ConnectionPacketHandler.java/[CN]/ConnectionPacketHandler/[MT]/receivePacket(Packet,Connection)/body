@@ -5,13 +5,15 @@
   if (packet.isFlagSet(Packet.FLAG_CLOSE) && packet.isFlagSet(Packet.FLAG_SIGNATURE_INCLUDED))   con.closeReceived();
   if (isNew) {
     con.incrementUnackedPacketsReceived();
-    long nextTime=con.getNextSendTime();
-    if (nextTime <= 0) {
-      con.setNextSendTime(con.getOptions().getSendAckDelay() + _context.clock().now());
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Scheduling ack in " + con.getOptions().getSendAckDelay() + "ms for received packet "+ packet);
+    if (packet.isFlagSet(Packet.FLAG_DELAY_REQUESTED) && (packet.getOptionalDelay() <= 0)) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Scheduling immediate ack for " + packet);
+      con.setNextSendTime(_context.clock().now() + con.getOptions().getSendAckDelay());
     }
  else {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Ack is already scheduled in " + (nextTime - _context.clock().now()) + "ms, though we just received "+ packet);
+      int delay=con.getOptions().getSendAckDelay();
+      if (packet.isFlagSet(Packet.FLAG_DELAY_REQUESTED))       delay+=packet.getOptionalDelay();
+      con.setNextSendTime(delay + _context.clock().now());
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Scheduling ack in " + delay + "ms for received packet "+ packet);
     }
   }
  else {
@@ -19,20 +21,27 @@
       con.getOptions().setResendDelay(con.getOptions().getResendDelay() * 2);
       if (_log.shouldLog(Log.WARN))       _log.warn("congestion.. dup " + packet);
       con.incrementUnackedPacketsReceived();
+      con.setNextSendTime(_context.clock().now() + con.getOptions().getSendAckDelay());
     }
  else {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("ACK only packet received: " + packet);
+      if (packet.isFlagSet(Packet.FLAG_SYNCHRONIZE)) {
+        con.incrementUnackedPacketsReceived();
+        con.setNextSendTime(_context.clock().now() + con.getOptions().getSendAckDelay());
+      }
+ else {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("ACK only packet received: " + packet);
+      }
     }
   }
   int numResends=0;
   List acked=con.ackPackets(packet.getAckThrough(),packet.getNacks());
   if ((acked != null) && (acked.size() > 0)) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug(acked.size() + " of our packets acked with " + packet);
-    int lowestRtt=-1;
+    int highestRTT=-1;
     for (int i=0; i < acked.size(); i++) {
       PacketLocal p=(PacketLocal)acked.get(i);
-      if ((lowestRtt < 0) || (p.getAckTime() < lowestRtt)) {
-        lowestRtt=p.getAckTime();
+      if (p.getAckTime() > highestRTT) {
+        highestRTT=p.getAckTime();
       }
       if (p.getNumSends() > 1)       numResends++;
       if ((p.getKeyUsed() != null) && (p.getTagsSent() != null) && (p.getTagsSent().size() > 0)) {
@@ -40,17 +49,17 @@
       }
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Packet acked after " + p.getAckTime() + "ms: "+ p);
     }
-    if (lowestRtt > 0) {
+    if (highestRTT > 0) {
       int oldRTT=con.getOptions().getRTT();
-      int newRTT=(int)(RTT_DAMPENING * oldRTT + (1 - RTT_DAMPENING) * lowestRtt);
+      int newRTT=(int)(RTT_DAMPENING * oldRTT + (1 - RTT_DAMPENING) * highestRTT);
       con.getOptions().setRTT(newRTT);
     }
   }
-  boolean fastAck=adjustWindow(con,isNew,packet.getSequenceNum(),numResends);
+  boolean fastAck=adjustWindow(con,isNew,packet.getSequenceNum(),numResends,(acked != null ? acked.size() : 0));
   con.eventOccurred();
   if (fastAck) {
     if (con.getLastSendTime() + con.getOptions().getRTT() < _context.clock().now()) {
-      _log.error("Fast ack for dup " + packet);
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Fast ack for dup " + packet);
       con.ackImmediately();
     }
   }

@@ -1,5 +1,4 @@
 {
-  if (!_connection.packetSendChoke())   throw new InterruptedIOException("Timeout expired waiting to write");
   boolean doSend=true;
   if ((size <= 0) && (_connection.getLastSendId() >= 0)) {
     if (_connection.getOutputStream().getClosed()) {
@@ -17,8 +16,10 @@
   if (_connection.getUnackedPacketsReceived() > 0)   doSend=true;
   if (_log.shouldLog(Log.ERROR) && !doSend)   _log.error("writeData called: size=" + size + " doSend="+ doSend+ " unackedReceived: "+ _connection.getUnackedPacketsReceived()+ " con: "+ _connection,new Exception("write called by"));
   if (doSend) {
-    send(buf,off,size);
+    PacketLocal packet=send(buf,off,size);
+    return packet;
   }
  else {
+    return _dummyStatus;
   }
 }

@@ -1,8 +1,9 @@
 {
+  int cur=off;
+  int remaining=len;
+  while (remaining > 0) {
+    WriteStatus ws=null;
 synchronized (_dataLock) {
-    int cur=off;
-    int remaining=len;
-    while (remaining > 0) {
       if (_valid + remaining < _buf.length) {
         System.arraycopy(b,cur,_buf,_valid,remaining);
         _valid+=remaining;
@@ -16,10 +17,17 @@ synchronized (_dataLock) {
         remaining-=toWrite;
         cur+=toWrite;
         _valid=_buf.length;
-        _dataReceiver.writeData(_buf,0,_valid);
+        ws=_dataReceiver.writeData(_buf,0,_valid);
         _written+=_valid;
         _valid=0;
         throwAnyError();
+      }
+    }
+    if (ws != null) {
+      ws.waitForAccept(_writeTimeout);
+      if (!ws.writeAccepted()) {
+        if (_writeTimeout > 0)         throw new InterruptedIOException("Write not accepted within timeout");
+ else         throw new IOException("Write not accepted into the queue");
       }
     }
   }

@@ -1,7 +1,16 @@
 {
   if (!isFlagSet(FLAG_SIGNATURE_INCLUDED))   return false;
   if (_optionSignature == null)   return false;
-  if (buffer == null)   buffer=new byte[writtenSize()];
-  int size=writePacket(buffer,0,false);
-  return ctx.dsa().verifySignature(_optionSignature,buffer,0,size,from.getSigningPublicKey());
+  int size=writtenSize();
+  if (buffer == null)   buffer=new byte[size];
+  int written=writePacket(buffer,0,false);
+  if (written != size) {
+    ctx.logManager().getLog(Packet.class).error("Written " + written + " size "+ size+ " for "+ toString(),new Exception("moo"));
+    return false;
+  }
+  boolean ok=ctx.dsa().verifySignature(_optionSignature,buffer,0,size,from.getSigningPublicKey());
+  if (!ok) {
+    ctx.logManager().getLog(Packet.class).error("Signature failed with sig " + Base64.encode(_optionSignature.getData()),new Exception("moo"));
+  }
+  return ok;
 }

@@ -1,4 +1,16 @@
 {
-  if (_nextSendTime > 0)   if (_log.shouldLog(Log.DEBUG))   _log.debug("set next send time to " + (when - _nextSendTime) + "ms after it was before ("+ when+ ")");
-  _nextSendTime=when;
+  if (_nextSendTime >= 0) {
+    if (when < _nextSendTime)     _nextSendTime=when;
+  }
+ else {
+    _nextSendTime=when;
+  }
+  if (_nextSendTime >= 0) {
+    long max=_context.clock().now() + _options.getSendAckDelay();
+    if (max < _nextSendTime)     _nextSendTime=max;
+  }
+  if (_log.shouldLog(Log.DEBUG) && false) {
+    if (_nextSendTime <= 0)     _log.debug("set next send time to an unknown time",new Exception(toString()));
+ else     _log.debug("set next send time to " + (_nextSendTime - _context.clock().now()) + "ms from now",new Exception(toString()));
+  }
 }

@@ -1,17 +1,34 @@
 {
   if (isValidMatch(con.getSendStreamId(),packet.getReceiveStreamId())) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("receive valid: " + packet);
-    con.getPacketHandler().receivePacket(packet,con);
+    try {
+      con.getPacketHandler().receivePacket(packet,con);
+    }
+ catch (    I2PException ie) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Received forged packet for " + con,ie);
+    }
   }
  else {
     if (packet.isFlagSet(Packet.FLAG_RESET)) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("receive reset: " + packet);
-      con.getPacketHandler().receivePacket(packet,con);
+      try {
+        con.getPacketHandler().receivePacket(packet,con);
+      }
+ catch (      I2PException ie) {
+        if (_log.shouldLog(Log.WARN))         _log.warn("Received forged reset for " + con,ie);
+      }
     }
  else     if (packet.isFlagSet(Packet.FLAG_SYNCHRONIZE)) {
       if ((con.getSendStreamId() == null) || (DataHelper.eq(con.getSendStreamId(),packet.getReceiveStreamId()))) {
+        byte oldId[]=con.getSendStreamId();
         con.setSendStreamId(packet.getReceiveStreamId());
-        con.getPacketHandler().receivePacket(packet,con);
+        try {
+          con.getPacketHandler().receivePacket(packet,con);
+        }
+ catch (        I2PException ie) {
+          if (_log.shouldLog(Log.WARN))           _log.warn("Received forged syn for " + con,ie);
+          con.setSendStreamId(oldId);
+        }
       }
  else {
         if (_log.shouldLog(Log.WARN))         _log.warn("Receive a syn packet with the wrong IDs: " + packet);

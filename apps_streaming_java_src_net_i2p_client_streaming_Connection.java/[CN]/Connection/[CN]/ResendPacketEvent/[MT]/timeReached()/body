@@ -1,30 +1,34 @@
 {
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Resend period reached for " + _packet);
   boolean resend=false;
 synchronized (_outboundPackets) {
     if (_outboundPackets.containsKey(new Long(_packet.getSequenceNum())))     resend=true;
   }
   if ((resend) && (_packet.getAckTime() < 0)) {
-    _packet.setAckThrough(getInputStream().getHighestBlockId());
-    _packet.setNacks(getInputStream().getNacks());
+    _inputStream.updateAcks(_packet);
     _packet.setOptionalDelay(getOptions().getChoke());
     _packet.setOptionalMaxSize(getOptions().getMaxMessageSize());
     _packet.setResendDelay(getOptions().getResendDelay());
     _packet.setReceiveStreamId(_receiveStreamId);
     _packet.setSendStreamId(_sendStreamId);
+    int newWindowSize=getOptions().getWindowSize();
+    newWindowSize/=2;
+    if (newWindowSize <= 0)     newWindowSize=1;
+    getOptions().setWindowSize(newWindowSize);
     int numSends=_packet.getNumSends() + 1;
-    if (_log.shouldLog(Log.WARN))     _log.warn("Resend packet " + _packet + " time "+ numSends+ " on "+ Connection.this);
+    if (_log.shouldLog(Log.WARN))     _log.warn("Resend packet " + _packet + " time "+ numSends+ " (wsize "+ newWindowSize+ " lifetime "+ (_context.clock().now() - _packet.getCreatedOn())+ "ms)");
     _outboundQueue.enqueue(_packet);
     if (numSends > _options.getMaxResends()) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Too many resends");
       disconnect(false);
     }
  else {
-      long timeout=_options.getRTT() << numSends;
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Scheduling resend in " + timeout + "ms");
+      long timeout=_options.getRTT() << (numSends - 1);
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Scheduling resend in " + timeout + "ms for "+ _packet);
       SimpleTimer.getInstance().addEvent(ResendPacketEvent.this,timeout);
     }
   }
  else {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Packet acked before resend: " + _packet + " on "+ Connection.this);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Packet acked before resend (resend=" + resend + "): "+ _packet+ " on "+ Connection.this);
   }
 }

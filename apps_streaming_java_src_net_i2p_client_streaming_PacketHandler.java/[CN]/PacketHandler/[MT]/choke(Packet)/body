@@ -1,18 +1,22 @@
 {
   if (false) {
     if (_context.random().nextInt(100) >= 98) {
-      _log.error("DROP: " + packet);
+      displayPacket(packet,"DROP");
       return false;
     }
  else {
-      int delay=_context.random().nextInt(1000);
-      try {
-        Thread.sleep(delay);
+      int delay=_context.random().nextInt(6 * 1000);
+      int delayFactor=_context.random().nextInt(100);
+      if (delayFactor > 80) {
+        if (delayFactor > 98)         delay*=5;
+ else         if (delayFactor > 95)         delay*=4;
+ else         if (delayFactor > 90)         delay*=3;
+ else         delay*=2;
       }
- catch (      InterruptedException ie) {
-      }
-      _log.debug("OK  : " + packet + " delay = "+ delay);
-      return true;
+      if (_context.random().nextInt(100) >= 20)       delay=_lastDelay;
+      _lastDelay=delay;
+      SimpleTimer.getInstance().addEvent(new Reinject(packet,delay),delay);
+      return false;
     }
   }
  else {

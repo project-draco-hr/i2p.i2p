@@ -1,6 +1,6 @@
 {
   boolean ackOnly=isAckOnly(size);
-  PacketLocal packet=new PacketLocal(_context,_connection.getRemotePeer());
+  PacketLocal packet=new PacketLocal(_context,_connection.getRemotePeer(),_connection);
   byte data[]=new byte[size];
   if (size > 0)   System.arraycopy(buf,off,data,0,size);
   packet.setPayload(data);
@@ -8,8 +8,7 @@
  else   packet.setSequenceNum(_connection.getNextOutboundPacketNum());
   packet.setSendStreamId(_connection.getSendStreamId());
   packet.setReceiveStreamId(_connection.getReceiveStreamId());
-  packet.setAckThrough(_connection.getInputStream().getHighestBlockId());
-  packet.setNacks(_connection.getInputStream().getNacks());
+  _connection.getInputStream().updateAcks(packet);
   packet.setOptionalDelay(_connection.getOptions().getChoke());
   packet.setOptionalMaxSize(_connection.getOptions().getMaxMessageSize());
   packet.setResendDelay(_connection.getOptions().getResendDelay());
@@ -26,7 +25,6 @@
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Closed is set for a new packet on " + _connection + ": "+ packet);
   }
  else {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Closed is not set for a new packet on " + _connection + ": "+ packet);
   }
   return packet;
 }

@@ -4,10 +4,16 @@ synchronized (_outboundPackets) {
     for (Iterator iter=_outboundPackets.keySet().iterator(); iter.hasNext(); ) {
       Long id=(Long)iter.next();
       if (id.longValue() <= ackThrough) {
+        boolean nacked=false;
         if (nacks != null) {
-          for (int i=0; i < nacks.length; i++)           if (nacks[i] == id.longValue())           continue;
+          for (int i=0; i < nacks.length; i++) {
+            if (nacks[i] == id.longValue()) {
+              nacked=true;
+              break;
+            }
+          }
         }
- else {
+        if (!nacked) {
           if (acked == null)           acked=new ArrayList(1);
           PacketLocal ackedPacket=(PacketLocal)_outboundPackets.get(id);
           ackedPacket.ackReceived();
