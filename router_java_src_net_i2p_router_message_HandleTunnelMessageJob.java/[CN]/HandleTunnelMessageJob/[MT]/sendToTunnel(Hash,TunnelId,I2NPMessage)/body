@@ -6,14 +6,15 @@
     ByteArrayOutputStream baos=new ByteArrayOutputStream(1024);
     body.writeBytes(baos);
     msg.setData(baos.toByteArray());
-    JobQueue.getInstance().addJob(new SendMessageDirectJob(msg,router,Clock.getInstance().now() + FORWARD_TIMEOUT,FORWARD_PRIORITY));
+    long exp=Clock.getInstance().now() + FORWARD_TIMEOUT;
+    JobQueue.getInstance().addJob(new SendMessageDirectJob(msg,router,exp,FORWARD_PRIORITY));
     String bodyType=body.getClass().getName();
     MessageHistory.getInstance().wrap(bodyType,body.getUniqueId(),TunnelMessage.class.getName(),msg.getUniqueId());
   }
  catch (  DataFormatException dfe) {
-    _log.error("Error writing out the message to forward to the tunnel",dfe);
+    if (_log.shouldLog(Log.ERROR))     _log.error("Error writing out the message to forward to the tunnel",dfe);
   }
 catch (  IOException ioe) {
-    _log.error("Error writing out the message to forward to the tunnel",ioe);
+    if (_log.shouldLog(Log.ERROR))     _log.error("Error writing out the message to forward to the tunnel",ioe);
   }
 }

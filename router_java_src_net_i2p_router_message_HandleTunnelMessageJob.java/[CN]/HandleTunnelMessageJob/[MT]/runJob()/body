@@ -5,18 +5,20 @@
     Hash from=_fromHash;
     if (_from != null)     from=_from.getHash();
     MessageHistory.getInstance().droppedTunnelMessage(id,from);
-    _log.error("Received a message for an unknown tunnel [" + id.getTunnelId() + "], dropping it: "+ _message,getAddedBy());
-    StatManager.getInstance().updateFrequency("tunnel.unknownTunnelFrequency");
+    if (_log.shouldLog(Log.ERROR))     _log.error("Received a message for an unknown tunnel [" + id.getTunnelId() + "], dropping it: "+ _message,getAddedBy());
+    long timeRemaining=_message.getMessageExpiration().getTime() - Clock.getInstance().now();
+    StatManager.getInstance().addRateData("tunnel.unknownTunnelTimeLeft",timeRemaining,0);
     return;
   }
   info=getUs(info);
   if (info == null) {
-    _log.error("We are not part of a known tunnel?? wtf!  drop.",getAddedBy());
-    StatManager.getInstance().updateFrequency("tunnel.unknownTunnelFrequency");
+    if (_log.shouldLog(Log.ERROR))     _log.error("We are not part of a known tunnel?? wtf!  drop.",getAddedBy());
+    long timeRemaining=_message.getMessageExpiration().getTime() - Clock.getInstance().now();
+    StatManager.getInstance().addRateData("tunnel.unknownTunnelTimeLeft",timeRemaining,0);
     return;
   }
  else {
-    _log.debug("Tunnel message received for tunnel: \n" + info);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Tunnel message received for tunnel: \n" + info);
   }
   if (_message.getVerificationStructure() == null) {
     if (info.getSigningKey() != null) {
@@ -28,8 +30,8 @@
         return;
       }
  else {
-        if (_log.shouldLog(Log.WARN))         _log.debug("We are the gateway and the endpoint for tunnel " + id.getTunnelId());
-        if (_log.shouldLog(Log.WARN))         _log.debug("Process locally");
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("We are the gateway and the endpoint for tunnel " + id.getTunnelId());
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Process locally");
         if (info.getDestination() != null) {
           if (!ClientManagerFacade.getInstance().isLocal(info.getDestination())) {
             if (_log.shouldLog(Log.WARN))             _log.warn("Received a message on a tunnel allocated to a client that has disconnected - dropping it!");
