@@ -1,17 +1,17 @@
 {
   if ((orig == null) || (orig.length <= 0))   return orig;
-  GZIPInputStream in=new GZIPInputStream(new ByteArrayInputStream(orig,offset,length),length);
-  CachingByteArrayOutputStream baos=new CachingByteArrayOutputStream(16,40 * 1024);
-  ByteCache cache=ByteCache.getInstance(10,4 * 1024);
-  ByteArray ba=cache.acquire();
-  byte buf[]=ba.getData();
+  ReusableGZIPInputStream in=ReusableGZIPInputStream.acquire();
+  in.initialize(new ByteArrayInputStream(orig,offset,length));
+  ByteCache cache=ByteCache.getInstance(16,MAX_UNCOMPRESSED);
+  ByteArray outBuf=cache.acquire();
+  int written=0;
   while (true) {
-    int read=in.read(buf);
+    int read=in.read(outBuf.getData(),written,MAX_UNCOMPRESSED - written);
     if (read == -1)     break;
-    baos.write(buf,0,read);
+    written+=read;
   }
-  byte rv[]=baos.toByteArray();
-  cache.release(ba);
-  baos.releaseBuffer();
+  byte rv[]=new byte[written];
+  System.arraycopy(outBuf.getData(),0,rv,0,written);
+  cache.release(outBuf);
   return rv;
 }

@@ -1,16 +1,18 @@
 {
   if ((orig == null) || (orig.length <= 0))   return orig;
+  if (size >= MAX_UNCOMPRESSED)   throw new IllegalArgumentException("tell jrandom size=" + size);
+  ReusableGZIPOutputStream out=ReusableGZIPOutputStream.acquire();
   try {
-    CachingByteArrayOutputStream baos=new CachingByteArrayOutputStream(16,40 * 1024);
-    GZIPOutputStream out=new GZIPOutputStream(baos,size);
     out.write(orig,offset,size);
     out.finish();
     out.flush();
-    byte rv[]=baos.toByteArray();
-    baos.releaseBuffer();
+    byte rv[]=out.getData();
     return rv;
   }
  catch (  IOException ioe) {
     return null;
+  }
+ finally {
+    ReusableGZIPOutputStream.release(out);
   }
 }
