@@ -1,0 +1,29 @@
+def __init__(self, **kw):
+    '\n        Creates a client connection to i2psam listener\n        \n        Keywords:\n            - host - host to connect to (default 127.0.0.1)\n            - port - port to connect to (default 7656)\n        '
+    log(4, 'entered')
+    self.host = kw.get('host', self.host)
+    self.port = int(kw.get('port', self.port))
+    self.cmdLock = threading.Lock()
+    self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    self.lockHello = threading.Lock()
+    self.sendLock = threading.Lock()
+    self.qNewDests = Queue.Queue()
+    self.qSession = Queue.Queue()
+    self.qDatagrams = Queue.Queue()
+    self.qRawMessages = Queue.Queue()
+    self.namingReplies = {}
+    self.namingCache = {}
+    self.isRunning = 1
+    log(4, 'trying connection to SAM server...')
+    try:
+        self.sock.connect((self.host, self.port))
+    except:
+        raise I2PServerFail(('Connection to i2psam server failed\n(are you sure your I2P router is running, and\nlistening for I2CP connections on %s:%s?)' % (self.host, self.port)))
+    thread.start_new_thread(self.threadRx, ())
+    try:
+        log(4, 'trying to ping SAM server...')
+        self.samHello()
+    except:
+        logException(4, 'Exception on handshaking')
+        raise I2PServerFail('Failed to handshake with i2psam server')
+    log(2, 'I2CP Client successfully connected')

@@ -1,0 +1,18 @@
+def samParse(self, flds):
+    '\n        carves up a SAM command, returns it as a 3-tuple:\n            - cmd - command string\n            - subcmd - subcommand string\n            - dargs - dict of args\n        '
+    cmd = flds[0]
+    subcmd = flds[1]
+    args = flds[2:]
+    dargs = {}
+    for arg in args:
+        try:
+            (name, val) = arg.split('=', 1)
+        except:
+            logException(3, ('failed to process %s' % repr(arg)))
+            raise
+        dargs[name] = val
+    if dargs.has_key('SIZE'):
+        size = dargs['SIZE'] = int(dargs['SIZE'])
+        dargs['DATA'] = self._recvbytes(size)
+    log(4, '\n'.join(([((cmd + ' ') + subcmd)] + [('%s=%s (...)' % (k, v)) for (k, v) in dargs.items()])))
+    return (cmd, subcmd, dargs)

@@ -1,0 +1,33 @@
+def demoDATAGRAM():
+    '\n    Runs a demo of SAM DATAGRAM messaging\n    '
+    print 'Starting SAM DATAGRAM demo...'
+    print 
+    print 'Instantiating 2 more client connections...'
+    c3 = I2PSamClient()
+    c4 = I2PSamClient()
+    print 'Creating more dests via SAM'
+    (pub3, priv3) = c3.samDestGenerate()
+    (pub4, priv4) = c4.samDestGenerate()
+    print 'Creating SAM DATAGRAM SESSION on connection c3...'
+    res = c3.samSessionCreate('DATAGRAM', priv3)
+    if (res != 'OK'):
+        print ('Failed to create DATAGRAM session on connection c3: %s' % repr(res))
+        return
+    print 'DATAGRAM Session on connection c3 created successfully'
+    print 'Creating SAM DATAGRAM SESSION on connection c4...'
+    res = c4.samSessionCreate('DATAGRAM', priv4)
+    if (res != 'OK'):
+        print ('Failed to create DATAGRAM session on connection c4: %s' % repr(res))
+        return
+    print 'Session on connection c4 created successfully'
+    msg = 'Hi there, this is a datagram!'
+    print ('sending from c3 to c4: %s' % repr(msg))
+    c3.samDatagramSend(pub4, msg)
+    print 'now try to receive from c4 (will block)...'
+    (remdest, msg1) = c4.samDatagramReceive()
+    print ('Connection c4 got %s from %s...' % (repr(msg1), repr(remdest)))
+    print 
+    print '--------------------------------------'
+    print 'DATAGRAM data transfer tests succeeded'
+    print '--------------------------------------'
+    print 

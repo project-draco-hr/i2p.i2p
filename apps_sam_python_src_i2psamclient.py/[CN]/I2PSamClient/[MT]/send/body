@@ -1,0 +1,20 @@
+def send(self, privdest, peerdest, msg):
+    '\n        DEPRECATED - use sam* methods instead!\n    \n        Sends a block of data from local dest to remote dest\n        '
+    self.cmdLock.acquire()
+    try:
+        self._sendline(('send %s %s %s' % (len(msg), privdest, peerdest)))
+        self._sendbytes(msg)
+        line = self._recvline()
+        respitems = line.split(' ', 1)
+        if (respitems[0] == 'ok'):
+            res = None
+        else:
+            res = ' '.join(respitems[1:])
+    except:
+        logException(2, 'send fail')
+        self.cmdLock.release()
+        raise
+    self.cmdLock.release()
+    if res:
+        raise I2PCommandFail(('send fail: ' + res))
+    return res
