@@ -3,6 +3,7 @@
   if (_routerInfoStructures == null)   throw new I2NPMessageException("RouterInfo replies are null");
   if (_routerInfoStructures.size() <= 0)   throw new I2NPMessageException("No replies specified in SearchReply!  Always include oneself!");
   if (_from == null)   throw new I2NPMessageException("No 'from' address specified!");
+  byte rv[]=null;
   ByteArrayOutputStream os=new ByteArrayOutputStream(32);
   try {
     _key.writeBytes(os);
@@ -16,9 +17,11 @@
     DataHelper.writeLong(os,2,compressed.length);
     os.write(compressed);
     _from.writeBytes(os);
+    rv=os.toByteArray();
+    _context.statManager().addRateData("netDb.searchReplyMessageSendSize",rv.length,1);
   }
  catch (  DataFormatException dfe) {
     throw new I2NPMessageException("Error writing out the message data",dfe);
   }
-  return os.toByteArray();
+  return rv;
 }
