@@ -1,4 +1,24 @@
 {
-  DSAEngine.getInstance().verifySignature(new Signature(readFileBytes(inputFile,16,55)),readFileBytes(inputFile,56,(int)new File(inputFile).length() - 57),new SigningPublicKey(readFileBytes(publicKeyFile,0,(int)new File(publicKeyFile).length() - 1)));
-  return false;
+  SigningPublicKey pub=new SigningPublicKey();
+  FileInputStream in=null;
+  try {
+    in=new FileInputStream(inputFile);
+    pub.readBytes(in);
+  }
+ catch (  IOException ioe) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Unable to load the signature",ioe);
+    return false;
+  }
+catch (  DataFormatException dfe) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Unable to load the signature",dfe);
+    return false;
+  }
+ finally {
+    if (in != null)     try {
+      in.close();
+    }
+ catch (    IOException ioe) {
+    }
+  }
+  return verify(inputFile,pub);
 }

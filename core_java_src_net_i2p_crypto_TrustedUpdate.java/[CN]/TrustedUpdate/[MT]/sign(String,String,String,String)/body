@@ -1,25 +1,24 @@
 {
-  byte[] headerUpdateVersion={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
-  byte[] updateVersionBytes={};
-  if (updateVersion.length() > 16)   updateVersion=updateVersion.substring(0,16);
+  SigningPrivateKey key=new SigningPrivateKey();
+  FileInputStream in=null;
   try {
-    updateVersionBytes=updateVersion.getBytes("UTF-8");
-  }
- catch (  UnsupportedEncodingException e) {
-  }
-  for (int i=0; i < updateVersionBytes.length; i++)   headerUpdateVersion[i]=updateVersionBytes[i];
-  byte[] data=readFileBytes(inputFile,0,(int)new File(inputFile).length());
-  Signature signature=DSAEngine.getInstance().sign(data,new SigningPrivateKey(readFileBytes(privateKeyFile,0,(int)new File(privateKeyFile).length() - 1)));
-  FileOutputStream fileOutputStream=null;
-  try {
-    fileOutputStream=new FileOutputStream(outputFile);
-    fileOutputStream.write(headerUpdateVersion);
-    fileOutputStream.write(signature.getData());
-    fileOutputStream.write(data);
-    fileOutputStream.close();
+    in=new FileInputStream(privateKeyFile);
+    key.readBytes(in);
   }
  catch (  IOException ioe) {
-    if (_log.shouldLog(Log.WARN))     _log.log(Log.WARN,"Error writing signed I2P update file " + outputFile,ioe);
+    if (_log.shouldLog(Log.WARN))     _log.warn("Unable to load the signing key",ioe);
+    return null;
   }
-  return signature;
+catch (  DataFormatException dfe) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Unable to load the signing key",dfe);
+    return null;
+  }
+ finally {
+    if (in != null)     try {
+      in.close();
+    }
+ catch (    IOException ioe) {
+    }
+  }
+  return sign(inputFile,outputFile,key,updateVersion);
 }

@@ -1,0 +1,40 @@
+{
+  _keepFetching=true;
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Fetching (proxied? " + _shouldProxy + ") url="+ _url);
+  while (_keepFetching) {
+    try {
+      sendRequest();
+      doFetch();
+      return;
+    }
+ catch (    IOException ioe) {
+      for (int i=0; i < _listeners.size(); i++)       ((StatusListener)_listeners.get(i)).attemptFailed(_url,_bytesTransferred,_bytesRemaining,_currentAttempt,_numRetries,ioe);
+    }
+ finally {
+      if (_out != null) {
+        try {
+          _out.close();
+        }
+ catch (        IOException cioe) {
+        }
+        _out=null;
+      }
+      if (_proxy != null) {
+        try {
+          _proxy.close();
+          _proxy=null;
+        }
+ catch (        IOException ioe) {
+        }
+      }
+    }
+    _currentAttempt++;
+    if (_currentAttempt > _numRetries)     break;
+    try {
+      Thread.sleep(5 * 1000);
+    }
+ catch (    InterruptedException ie) {
+    }
+  }
+  for (int i=0; i < _listeners.size(); i++)   ((StatusListener)_listeners.get(i)).transferFailed(_url,_bytesTransferred,_bytesRemaining,_currentAttempt);
+}

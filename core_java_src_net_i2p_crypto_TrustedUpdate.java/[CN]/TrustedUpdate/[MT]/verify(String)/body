@@ -1,4 +1,15 @@
 {
-  DSAEngine.getInstance().verifySignature(new Signature(readFileBytes(inputFile,16,55)),readFileBytes(inputFile,56,(int)new File(inputFile).length() - 57),new SigningPublicKey(I2P_PUBLICKEY));
+  for (int i=0; i < _trustedKeys.size(); i++) {
+    SigningPublicKey key=new SigningPublicKey();
+    try {
+      key.fromBase64((String)_trustedKeys.get(i));
+      boolean ok=verify(inputFile,key);
+      if (ok)       return true;
+    }
+ catch (    DataFormatException dfe) {
+      _log.log(Log.CRIT,"Trusted key " + i + " is not valid");
+    }
+  }
+  if (_log.shouldLog(Log.WARN))   _log.warn("None of the keys match");
   return false;
 }

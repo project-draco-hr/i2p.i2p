@@ -1,0 +1,26 @@
+{
+  FileInputStream in=null;
+  try {
+    in=new FileInputStream(inputFile);
+    byte version[]=new byte[VERSION_BYTES];
+    Signature sig=new Signature();
+    if (VERSION_BYTES != DataHelper.read(in,version))     throw new IOException("Not enough data for the version bytes");
+    sig.readBytes(in);
+    return _context.dsa().verifySignature(sig,in,key);
+  }
+ catch (  IOException ioe) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Error reading " + inputFile + " to verify",ioe);
+    return false;
+  }
+catch (  DataFormatException dfe) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Error reading the signature",dfe);
+    return false;
+  }
+ finally {
+    if (in != null)     try {
+      in.close();
+    }
+ catch (    IOException ioe) {
+    }
+  }
+}

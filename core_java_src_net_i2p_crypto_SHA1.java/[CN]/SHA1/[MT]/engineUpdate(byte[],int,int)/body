@@ -1,0 +1,36 @@
+{
+  if (offset >= 0 && len >= 0 && offset + len <= input.length) {
+    bytes+=len;
+    int padlen=64 - padding;
+    if (padding > 0 && len >= padlen) {
+      System.arraycopy(input,offset,pad,padding,padlen);
+      computeBlock(pad,0);
+      padding=0;
+      offset+=padlen;
+      len-=padlen;
+    }
+    while (len >= 512) {
+      computeBlock(input,offset);
+      computeBlock(input,offset + 64);
+      computeBlock(input,offset + 128);
+      computeBlock(input,offset + 192);
+      computeBlock(input,offset + 256);
+      computeBlock(input,offset + 320);
+      computeBlock(input,offset + 384);
+      computeBlock(input,offset + 448);
+      offset+=512;
+      len-=512;
+    }
+    while (len >= 64) {
+      computeBlock(input,offset);
+      offset+=64;
+      len-=64;
+    }
+    if (len > 0) {
+      System.arraycopy(input,offset,pad,padding,len);
+      padding+=len;
+    }
+    return;
+  }
+  throw new ArrayIndexOutOfBoundsException(offset);
+}

@@ -1,0 +1,48 @@
+{
+  String proxyHost="localhost";
+  int proxyPort=4444;
+  int numRetries=5;
+  int markSize=1024;
+  int lineLen=40;
+  String saveAs=null;
+  String url=null;
+  try {
+    for (int i=0; i < args.length; i++) {
+      if (args[i].equals("-p")) {
+        proxyHost=args[i + 1].substring(0,args[i + 1].indexOf(':'));
+        String port=args[i + 1].substring(args[i + 1].indexOf(':') + 1);
+        proxyPort=Integer.parseInt(port);
+        i++;
+      }
+ else       if (args[i].equals("-n")) {
+        numRetries=Integer.parseInt(args[i + 1]);
+        i++;
+      }
+ else       if (args[i].equals("-o")) {
+        saveAs=args[i + 1];
+        i++;
+      }
+ else       if (args[i].equals("-m")) {
+        markSize=Integer.parseInt(args[i + 1]);
+        lineLen=Integer.parseInt(args[i + 2]);
+        i+=2;
+      }
+ else {
+        url=args[i];
+      }
+    }
+  }
+ catch (  Exception e) {
+    e.printStackTrace();
+    usage();
+    return;
+  }
+  if (url == null) {
+    usage();
+    return;
+  }
+  if (saveAs == null)   saveAs=suggestName(url);
+  EepGet get=new EepGet(I2PAppContext.getGlobalContext(),proxyHost,proxyPort,numRetries,saveAs,url);
+  get.addStatusListener(get.new CLIStatusListener(markSize,lineLen));
+  get.fetch();
+}

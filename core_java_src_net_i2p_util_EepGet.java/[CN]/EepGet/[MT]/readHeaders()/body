@@ -1,0 +1,59 @@
+{
+  String key=null;
+  StringBuffer buf=new StringBuffer(32);
+  boolean read=DataHelper.readLine(_proxyIn,buf);
+  if (!read)   throw new IOException("Unable to read the first line");
+  int responseCode=handleStatus(buf.toString());
+  boolean rcOk=false;
+switch (responseCode) {
+case 200:
+    _out=new FileOutputStream(_outputFile,false);
+  rcOk=true;
+break;
+case 206:
+_out=new FileOutputStream(_outputFile,true);
+rcOk=true;
+break;
+case 416:
+_bytesRemaining=0;
+_keepFetching=false;
+return;
+default :
+rcOk=false;
+}
+byte lookahead[]=new byte[3];
+while (true) {
+int cur=_proxyIn.read();
+switch (cur) {
+case -1:
+throw new IOException("Headers ended too soon");
+case ':':
+if (key == null) {
+key=buf.toString();
+buf.setLength(0);
+increment(lookahead,cur);
+break;
+}
+ else {
+buf.append((char)cur);
+increment(lookahead,cur);
+break;
+}
+case '\n':
+case '\r':
+if (key != null) handle(key,buf.toString());
+buf.setLength(0);
+key=null;
+increment(lookahead,cur);
+if (isEndOfHeaders(lookahead)) {
+if (!rcOk) throw new IOException("Invalid HTTP response code: " + responseCode);
+return;
+}
+break;
+default :
+buf.append((char)cur);
+increment(lookahead,cur);
+}
+if (buf.length() > 1024) throw new IOException("Header line too long: " + buf.toString());
+}
+}
