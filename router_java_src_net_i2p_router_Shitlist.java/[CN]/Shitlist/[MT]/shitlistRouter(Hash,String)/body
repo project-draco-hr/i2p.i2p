@@ -1,0 +1,21 @@
+{
+  if (peer == null)   return false;
+  if (_context.routerHash().equals(peer)) {
+    _log.error("wtf, why did we try to shitlist ourselves?",new Exception("shitfaced"));
+    return false;
+  }
+  boolean wasAlready=false;
+  if (_log.shouldLog(Log.INFO))   _log.info("Shitlisting router " + peer.toBase64(),new Exception("Shitlist cause"));
+synchronized (_shitlist) {
+    Date oldDate=(Date)_shitlist.put(peer,new Date(_context.clock().now()));
+    wasAlready=(null == oldDate);
+    if (reason != null) {
+      _shitlistCause.put(peer,reason);
+    }
+ else {
+      _shitlistCause.remove(peer);
+    }
+  }
+  _context.tunnelManager().peerFailed(peer);
+  return wasAlready;
+}
