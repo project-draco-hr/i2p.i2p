@@ -2,6 +2,7 @@
   OutputStream out=null;
   String targetRequest=null;
   boolean usingWWWProxy=false;
+  String currentProxy=null;
   InactivityTimeoutThread timeoutThread=null;
   try {
     out=s.getOutputStream();
@@ -40,7 +41,8 @@
           line=method + " " + request.substring(pos);
         }
  else         if (host.indexOf(".") != -1) {
-          destination=wwwProxy;
+          currentProxy=selectProxy();
+          destination=currentProxy;
           usingWWWProxy=true;
           if (_log.shouldLog(Log.DEBUG))           _log.debug(getPrefix() + "Host doesnt end with .i2p and it contains a period [" + host+ "]: wwwProxy!");
         }
@@ -114,28 +116,28 @@
     I2PSocket i2ps=createI2PSocket(dest);
     byte[] data=newRequest.toString().getBytes("ISO-8859-1");
     I2PTunnelRunner runner=new I2PTunnelRunner(s,i2ps,sockLock,data);
-    timeoutThread=new InactivityTimeoutThread(runner,out,targetRequest,usingWWWProxy,s);
+    timeoutThread=new InactivityTimeoutThread(runner,out,targetRequest,usingWWWProxy,currentProxy,s);
     timeoutThread.start();
   }
  catch (  SocketException ex) {
     if (timeoutThread != null)     timeoutThread.disable();
     _log.info(getPrefix() + "Error trying to connect",ex);
     l.log(ex.getMessage());
-    handleHTTPClientException(ex,out,targetRequest,usingWWWProxy,wwwProxy);
+    handleHTTPClientException(ex,out,targetRequest,usingWWWProxy,currentProxy);
     closeSocket(s);
   }
 catch (  IOException ex) {
     if (timeoutThread != null)     timeoutThread.disable();
     _log.info(getPrefix() + "Error trying to connect",ex);
     l.log(ex.getMessage());
-    handleHTTPClientException(ex,out,targetRequest,usingWWWProxy,wwwProxy);
+    handleHTTPClientException(ex,out,targetRequest,usingWWWProxy,currentProxy);
     closeSocket(s);
   }
 catch (  I2PException ex) {
     if (timeoutThread != null)     timeoutThread.disable();
     _log.info("getPrefix() + Error trying to connect",ex);
     l.log(ex.getMessage());
-    handleHTTPClientException(ex,out,targetRequest,usingWWWProxy,wwwProxy);
+    handleHTTPClientException(ex,out,targetRequest,usingWWWProxy,currentProxy);
     closeSocket(s);
   }
 }
