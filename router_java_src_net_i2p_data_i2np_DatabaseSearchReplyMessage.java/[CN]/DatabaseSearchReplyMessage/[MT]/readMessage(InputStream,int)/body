@@ -3,23 +3,16 @@
   try {
     _key=new Hash();
     _key.readBytes(in);
-    int compressedLength=(int)DataHelper.readLong(in,2);
-    byte compressedData[]=new byte[compressedLength];
-    int read=DataHelper.read(in,compressedData);
-    if (read != compressedLength)     throw new IOException("Not enough data to decompress");
-    byte decompressedData[]=DataHelper.decompress(compressedData);
-    if (decompressedData == null)     throw new I2NPMessageException("Could not decompress the " + compressedLength + "bytes of data");
-    ByteArrayInputStream bais=new ByteArrayInputStream(decompressedData);
-    int num=(int)DataHelper.readLong(bais,1);
-    _routerInfoStructures.clear();
+    int num=(int)DataHelper.readLong(in,1);
+    _peerHashes.clear();
     for (int i=0; i < num; i++) {
-      RouterInfo info=new RouterInfo();
-      info.readBytes(bais);
-      addReply(info);
+      Hash peer=new Hash();
+      peer.readBytes(in);
+      addReply(peer);
     }
     _from=new Hash();
     _from.readBytes(in);
-    _context.statManager().addRateData("netDb.searchReplyMessageReceive",compressedLength + 64,1);
+    _context.statManager().addRateData("netDb.searchReplyMessageReceive",num * 32 + 64,1);
   }
  catch (  DataFormatException dfe) {
     throw new I2NPMessageException("Unable to load the message data",dfe);

@@ -1,21 +1,16 @@
 {
   if (_key == null)   throw new I2NPMessageException("Key in reply to not specified");
-  if (_routerInfoStructures == null)   throw new I2NPMessageException("RouterInfo replies are null");
-  if (_routerInfoStructures.size() <= 0)   throw new I2NPMessageException("No replies specified in SearchReply!  Always include oneself!");
+  if (_peerHashes == null)   throw new I2NPMessageException("Peer replies are null");
   if (_from == null)   throw new I2NPMessageException("No 'from' address specified!");
   byte rv[]=null;
   ByteArrayOutputStream os=new ByteArrayOutputStream(32);
   try {
     _key.writeBytes(os);
-    ByteArrayOutputStream baos=new ByteArrayOutputStream(512);
-    DataHelper.writeLong(baos,1,_routerInfoStructures.size());
+    DataHelper.writeLong(os,1,_peerHashes.size());
     for (int i=0; i < getNumReplies(); i++) {
-      RouterInfo info=getReply(i);
-      info.writeBytes(baos);
+      Hash peer=getReply(i);
+      peer.writeBytes(os);
     }
-    byte compressed[]=DataHelper.compress(baos.toByteArray());
-    DataHelper.writeLong(os,2,compressed.length);
-    os.write(compressed);
     _from.writeBytes(os);
     rv=os.toByteArray();
     _context.statManager().addRateData("netDb.searchReplyMessageSendSize",rv.length,1);

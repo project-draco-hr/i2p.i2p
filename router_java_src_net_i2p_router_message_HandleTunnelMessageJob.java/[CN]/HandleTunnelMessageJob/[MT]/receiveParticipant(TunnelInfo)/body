@@ -1,0 +1,22 @@
+{
+  TunnelVerificationStructure struct=_message.getVerificationStructure();
+  boolean ok=struct.verifySignature(getContext(),info.getVerificationKey().getKey());
+  if (!ok) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Failed tunnel verification!  Spoofing / tagging attack?  " + _message,getAddedBy());
+    return;
+  }
+ else {
+    if (info.getNextHop() != null) {
+      if (_log.shouldLog(Log.INFO))       _log.info("Message for tunnel " + info.getTunnelId().getTunnelId() + " received where we're not the gateway and there are remaining hops, so forward it on to "+ info.getNextHop().toBase64()+ " via SendTunnelMessageJob");
+      getContext().statManager().addRateData("tunnel.relayMessageSize",_message.getData().length,0);
+      SendMessageDirectJob j=new SendMessageDirectJob(getContext(),_message,info.getNextHop(),(int)(_message.getMessageExpiration().getTime() - getContext().clock().now()),FORWARD_PRIORITY);
+      getContext().jobQueue().addJob(j);
+      return;
+    }
+ else {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("No more hops, unwrap and follow the instructions");
+      getContext().jobQueue().addJob(new HandleEndpointJob(info));
+      return;
+    }
+  }
+}

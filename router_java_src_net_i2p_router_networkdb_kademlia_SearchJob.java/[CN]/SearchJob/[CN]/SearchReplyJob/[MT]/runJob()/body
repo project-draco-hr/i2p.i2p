@@ -4,20 +4,17 @@
     if (_newPeers > 0)     newPeersFound(_newPeers);
   }
  else {
-    RouterInfo ri=_msg.getReply(_curIndex);
-    if (ri.isValid()) {
-      if (_state.wasAttempted(ri.getIdentity().getHash())) {
-        _duplicatePeers++;
-      }
-      if (_log.shouldLog(Log.DEBUG))       _log.debug(getJobId() + ": dbSearchReply received on search containing router " + ri.getIdentity().getHash()+ " with publishDate of "+ new Date(ri.getPublished()));
-      _facade.store(ri.getIdentity().getHash(),ri);
-      if (_facade.getKBuckets().add(ri.getIdentity().getHash()))       _newPeers++;
- else       _seenPeers++;
+    Hash peer=_msg.getReply(_curIndex);
+    RouterInfo info=getContext().netDb().lookupRouterInfoLocally(peer);
+    if (info == null) {
+      getContext().netDb().lookupRouterInfo(peer,null,null,_timeoutMs);
     }
- else {
-      if (_log.shouldLog(Log.ERROR))       _log.error(getJobId() + ": Received an invalid peer from " + _peer+ ": "+ ri);
-      _invalidPeers++;
+    if (_state.wasAttempted(peer)) {
+      _duplicatePeers++;
     }
+    if (_log.shouldLog(Log.DEBUG))     _log.debug(getJobId() + ": dbSearchReply received on search referencing router " + peer);
+    if (_facade.getKBuckets().add(peer))     _newPeers++;
+ else     _seenPeers++;
     _curIndex++;
     requeue(0);
   }

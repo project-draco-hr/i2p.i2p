@@ -1,0 +1,38 @@
+{
+  if (info.getSigningKey() != null) {
+    if (info.getNextHop() != null) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("We are the gateway to tunnel " + info.getTunnelId().getTunnelId());
+      byte data[]=_message.getData();
+      I2NPMessage msg=getBody(data);
+      getContext().jobQueue().addJob(new HandleGatewayMessageJob(msg,info,data.length));
+      return;
+    }
+ else {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("We are the gateway and the endpoint for tunnel " + info.getTunnelId().getTunnelId());
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Process locally");
+      if (info.getDestination() != null) {
+        if (!getContext().clientManager().isLocal(info.getDestination())) {
+          if (_log.shouldLog(Log.WARN))           _log.warn("Received a message on a tunnel allocated to a client that has disconnected - dropping it!");
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("Dropping message for disconnected client: " + _message);
+          getContext().messageHistory().droppedOtherMessage(_message);
+          getContext().messageHistory().messageProcessingError(_message.getUniqueId(),_message.getClass().getName(),"Disconnected client");
+          return;
+        }
+      }
+      I2NPMessage body=getBody(_message.getData());
+      if (body != null) {
+        getContext().jobQueue().addJob(new HandleLocallyJob(body,info));
+        return;
+      }
+ else {
+        if (_log.shouldLog(Log.ERROR))         _log.error("Body is null!  content of message.getData() = [" + DataHelper.toString(_message.getData()) + "]",getAddedBy());
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Message that failed: " + _message,getAddedBy());
+        return;
+      }
+    }
+  }
+ else {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Received a message that we are not the gateway for on tunnel " + info.getTunnelId().getTunnelId() + " without a verification structure: "+ _message,getAddedBy());
+    return;
+  }
+}
