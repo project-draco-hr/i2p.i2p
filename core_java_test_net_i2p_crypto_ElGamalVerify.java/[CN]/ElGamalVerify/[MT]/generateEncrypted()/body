@@ -1,0 +1,26 @@
+{
+  try {
+    Object keypair[]=_context.keyGenerator().generatePKIKeypair();
+    PublicKey pub=(PublicKey)keypair[0];
+    PrivateKey priv=(PrivateKey)keypair[1];
+    log("PUBLIC : " + pub.toBase64());
+    log("PRIVATE: " + priv.toBase64());
+    for (int i=0; i < UNENCRYPTED.length; i++) {
+      byte orig[]=UNENCRYPTED[i].getBytes();
+      byte encrypted[]=_context.elGamalEngine().encrypt(orig,pub);
+      System.out.println("Encrypted [" + i + "]: ");
+      String enc=Base64.encode(encrypted);
+      for (int j=0; j < enc.length(); j++) {
+        int remaining=enc.length() - j * 70;
+        if (remaining > 0) {
+          String cur=enc.substring(j * 70,remaining > 70 ? (j + 1) * 70 : enc.length());
+          System.out.println(cur);
+        }
+      }
+    }
+  }
+ catch (  Exception e) {
+    log("ERROR: generateEncrypted blew up: " + e.getMessage());
+    e.printStackTrace();
+  }
+}
