@@ -1,13 +1,26 @@
 {
   if (_curIndex >= _msg.getNumReplies()) {
-    getContext().profileManager().dbLookupReply(_peer,_newPeers,_seenPeers,_invalidPeers,_duplicatePeers,_duration);
-    if (_newPeers > 0)     newPeersFound(_newPeers);
+    if (_repliesPendingVerification > 0) {
+      SearchReplyJob.this.requeue(_timeoutMs);
+    }
+ else {
+      getContext().profileManager().dbLookupReply(_peer,_newPeers,_seenPeers,_invalidPeers,_duplicatePeers,_duration);
+      if (_newPeers > 0)       newPeersFound(_newPeers);
+    }
   }
  else {
     Hash peer=_msg.getReply(_curIndex);
     RouterInfo info=getContext().netDb().lookupRouterInfoLocally(peer);
     if (info == null) {
-      getContext().netDb().lookupRouterInfo(peer,null,null,_timeoutMs);
+      boolean sendsBadInfo=getContext().profileOrganizer().peerSendsBadReplies(_peer);
+      if (!sendsBadInfo) {
+        getContext().netDb().lookupRouterInfo(peer,new ReplyVerifiedJob(peer),new ReplyNotVerifiedJob(peer),_timeoutMs);
+        _repliesPendingVerification++;
+      }
+ else {
+        if (_log.shouldLog(Log.WARN))         _log.warn("Peer " + _peer.toBase64() + " sends us bad replies, so not verifying "+ peer.toBase64());
+        getContext().statManager().addRateData("netDb.searchReplyValidationSkipped",1,0);
+      }
     }
     if (_state.wasAttempted(peer)) {
       _duplicatePeers++;

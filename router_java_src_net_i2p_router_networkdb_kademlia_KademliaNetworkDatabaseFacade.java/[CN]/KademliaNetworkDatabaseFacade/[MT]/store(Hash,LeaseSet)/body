@@ -1,22 +1,7 @@
 {
-  long start=_context.clock().now();
   if (!_initialized)   return null;
-  if (!key.equals(leaseSet.getDestination().calculateHash())) {
-    if (_log.shouldLog(Log.ERROR))     _log.error("Invalid store attempt! key does not match leaseSet.destination!  key = " + key + ", leaseSet = "+ leaseSet);
-    return null;
-  }
- else   if (!leaseSet.verifySignature()) {
-    if (_log.shouldLog(Log.ERROR))     _log.error("Invalid leaseSet signature!  leaseSet = " + leaseSet);
-    return null;
-  }
- else   if (leaseSet.getEarliestLeaseDate() <= _context.clock().now()) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("Old leaseSet!  not storing it: " + leaseSet.getDestination().calculateHash().toBase64() + " expires on "+ new Date(leaseSet.getEarliestLeaseDate()),new Exception("Rejecting store"));
-    return null;
-  }
- else   if (leaseSet.getEarliestLeaseDate() > _context.clock().now() + MAX_LEASE_FUTURE) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("LeaseSet to expire too far in the future: " + leaseSet.getDestination().calculateHash().toBase64() + " expires on "+ new Date(leaseSet.getEarliestLeaseDate()),new Exception("Rejecting store"));
-    return null;
-  }
+  boolean valid=validate(key,leaseSet);
+  if (!valid)   throw new IllegalArgumentException("LeaseSet is not valid");
   LeaseSet rv=null;
   if (_ds.isKnown(key))   rv=(LeaseSet)_ds.get(key);
   _ds.put(key,leaseSet);
@@ -36,7 +21,5 @@ synchronized (_lastSent) {
       }
     }
   }
-  long end=_context.clock().now();
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Store leaseSet took [" + (end - start) + "ms]");
   return rv;
 }
