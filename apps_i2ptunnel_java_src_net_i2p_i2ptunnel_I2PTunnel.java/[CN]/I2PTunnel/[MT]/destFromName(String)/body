@@ -1,5 +1,7 @@
 {
   if ((name == null) || (name.trim().length() <= 0))   throw new DataFormatException("Empty destination provided");
+  I2PAppContext ctx=I2PAppContext.getGlobalContext();
+  Log log=ctx.logManager().getLog(I2PTunnel.class);
   if (name.startsWith("file:")) {
     Destination result=new Destination();
     byte content[]=null;
@@ -27,20 +29,20 @@
       return result;
     }
  catch (    Exception ex) {
-      if (_log.shouldLog(Log.INFO))       _log.info("File is not a binary destination - trying base64");
+      if (log.shouldLog(Log.INFO))       log.info("File is not a binary destination - trying base64");
       try {
         byte decoded[]=Base64.decode(new String(content));
         result.fromByteArray(decoded);
         return result;
       }
  catch (      DataFormatException dfe) {
-        if (_log.shouldLog(Log.WARN))         _log.warn("File is not a base64 destination either - failing!");
+        if (log.shouldLog(Log.WARN))         log.warn("File is not a base64 destination either - failing!");
         return null;
       }
     }
   }
  else {
-    NamingService inst=_context.namingService();
+    NamingService inst=ctx.namingService();
     return inst.lookup(name);
   }
 }
