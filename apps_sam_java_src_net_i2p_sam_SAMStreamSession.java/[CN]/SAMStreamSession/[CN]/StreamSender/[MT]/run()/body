@@ -1,11 +1,20 @@
 {
+  _log.debug("run() called for socket sender " + _id);
   ByteArray data=null;
   while (_stillRunning) {
     data=null;
     try {
 synchronized (_data) {
-        if (_data.size() > 0)         data=(ByteArray)_data.remove(0);
- else         _data.wait(5000);
+        if (_data.size() > 0) {
+          data=(ByteArray)_data.remove(0);
+        }
+ else         if (_shuttingDownGracefully) {
+          stopRunning();
+          break;
+        }
+ else {
+          _data.wait(5000);
+        }
       }
       if (data != null) {
         try {
