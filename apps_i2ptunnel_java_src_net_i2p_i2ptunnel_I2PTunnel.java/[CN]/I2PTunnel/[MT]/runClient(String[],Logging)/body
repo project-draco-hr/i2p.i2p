@@ -1,8 +1,8 @@
 {
   if (args.length == 2) {
-    int port=-1;
+    int portNum=-1;
     try {
-      port=Integer.parseInt(args[0]);
+      portNum=Integer.parseInt(args[0]);
     }
  catch (    NumberFormatException nfe) {
       l.log("invalid port");
@@ -11,9 +11,16 @@
       return;
     }
     I2PTunnelTask task;
-    task=new I2PTunnelClient(port,args[1],l,ownDest,(EventDispatcher)this,this);
-    addtask(task);
-    notifyEvent("clientTaskId",new Integer(task.getId()));
+    try {
+      task=new I2PTunnelClient(portNum,args[1],l,ownDest,(EventDispatcher)this,this);
+      addtask(task);
+      notifyEvent("clientTaskId",new Integer(task.getId()));
+    }
+ catch (    IllegalArgumentException iae) {
+      _log.error(getPrefix() + "Invalid I2PTunnel config to create a client [" + host+ ":"+ port+ "]",iae);
+      l.log("Invalid I2PTunnel configuration [" + host + ":"+ port+ "]");
+      notifyEvent("clientTaskId",new Integer(-1));
+    }
   }
  else {
     l.log("client <port> <pubkey>|file:<pubkeyfile>");

@@ -15,9 +15,16 @@
       proxy=args[1];
     }
     I2PTunnelTask task;
-    task=new I2PTunnelHTTPClient(port,l,ownDest,proxy,(EventDispatcher)this,this);
-    addtask(task);
-    notifyEvent("httpclientTaskId",new Integer(task.getId()));
+    try {
+      task=new I2PTunnelHTTPClient(port,l,ownDest,proxy,(EventDispatcher)this,this);
+      addtask(task);
+      notifyEvent("httpclientTaskId",new Integer(task.getId()));
+    }
+ catch (    IllegalArgumentException iae) {
+      _log.error(getPrefix() + "Invalid I2PTunnel config to create an httpclient [" + host+ ":"+ port+ "]",iae);
+      l.log("Invalid I2PTunnel configuration [" + host + ":"+ port+ "]");
+      notifyEvent("httpclientTaskId",new Integer(-1));
+    }
   }
  else {
     l.log("httpclient <port> [<proxy>]");
