@@ -16,6 +16,7 @@ synchronized (_outboundPackets) {
     if (newWindowSize <= 0)     newWindowSize=1;
     getOptions().setWindowSize(newWindowSize);
     int numSends=_packet.getNumSends() + 1;
+    if ((newWindowSize == 1) && (numSends > 2))     _context.sessionKeyManager().failTags(_remotePeer.getPublicKey());
     if (_log.shouldLog(Log.WARN))     _log.warn("Resend packet " + _packet + " time "+ numSends+ " (wsize "+ newWindowSize+ " lifetime "+ (_context.clock().now() - _packet.getCreatedOn())+ "ms)");
     _outboundQueue.enqueue(_packet);
     if (numSends > _options.getMaxResends()) {
