@@ -4,19 +4,25 @@
     notifyEvent("openClientResult","error");
     return;
   }
-  try {
-    dest=I2PTunnel.destFromName(destination);
-    if (dest == null) {
-      l.log("Could not resolve " + destination + ".");
-      return;
+  StringTokenizer tok=new StringTokenizer(destinations,",");
+  dests=new ArrayList(1);
+  while (tok.hasMoreTokens()) {
+    String destination=tok.nextToken();
+    try {
+      Destination dest=I2PTunnel.destFromName(destination);
+      if (dest == null)       l.log("Could not resolve " + destination);
+ else       dests.add(dest);
+    }
+ catch (    DataFormatException dfe) {
+      l.log("Bad format parsing \"" + destination + "\"");
     }
   }
- catch (  DataFormatException e) {
-    l.log("Bad format in destination \"" + destination + "\".");
+  if (dests.size() <= 0) {
+    l.log("No target destinations found");
     notifyEvent("openClientResult","error");
     return;
   }
-  setName(getLocalPort() + " -> " + destination);
+  setName(getLocalPort() + " -> " + destinations);
   startRunning();
   notifyEvent("openClientResult","ok");
 }

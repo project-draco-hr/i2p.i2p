@@ -1,0 +1,32 @@
+{
+  String seedURL=System.getProperty("i2p.reseedURL",DEFAULT_SEED_URL);
+  if ((seedURL == null) || (seedURL.trim().length() <= 0))   seedURL=DEFAULT_SEED_URL;
+  try {
+    URL dir=new URL(seedURL);
+    String content=new String(readURL(dir));
+    Set urls=new HashSet();
+    int cur=0;
+    while (true) {
+      int start=content.indexOf("href=\"routerInfo-",cur);
+      if (start < 0)       break;
+      int end=content.indexOf(".dat\">",start);
+      String name=content.substring(start + "href=\"routerInfo-".length(),end);
+      urls.add(name);
+      cur=end + 1;
+    }
+    int fetched=0;
+    int errors=0;
+    for (Iterator iter=urls.iterator(); iter.hasNext(); ) {
+      try {
+        fetchSeed(seedURL,(String)iter.next());
+        fetched++;
+      }
+ catch (      Exception e) {
+        errors++;
+      }
+    }
+  }
+ catch (  Throwable t) {
+    I2PAppContext.getGlobalContext().logManager().getLog(ReseedHandler.class).error("Error reseeding",t);
+  }
+}
