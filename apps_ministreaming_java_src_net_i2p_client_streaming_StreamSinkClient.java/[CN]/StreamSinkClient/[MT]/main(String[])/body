@@ -1,10 +1,9 @@
 {
-  if (args.length != 3) {
-    System.out.println("Usage: StreamSinkClient sendSizeKB writeDelayMs serverDestFile");
-  }
- else {
-    int sendSizeKB=-1;
-    int writeDelayMs=-1;
+  StreamSinkClient client=null;
+  int sendSizeKB=-1;
+  int writeDelayMs=-1;
+switch (args.length) {
+case 3:
     try {
       sendSizeKB=Integer.parseInt(args[0]);
     }
@@ -12,14 +11,28 @@
       System.err.println("Send size invalid [" + args[0] + "]");
       return;
     }
-    try {
-      writeDelayMs=Integer.parseInt(args[1]);
-    }
- catch (    NumberFormatException nfe) {
-      System.err.println("Write delay ms invalid [" + args[1] + "]");
-      return;
-    }
-    StreamSinkClient client=new StreamSinkClient(sendSizeKB,writeDelayMs,args[2]);
-    client.runClient();
+  try {
+    writeDelayMs=Integer.parseInt(args[1]);
   }
+ catch (  NumberFormatException nfe) {
+    System.err.println("Write delay ms invalid [" + args[1] + "]");
+    return;
+  }
+client=new StreamSinkClient(sendSizeKB,writeDelayMs,args[2]);
+break;
+case 5:
+try {
+int port=Integer.parseInt(args[1]);
+sendSizeKB=Integer.parseInt(args[2]);
+writeDelayMs=Integer.parseInt(args[3]);
+client=new StreamSinkClient(args[0],port,sendSizeKB,writeDelayMs,args[4]);
+}
+ catch (NumberFormatException nfe) {
+System.err.println("arg error");
+}
+break;
+default :
+System.out.println("Usage: StreamSinkClient [i2cpHost i2cpPort] sendSizeKB writeDelayMs serverDestFile");
+}
+if (client != null) client.runClient();
 }

@@ -15,27 +15,20 @@
     System.arraycopy(data,0,elgEncr,514 - data.length,data.length);
   }
   byte elgDecr[]=_context.elGamalEngine().decrypt(elgEncr,targetPrivateKey);
-  if (elgDecr == null)   return null;
-  ByteArrayInputStream bais=new ByteArrayInputStream(elgDecr);
-  byte preIV[]=null;
-  try {
-    usedKey.readBytes(bais);
-    preIV=new byte[32];
-    int read=bais.read(preIV);
-    if (read != preIV.length) {
-      throw new DataFormatException("Somehow ElGamal broke and 256 bytes is less than 32 bytes...");
-    }
-  }
- catch (  IOException ioe) {
-    if (_log.shouldLog(Log.ERROR))     _log.error("Error decrypting the new session",ioe);
+  if (elgDecr == null) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("decrypt returned null",new Exception("decrypt failed"));
     return null;
   }
-  byte aesEncr[]=new byte[data.length - 514];
-  System.arraycopy(data,514,aesEncr,0,aesEncr.length);
+  byte preIV[]=null;
+  byte key[]=new byte[SessionKey.KEYSIZE_BYTES];
+  System.arraycopy(elgDecr,0,key,0,SessionKey.KEYSIZE_BYTES);
+  usedKey.setData(key);
+  preIV=new byte[32];
+  System.arraycopy(elgDecr,SessionKey.KEYSIZE_BYTES,preIV,0,32);
   Hash ivHash=_context.sha().calculateHash(preIV);
   byte iv[]=new byte[16];
   System.arraycopy(ivHash.getData(),0,iv,0,16);
-  byte aesDecr[]=decryptAESBlock(aesEncr,usedKey,iv,null,foundTags,foundKey);
+  byte aesDecr[]=decryptAESBlock(data,514,data.length - 514,usedKey,iv,null,foundTags,foundKey);
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Decrypt with a NEW session successfull: # tags read = " + foundTags.size(),new Exception("Decrypted by"));
   return aesDecr;
 }

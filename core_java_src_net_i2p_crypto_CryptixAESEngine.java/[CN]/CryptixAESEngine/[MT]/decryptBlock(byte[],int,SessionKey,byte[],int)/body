@@ -1,9 +1,15 @@
 {
+  if ((payload == null) || (rv == null))   throw new IllegalArgumentException("null block args [payload=" + payload + " rv="+ rv);
+  if (payload.length - inIndex > rv.length - outIndex)   throw new IllegalArgumentException("bad block args [payload.len=" + payload.length + " inIndex="+ inIndex+ " rv.len="+ rv.length+ " outIndex="+ outIndex);
+  CryptixAESKeyCache.KeyCacheEntry keyData=_cache.acquireKey();
   try {
-    Object key=CryptixRijndael_Algorithm.makeKey(sessionKey.getData(),16);
+    Object key=CryptixRijndael_Algorithm.makeKey(sessionKey.getData(),16,keyData);
     CryptixRijndael_Algorithm.blockDecrypt(payload,rv,inIndex,outIndex,key,16);
   }
  catch (  InvalidKeyException ike) {
     _log.error("Invalid key",ike);
+  }
+ finally {
+    _cache.releaseKey(keyData);
   }
 }

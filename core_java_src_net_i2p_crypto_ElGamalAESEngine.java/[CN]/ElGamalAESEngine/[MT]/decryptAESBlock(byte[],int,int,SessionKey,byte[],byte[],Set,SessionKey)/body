@@ -1,0 +1,47 @@
+{
+  byte decrypted[]=new byte[encryptedLen];
+  _context.aes().decrypt(encrypted,offset,decrypted,0,key,iv,encryptedLen);
+  try {
+    SessionKey newKey=null;
+    Hash readHash=null;
+    List tags=new ArrayList();
+    ByteArrayInputStream bais=new ByteArrayInputStream(decrypted);
+    long numTags=DataHelper.readLong(bais,2);
+    if ((numTags < 0) || (numTags > 65535))     throw new Exception("Invalid number of session tags");
+    for (int i=0; i < numTags; i++) {
+      byte tag[]=new byte[32];
+      int read=bais.read(tag);
+      if (read != 32)       throw new Exception("Invalid session tag - # tags: " + numTags + " curTag #: "+ i+ " read: "+ read);
+      tags.add(new SessionTag(tag));
+    }
+    long len=DataHelper.readLong(bais,4);
+    if ((len < 0) || (len > encryptedLen))     throw new Exception("Invalid size of payload");
+    byte hashval[]=new byte[32];
+    int read=bais.read(hashval);
+    if (read != hashval.length)     throw new Exception("Invalid size of hash");
+    readHash=new Hash();
+    readHash.setData(hashval);
+    byte flag=(byte)bais.read();
+    if (flag == 0x01) {
+      byte rekeyVal[]=new byte[32];
+      read=bais.read(rekeyVal);
+      if (read != rekeyVal.length)       throw new Exception("Invalid size of the rekeyed session key");
+      newKey=new SessionKey();
+      newKey.setData(rekeyVal);
+    }
+    byte unencrData[]=new byte[(int)len];
+    read=bais.read(unencrData);
+    if (read != unencrData.length)     throw new Exception("Invalid size of the data read");
+    Hash calcHash=_context.sha().calculateHash(unencrData);
+    if (calcHash.equals(readHash)) {
+      foundTags.addAll(tags);
+      if (newKey != null)       foundKey.setData(newKey.getData());
+      return unencrData;
+    }
+    throw new Exception("Hash does not match");
+  }
+ catch (  Exception e) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Unable to decrypt AES block",e);
+    return null;
+  }
+}

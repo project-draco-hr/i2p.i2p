@@ -1,16 +1,18 @@
 {
   if ((iv == null) || (payload == null) || (payload.length <= 0)|| (sessionKey == null)|| (iv.length != 16))   throw new IllegalArgumentException("bad setup");
+ else   if (out == null)   throw new IllegalArgumentException("out is null");
+ else   if (out.length - outIndex < length)   throw new IllegalArgumentException("out is too small (out.length=" + out.length + " outIndex="+ outIndex+ " length="+ length);
   if (USE_FAKE_CRYPTO) {
     _log.warn("AES Crypto disabled!  Using trivial XOR");
     System.arraycopy(payload,payloadIndex,out,outIndex,length);
     return;
   }
-  int numblock=payload.length / 16;
-  if (payload.length % 16 != 0)   numblock++;
-  decryptBlock(payload,0,sessionKey,out,0);
-  DataHelper.xor(out,0,iv,0,out,0,16);
+  int numblock=length / 16;
+  if (length % 16 != 0)   numblock++;
+  decryptBlock(payload,payloadIndex,sessionKey,out,outIndex);
+  DataHelper.xor(out,outIndex,iv,0,out,outIndex,16);
   for (int x=1; x < numblock; x++) {
-    decryptBlock(payload,x * 16,sessionKey,out,x * 16);
-    DataHelper.xor(out,x * 16,payload,(x - 1) * 16,out,x * 16,16);
+    decryptBlock(payload,payloadIndex + (x * 16),sessionKey,out,outIndex + (x * 16));
+    DataHelper.xor(out,outIndex + x * 16,payload,payloadIndex + (x - 1) * 16,out,outIndex + x * 16,16);
   }
 }
