@@ -4,18 +4,20 @@
   Rate curFailed=failedStat.getRate(period);
   long eventCount=0;
   if (curAccepted != null)   eventCount=curAccepted.getCurrentEventCount() + curAccepted.getLastEventCount();
-  double stretch=ESTIMATE_PERIOD / period;
+  double stretch=((double)ESTIMATE_PERIOD) / period;
   double val=eventCount * stretch;
   long failed=0;
   if (curFailed != null)   failed=curFailed.getCurrentEventCount() + curFailed.getLastEventCount();
   if (failed > 0) {
-    if ((period == 10 * 60 * 1000) && (curFailed.getCurrentEventCount() > 0))     return 0.0d;
+    if ((period <= 10 * 60 * 1000) && (curFailed.getCurrentEventCount() > 0))     return 0.0d;
  else     val-=failed * stretch;
   }
-  if ((period == 10 * 60 * 1000) && (curRejected.getCurrentEventCount() + curRejected.getLastEventCount() > 0))   return 0.0d;
+  if ((period <= 10 * 60 * 1000) && (curRejected.getCurrentEventCount() + curRejected.getLastEventCount() > 0)) {
+    return 0.0d;
+  }
  else   val-=stretch * (curRejected.getCurrentEventCount() + curRejected.getLastEventCount());
   if (val >= 0) {
-    return (val + GROWTH_FACTOR) * periodWeight(period);
+    return (val + GROWTH_FACTOR);
   }
  else {
     return 0.0d;

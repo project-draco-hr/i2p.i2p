@@ -1,0 +1,16 @@
+{
+  long bytesAllowed=getBytesAllowed();
+  bytesAllowed*=getSharePercentage();
+  double bytesPerTunnel=(numTunnels > 0 ? bytesAllocated / numTunnels : 0);
+  double toAllocate=(numTunnels > 0 ? bytesPerTunnel * (numTunnels + 1) : 0);
+  double pctFull=toAllocate / bytesAllowed;
+  double allocatedKBps=toAllocate / (10 * 60 * 1024);
+  if (_context.random().nextInt(100) > 100 * pctFull) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Probabalistically allowing the tunnel w/ " + pctFull + " of our "+ bytesAllowed+ "bytes/"+ allocatedKBps+ "KBps allocated through "+ numTunnels+ " tunnels");
+    return true;
+  }
+ else {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Rejecting the tunnel w/ " + pctFull + " of our "+ bytesAllowed+ "bytes allowed ("+ toAllocate+ "bytes / "+ allocatedKBps+ "KBps) through "+ numTunnels+ " tunnels");
+    return false;
+  }
+}
