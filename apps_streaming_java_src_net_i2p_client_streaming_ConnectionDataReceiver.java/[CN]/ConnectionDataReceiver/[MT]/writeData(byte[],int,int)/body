@@ -1,8 +1,10 @@
 {
+  Connection con=_connection;
+  if (con == null)   return _dummyStatus;
   boolean doSend=true;
-  if ((size <= 0) && (_connection.getLastSendId() >= 0)) {
-    if (_connection.getOutputStream().getClosed()) {
-      if (_connection.getCloseSentOn() < 0) {
+  if ((size <= 0) && (con.getLastSendId() >= 0)) {
+    if (con.getOutputStream().getClosed()) {
+      if (con.getCloseSentOn() < 0) {
         doSend=true;
       }
  else {
@@ -13,10 +15,11 @@
       doSend=false;
     }
   }
-  if (_connection.getUnackedPacketsReceived() > 0)   doSend=true;
-  if (_log.shouldLog(Log.INFO) && !doSend)   _log.info("writeData called: size=" + size + " doSend="+ doSend+ " unackedReceived: "+ _connection.getUnackedPacketsReceived()+ " con: "+ _connection,new Exception("write called by"));
+  if (con.getUnackedPacketsReceived() > 0)   doSend=true;
+  if (_log.shouldLog(Log.INFO) && !doSend)   _log.info("writeData called: size=" + size + " doSend="+ doSend+ " unackedReceived: "+ con.getUnackedPacketsReceived()+ " con: "+ con,new Exception("write called by"));
   if (doSend) {
     PacketLocal packet=send(buf,off,size);
+    if (packet == null)     return _dummyStatus;
     if ((packet.getSequenceNum() > 0) || (packet.isFlagSet(Packet.FLAG_SYNCHRONIZE)))     return packet;
  else     return _dummyStatus;
   }

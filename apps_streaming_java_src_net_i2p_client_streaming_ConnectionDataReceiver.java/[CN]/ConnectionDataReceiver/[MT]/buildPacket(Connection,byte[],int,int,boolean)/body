@@ -1,0 +1,30 @@
+{
+  boolean ackOnly=isAckOnly(con,size);
+  PacketLocal packet=new PacketLocal(_context,con.getRemotePeer(),con);
+  byte data[]=new byte[size];
+  if (size > 0)   System.arraycopy(buf,off,data,0,size);
+  packet.setPayload(data);
+  if (ackOnly && !forceIncrement)   packet.setSequenceNum(0);
+ else   packet.setSequenceNum(con.getNextOutboundPacketNum());
+  packet.setSendStreamId(con.getSendStreamId());
+  packet.setReceiveStreamId(con.getReceiveStreamId());
+  con.getInputStream().updateAcks(packet);
+  packet.setOptionalDelay(con.getOptions().getChoke());
+  packet.setOptionalMaxSize(con.getOptions().getMaxMessageSize());
+  packet.setResendDelay(con.getOptions().getResendDelay());
+  if (con.getOptions().getProfile() == ConnectionOptions.PROFILE_INTERACTIVE)   packet.setFlag(Packet.FLAG_PROFILE_INTERACTIVE,true);
+ else   packet.setFlag(Packet.FLAG_PROFILE_INTERACTIVE,false);
+  packet.setFlag(Packet.FLAG_SIGNATURE_REQUESTED,con.getOptions().getRequireFullySigned());
+  if ((!ackOnly) && (packet.getSequenceNum() <= 0)) {
+    packet.setFlag(Packet.FLAG_SYNCHRONIZE);
+    packet.setOptionalFrom(con.getSession().getMyDestination());
+  }
+  if (con.getOutputStream().getClosed() && ((size > 0) || (con.getUnackedPacketsSent() <= 0))) {
+    packet.setFlag(Packet.FLAG_CLOSE);
+    con.setCloseSentOn(_context.clock().now());
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Closed is set for a new packet on " + con + ": "+ packet);
+  }
+ else {
+  }
+  return packet;
+}
