@@ -6,7 +6,13 @@
     ri.setPublished(getContext().clock().now());
     ri.setOptions(stats);
     ri.setAddresses(getContext().commSystem().createAddresses());
-    ri.sign(getContext().keyManager().getSigningPrivateKey());
+    SigningPrivateKey key=getContext().keyManager().getSigningPrivateKey();
+    if (key == null) {
+      _log.log(Log.CRIT,"Internal error - signing private key not known?  rescheduling publish for 30s");
+      requeue(30 * 1000);
+      return;
+    }
+    ri.sign(key);
     getContext().router().setRouterInfo(ri);
     if (_log.shouldLog(Log.INFO))     _log.info("Newly updated routerInfo is published with " + stats.size() + "/"+ ri.getOptions().size()+ " options on "+ new Date(ri.getPublished()));
     getContext().netDb().publish(ri);
