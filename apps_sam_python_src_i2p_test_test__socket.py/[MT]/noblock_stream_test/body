@@ -1,0 +1,63 @@
+def noblock_stream_test():
+    'Unit test for non-blocking stream commands and listen.'
+    kwargs = {'in_depth': 0, 'out_depth': 0, }
+    serv = socket.socket('Allison', socket.SOCK_STREAM, **kwargs)
+    serv.setblocking(False)
+    serv.listen(100)
+    assert (serv.gettimeout() == 0.0)
+    msg_to_client = 'Hi, client!!!!'
+    msg_to_server = 'Hi, server!'
+    nconnects = 5
+    global server_done, client_count, client_lock
+    server_done = False
+    client_count = 0
+    client_lock = threading.Lock()
+
+    def serv_func(n=nconnects):
+        while True:
+            try:
+                (C, ignoredest) = serv.accept()
+                C.send(msg_to_client)
+                rmsg = C.recv(len(msg_to_server), socket.MSG_WAITALL)
+                if (rmsg != msg_to_server):
+                    raise ValueError(((('message should have been: ' + repr(msg_to_server)) + ' was: ') + repr(rmsg)))
+                C.close()
+                n -= 1
+                if (n == 0):
+                    break
+            except socket.BlockError:
+                pass
+            time.sleep(0.01)
+        global server_done
+        server_done = True
+
+    def client_func():
+        C = socket.socket('Bobb', socket.SOCK_STREAM, **kwargs)
+        C.setblocking(False)
+        try:
+            C.connect(serv.dest)
+        except socket.BlockError:
+            (Rlist, Wlist, Elist) = select.select([C], [C], [C])
+            if (len(Elist) > 0):
+                assert (Elist[0] == C)
+                raise Elist[0].sessobj.err
+        C.send(msg_to_server)
+        C.setblocking(True)
+        rmsg = C.recv(len(msg_to_client), socket.MSG_WAITALL)
+        if (rmsg != msg_to_client):
+            raise ValueError(((('message should have been: ' + repr(msg_to_client)) + ' was: ') + repr(rmsg)))
+        C.close()
+        global client_count, client_lock
+        client_lock.acquire()
+        try:
+            client_count += 1
+        finally:
+            client_lock.release()
+    thread.start_new_thread(serv_func, ())
+    for i in range(nconnects):
+        thread.start_new_thread(client_func, ())
+    while True:
+        if (server_done and (client_count == nconnects)):
+            break
+        time.sleep(0.01)
+    test_passed('socket.listen (SOCK_STREAM), and non-blocking IO')

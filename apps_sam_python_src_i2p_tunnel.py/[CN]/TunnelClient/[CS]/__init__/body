@@ -1,0 +1,18 @@
+def __init__(self, session, port, dest, samaddr=i2p.socket.samaddr, nconnect=(-1), timeout=None, **kwargs):
+    "Tunnels localhost:port --> I2P Destination dest.\n\n       A session named 'session' is created locally, for purposes\n       of routing to 'dest'.  nconnect and timeout are the maximum\n       number of connections and maximum time per connection.  All\n       other arguments are passed to i2p.socket.socket().  This call\n       blocks until the tunnel is ready."
+    S = pysocket.socket(pysocket.AF_INET, pysocket.SOCK_STREAM)
+    S.bind(('', port))
+    S.listen(4)
+    obj = i2p.socket.socket(session, i2p.socket.SOCK_STREAM, samaddr, **kwargs)
+    self.session = session
+    self.dest = obj.dest
+
+    def make_send():
+        C = i2p.socket.socket(session, i2p.socket.SOCK_STREAM, samaddr, **kwargs)
+        C.setblocking(False)
+        try:
+            C.connect(dest)
+        except:
+            pass
+        return C
+    Tunnel.__init__(self, S, make_send, nconnect, timeout)

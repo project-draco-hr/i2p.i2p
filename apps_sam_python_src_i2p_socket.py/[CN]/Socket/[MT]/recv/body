@@ -1,0 +1,11 @@
+def recv(self, bufsize, flags=0):
+    "Receive string data from the socket.\n\n       The maximum amount of data to be received is given by\n       bufsize.  If bufsize is zero, this function returns\n       an empty string immediately.  If bufsize is nonzero,\n       this function blocks until at least one character is\n       available for reading.  If the socket has been closed,\n       an empty string is returned as an end of file indicator.\n\n       If recv() is called on a socket that is in non-blocking\n       mode or has a timeout, i2p.socket.BlockError or\n       i2p.socket.Timeout will be raised if data is not available\n       within the given timeframe.\n\n       For a datagram or raw socket, the first bufsize characters\n       of the packet are read, and the remainder of the packet is\n       discarded.  To read the entire packet, use bufsize = -1.\n\n       For datagram and raw sockets, the packet may originate from\n       any Destination.  Use recvfrom() with datagrams to determine\n       the Destination from which the packet was received.\n\n       The flags argument can be a bitwise OR of MSG_PEEK,\n       MSG_WAITALL, and/or MSG_DONTWAIT.  MSG_PEEK indicates that\n       any data read should not be removed from the socket's\n       incoming buffer.  MSG_WAITALL indicates to wait for exactly\n       bufsize characters or an error.  MSG_DONTWAIT indicates\n       that the recv() command should not block execution.\n       "
+    timeout = self.timeout
+    (peek, waitall, dontwait) = ((flags & MSG_PEEK), (flags & MSG_WAITALL), (flags & MSG_DONTWAIT))
+    if dontwait:
+        timeout = 0.0
+    if (self.type == SOCK_STREAM):
+        self._verify_connected()
+        return self.sessobj.recv(bufsize, timeout, peek, waitall)
+    else:
+        return self.recvfrom(bufsize, flags)[0]

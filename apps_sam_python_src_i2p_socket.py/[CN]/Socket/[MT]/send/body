@@ -1,0 +1,12 @@
+def send(self, string, flags=0):
+    'Sends string data to a remote Destination.\n\n       For a stream, connect() must be called prior to send().\n       Once close() is called, no further data can be sent, and\n       the stream cannot be re-opened.\n\n       For datagram and raw sockets, connect() only specifies\n       a Destination to which packets are sent to.  send() will\n       then send a packet to the given Destination.  connect()\n       can be used multiple times.\n\n       The send() command never blocks execution.  The flags\n       argument is ignored.\n    '
+    self._verify_open()
+    if ((self.type == SOCK_DGRAM) or (self.type == SOCK_RAW)):
+        if (not hasattr(self, 'packet_dest')):
+            raise i2p.Error(('use connect or sendto to specify a ' + 'Destination'))
+        self.sendto(string, flags, self.packet_dest)
+        return
+    self._verify_connected()
+    if self.closed:
+        raise i2p.Error('send operation on closed socket')
+    self.sessobj.send(string)
