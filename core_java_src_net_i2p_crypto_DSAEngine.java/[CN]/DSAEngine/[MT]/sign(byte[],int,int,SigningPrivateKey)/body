@@ -9,9 +9,14 @@
  while (k.compareTo(CryptoConstants.dsaq) != 1);
   BigInteger r=CryptoConstants.dsag.modPow(k,CryptoConstants.dsap).mod(CryptoConstants.dsaq);
   BigInteger kinv=k.modInverse(CryptoConstants.dsaq);
-  Hash h=calculateHash(data,offset,length);
-  if (h == null)   return null;
+  SHAEntryCache.CacheEntry entry=_cache.acquire(length);
+  Hash h=calculateHash(data,offset,length,entry);
+  if (h == null) {
+    _cache.release(entry);
+    return null;
+  }
   BigInteger M=new NativeBigInteger(1,h.getData());
+  _cache.release(entry);
   BigInteger x=new NativeBigInteger(1,signingKey.getData());
   BigInteger s=(kinv.multiply(M.add(x.multiply(r)))).mod(CryptoConstants.dsaq);
   byte[] rbytes=r.toByteArray();

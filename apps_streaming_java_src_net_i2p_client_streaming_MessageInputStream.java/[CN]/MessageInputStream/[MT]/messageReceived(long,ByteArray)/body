@@ -1,0 +1,36 @@
+{
+synchronized (_dataLock) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("received " + messageId + " with "+ payload.getValid());
+    if (messageId <= _highestReadyBlockId) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("ignoring dup message " + messageId);
+      _dataLock.notifyAll();
+      return false;
+    }
+    if (messageId > _highestBlockId)     _highestBlockId=messageId;
+    if (_highestReadyBlockId + 1 == messageId) {
+      if (!_locallyClosed && payload.getValid() > 0) {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("accepting bytes as ready: " + payload.getValid());
+        _readyDataBlocks.add(payload);
+      }
+      _highestReadyBlockId=messageId;
+      long cur=_highestReadyBlockId + 1;
+      while (_notYetReadyBlocks.containsKey(new Long(cur))) {
+        ByteArray ba=(ByteArray)_notYetReadyBlocks.remove(new Long(cur));
+        if ((ba != null) && (ba.getData() != null) && (ba.getValid() > 0)) {
+          _readyDataBlocks.add(ba);
+        }
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("making ready the block " + cur);
+        cur++;
+        _highestReadyBlockId++;
+      }
+      _dataLock.notifyAll();
+    }
+ else {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("message is out of order: " + messageId);
+      if (_locallyClosed)       _notYetReadyBlocks.put(new Long(messageId),new ByteArray(null));
+ else       _notYetReadyBlocks.put(new Long(messageId),payload);
+      _dataLock.notifyAll();
+    }
+  }
+  return true;
+}

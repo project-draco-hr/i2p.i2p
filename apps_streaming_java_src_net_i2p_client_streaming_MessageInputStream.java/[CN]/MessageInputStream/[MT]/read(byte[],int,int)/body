@@ -53,17 +53,20 @@ synchronized (_dataLock) {
       }
  else {
         ByteArray cur=(ByteArray)_readyDataBlocks.get(0);
-        byte rv=cur.getData()[_readyDataBlockIndex];
+        byte rv=cur.getData()[cur.getOffset() + _readyDataBlockIndex];
         _readyDataBlockIndex++;
-        if (cur.getData().length <= _readyDataBlockIndex) {
+        boolean removed=false;
+        if (cur.getValid() <= _readyDataBlockIndex) {
           _readyDataBlockIndex=0;
           _readyDataBlocks.remove(0);
+          removed=true;
         }
         _readTotal++;
         target[offset + i]=rv;
-        if ((_readyDataBlockIndex <= 3) || (_readyDataBlockIndex >= cur.getData().length - 5)) {
+        if ((_readyDataBlockIndex <= 3) || (_readyDataBlockIndex >= cur.getValid() - 5)) {
           if (_log.shouldLog(Log.DEBUG))           _log.debug("read(...," + offset + ", "+ length+ ")["+ i+ "] after ready data: readyDataBlockIndex="+ _readyDataBlockIndex+ " readyBlocks="+ _readyDataBlocks.size()+ " readTotal="+ _readTotal);
         }
+        if (removed)         _cache.release(cur);
       }
     }
   }

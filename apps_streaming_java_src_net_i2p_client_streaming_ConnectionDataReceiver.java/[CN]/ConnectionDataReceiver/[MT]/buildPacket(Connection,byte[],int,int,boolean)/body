@@ -1,8 +1,10 @@
 {
   boolean ackOnly=isAckOnly(con,size);
   PacketLocal packet=new PacketLocal(_context,con.getRemotePeer(),con);
-  byte data[]=new byte[size];
-  if (size > 0)   System.arraycopy(buf,off,data,0,size);
+  ByteArray data=(size <= Packet.MAX_PAYLOAD_SIZE ? _cache.acquire() : new ByteArray(new byte[size]));
+  if (size > 0)   System.arraycopy(buf,off,data.getData(),0,size);
+  data.setValid(size);
+  data.setOffset(0);
   packet.setPayload(data);
   if (ackOnly && !forceIncrement)   packet.setSequenceNum(0);
  else   packet.setSequenceNum(con.getNextOutboundPacketNum());
