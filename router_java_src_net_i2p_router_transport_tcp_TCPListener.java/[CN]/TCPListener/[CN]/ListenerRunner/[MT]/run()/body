@@ -1,5 +1,5 @@
 {
-  _log.info("Beginning TCP listener");
+  if (_log.shouldLog(Log.INFO))   _log.info("Beginning TCP listener");
   int curDelay=0;
   while ((_isRunning) && (curDelay < MAX_FAIL_DELAY)) {
     try {
@@ -9,12 +9,12 @@
  else {
         _socket=new ServerSocket(_myAddress.getPort());
       }
-      _log.info("Begin looping for host " + _myAddress.getHost() + ":"+ _myAddress.getPort());
+      if (_log.shouldLog(Log.INFO))       _log.info("Begin looping for host " + _myAddress.getHost() + ":"+ _myAddress.getPort());
       curDelay=0;
       loop();
     }
  catch (    IOException ioe) {
-      _log.error("Error listening to tcp connection " + _myAddress.getHost() + ":"+ _myAddress.getPort(),ioe);
+      if (_log.shouldLog(Log.ERROR))       _log.error("Error listening to tcp connection " + _myAddress.getHost() + ":"+ _myAddress.getPort(),ioe);
     }
     if (_socket != null) {
       stopListening();
@@ -25,7 +25,7 @@
       }
       _socket=null;
     }
-    _log.error("Error listening, waiting " + _nextFailDelay + "ms before we try again");
+    if (_log.shouldLog(Log.ERROR))     _log.error("Error listening, waiting " + _nextFailDelay + "ms before we try again");
     try {
       Thread.sleep(_nextFailDelay);
     }
@@ -34,6 +34,6 @@
     curDelay+=_nextFailDelay;
     _nextFailDelay*=5;
   }
-  _log.error("CANCELING TCP LISTEN.  delay = " + curDelay,new Exception("TCP Listen cancelled!!!"));
+  if (_log.shouldLog(Log.ERROR))   _log.error("CANCELING TCP LISTEN.  delay = " + curDelay);
   _isRunning=false;
 }

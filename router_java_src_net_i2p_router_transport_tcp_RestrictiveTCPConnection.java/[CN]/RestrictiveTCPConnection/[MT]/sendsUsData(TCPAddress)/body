@@ -1,19 +1,6 @@
 {
   SocketCreator creator=new SocketCreator(peer.getHost(),peer.getPort(),false);
-  I2PThread sockCreator=new I2PThread(creator);
-  sockCreator.setDaemon(true);
-  sockCreator.setName("PeerCallback:" + _transport.getListenPort());
-  sockCreator.start();
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Before joining socket creator via peer callback...");
-  try {
-synchronized (creator) {
-      creator.wait(TCPTransport.SOCKET_CREATE_TIMEOUT);
-    }
-  }
- catch (  InterruptedException ie) {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Timed out waiting to connect to " + peer.getHost() + ':'+ peer.getPort());
-  }
-  boolean established=creator.couldEstablish();
+  boolean established=creator.verifyReachability(TCPTransport.SOCKET_CREATE_TIMEOUT);
   if (_log.shouldLog(Log.DEBUG))   _log.debug("After joining socket creator via peer callback [could establish? " + established + "]");
   return established;
 }
