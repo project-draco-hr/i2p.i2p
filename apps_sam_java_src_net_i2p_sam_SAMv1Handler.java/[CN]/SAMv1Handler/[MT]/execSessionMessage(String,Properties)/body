@@ -32,7 +32,17 @@
         rawSession=new SAMRawSession(dest,props,this);
       }
  else       if (style.equals("STREAM")) {
-        streamSession=new SAMStreamSession(dest,props,this);
+        String dir=props.getProperty("DIRECTION");
+        if (dir == null) {
+          _log.debug("No DIRECTION parameter in STREAM session");
+          return false;
+        }
+        if (!dir.equals("CREATE") && !dir.equals("RECEIVE") && !dir.equals("BOTH")) {
+          _log.debug("Unknow DIRECTION parameter value: " + dir);
+          return false;
+        }
+        props.remove("DIRECTION");
+        streamSession=new SAMStreamSession(dest,dir,props,this);
       }
  else {
         _log.debug("Unrecognized SESSION STYLE: \"" + style + "\"");

@@ -1,0 +1,32 @@
+{
+  this.recv=recv;
+  _log.debug("SAM STREAM session instantiated");
+  Properties allprops=new Properties();
+  allprops.putAll(System.getProperties());
+  allprops.putAll(props);
+  _log.debug("Creating I2PSocketManager...");
+  socketMgr=I2PSocketManagerFactory.createManager(destStream,"127.0.0.1",7654,allprops);
+  if (socketMgr == null) {
+    throw new SAMException("Error creating I2PSocketManager");
+  }
+  boolean canReceive=false;
+  if (dir.equals("BOTH")) {
+    canCreate=true;
+    canReceive=true;
+  }
+ else   if (dir.equals("CREATE")) {
+    canCreate=true;
+  }
+ else   if (dir.equals("RECEIVE")) {
+    canReceive=true;
+  }
+ else {
+    _log.error("BUG! Wrong direction passed to SAMStreamSession: " + dir);
+    throw new SAMException("BUG! Wrong direction specified!");
+  }
+  if (canReceive) {
+    server=new SAMStreamSessionServer();
+    Thread t=new I2PThread(server,"SAMStreamSessionServer");
+    t.start();
+  }
+}
