@@ -103,16 +103,31 @@
     timeoutThread=new InactivityTimeoutThread(runner,out,targetRequest,usingWWWProxy,s);
     timeoutThread.start();
   }
- catch (  IOException ex) {
+ catch (  SocketException ex) {
     if (timeoutThread != null)     timeoutThread.disable();
-    _log.error("Error sending syn",ex);
+    _log.info("Error trying to connect",ex);
+    l.log(ex.getMessage());
+    handleHTTPClientException(ex,out,targetRequest,usingWWWProxy,wwwProxy);
+    closeSocket(s);
+  }
+catch (  IOException ex) {
+    if (timeoutThread != null)     timeoutThread.disable();
+    _log.info("Error trying to connect",ex);
+    l.log(ex.getMessage());
+    handleHTTPClientException(ex,out,targetRequest,usingWWWProxy,wwwProxy);
+    closeSocket(s);
+  }
+catch (  InterruptedException ex) {
+    if (timeoutThread != null)     timeoutThread.disable();
+    _log.info("Error trying to connect",ex);
+    l.log(ex.getMessage());
     handleHTTPClientException(ex,out,targetRequest,usingWWWProxy,wwwProxy);
     closeSocket(s);
   }
 catch (  I2PException ex) {
     if (timeoutThread != null)     timeoutThread.disable();
-    _log.info("Error sending syn",ex);
-    l.log("Unable to reach peer");
+    _log.info("Error trying to connect",ex);
+    l.log(ex.getMessage());
     handleHTTPClientException(ex,out,targetRequest,usingWWWProxy,wwwProxy);
     closeSocket(s);
   }
