@@ -1,4 +1,23 @@
 {
   if (!_initialized)   return;
-  _context.jobQueue().addJob(new SearchJob(_context,this,key,onFindJob,onFailedLookupJob,timeoutMs,true,isLease));
+  int pendingRequests=0;
+  boolean allowSearch=false;
+synchronized (_activeRequests) {
+    List pending=(List)_activeRequests.get(key);
+    if (pending == null) {
+      _activeRequests.put(key,new ArrayList(0));
+      allowSearch=true;
+    }
+ else {
+      pending.add(new DeferredSearchJob(key,onFindJob,onFailedLookupJob,timeoutMs,isLease));
+      pendingRequests=pending.size();
+      allowSearch=false;
+    }
+  }
+  if (allowSearch) {
+    _context.jobQueue().addJob(new SearchJob(_context,this,key,onFindJob,onFailedLookupJob,timeoutMs,true,isLease));
+  }
+ else {
+    if (_log.shouldLog(Log.INFO))     _log.info("Deferring search for " + key.toBase64() + ": there are "+ pendingRequests+ " other concurrent requests for it");
+  }
 }
