@@ -18,9 +18,7 @@ synchronized (finishLock) {
       }
     }
     s.close();
-    s=null;
     i2ps.close();
-    i2ps=null;
     t1.join();
     t2.join();
   }
@@ -34,9 +32,13 @@ catch (  Exception e) {
     if (_log.shouldLog(Log.ERROR))     _log.error("Internal error",e);
   }
  finally {
+    removeRef();
     try {
       if (s != null)       s.close();
-      if (i2ps != null)       i2ps.close();
+      if (i2ps != null) {
+        i2ps.close();
+        i2ps.setSocketErrorListener(null);
+      }
     }
  catch (    IOException ex) {
       if (_log.shouldLog(Log.ERROR))       _log.error("Could not close socket",ex);

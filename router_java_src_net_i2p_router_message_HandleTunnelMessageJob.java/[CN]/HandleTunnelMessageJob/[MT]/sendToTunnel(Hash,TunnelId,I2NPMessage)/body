@@ -3,6 +3,10 @@
   int timeoutMs=(int)(body.getMessageExpiration().getTime() - getContext().clock().now());
   if (timeoutMs < 5000)   timeoutMs=FORWARD_TIMEOUT;
   TunnelInfo curInfo=getContext().tunnelManager().getTunnelInfo(_message.getTunnelId());
+  if (curInfo == null) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Tunnel went away (" + _message.getTunnelId() + ")");
+    return;
+  }
   if (curInfo.getTunnelId().getType() != TunnelId.TYPE_INBOUND) {
     TunnelMessage msg=new TunnelMessage(getContext());
     msg.setTunnelId(id);
