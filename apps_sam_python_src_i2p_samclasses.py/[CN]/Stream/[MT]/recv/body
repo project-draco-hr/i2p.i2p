@@ -1,0 +1,33 @@
+def recv(self, n, timeout=None, peek=False, waitall=False):
+    'Reads up to n bytes in a manner identical to socket.recv.\n       Blocks for up to timeout seconds if n > 0 and no data is\n       available (timeout=None means wait forever).  If still no data\n       is available, raises BlockError or Timeout.  For a closed\n       stream, recv will read the data stored in the buffer until\n       EOF, at which point the read data will be truncated.  If peek\n       is True, the data is not removed.  If waitall is True, reads\n       exactly n bytes, or raises BlockError or Timeout as\n       appropriate.  Returns data.'
+    if (n < 0):
+        raise ValueError
+    if (n == 0):
+        return ''
+    minlen = 1
+    if waitall:
+        minlen = n
+    if (timeout != None):
+        end = (time.clock() + timeout)
+    while True:
+        self.parent.term.check()
+        self.lock.acquire()
+        try:
+            if (len(self.buf) >= minlen):
+                if peek:
+                    return self.buf.peek(n)
+                else:
+                    return self.buf.read(n)
+            if (self.closed and (self.err == None)):
+                return self.buf.read(n)
+            if (self.err != None):
+                raise self.err
+        finally:
+            self.lock.release()
+        if ((timeout != None) and (time.clock() >= end)):
+            break
+        sleep()
+    if (timeout == 0.0):
+        raise i2p.sam.BlockError('command would have blocked')
+    else:
+        raise i2p.sam.Timeout('timed out')

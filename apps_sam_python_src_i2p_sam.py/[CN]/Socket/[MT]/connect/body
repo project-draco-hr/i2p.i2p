@@ -1,0 +1,23 @@
+def connect(self, address):
+    self.lock.acquire()
+    try:
+        self._verify_open()
+        if ((self.type == SOCK_DGRAM) or (self.type == SOCK_RAW)):
+            self.packet_dest = address
+            return
+        self._verify_not_connected()
+        address = resolve(address, self.samaddr)
+        timeout = self.timeout
+        unwrap = self.sessobj.connect(address, timeout=timeout)
+        w = _wrap_stream(unwrap, self)
+        self.sessobj = w.sessobj
+        self.remotedest = w.remotedest
+        if (self.sessobj.err != None):
+            raise self.sessobj.err
+        if (not self.sessobj.didconnect):
+            if (timeout == 0.0):
+                raise BlockError(('command would have blocked.  use ' + 'select() to find when socket is connected'))
+            else:
+                raise Timeout(('timed out.  use select() to find ' + 'when socket is connected'))
+    finally:
+        self.lock.release()

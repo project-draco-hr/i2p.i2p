@@ -1,0 +1,53 @@
+def _poll_loop(self):
+    'Polling loop for incoming messages.'
+    try:
+        while True:
+            line = []
+            while True:
+                try:
+                    c = self.sock.recv(1)
+                except socket.error as ex:
+                    self.error = self.lost_error
+                if (c == ''):
+                    self.error = self.lost_error
+                if (self.error != None):
+                    return
+                if (c == '\n'):
+                    break
+                if (c != ''):
+                    line += [c]
+            line = ''.join(line)
+            if sam_log:
+                logf = open('log.txt', 'a')
+                logf.write((('\n' + line) + '\n'))
+                logf.close()
+            (msg, kwargs) = self._samdecode(line)
+            if ('SIZE' in kwargs):
+                data = []
+                remain = int(kwargs['SIZE'])
+                while True:
+                    try:
+                        s = self.sock.recv(remain)
+                    except socket.error as ex:
+                        self.error = self.lost_error
+                    if (s == ''):
+                        self.error = self.lost_error
+                    if (self.error != None):
+                        return
+                    if (s != ''):
+                        data += [s]
+                    remain -= len(s)
+                    if (remain <= 0):
+                        break
+                data = ''.join(data)
+                kwargs['DATA'] = data
+                del kwargs['SIZE']
+            try:
+                self.on_message(msg, kwargs)
+            except Exception as e:
+                print 'Unhandled exception in polling thread.'
+                traceback.print_exc()
+    except Exception as e:
+        print 'Fatal exception in polling thread'
+        traceback.print_exc()
+        sys.exit()

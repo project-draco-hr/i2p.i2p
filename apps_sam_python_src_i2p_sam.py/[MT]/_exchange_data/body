@@ -1,0 +1,37 @@
+def _exchange_data(A, B):
+    'Exchanges data A <-> B between open stream sockets A and B.'
+    err = None
+    try:
+        while True:
+            A.setblocking(False)
+            try:
+                s = A.recv(1024)
+            except Exception as e:
+                s = None
+            if (s == ''):
+                raise ClosedError
+            if (s == None):
+                break
+            else:
+                B.setblocking(True)
+                B.sendall(s)
+    except Exception as e:
+        err = e
+    try:
+        while True:
+            B.setblocking(False)
+            try:
+                s = B.recv(1024)
+            except Exception as e:
+                s = None
+            if (s == ''):
+                raise ClosedError
+            if (s == None):
+                break
+            else:
+                A.setblocking(True)
+                A.sendall(s)
+    except Exception as e:
+        err = e
+    if (err != None):
+        raise err

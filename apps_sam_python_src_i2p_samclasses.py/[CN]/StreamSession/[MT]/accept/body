@@ -1,0 +1,21 @@
+def accept(self, timeout=None):
+    'Wait for incoming connection, and return a Stream object\n       for it.'
+    if (self.max_accept <= 0):
+        raise i2p.Error(('listen(n) must be called before accept ' + '(n>=1)'))
+    if (timeout != None):
+        end = (time.clock() + timeout)
+    while True:
+        self.term.check()
+        self.lock.acquire()
+        try:
+            if (self.qaccept.qsize() > 0):
+                return self.term.queue_get(self.qaccept)
+        finally:
+            self.lock.release()
+        if ((timeout != None) and (time.clock() >= end)):
+            break
+        sleep()
+    if (timeout == 0.0):
+        raise i2p.sam.BlockError('command would have blocked')
+    else:
+        raise i2p.sam.Timeout('timed out')

@@ -1,0 +1,25 @@
+def connect(self, dest, timeout=None):
+    "Create a stream connected to remote destination 'dest'.  The\n       id is random.  If the timeout is exceeded, do NOT raise an\n       error; rather, return a Stream object with .didconnect set\n       to False."
+    if (not isinstance(dest, type(''))):
+        raise TypeError
+    self.lock.acquire()
+    try:
+        while True:
+            id = random.randrange(1, ((len(self.idmap) * 10) + 2))
+            if (not (id in self.idmap)):
+                ans = Stream(self, dest, id, didconnect=False)
+                self.idmap[id] = ans
+                break
+    finally:
+        self.lock.release()
+    self.term.send_message(((('STREAM CONNECT ID=' + str(id)) + ' DESTINATION=') + str(dest)))
+    if (timeout != None):
+        end = (time.clock() + timeout)
+    while True:
+        self.term.check()
+        if ans.didconnect:
+            break
+        if ((timeout != None) and (time.clock() >= end)):
+            break
+        sleep()
+    return ans

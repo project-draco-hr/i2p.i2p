@@ -1,0 +1,23 @@
+def stop(dir=None, force=False):
+    "Stop a locally installed I2P router, if it was started by\n     the current Python program.  If force is True, stop the\n     router even if it was started by another process.  Do nothing\n     if force is False and the router was started by another program.\n\n     The file 'router.config' is located using the same search\n     process used for find(dir).  It is parsed for\n     'router.shutdownPassword' and 'router.adminPort'.  The\n     router is shut down through the admin port.\n\n     Raises i2p.RouterError if the I2P router is running but cannot\n     be stopped.  You must uncomment the\n     'router.shutdownPassword' line for this command to work.\n  "
+    if ((force == False) and (our_router == False)):
+        return
+    config = _parse_config(os.path.join(find(dir), router_config))
+    password = config.get('router.shutdownPassword', '')
+    if (password == ''):
+        raise ValueError(('router.shutdownPassword not found in ' + router_config))
+    admin_port = config.get('router.adminPort', '')
+    if (admin_port == ''):
+        raise ValueError(('router.adminPort not found in ' + router_config))
+    try:
+        admin_port = int(admin_port)
+    except:
+        raise ValueError(('invalid router.adminPort in ' + router_config))
+    try:
+        sock = pysocket.socket(pysocket.AF_INET, pysocket.SOCK_STREAM)
+        sock.connect(('127.0.0.1', admin_port))
+        sock.send((('GET /shutdown?password=' + password) + ' HTTP/1.0\r\n\r\n'))
+        time.sleep(0.01)
+        sock.close()
+    except:
+        raise i2p.RouterError('router shutdown failed')

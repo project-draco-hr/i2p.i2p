@@ -1,0 +1,110 @@
+def multithread_packet_test(raw=True):
+    'If raw:  Multithreaded unit test for samclasses.RawSession.\n     Not raw: Multithreaded unit test for samclasses.DatagramSession.\n  '
+    try:
+        multithread_wait_time = 200.0
+        may_need_increase = False
+        if raw:
+            C = samclasses.RawSession('Carol', in_depth=0, out_depth=0)
+            D = samclasses.RawSession('Dave', in_depth=0, out_depth=0)
+        else:
+            C = samclasses.DatagramSession('Carol', in_depth=0, out_depth=0)
+            D = samclasses.DatagramSession('Dave', in_depth=0, out_depth=0)
+        global C_recv, D_recv, C_got, D_got, __lock
+        C_recv = []
+        D_recv = []
+        C_got = []
+        D_got = []
+        n = 50
+        m = 40
+        global __done_count
+        __done_count = 0
+        __lock = threading.Lock()
+
+        def f():
+            global C_recv, D_recv, C_got, D_got, __lock, __done_count
+            for i in range(m):
+                index_list = range(random.randrange(2, 80))
+                s = ''.join([chr(random.randrange(256)) for j in index_list])
+                if (random.randrange(2) == 0):
+                    C.send(s, D.dest)
+                    __lock.acquire()
+                    D_recv += [s]
+                    __lock.release()
+                else:
+                    D.send(s, C.dest)
+                    __lock.acquire()
+                    C_recv += [s]
+                    __lock.release()
+                time.sleep((0.01 * random.uniform(0.0, 1.0)))
+                try:
+                    (p, fromaddr) = C.recv(timeout=0.0)
+                except sam.BlockError:
+                    p = None
+                if ((p != None) and (not raw)):
+                    assert (fromaddr == D.dest)
+                __lock.acquire()
+                if (p != None):
+                    C_got += [p]
+                __lock.release()
+                try:
+                    (p, fromaddr) = D.recv(timeout=0.0)
+                except sam.BlockError:
+                    p = None
+                if ((p != None) and (not raw)):
+                    assert (fromaddr == C.dest)
+                __lock.acquire()
+                if (p != None):
+                    D_got += [p]
+                __lock.release()
+            __lock.acquire()
+            __done_count += 1
+            __lock.release()
+        for i in range(n):
+            threading.Thread(target=f).start()
+        while (__done_count < n):
+            time.sleep(0.01)
+        end_time = (time.clock() + multithread_wait_time)
+        while (time.clock() < end_time):
+            try:
+                (p, fromaddr) = C.recv(timeout=0.0)
+            except sam.BlockError:
+                p = None
+            if ((p != None) and (not raw)):
+                assert (fromaddr == D.dest)
+            if (p != None):
+                C_got += [p]
+            try:
+                (p, fromaddr) = D.recv(timeout=0.0)
+            except sam.BlockError:
+                p = None
+            if ((p != None) and (not raw)):
+                assert (fromaddr == C.dest)
+            if (p != None):
+                D_got += [p]
+            if ((len(C_got) == len(C_recv)) and (len(D_got) == len(D_recv))):
+                break
+        if (time.clock() >= end_time):
+            may_need_increase = True
+        C_got.sort()
+        D_got.sort()
+        C_recv.sort()
+        D_recv.sort()
+        assert (C_got == C_recv)
+        assert (D_got == D_recv)
+        C.close()
+        D.close()
+    except:
+        if raw:
+            print ('Unit test failed for samclasses.RawSession ' + '(multithreaded).')
+            print 'Raw packets are not reliable.'
+        else:
+            print ('Unit test failed for samclasses.DatagramSession ' + '(multithreaded).')
+            print 'Datagram packets are not reliable.'
+        if may_need_increase:
+            print 'Try increasing multithread_wait_time.'
+        traceback.print_exc()
+        sys.exit()
+    if raw:
+        test_passed('samclasses.RawSession (multithreaded)')
+    else:
+        test_passed('samclasses.DatagramSession (multithreaded)')

@@ -1,0 +1,17 @@
+def _on_STREAM_CLOSED(self, **kwargs):
+    'Got STREAM CLOSED command.  Call idmap[id].on_close(e) and\n       delete idmap[id].'
+    id = int(kwargs['ID'])
+    e = None
+    try:
+        self.term.check_message(kwargs)
+    except i2p.Error as err:
+        e = err
+    self.lock.acquire()
+    try:
+        if (not (id in self.idmap)):
+            return
+        obj = self.idmap[id]
+        del self.idmap[id]
+    finally:
+        self.lock.release()
+    obj.on_close(None)

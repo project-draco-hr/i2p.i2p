@@ -1,0 +1,16 @@
+def urlopen(url, eepaddr=eepaddr):
+    "Like urllib2.urlopen(url), but only works for eep-sites.\n     Example: f = urlopen('http://duck.i2p/index.html')"
+    if (url.find('http://') != 0):
+        url = ('http://' + url)
+    if (len(url) >= 256):
+        suffix = url[len('http://'):]
+        if (suffix[:4] != 'i2p/'):
+            url = ('http://i2p/' + suffix)
+    if (url.find('/', len('http://')) < 0):
+        url = (url + '/')
+    if (eepaddr.find('http://') == 0):
+        eepaddr = eepaddr[len('http://'):]
+    eepaddr = eepaddr.rstrip('/')
+    proxy = urllib2.ProxyHandler({'http': ('http://anonymous:passwd@' + eepaddr), })
+    opener = urllib2.build_opener(proxy, urllib2.HTTPBasicAuthHandler(), urllib2.HTTPHandler)
+    return opener.open(url)

@@ -1,0 +1,24 @@
+def recv(self, timeout=None, peek=False):
+    'Get a single packet.  Blocks for up to timeout seconds if\n       n > 0 and no packet is available (timeout=None means wait\n       forever).  If still no packet is available, raises BlockError\n       or Timeout.  Returns the pair (data, address).  If peek is\n       True, the data is not removed.'
+    if (timeout != None):
+        end = (time.clock() + timeout)
+    while True:
+        self.term.check()
+        self.lock.acquire()
+        try:
+            if (len(self.buf) > 0):
+                if peek:
+                    ans = self.buf.pop_first()
+                    self.buf.push_first(ans)
+                    return ans
+                else:
+                    return self.buf.pop_first()
+        finally:
+            self.lock.release()
+        if ((timeout != None) and (time.clock() >= end)):
+            break
+        sleep()
+    if (timeout == 0.0):
+        raise i2p.sam.BlockError('command would have blocked')
+    else:
+        raise i2p.sam.Timeout('timed out')

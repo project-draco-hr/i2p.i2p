@@ -1,0 +1,15 @@
+def close(self):
+    'Close the stream.  Threadsafe.'
+    self.parent.lock.acquire()
+    try:
+        if (not self.closed):
+            self.closed = True
+            id = self.id
+            self.id = None
+            if (not (id in self.parent.idmap)):
+                return
+            self.parent.term.send_message(('STREAM CLOSE ID=' + str(id)))
+            self.on_close(None)
+            del self.parent.idmap[id]
+    finally:
+        self.parent.lock.release()

@@ -1,0 +1,13 @@
+def _on_STREAM_CONNECTED(self, **kwargs):
+    'Got STREAM CONNECTED command.  This is what accept() commands\n       wait for.'
+    self.lock.acquire()
+    try:
+        if (self.qaccept.qsize() >= self.max_accept):
+            self.term.send_message(('STREAM CLOSE ID=' + str(int(kwargs['ID']))))
+            return
+        self.term.check_message(kwargs)
+        id = int(kwargs['ID'])
+        self.idmap[id] = Stream(self, kwargs['DESTINATION'], id)
+        self.qaccept.put(self.idmap[id])
+    finally:
+        self.lock.release()

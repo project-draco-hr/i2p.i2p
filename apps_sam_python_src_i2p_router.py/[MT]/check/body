@@ -1,0 +1,14 @@
+def check(dir=None):
+    "Checks whether a locally installed router is running.  Does\n     nothing if successful, otherwise raises i2p.RouterError.\n\n     An I2P installation is located by using find(dir).\n     The router.config file is parsed for 'router.adminPort'.\n     This port is queried to determine whether the router is\n     running.\n  "
+    config = _parse_config(os.path.join(find(dir), router_config))
+    port = config.get('router.adminPort', '')
+    try:
+        port = int(port)
+    except:
+        raise ValueError(('router.adminPort missing or bad in ' + router_config))
+    try:
+        s = pysocket.socket(pysocket.AF_INET, pysocket.SOCK_STREAM)
+        s.connect(('127.0.0.1', port))
+        s.close()
+    except pysocket.error:
+        raise i2p.RouterError(('could not contact 127.0.0.1:' + str(port)))
