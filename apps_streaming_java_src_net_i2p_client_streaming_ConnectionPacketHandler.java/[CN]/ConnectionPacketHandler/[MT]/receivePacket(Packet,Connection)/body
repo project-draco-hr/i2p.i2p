@@ -2,6 +2,7 @@
   boolean ok=verifyPacket(packet,con);
   if (!ok)   return;
   boolean isNew=con.getInputStream().messageReceived(packet.getSequenceNum(),packet.getPayload());
+  if (packet.isFlagSet(Packet.FLAG_CLOSE) && packet.isFlagSet(Packet.FLAG_SIGNATURE_INCLUDED))   con.closeReceived();
   if (isNew) {
     con.incrementUnackedPacketsReceived();
     long nextTime=con.getNextSendTime();
@@ -31,13 +32,13 @@
     for (int i=0; i < acked.size(); i++) {
       PacketLocal p=(PacketLocal)acked.get(i);
       if ((lowestRtt < 0) || (p.getAckTime() < lowestRtt)) {
-        if (p.getNumSends() <= 1)         lowestRtt=p.getAckTime();
+        lowestRtt=p.getAckTime();
       }
       if (p.getNumSends() > 1)       numResends++;
       if ((p.getKeyUsed() != null) && (p.getTagsSent() != null) && (p.getTagsSent().size() > 0)) {
         _context.sessionKeyManager().tagsDelivered(p.getTo().getPublicKey(),p.getKeyUsed(),p.getTagsSent());
       }
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Packet acked: " + p);
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Packet acked after " + p.getAckTime() + "ms: "+ p);
     }
     if (lowestRtt > 0) {
       int oldRTT=con.getOptions().getRTT();

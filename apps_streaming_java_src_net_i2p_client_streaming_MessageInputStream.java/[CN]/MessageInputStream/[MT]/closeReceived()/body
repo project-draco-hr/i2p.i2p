@@ -1,6 +1,25 @@
 {
 synchronized (_dataLock) {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Close received, ready size: " + _readyDataBlocks.size() + " not ready: "+ _notYetReadyBlocks.size(),new Exception("closed"));
+    if (_log.shouldLog(Log.DEBUG)) {
+      StringBuffer buf=new StringBuffer(128);
+      buf.append("Close received, ready bytes: ");
+      long available=0;
+      for (int i=0; i < _readyDataBlocks.size(); i++)       available+=((ByteArray)_readyDataBlocks.get(i)).getData().length;
+      available-=_readyDataBlockIndex;
+      buf.append(available);
+      buf.append(" blocks: ").append(_readyDataBlocks.size());
+      buf.append(" not ready blocks: ");
+      long notAvailable=0;
+      for (Iterator iter=_notYetReadyBlocks.keySet().iterator(); iter.hasNext(); ) {
+        Long id=(Long)iter.next();
+        ByteArray ba=(ByteArray)_notYetReadyBlocks.get(id);
+        buf.append(id).append(" ");
+        if (ba.getData() != null)         notAvailable+=ba.getData().length;
+      }
+      buf.append("not ready bytes: ").append(notAvailable);
+      buf.append(" highest ready block: ").append(_highestReadyBlockId);
+      _log.debug(buf.toString(),new Exception("closed"));
+    }
     _closeReceived=true;
     _dataLock.notifyAll();
   }
