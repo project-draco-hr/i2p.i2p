@@ -1,16 +1,21 @@
 {
   _closed=true;
   _streamError=new IOException("Closed internally");
+  ByteArray ba=null;
 synchronized (_dataLock) {
     if (_valid > 0) {
       _dataReceiver.writeData(_buf,0,_valid);
       _written+=_valid;
       _valid=0;
     }
+    if (_buf != null) {
+      ba=new ByteArray(_buf);
+      _buf=null;
+      _valid=0;
+    }
     _dataLock.notifyAll();
   }
-  if (_buf != null) {
-    _dataCache.release(new ByteArray(_buf));
-    _buf=null;
+  if (ba != null) {
+    _dataCache.release(ba);
   }
 }

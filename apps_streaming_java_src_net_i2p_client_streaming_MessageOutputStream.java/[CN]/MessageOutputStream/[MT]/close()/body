@@ -3,8 +3,15 @@
   _closed=true;
   flush();
   _log.debug("Output stream closed after writing " + _written);
-  if (_buf != null) {
-    _dataCache.release(new ByteArray(_buf));
-    _buf=null;
+  ByteArray ba=null;
+synchronized (_dataLock) {
+    if (_buf != null) {
+      ba=new ByteArray(_buf);
+      _buf=null;
+      _valid=0;
+    }
+  }
+  if (ba != null) {
+    _dataCache.release(ba);
   }
 }
