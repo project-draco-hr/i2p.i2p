@@ -1,10 +1,12 @@
 {
-  SAMStreamSessionSocketHandler handler;
+  SAMStreamSessionSocketReader reader=null;
+  StreamSender sender=null;
   if (id == 0) {
     id=createUniqueId();
   }
   try {
-    handler=new SAMStreamSessionSocketHandler(s,id);
+    reader=new SAMStreamSessionSocketReader(s,id);
+    sender=new StreamSender(s,id);
   }
  catch (  IOException e) {
     _log.error("IOException when creating SAM STREAM session socket handler",e);
@@ -12,9 +14,12 @@
     return 0;
   }
 synchronized (handlersMapLock) {
-    handlersMap.put(new Integer(id),handler);
+    handlersMap.put(new Integer(id),reader);
+    sendersMap.put(new Integer(id),sender);
   }
-  I2PThread t=new I2PThread(handler,"SAMStreamSessionSocketHandler");
+  I2PThread t=new I2PThread(reader,"SAMReader" + id);
+  t.start();
+  t=new I2PThread(sender,"SAMSender" + id);
   t.start();
   return id;
 }
