@@ -3,15 +3,23 @@
   if (key == null)   key=_context.sessionKeyManager().createSession(dest.getPublicKey());
   SessionTag tag=_context.sessionKeyManager().consumeNextAvailableTag(dest.getPublicKey(),key);
   Set sentTags=null;
-  if (_context.sessionKeyManager().getAvailableTags(dest.getPublicKey(),key) < 10) {
+  int oldTags=_context.sessionKeyManager().getAvailableTags(dest.getPublicKey(),key);
+  long availTimeLeft=_context.sessionKeyManager().getAvailableTimeLeft(dest.getPublicKey(),key);
+  if (oldTags < 10) {
     sentTags=createNewTags(50);
   }
- else   if (_context.sessionKeyManager().getAvailableTimeLeft(dest.getPublicKey(),key) < 30 * 1000) {
+ else   if (availTimeLeft < 30 * 1000) {
     sentTags=createNewTags(50);
     if (_log.shouldLog(Log.DEBUG))     _log.debug(getPrefix() + "Tags are almost expired, adding 50 new ones");
   }
+ else {
+  }
   SessionKey newKey=null;
   if (false)   newKey=_context.keyGenerator().generateSessionKey();
+  if ((tagsSent != null) && (tagsSent.size() > 0)) {
+    if (sentTags == null)     sentTags=new HashSet();
+    sentTags.addAll(tagsSent);
+  }
   long nonce=_context.random().nextInt(Integer.MAX_VALUE);
   MessageState state=new MessageState(nonce,getPrefix());
   state.setKey(key);

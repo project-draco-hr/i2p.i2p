@@ -1,0 +1,72 @@
+{
+  I2PSocketManager mgr=I2PSocketManagerFactory.createManager();
+  Destination peer=null;
+  FileInputStream fis=null;
+  try {
+    fis=new FileInputStream(_peerDestFile);
+    peer=new Destination();
+    peer.readBytes(fis);
+  }
+ catch (  IOException ioe) {
+    _log.error("Error finding the peer destination to contact in " + _peerDestFile,ioe);
+    return;
+  }
+catch (  DataFormatException dfe) {
+    _log.error("Peer destination is not valid in " + _peerDestFile,dfe);
+    return;
+  }
+ finally {
+    if (fis == null)     try {
+      fis.close();
+    }
+ catch (    IOException ioe) {
+    }
+  }
+  System.out.println("Send " + _sendFile + " to "+ peer.calculateHash().toBase64());
+  try {
+    I2PSocket sock=mgr.connect(peer);
+    byte buf[]=new byte[32 * 1024];
+    OutputStream out=sock.getOutputStream();
+    long beforeSending=System.currentTimeMillis();
+    fis=new FileInputStream(_sendFile);
+    long size=0;
+    while (true) {
+      int read=fis.read(buf);
+      if (read < 0)       break;
+      out.write(buf,0,read);
+      size+=read;
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Wrote " + read);
+      if (_writeDelay > 0) {
+        try {
+          Thread.sleep(_writeDelay);
+        }
+ catch (        InterruptedException ie) {
+        }
+      }
+    }
+    fis.close();
+    long afterSending=System.currentTimeMillis();
+    System.out.println("Sent " + (size / 1024) + "KB in "+ (afterSending - beforeSending)+ "ms");
+    sock.close();
+  }
+ catch (  InterruptedIOException iie) {
+    _log.error("Timeout connecting to the peer",iie);
+    return;
+  }
+catch (  NoRouteToHostException nrthe) {
+    _log.error("Unable to connect to the peer",nrthe);
+    return;
+  }
+catch (  ConnectException ce) {
+    _log.error("Connection already dropped",ce);
+    return;
+  }
+catch (  I2PException ie) {
+    _log.error("Error connecting to the peer",ie);
+    return;
+  }
+catch (  IOException ioe) {
+    _log.error("IO error sending",ioe);
+    return;
+  }
+}
