@@ -1,20 +1,25 @@
 {
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("write(b[], " + off + ", "+ len+ ")");
 synchronized (_dataLock) {
+    int cur=off;
     int remaining=len;
     while (remaining > 0) {
       if (_valid + remaining < _buf.length) {
-        System.arraycopy(b,off,_buf,_valid,remaining);
+        System.arraycopy(b,cur,_buf,_valid,remaining);
         _valid+=remaining;
+        cur+=remaining;
         remaining=0;
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("write(...): appending valid = " + _valid + " remaining="+ remaining);
       }
  else {
         int toWrite=_buf.length - _valid;
-        System.arraycopy(b,off,_buf,_valid,toWrite);
+        System.arraycopy(b,cur,_buf,_valid,toWrite);
         remaining-=toWrite;
+        cur+=toWrite;
         _valid=_buf.length;
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("write(b[], " + off + ", "+ len+ "): valid = "+ _valid);
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("write(...): flushing valid = " + _valid + " remaining="+ remaining);
         _dataReceiver.writeData(_buf,0,_valid);
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("write(b[], " + off + ", "+ len+ "): valid = "+ _valid+ " complete");
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("write(...): flushing complete valid = " + _valid + " remaining="+ remaining);
         _valid=0;
         throwAnyError();
       }

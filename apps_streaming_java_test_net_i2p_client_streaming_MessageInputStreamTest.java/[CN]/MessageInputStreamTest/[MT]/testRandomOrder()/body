@@ -1,18 +1,18 @@
 {
-  byte orig[]=new byte[32 * 1024];
+  byte orig[]=new byte[256 * 1024];
   _context.random().nextBytes(orig);
   MessageInputStream in=new MessageInputStream(_context);
   ArrayList order=new ArrayList(32);
-  for (int i=0; i < 32; i++)   order.add(new Integer(i));
+  for (int i=0; i < orig.length / 1024; i++)   order.add(new Integer(i));
   Collections.shuffle(order);
-  for (int i=0; i < 32; i++) {
+  for (int i=0; i < orig.length / 1024; i++) {
     byte msg[]=new byte[1024];
     Integer cur=(Integer)order.get(i);
     System.arraycopy(orig,cur.intValue() * 1024,msg,0,1024);
     in.messageReceived(cur.intValue(),msg);
     _log.debug("Injecting " + cur);
   }
-  byte read[]=new byte[32 * 1024];
+  byte read[]=new byte[orig.length];
   try {
     int howMany=DataHelper.read(in,read);
     if (howMany != orig.length)     throw new RuntimeException("Failed test: not enough bytes read [" + howMany + "]");

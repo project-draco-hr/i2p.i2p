@@ -4,6 +4,13 @@ synchronized (_outboundPackets) {
     if (_outboundPackets.containsKey(new Long(_packet.getSequenceNum())))     resend=true;
   }
   if ((resend) && (_packet.getAckTime() < 0)) {
+    _packet.setAckThrough(getInputStream().getHighestBlockId());
+    _packet.setNacks(getInputStream().getNacks());
+    _packet.setOptionalDelay(getOptions().getChoke());
+    _packet.setOptionalMaxSize(getOptions().getMaxMessageSize());
+    _packet.setResendDelay(getOptions().getResendDelay());
+    _packet.setReceiveStreamId(_receiveStreamId);
+    _packet.setSendStreamId(_sendStreamId);
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Resend packet " + _packet + " on "+ Connection.this);
     _outboundQueue.enqueue(_packet);
     int numSends=_packet.getNumSends();

@@ -1,0 +1,58 @@
+{
+  try {
+    Properties opts=new Properties();
+    I2PSocketManager mgr=new I2PSocketManagerFull(_context,_session,opts,"client");
+    _log.debug("manager created");
+    I2PSocket socket=mgr.connect(_server.getMyDestination());
+    _log.debug("socket created");
+    InputStream in=socket.getInputStream();
+    OutputStream out=socket.getOutputStream();
+    for (int i=0; i < 3; i++) {
+      byte buf[]=new byte[128 * 1024];
+      _context.random().nextBytes(buf);
+      byte orig[]=new byte[buf.length];
+      System.arraycopy(buf,0,orig,0,buf.length);
+      out.write(buf);
+      _log.debug("client wrote a buffer");
+      out.flush();
+      _log.debug("client flushed");
+      byte rbuf[]=new byte[buf.length];
+      for (int j=0; j < buf.length; j++) {
+        int c=in.read();
+        if (c == -1) {
+          buf=null;
+          break;
+        }
+ else {
+          if (c < 0)           c+=256;
+          rbuf[j]=(byte)(c & 0xFF);
+        }
+      }
+      if (buf != null) {
+        _log.debug("* client read a full buffer");
+        int firstOff=-1;
+        for (int k=0; k < orig.length; k++) {
+          if (orig[k] != rbuf[k]) {
+            firstOff=k;
+            break;
+          }
+        }
+        if (firstOff < 0) {
+          System.out.println("** Read match");
+        }
+ else {
+          System.out.println("** Read does not match: first off = " + firstOff);
+          _log.error("read does not match (first off = " + firstOff + "): \n"+ Base64.encode(orig)+ "\n"+ Base64.encode(rbuf));
+        }
+      }
+    }
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Closing the client socket");
+    socket.close();
+    _log.debug("socket closed");
+    Thread.sleep(5 * 1000);
+    System.exit(0);
+  }
+ catch (  Exception e) {
+    _log.error("error running",e);
+  }
+}
