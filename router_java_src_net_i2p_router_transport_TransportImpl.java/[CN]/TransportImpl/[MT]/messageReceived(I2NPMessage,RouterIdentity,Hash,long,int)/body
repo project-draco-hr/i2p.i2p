@@ -1,7 +1,10 @@
 {
-  if (_log.shouldLog(Log.INFO)) {
+  int level=Log.INFO;
+  if (msToReceive > 5000)   level=Log.ERROR;
+  if (_log.shouldLog(level)) {
     StringBuffer buf=new StringBuffer(128);
     buf.append("Message received: ").append(inMsg.getClass().getName());
+    buf.append(" / ").append(inMsg.getUniqueId());
     buf.append(" in ").append(msToReceive).append("ms containing ");
     buf.append(bytesReceived).append(" bytes ");
     buf.append(" from ");
@@ -16,7 +19,7 @@
     }
     buf.append(" and forwarding to listener: ");
     if (_listener != null)     buf.append(_listener);
-    _log.info(buf.toString());
+    _log.log(level,buf.toString());
   }
   if (remoteIdent != null)   remoteIdentHash=remoteIdent.getHash();
   if (remoteIdentHash != null) {
@@ -24,7 +27,9 @@
     _context.statManager().addRateData("transport.receiveMessageSize",bytesReceived,msToReceive);
   }
   _context.statManager().addRateData("transport.receiveMessageTime",msToReceive,msToReceive);
-  if (msToReceive > 1000)   _context.statManager().addRateData("transport.receiveMessageTimeSlow",msToReceive,msToReceive);
+  if (msToReceive > 1000) {
+    _context.statManager().addRateData("transport.receiveMessageTimeSlow",msToReceive,msToReceive);
+  }
   if (_listener != null) {
     _listener.messageReceived(inMsg,remoteIdent,remoteIdentHash);
   }

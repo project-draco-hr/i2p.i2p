@@ -1,6 +1,12 @@
 {
   msg.timestamp("TCPConnection.runner.doSend fetched");
   long afterExpire=_context.clock().now();
+  long remaining=msg.getExpiration() - afterExpire;
+  if (remaining < 0) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Message " + msg.getMessageType() + "/"+ msg.getMessageId()+ " expired before doSend (too slow by "+ remaining+ "ms)");
+    _transport.afterSend(msg,false,false);
+    return true;
+  }
   byte data[]=msg.getMessageData();
   if (data == null) {
     if (_log.shouldLog(Log.WARN))     _log.warn("message " + msg.getMessageType() + "/"+ msg.getMessageId()+ " expired before it could be sent");
@@ -30,7 +36,7 @@ synchronized (_out) {
   if (lifetime > 10 * 1000) {
     if (_log.shouldLog(Log.WARN))     _log.warn("The processing of the message took way too long (" + lifetime + "ms) - time left ("+ timeLeft+ ") to "+ _remoteIdentity.getHash().toBase64()+ "\n"+ msg.toString());
   }
-  _transport.afterSend(msg,true);
+  _transport.afterSend(msg,true,(end - beforeWrite));
   if (_log.shouldLog(Log.DEBUG))   _log.debug("doSend - message sent completely: " + msg.getMessageSize() + " byte "+ msg.getMessageType()+ " message to "+ _remoteIdentity.getHash().toBase64());
   if (end - afterExpire > 1000) {
     if (_log.shouldLog(Log.WARN))     _log.warn("Actual sending took too long ( " + (end - afterExpire) + "ms) sending "+ data.length+ " bytes to "+ _remoteIdentity.getHash().toBase64());
