@@ -23,6 +23,7 @@
   }
  else {
     _state.addPending(closestHashes);
+    int sent=0;
     for (Iterator iter=closestHashes.iterator(); iter.hasNext(); ) {
       Hash peer=(Hash)iter.next();
       DataStructure ds=_facade.getDataStore().get(peer);
@@ -31,7 +32,12 @@
       }
  else {
         sendSearch((RouterInfo)ds);
+        sent++;
       }
+    }
+    if (sent <= 0) {
+      if (_log.shouldLog(Log.WARN))       _log.warn(getJobId() + ": No new peer queued up, so we are going to requeue " + "ourselves in our search for "+ _state.getTarget().toBase64());
+      requeuePending(0);
     }
   }
 }
