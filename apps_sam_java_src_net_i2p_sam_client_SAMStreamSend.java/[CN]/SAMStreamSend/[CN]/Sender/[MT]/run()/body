@@ -1,0 +1,43 @@
+{
+  _started=_context.clock().now();
+  _context.statManager().addRateData("send." + _connectionId + ".started",1,0);
+  byte data[]=new byte[1024];
+  long value=0;
+  long lastSend=_context.clock().now();
+  while (!_closed) {
+    try {
+      int read=_in.read(data);
+      long now=_context.clock().now();
+      if (read == -1) {
+        _log.debug("EOF from the data for " + _connectionId + " after "+ (now - lastSend));
+        break;
+      }
+ else       if (read > 0) {
+        _log.debug("Sending " + read + " on "+ _connectionId+ " after "+ (now - lastSend));
+        lastSend=now;
+        byte msg[]=("STREAM SEND ID=" + _connectionId + " SIZE="+ read+ "\n").getBytes();
+synchronized (_samOut) {
+          _samOut.write(msg);
+          _samOut.write(data,0,read);
+          _samOut.flush();
+        }
+        _totalSent+=read;
+        _context.statManager().addRateData("send." + _connectionId + ".totalSent",_totalSent,0);
+      }
+    }
+ catch (    IOException ioe) {
+      _log.error("Error sending",ioe);
+    }
+  }
+  byte msg[]=("STREAM CLOSE ID=" + _connectionId + "\n").getBytes();
+  try {
+synchronized (_samOut) {
+      _samOut.write(msg);
+      _samOut.flush();
+    }
+  }
+ catch (  IOException ioe) {
+    _log.error("Error closing",ioe);
+  }
+  closed();
+}
