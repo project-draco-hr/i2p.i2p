@@ -1,0 +1,26 @@
+def on_doneFindNode(self, lst):
+    '\n        Receive a callback from findNode\n        \n        Send STORE command to each node that comes back\n        '
+    localNode = self.localNode
+    normalisePeer = localNode._normalisePeer
+    peers = [normalisePeer(p) for p in lst]
+    self.log(2, ('STORE RPC findNode - got peers %s' % repr(peers)))
+    self.numPeersToStore = min(len(peers), numStorePeers)
+    self.numPeersSucceeded = 0
+    self.numPeersFailed = 0
+    self.numPeersFinished = 0
+    i = 0
+    for peer in peers:
+        if (peer.dest == localNode.dest):
+            self.log(3, 'storing to ourself')
+            localNode.storage.putKey(self.keyHashed, self.value, keyIsHashed=True)
+            self.numPeersSucceeded += 1
+            self.numPeersFinished += 1
+        else:
+            msgId = self.localNode._msgIdAlloc()
+            self.log(4, ('forwarding store cmd to peer:\npeer=%s\nmsgId=%s' % (peer, msgId)))
+            self.bindPeerReply(peer, msgId)
+            peer.send_store(key=self.keyHashed, value=self.value, msgId=msgId)
+        i += 1
+        if (i >= numStorePeers):
+            break
+    self.log(2, ('Sent store cmd to %s peers, awaiting responses' % i))

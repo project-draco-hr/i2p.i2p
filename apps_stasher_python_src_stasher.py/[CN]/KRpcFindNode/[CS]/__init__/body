@@ -1,0 +1,23 @@
+def __init__(self, localNode, client=None, **kw):
+    "\n        Creates and launches the findNode rpc\n        \n        Arguments:\n            - localNode - the node performing this RPC\n            - client - see KRpc.__init__\n    \n        Keywords:\n            - hash - a string, long int or KHash object representing\n              what we're looking for. treatment depends on type:\n                  - KHash object - used as is\n                  - string - gets wrapped into a KHash object\n                  - long int - wrapped into a KHash object\n              refer KHash.__init__\n            - raw - whether 'hash' is already a hash, default True\n            - local - True/False - whether to only search local store,\n              or pass on the query to the network, default True\n        "
+    kw = dict(kw)
+    if kw.get('raw', False):
+        h = kw['hash']
+        del kw['hash']
+        kw['raw'] = h
+        self.hashWanted = KHash(**kw)
+    else:
+        self.hashWanted = KHash(kw['hash'], **kw)
+    self.isLocalOnly = kw.get('local', True)
+    self.numQueriesPending = 0
+    self.numRounds = 0
+    self.numReplies = 0
+    self.numQueriesSent = 0
+    self.numPeersRecommended = 0
+    self.localNode = localNode
+    self.peerTab = self.findClosestPeersInitial()
+    self.log(4, ('KRpcFindNode: isLocalOnly=%s' % self.isLocalOnly))
+    if kw.has_key('cbArgs'):
+        KRpc.__init__(self, localNode, client, cbArgs=kw['cbArgs'])
+    else:
+        KRpc.__init__(self, localNode, client)

@@ -1,0 +1,23 @@
+def __init__(self, name, **kw):
+    "\n        Creates a kademlia node of name 'name'.\n    \n        Name is mandatory, because each name is permanently written\n        to the SAM bridge's store\n        \n        I thought of supporting random name generation, but went off this\n        idea because names get permanently stored to SAM bridge's file\n    \n        Arguments:\n            - name - mandatory - a short text name for the node, should\n              be alphanumerics, '-', '.', '_'\n              This name is used for the SAM socket session.\n        \n        Keywords:\n            - storage - optional - an instance of L{KStorageBase} or one of\n              its subclasses. If not given, default action is to instantiate\n              a L{KStorageFile} object against the given node name\n        "
+    self.name = name
+    self.isRunning = False
+    self.id = KHash('<NONE>')
+    self.log(5, ('creating socket for node %s' % name))
+    self.log(5, ('socket for node %s created' % name))
+    if (self.SocketFactory == None):
+        self.SocketFactory = i2p.socket.socket
+    self.sock = self.SocketFactory(('stashernode-' + name), i2p.socket.SOCK_DGRAM, samaddr=samAddr, **kw)
+    self.sock.setblocking(0)
+    self.dest = self.sock.dest
+    self.id = KHash(self.dest)
+    self.buckets = []
+    for i in range(160):
+        self.buckets.append(KBucket())
+    self.storage = kw.get('storage', KStorageFile(self))
+    self.peers = self.storage.getRefs()
+    self.pendingPings = {}
+    self.rpcBindings = {}
+    self.rpcPending = []
+    self._msgIdNext = 0
+    _nodes[name] = self

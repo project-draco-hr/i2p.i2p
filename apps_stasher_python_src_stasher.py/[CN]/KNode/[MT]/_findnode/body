@@ -1,0 +1,14 @@
+def _findnode(self, something=None, callback=None, **kw):
+    "\n        Mainly for testing - does a findNode query on the network\n        \n        Arguments:\n            - something - one of:\n                - plain string - the string gets hashed and used for the search\n                - int or long int - this gets used as the raw hash\n                - a KHash object - that's what gets used\n                - None - the value of the 'raw' keyword will be used instead\n            - callback - optional - if given, a callable object which will be\n              called upon completion, with the result as argument\n    \n        Keywords:\n            - local - optional - if True, only returns the closest peers known to\n              node. if False, causes node to query other nodes.\n              default is False\n            - raw - one of:\n                - 20-byte string - this gets used as a binary hash\n                - 40-byte string - this gets used as a hex hash\n        "
+    if (not kw.has_key('local')):
+        kw = dict(kw)
+        kw['local'] = False
+    self.log(3, 'about to instantiate findnode rpc')
+    if callback:
+        KRpcFindNode(self, callback, hash=something, **kw)
+        self.log(3, 'asynchronously invoked findnode, expecting callback')
+    else:
+        lst = KRpcFindNode(self, hash=something, **kw).execute()
+        self.log(3, 'back from findnode rpc')
+        res = [self._normalisePeer(p) for p in lst]
+        return res

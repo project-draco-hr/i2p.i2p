@@ -1,0 +1,21 @@
+def start(self, doPings=True):
+    '\n        Starts the node running\n        '
+    if self.isRunning:
+        self.log(3, ('node %s is already running!' % self.name))
+        return
+    self.log(3, ('starting node %s' % self.name))
+    if doPings:
+        for peer in self.peers:
+            self.log(3, ('doing initial ping\n%s\n%s' % (self, peer)))
+            KRpcPing(self, peer=peer)
+    if greetPeersOnStartup:
+        neighbours = KRpcFindNode(self, hash=self.id).execute()
+        self.log(3, ('neighbours=%s' % repr([n[:10] for n in neighbours])))
+        for n in neighbours:
+            n = self._normalisePeer(n)
+            KRpcPing(self, peer=n)
+    self.isRunning = True
+    if runCore:
+        core.subscribe(self)
+    else:
+        thread.start_new_thread(self._threadRx, ())

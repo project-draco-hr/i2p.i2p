@@ -1,0 +1,12 @@
+def returnValue(self, result=None, **kw):
+    '\n        Passes a return value back to the original caller, be it\n        the local application, or an upstream peer\n        \n        Arguments:\n            - just one - a result object to pass back, if this RPC\n              was instigated by a local application call.\n              Note that if this RPC was instigated by an upstream\n              peer, this will be ignored.\n        \n        Keywords:\n            - the items to return, in the case that this RPC was\n              instigated by an upstream peer. Ignored if this\n              RPC was instigated by a local application call.\n              Note - the RPC invocation/reply dict keys are\n              listed at the top of this source file.\n        '
+    self.terminate()
+    if self.callback:
+        if hasattr(self, 'cbArgs'):
+            self.callback(result, self.cbArgs)
+        else:
+            self.callback(result)
+    elif self.isLocal:
+        self.queue.put(result)
+    else:
+        self.upstreamPeer.send_reply(msgId=self.upstreamMsgId, **kw)
