@@ -2,6 +2,12 @@
   boolean ok=verifyPacket(packet,con);
   if (!ok)   return;
   con.packetReceived();
+  if (con.getInputStream().getTotalQueuedSize() > con.getOptions().getInboundBufferSize()) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Inbound buffer exceeded on connection " + con + ": dropping "+ packet);
+    con.getOptions().setChoke(5 * 1000);
+    return;
+  }
+  con.getOptions().setChoke(0);
   boolean isNew=con.getInputStream().messageReceived(packet.getSequenceNum(),packet.getPayload());
   if (packet.isFlagSet(Packet.FLAG_CLOSE) && packet.isFlagSet(Packet.FLAG_SIGNATURE_INCLUDED))   con.closeReceived();
   if (isNew) {
@@ -21,6 +27,7 @@
     if (packet.getSequenceNum() > 0) {
       con.getOptions().setResendDelay(con.getOptions().getResendDelay() * 2);
       if (_log.shouldLog(Log.WARN))       _log.warn("congestion.. dup " + packet);
+      SimpleTimer.getInstance().addEvent(new AckDup(con),con.getOptions().getSendAckDelay());
       con.setNextSendTime(_context.clock().now() + con.getOptions().getSendAckDelay());
     }
  else {
