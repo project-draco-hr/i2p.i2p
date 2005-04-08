@@ -1,56 +1,59 @@
 {
-  byte[] headerUpdateVersion={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
-  byte[] updateVersionBytes=null;
-  if (updateVersion.length() > VERSION_BYTES)   updateVersion=updateVersion.substring(0,VERSION_BYTES);
+  byte[] versionHeader={0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+  byte[] versionRawBytes=null;
+  if (version.length() > VERSION_BYTES)   version=version.substring(0,VERSION_BYTES);
   try {
-    updateVersionBytes=updateVersion.getBytes("UTF-8");
+    versionRawBytes=version.getBytes("UTF-8");
   }
  catch (  UnsupportedEncodingException e) {
     throw new RuntimeException("wtf, your JVM doesnt support utf-8? " + e.getMessage());
   }
-  System.arraycopy(updateVersionBytes,0,headerUpdateVersion,0,updateVersionBytes.length);
+  System.arraycopy(versionRawBytes,0,versionHeader,0,versionRawBytes.length);
+  FileInputStream fileInputStream=null;
   Signature signature=null;
-  FileInputStream in=null;
+  SequenceInputStream bytesToSignInputStream=null;
+  ByteArrayInputStream versionHeaderInputStream=null;
   try {
-    in=new FileInputStream(inputFile);
-    signature=_context.dsa().sign(in,privKey);
+    fileInputStream=new FileInputStream(inputFile);
+    versionHeaderInputStream=new ByteArrayInputStream(versionHeader);
+    bytesToSignInputStream=new SequenceInputStream(versionHeaderInputStream,fileInputStream);
+    signature=_context.dsa().sign(bytesToSignInputStream,signingPrivateKey);
   }
  catch (  Exception e) {
     if (_log.shouldLog(Log.ERROR))     _log.error("Error signing",e);
     return null;
   }
  finally {
-    if (in != null)     try {
-      in.close();
+    if (bytesToSignInputStream != null)     try {
+      bytesToSignInputStream.close();
     }
  catch (    IOException ioe) {
     }
-    in=null;
+    fileInputStream=null;
   }
   FileOutputStream fileOutputStream=null;
   try {
-    fileOutputStream=new FileOutputStream(outputFile);
-    fileOutputStream.write(headerUpdateVersion);
+    fileOutputStream=new FileOutputStream(signedFile);
     fileOutputStream.write(signature.getData());
-    in=new FileInputStream(inputFile);
-    byte buf[]=new byte[1024];
-    int read=0;
-    while ((read=in.read(buf)) != -1)     fileOutputStream.write(buf,0,read);
+    fileOutputStream.write(versionHeader);
+    fileInputStream=new FileInputStream(inputFile);
+    byte[] buffer=new byte[1024];
+    int bytesRead=0;
+    while ((bytesRead=fileInputStream.read(buffer)) != -1)     fileOutputStream.write(buffer,0,bytesRead);
     fileOutputStream.close();
-    fileOutputStream=null;
   }
  catch (  IOException ioe) {
-    if (_log.shouldLog(Log.WARN))     _log.log(Log.WARN,"Error writing signed I2P update file " + outputFile,ioe);
+    if (_log.shouldLog(Log.WARN))     _log.log(Log.WARN,"Error writing signed file " + signedFile,ioe);
     return null;
   }
  finally {
-    if (fileOutputStream != null)     try {
-      fileOutputStream.close();
+    if (fileInputStream != null)     try {
+      fileInputStream.close();
     }
  catch (    IOException ioe) {
     }
-    if (in != null)     try {
-      in.close();
+    if (fileOutputStream != null)     try {
+      fileOutputStream.close();
     }
  catch (    IOException ioe) {
     }
