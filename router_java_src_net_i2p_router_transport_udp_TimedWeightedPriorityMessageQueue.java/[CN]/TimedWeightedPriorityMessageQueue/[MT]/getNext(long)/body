@@ -1,0 +1,45 @@
+{
+  while (_alive) {
+    _addedSincePassBegan=false;
+    for (int i=0; i < _queue.length; i++) {
+      int currentQueue=(_nextQueue + i) % _queue.length;
+synchronized (_queue[currentQueue]) {
+        if (_queue[currentQueue].size() > 0) {
+          OutNetMessage msg=(OutNetMessage)_queue[currentQueue].remove(0);
+          long size=msg.getMessageSize();
+          _bytesQueued[currentQueue]-=size;
+          _bytesTransferred[currentQueue]+=size;
+          _messagesFlushed[currentQueue]++;
+          if (_messagesFlushed[currentQueue] >= _weighting[currentQueue]) {
+            _messagesFlushed[currentQueue]=0;
+            _nextQueue=(currentQueue + 1) % _queue.length;
+          }
+          _context.statManager().addRateData("udp.messageQueueSize",_queue[currentQueue].size(),currentQueue);
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("Pulling a message off queue " + currentQueue + " with "+ _queue[currentQueue].size()+ " remaining");
+          return msg;
+        }
+ else {
+          _messagesFlushed[currentQueue]=0;
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("Nothing on queue " + currentQueue);
+        }
+      }
+    }
+    long remaining=blockUntil - _context.clock().now();
+    if ((blockUntil > 0) && (remaining < 0)) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Nonblocking, or block time has expired");
+      return null;
+    }
+    try {
+synchronized (_nextLock) {
+        if (!_addedSincePassBegan && _alive) {
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("Wait for activity (up to " + remaining + "ms)");
+          if (blockUntil < 0)           _nextLock.wait();
+ else           _nextLock.wait(remaining);
+        }
+      }
+    }
+ catch (    InterruptedException ie) {
+    }
+  }
+  return null;
+}

@@ -1,0 +1,21 @@
+{
+  RouterAddress ra=msg.getTarget().getTargetAddress(_transport.getStyle());
+  if (ra == null) {
+    _transport.failed(msg);
+    return;
+  }
+  UDPAddress addr=new UDPAddress(ra);
+  InetAddress remAddr=addr.getHostAddress();
+  int port=addr.getPort();
+  String to=PeerState.calculateRemoteHostString(remAddr.getAddress(),port);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Add outobund establish state to: " + to);
+synchronized (_outboundStates) {
+    OutboundEstablishState state=(OutboundEstablishState)_outboundStates.get(to);
+    if (state == null) {
+      state=new OutboundEstablishState(_context,remAddr,port,msg.getTarget().getIdentity(),new SessionKey(addr.getIntroKey()));
+      _outboundStates.put(to,state);
+    }
+    state.addMessage(msg);
+  }
+  notifyActivity();
+}

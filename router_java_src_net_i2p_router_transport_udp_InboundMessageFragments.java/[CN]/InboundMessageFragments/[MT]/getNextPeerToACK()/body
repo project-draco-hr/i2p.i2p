@@ -1,0 +1,22 @@
+{
+  while (_alive) {
+    try {
+      long now=_context.clock().now();
+synchronized (_stateLock) {
+        for (int i=0; i < _unsentACKs.size(); i++) {
+          PeerState peer=(PeerState)_unsentACKs.get(i);
+          if (peer.getLastACKSend() + ACK_FREQUENCY <= now) {
+            _unsentACKs.remove(i);
+            peer.setLastACKSend(now);
+            return peer;
+          }
+        }
+        if (_unsentACKs.size() > 0)         _stateLock.wait(_context.random().nextInt(100));
+ else         _stateLock.wait();
+      }
+    }
+ catch (    InterruptedException ie) {
+    }
+  }
+  return null;
+}

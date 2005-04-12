@@ -1,0 +1,37 @@
+{
+  _socketChanged=false;
+  while (_keepRunning) {
+    if (_socketChanged) {
+      Thread.currentThread().setName(_name);
+      _socketChanged=false;
+    }
+    UDPPacket packet=UDPPacket.acquire(_context);
+    while (!_context.throttle().acceptNetworkMessage())     try {
+      Thread.sleep(10);
+    }
+ catch (    InterruptedException ie) {
+    }
+    try {
+synchronized (Runner.this) {
+        _socket.receive(packet.getPacket());
+      }
+      int size=packet.getPacket().getLength();
+      packet.resetBegin();
+      _context.statManager().addRateData("udp.receivePacketSize",size,0);
+      if (size > 0) {
+        FIFOBandwidthLimiter.Request req=_context.bandwidthLimiter().requestInbound(size,"UDP receiver");
+        while (req.getPendingInboundRequested() > 0)         req.waitForNextAllocation();
+      }
+      receive(packet);
+    }
+ catch (    IOException ioe) {
+      if (_socketChanged) {
+        if (_log.shouldLog(Log.INFO))         _log.info("Changing ports...");
+      }
+ else {
+        if (_log.shouldLog(Log.ERROR))         _log.error("Error receiving",ioe);
+      }
+      packet.release();
+    }
+  }
+}

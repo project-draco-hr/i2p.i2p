@@ -1,0 +1,15 @@
+{
+  if (message == null)   return;
+  _context.statManager().addRateData("udp.timeToEntrance",message.getLifetime(),message.getLifetime());
+  int queue=pickQueue(message);
+  long size=message.getMessageSize();
+synchronized (_queue[queue]) {
+    _queue[queue].add(message);
+    _bytesQueued[queue]+=size;
+  }
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Added a " + size + " byte message to queue "+ queue);
+synchronized (_nextLock) {
+    _addedSincePassBegan=true;
+    _nextLock.notifyAll();
+  }
+}

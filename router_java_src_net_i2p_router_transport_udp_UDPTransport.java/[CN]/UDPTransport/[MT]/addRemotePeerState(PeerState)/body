@@ -1,0 +1,23 @@
+{
+  if (_log.shouldLog(Log.WARN))   _log.debug("Add remote peer state: " + peer);
+  if (peer.getRemotePeer() != null) {
+synchronized (_peersByIdent) {
+      PeerState oldPeer=(PeerState)_peersByIdent.put(peer.getRemotePeer(),peer);
+      if ((oldPeer != null) && (oldPeer != peer)) {
+        _peersByIdent.put(oldPeer.getRemotePeer(),oldPeer);
+        return false;
+      }
+    }
+  }
+  String remoteString=peer.getRemoteHostString();
+  if (remoteString == null)   return false;
+synchronized (_peersByRemoteHost) {
+    PeerState oldPeer=(PeerState)_peersByRemoteHost.put(remoteString,peer);
+    if ((oldPeer != null) && (oldPeer != peer)) {
+      _peersByRemoteHost.put(remoteString,oldPeer);
+      return false;
+    }
+  }
+  _context.shitlist().unshitlistRouter(peer.getRemotePeer());
+  return true;
+}

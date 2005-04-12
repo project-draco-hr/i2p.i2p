@@ -1,0 +1,81 @@
+{
+  long now=_context.clock().now();
+  long nextSendTime=-1;
+  OutboundEstablishState outboundState=null;
+synchronized (_outboundStates) {
+    for (Iterator iter=_outboundStates.values().iterator(); iter.hasNext(); ) {
+      OutboundEstablishState cur=(OutboundEstablishState)iter.next();
+      if (cur.getState() == OutboundEstablishState.STATE_CONFIRMED_COMPLETELY) {
+        iter.remove();
+        outboundState=cur;
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Removing confirmed outbound: " + cur);
+        break;
+      }
+ else       if (cur.getLifetime() > MAX_ESTABLISH_TIME) {
+        iter.remove();
+        outboundState=cur;
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Removing expired outbound: " + cur);
+        break;
+      }
+ else {
+        if (cur.getNextSendTime() <= now) {
+          outboundState=cur;
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("Outbound wants activity: " + cur);
+          break;
+        }
+ else {
+          long when=-1;
+          if (cur.getNextSendTime() <= 0) {
+            when=cur.getEstablishBeginTime() + MAX_ESTABLISH_TIME;
+          }
+ else {
+            when=cur.getNextSendTime();
+          }
+          if ((nextSendTime <= 0) || (when < nextSendTime))           nextSendTime=when;
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("Outbound doesn't want activity: " + cur + " (next="+ (when - now)+ ")");
+        }
+      }
+    }
+  }
+  if (outboundState != null) {
+    if (outboundState.getLifetime() > MAX_ESTABLISH_TIME) {
+      if (outboundState.getState() != OutboundEstablishState.STATE_CONFIRMED_COMPLETELY) {
+        while (true) {
+          OutNetMessage msg=outboundState.getNextQueuedMessage();
+          if (msg == null)           break;
+          _transport.failed(msg);
+        }
+        _context.shitlist().shitlistRouter(outboundState.getRemoteIdentity().calculateHash(),"Unable to establish");
+      }
+ else {
+        while (true) {
+          OutNetMessage msg=outboundState.getNextQueuedMessage();
+          if (msg == null)           break;
+          _transport.send(msg);
+        }
+      }
+    }
+ else {
+switch (outboundState.getState()) {
+case OutboundEstablishState.STATE_UNKNOWN:
+        sendRequest(outboundState);
+      break;
+case OutboundEstablishState.STATE_REQUEST_SENT:
+    if (outboundState.getNextSendTime() <= now)     sendRequest(outboundState);
+  break;
+case OutboundEstablishState.STATE_CREATED_RECEIVED:
+case OutboundEstablishState.STATE_CONFIRMED_PARTIALLY:
+if (outboundState.getNextSendTime() <= now) sendConfirmation(outboundState);
+break;
+case OutboundEstablishState.STATE_CONFIRMED_COMPLETELY:
+handleCompletelyEstablished(outboundState);
+break;
+default :
+}
+}
+nextSendTime=now;
+}
+ else {
+}
+return nextSendTime;
+}

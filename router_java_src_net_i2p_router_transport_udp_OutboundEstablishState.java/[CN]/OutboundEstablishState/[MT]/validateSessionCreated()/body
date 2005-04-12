@@ -1,0 +1,25 @@
+{
+  if (_receivedSignature != null) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Session created already validated");
+    return true;
+  }
+  generateSessionKey();
+  decryptSignature();
+  if (verifySessionCreated()) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Session created passed validation");
+    return true;
+  }
+ else {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Session created failed validation, clearing state");
+    _receivedY=null;
+    _aliceIP=null;
+    _receivedRelayTag=0;
+    _receivedSignedOnTime=-1;
+    _receivedEncryptedSignature=null;
+    _receivedIV=null;
+    _receivedSignature=null;
+    if ((_currentState == STATE_UNKNOWN) || (_currentState == STATE_REQUEST_SENT) || (_currentState == STATE_CREATED_RECEIVED))     _currentState=STATE_REQUEST_SENT;
+    _nextSend=_context.clock().now();
+    return false;
+  }
+}

@@ -1,0 +1,82 @@
+{
+  PeerState peer=null;
+  OutboundMessageState state=null;
+  int currentFragment=-1;
+  while (_alive && (currentFragment < 0)) {
+    long now=_context.clock().now();
+    long nextSend=-1;
+    finishMessages();
+synchronized (_activeMessages) {
+      for (int i=0; i < _activeMessages.size(); i++) {
+        int cur=(i + _nextPacketMessage) % _activeMessages.size();
+        state=(OutboundMessageState)_activeMessages.get(cur);
+        if (state.getNextSendTime() <= now) {
+          peer=state.getPeer();
+          if (peer == null)           peer=_transport.getPeerState(state.getMessage().getTarget().getIdentity().calculateHash());
+          if (peer == null) {
+            _activeMessages.remove(cur);
+            _transport.failed(state.getMessage());
+            if (_log.shouldLog(Log.WARN))             _log.warn("Peer disconnected for " + state);
+            i--;
+          }
+ else {
+            if (!state.isFragmented()) {
+              state.fragment(fragmentSize(peer.getMTU()));
+              if (_log.shouldLog(Log.INFO))               _log.info("Fragmenting " + state);
+            }
+            int oldVolley=state.getPushCount();
+            currentFragment=state.pickNextFragment();
+            int fragmentSize=state.fragmentSize(currentFragment);
+            if (peer.allocateSendingBytes(fragmentSize)) {
+              if (_log.shouldLog(Log.INFO))               _log.info("Allocation of " + fragmentSize + " allowed");
+              _nextPacketMessage=i + 1;
+              if (state.getPushCount() != oldVolley) {
+                _context.statManager().addRateData("udp.sendVolleyTime",state.getLifetime(),state.getFragmentCount());
+                state.setNextSendTime(now + 500);
+              }
+ else {
+                if (peer.getSendWindowBytesRemaining() > 0)                 state.setNextSendTime(now);
+ else                 state.setNextSendTime(now + 50);
+              }
+              break;
+            }
+ else {
+              if (_log.shouldLog(Log.WARN))               _log.warn("Allocation of " + fragmentSize + " rejected");
+              state.setNextSendTime(now + _context.random().nextInt(500));
+              currentFragment=-1;
+            }
+          }
+        }
+        long time=state.getNextSendTime();
+        if ((nextSend < 0) || (time < nextSend))         nextSend=time;
+      }
+      if (currentFragment < 0) {
+        if (nextSend <= 0) {
+          try {
+            _activeMessages.wait(100);
+          }
+ catch (          InterruptedException ie) {
+          }
+        }
+ else {
+          long delay=nextSend - now;
+          if (delay <= 0)           delay=10;
+          if (delay > 500)           delay=500;
+          try {
+            _activeMessages.wait(delay);
+          }
+ catch (          InterruptedException ie) {
+          }
+        }
+      }
+    }
+  }
+  if (currentFragment >= 0) {
+    if (_log.shouldLog(Log.INFO))     _log.info("Building packet for fragment " + currentFragment + " of "+ state+ " to "+ peer);
+    UDPPacket rv=_builder.buildPacket(state,currentFragment,peer);
+    return rv;
+  }
+ else {
+    return null;
+  }
+}

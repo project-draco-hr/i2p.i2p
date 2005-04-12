@@ -1,0 +1,34 @@
+{
+  boolean eq=false;
+  ByteArray buf=_validateCache.acquire();
+  int payloadLength=_packet.getLength() - MAC_SIZE - IV_SIZE;
+  if (payloadLength > 0) {
+    int off=0;
+    System.arraycopy(_data,_packet.getOffset() + MAC_SIZE + IV_SIZE,buf.getData(),off,payloadLength);
+    off+=payloadLength;
+    System.arraycopy(_data,_packet.getOffset() + MAC_SIZE,buf.getData(),off,IV_SIZE);
+    off+=IV_SIZE;
+    DataHelper.toLong(buf.getData(),off,2,payloadLength);
+    off+=2;
+    Hash calculated=_context.hmac().calculate(macKey,buf.getData(),0,off);
+    if (_log.shouldLog(Log.DEBUG)) {
+      StringBuffer str=new StringBuffer(128);
+      str.append(_packet.getLength()).append(" byte packet received, payload length ");
+      str.append(payloadLength);
+      str.append("\nIV: ").append(Base64.encode(buf.getData(),payloadLength,IV_SIZE));
+      str.append("\nIV2: ").append(Base64.encode(_data,MAC_SIZE,IV_SIZE));
+      str.append("\nlen: ").append(DataHelper.fromLong(buf.getData(),payloadLength + IV_SIZE,2));
+      str.append("\nMAC key: ").append(macKey.toBase64());
+      str.append("\ncalc HMAC: ").append(calculated.toBase64());
+      str.append("\nread HMAC: ").append(Base64.encode(_data,_packet.getOffset(),MAC_SIZE));
+      str.append("\nraw: ").append(Base64.encode(_data,_packet.getOffset(),_packet.getLength()));
+      _log.debug(str.toString());
+    }
+    eq=DataHelper.eq(calculated.getData(),0,_data,_packet.getOffset(),MAC_SIZE);
+  }
+ else {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Payload length is " + payloadLength);
+  }
+  _validateCache.release(buf);
+  return eq;
+}

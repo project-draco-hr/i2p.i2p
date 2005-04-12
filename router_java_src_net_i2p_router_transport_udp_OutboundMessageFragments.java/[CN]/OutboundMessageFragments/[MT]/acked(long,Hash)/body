@@ -1,0 +1,38 @@
+{
+  OutboundMessageState state=null;
+synchronized (_activeMessages) {
+    for (int i=0; i < _activeMessages.size(); i++) {
+      state=(OutboundMessageState)_activeMessages.get(i);
+      if (state.getMessageId() == messageId) {
+        OutNetMessage msg=state.getMessage();
+        if (msg != null) {
+          Hash expectedBy=msg.getTarget().getIdentity().getHash();
+          if (!expectedBy.equals(ackedBy)) {
+            state=null;
+            return 0;
+          }
+        }
+        _activeMessages.remove(i);
+        _activeMessages.notifyAll();
+        break;
+      }
+ else {
+        state=null;
+      }
+    }
+  }
+  if (state != null) {
+    if (_log.shouldLog(Log.INFO))     _log.info("Received ack of " + messageId + " by "+ ackedBy.toBase64()+ " after "+ state.getLifetime());
+    _context.statManager().addRateData("udp.sendConfirmTime",state.getLifetime(),state.getLifetime());
+    _context.statManager().addRateData("udp.sendConfirmFragments",state.getFragmentCount(),state.getLifetime());
+    int numSends=state.getMaxSends();
+    _context.statManager().addRateData("udp.sendConfirmVolley",numSends,state.getFragmentCount());
+    if ((numSends > 1) && (state.getPeer() != null))     state.getPeer().congestionOccurred();
+    _transport.succeeded(state.getMessage());
+    return state.getFragmentCount();
+  }
+ else {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Received an ACK for a message not pending: " + messageId);
+    return 0;
+  }
+}

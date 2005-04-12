@@ -1,0 +1,50 @@
+{
+  UDPPacket packet=UDPPacket.acquire(_context);
+  try {
+    packet.getPacket().setAddress(InetAddress.getByAddress(state.getSentIP()));
+  }
+ catch (  UnknownHostException uhe) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("How did we think this was a valid IP?  " + state.getRemoteHostInfo());
+    return null;
+  }
+  byte data[]=packet.getPacket().getData();
+  Arrays.fill(data,0,data.length,(byte)0x0);
+  int off=UDPPacket.MAC_SIZE + UDPPacket.IV_SIZE;
+  data[off]=SESSION_CONFIRMED_FLAG_BYTE;
+  off++;
+  long now=_context.clock().now() / 1000;
+  DataHelper.toLong(data,off,4,now);
+  off+=4;
+  data[off]|=fragmentNum << 4;
+  data[off]|=(numFragments & 0xF);
+  off++;
+  int curFragSize=MAX_IDENTITY_FRAGMENT_SIZE;
+  if (fragmentNum == numFragments - 1) {
+    if (identity.length % MAX_IDENTITY_FRAGMENT_SIZE != 0)     curFragSize=identity.length % MAX_IDENTITY_FRAGMENT_SIZE;
+  }
+  DataHelper.toLong(data,off,2,curFragSize);
+  off+=2;
+  int curFragOffset=fragmentNum * MAX_IDENTITY_FRAGMENT_SIZE;
+  System.arraycopy(identity,curFragOffset,data,off,curFragSize);
+  off+=curFragSize;
+  if (fragmentNum == numFragments - 1) {
+    DataHelper.toLong(data,off,4,state.getSentSignedOnTime());
+    off+=4;
+    int paddingRequired=0;
+    if ((off + Signature.SIGNATURE_BYTES) % 16 != 0)     paddingRequired+=16 - ((off + Signature.SIGNATURE_BYTES) % 16);
+    for (int i=0; i < paddingRequired; i++) {
+      data[off]=(byte)_context.random().nextInt(255);
+      off++;
+    }
+    System.arraycopy(state.getSentSignature().getData(),0,data,off,Signature.SIGNATURE_BYTES);
+    packet.getPacket().setLength(off + Signature.SIGNATURE_BYTES);
+    authenticate(packet,state.getCipherKey(),state.getMACKey());
+  }
+ else {
+    if ((off % 16) != 0)     off+=16 - (off % 16);
+    packet.getPacket().setLength(off);
+    authenticate(packet,state.getIntroKey(),state.getIntroKey());
+  }
+  setTo(packet,state.getSentIP(),state.getSentPort());
+  return packet;
+}

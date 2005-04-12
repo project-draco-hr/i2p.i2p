@@ -1,0 +1,58 @@
+{
+  StringBuffer buf=new StringBuffer(256);
+  long msAgo=_context.clock().now() - readTimestamp() * 1000;
+  buf.append("Data packet sent ").append(msAgo).append("ms ago ");
+  buf.append("IV ");
+  buf.append(Base64.encode(_message,_payloadBeginOffset - UDPPacket.IV_SIZE,UDPPacket.IV_SIZE));
+  buf.append(" ");
+  int off=readBodyOffset() + 1;
+  if (readACKsIncluded()) {
+    int numACKs=(int)DataHelper.fromLong(_message,off,1);
+    off++;
+    buf.append("with ACKs for ");
+    for (int i=0; i < numACKs; i++) {
+      buf.append(DataHelper.fromLong(_message,off,4)).append(' ');
+      off+=4;
+    }
+  }
+  if (readNACKsIncluded()) {
+    int numNACKs=(int)DataHelper.fromLong(_message,off,1);
+    off++;
+    buf.append("with NACKs for ");
+    for (int i=0; i < numNACKs; i++) {
+      buf.append(DataHelper.fromLong(_message,off,4)).append(' ');
+      off+=5;
+    }
+    off+=5 * numNACKs;
+  }
+  if (readNumACKsIncluded()) {
+    buf.append("with numACKs of ");
+    buf.append(DataHelper.fromLong(_message,off,2));
+    buf.append(' ');
+    off+=2;
+  }
+  if (readExtendedDataIncluded()) {
+    int size=(int)DataHelper.fromLong(_message,off,1);
+    off++;
+    buf.append("with extended size of ");
+    buf.append(size);
+    buf.append(' ');
+    off+=size;
+  }
+  int numFragments=(int)DataHelper.fromLong(_message,off,1);
+  off++;
+  buf.append("with fragmentCount of ");
+  buf.append(numFragments);
+  buf.append(' ');
+  for (int i=0; i < numFragments; i++) {
+    buf.append("containing messageId ");
+    buf.append(DataHelper.fromLong(_message,off,4));
+    off+=5;
+    int size=(int)DataHelper.fromLong(_message,off,2);
+    buf.append(" with ").append(size).append(" bytes");
+    buf.append(' ');
+    off+=size;
+    off+=2;
+  }
+  return buf.toString();
+}

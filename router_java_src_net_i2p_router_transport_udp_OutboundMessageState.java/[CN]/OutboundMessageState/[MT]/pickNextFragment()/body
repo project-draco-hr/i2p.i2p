@@ -1,0 +1,37 @@
+{
+  short minValue=-1;
+  int minIndex=-1;
+  int startOffset=_context.random().nextInt(_fragmentSends.length);
+  for (int i=0; i < _fragmentSends.length; i++) {
+    int cur=(i + startOffset) % _fragmentSends.length;
+    if (_fragmentSends[cur] < (short)0)     continue;
+ else     if ((minValue < (short)0) || (_fragmentSends[cur] < minValue)) {
+      minValue=_fragmentSends[cur];
+      minIndex=cur;
+    }
+  }
+  if (minIndex >= 0) {
+    _fragmentSends[minIndex]++;
+    if (_fragmentSends[minIndex] > _maxSends)     _maxSends=_fragmentSends[minIndex];
+  }
+  boolean endOfVolley=true;
+  for (int i=0; i < _fragmentSends.length; i++) {
+    if (_fragmentSends[i] < (short)0)     continue;
+    if (_fragmentSends[i] != (short)_pushCount + 1) {
+      endOfVolley=false;
+      break;
+    }
+  }
+  if (endOfVolley)   _pushCount++;
+  if (_log.shouldLog(Log.DEBUG)) {
+    StringBuffer buf=new StringBuffer(64);
+    buf.append("Next fragment is ").append(minIndex);
+    if (minIndex >= 0) {
+      buf.append(" (#sends: ").append(_fragmentSends[minIndex] - 1);
+      buf.append(" #fragments: ").append(_fragmentSends.length);
+      buf.append(")");
+    }
+    _log.debug(buf.toString());
+  }
+  return minIndex;
+}

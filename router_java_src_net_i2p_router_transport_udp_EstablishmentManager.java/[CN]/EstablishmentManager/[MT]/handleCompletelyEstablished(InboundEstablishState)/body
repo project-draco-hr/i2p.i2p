@@ -1,0 +1,19 @@
+{
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Handle completely established (inbound): " + state.getRemoteHostInfo());
+  long now=_context.clock().now();
+  RouterIdentity remote=state.getConfirmedIdentity();
+  PeerState peer=new PeerState(_context);
+  peer.setCurrentCipherKey(state.getCipherKey());
+  peer.setCurrentMACKey(state.getMACKey());
+  peer.setCurrentReceiveSecond(now - (now % 1000));
+  peer.setKeyEstablishedTime(now);
+  peer.setLastReceiveTime(now);
+  peer.setLastSendTime(now);
+  peer.setRemoteAddress(state.getSentIP(),state.getSentPort());
+  peer.setRemotePeer(remote.calculateHash());
+  if (true)   peer.setRemoteRequiresIntroduction(false);
+  peer.setTheyRelayToUsAs(0);
+  peer.setWeRelayToThemAs(state.getSentRelayTag());
+  _transport.addRemotePeerState(peer);
+  sendOurInfo(peer);
+}

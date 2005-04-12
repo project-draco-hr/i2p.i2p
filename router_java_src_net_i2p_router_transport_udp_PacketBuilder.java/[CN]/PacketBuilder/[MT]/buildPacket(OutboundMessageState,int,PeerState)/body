@@ -1,0 +1,28 @@
+{
+  UDPPacket packet=UDPPacket.acquire(_context);
+  byte data[]=packet.getPacket().getData();
+  Arrays.fill(data,0,data.length,(byte)0x0);
+  int off=UDPPacket.MAC_SIZE + UDPPacket.IV_SIZE;
+  data[off]|=(UDPPacket.PAYLOAD_TYPE_DATA << 4);
+  off++;
+  long now=_context.clock().now() / 1000;
+  DataHelper.toLong(data,off,4,now);
+  off+=4;
+  data[off]|=UDPPacket.DATA_FLAG_WANT_REPLY;
+  off++;
+  DataHelper.toLong(data,off,1,1);
+  off++;
+  DataHelper.toLong(data,off,4,state.getMessageId());
+  off+=4;
+  data[off]|=fragment << 3;
+  if (fragment == state.getFragmentCount() - 1)   data[off]|=1 << 2;
+  off++;
+  DataHelper.toLong(data,off,2,state.fragmentSize(fragment));
+  off+=2;
+  off+=state.writeFragment(data,off,fragment);
+  if ((off % 16) != 0)   off+=16 - (off % 16);
+  packet.getPacket().setLength(off);
+  authenticate(packet,peer.getCurrentCipherKey(),peer.getCurrentMACKey());
+  setTo(packet,peer.getRemoteIP(),peer.getRemotePort());
+  return packet;
+}

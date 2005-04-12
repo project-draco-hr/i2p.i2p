@@ -1,0 +1,29 @@
+{
+  if (_log.shouldLog(Log.INFO))   _log.info("Received partial ack of " + messageId + " by "+ ackedBy.toBase64());
+  OutboundMessageState state=null;
+synchronized (_activeMessages) {
+    for (int i=0; i < _activeMessages.size(); i++) {
+      state=(OutboundMessageState)_activeMessages.get(i);
+      if (state.getMessage().getMessageId() == messageId) {
+        Hash expectedBy=state.getMessage().getTarget().getIdentity().calculateHash();
+        if (!expectedBy.equals(ackedBy)) {
+          return;
+        }
+ else {
+          state.acked(ackedFragments);
+          if (state.isComplete()) {
+            _activeMessages.remove(i);
+            _activeMessages.notifyAll();
+          }
+          break;
+        }
+      }
+    }
+  }
+  if ((state != null) && (state.isComplete())) {
+    if (_log.shouldLog(Log.INFO))     _log.info("Received ack of " + messageId + " by "+ ackedBy.toBase64()+ " after "+ state.getLifetime());
+    _context.statManager().addRateData("udp.sendConfirmTime",state.getLifetime(),state.getLifetime());
+    _context.statManager().addRateData("udp.sendConfirmFragments",state.getFragmentCount(),state.getLifetime());
+    _transport.succeeded(state.getMessage());
+  }
+}

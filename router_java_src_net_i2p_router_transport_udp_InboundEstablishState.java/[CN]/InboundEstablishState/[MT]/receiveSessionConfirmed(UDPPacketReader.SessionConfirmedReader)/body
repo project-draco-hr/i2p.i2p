@@ -1,0 +1,19 @@
+{
+  if (_receivedIdentity == null)   _receivedIdentity=new byte[conf.readTotalFragmentNum()][];
+  int cur=conf.readCurrentFragmentNum();
+  if (_receivedIdentity[cur] == null) {
+    byte fragment[]=new byte[conf.readCurrentFragmentSize()];
+    conf.readFragmentData(fragment,0);
+    _receivedIdentity[cur]=fragment;
+  }
+  if (cur == _receivedIdentity.length - 1) {
+    _receivedSignedOnTime=conf.readFinalFragmentSignedOnTime();
+    if (_receivedSignature == null)     _receivedSignature=new byte[Signature.SIGNATURE_BYTES];
+    conf.readFinalSignature(_receivedSignature,0);
+  }
+  if ((_currentState == STATE_UNKNOWN) || (_currentState == STATE_REQUEST_RECEIVED) || (_currentState == STATE_CREATED_SENT)) {
+    if (confirmedFullyReceived())     _currentState=STATE_CONFIRMED_COMPLETELY;
+ else     _currentState=STATE_CONFIRMED_PARTIALLY;
+  }
+  packetReceived();
+}

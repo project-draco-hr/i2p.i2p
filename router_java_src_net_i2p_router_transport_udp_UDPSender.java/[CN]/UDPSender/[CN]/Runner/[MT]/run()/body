@@ -1,0 +1,31 @@
+{
+  _socketChanged=false;
+  while (_keepRunning) {
+    if (_socketChanged) {
+      Thread.currentThread().setName(_name);
+      _socketChanged=false;
+    }
+    UDPPacket packet=getNextPacket();
+    if (packet != null) {
+      int size=packet.getPacket().getLength();
+      if (size > 0) {
+        FIFOBandwidthLimiter.Request req=_context.bandwidthLimiter().requestOutbound(size,"UDP sender");
+        while (req.getPendingOutboundRequested() > 0)         req.waitForNextAllocation();
+      }
+      if (_log.shouldLog(Log.DEBUG)) {
+        int len=packet.getPacket().getLength();
+        _log.debug("Sending packet: \nraw: " + Base64.encode(packet.getPacket().getData(),0,len));
+      }
+      try {
+synchronized (Runner.this) {
+          _socket.send(packet.getPacket());
+        }
+        _context.statManager().addRateData("udp.pushTime",packet.getLifetime(),packet.getLifetime());
+        _context.statManager().addRateData("udp.sendPacketSize",packet.getPacket().getLength(),packet.getLifetime());
+      }
+ catch (      IOException ioe) {
+        if (_log.shouldLog(Log.ERROR))         _log.error("Error sending",ioe);
+      }
+    }
+  }
+}

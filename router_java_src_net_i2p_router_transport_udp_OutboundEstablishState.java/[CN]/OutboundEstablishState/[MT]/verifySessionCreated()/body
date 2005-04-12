@@ -1,0 +1,28 @@
+{
+  byte signed[]=new byte[_aliceIP.length + 2 + _bobIP.length+ 2+ 4+ 4];
+  int off=0;
+  System.arraycopy(_aliceIP,0,signed,off,_aliceIP.length);
+  off+=_aliceIP.length;
+  DataHelper.toLong(signed,off,2,_alicePort);
+  off+=2;
+  System.arraycopy(_bobIP,0,signed,off,_bobIP.length);
+  off+=_bobIP.length;
+  DataHelper.toLong(signed,off,2,_bobPort);
+  off+=2;
+  DataHelper.toLong(signed,off,4,_receivedRelayTag);
+  off+=4;
+  DataHelper.toLong(signed,off,4,_receivedSignedOnTime);
+  if (_log.shouldLog(Log.DEBUG)) {
+    StringBuffer buf=new StringBuffer(128);
+    buf.append("Signed sessionCreated:");
+    buf.append(" AliceIP: ").append(Base64.encode(_aliceIP));
+    buf.append(" AlicePort: ").append(_alicePort);
+    buf.append(" BobIP: ").append(Base64.encode(_bobIP));
+    buf.append(" BobPort: ").append(_bobPort);
+    buf.append(" RelayTag: ").append(_receivedRelayTag);
+    buf.append(" SignedOn: ").append(_receivedSignedOnTime);
+    buf.append(" signature: ").append(Base64.encode(_receivedSignature.getData()));
+    _log.debug(buf.toString());
+  }
+  return _context.dsa().verifySignature(_receivedSignature,signed,_remotePeer.getSigningPublicKey());
+}

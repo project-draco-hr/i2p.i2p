@@ -1,0 +1,44 @@
+{
+  if (explicitAddressSpecified()) {
+    try {
+      String host=_context.getProperty(PROP_EXTERNAL_HOST);
+      String port=_context.getProperty(PROP_EXTERNAL_PORT);
+      _externalListenHost=InetAddress.getByName(host);
+      _externalListenPort=Integer.parseInt(port);
+    }
+ catch (    UnknownHostException uhe) {
+      _externalListenHost=null;
+    }
+catch (    NumberFormatException nfe) {
+      _externalListenPort=-1;
+    }
+  }
+  Properties options=new Properties();
+  if ((_externalListenPort > 0) && (_externalListenHost != null)) {
+    options.setProperty(UDPAddress.PROP_PORT,String.valueOf(_externalListenPort));
+    options.setProperty(UDPAddress.PROP_HOST,_externalListenHost.getHostAddress());
+  }
+ else {
+synchronized (_relayPeers) {
+      Collections.shuffle(_relayPeers);
+      int numPeers=PUBLIC_RELAY_COUNT;
+      if (numPeers > _relayPeers.size())       numPeers=_relayPeers.size();
+      for (int i=0; i < numPeers; i++) {
+        RelayPeer peer=(RelayPeer)_relayPeers.get(i);
+        options.setProperty("relay." + i + ".host",peer.getHost());
+        options.setProperty("relay." + i + ".port",String.valueOf(peer.getPort()));
+        options.setProperty("relay." + i + ".tag",Base64.encode(peer.getTag()));
+        options.setProperty("relay." + i + ".key",peer.getIntroKey().toBase64());
+      }
+    }
+    if (options.size() <= 0)     return;
+  }
+  options.setProperty(UDPAddress.PROP_INTRO_KEY,_introKey.toBase64());
+  RouterAddress addr=new RouterAddress();
+  addr.setCost(5);
+  addr.setExpiration(null);
+  addr.setTransportStyle(STYLE);
+  addr.setOptions(options);
+  _externalAddress=addr;
+  replaceAddress(addr);
+}

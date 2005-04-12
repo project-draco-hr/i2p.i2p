@@ -1,0 +1,20 @@
+{
+  if (_receivedY != null) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Session created already received, ignoring");
+    return;
+  }
+  _receivedY=new byte[UDPPacketReader.SessionCreatedReader.Y_LENGTH];
+  reader.readY(_receivedY,0);
+  if (_aliceIP == null)   _aliceIP=new byte[reader.readIPSize()];
+  reader.readIP(_aliceIP,0);
+  _alicePort=reader.readPort();
+  _receivedRelayTag=reader.readRelayTag();
+  _receivedSignedOnTime=reader.readSignedOnTime();
+  _receivedEncryptedSignature=new byte[Signature.SIGNATURE_BYTES + 8];
+  reader.readEncryptedSignature(_receivedEncryptedSignature,0);
+  _receivedIV=new byte[UDPPacket.IV_SIZE];
+  reader.readIV(_receivedIV,0);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Receive session created:\neSig: " + Base64.encode(_receivedEncryptedSignature) + "\nreceivedIV: "+ Base64.encode(_receivedIV)+ "\nAliceIP: "+ Base64.encode(_aliceIP)+ " RelayTag: "+ _receivedRelayTag+ " SignedOn: "+ _receivedSignedOnTime+ "\nthis: "+ this.toString());
+  if ((_currentState == STATE_UNKNOWN) || (_currentState == STATE_REQUEST_SENT))   _currentState=STATE_CREATED_RECEIVED;
+  packetReceived();
+}

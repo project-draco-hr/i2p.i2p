@@ -1,0 +1,16 @@
+{
+  int fragmentNum=data.readMessageFragmentNum(dataFragment);
+  if ((fragmentNum < 0) || (fragmentNum > _fragments.length)) {
+    _log.log(Log.CRIT,"Invalid fragment " + fragmentNum + ": "+ data,new Exception("source"));
+    return false;
+  }
+  if (_fragments[fragmentNum] == null) {
+    ByteArray message=_fragmentCache.acquire();
+    data.readMessageFragment(dataFragment,message.getData(),0);
+    int size=data.readMessageFragmentSize(dataFragment);
+    message.setValid(size);
+    _fragments[fragmentNum]=message;
+    if (data.readMessageIsLast(dataFragment))     _lastFragment=fragmentNum;
+  }
+  return true;
+}

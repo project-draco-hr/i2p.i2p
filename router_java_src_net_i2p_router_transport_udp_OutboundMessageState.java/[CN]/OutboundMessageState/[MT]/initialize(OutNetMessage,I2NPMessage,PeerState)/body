@@ -1,0 +1,18 @@
+{
+  _message=m;
+  _peer=peer;
+  if (_messageBuf != null) {
+    _cache.release(_messageBuf);
+    _messageBuf=null;
+  }
+  _messageBuf=_cache.acquire();
+  int size=msg.getRawMessageSize();
+  if (size > _messageBuf.getData().length)   throw new IllegalArgumentException("Size too large!  " + size + " in "+ msg);
+  int len=msg.toRawByteArray(_messageBuf.getData());
+  _messageBuf.setValid(len);
+  _messageId=msg.getUniqueId();
+  _startedOn=_context.clock().now();
+  _nextSendTime=_startedOn;
+  _expiration=_startedOn + 10 * 1000;
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Raw byte array for " + _messageId + ": "+ Base64.encode(_messageBuf.getData(),0,len));
+}
