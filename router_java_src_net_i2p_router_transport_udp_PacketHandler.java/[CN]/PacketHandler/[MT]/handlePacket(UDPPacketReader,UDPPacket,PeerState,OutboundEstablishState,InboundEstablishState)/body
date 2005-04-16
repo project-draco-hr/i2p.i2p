@@ -1,0 +1,37 @@
+{
+  reader.initialize(packet);
+  long now=_context.clock().now();
+  long when=reader.readTimestamp() * 1000;
+  long skew=now - when;
+  if (skew > GRACE_PERIOD) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Packet too far in the future: " + new Date(when) + ": "+ packet);
+    return;
+  }
+ else   if (skew < 0 - GRACE_PERIOD) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Packet too far in the past: " + new Date(when) + ": "+ packet);
+    return;
+  }
+  _context.statManager().addRateData("udp.receivePacketSkew",skew,packet.getLifetime());
+  InetAddress fromHost=packet.getPacket().getAddress();
+  int fromPort=packet.getPacket().getPort();
+  String from=PeerState.calculateRemoteHostString(fromHost.getAddress(),fromPort);
+switch (reader.readPayloadType()) {
+case UDPPacket.PAYLOAD_TYPE_SESSION_REQUEST:
+    _establisher.receiveSessionRequest(from,fromHost,fromPort,reader);
+  break;
+case UDPPacket.PAYLOAD_TYPE_SESSION_CONFIRMED:
+_establisher.receiveSessionConfirmed(from,reader);
+break;
+case UDPPacket.PAYLOAD_TYPE_SESSION_CREATED:
+_establisher.receiveSessionCreated(from,reader);
+break;
+case UDPPacket.PAYLOAD_TYPE_DATA:
+if (outState != null) state=_establisher.receiveData(outState);
+if (_log.shouldLog(Log.INFO)) _log.info("Received new DATA packet from " + state + ": "+ packet);
+_inbound.receiveData(state,reader.getDataReader());
+break;
+default :
+if (_log.shouldLog(Log.WARN)) _log.warn("Unknown payload type: " + reader.readPayloadType());
+return;
+}
+}

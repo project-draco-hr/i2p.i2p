@@ -1,6 +1,13 @@
 {
   _consecutiveSendingSecondsWithoutACKs=0;
-  _sendWindowBytes+=bytesACKed;
+  if (_sendWindowBytes <= _slowStartThreshold) {
+    _sendWindowBytes+=bytesACKed;
+  }
+ else {
+    double prob=bytesACKed / _sendWindowBytes;
+    if (_context.random().nextDouble() <= prob)     _sendWindowBytes+=bytesACKed;
+  }
+  if (_sendWindowBytes > MAX_SEND_WINDOW_BYTES)   _sendWindowBytes=MAX_SEND_WINDOW_BYTES;
   _lastReceiveTime=_context.clock().now();
   _messagesSent++;
 }

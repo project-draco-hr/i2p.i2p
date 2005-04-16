@@ -1,0 +1,62 @@
+{
+  UDPPacket packet=UDPPacket.acquire(_context);
+  try {
+    packet.getPacket().setAddress(InetAddress.getByAddress(state.getSentIP()));
+  }
+ catch (  UnknownHostException uhe) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("How did we think this was a valid IP?  " + state.getRemoteHostInfo());
+    return null;
+  }
+  state.prepareSessionCreated();
+  byte data[]=packet.getPacket().getData();
+  Arrays.fill(data,0,data.length,(byte)0x0);
+  int off=UDPPacket.MAC_SIZE + UDPPacket.IV_SIZE;
+  data[off]=SESSION_CREATED_FLAG_BYTE;
+  off++;
+  long now=_context.clock().now() / 1000;
+  DataHelper.toLong(data,off,4,now);
+  off+=4;
+  System.arraycopy(state.getSentY(),0,data,off,state.getSentY().length);
+  off+=state.getSentY().length;
+  DataHelper.toLong(data,off,1,state.getSentIP().length);
+  off+=1;
+  System.arraycopy(state.getSentIP(),0,data,off,state.getSentIP().length);
+  off+=state.getSentIP().length;
+  DataHelper.toLong(data,off,2,state.getSentPort());
+  off+=2;
+  DataHelper.toLong(data,off,4,state.getSentRelayTag());
+  off+=4;
+  DataHelper.toLong(data,off,4,state.getSentSignedOnTime());
+  off+=4;
+  System.arraycopy(state.getSentSignature().getData(),0,data,off,Signature.SIGNATURE_BYTES);
+  off+=Signature.SIGNATURE_BYTES;
+  long l=_context.random().nextLong();
+  if (l < 0)   l=0 - l;
+  DataHelper.toLong(data,off,8,l);
+  off+=8;
+  if (_log.shouldLog(Log.DEBUG)) {
+    StringBuffer buf=new StringBuffer(128);
+    buf.append("Sending sessionCreated:");
+    buf.append(" AliceIP: ").append(Base64.encode(state.getSentIP()));
+    buf.append(" AlicePort: ").append(state.getSentPort());
+    buf.append(" BobIP: ").append(Base64.encode(state.getReceivedOurIP()));
+    buf.append(" BobPort: ").append(externalPort);
+    buf.append(" RelayTag: ").append(state.getSentRelayTag());
+    buf.append(" SignedOn: ").append(state.getSentSignedOnTime());
+    buf.append(" signature: ").append(Base64.encode(state.getSentSignature().getData()));
+    buf.append("\nRawCreated: ").append(Base64.encode(data,0,off));
+    buf.append("\nsignedTime: ").append(Base64.encode(data,off - 8 - Signature.SIGNATURE_BYTES- 4,4));
+    _log.debug(buf.toString());
+  }
+  ByteArray iv=_ivCache.acquire();
+  _context.random().nextBytes(iv.getData());
+  int encrWrite=Signature.SIGNATURE_BYTES + 8;
+  int sigBegin=off - encrWrite;
+  _context.aes().encrypt(data,sigBegin,data,sigBegin,state.getCipherKey(),iv.getData(),encrWrite);
+  if ((off % 16) != 0)   off+=16 - (off % 16);
+  packet.getPacket().setLength(off);
+  authenticate(packet,ourIntroKey,ourIntroKey,iv);
+  setTo(packet,state.getSentIP(),state.getSentPort());
+  _ivCache.release(iv);
+  return packet;
+}

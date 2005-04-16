@@ -1,0 +1,16 @@
+{
+  while (_keepReading) {
+    UDPPacket packet=_endpoint.receive();
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Received the packet " + packet);
+    long queueTime=packet.getLifetime();
+    long handleStart=_context.clock().now();
+    handlePacket(_reader,packet);
+    long handleTime=_context.clock().now() - handleStart;
+    _context.statManager().addRateData("udp.handleTime",handleTime,packet.getLifetime());
+    _context.statManager().addRateData("udp.queueTime",queueTime,packet.getLifetime());
+    if (handleTime > 1000) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Took " + handleTime + " to process the packet "+ packet+ ": "+ _reader);
+    }
+    packet.release();
+  }
+}
