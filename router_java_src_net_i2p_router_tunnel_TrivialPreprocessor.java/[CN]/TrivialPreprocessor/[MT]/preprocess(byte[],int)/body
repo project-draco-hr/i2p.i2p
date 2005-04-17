@@ -2,9 +2,8 @@
   ByteArray ivBuf=_ivCache.acquire();
   byte iv[]=ivBuf.getData();
   _context.random().nextBytes(iv);
-  SHA256EntryCache.CacheEntry cache=_context.sha().cache().acquire(PREPROCESSED_SIZE);
   System.arraycopy(iv,0,fragments,fragmentLength,IV_SIZE);
-  Hash h=_context.sha().calculateHash(fragments,0,fragmentLength + IV_SIZE,cache);
+  Hash h=_context.sha().calculateHash(fragments,0,fragmentLength + IV_SIZE);
   int distance=PREPROCESSED_SIZE - fragmentLength;
   System.arraycopy(fragments,0,fragments,distance,fragmentLength);
   java.util.Arrays.fill(fragments,0,distance,(byte)0x0);
@@ -13,7 +12,6 @@
   offset+=IV_SIZE;
   System.arraycopy(h.getData(),0,fragments,offset,4);
   offset+=4;
-  _context.sha().cache().release(cache);
   _ivCache.release(ivBuf);
   int numPadBytes=PREPROCESSED_SIZE - IV_SIZE - 4- 1- fragmentLength;
   int paddingRemaining=numPadBytes;

@@ -15,14 +15,12 @@
   System.arraycopy(preprocessed,offset + paddingEnd,preV,0,validLength - HopProcessor.IV_LENGTH);
   System.arraycopy(preprocessed,0,preV,validLength - HopProcessor.IV_LENGTH,HopProcessor.IV_LENGTH);
   if (_log.shouldLog(Log.DEBUG))   _log.debug("endpoint IV: " + Base64.encode(preV,validLength - HopProcessor.IV_LENGTH,HopProcessor.IV_LENGTH));
-  SHA256EntryCache.CacheEntry cache=_context.sha().cache().acquire(TrivialPreprocessor.PREPROCESSED_SIZE);
-  Hash v=_context.sha().calculateHash(preV,0,validLength,cache);
+  Hash v=_context.sha().calculateHash(preV,0,validLength);
   boolean eq=DataHelper.eq(v.getData(),0,preprocessed,offset + HopProcessor.IV_LENGTH,4);
   if (!eq) {
     if (_log.shouldLog(Log.ERROR))     _log.error("Corrupt tunnel message - verification fails");
     if (_log.shouldLog(Log.WARN))     _log.warn("nomatching endpoint: # pad bytes: " + (paddingEnd - (HopProcessor.IV_LENGTH + 4) - 1) + "\n"+ " offset="+ offset+ " length="+ length+ " paddingEnd="+ paddingEnd+ Base64.encode(preprocessed,offset,length));
   }
-  _context.sha().cache().release(cache);
   _validateCache.release(ba);
   if (eq) {
     int excessPadding=paddingEnd - (HopProcessor.IV_LENGTH + 4 + 1);

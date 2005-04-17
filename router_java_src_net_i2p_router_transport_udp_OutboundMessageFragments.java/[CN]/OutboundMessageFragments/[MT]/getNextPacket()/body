@@ -17,6 +17,7 @@ synchronized (_activeMessages) {
             _activeMessages.remove(cur);
             _transport.failed(state.getMessage());
             if (_log.shouldLog(Log.WARN))             _log.warn("Peer disconnected for " + state);
+            state.releaseResources();
             i--;
           }
  else {
@@ -32,7 +33,7 @@ synchronized (_activeMessages) {
               _nextPacketMessage=i + 1;
               if (state.getPushCount() != oldVolley) {
                 _context.statManager().addRateData("udp.sendVolleyTime",state.getLifetime(),state.getFragmentCount());
-                state.setNextSendTime(now + (1000 - (now % 1000)) + _context.random().nextInt(2000));
+                state.setNextSendTime(now + (1000 - (now % 1000)) + _context.random().nextInt(4000));
               }
  else {
                 if (peer.getSendWindowBytesRemaining() > 0)                 state.setNextSendTime(now);
