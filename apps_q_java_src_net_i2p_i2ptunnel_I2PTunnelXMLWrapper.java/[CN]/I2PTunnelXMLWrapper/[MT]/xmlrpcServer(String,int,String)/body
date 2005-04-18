@@ -1,0 +1,35 @@
+{
+  Hashtable result=new Hashtable();
+  BufferLogger log=new BufferLogger();
+  File keyBinFile;
+  String[] args=new String[3];
+  args[0]=host;
+  Integer portInt=new Integer(port);
+  args[1]=portInt.toString();
+  String keyBin=new String(net.i2p.data.Base64.decode(key));
+  try {
+    keyBinFile=File.createTempFile("xmlrpc_",".priv");
+    keyBinFile.createNewFile();
+    FileWriter keyBinFileWriter=new FileWriter(keyBinFile);
+    keyBinFileWriter.write(keyBin,0,keyBin.length());
+    keyBinFileWriter.flush();
+    keyBinFileWriter.close();
+  }
+ catch (  IOException e) {
+    result.put("status","fail");
+    result.put("error","IOException");
+    return result;
+  }
+  args[2]=keyBinFile.getAbsolutePath();
+  runServer(args,log);
+  keyBinFile.delete();
+  String reply=log.getBuffer().trim();
+  if (reply.equals("Ready!")) {
+    result.put("status","ok");
+  }
+ else {
+    result.put("status","fail");
+    result.put("error",reply);
+  }
+  return result;
+}
