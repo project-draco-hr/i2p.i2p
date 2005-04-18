@@ -1,0 +1,45 @@
+{
+  this.dataDir=dataDir;
+  int i;
+  File rootDir=new File(dataDir);
+  if (!rootDir.isDirectory()) {
+    rootDir.mkdirs();
+  }
+  String logPath=dataDir + sep + "node.log";
+  Properties envProps=new Properties();
+  envProps.setProperty("loggerFilenameOverride",logPath);
+  i2p=I2PAppContext.getGlobalContext();
+  log=i2p.logManager().getLog(this.getClass());
+  log.setMinimumPriority(log.DEBUG);
+  log.info("creating server at directory " + dataDir);
+  for (i=0; i < coreSubDirs.length; i++) {
+    String subdir=dataDir + sep + coreSubDirs[i];
+    File d=new File(subdir);
+    if (!d.isDirectory()) {
+      log.info("Creating datastore subdirectory '" + subdir + "'");
+      if (!d.mkdirs()) {
+        throw new IOException("Failed to create directory " + subdir);
+      }
+    }
+  }
+  for (i=0; i < extraSubDirs.length; i++) {
+    String subdir=dataDir + sep + extraSubDirs[i];
+    File d=new File(subdir);
+    if (!d.isDirectory()) {
+      log.info("Creating supplementary datastore subdir '" + subdir + "'");
+      if (!d.mkdirs()) {
+        throw new IOException("Failed to create directory " + subdir);
+      }
+    }
+  }
+  peersDir=dataDir + sep + "peers";
+  peersIdx=new QIndexFile(peersDir + sep + "index.dat");
+  catalogDir=dataDir + sep + "catalog";
+  catalogIdx=new QIndexFile(catalogDir + sep + "index.dat");
+  locationDir=dataDir + sep + "locations";
+  contentDir=dataDir + sep + "content";
+  contentIdx=new QIndexFile(contentDir + sep + "index.dat");
+  jobsDir=dataDir + sep + "jobs";
+  jobsIdx=new QIndexFile(jobsDir + sep + "index.dat");
+  getResources();
+}

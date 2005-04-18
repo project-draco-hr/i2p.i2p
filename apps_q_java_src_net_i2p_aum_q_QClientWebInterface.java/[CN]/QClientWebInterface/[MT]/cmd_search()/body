@@ -1,0 +1,27 @@
+{
+  Hashtable criteria=new Hashtable();
+  String[] fields={"type","title","path","mimetype","keywords","summary","searchmode"};
+  for (int i=0; i < fields.length; i++) {
+    String fieldName=fields[i];
+    String fieldVal=allVars.get(fieldName,0,null);
+    if (fieldVal == null) {
+      continue;
+    }
+    if (fieldName.equals("type") && fieldVal.equals("any")) {
+      continue;
+    }
+    if (!fieldVal.equals("")) {
+      if (!(fieldName.equals("searchmode") || allVars.containsKey(fieldName + "_re"))) {
+        fieldVal=".*\\Q" + fieldVal + "\\E.*";
+      }
+      criteria.put(fieldName,fieldVal);
+    }
+  }
+  Hashtable result=node.search(criteria);
+  Vector items=(Vector)result.get("items");
+  Template results=loadTemplate("searchresults");
+  System.out.println("items=" + items);
+  results.setParam("results",items);
+  results.setParam("numresults",items.size());
+  addToMainPane(results);
+}

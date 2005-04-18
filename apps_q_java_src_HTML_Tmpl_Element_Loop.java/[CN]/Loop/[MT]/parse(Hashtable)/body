@@ -1,0 +1,44 @@
+{
+  if (!p.containsKey(this.name))   this.control_val=null;
+ else {
+    Object o=p.get(this.name);
+    if (!o.getClass().getName().endsWith(".Vector") && !o.getClass().getName().endsWith(".List"))     throw new ClassCastException("Attempt to set <tmpl_loop> with a non-list.  tmpl_loop=" + this.name);
+    setControlValue((Vector)p.get(this.name));
+  }
+  if (control_val == null)   return "";
+  StringBuffer output=new StringBuffer();
+  Enumeration iterator=control_val.elements();
+  boolean first=true;
+  boolean last=false;
+  boolean inner=false;
+  boolean odd=true;
+  int counter=1;
+  while (iterator.hasMoreElements()) {
+    Hashtable params=(Hashtable)iterator.nextElement();
+    if (params == null)     params=new Hashtable();
+    if (global_vars) {
+      for (Enumeration e=p.keys(); e.hasMoreElements(); ) {
+        Object key=e.nextElement();
+        if (!params.containsKey(key))         params.put(key,p.get(key));
+      }
+    }
+    if (loop_context_vars) {
+      if (!iterator.hasMoreElements())       last=true;
+      inner=!first && !last;
+      params.put("__FIRST__",first ? "1" : "");
+      params.put("__LAST__",last ? "1" : "");
+      params.put("__ODD__",odd ? "1" : "");
+      params.put("__INNER__",inner ? "1" : "");
+      params.put("__COUNTER__","" + (counter++));
+    }
+    Enumeration de=data.elements();
+    while (de.hasMoreElements()) {
+      Object e=de.nextElement();
+      if (e.getClass().getName().indexOf("String") > -1)       output.append((String)e);
+ else       output.append(((Element)e).parse(params));
+    }
+    first=false;
+    odd=!odd;
+  }
+  return output.toString();
+}

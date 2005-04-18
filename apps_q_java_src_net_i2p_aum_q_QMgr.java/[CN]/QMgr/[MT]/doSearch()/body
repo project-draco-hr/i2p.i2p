@@ -1,0 +1,47 @@
+{
+  if (argi == argc) {
+    usage("Missing search metadata");
+  }
+  if (argi >= argc || !args[argi].equals("-m")) {
+    usage("Bad search command syntax");
+  }
+  argi++;
+  if (argi == argc) {
+    usage("Missing search metadata");
+  }
+  Hashtable metadata=readMetadataSpec();
+  Vector searchArgs=new Vector();
+  Hashtable res;
+  searchArgs.addElement(metadata);
+  try {
+    res=(Hashtable)node.execute("i2p.q.search",searchArgs);
+  }
+ catch (  Exception e) {
+    e.printStackTrace(System.err);
+    System.err.println("Failed to search");
+    return 1;
+  }
+  String status=(String)res.get("status");
+  if (!status.equals("ok")) {
+    String error=(String)res.get("error");
+    usage("search: failure - " + error);
+  }
+  Vector items=(Vector)res.get("items");
+  for (int i=0; i < items.size(); i++) {
+    Hashtable rec=(Hashtable)items.get(i);
+    String key=(String)rec.get("key");
+    if (key == null) {
+      continue;
+    }
+    System.out.println(key);
+    Enumeration keys=rec.keys();
+    while (keys.hasMoreElements()) {
+      Object mkey=keys.nextElement();
+      if (!mkey.toString().equals("key")) {
+        Object val=rec.get(mkey);
+        System.out.println("  " + mkey + "="+ val);
+      }
+    }
+  }
+  return 0;
+}

@@ -1,0 +1,73 @@
+{
+  if (allVars.containsKey("data") && ((String)allVars.get("data",0)).length() > 0 && allVars.containsKey("rawdata") && ((String)allVars.get("rawdata",0)).length() > 0) {
+    Template t=loadTemplate("puterror");
+    t.setParam("error","you specified a file as well as 'rawdata'");
+    addToMainPane(t);
+    addToMainPane(dumpVars().toString());
+    return;
+  }
+  Hashtable metadata=new Hashtable();
+  byte[] data=new byte[0];
+  String[] keys={"data","rawdata","mimetype","keywords","privkey","abstract","type","title","path"};
+  for (int i=0; i < keys.length; i++) {
+    String key=keys[i];
+    if (allVars.containsKey(key)) {
+      if (key.equals("data")) {
+        byte[] dataval=allVars.get("data",0).getBytes();
+        if (dataval.length > 0) {
+          data=dataval;
+        }
+      }
+ else       if (key.equals("rawdata")) {
+        byte[] dataval=allVars.get("rawdata",0).getBytes();
+        if (dataval.length > 0) {
+          data=dataval;
+        }
+      }
+ else       if (key.equals("privkey")) {
+        String k=allVars.get("privkey",0);
+        if (k.length() > 0) {
+          metadata.put("privateKey",k);
+        }
+      }
+ else {
+        String val=allVars.get(key,0);
+        if (val.length() > 0) {
+          metadata.put(key,allVars.get(key,0));
+        }
+      }
+    }
+  }
+  if (metadata.size() == 0) {
+    Template err=loadTemplate("puterror");
+    err.setParam("error","No metadata!");
+    addToMainPane(err);
+    addToMainPane(dumpVars().toString());
+    return;
+  }
+  if (data.length == 0) {
+    Template err=loadTemplate("puterror");
+    err.setParam("error","No data!");
+    addToMainPane(err);
+    addToMainPane(dumpVars().toString());
+    return;
+  }
+  System.out.println("WEB:cmd_put: inserting");
+  Hashtable result=node.putItem(metadata,data);
+  System.out.println("WEB:cmd_put: got" + result);
+  String status=(String)result.get("status");
+  if (!status.equals("ok")) {
+    String errTxt=(String)result.get("error");
+    if (result.containsKey("summary")) {
+      errTxt=errTxt + ":" + result.get("summary").toString();
+    }
+    Template err=loadTemplate("puterror");
+    err.setParam("error",(String)result.get("error"));
+    addToMainPane(err);
+    addToMainPane(dumpVars().toString());
+    return;
+  }
+  Template success=loadTemplate("putok");
+  success.setParam("uri",(String)result.get("uri"));
+  addToMainPane(success);
+}

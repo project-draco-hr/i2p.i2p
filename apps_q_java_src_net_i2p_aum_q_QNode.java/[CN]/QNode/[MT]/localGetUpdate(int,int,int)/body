@@ -1,0 +1,58 @@
+{
+  Iterator items;
+  Hashtable h=new Hashtable();
+  int nowsecs;
+  Vector vCat=new Vector();
+  Vector vPeers=new Vector();
+  log.debug("localGetUpdate: since=" + since + ", incpeers="+ includePeers+ ", inccat="+ includeCatalog);
+  if (includeCatalog != 0) {
+    try {
+      items=contentIdx.getItemsSince(since);
+    }
+ catch (    IOException e) {
+      e.printStackTrace();
+      h.put("status","error");
+      h.put("error","IOException");
+      return h;
+    }
+    while (items.hasNext()) {
+      String key=(String)(items.next());
+      QDataItem item=getLocalMetadata(key);
+      if (item != null) {
+        vCat.addElement(item);
+      }
+    }
+  }
+  if (includePeers != 0) {
+    try {
+      items=peersIdx.getItemsSince(since);
+    }
+ catch (    IOException e) {
+      e.printStackTrace();
+      h.put("status","error");
+      h.put("error","IOException");
+      return h;
+    }
+    while (true) {
+      try {
+        String destId=(String)items.next();
+        try {
+          QPeer peerRec=getPeerRecord(destId);
+          vPeers.addElement(peerRec.destStr);
+        }
+ catch (        Exception e) {
+          log.warn("localGetPeersList",e);
+        }
+      }
+ catch (      NoSuchElementException e) {
+        break;
+      }
+    }
+  }
+  h.put("status","ok");
+  h.put("items",vCat);
+  h.put("peers",vPeers);
+  h.put("timeUpdateEnds",new Integer(nowSecs()));
+  h.put("timeNextContact",new Integer(getAdvisedNextContactTime()));
+  return h;
+}

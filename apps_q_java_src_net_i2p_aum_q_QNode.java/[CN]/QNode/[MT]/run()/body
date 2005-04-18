@@ -1,0 +1,49 @@
+{
+  log.info("Starting background tasks");
+  nodeStartTime=new Date();
+  log.info("launching node XML-RPC server");
+  QServerMethods handler=new QServerMethods(this);
+  try {
+    startExternalInterfaces(handler);
+  }
+ catch (  Exception e) {
+    log.error("Failed to start external interfaces",e);
+    return;
+  }
+  try {
+    long now=new Date().getTime();
+    String[] oldJobs=new File(jobsDir).list();
+    for (int i=0; i < oldJobs.length; i++) {
+      try {
+        String jobTimeStr=oldJobs[i];
+        if (!jobTimeStr.matches("[0-9]+")) {
+          continue;
+        }
+        long jobTime=new Long(jobTimeStr).longValue();
+        jobQueue.putAt(jobTime,jobTimeStr);
+      }
+ catch (      Exception e) {
+        e.printStackTrace();
+      }
+    }
+  }
+ catch (  Exception e) {
+    e.printStackTrace();
+  }
+  scheduleTestJob(20000,"red");
+  scheduleTestJob(40000,"white");
+  scheduleTestJob(30000,"blue");
+  while (true) {
+    try {
+      threadPool.acquire();
+    }
+ catch (    Exception e) {
+      e.printStackTrace();
+      log.warn("QNode.run: crashed on acquiring new thread");
+      continue;
+    }
+    String jobTime=(String)jobQueue.get();
+    Thread thrd=new QWorkerThread(this,jobTime);
+    thrd.start();
+  }
+}

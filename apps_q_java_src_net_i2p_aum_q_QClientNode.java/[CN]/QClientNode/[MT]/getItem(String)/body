@@ -1,0 +1,61 @@
+{
+  Hashtable res;
+  log.info("getItem: uri='" + uri + "'");
+  if (localHasItem(uri)) {
+class Fred {
+    }
+    Fred xxx=new Fred();
+    return localGetItem(uri);
+  }
+  Vector sources=getItemLocation(uri);
+  if (sources == null || sources.size() == 0) {
+    Hashtable dnf=new Hashtable();
+    dnf.put("status","error");
+    dnf.put("error","notfound");
+    dnf.put("comment","uri not known locally or remotely");
+    return dnf;
+  }
+  int i;
+  int npeers=sources.size();
+  int numCmdFail=0;
+  int numDnf=0;
+  int numBadData=0;
+  for (i=0; i < npeers; i++) {
+    String peerId=(String)sources.get(i);
+    try {
+      res=peerGetItem(peerId,uri);
+    }
+ catch (    Exception e) {
+      e.printStackTrace();
+      numCmdFail+=1;
+      continue;
+    }
+    String status=(String)res.get("status");
+    if (status.equals("ok")) {
+      Hashtable metadata=(Hashtable)res.get("metadata");
+      String dataHash=(String)metadata.get("dataHash");
+      byte[] data=(byte[])res.get("data");
+      String dataHash1=sha256Base64(data);
+      if (dataHash.equals(dataHash1)) {
+        QDataItem item=new QDataItem(metadata,data);
+        localPutItem(item);
+        return res;
+      }
+ else {
+        System.out.println("getItem: bad hash on " + data.length + "-byte uri "+ uri);
+        System.out.println("getItem: expected: " + dataHash);
+        System.out.println("getItem: received: " + dataHash1);
+        System.out.println("getItem: metadata=" + metadata);
+        numBadData+=1;
+      }
+    }
+ else {
+      numDnf+=1;
+    }
+  }
+  res=new Hashtable();
+  res.put("status","error");
+  res.put("error","notfound");
+  res.put("summary","tried " + npeers + " peers, "+ numCmdFail+ " cmdfail, "+ numDnf+ " notfound, "+ numBadData+ " baddata");
+  return res;
+}

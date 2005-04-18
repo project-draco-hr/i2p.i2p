@@ -1,0 +1,51 @@
+{
+  try {
+    System.out.println("I2PXmlRpcServer.run: got inbound XML-RPC I2P conn");
+    log.info("run: Got client connection, creating streams");
+    InputStream socketIn=_sock.getInputStream();
+    OutputStreamWriter socketOut=new OutputStreamWriter(_sock.getOutputStream());
+    log.info("run: reading http headers");
+    int size=readHttpHeaders(socketIn);
+    if (size <= 0) {
+      log.info("read req failed, terminating session");
+      _sock.close();
+      return;
+    }
+    log.info("run: reading request body of " + size + " bytes");
+    byte[] reqBody=new byte[size];
+    for (int i=0; i < size; i++) {
+      int b=socketIn.read();
+      reqBody[i]=(byte)b;
+    }
+    ByteArrayInputStream reqBodyStream=new ByteArrayInputStream(reqBody);
+    log.info("run: executing request");
+    System.out.println("run: executing request");
+    byte[] result;
+    try {
+      result=execute(reqBodyStream);
+    }
+ catch (    Exception e) {
+      System.out.println("run: execute failed, closing socket");
+      _sock.close();
+      System.out.println("run: closed socket");
+      throw e;
+    }
+    log.info("run: sending response");
+    socketOut.write("HTTP/1.0 200 OK\r\n" + "Server: I2P XML-RPC server by aum\r\n" + "Date: " + (new Date().toString()) + "\r\n"+ "Content-type: text/xml\r\n"+ "Content-length: "+ String.valueOf(result.length)+ "\r\n"+ "\r\n");
+    socketOut.write(new String(result));
+    socketOut.flush();
+    log.info("closing socket");
+    System.out.println("closing socket");
+    _sock.close();
+    log.info("session complete");
+  }
+ catch (  Exception e) {
+    try {
+      e.printStackTrace();
+      _sock.close();
+    }
+ catch (    Exception e1) {
+      e1.printStackTrace();
+    }
+  }
+}

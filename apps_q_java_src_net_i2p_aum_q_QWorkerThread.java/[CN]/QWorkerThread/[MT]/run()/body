@@ -1,0 +1,40 @@
+{
+  try {
+    node.log.info("worker: executing job: " + jobTime);
+    job=node.loadJob(jobTime);
+    jobDesc=node.loadJobDescription(jobTime);
+    String cmd=(String)job.get("cmd");
+    peerId=(String)job.get("peerId");
+    if (cmd.equals("getUpdate")) {
+      doGetUpdate();
+    }
+ else     if (cmd.equals("hello")) {
+      doHello();
+    }
+ else     if (cmd.equals("localPutItem")) {
+      doLocalPutItem();
+    }
+ else     if (cmd.equals("uploadItem")) {
+      doUploadItem();
+    }
+ else     if (cmd.equals("test")) {
+      doTest();
+    }
+ else {
+      node.log.error("workerthread.run: unrecognised command '" + cmd + "'");
+      System.out.println("workerthread.run: unrecognised command '" + cmd + "'");
+    }
+  }
+ catch (  Exception e) {
+    e.printStackTrace();
+    node.log.warn("worker thread crashed");
+  }
+  node.threadPool.release();
+  try {
+    new File(node.jobsDir + node.sep + jobTime).delete();
+    new File(node.jobsDir + node.sep + jobTime+ ".desc").delete();
+  }
+ catch (  Exception e) {
+    e.printStackTrace();
+  }
+}

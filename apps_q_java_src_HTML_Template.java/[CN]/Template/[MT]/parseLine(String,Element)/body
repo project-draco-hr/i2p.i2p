@@ -1,0 +1,52 @@
+{
+  Vector parts;
+  parts=parser.parseLine(line);
+  Util.debug_print("Items: " + parts.size());
+  for (Enumeration pt=parts.elements(); pt.hasMoreElements(); ) {
+    Object o=pt.nextElement();
+    if (o.getClass().getName().endsWith(".String")) {
+      if (((String)o).equals(""))       continue;
+      e.add((String)o);
+      Util.debug_print("added: " + (String)o);
+      continue;
+    }
+    Properties p=(Properties)o;
+    String type=p.getProperty("type");
+    Util.debug_print("adding element: " + type);
+    if (type.equals("include")) {
+      if (no_includes)       throw new IllegalStateException("<tmpl_include> not " + "allowed when " + "no_includes in effect");
+      if (max_includes == 0) {
+        throw new IndexOutOfBoundsException("include too deep");
+      }
+ else {
+        elements.push(e);
+        read_file(p.getProperty("name"));
+      }
+    }
+ else     if (type.equals("var")) {
+      String name=p.getProperty("name");
+      String escape=p.getProperty("escape");
+      String def=p.getProperty("default");
+      Util.debug_print("name: " + name);
+      Util.debug_print("escape: " + escape);
+      Util.debug_print("default: " + def);
+      e.add(new Var(name,escape,def));
+    }
+ else     if (type.equals("else")) {
+      Util.debug_print("adding branch");
+      ((Conditional)e).addBranch();
+    }
+ else     if (p.getProperty("close").equals("true")) {
+      Util.debug_print("closing tag");
+      if (!type.equals(e.Type()))       throw new EmptyStackException();
+      e=(Element)elements.pop();
+    }
+ else {
+      Element t=parser.getElement(p);
+      e.add(t);
+      elements.push(e);
+      e=t;
+    }
+  }
+  return e;
+}

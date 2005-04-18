@@ -1,0 +1,45 @@
+{
+  String confPath=dataDir + sep + "node.conf";
+  conf=new PropertiesFile(confPath);
+  privKeyStr=conf.getProperty("privKey");
+  if (privKeyStr == null) {
+    log.info("No private key found, generating new one");
+    ByteArrayOutputStream privBytes=new ByteArrayOutputStream();
+    I2PClient client=I2PClientFactory.createClient();
+    dest=client.createDestination(privBytes);
+    privKey=new PrivDestination(privBytes.toByteArray());
+    privKeyStr=privKey.toBase64();
+    destStr=dest.toBase64();
+    String privKeyPath=dataDir + sep + "nodeKey.priv";
+    SimpleFile.write(privKeyPath,privKey.toBase64());
+    String destPath=dataDir + sep + "nodeKey.pub";
+    SimpleFile.write(destPath,dest.toBase64());
+    id=destToId(dest);
+    conf.setProperty("dest",dest.toBase64());
+    conf.setProperty("privKey",privKey.toBase64());
+    conf.setProperty("id",id);
+    conf.setProperty("numPeers","0");
+    conf.setDoubleProperty("loadDampRise",load_kRise);
+    conf.setDoubleProperty("loadDampFall",load_kFall);
+    conf.setIntProperty("loadBackoffMin",load_backoffMin);
+    conf.setIntProperty("loadBackoffBits",load_backoffBits);
+    conf.setIntProperty("xmlRpcServerPort",xmlRpcServerPort);
+    log.info("Saved new keys, and nodeID " + id);
+  }
+ else {
+    dest=new Destination();
+    dest.fromBase64(conf.getProperty("dest"));
+    destStr=dest.toBase64();
+    privKey=PrivDestination.fromBase64String(conf.getProperty("privKey"));
+    privKeyStr=privKey.toBase64();
+    id=conf.getProperty("id");
+    load_kRise=conf.getDoubleProperty("loadDampRise",load_kRise);
+    load_kFall=conf.getDoubleProperty("loadDampFall",load_kFall);
+    load_backoffMin=conf.getIntProperty("loadBackoffMin",load_backoffMin);
+    load_backoffBits=conf.getIntProperty("loadBackoffBits",load_backoffBits);
+    xmlRpcServerPort=conf.getIntProperty("xmlRpcServerPort",xmlRpcServerPort);
+    if (privKeyStr == null) {
+      privKeyStr=conf.getProperty("privKey");
+    }
+  }
+}

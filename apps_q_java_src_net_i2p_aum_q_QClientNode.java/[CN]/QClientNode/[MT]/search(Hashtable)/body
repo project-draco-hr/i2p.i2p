@@ -1,0 +1,40 @@
+{
+  Hashtable result=new Hashtable();
+  Vector matchingItems=new Vector();
+  Iterator items;
+  Hashtable item;
+  Hashtable foundUris=new Hashtable();
+  String uri;
+  try {
+    items=contentIdx.getItemsSince(0);
+    while (items.hasNext()) {
+      String uriHash=(String)items.next();
+      item=getLocalMetadataForHash(uriHash);
+      uri=(String)item.get("uri");
+      if (metadataMatchesCriteria(item,criteria)) {
+        matchingItems.addElement(item);
+        foundUris.put(uri,item);
+      }
+    }
+    items=catalogIdx.getItemsSince(0);
+    while (items.hasNext()) {
+      String uriHash=(String)items.next();
+      item=getLocalCatalogMetadataForHash(uriHash);
+      uri=(String)item.get("uri");
+      if (metadataMatchesCriteria(item,criteria)) {
+        if (!foundUris.containsKey("uri")) {
+          matchingItems.addElement(item);
+        }
+      }
+    }
+  }
+ catch (  Exception e) {
+    e.printStackTrace();
+    result.put("status","error");
+    result.put("error",e.getMessage());
+    return result;
+  }
+  result.put("status","ok");
+  result.put("items",matchingItems);
+  return result;
+}

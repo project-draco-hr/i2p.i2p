@@ -1,0 +1,53 @@
+{
+  Properties props=new Properties();
+  props.setProperty("inbound.length","0");
+  props.setProperty("outbound.length","0");
+  props.setProperty("inbound.lengthVariance","0");
+  props.setProperty("outbound.lengthVariance","0");
+  if (keyStr.equals("new")) {
+    try {
+      key=PrivDestination.newKey();
+    }
+ catch (    I2PException e) {
+      e.printStackTrace();
+      return;
+    }
+catch (    IOException e) {
+      e.printStackTrace();
+      return;
+    }
+    print("Creating new server dest...");
+    socketManager=I2PSocketManagerFactory.createManager(key.getInputStream(),props);
+    print("Getting server socket...");
+    serverSocket=socketManager.getServerSocket();
+    print("Server socket created, ready to run...");
+    dest=socketManager.getSession().getMyDestination();
+    print("private key follows:");
+    System.out.println(key.toBase64());
+    print("dest follows:");
+    System.out.println(dest.toBase64());
+  }
+ else {
+    key=PrivDestination.fromBase64String(keyStr);
+    String dest64Abbrev=key.toBase64().substring(0,16);
+    print("Creating server socket manager on dest " + dest64Abbrev + "...");
+    socketManager=I2PSocketManagerFactory.createManager(key.getInputStream(),props);
+    serverSocket=socketManager.getServerSocket();
+    print("Server socket created, ready to run...");
+  }
+  print("Awaiting client connection...");
+  I2PSocket sessSocket;
+  try {
+    sessSocket=serverSocket.accept();
+  }
+ catch (  I2PException e) {
+    e.printStackTrace();
+    return;
+  }
+catch (  ConnectException e) {
+    e.printStackTrace();
+    return;
+  }
+  print("Got connection from client");
+  chat(sessSocket);
+}

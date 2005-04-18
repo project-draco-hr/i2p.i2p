@@ -1,0 +1,64 @@
+{
+  Hashtable metadata=new Hashtable();
+  String path=null;
+  if (argi < argc) {
+    if (!args[argi].equals("-m")) {
+      path=args[argi++];
+    }
+    if (argi >= argc || !args[argi].equals("-m")) {
+      usage("Bad put command syntax");
+    }
+    argi++;
+    metadata=readMetadataSpec();
+  }
+  byte[] data=null;
+  if (path != null) {
+    try {
+      data=new SimpleFile(path,"r").readBytes();
+    }
+ catch (    IOException e) {
+      e.printStackTrace();
+      usage("get: Failed to read input file '" + path + "'");
+    }
+  }
+ else {
+    ByteArrayOutputStream bo=new ByteArrayOutputStream();
+    int c;
+    try {
+      while (true) {
+        c=System.in.read();
+        if (c < 0) {
+          break;
+        }
+        bo.write(c);
+      }
+    }
+ catch (    Exception e) {
+      e.printStackTrace();
+      usage("put: error reading from input stream");
+    }
+    data=bo.toByteArray();
+  }
+  Vector putArgs=new Vector();
+  Hashtable res;
+  putArgs.addElement(metadata);
+  putArgs.addElement(data);
+  System.out.println("data length=" + data.length);
+  try {
+    res=(Hashtable)node.execute("i2p.q.putItem",putArgs);
+  }
+ catch (  Exception e) {
+    e.printStackTrace(System.err);
+    System.err.println("Failed to put");
+    return 1;
+  }
+  String status=(String)res.get("status");
+  if (!status.equals("ok")) {
+    String error=(String)res.get("error");
+    usage("put: failure - " + error);
+  }
+  String key=(String)res.get("key");
+  System.out.print(key);
+  System.out.flush();
+  return 0;
+}

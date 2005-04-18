@@ -1,0 +1,23 @@
+{
+  super();
+  setupStoreTree(dataDir);
+  getConfig();
+  peerInterfaceGen=new I2PXmlRpcClientFactory();
+  int maxThreads=defaultMaxThreads;
+  String maxThreadsStr=System.getProperty("qnode.maxthreads");
+  if (maxThreadsStr != null) {
+    try {
+      maxThreads=Integer.getInteger(maxThreadsStr).intValue();
+    }
+ catch (    Exception e) {
+      e.printStackTrace();
+      log.error("Invalid qnode.maxThreads setting '" + maxThreadsStr + "'");
+    }
+  }
+  threadPool=new SimpleSemaphore(maxThreads);
+  jobQueue=new EmbargoedQueue();
+  loadPeers();
+  setup();
+  System.out.println("after setup, isClient=" + isClient);
+  scheduleStartupJobs();
+}

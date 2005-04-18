@@ -1,0 +1,39 @@
+{
+  DupHashtable flds=new DupHashtable();
+  String boundary=reqContentType.split("multipart/form-data;\\s*")[1].split("boundary\\=")[1];
+  boundary="\\Q" + boundary + "\\E";
+  String[] postItems=postDataStr.split(boundary);
+  for (int i=0; i < postItems.length; i++) {
+    String item=postItems[i];
+    String[] items=item.split("^\\s+");
+    item=items[items.length - 1];
+    try {
+      item=item.substring(0,item.length() - 4);
+    }
+ catch (    StringIndexOutOfBoundsException e) {
+      item=item.substring(0,item.length() - 2);
+    }
+    postItems[i]=item;
+    String[] bits=item.split("\\r\\n\\r\\n",2);
+    String[] fldHdrs=bits[0].split("\\r\\n");
+    String fldContent;
+    try {
+      fldContent=bits[1];
+    }
+ catch (    ArrayIndexOutOfBoundsException e) {
+      fldContent="";
+    }
+    for (int j=0; j < fldHdrs.length; j++) {
+      String[] hdrItems=fldHdrs[j].split(";\\s+");
+      for (int k=0; k < hdrItems.length; k++) {
+        String hdrItem=hdrItems[k];
+        if (hdrItem.startsWith("name=\"")) {
+          String varName=hdrItem.substring(6,hdrItem.length() - 1);
+          flds.put(varName,fldContent);
+          allVars.put(varName,fldContent);
+        }
+      }
+    }
+  }
+  return flds;
+}

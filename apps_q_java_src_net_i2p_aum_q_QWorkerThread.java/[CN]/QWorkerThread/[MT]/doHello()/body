@@ -1,0 +1,19 @@
+{
+  QPeer peerRec=(QPeer)node.peers.get(peerId);
+  node.log.debug("doHello: " + node.id + " -> "+ peerId);
+  try {
+    Hashtable result=node.peerHello(peerId,node.destStr);
+    String status=(String)result.get("status");
+    if (status.equals("ok")) {
+      peerRec.markAsGreeted();
+      node.schedulePeerUpdateJob(peerRec);
+    }
+  }
+ catch (  Exception e) {
+    node.log.warn("Got an xmlrpc client failure, trying again in 1 hour",e);
+    Hashtable job=new Hashtable();
+    job.put("cmd","hello");
+    job.put("peerId",peerId);
+    node.runAfter(3600000,job,"hello:peerId=" + peerId);
+  }
+}

@@ -1,0 +1,50 @@
+{
+  Hashtable result=new Hashtable();
+  String uri=null;
+  String pubKey64;
+  File dir=new File(rootPath);
+  if (!dir.isDirectory()) {
+    result.put("status","error");
+    result.put("error","nosuchdir");
+    result.put("detail","Path '" + rootPath + "' is not a directory");
+    return result;
+  }
+  if (!dir.canRead()) {
+    result.put("status","error");
+    result.put("error","cantread");
+    result.put("detail","Path '" + rootPath + "' is not readable");
+    return result;
+  }
+  siteName=siteName.trim();
+  if (!siteName.matches("[a-zA-Z0-9_-]+")) {
+    result.put("status","error");
+    result.put("error","badsitename");
+    result.put("detail","QSite name should be only alphanumerics, '-' and '_'");
+    return result;
+  }
+  String defaultPath=rootPath + sep + "index.html";
+  File defaultFile=new File(defaultPath);
+  if (!(defaultFile.isFile() && defaultFile.canRead())) {
+    result.put("status","error");
+    result.put("error","noindex");
+    result.put("detail","Required file index.html missing or unreadable");
+    return result;
+  }
+  try {
+    pubKey64=QUtil.privateToPubHash(privKey64);
+  }
+ catch (  Exception e) {
+    result.put("status","error");
+    result.put("error","badprivkey");
+    return result;
+  }
+  uri="Q:" + pubKey64 + "/"+ siteName+ "/";
+  insertQSiteDir(privKey64,siteName,rootPath,"");
+  metadata.put("type","qsite");
+  metadata.put("path",siteName + "/");
+  metadata.put("mimetype","text/html");
+  insertQSiteFile(privKey64,siteName,defaultPath,"",metadata);
+  result.put("status","ok");
+  result.put("uri",uri);
+  return result;
+}

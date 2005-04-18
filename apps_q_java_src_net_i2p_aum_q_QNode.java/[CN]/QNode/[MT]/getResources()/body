@@ -1,0 +1,51 @@
+{
+  String resPath=dataDir + sep + "resources";
+  File resDir=new File(resPath);
+  ClassLoader cl=this.getClass().getClassLoader();
+  String jarPath=cl.getResource("qresources").getPath();
+  System.out.println("jarPath='" + jarPath + "'");
+  if (jarPath.startsWith("jar:")) {
+    jarPath=jarPath.split("jar:")[1];
+  }
+  if (jarPath.startsWith("file:")) {
+    jarPath=jarPath.split("file:")[1];
+  }
+  int bangIdx=jarPath.indexOf("!");
+  if (bangIdx > 0) {
+    jarPath=jarPath.substring(0,bangIdx);
+  }
+  if (!jarPath.endsWith(".jar")) {
+    resourcesDir=jarPath;
+    System.out.println("Found physical resources dir: '" + resourcesDir + "'");
+    return;
+  }
+  System.out.println("jarPath='" + jarPath + "'");
+  if (!resDir.isDirectory()) {
+    resDir.mkdirs();
+  }
+  resourcesDir=resDir.getPath();
+  JarFile jf=new JarFile(jarPath);
+  Enumeration jfe=jf.entries();
+  Vector entlist=new Vector();
+  while (jfe.hasMoreElements()) {
+    JarEntry ent=(JarEntry)jfe.nextElement();
+    String name=ent.getName();
+    if (name.startsWith("qresources") && !ent.isDirectory()) {
+      entlist.addElement(name);
+      System.out.println("Need to extract resource: " + name);
+      String absPath=resDir.getPath() + sep + name.split("qresources/")[1];
+      File absFile=new File(absPath);
+      File parent=absFile.getParentFile();
+      if (!parent.isDirectory()) {
+        parent.mkdirs();
+      }
+      FileWriter fw=new FileWriter(absFile);
+      InputStream is=cl.getResourceAsStream(name);
+      int c;
+      while ((c=is.read()) >= 0) {
+        fw.write(c);
+      }
+      fw.close();
+    }
+  }
+}

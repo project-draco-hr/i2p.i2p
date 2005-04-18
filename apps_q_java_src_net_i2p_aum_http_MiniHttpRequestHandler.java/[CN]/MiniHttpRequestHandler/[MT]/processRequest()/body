@@ -1,0 +1,103 @@
+{
+  headerVars=new DupHashtable();
+  urlVars=new DupHashtable();
+  postVars=new DupHashtable();
+  allVars=new DupHashtable();
+  String line;
+  String reqLine=br.readLine();
+  printReq(reqLine);
+  String[] reqBits=reqLine.split("\\s+",3);
+  reqType=reqBits[0];
+  String[] reqFileBits=reqBits[1].split("[?]",2);
+  reqFile=reqFileBits[0];
+  if (reqFileBits.length > 1) {
+    urlVars=parseVars(reqFileBits[1]);
+  }
+  try {
+    reqProto=reqBits[2];
+  }
+ catch (  Exception e) {
+    reqFile="/";
+    reqProto="HTTP/1.0";
+  }
+  while (true) {
+    line=br.readLine();
+    if (line.equals("")) {
+      break;
+    }
+    String[] lineBits=line.split(":\\s+",2);
+    headerVars.put(lineBits[0],lineBits[1]);
+  }
+  if (reqType.equals("GET")) {
+    on_GET();
+  }
+ else   if (reqType.equals("POST")) {
+    int postLen;
+    String postLenStr;
+    try {
+      reqContentType=headerVars.get("Content-Type",0,"");
+      try {
+        postLenStr=headerVars.get("Content-Length",0);
+      }
+ catch (      Exception e) {
+        postLenStr=headerVars.get("Content-length",0);
+      }
+      postLen=new Integer(postLenStr).intValue();
+      postData=new char[postLen];
+      for (int i=0; i < postLen; i++) {
+        int n=br.read();
+        postData[i]=(char)n;
+      }
+      postDataStr=new String(postData);
+      if (reqContentType.equals("text/xml") && postDataStr.startsWith("<?xml")) {
+        ByteArrayInputStream in=new ByteArrayInputStream(postDataStr.getBytes());
+        try {
+          byte[] resp=server.xmlRpcServer.execute(in);
+          setRawOutput(resp);
+        }
+ catch (        Exception e) {
+          e.printStackTrace();
+          throw e;
+        }
+      }
+ else       if (reqContentType.startsWith("multipart/form-data")) {
+        postVars=parsMultipartForm(reqContentType,postDataStr);
+        on_POST();
+      }
+ else {
+        postVars=parseVars(postDataStr);
+        on_POST();
+      }
+    }
+ catch (    Exception e) {
+      e.printStackTrace();
+      setStatus("HTTP/1.0 400 Missing Content-Length header");
+      setRawOutput("Missing Content-Length header");
+    }
+  }
+  write(status + "\r\n");
+  write("Content-Type: " + contentType + "\r\n");
+  write("Server: " + server + "\r\n");
+  int contentLength;
+  if (rawContentBytes == null) {
+    String rawPage=toString();
+    contentLength=rawPage.length();
+    write("Content-Length: " + rawPage.length() + "\r\n");
+    write("\r\n");
+    write(rawPage);
+  }
+ else {
+    write("Content-Length: " + rawContentBytes.length + "\r\n");
+    write("\r\n");
+    write(rawContentBytes);
+  }
+  output.flush();
+  try {
+    input.close();
+    output.close();
+    br.close();
+    closeSocket();
+  }
+ catch (  Exception e) {
+  }
+}
