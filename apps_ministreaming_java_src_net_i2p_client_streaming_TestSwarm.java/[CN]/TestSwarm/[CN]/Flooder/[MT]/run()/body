@@ -1,7 +1,8 @@
 {
   _started=_context.clock().now();
   _context.statManager().addRateData("swarm." + _connectionId + ".started",1,0);
-  byte data[]=new byte[32 * 1024];
+  byte data[]=new byte[4 * 1024];
+  _context.random().nextBytes(data);
   long value=0;
   long lastSend=_context.clock().now();
   if (_socket == null) {
@@ -18,16 +19,19 @@
   try {
     OutputStream out=_socket.getOutputStream();
     while (!_closed) {
-      out.write(data);
-      _totalSent+=data.length;
-      _context.statManager().addRateData("swarm." + _connectionId + ".totalSent",_totalSent,0);
-      long now=_context.clock().now();
-      _log.debug("Sending " + _connectionId + " after "+ (now - lastSend));
-      lastSend=now;
-      try {
-        Thread.sleep(20);
+      if (shouldSend()) {
+        out.write(data);
+        _totalSent+=data.length;
+        _context.statManager().addRateData("swarm." + _connectionId + ".totalSent",_totalSent,0);
+        long now=_context.clock().now();
+        lastSend=now;
       }
- catch (      InterruptedException ie) {
+ else {
+        try {
+          Thread.sleep(5000);
+        }
+ catch (        InterruptedException ie) {
+        }
       }
     }
   }

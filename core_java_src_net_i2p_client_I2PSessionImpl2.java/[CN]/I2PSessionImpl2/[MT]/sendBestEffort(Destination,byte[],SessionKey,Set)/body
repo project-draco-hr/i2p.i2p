@@ -34,7 +34,7 @@
   if (_log.shouldLog(Log.DEBUG))   _log.debug("before creating nonce");
   long nonce=_context.random().nextInt(Integer.MAX_VALUE);
   if (_log.shouldLog(Log.DEBUG))   _log.debug("before sync state");
-  MessageState state=new MessageState(nonce,getPrefix());
+  MessageState state=new MessageState(_context,nonce,getPrefix());
   state.setKey(key);
   state.setTags(sentTags);
   state.setNewKey(newKey);
@@ -59,7 +59,7 @@ synchronized (_sendingStates) {
   long afterSendingSync=_context.clock().now();
   if (_log.shouldLog(Log.DEBUG))   _log.debug(getPrefix() + "Adding sending state " + state.getMessageId()+ " / "+ state.getNonce()+ " for best effort "+ " sync took "+ (inSendingSync - beforeSendingSync)+ " add took "+ (afterSendingSync - inSendingSync));
   _producer.sendMessage(this,dest,nonce,payload,tag,key,sentTags,newKey);
-  boolean actuallyWait=true;
+  boolean actuallyWait=false;
   long beforeWaitFor=_context.clock().now();
   if (actuallyWait)   state.waitFor(MessageStatusMessage.STATUS_SEND_ACCEPTED,_context.clock().now() + getTimeout());
   long afterWaitFor=_context.clock().now();
@@ -78,6 +78,7 @@ synchronized (_sendingStates) {
   if ((afterRemovingSync - begin > 500) && (_log.shouldLog(Log.WARN))) {
     _log.warn("Took " + (afterRemovingSync - begin) + "ms to sendBestEffort, "+ (afterSendingSync - begin)+ "ms to prepare, "+ (beforeWaitFor - afterSendingSync)+ "ms to send, "+ (afterRemovingSync - beforeWaitFor)+ "ms waiting for reply");
   }
+  _context.statManager().addRateData("i2cp.sendBestEffortTotalTime",afterRemovingSync - begin,0);
   if (found) {
     if (_log.shouldLog(Log.INFO))     _log.info(getPrefix() + "Message sent after " + state.getElapsed()+ "ms with "+ payload.length+ " bytes");
   }

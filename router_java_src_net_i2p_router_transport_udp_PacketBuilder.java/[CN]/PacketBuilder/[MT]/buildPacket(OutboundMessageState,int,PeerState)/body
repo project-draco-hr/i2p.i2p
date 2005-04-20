@@ -17,9 +17,13 @@
   data[off]|=fragment << 3;
   if (fragment == state.getFragmentCount() - 1)   data[off]|=1 << 2;
   off++;
-  DataHelper.toLong(data,off,2,state.fragmentSize(fragment));
+  int size=state.fragmentSize(fragment);
+  if (size < 0)   return null;
+  DataHelper.toLong(data,off,2,size);
   off+=2;
-  off+=state.writeFragment(data,off,fragment);
+  size=state.writeFragment(data,off,fragment);
+  if (size < 0)   return null;
+  off+=size;
   if ((off % 16) != 0)   off+=16 - (off % 16);
   packet.getPacket().setLength(off);
   authenticate(packet,peer.getCurrentCipherKey(),peer.getCurrentMACKey());

@@ -23,7 +23,9 @@
   _outTunnel=selectOutboundTunnel();
   if (_outTunnel != null) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug(getJobId() + ": Sending tunnel message out " + _outTunnel.getSendTunnelId(0)+ " to "+ _toString+ " at "+ _lease.getTunnelId()+ " on "+ _lease.getGateway().toBase64());
-    getContext().jobQueue().addJob(new DispatchJob(getContext(),msg,selector,onReply,onFail,(int)(_overallExpiration - getContext().clock().now())));
+    DispatchJob dispatchJob=new DispatchJob(getContext(),msg,selector,onReply,onFail,(int)(_overallExpiration - getContext().clock().now()));
+    if (false)     getContext().jobQueue().addJob(dispatchJob);
+ else     dispatchJob.runJob();
   }
  else {
     if (_log.shouldLog(Log.ERROR))     _log.error(getJobId() + ": Could not find any outbound tunnels to send the payload through... wtf?");
@@ -31,4 +33,5 @@
   }
   _clientMessage=null;
   _clove=null;
+  getContext().statManager().addRateData("client.dispatchPrepareTime",getContext().clock().now() - _start,0);
 }
