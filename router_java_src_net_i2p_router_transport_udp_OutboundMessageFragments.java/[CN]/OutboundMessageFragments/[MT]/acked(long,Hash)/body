@@ -22,14 +22,20 @@ synchronized (_activeMessages) {
     }
   }
   if (state != null) {
-    if (_log.shouldLog(Log.INFO))     _log.info("Received ack of " + messageId + " by "+ ackedBy.toBase64()+ " after "+ state.getLifetime());
+    int numSends=state.getMaxSends();
+    if (_log.shouldLog(Log.INFO))     _log.info("Received ack of " + messageId + " by "+ ackedBy.toBase64()+ " after "+ state.getLifetime()+ " and "+ numSends+ " sends");
     _context.statManager().addRateData("udp.sendConfirmTime",state.getLifetime(),state.getLifetime());
     _context.statManager().addRateData("udp.sendConfirmFragments",state.getFragmentCount(),state.getLifetime());
-    int numSends=state.getMaxSends();
     _context.statManager().addRateData("udp.sendConfirmVolley",numSends,state.getFragmentCount());
     if ((numSends > 1) && (state.getPeer() != null))     state.getPeer().congestionOccurred();
     _transport.succeeded(state.getMessage());
     int numFragments=state.getFragmentCount();
+    if (state.getPeer() != null) {
+      state.getPeer().messageACKed(numFragments * state.getFragmentSize(),state.getLifetime(),state.getMaxSends());
+    }
+ else {
+      _log.warn("message acked, but no peer attacked: " + state);
+    }
     state.releaseResources();
     return numFragments;
   }

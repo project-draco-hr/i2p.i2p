@@ -1,6 +1,6 @@
 {
   if (_log.shouldLog(Log.INFO))   _log.info("Joining as inbound gateway: " + cfg);
-  TunnelGateway.QueuePreprocessor preproc=createPreprocessor();
+  TunnelGateway.QueuePreprocessor preproc=createPreprocessor(cfg);
   TunnelGateway.Sender sender=new InboundSender(_context,cfg);
   TunnelGateway.Receiver receiver=new InboundGatewayReceiver(_context,cfg);
   TunnelGateway gw=new TunnelGateway(_context,preproc,sender,receiver);
@@ -13,6 +13,7 @@ synchronized (_participatingConfig) {
     _participatingConfig.put(recvId,cfg);
     numParticipants=_participatingConfig.size();
   }
+  _context.messageHistory().tunnelJoined("inboundGateway",cfg);
   _context.statManager().addRateData("tunnel.participatingTunnels",numParticipants,0);
   _context.statManager().addRateData("tunnel.joinInboundGateway",1,0);
   if (cfg.getExpiration() > _lastParticipatingExpiration)   _lastParticipatingExpiration=cfg.getExpiration();

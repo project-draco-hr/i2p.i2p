@@ -1,9 +1,13 @@
 {
   OutboundMessageState state=new OutboundMessageState(_context);
   boolean ok=state.initialize(msg);
+  state.setPeer(_transport.getPeerState(msg.getTarget().getIdentity().calculateHash()));
   finishMessages();
+  int active=0;
 synchronized (_activeMessages) {
     if (ok)     _activeMessages.add(state);
+    active=_activeMessages.size();
     _activeMessages.notifyAll();
   }
+  _context.statManager().addRateData("udp.outboundActiveCount",active,0);
 }

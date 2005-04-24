@@ -4,11 +4,14 @@
     long acks[]=data.readACKs();
     if (acks != null) {
       _context.statManager().addRateData("udp.receivedACKs",acks.length,0);
+      _context.statManager().getStatLog().addData(from.getRemoteHostString(),"udp.peer.receiveACKCount",acks.length,0);
       for (int i=0; i < acks.length; i++) {
         if (_log.shouldLog(Log.INFO))         _log.info("Full ACK of message " + acks[i] + " received!");
         fragments+=_outbound.acked(acks[i],from.getRemotePeer());
       }
-      from.messageACKed(fragments * from.getMTU());
+    }
+ else {
+      _log.error("Received ACKs with no acks?! " + data);
     }
   }
   if (data.readECN())   from.ECNReceived();

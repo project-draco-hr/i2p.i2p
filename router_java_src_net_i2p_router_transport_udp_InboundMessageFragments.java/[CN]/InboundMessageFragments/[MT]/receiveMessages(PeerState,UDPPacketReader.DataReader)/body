@@ -9,8 +9,11 @@ synchronized (_stateLock) {
     }
     for (int i=0; i < fragments; i++) {
       Long messageId=new Long(data.readMessageId(i));
-      if (_recentlyCompletedMessages.contains(messageId)) {
+      if (_recentlyCompletedMessages.isKnown(messageId.longValue())) {
         _context.statManager().addRateData("udp.ignoreRecentDuplicate",1,0);
+        from.messageFullyReceived(messageId);
+        if (!_unsentACKs.contains(from))         _unsentACKs.add(from);
+        if (_log.shouldLog(Log.WARN))         _log.warn("Message received is a dup: " + messageId + " dups: "+ _recentlyCompletedMessages.getCurrentDuplicateCount()+ " out of "+ _recentlyCompletedMessages.getInsertedCount());
         continue;
       }
       int size=data.readMessageFragmentSize(i);
@@ -27,8 +30,7 @@ synchronized (_stateLock) {
       if (state.isComplete()) {
         messageComplete=true;
         messages.remove(messageId);
-        while (_recentlyCompletedMessages.size() >= RECENTLY_COMPLETED_SIZE)         _recentlyCompletedMessages.remove(0);
-        _recentlyCompletedMessages.add(messageId);
+        _recentlyCompletedMessages.add(messageId.longValue());
         _completeMessages.add(state);
         from.messageFullyReceived(messageId);
         if (!_unsentACKs.contains(from))         _unsentACKs.add(from);

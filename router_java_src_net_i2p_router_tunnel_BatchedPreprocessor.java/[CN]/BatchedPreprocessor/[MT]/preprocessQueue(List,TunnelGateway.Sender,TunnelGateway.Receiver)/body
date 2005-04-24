@@ -5,7 +5,10 @@
     while (pending.size() > 0) {
       TunnelGateway.Pending msg=(TunnelGateway.Pending)pending.get(0);
       send(pending,0,0,sender,rec);
-      if (msg.getOffset() >= msg.getData().length)       pending.remove(0);
+      if (msg.getOffset() >= msg.getData().length) {
+        notePreprocessing(msg.getMessageId(),msg.getFragmentNumber());
+        pending.remove(0);
+      }
     }
     return false;
   }
@@ -28,9 +31,13 @@
         _pendingSince=0;
         send(pending,0,i,sender,rec);
         if (_log.shouldLog(Log.INFO))         _log.info("Allocated=" + allocated + " so we sent "+ (i + 1)+ " (last complete? "+ (msg.getOffset() >= msg.getData().length)+ ")");
-        for (int j=0; j < i; j++)         pending.remove(0);
+        for (int j=0; j < i; j++) {
+          TunnelGateway.Pending cur=(TunnelGateway.Pending)pending.remove(0);
+          notePreprocessing(cur.getMessageId(),cur.getFragmentNumber());
+        }
         if (msg.getOffset() >= msg.getData().length) {
-          pending.remove(0);
+          TunnelGateway.Pending cur=(TunnelGateway.Pending)pending.remove(0);
+          notePreprocessing(cur.getMessageId(),cur.getFragmentNumber());
         }
         if (i > 0)         _context.statManager().addRateData("tunnel.batchMultipleCount",i + 1,0);
         allocated=0;
@@ -43,7 +50,10 @@
         if (pending.size() > 1)         _context.statManager().addRateData("tunnel.batchMultipleCount",pending.size(),0);
         _context.statManager().addRateData("tunnel.batchDelaySent",pending.size(),0);
         send(pending,0,pending.size() - 1,sender,rec);
-        pending.clear();
+        while (pending.size() > 0) {
+          TunnelGateway.Pending cur=(TunnelGateway.Pending)pending.remove(0);
+          notePreprocessing(cur.getMessageId(),cur.getFragmentNumber());
+        }
         _pendingSince=0;
         return false;
       }
