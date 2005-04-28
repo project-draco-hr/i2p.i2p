@@ -1,5 +1,22 @@
 {
-  List rv=new ArrayList(1);
-  rv.add(getBid(msg));
+  if (msg == null)   throw new IllegalArgumentException("Null message?  no bidding on a null outNetMessage!");
+  if (_context.router().getRouterInfo().equals(msg.getTarget()))   throw new IllegalArgumentException("WTF, bids for a message bound to ourselves?");
+  List rv=new ArrayList(_transports.size());
+  Set failedTransports=msg.getFailedTransports();
+  for (int i=0; i < _transports.size(); i++) {
+    Transport t=(Transport)_transports.get(i);
+    if (failedTransports.contains(t.getStyle())) {
+      _log.debug("Skipping transport " + t.getStyle() + " as it already failed");
+      continue;
+    }
+    TransportBid bid=t.bid(msg.getTarget(),msg.getMessageSize());
+    if (bid != null) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Transport " + t.getStyle() + " bid: "+ bid);
+      rv.add(bid);
+    }
+ else {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Transport " + t.getStyle() + " did not produce a bid");
+    }
+  }
   return rv;
 }

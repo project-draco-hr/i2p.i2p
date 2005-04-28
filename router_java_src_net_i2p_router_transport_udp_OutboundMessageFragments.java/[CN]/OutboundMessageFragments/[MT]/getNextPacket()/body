@@ -29,12 +29,12 @@ synchronized (_activeMessages) {
             currentFragment=state.pickNextFragment();
             int fragmentSize=state.fragmentSize(currentFragment);
             if (peer.allocateSendingBytes(fragmentSize)) {
+              state.incrementCurrentFragment();
               if (_log.shouldLog(Log.INFO))               _log.info("Allocation of " + fragmentSize + " allowed with "+ peer.getSendWindowBytesRemaining()+ "/"+ peer.getSendWindowBytes()+ " remaining"+ " for message "+ state.getMessageId()+ ": "+ state);
               if (state.justBeganVolley() && (state.getPushCount() > 0) && (state.getFragmentCount() > 1)) {
                 peer.messageRetransmitted();
-                if (_log.shouldLog(Log.ERROR))                 _log.error("Retransmitting " + state + " to "+ peer);
+                if (_log.shouldLog(Log.WARN))                 _log.warn("Retransmitting " + state + " to "+ peer);
               }
-              _nextPacketMessage=i + 1;
               if (currentFragment >= state.getFragmentCount() - 1) {
                 _context.statManager().addRateData("udp.sendVolleyTime",state.getLifetime(),state.getFragmentCount());
                 if (state.getPeer() != null) {
@@ -42,9 +42,10 @@ synchronized (_activeMessages) {
                   state.setNextSendTime(now + rto);
                 }
  else {
-                  _log.error("changed volley, unknown peer");
+                  if (_log.shouldLog(Log.ERROR))                   _log.error("changed volley, unknown peer");
                   state.setNextSendTime(now + 1000 + _context.random().nextInt(2000));
                 }
+                _nextPacketMessage=(i + 1) % _activeMessages.size();
               }
  else {
                 if (peer.getSendWindowBytesRemaining() > 0)                 state.setNextSendTime(now);
@@ -53,6 +54,7 @@ synchronized (_activeMessages) {
               break;
             }
  else {
+              _context.statManager().addRateData("udp.sendRejected",state.getPushCount(),state.getLifetime());
               if (_log.shouldLog(Log.WARN))               _log.warn("Allocation of " + fragmentSize + " rejected w/ wsize="+ peer.getSendWindowBytes()+ " available="+ peer.getSendWindowBytesRemaining()+ " for message "+ state.getMessageId()+ ": "+ state);
               state.setNextSendTime((now + 1024) & ~SECOND_MASK);
               currentFragment=-1;

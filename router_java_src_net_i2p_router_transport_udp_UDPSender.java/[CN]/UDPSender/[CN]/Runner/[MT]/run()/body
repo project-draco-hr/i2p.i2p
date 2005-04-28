@@ -7,19 +7,26 @@
     }
     UDPPacket packet=getNextPacket();
     if (packet != null) {
+      long acquireTime=_context.clock().now();
       int size=packet.getPacket().getLength();
       if (size > 0) {
         FIFOBandwidthLimiter.Request req=_context.bandwidthLimiter().requestOutbound(size,"UDP sender");
         while (req.getPendingOutboundRequested() > 0)         req.waitForNextAllocation();
       }
+      long afterBW=_context.clock().now();
       if (_log.shouldLog(Log.DEBUG)) {
         int len=packet.getPacket().getLength();
         _log.debug("Sending packet: \nraw: " + Base64.encode(packet.getPacket().getData(),0,len));
       }
       try {
+        long before=_context.clock().now();
 synchronized (Runner.this) {
           _socket.send(packet.getPacket());
         }
+        long sendTime=_context.clock().now() - before;
+        _context.statManager().addRateData("udp.socketSendTime",sendTime,packet.getLifetime());
+        _context.statManager().addRateData("udp.sendBWThrottleTime",afterBW - acquireTime,acquireTime - packet.getBegin());
+        if (packet.getMarkedType() == 1)         _context.statManager().addRateData("udp.sendACKTime",afterBW - acquireTime,packet.getLifetime());
         _context.statManager().addRateData("udp.pushTime",packet.getLifetime(),packet.getLifetime());
         _context.statManager().addRateData("udp.sendPacketSize",packet.getPacket().getLength(),packet.getLifetime());
       }

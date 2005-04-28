@@ -1,7 +1,7 @@
 {
   int fragments=data.readFragmentCount();
   if (fragments <= 0)   return;
-synchronized (_stateLock) {
+synchronized (_inboundMessages) {
     Map messages=(Map)_inboundMessages.get(from.getRemotePeer());
     if (messages == null) {
       messages=new HashMap(fragments);
@@ -12,7 +12,7 @@ synchronized (_stateLock) {
       if (_recentlyCompletedMessages.isKnown(messageId.longValue())) {
         _context.statManager().addRateData("udp.ignoreRecentDuplicate",1,0);
         from.messageFullyReceived(messageId);
-        if (!_unsentACKs.contains(from))         _unsentACKs.add(from);
+        _ackSender.ackPeer(from);
         if (_log.shouldLog(Log.WARN))         _log.warn("Message received is a dup: " + messageId + " dups: "+ _recentlyCompletedMessages.getCurrentDuplicateCount()+ " out of "+ _recentlyCompletedMessages.getInsertedCount());
         continue;
       }
@@ -30,10 +30,11 @@ synchronized (_stateLock) {
       if (state.isComplete()) {
         messageComplete=true;
         messages.remove(messageId);
+        if (messages.size() <= 0)         _inboundMessages.remove(from.getRemotePeer());
         _recentlyCompletedMessages.add(messageId.longValue());
-        _completeMessages.add(state);
+        _messageReceiver.receiveMessage(state);
         from.messageFullyReceived(messageId);
-        if (!_unsentACKs.contains(from))         _unsentACKs.add(from);
+        _ackSender.ackPeer(from);
         if (_log.shouldLog(Log.INFO))         _log.info("Message received completely!  " + state);
         _context.statManager().addRateData("udp.receivedCompleteTime",state.getLifetime(),state.getLifetime());
         _context.statManager().addRateData("udp.receivedCompleteFragments",state.getFragmentCount(),state.getLifetime());
@@ -41,11 +42,11 @@ synchronized (_stateLock) {
  else       if (state.isExpired()) {
         messageExpired=true;
         messages.remove(messageId);
+        if (messages.size() <= 0)         _inboundMessages.remove(from.getRemotePeer());
         if (_log.shouldLog(Log.WARN))         _log.warn("Message expired while only being partially read: " + state);
         state.releaseResources();
       }
       if (!fragmentOK)       break;
     }
-    _stateLock.notifyAll();
   }
 }
