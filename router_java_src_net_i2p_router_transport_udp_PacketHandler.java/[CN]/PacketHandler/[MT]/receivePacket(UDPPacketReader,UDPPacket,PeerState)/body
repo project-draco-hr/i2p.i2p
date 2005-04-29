@@ -10,7 +10,16 @@
         packet.decrypt(_transport.getIntroKey());
       }
  else {
-        if (_log.shouldLog(Log.WARN))         _log.warn("Validation with existing con failed, and validation as reestablish failed too.  DROP");
+        InetAddress remAddr=packet.getPacket().getAddress();
+        int remPort=packet.getPacket().getPort();
+        InboundEstablishState est=_establisher.getInboundState(remAddr,remPort);
+        if (est != null) {
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("Packet from an existing peer IS for an inbound establishment");
+          receivePacket(reader,packet,est,false);
+        }
+ else {
+          if (_log.shouldLog(Log.WARN))           _log.warn("Validation with existing con failed, and validation as reestablish failed too.  DROP");
+        }
         return;
       }
     }

@@ -1,16 +1,17 @@
 {
   reader.initialize(packet);
-  long now=_context.clock().now();
-  long when=reader.readTimestamp() * 1000;
-  long skew=now - when;
+  long recvOn=packet.getBegin();
+  long sendOn=reader.readTimestamp() * 1000;
+  long skew=recvOn - sendOn;
   if (skew > GRACE_PERIOD) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("Packet too far in the future: " + new Date(when) + ": "+ packet);
+    if (_log.shouldLog(Log.WARN))     _log.warn("Packet too far in the future: " + new Date(sendOn / 1000) + ": "+ packet);
     return;
   }
  else   if (skew < 0 - GRACE_PERIOD) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("Packet too far in the past: " + new Date(when) + ": "+ packet);
+    if (_log.shouldLog(Log.WARN))     _log.warn("Packet too far in the past: " + new Date(sendOn / 1000) + ": "+ packet);
     return;
   }
+  if (state != null)   state.adjustClockSkew((short)skew);
   _context.statManager().addRateData("udp.receivePacketSkew",skew,packet.getLifetime());
   InetAddress fromHost=packet.getPacket().getAddress();
   int fromPort=packet.getPacket().getPort();
