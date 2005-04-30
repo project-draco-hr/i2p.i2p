@@ -1,0 +1,62 @@
+{
+  PeerState peer=null;
+  OutboundMessageState state=null;
+  while (_alive && (state == null)) {
+    long now=_context.clock().now();
+    long nextSend=-1;
+    finishMessages();
+synchronized (_activeMessages) {
+      for (int i=0; i < _activeMessages.size(); i++) {
+        int cur=(i + _nextPacketMessage) % _activeMessages.size();
+        state=(OutboundMessageState)_activeMessages.get(cur);
+        peer=state.getPeer();
+        if (peer == null)         peer=_transport.getPeerState(state.getMessage().getTarget().getIdentity().calculateHash());
+        if ((peer != null) && locked_shouldSend(state,peer)) {
+          _nextPacketMessage=i + 1;
+          break;
+        }
+ else {
+          if (peer == null) {
+            _activeMessages.remove(cur);
+            _transport.failed(state);
+            if (_log.shouldLog(Log.WARN))             _log.warn("Peer disconnected for " + state);
+            if (state.getPeer().getSendWindowBytesRemaining() > 0)             _throttle.unchoke(state.getPeer().getRemotePeer());
+            state.releaseResources();
+            i--;
+          }
+          long time=state.getNextSendTime();
+          if ((nextSend < 0) || (time < nextSend))           nextSend=time;
+          state=null;
+          peer=null;
+        }
+      }
+      if (state == null) {
+        if (nextSend <= 0) {
+          try {
+            _activeMessages.notifyAll();
+            _activeMessages.wait();
+          }
+ catch (          InterruptedException ie) {
+          }
+        }
+ else {
+          long delay=nextSend - now;
+          if (delay <= 0)           delay=10;
+          if (delay > 1000)           delay=1000;
+          _allowExcess=true;
+          _activeMessages.notifyAll();
+          try {
+            _activeMessages.wait(delay);
+          }
+ catch (          InterruptedException ie) {
+          }
+        }
+      }
+ else {
+        _activeMessages.notifyAll();
+      }
+      _allowExcess=false;
+    }
+  }
+  return preparePackets(state,peer);
+}

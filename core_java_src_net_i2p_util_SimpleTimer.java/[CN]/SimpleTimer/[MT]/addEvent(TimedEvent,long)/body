@@ -4,7 +4,16 @@
   long eventTime=now + timeoutMs;
   Long time=new Long(eventTime);
 synchronized (_events) {
-    if (_eventTimes.containsKey(event))     _events.remove(_eventTimes.get(event));
+    Long oldTime=(Long)_eventTimes.get(event);
+    if (oldTime != null) {
+      if (oldTime.longValue() < eventTime) {
+        _events.notifyAll();
+        return;
+      }
+ else {
+        _events.remove(oldTime);
+      }
+    }
     while (_events.containsKey(time))     time=new Long(time.longValue() + 1);
     _events.put(time,event);
     _eventTimes.put(event,time);
