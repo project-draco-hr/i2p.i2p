@@ -11,7 +11,7 @@ synchronized (_inboundMessages) {
       Long messageId=new Long(data.readMessageId(i));
       if (_recentlyCompletedMessages.isKnown(messageId.longValue())) {
         _context.statManager().addRateData("udp.ignoreRecentDuplicate",1,0);
-        from.messageFullyReceived(messageId);
+        from.messageFullyReceived(messageId,-1);
         _ackSender.ackPeer(from);
         if (_log.shouldLog(Log.WARN))         _log.warn("Message received is a dup: " + messageId + " dups: "+ _recentlyCompletedMessages.getCurrentDuplicateCount()+ " out of "+ _recentlyCompletedMessages.getInsertedCount());
         continue;
@@ -33,7 +33,7 @@ synchronized (_inboundMessages) {
         if (messages.size() <= 0)         _inboundMessages.remove(from.getRemotePeer());
         _recentlyCompletedMessages.add(messageId.longValue());
         _messageReceiver.receiveMessage(state);
-        from.messageFullyReceived(messageId);
+        from.messageFullyReceived(messageId,state.getCompleteSize());
         _ackSender.ackPeer(from);
         if (_log.shouldLog(Log.INFO))         _log.info("Message received completely!  " + state);
         _context.statManager().addRateData("udp.receivedCompleteTime",state.getLifetime(),state.getLifetime());

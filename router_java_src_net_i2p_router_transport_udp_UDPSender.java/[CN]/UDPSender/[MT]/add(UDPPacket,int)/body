@@ -1,4 +1,5 @@
 {
+  long expiration=_context.clock().now() + blockTime;
   int remaining=-1;
   while ((_keepRunning) && (remaining < 0)) {
     try {
@@ -9,11 +10,13 @@ synchronized (_outboundQueue) {
           _outboundQueue.notifyAll();
         }
  else {
-          if (blocking) {
-            _outboundQueue.wait();
+          long remainingTime=expiration - _context.clock().now();
+          if (remainingTime > 0) {
+            _outboundQueue.wait(remainingTime);
           }
  else {
             remaining=_outboundQueue.size();
+            _outboundQueue.notifyAll();
           }
         }
       }

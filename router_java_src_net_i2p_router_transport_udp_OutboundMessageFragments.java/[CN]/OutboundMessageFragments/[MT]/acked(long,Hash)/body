@@ -9,6 +9,7 @@ synchronized (_activeMessages) {
           Hash expectedBy=msg.getTarget().getIdentity().getHash();
           if (!expectedBy.equals(ackedBy)) {
             state=null;
+            _activeMessages.notifyAll();
             return 0;
           }
         }
@@ -17,13 +18,13 @@ synchronized (_activeMessages) {
           _nextPacketMessage--;
           if (_nextPacketMessage < 0)           _nextPacketMessage=0;
         }
-        _activeMessages.notifyAll();
         break;
       }
  else {
         state=null;
       }
     }
+    _activeMessages.notifyAll();
   }
   if (state != null) {
     int numSends=state.getMaxSends();
