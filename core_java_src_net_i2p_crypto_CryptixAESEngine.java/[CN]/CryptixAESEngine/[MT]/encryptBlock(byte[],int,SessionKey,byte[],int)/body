@@ -1,13 +1,13 @@
 {
-  CryptixAESKeyCache.KeyCacheEntry keyData=_cache.acquireKey();
-  try {
-    Object key=CryptixRijndael_Algorithm.makeKey(sessionKey.getData(),16,keyData);
-    CryptixRijndael_Algorithm.blockEncrypt(payload,out,inIndex,outIndex,key,16);
+  if (sessionKey.getPreparedKey() == null) {
+    try {
+      Object key=CryptixRijndael_Algorithm.makeKey(sessionKey.getData(),16);
+      sessionKey.setPreparedKey(key);
+    }
+ catch (    InvalidKeyException ike) {
+      _log.log(Log.CRIT,"Invalid key",ike);
+      throw new IllegalArgumentException("wtf, invalid key?  " + ike.getMessage());
+    }
   }
- catch (  InvalidKeyException ike) {
-    _log.error("Invalid key",ike);
-  }
- finally {
-    _cache.releaseKey(keyData);
-  }
+  CryptixRijndael_Algorithm.blockEncrypt(payload,out,inIndex,outIndex,sessionKey.getPreparedKey(),16);
 }
