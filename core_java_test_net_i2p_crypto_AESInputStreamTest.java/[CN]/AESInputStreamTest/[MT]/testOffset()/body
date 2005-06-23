@@ -1,0 +1,28 @@
+{
+  I2PAppContext ctx=I2PAppContext.getGlobalContext();
+  byte[] orig=new byte[32];
+  RandomSource.getInstance().nextBytes(orig);
+  SessionKey key=KeyGenerator.getInstance().generateSessionKey();
+  byte iv[]="there once was a".getBytes();
+  ByteArrayOutputStream origStream=new ByteArrayOutputStream(512);
+  AESOutputStream out=new AESOutputStream(ctx,origStream,key,iv);
+  out.write(orig);
+  out.close();
+  byte encrypted[]=origStream.toByteArray();
+  byte encryptedSegment[]=new byte[40];
+  System.arraycopy(encrypted,0,encryptedSegment,0,40);
+  ByteArrayInputStream encryptedStream=new ByteArrayInputStream(encryptedSegment);
+  AESInputStream sin=new AESInputStream(ctx,encryptedStream,key,iv);
+  ByteArrayOutputStream baos=new ByteArrayOutputStream(512);
+  byte buf[]=new byte[1024 * 32];
+  int read=DataHelper.read(sin,buf);
+  int remaining=sin.remainingBytes();
+  int readyBytes=sin.readyBytes();
+  if (read > 0)   baos.write(buf,0,read);
+  sin.close();
+  byte fin[]=baos.toByteArray();
+  Hash origHash=SHA256Generator.getInstance().calculateHash(orig);
+  Hash newHash=SHA256Generator.getInstance().calculateHash(fin);
+  assertFalse(origHash.equals(newHash));
+  assertFalse(DataHelper.eq(orig,fin));
+}

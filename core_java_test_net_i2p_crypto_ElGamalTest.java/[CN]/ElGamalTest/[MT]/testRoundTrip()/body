@@ -1,0 +1,21 @@
+{
+  Object keys[]=KeyGenerator.getInstance().generatePKIKeypair();
+  PublicKey pubKey=(PublicKey)keys[0];
+  PrivateKey privKey=(PrivateKey)keys[1];
+  String msg="Hello world";
+  Set toBeDelivered=new HashSet();
+  SessionKey key=_context.sessionKeyManager().getCurrentKey(pubKey);
+  if (key == null)   key=_context.sessionKeyManager().createSession(pubKey);
+  byte[] encrypted=_context.elGamalAESEngine().encrypt(msg.getBytes(),pubKey,key,64);
+  byte[] decrypted=null;
+  try {
+    decrypted=_context.elGamalAESEngine().decrypt(encrypted,privKey);
+  }
+ catch (  DataFormatException dfe) {
+    dfe.printStackTrace();
+    fail();
+  }
+  assertNotNull(decrypted);
+  String read=new String(decrypted);
+  assertEquals(msg,read);
+}

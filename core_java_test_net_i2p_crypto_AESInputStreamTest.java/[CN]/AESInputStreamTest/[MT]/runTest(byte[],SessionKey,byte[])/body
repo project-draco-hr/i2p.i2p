@@ -1,0 +1,20 @@
+{
+  I2PAppContext ctx=I2PAppContext.getGlobalContext();
+  ByteArrayOutputStream origStream=new ByteArrayOutputStream(512);
+  AESOutputStream out=new AESOutputStream(ctx,origStream,key,iv);
+  out.write(orig);
+  out.close();
+  byte encrypted[]=origStream.toByteArray();
+  ByteArrayInputStream encryptedStream=new ByteArrayInputStream(encrypted);
+  AESInputStream sin=new AESInputStream(ctx,encryptedStream,key,iv);
+  ByteArrayOutputStream baos=new ByteArrayOutputStream(512);
+  byte buf[]=new byte[1024 * 32];
+  int read=DataHelper.read(sin,buf);
+  if (read > 0)   baos.write(buf,0,read);
+  sin.close();
+  byte fin[]=baos.toByteArray();
+  Hash origHash=SHA256Generator.getInstance().calculateHash(orig);
+  Hash newHash=SHA256Generator.getInstance().calculateHash(fin);
+  assertEquals(origHash,newHash);
+  assertTrue(DataHelper.eq(orig,fin));
+}

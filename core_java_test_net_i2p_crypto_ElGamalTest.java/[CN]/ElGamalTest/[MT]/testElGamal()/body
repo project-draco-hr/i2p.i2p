@@ -1,0 +1,57 @@
+{
+  for (int i=0; i < 2; i++) {
+    Object keys[]=KeyGenerator.getInstance().generatePKIKeypair();
+    PublicKey pubKey=(PublicKey)keys[0];
+    PrivateKey privKey=(PrivateKey)keys[1];
+    SessionKey key=KeyGenerator.getInstance().generateSessionKey();
+    ByteArrayOutputStream elgSrc=new ByteArrayOutputStream(256);
+    try {
+      key.writeBytes(elgSrc);
+    }
+ catch (    DataFormatException dfe) {
+      dfe.printStackTrace();
+      fail();
+    }
+catch (    IOException ioe) {
+      ioe.printStackTrace();
+      fail();
+    }
+    byte preIV[]=new byte[32];
+    RandomSource.getInstance().nextBytes(preIV);
+    try {
+      elgSrc.write(preIV);
+      elgSrc.flush();
+    }
+ catch (    IOException ioe) {
+      ioe.printStackTrace();
+      fail();
+    }
+    byte elgEncr[]=_context.elGamalEngine().encrypt(elgSrc.toByteArray(),pubKey);
+    byte elgDecr[]=_context.elGamalEngine().decrypt(elgEncr,privKey);
+    ByteArrayInputStream bais=new ByteArrayInputStream(elgDecr);
+    SessionKey nk=new SessionKey();
+    try {
+      nk.readBytes(bais);
+    }
+ catch (    DataFormatException dfe) {
+      dfe.printStackTrace();
+      fail();
+    }
+catch (    IOException ioe) {
+      ioe.printStackTrace();
+      fail();
+    }
+    byte postpreIV[]=new byte[32];
+    int read=0;
+    try {
+      read=bais.read(postpreIV);
+    }
+ catch (    IOException ioe) {
+      ioe.printStackTrace();
+      fail();
+    }
+    assertEquals(read,postpreIV.length);
+    assertTrue(DataHelper.eq(preIV,postpreIV));
+    assertEquals(key,nk);
+  }
+}
