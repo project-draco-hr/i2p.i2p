@@ -6,23 +6,27 @@
       _socketChanged=false;
     }
     UDPPacket packet=UDPPacket.acquire(_context);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Before throttling receive");
     while (!_context.throttle().acceptNetworkMessage())     try {
       Thread.sleep(10);
     }
  catch (    InterruptedException ie) {
     }
     try {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Before blocking socket.receive");
 synchronized (Runner.this) {
         _socket.receive(packet.getPacket());
       }
       int size=packet.getPacket().getLength();
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("After blocking socket.receive: packet is " + size + " bytes!");
+      packet.setPacketDataLength(size);
       packet.resetBegin();
-      _context.statManager().addRateData("udp.receivePacketSize",size,0);
       if (size > 0) {
         FIFOBandwidthLimiter.Request req=_context.bandwidthLimiter().requestInbound(size,"UDP receiver");
         while (req.getPendingInboundRequested() > 0)         req.waitForNextAllocation();
       }
-      receive(packet);
+      int queued=receive(packet);
+      _context.statManager().addRateData("udp.receivePacketSize",size,queued);
     }
  catch (    IOException ioe) {
       if (_socketChanged) {
@@ -34,4 +38,5 @@ synchronized (Runner.this) {
       packet.release();
     }
   }
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Stop receiving...");
 }

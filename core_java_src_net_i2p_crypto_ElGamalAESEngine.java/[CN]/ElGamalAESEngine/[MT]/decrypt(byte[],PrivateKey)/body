@@ -17,27 +17,42 @@
   Set foundTags=new HashSet();
   byte decrypted[]=null;
   if (key != null) {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Key is known for tag " + st);
     usedKey.setData(key.getData());
+    long id=_context.random().nextLong();
+    if (_log.shouldLog(Log.DEBUG))     _log.debug(id + ": Decrypting existing session encrypted with tag: " + st.toString()+ ": key: "+ key.toBase64()+ ": "+ data.length+ " bytes: "+ Base64.encode(data,0,64));
     decrypted=decryptExistingSession(data,key,targetPrivateKey,foundTags,usedKey,foundKey);
-    if (decrypted != null)     _context.statManager().updateFrequency("crypto.elGamalAES.decryptExistingSession");
- else     _context.statManager().updateFrequency("crypto.elGamalAES.decryptFailed");
+    if (decrypted != null) {
+      _context.statManager().updateFrequency("crypto.elGamalAES.decryptExistingSession");
+      if ((foundTags.size() > 0) && (_log.shouldLog(Log.WARN)))       _log.warn(id + ": ElG/AES decrypt success with " + st+ ": found tags: "+ foundTags);
+    }
+ else {
+      _context.statManager().updateFrequency("crypto.elGamalAES.decryptFailed");
+      if (_log.shouldLog(Log.ERROR)) {
+        _log.error(id + ": ElG decrypt fail: known tag [" + st+ "], failed decrypt");
+      }
+    }
   }
  else {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Key is NOT known for tag " + st);
     decrypted=decryptNewSession(data,targetPrivateKey,foundTags,usedKey,foundKey);
-    if (decrypted != null)     _context.statManager().updateFrequency("crypto.elGamalAES.decryptNewSession");
- else     _context.statManager().updateFrequency("crypto.elGamalAES.decryptFailed");
+    if (decrypted != null) {
+      _context.statManager().updateFrequency("crypto.elGamalAES.decryptNewSession");
+      if ((foundTags.size() > 0) && (_log.shouldLog(Log.WARN)))       _log.warn("ElG decrypt success: found tags: " + foundTags);
+    }
+ else {
+      _context.statManager().updateFrequency("crypto.elGamalAES.decryptFailed");
+      if (_log.shouldLog(Log.ERROR))       _log.error("ElG decrypt fail: unknown tag: " + st);
+    }
   }
   if ((key == null) && (decrypted == null)) {
   }
   if (foundTags.size() > 0) {
     if (foundKey.getData() != null) {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Found key: " + foundKey);
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Found key: " + foundKey.toBase64() + " tags: "+ foundTags);
       _context.sessionKeyManager().tagsReceived(foundKey,foundTags);
     }
  else {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Used key: " + usedKey);
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Used key: " + usedKey.toBase64() + " tags: "+ foundTags);
       _context.sessionKeyManager().tagsReceived(usedKey,foundTags);
     }
   }

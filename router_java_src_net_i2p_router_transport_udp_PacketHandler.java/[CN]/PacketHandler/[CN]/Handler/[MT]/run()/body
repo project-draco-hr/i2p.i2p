@@ -1,10 +1,16 @@
 {
   while (_keepReading) {
     UDPPacket packet=_endpoint.receive();
+    if (packet == null)     continue;
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Received the packet " + packet);
     long queueTime=packet.getLifetime();
     long handleStart=_context.clock().now();
-    handlePacket(_reader,packet);
+    try {
+      handlePacket(_reader,packet);
+    }
+ catch (    Exception e) {
+      if (_log.shouldLog(Log.ERROR))       _log.error("Crazy error handling a packet: " + packet,e);
+    }
     long handleTime=_context.clock().now() - handleStart;
     _context.statManager().addRateData("udp.handleTime",handleTime,packet.getLifetime());
     _context.statManager().addRateData("udp.queueTime",queueTime,packet.getLifetime());

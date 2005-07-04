@@ -1,19 +1,9 @@
 {
   if (ARTIFICIAL_DROP_PROBABILITY > 0) {
-    if (_context.random().nextFloat() <= ARTIFICIAL_DROP_PROBABILITY)     return;
+    if (_context.random().nextFloat() <= ARTIFICIAL_DROP_PROBABILITY)     return -1;
   }
-synchronized (_inboundQueue) {
-    int queueSize=_inboundQueue.size();
-    if (queueSize > 0) {
-      long headPeriod=((UDPPacket)_inboundQueue.get(0)).getLifetime();
-      if (headPeriod > MAX_QUEUE_PERIOD) {
-        _context.statManager().addRateData("udp.droppedInbound",queueSize,headPeriod);
-        if (_log.shouldLog(Log.WARN))         _log.warn("Dropping inbound packet with " + queueSize + " queued for "+ headPeriod);
-        _inboundQueue.notifyAll();
-        return;
-      }
-    }
-    _inboundQueue.add(packet);
-    _inboundQueue.notifyAll();
+  if ((ARTIFICIAL_DELAY > 0) || (ARTIFICIAL_DELAY_BASE > 0)) {
+    SimpleTimer.getInstance().addEvent(new ArtificiallyDelayedReceive(packet),ARTIFICIAL_DELAY_BASE + _context.random().nextInt(ARTIFICIAL_DELAY));
   }
+  return doReceive(packet);
 }

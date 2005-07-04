@@ -1,10 +1,12 @@
 {
   long expiration=_context.clock().now() + blockTime;
   int remaining=-1;
+  long lifetime=-1;
   while ((_keepRunning) && (remaining < 0)) {
     try {
 synchronized (_outboundQueue) {
         if (_outboundQueue.size() < MAX_QUEUED) {
+          lifetime=packet.getLifetime();
           _outboundQueue.add(packet);
           remaining=_outboundQueue.size();
           _outboundQueue.notifyAll();
@@ -24,6 +26,7 @@ synchronized (_outboundQueue) {
  catch (    InterruptedException ie) {
     }
   }
-  _context.statManager().addRateData("udp.sendQueueSize",remaining,packet.getLifetime());
+  _context.statManager().addRateData("udp.sendQueueSize",remaining,lifetime);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Added the packet onto the queue with " + remaining + " remaining and a lifetime of "+ lifetime);
   return remaining;
 }

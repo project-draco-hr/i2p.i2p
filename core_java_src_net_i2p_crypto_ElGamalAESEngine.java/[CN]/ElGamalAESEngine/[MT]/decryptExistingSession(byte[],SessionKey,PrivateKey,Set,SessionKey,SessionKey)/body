@@ -7,9 +7,13 @@
   usedKey.setData(key.getData());
   byte decrypted[]=decryptAESBlock(data,32,data.length - 32,key,iv,preIV,foundTags,foundKey);
   if (decrypted == null) {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Decrypt with a non session tag, but tags read: " + foundTags.size());
-    return decryptNewSession(data,targetPrivateKey,foundTags,usedKey,foundKey);
+    if (_log.shouldLog(Log.WARN))     _log.warn("Decrypting looks negative... existing key fails with existing tag, lets try as a new one");
+    byte rv[]=decryptNewSession(data,targetPrivateKey,foundTags,usedKey,foundKey);
+    if (_log.shouldLog(Log.WARN)) {
+      if (rv == null)       _log.warn("Decrypting failed with a known existing tag as either an existing message or a new session");
+ else       _log.warn("Decrypting suceeded as a new session, even though it used an existing tag!");
+    }
+    return rv;
   }
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Decrypt with an EXISTING session tag successfull, # tags read: " + foundTags.size(),new Exception("Decrypted by"));
   return decrypted;
 }

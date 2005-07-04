@@ -1,0 +1,29 @@
+{
+  if (_stats.size() <= 0)   return false;
+  _currentStatName=(String)_stats.remove(0);
+  RateStat rs=_context.statManager().getRate(_currentStatName);
+  if (rs != null) {
+    _currentStatDescription=rs.getDescription();
+    if (_currentGroup == null)     _currentIsFirstInGroup=true;
+ else     if (!rs.getGroupName().equals(_currentGroup))     _currentIsFirstInGroup=true;
+ else     _currentIsFirstInGroup=false;
+    _currentGroup=rs.getGroupName();
+  }
+ else {
+    FrequencyStat fs=_context.statManager().getFrequency(_currentStatName);
+    if (fs != null) {
+      _currentStatDescription=fs.getDescription();
+      if (_currentGroup == null)       _currentIsFirstInGroup=true;
+ else       if (!fs.getGroupName().equals(_currentGroup))       _currentIsFirstInGroup=true;
+ else       _currentIsFirstInGroup=false;
+      _currentGroup=fs.getGroupName();
+    }
+ else {
+      if (_log.shouldLog(Log.ERROR))       _log.error("Stat does not exist?!  [" + _currentStatName + "]");
+      return false;
+    }
+  }
+  if (_filters.contains("*") || _filters.contains(_currentStatName))   _currentIsLogged=true;
+ else   _currentIsLogged=false;
+  return true;
+}

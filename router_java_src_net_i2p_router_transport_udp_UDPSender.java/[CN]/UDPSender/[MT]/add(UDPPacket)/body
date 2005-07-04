@@ -1,10 +1,13 @@
 {
   int size=0;
+  long lifetime=-1;
 synchronized (_outboundQueue) {
+    lifetime=packet.getLifetime();
     _outboundQueue.add(packet);
     size=_outboundQueue.size();
     _outboundQueue.notifyAll();
   }
-  _context.statManager().addRateData("udp.sendQueueSize",size,packet.getLifetime());
+  _context.statManager().addRateData("udp.sendQueueSize",size,lifetime);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Added the packet onto the queue with " + size + " remaining and a lifetime of "+ lifetime);
   return size;
 }

@@ -1,10 +1,8 @@
 {
   if (data == null) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("Data is null, unable to decrypt new session");
     return null;
   }
  else   if (data.length < 514) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("Data length is too small (" + data.length + ")");
     return null;
   }
   byte elgEncr[]=new byte[514];
@@ -16,7 +14,6 @@
   }
   byte elgDecr[]=_context.elGamalEngine().decrypt(elgEncr,targetPrivateKey);
   if (elgDecr == null) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("decrypt returned null",new Exception("decrypt failed"));
     return null;
   }
   byte preIV[]=null;
@@ -33,6 +30,5 @@
   System.arraycopy(ivHash.getData(),0,iv,0,16);
   _context.random().harvester().feedEntropy("ElG/AES",elgDecr,offset,elgDecr.length - offset);
   byte aesDecr[]=decryptAESBlock(data,514,data.length - 514,usedKey,iv,null,foundTags,foundKey);
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Decrypt with a NEW session successfull: # tags read = " + foundTags.size(),new Exception("Decrypted by"));
   return aesDecr;
 }

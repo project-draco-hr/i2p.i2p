@@ -1,0 +1,17 @@
+{
+synchronized (_inboundQueue) {
+    int queueSize=_inboundQueue.size();
+    if (queueSize > 0) {
+      long headPeriod=((UDPPacket)_inboundQueue.get(0)).getLifetime();
+      if (headPeriod > MAX_QUEUE_PERIOD) {
+        _context.statManager().addRateData("udp.droppedInbound",queueSize,headPeriod);
+        if (_log.shouldLog(Log.ERROR))         _log.error("Dropping inbound packet with " + queueSize + " queued for "+ headPeriod);
+        _inboundQueue.notifyAll();
+        return queueSize;
+      }
+    }
+    _inboundQueue.add(packet);
+    _inboundQueue.notifyAll();
+    return queueSize + 1;
+  }
+}

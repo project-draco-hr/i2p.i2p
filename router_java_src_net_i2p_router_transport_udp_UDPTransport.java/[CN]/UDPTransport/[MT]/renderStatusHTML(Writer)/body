@@ -12,6 +12,7 @@ synchronized (_peersByIdent) {
   buf.append("     <td><b>cwnd</b></td><td><b>ssthresh</b></td>\n");
   buf.append("     <td><b>rtt</b></td><td><b>dev</b></td><td><b>rto</b></td>\n");
   buf.append("     <td><b>send</b></td><td><b>recv</b></td>\n");
+  buf.append("     <td><b>resent</b></td><td><b>dupRecv</b></td>\n");
   buf.append(" </tr>\n");
   out.write(buf.toString());
   buf.setLength(0);
@@ -68,10 +69,18 @@ synchronized (_peersByIdent) {
     buf.append(peer.getRTO());
     buf.append("</td>");
     buf.append("<td>");
-    buf.append(peer.getMessagesSent());
+    buf.append(peer.getPacketsTransmitted());
     buf.append("</td>");
     buf.append("<td>");
-    buf.append(peer.getMessagesReceived());
+    buf.append(peer.getPacketsReceived());
+    buf.append("</td>");
+    double sendLostPct=(double)peer.getPacketsRetransmitted() / (double)PeerState.RETRANSMISSION_PERIOD_WIDTH;
+    buf.append("<td>");
+    buf.append(peer.getPacketRetransmissionRate());
+    buf.append("</td>");
+    double recvDupPct=(double)peer.getPacketsReceivedDuplicate() / (double)peer.getPacketsReceived();
+    buf.append("<td>");
+    buf.append(formatPct(recvDupPct));
     buf.append("</td>");
     buf.append("</tr>");
     out.write(buf.toString());

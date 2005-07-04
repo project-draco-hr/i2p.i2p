@@ -1,0 +1,30 @@
+{
+  List rv=new ArrayList(16);
+  int bytesRemaining=countMaxACKData();
+synchronized (_currentACKs) {
+    while ((bytesRemaining >= 4) && (_currentACKs.size() > 0)) {
+      rv.add(new FullACKBitfield((Long)_currentACKs.remove(0)));
+      bytesRemaining-=4;
+    }
+    if (_currentACKs.size() <= 0)     _wantACKSendSince=-1;
+  }
+  int partialIncluded=0;
+  if ((bytesRemaining > 4) && (partialACKSource != null)) {
+    List partial=new ArrayList();
+    partialACKSource.fetchPartialACKs(_remotePeer,partial);
+    for (int i=0; (bytesRemaining > 4) && (i < partial.size()); i++) {
+      ACKBitfield bitfield=(ACKBitfield)partial.get(i);
+      int bytes=(bitfield.fragmentCount() / 7) + 1;
+      if (bytesRemaining > bytes + 4) {
+        rv.add(bitfield);
+        bytesRemaining-=bytes + 4;
+        partialIncluded++;
+      }
+ else {
+      }
+    }
+  }
+  _context.statManager().addRateData("udp.sendACKPartial",partialIncluded,rv.size() - partialIncluded);
+  _lastACKSend=_context.clock().now();
+  return rv;
+}

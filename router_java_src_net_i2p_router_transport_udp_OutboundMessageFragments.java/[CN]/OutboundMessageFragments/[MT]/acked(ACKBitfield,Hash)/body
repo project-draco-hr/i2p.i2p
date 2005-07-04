@@ -1,0 +1,61 @@
+{
+  if (bitfield.receivedComplete()) {
+    acked(bitfield.getMessageId(),ackedBy);
+    return;
+  }
+  OutboundMessageState state=null;
+  boolean isComplete=false;
+synchronized (_activeMessages) {
+    for (int i=0; i < _activeMessages.size(); i++) {
+      state=(OutboundMessageState)_activeMessages.get(i);
+      if (state.getMessageId() == bitfield.getMessageId()) {
+        OutNetMessage msg=state.getMessage();
+        if (msg != null) {
+          Hash expectedBy=msg.getTarget().getIdentity().getHash();
+          if (!expectedBy.equals(ackedBy)) {
+            state=null;
+            _activeMessages.notifyAll();
+            return;
+          }
+        }
+        isComplete=state.acked(bitfield);
+        if (isComplete) {
+          _activeMessages.remove(i);
+          if (i < _nextPacketMessage) {
+            _nextPacketMessage--;
+            if (_nextPacketMessage < 0)             _nextPacketMessage=0;
+          }
+        }
+        break;
+      }
+ else {
+        state=null;
+      }
+    }
+    _activeMessages.notifyAll();
+  }
+  if (state != null) {
+    int numSends=state.getMaxSends();
+    int bits=bitfield.fragmentCount();
+    int numACKed=0;
+    for (int i=0; i < bits; i++)     if (bitfield.received(i))     numACKed++;
+    _context.statManager().addRateData("udp.partialACKReceived",numACKed,state.getLifetime());
+    if (_log.shouldLog(Log.INFO))     _log.info("Received partial ack of " + state.getMessageId() + " by "+ ackedBy.toBase64()+ " after "+ state.getLifetime()+ " and "+ numSends+ " sends: "+ bitfield+ ": completely removed? "+ isComplete+ ": "+ state);
+    if (isComplete) {
+      _context.statManager().addRateData("udp.sendConfirmTime",state.getLifetime(),state.getLifetime());
+      _context.statManager().addRateData("udp.sendConfirmFragments",state.getFragmentCount(),state.getLifetime());
+      _context.statManager().addRateData("udp.sendConfirmVolley",numSends,state.getFragmentCount());
+      _transport.succeeded(state.getMessage());
+      if (state.getPeer() != null) {
+        state.getPeer().messageACKed(state.getFragmentCount() * state.getFragmentSize(),state.getLifetime(),0);
+        if (state.getPeer().getSendWindowBytesRemaining() > 0)         _throttle.unchoke(state.getPeer().getRemotePeer());
+      }
+      state.releaseResources();
+    }
+    return;
+  }
+ else {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Received an ACK for a message not pending: " + bitfield);
+    return;
+  }
+}

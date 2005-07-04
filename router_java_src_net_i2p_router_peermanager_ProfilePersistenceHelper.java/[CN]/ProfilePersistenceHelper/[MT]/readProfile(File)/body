@@ -8,6 +8,12 @@
     PeerProfile profile=new PeerProfile(_context,peer);
     Properties props=new Properties();
     loadProps(props,file);
+    long lastSentToSuccessfully=getLong(props,"lastSentToSuccessfully");
+    if (isExpired(lastSentToSuccessfully)) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Dropping old profile for " + file.getName() + ", since we haven't heard from them in a long time");
+      file.delete();
+      return null;
+    }
     profile.setReliabilityBonus(getLong(props,"reliabilityBonus"));
     profile.setIntegrationBonus(getLong(props,"integrationBonus"));
     profile.setSpeedBonus(getLong(props,"speedBonus"));

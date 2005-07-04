@@ -3,12 +3,30 @@
   TagSet tagSet=new TagSet(sessionTags,key,_context.clock().now());
   for (Iterator iter=sessionTags.iterator(); iter.hasNext(); ) {
     SessionTag tag=(SessionTag)iter.next();
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Receiving tag " + tag + " for key "+ key);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Receiving tag " + tag + " for key "+ key.toBase64()+ " / "+ key.toString()+ ": tagSet: "+ tagSet);
 synchronized (_inboundTagSets) {
-      _inboundTagSets.put(tag,tagSet);
+      Object old=_inboundTagSets.put(tag,tagSet);
       overage=_inboundTagSets.size() - MAX_INBOUND_SESSION_TAGS;
+      if (old != null) {
+        TagSet oldTS=(TagSet)old;
+        if (!oldTS.getAssociatedKey().equals(tagSet.getAssociatedKey())) {
+          if (_log.shouldLog(Log.ERROR)) {
+            _log.error("Multiple tags matching!  tag: " + tag.toString() + " matches for new tagSet: "+ tagSet+ " and old tagSet: "+ old);
+            _log.error("Earlier tag set creation: " + old + ": key="+ oldTS.getAssociatedKey().toBase64(),oldTS.getCreatedBy());
+            _log.error("Current tag set creation: " + tagSet + ": key="+ tagSet.getAssociatedKey().toBase64(),tagSet.getCreatedBy());
+          }
+        }
+ else {
+          if (_log.shouldLog(Log.DEBUG)) {
+            _log.debug("Multiple tags matching, but equal keys (probably just a retransmission). tag: " + tag.toString() + " matches for new tagSet: "+ tagSet+ " and old tagSet: "+ old);
+            _log.debug("Earlier tag set creation: " + old + ": key="+ oldTS.getAssociatedKey().toBase64(),oldTS.getCreatedBy());
+            _log.debug("Current tag set creation: " + tagSet + ": key="+ tagSet.getAssociatedKey().toBase64(),tagSet.getCreatedBy());
+          }
+        }
+      }
     }
   }
   if (overage > 0)   clearExcess(overage);
   if ((sessionTags.size() <= 0) && (_log.shouldLog(Log.DEBUG)))   _log.debug("Received 0 tags for key " + key);
+  if (false)   aggressiveExpire();
 }

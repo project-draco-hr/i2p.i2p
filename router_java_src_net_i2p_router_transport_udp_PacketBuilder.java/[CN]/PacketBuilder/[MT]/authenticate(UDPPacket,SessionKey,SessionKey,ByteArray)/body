@@ -1,6 +1,6 @@
 {
   int encryptOffset=packet.getPacket().getOffset() + UDPPacket.IV_SIZE + UDPPacket.MAC_SIZE;
-  int encryptSize=packet.getPacket().getLength() - UDPPacket.IV_SIZE - UDPPacket.MAC_SIZE- packet.getPacket().getOffset();
+  int encryptSize=packet.getPacketDataLength() - UDPPacket.IV_SIZE - UDPPacket.MAC_SIZE- packet.getPacket().getOffset();
   byte data[]=packet.getPacket().getData();
   _context.aes().encrypt(data,encryptOffset,data,encryptOffset,cipherKey,iv.getData(),encryptSize);
   int off=packet.getPacket().getOffset();
@@ -12,7 +12,7 @@
   int hmacOff=packet.getPacket().getOffset();
   int hmacLen=encryptSize + UDPPacket.IV_SIZE + 2;
   Hash hmac=_context.hmac().calculate(macKey,data,hmacOff,hmacLen);
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Authenticating " + packet.getPacket().getLength() + "\nIV: "+ Base64.encode(iv.getData())+ "\nraw mac: "+ hmac.toBase64()+ "\nMAC key: "+ macKey.toBase64());
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Authenticating " + packet.getPacketDataLength() + "\nIV: "+ Base64.encode(iv.getData())+ "\nraw mac: "+ hmac.toBase64()+ "\nMAC key: "+ macKey.toBase64());
   System.arraycopy(data,hmacOff,data,encryptOffset,encryptSize);
   System.arraycopy(hmac.getData(),0,data,hmacOff,UDPPacket.MAC_SIZE);
   System.arraycopy(iv.getData(),0,data,hmacOff + UDPPacket.MAC_SIZE,UDPPacket.IV_SIZE);

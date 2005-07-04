@@ -5,12 +5,15 @@
     off++;
     off+=4 * numACKs;
   }
-  if (readNACKsIncluded()) {
-    int numNACKs=(int)DataHelper.fromLong(_message,off,1);
+  if (readACKBitfieldsIncluded()) {
+    int numBitfields=(int)DataHelper.fromLong(_message,off,1);
     off++;
-    off+=5 * numNACKs;
+    PacketACKBitfield bf[]=new PacketACKBitfield[numBitfields];
+    for (int i=0; i < numBitfields; i++) {
+      bf[i]=new PacketACKBitfield(off);
+      off+=bf[i].getByteLength();
+    }
   }
-  if (readNumACKsIncluded())   off+=2;
   if (readExtendedDataIncluded()) {
     int size=(int)DataHelper.fromLong(_message,off,1);
     off++;
@@ -23,7 +26,7 @@
  else {
     for (int i=0; i < fragmentNum; i++) {
       off+=5;
-      off+=(int)DataHelper.fromLong(_message,off,2);
+      off+=((int)DataHelper.fromLong(_message,off,2)) & 0x3FFF;
       off+=2;
     }
     return off;

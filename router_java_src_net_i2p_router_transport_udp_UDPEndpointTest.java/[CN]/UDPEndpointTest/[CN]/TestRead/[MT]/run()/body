@@ -11,10 +11,20 @@
   int received=0;
   while (true) {
     UDPPacket packet=_endpoint.receive();
-    received++;
-    if (received == 10000) {
-      long time=System.currentTimeMillis() - start;
-      _log.debug("Received 10000 in " + time);
+    ByteArray ba=new ByteArray(packet.getPacket().getData(),0,packet.getPacket().getLength());
+    boolean removed=_sentNotReceived.remove(ba);
+    int outstanding=_sentNotReceived.size();
+    if (!removed) {
+      _log.error("Received a packet that we weren't expecting: " + packet);
     }
+ else {
+      _log.debug("Received an expected packet (" + received + ") with outstanding: "+ outstanding);
+      received++;
+    }
+    if ((received % 10000) == 0) {
+      long time=System.currentTimeMillis() - start;
+      _log.debug("Received " + received + " in "+ time);
+    }
+    packet.release();
   }
 }

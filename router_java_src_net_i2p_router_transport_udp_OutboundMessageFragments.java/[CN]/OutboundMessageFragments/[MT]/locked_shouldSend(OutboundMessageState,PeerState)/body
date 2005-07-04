@@ -9,9 +9,14 @@
     if (peer.allocateSendingBytes(size)) {
       if (_log.shouldLog(Log.INFO))       _log.info("Allocation of " + size + " allowed with "+ peer.getSendWindowBytesRemaining()+ "/"+ peer.getSendWindowBytes()+ " remaining"+ " for message "+ state.getMessageId()+ ": "+ state);
       if (state.getPushCount() > 0) {
-        peer.messageRetransmitted();
+        int fragments=state.getFragmentCount();
+        int toSend=0;
+        for (int i=0; i < fragments; i++) {
+          if (state.needsSending(i))           toSend++;
+        }
+        peer.messageRetransmitted(toSend);
         if (_log.shouldLog(Log.WARN))         _log.warn("Retransmitting " + state + " to "+ peer);
-        _context.statManager().addRateData("udp.sendVolleyTime",state.getLifetime(),state.getFragmentCount());
+        _context.statManager().addRateData("udp.sendVolleyTime",state.getLifetime(),toSend);
       }
       state.push();
       int rto=peer.getRTO() * state.getPushCount();
