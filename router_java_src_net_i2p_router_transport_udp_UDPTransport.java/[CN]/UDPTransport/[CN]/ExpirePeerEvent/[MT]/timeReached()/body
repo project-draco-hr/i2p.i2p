@@ -1,0 +1,26 @@
+{
+  long inactivityCutoff=_context.clock().now() - 10 * 60 * 1000;
+  for (int i=0; i < _peers.size(); i++) {
+    PeerState peer=(PeerState)_peers.get(i);
+    if (peer.getLastReceiveTime() < inactivityCutoff) {
+      dropPeer(peer,false);
+      _peers.remove(i);
+      i--;
+    }
+  }
+synchronized (_toAdd) {
+    for (int i=0; i < _toAdd.size(); i++) {
+      PeerState peer=(PeerState)_toAdd.get(i);
+      if (!_peers.contains(peer))       _peers.add(peer);
+    }
+    _toAdd.clear();
+  }
+synchronized (_toRemove) {
+    for (int i=0; i < _toRemove.size(); i++) {
+      PeerState peer=(PeerState)_toRemove.get(i);
+      _peers.remove(peer);
+    }
+    _toRemove.clear();
+  }
+  if (_alive)   SimpleTimer.getInstance().addEvent(ExpirePeerEvent.this,5 * 60 * 1000);
+}

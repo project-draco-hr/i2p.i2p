@@ -1,7 +1,8 @@
 {
-  List rv=new ArrayList(16);
+  List rv=null;
   int bytesRemaining=countMaxACKData();
 synchronized (_currentACKs) {
+    rv=new ArrayList(_currentACKs.size());
     while ((bytesRemaining >= 4) && (_currentACKs.size() > 0)) {
       rv.add(new FullACKBitfield((Long)_currentACKs.remove(0)));
       bytesRemaining-=4;
@@ -16,6 +17,7 @@ synchronized (_currentACKs) {
       ACKBitfield bitfield=(ACKBitfield)partial.get(i);
       int bytes=(bitfield.fragmentCount() / 7) + 1;
       if (bytesRemaining > bytes + 4) {
+        if (rv == null)         rv=new ArrayList(partial.size());
         rv.add(bitfield);
         bytesRemaining-=bytes + 4;
         partialIncluded++;
@@ -26,5 +28,6 @@ synchronized (_currentACKs) {
   }
   _context.statManager().addRateData("udp.sendACKPartial",partialIncluded,rv.size() - partialIncluded);
   _lastACKSend=_context.clock().now();
+  if (rv == null)   rv=Collections.EMPTY_LIST;
   return rv;
 }

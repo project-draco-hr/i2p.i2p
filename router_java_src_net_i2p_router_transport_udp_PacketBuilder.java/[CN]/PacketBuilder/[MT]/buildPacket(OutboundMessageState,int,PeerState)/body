@@ -20,14 +20,23 @@
   int size=state.fragmentSize(fragment);
   if (size < 0)   return null;
   DataHelper.toLong(data,off,2,size);
-  data[off]&=(byte)3F;
+  data[off]&=(byte)0x3F;
   off+=2;
-  size=state.writeFragment(data,off,fragment);
+  int sizeWritten=state.writeFragment(data,off,fragment);
+  if (sizeWritten != size)   _log.error("Size written: " + sizeWritten + " but size: "+ size+ " for fragment "+ fragment+ " of "+ state.getMessageId());
+ else   if (_log.shouldLog(Log.DEBUG))   _log.debug("Size written: " + sizeWritten + " for fragment "+ fragment+ " of "+ state.getMessageId());
+  size=sizeWritten;
   if (size < 0)   return null;
   off+=size;
-  if ((off % 16) != 0)   off+=16 - (off % 16);
+  int padSize=16 - (off % 16);
+  if (padSize > 0) {
+    ByteArray block=_blockCache.acquire();
+    _context.random().nextBytes(block.getData());
+    System.arraycopy(block.getData(),0,data,off,padSize);
+    _blockCache.release(block);
+    off+=padSize;
+  }
   packet.getPacket().setLength(off);
-  packet.setPacketDataLength(off);
   authenticate(packet,peer.getCurrentCipherKey(),peer.getCurrentMACKey());
   setTo(packet,peer.getRemoteIPAddress(),peer.getRemotePort());
   return packet;
