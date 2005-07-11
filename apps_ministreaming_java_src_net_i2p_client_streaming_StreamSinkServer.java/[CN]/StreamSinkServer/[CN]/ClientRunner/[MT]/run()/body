@@ -1,33 +1,16 @@
 {
-  if (_fos == null)   return;
-  long start=System.currentTimeMillis();
-  try {
-    InputStream in=_sock.getInputStream();
-    byte buf[]=new byte[4096];
-    long written=0;
-    int read=0;
-    while ((read=in.read(buf)) != -1) {
-      written+=read;
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("read and wrote " + read);
+  while (true) {
+    try {
+      I2PSocket socket=_socket.accept();
+      if (socket != null)       handle(socket);
     }
-    _fos.write(("written: [" + written + "]\n").getBytes());
-    long lifetime=System.currentTimeMillis() - start;
-    _log.error("Got EOF from client socket [written=" + written + " lifetime="+ lifetime+ "]");
-  }
- catch (  IOException ioe) {
-    _log.error("Error writing the sink",ioe);
-  }
- finally {
-    if (_fos != null)     try {
-      _fos.close();
+ catch (    I2PException ie) {
+      _log.error("Error accepting connection",ie);
+      return;
     }
- catch (    IOException ioe) {
+catch (    ConnectException ce) {
+      _log.error("Connection already dropped",ce);
+      return;
     }
-    if (_sock != null)     try {
-      _sock.close();
-    }
- catch (    IOException ioe) {
-    }
-    _log.error("Client socket closed");
   }
 }

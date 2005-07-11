@@ -2,8 +2,10 @@
   StreamSinkClient client=null;
   int sendSizeKB=-1;
   int writeDelayMs=-1;
+  int concurrent=1;
 switch (args.length) {
 case 3:
+case 4:
     try {
       sendSizeKB=Integer.parseInt(args[0]);
     }
@@ -18,9 +20,17 @@ case 3:
     System.err.println("Write delay ms invalid [" + args[1] + "]");
     return;
   }
+if (args.length == 4) {
+  try {
+    concurrent=Integer.parseInt(args[3]);
+  }
+ catch (  NumberFormatException nfe) {
+  }
+}
 client=new StreamSinkClient(sendSizeKB,writeDelayMs,args[2]);
 break;
 case 5:
+case 6:
 try {
 int port=Integer.parseInt(args[1]);
 sendSizeKB=Integer.parseInt(args[2]);
@@ -30,9 +40,18 @@ client=new StreamSinkClient(args[0],port,sendSizeKB,writeDelayMs,args[4]);
  catch (NumberFormatException nfe) {
 System.err.println("arg error");
 }
+if (args.length == 6) {
+try {
+concurrent=Integer.parseInt(args[5]);
+}
+ catch (NumberFormatException nfe) {
+}
+}
 break;
 default :
-System.out.println("Usage: StreamSinkClient [i2cpHost i2cpPort] sendSizeKB writeDelayMs serverDestFile");
+System.out.println("Usage: StreamSinkClient [i2cpHost i2cpPort] sendSizeKB writeDelayMs serverDestFile [concurrentSends]");
 }
-if (client != null) client.runClient();
+if (client != null) {
+for (int i=0; i < concurrent; i++) new I2PThread(new Runner(client),"Client " + i).start();
+}
 }

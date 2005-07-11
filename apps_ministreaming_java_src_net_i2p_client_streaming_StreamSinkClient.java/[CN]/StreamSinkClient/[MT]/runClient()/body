@@ -24,47 +24,46 @@ catch (  DataFormatException dfe) {
  catch (    IOException ioe) {
     }
   }
-  System.out.println("Send " + _sendSize + "KB to "+ peer.calculateHash().toBase64());
-  try {
-    I2PSocket sock=mgr.connect(peer);
-    byte buf[]=new byte[32 * 1024];
-    Random rand=new Random();
-    OutputStream out=sock.getOutputStream();
-    long beforeSending=System.currentTimeMillis();
-    for (int i=0; (_sendSize < 0) || (i < _sendSize); i+=32) {
-      rand.nextBytes(buf);
-      out.write(buf);
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Wrote " + (i + 32) + "/"+ _sendSize+ "KB");
-      if (_writeDelay > 0) {
-        try {
-          Thread.sleep(_writeDelay);
-        }
- catch (        InterruptedException ie) {
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Send " + _sendSize + "KB to "+ peer.calculateHash().toBase64());
+  while (true) {
+    try {
+      I2PSocket sock=mgr.connect(peer);
+      byte buf[]=new byte[Math.min(32 * 1024,_sendSize * 1024)];
+      Random rand=new Random();
+      OutputStream out=sock.getOutputStream();
+      long beforeSending=System.currentTimeMillis();
+      for (int i=0; (_sendSize < 0) || (i < _sendSize); i+=buf.length / 1024) {
+        rand.nextBytes(buf);
+        out.write(buf);
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Wrote " + ((1 + i * buf.length) / 1024) + "/"+ _sendSize+ "KB");
+        if (_writeDelay > 0) {
+          try {
+            Thread.sleep(_writeDelay);
+          }
+ catch (          InterruptedException ie) {
+          }
         }
       }
+      sock.close();
+      long afterSending=System.currentTimeMillis();
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Sent " + _sendSize + "KB in "+ (afterSending - beforeSending)+ "ms");
     }
-    sock.close();
-    long afterSending=System.currentTimeMillis();
-    System.out.println("Sent " + _sendSize + "KB in "+ (afterSending - beforeSending)+ "ms");
-  }
- catch (  InterruptedIOException iie) {
-    _log.error("Timeout connecting to the peer",iie);
-    return;
-  }
-catch (  NoRouteToHostException nrthe) {
-    _log.error("Unable to connect to the peer",nrthe);
-    return;
-  }
-catch (  ConnectException ce) {
-    _log.error("Connection already dropped",ce);
-    return;
-  }
-catch (  I2PException ie) {
-    _log.error("Error connecting to the peer",ie);
-    return;
-  }
-catch (  IOException ioe) {
-    _log.error("IO error sending",ioe);
-    return;
+ catch (    InterruptedIOException iie) {
+      _log.error("Timeout connecting to the peer",iie);
+    }
+catch (    NoRouteToHostException nrthe) {
+      _log.error("Unable to connect to the peer",nrthe);
+    }
+catch (    ConnectException ce) {
+      _log.error("Connection already dropped",ce);
+    }
+catch (    I2PException ie) {
+      _log.error("Error connecting to the peer",ie);
+      return;
+    }
+catch (    IOException ioe) {
+      _log.error("IO error sending",ioe);
+      return;
+    }
   }
 }
