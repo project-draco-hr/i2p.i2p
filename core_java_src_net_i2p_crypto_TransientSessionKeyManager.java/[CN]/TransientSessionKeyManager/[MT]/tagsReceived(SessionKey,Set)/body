@@ -1,38 +1,39 @@
 {
   int overage=0;
   TagSet tagSet=new TagSet(sessionTags,key,_context.clock().now());
+  TagSet old=null;
   for (Iterator iter=sessionTags.iterator(); iter.hasNext(); ) {
     SessionTag tag=(SessionTag)iter.next();
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Receiving tag " + tag + " for key "+ key.toBase64()+ " / "+ key.toString()+ ": tagSet: "+ tagSet);
 synchronized (_inboundTagSets) {
-      Object old=_inboundTagSets.put(tag,tagSet);
+      old=(TagSet)_inboundTagSets.put(tag,tagSet);
       overage=_inboundTagSets.size() - MAX_INBOUND_SESSION_TAGS;
       if (old != null) {
-        TagSet oldTS=(TagSet)old;
-        if (!oldTS.getAssociatedKey().equals(tagSet.getAssociatedKey())) {
-          if (_log.shouldLog(Log.WARN)) {
-            _log.warn("Multiple tags matching!  tag: " + tag.toString() + " matches for new tagSet: "+ tagSet+ " and old tagSet: "+ old);
-            _log.warn("Earlier tag set creation: " + old + ": key="+ oldTS.getAssociatedKey().toBase64(),oldTS.getCreatedBy());
-            _log.warn("Current tag set creation: " + tagSet + ": key="+ tagSet.getAssociatedKey().toBase64(),tagSet.getCreatedBy());
-          }
+        if (!old.getAssociatedKey().equals(tagSet.getAssociatedKey())) {
           _inboundTagSets.remove(tag);
-          for (Iterator tsIter=oldTS.dropTags().iterator(); iter.hasNext(); ) {
-            SessionTag curTag=(SessionTag)tsIter.next();
-            _inboundTagSets.remove(curTag);
-          }
-          for (Iterator tsIter=tagSet.dropTags().iterator(); iter.hasNext(); ) {
-            SessionTag curTag=(SessionTag)tsIter.next();
-            _inboundTagSets.remove(curTag);
-          }
+          break;
         }
  else {
-          if (_log.shouldLog(Log.DEBUG)) {
-            _log.debug("Multiple tags matching, but equal keys (probably just a retransmission). tag: " + tag.toString() + " matches for new tagSet: "+ tagSet+ " and old tagSet: "+ old);
-            _log.debug("Earlier tag set creation: " + old + ": key="+ oldTS.getAssociatedKey().toBase64(),oldTS.getCreatedBy());
-            _log.debug("Current tag set creation: " + tagSet + ": key="+ tagSet.getAssociatedKey().toBase64(),tagSet.getCreatedBy());
-          }
+          old=null;
         }
       }
+    }
+  }
+  if (old != null) {
+synchronized (_inboundTagSets) {
+      for (Iterator iter=old.getTags().iterator(); iter.hasNext(); ) {
+        SessionTag tag=(SessionTag)iter.next();
+        _inboundTagSets.remove(tag);
+      }
+      for (Iterator iter=sessionTags.iterator(); iter.hasNext(); ) {
+        SessionTag tag=(SessionTag)iter.next();
+        _inboundTagSets.remove(tag);
+      }
+    }
+    if (_log.shouldLog(Log.WARN)) {
+      _log.warn("Multiple tags matching!  tagSet: " + tagSet + " and old tagSet: "+ old);
+      _log.warn("Earlier tag set creation: " + old + ": key="+ old.getAssociatedKey().toBase64(),old.getCreatedBy());
+      _log.warn("Current tag set creation: " + tagSet + ": key="+ tagSet.getAssociatedKey().toBase64(),tagSet.getCreatedBy());
     }
   }
   if (overage > 0)   clearExcess(overage);
