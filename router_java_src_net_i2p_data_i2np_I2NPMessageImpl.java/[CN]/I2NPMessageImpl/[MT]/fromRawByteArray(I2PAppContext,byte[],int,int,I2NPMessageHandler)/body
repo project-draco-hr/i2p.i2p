@@ -1,0 +1,26 @@
+{
+  int type=(int)DataHelper.fromLong(buffer,offset,1);
+  offset++;
+  I2NPMessage msg=createMessage(ctx,type);
+  if (msg == null)   throw new I2NPMessageException("Unknown message type: " + type);
+  if (RAW_FULL_SIZE) {
+    try {
+      msg.readBytes(buffer,type,offset);
+    }
+ catch (    IOException ioe) {
+      throw new I2NPMessageException("Error reading the " + msg,ioe);
+    }
+    return msg;
+  }
+  long expiration=DataHelper.fromLong(buffer,offset,4) * 1000;
+  offset+=4;
+  int dataSize=len - 1 - 4;
+  try {
+    msg.readMessage(buffer,offset,dataSize,type,handler);
+    msg.setMessageExpiration(expiration);
+    return msg;
+  }
+ catch (  IOException ioe) {
+    throw new I2NPMessageException("IO error reading raw message",ioe);
+  }
+}

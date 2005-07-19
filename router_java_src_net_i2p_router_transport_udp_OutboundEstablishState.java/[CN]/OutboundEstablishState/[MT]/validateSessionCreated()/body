@@ -3,9 +3,16 @@
     if (_log.shouldLog(Log.WARN))     _log.warn("Session created already validated");
     return true;
   }
-  generateSessionKey();
-  decryptSignature();
-  if (verifySessionCreated()) {
+  boolean valid=true;
+  try {
+    generateSessionKey();
+  }
+ catch (  DHSessionKeyBuilder.InvalidPublicParameterException ippe) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Peer " + getRemoteHostId() + " sent us an invalid DH parameter (or were spoofed)",ippe);
+    valid=false;
+  }
+  if (valid)   decryptSignature();
+  if (valid && verifySessionCreated()) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Session created passed validation");
     return true;
   }

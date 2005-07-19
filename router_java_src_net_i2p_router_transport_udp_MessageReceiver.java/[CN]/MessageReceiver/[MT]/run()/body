@@ -1,5 +1,6 @@
 {
   InboundMessageState message=null;
+  ByteArray buf=_cache.acquire();
   while (_alive) {
     try {
 synchronized (_completeMessages) {
@@ -12,9 +13,10 @@ synchronized (_completeMessages) {
     if (message != null) {
       int size=message.getCompleteSize();
       if (_log.shouldLog(Log.INFO))       _log.info("Full message received (" + message.getMessageId() + ") after "+ message.getLifetime());
-      I2NPMessage msg=readMessage(message);
+      I2NPMessage msg=readMessage(buf,message);
       if (msg != null)       _transport.messageReceived(msg,null,message.getFrom(),message.getLifetime(),size);
       message=null;
     }
   }
+  _cache.release(buf,false);
 }

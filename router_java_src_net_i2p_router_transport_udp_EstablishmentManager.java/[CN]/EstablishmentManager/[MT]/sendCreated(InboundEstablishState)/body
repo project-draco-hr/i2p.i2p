@@ -2,7 +2,16 @@
   long now=_context.clock().now();
   if (true)   state.setSentRelayTag(0);
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Send created to: " + state.getRemoteHostId().toString());
-  state.generateSessionKey();
+  try {
+    state.generateSessionKey();
+  }
+ catch (  DHSessionKeyBuilder.InvalidPublicParameterException ippe) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Peer " + state.getRemoteHostId() + " sent us an invalid DH parameter (or were spoofed)",ippe);
+synchronized (_inboundStates) {
+      _inboundStates.remove(state.getRemoteHostId());
+    }
+    return;
+  }
   _transport.send(_builder.buildSessionCreatedPacket(state,_transport.getExternalPort(),_transport.getIntroKey()));
   state.setNextSendTime(now + 5 * 1000);
 }
