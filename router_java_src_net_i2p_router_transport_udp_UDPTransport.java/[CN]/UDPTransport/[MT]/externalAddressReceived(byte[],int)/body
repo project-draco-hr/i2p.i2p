@@ -1,6 +1,7 @@
 {
   if (_log.shouldLog(Log.DEBUG))   _log.debug("External address received: " + Base64.encode(ourIP) + ":"+ ourPort);
   if (explicitAddressSpecified())   return;
+  boolean updated=false;
 synchronized (this) {
     if ((_externalListenHost == null) || (!eq(_externalListenHost.getAddress(),_externalListenPort,ourIP,ourPort))) {
       try {
@@ -8,10 +9,12 @@ synchronized (this) {
         _externalListenPort=ourPort;
         rebuildExternalAddress();
         replaceAddress(_externalAddress);
+        updated=true;
       }
  catch (      UnknownHostException uhe) {
         _externalListenHost=null;
       }
     }
   }
+  if (updated)   _context.router().rebuildRouterInfo();
 }
