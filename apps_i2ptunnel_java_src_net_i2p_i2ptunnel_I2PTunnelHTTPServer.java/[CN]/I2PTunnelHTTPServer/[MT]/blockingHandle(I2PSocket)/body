@@ -1,0 +1,27 @@
+{
+  long afterAccept=getTunnel().getContext().clock().now();
+  long afterSocket=-1;
+  try {
+    socket.setReadTimeout(readTimeout);
+    String modifiedHeader=getModifiedHeader(socket);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Modified header: [" + modifiedHeader + "]");
+    Socket s=new Socket(remoteHost,remotePort);
+    afterSocket=getTunnel().getContext().clock().now();
+    new I2PTunnelRunner(s,socket,slock,null,modifiedHeader.getBytes(),null);
+  }
+ catch (  SocketException ex) {
+    try {
+      socket.close();
+    }
+ catch (    IOException ioe) {
+      if (_log.shouldLog(Log.ERROR))       _log.error("Error while closing the received i2p con",ex);
+    }
+  }
+catch (  IOException ex) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Error while receiving the new HTTP request",ex);
+  }
+  long afterHandle=getTunnel().getContext().clock().now();
+  long timeToHandle=afterHandle - afterAccept;
+  getTunnel().getContext().statManager().addRateData("i2ptunnel.httpserver.blockingHandleTime",timeToHandle,0);
+  if ((timeToHandle > 1000) && (_log.shouldLog(Log.WARN)))   _log.warn("Took a while to handle the request [" + timeToHandle + ", socket create: "+ (afterSocket - afterAccept)+ "]");
+}
