@@ -54,6 +54,8 @@ catch (  DataFormatException dfe) {
   }
   long clockSkew=0;
   boolean sigOk=false;
+  byte X[]=builder.getPeerPublicValueBytes();
+  byte Y[]=builder.getMyPublicValueBytes();
   try {
     RouterInfo info=new RouterInfo();
     info.readBytes(_rawIn);
@@ -65,6 +67,8 @@ catch (  DataFormatException dfe) {
     DataHelper.writeDate(baos,now);
     baos.write(_nonce.getData());
     baos.write(_nextConnectionTag.getData());
+    baos.write(X);
+    baos.write(Y);
     sigOk=_context.dsa().verifySignature(sig,baos.toByteArray(),info.getIdentity().getSigningPublicKey());
     clockSkew=_context.clock().now() - now.getTime();
     _actualPeer=info;
@@ -113,6 +117,8 @@ catch (  DataFormatException dfe) {
     byte beginning[]=baos.toByteArray();
     baos.write(_nonce.getData());
     baos.write(_nextConnectionTag.getData());
+    baos.write(X);
+    baos.write(Y);
     Signature sig=_context.dsa().sign(baos.toByteArray(),_context.keyManager().getSigningPrivateKey());
     _rawOut.write(beginning);
     sig.writeBytes(_rawOut);
