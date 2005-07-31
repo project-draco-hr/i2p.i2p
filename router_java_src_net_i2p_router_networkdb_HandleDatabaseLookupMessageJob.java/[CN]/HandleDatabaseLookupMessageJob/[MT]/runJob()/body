@@ -12,12 +12,18 @@
     }
  else {
       Set routerInfoSet=getContext().netDb().findNearestRouters(_message.getSearchKey(),CLOSENESS_THRESHOLD,_message.getDontIncludePeers());
-      if (getContext().clientManager().isLocal(ls.getDestination()) && weAreClosest(routerInfoSet)) {
-        getContext().statManager().addRateData("netDb.lookupsMatchedLocalClosest",1,0);
-        sendData(_message.getSearchKey(),ls,fromKey,_message.getReplyTunnel());
+      if (getContext().clientManager().isLocal(ls.getDestination())) {
+        if (weAreClosest(routerInfoSet)) {
+          getContext().statManager().addRateData("netDb.lookupsMatchedLocalClosest",1,0);
+          sendData(_message.getSearchKey(),ls,fromKey,_message.getReplyTunnel());
+        }
+ else {
+          getContext().statManager().addRateData("netDb.lookupsMatchedLocalNotClosest",1,0);
+          sendClosest(_message.getSearchKey(),routerInfoSet,fromKey,_message.getReplyTunnel());
+        }
       }
  else {
-        getContext().statManager().addRateData("netDb.lookupsMatchedLocalNotClosest",1,0);
+        getContext().statManager().addRateData("netDb.lookupsMatchedRemoteNotClosest",1,0);
         sendClosest(_message.getSearchKey(),routerInfoSet,fromKey,_message.getReplyTunnel());
       }
     }

@@ -1,0 +1,21 @@
+{
+  byte rv[]=new byte[estimateSize()];
+  int offset=0;
+  offset+=_instructions.writeBytes(rv,offset);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Wrote instructions: " + _instructions);
+  try {
+    byte m[]=_msg.toByteArray();
+    System.arraycopy(m,0,rv,offset,m.length);
+    offset+=m.length;
+  }
+ catch (  Exception e) {
+    throw new RuntimeException("Unable to write: " + _msg + ": "+ e.getMessage());
+  }
+  DataHelper.toLong(rv,offset,4,_cloveId);
+  offset+=4;
+  DataHelper.toDate(rv,offset,_expiration.getTime());
+  offset+=DataHelper.DATE_LENGTH;
+  offset+=_certificate.writeBytes(rv,offset);
+  if (offset != rv.length)   _log.log(Log.CRIT,"Clove offset: " + offset + " but estimated length: "+ rv.length);
+  return rv;
+}

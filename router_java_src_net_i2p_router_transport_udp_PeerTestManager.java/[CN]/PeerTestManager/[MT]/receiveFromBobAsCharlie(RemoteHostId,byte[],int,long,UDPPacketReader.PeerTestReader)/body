@@ -1,0 +1,27 @@
+{
+  if (fromIP == null) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("From address received from Bob (we are Charlie) is invalid: " + from + ": "+ testInfo);
+    return;
+  }
+  if (fromPort <= 0) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("From port received from Bob (we are Charlie) is invalid: " + fromPort + ": "+ testInfo);
+    return;
+  }
+  int index=-1;
+synchronized (_receiveAsCharlie) {
+    index=_receiveAsCharlieIndex;
+    _receiveAsCharlie[index]=nonce;
+    _receiveAsCharlieIndex=(index + 1) % _receiveAsCharlie.length;
+  }
+  SimpleTimer.getInstance().addEvent(new RemoveCharlie(nonce,index),MAX_CHARLIE_LIFETIME);
+  try {
+    InetAddress aliceIP=InetAddress.getByAddress(fromIP);
+    SessionKey aliceIntroKey=new SessionKey();
+    testInfo.readIntroKey(aliceIntroKey.getData(),0);
+    UDPPacket packet=_packetBuilder.buildPeerTestToAlice(aliceIP,fromPort,aliceIntroKey,_transport.getIntroKey(),nonce);
+    _transport.send(packet);
+  }
+ catch (  UnknownHostException uhe) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Unable to build the aliceIP from " + from,uhe);
+  }
+}

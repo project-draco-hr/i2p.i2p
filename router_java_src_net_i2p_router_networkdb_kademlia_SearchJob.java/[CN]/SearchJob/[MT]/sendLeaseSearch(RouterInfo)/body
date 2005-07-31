@@ -12,7 +12,7 @@
     getContext().jobQueue().addJob(new FailedJob(getContext(),router));
     return;
   }
-  long expiration=getContext().clock().now() + PER_PEER_TIMEOUT;
+  long expiration=getContext().clock().now() + getPerPeerTimeoutMs();
   DatabaseLookupMessage msg=buildMessage(inTunnelId,inGateway,expiration);
   TunnelInfo outTunnel=getOutboundTunnelId();
   if (outTunnel == null) {
@@ -24,6 +24,6 @@
   if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": Sending leaseSet search to " + router.getIdentity().getHash().toBase64()+ " for "+ msg.getSearchKey().toBase64()+ " w/ replies through ["+ msg.getFrom().toBase64()+ "] via tunnel ["+ msg.getReplyTunnel()+ "]");
   SearchMessageSelector sel=new SearchMessageSelector(getContext(),router,_expiration,_state);
   SearchUpdateReplyFoundJob reply=new SearchUpdateReplyFoundJob(getContext(),router,_state,_facade,this);
-  getContext().messageRegistry().registerPending(sel,reply,new FailedJob(getContext(),router),PER_PEER_TIMEOUT);
+  getContext().messageRegistry().registerPending(sel,reply,new FailedJob(getContext(),router),getPerPeerTimeoutMs());
   getContext().tunnelDispatcher().dispatchOutbound(msg,outTunnelId,router.getIdentity().getHash());
 }

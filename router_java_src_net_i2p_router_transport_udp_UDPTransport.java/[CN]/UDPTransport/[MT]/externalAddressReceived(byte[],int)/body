@@ -1,12 +1,13 @@
 {
   if (_log.shouldLog(Log.DEBUG))   _log.debug("External address received: " + Base64.encode(ourIP) + ":"+ ourPort);
   if (explicitAddressSpecified())   return;
+  boolean fixedPort=getIsPortFixed();
   boolean updated=false;
 synchronized (this) {
     if ((_externalListenHost == null) || (!eq(_externalListenHost.getAddress(),_externalListenPort,ourIP,ourPort))) {
       try {
         _externalListenHost=InetAddress.getByAddress(ourIP);
-        _externalListenPort=ourPort;
+        if (!fixedPort)         _externalListenPort=ourPort;
         rebuildExternalAddress();
         replaceAddress(_externalAddress);
         updated=true;
@@ -16,7 +17,7 @@ synchronized (this) {
       }
     }
   }
-  _context.router().setConfigSetting(PROP_EXTERNAL_PORT,ourPort + "");
+  if (!fixedPort)   _context.router().setConfigSetting(PROP_EXTERNAL_PORT,ourPort + "");
   _context.router().saveConfig();
   if (updated)   _context.router().rebuildRouterInfo();
 }

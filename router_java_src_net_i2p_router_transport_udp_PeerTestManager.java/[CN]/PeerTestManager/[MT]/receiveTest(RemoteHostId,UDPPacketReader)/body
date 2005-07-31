@@ -1,0 +1,29 @@
+{
+  UDPPacketReader.PeerTestReader testInfo=reader.getPeerTestReader();
+  byte fromIP[]=null;
+  int fromPort=testInfo.readPort();
+  long nonce=testInfo.readNonce();
+  if (nonce == _currentTestNonce) {
+    receiveTestReply(from,testInfo);
+    return;
+  }
+  if ((testInfo.readIPSize() > 0) && (fromPort > 0)) {
+    fromIP=new byte[testInfo.readIPSize()];
+    testInfo.readIP(fromIP,0);
+  }
+  if (((fromIP == null) && (fromPort <= 0)) || (DataHelper.eq(fromIP,from.getIP()) && (fromPort == from.getPort()))) {
+    boolean weAreCharlie=false;
+synchronized (_receiveAsCharlie) {
+      weAreCharlie=(Arrays.binarySearch(_receiveAsCharlie,nonce) != -1);
+    }
+    if (weAreCharlie) {
+      receiveFromAliceAsCharlie(from,testInfo,nonce);
+    }
+ else {
+      receiveFromAliceAsBob(from,testInfo,nonce);
+    }
+  }
+ else {
+    receiveFromBobAsCharlie(from,fromIP,fromPort,nonce,testInfo);
+  }
+}

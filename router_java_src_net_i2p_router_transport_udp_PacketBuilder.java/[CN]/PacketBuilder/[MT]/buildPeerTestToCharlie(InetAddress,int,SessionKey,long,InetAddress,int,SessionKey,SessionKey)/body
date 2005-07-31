@@ -1,0 +1,28 @@
+{
+  UDPPacket packet=UDPPacket.acquire(_context);
+  byte data[]=packet.getPacket().getData();
+  Arrays.fill(data,0,data.length,(byte)0x0);
+  int off=UDPPacket.MAC_SIZE + UDPPacket.IV_SIZE;
+  data[off]=PEER_TEST_FLAG_BYTE;
+  off++;
+  long now=_context.clock().now() / 1000;
+  DataHelper.toLong(data,off,4,now);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Sending peer test " + nonce + " to Charlie with time = "+ new Date(now * 1000));
+  off+=4;
+  DataHelper.toLong(data,off,4,nonce);
+  off+=4;
+  byte ip[]=aliceIP.getAddress();
+  DataHelper.toLong(data,off,1,ip.length);
+  off++;
+  System.arraycopy(ip,0,data,off,ip.length);
+  off+=ip.length;
+  DataHelper.toLong(data,off,2,alicePort);
+  off+=2;
+  System.arraycopy(aliceIntroKey.getData(),0,data,off,SessionKey.KEYSIZE_BYTES);
+  off+=SessionKey.KEYSIZE_BYTES;
+  if ((off % 16) != 0)   off+=16 - (off % 16);
+  packet.getPacket().setLength(off);
+  authenticate(packet,charlieCipherKey,charlieMACKey);
+  setTo(packet,charlieIP,charliePort);
+  return packet;
+}
