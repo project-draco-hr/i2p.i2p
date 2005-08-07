@@ -1,0 +1,43 @@
+{
+  _state=17;
+  boolean isValid=packet.validate(state.getCurrentMACKey());
+  if (!isValid) {
+    _state=18;
+    if (state.getNextMACKey() != null)     isValid=packet.validate(state.getNextMACKey());
+    if (!isValid) {
+      _state=19;
+      if (_log.shouldLog(Log.WARN))       _log.warn("Failed validation with existing con, trying as new con: " + packet);
+      isValid=packet.validate(_transport.getIntroKey());
+      if (isValid) {
+        _state=20;
+        if (_log.shouldLog(Log.INFO))         _log.info("Validation with existing con failed, but validation as reestablish/stray passed");
+        packet.decrypt(_transport.getIntroKey());
+      }
+ else {
+        _state=21;
+        InboundEstablishState est=_establisher.getInboundState(packet.getRemoteHost());
+        if (est != null) {
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("Packet from an existing peer IS for an inbound establishment");
+          _state=22;
+          receivePacket(reader,packet,est,false);
+        }
+ else {
+          if (_log.shouldLog(Log.WARN))           _log.warn("Validation with existing con failed, and validation as reestablish failed too.  DROP");
+          _context.statManager().addRateData("udp.droppedInvalidReestablish",packet.getLifetime(),packet.getExpiration());
+        }
+        return;
+      }
+    }
+ else {
+      _state=23;
+      packet.decrypt(state.getNextCipherKey());
+    }
+  }
+ else {
+    _state=24;
+    packet.decrypt(state.getCurrentCipherKey());
+  }
+  _state=25;
+  handlePacket(reader,packet,state,null,null);
+  _state=26;
+}

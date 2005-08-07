@@ -1,8 +1,8 @@
 {
-  long inactivityCutoff=_context.clock().now() - 10 * 60 * 1000;
+  long inactivityCutoff=_context.clock().now() - EXPIRE_TIMEOUT;
   for (int i=0; i < _peers.size(); i++) {
     PeerState peer=(PeerState)_peers.get(i);
-    if (peer.getLastReceiveTime() < inactivityCutoff) {
+    if ((peer.getLastReceiveTime() < inactivityCutoff) && (peer.getLastSendTime() < inactivityCutoff)) {
       dropPeer(peer,false);
       _peers.remove(i);
       i--;
@@ -11,7 +11,8 @@
 synchronized (_toAdd) {
     for (int i=0; i < _toAdd.size(); i++) {
       PeerState peer=(PeerState)_toAdd.get(i);
-      if (!_peers.contains(peer))       _peers.add(peer);
+      _peers.remove(peer);
+      _peers.add(peer);
     }
     _toAdd.clear();
   }

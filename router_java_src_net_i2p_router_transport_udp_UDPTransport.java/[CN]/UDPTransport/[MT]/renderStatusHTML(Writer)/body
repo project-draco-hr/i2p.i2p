@@ -3,6 +3,7 @@
 synchronized (_peersByIdent) {
     peers=new ArrayList(_peersByIdent.values());
   }
+  long offsetTotal=0;
   StringBuffer buf=new StringBuffer(512);
   buf.append("<b>UDP connections: ").append(peers.size()).append("</b><br />\n");
   buf.append("<table border=\"1\">\n");
@@ -36,6 +37,7 @@ synchronized (_peersByIdent) {
     buf.append("</a>");
     if (_activeThrottle.isChoked(peer.getRemotePeer()))     buf.append(" [choked]");
     if (peer.getConsecutiveFailedSends() > 0)     buf.append(" [").append(peer.getConsecutiveFailedSends()).append(" failures]");
+    if (_context.shitlist().isShitlisted(peer.getRemotePeer()))     buf.append(" [shitlisted]");
     buf.append("</td>");
     buf.append("<td>");
     buf.append((now - peer.getLastReceiveTime()) / 1000);
@@ -53,6 +55,7 @@ synchronized (_peersByIdent) {
     buf.append("<td>");
     buf.append(peer.getClockSkew() / 1000);
     buf.append("s</td>");
+    offsetTotal=offsetTotal + peer.getClockSkew();
     buf.append("<td>");
     buf.append(peer.getSendWindowBytes() / 1024);
     buf.append("K</td>");
@@ -87,4 +90,9 @@ synchronized (_peersByIdent) {
     buf.setLength(0);
   }
   out.write("</table>\n");
+  buf.append("<b>Average clock skew, UDP peers:");
+  if (peers.size() > 0)   buf.append(offsetTotal / peers.size()).append("ms</b><br><br>\n");
+ else   buf.append("n/a</b><br><br>\n");
+  out.write(buf.toString());
+  buf.setLength(0);
 }

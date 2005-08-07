@@ -33,13 +33,8 @@ synchronized (_outboundPackets) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Resend in " + timeout + " for "+ packet,new Exception("Sent by"));
     SimpleTimer.getInstance().addEvent(new ResendPacketEvent(packet),timeout);
   }
+  _context.statManager().getStatLog().addData(Packet.toId(_sendStreamId),"stream.rtt",_options.getRTT(),_options.getWindowSize());
   _lastSendTime=_context.clock().now();
   _outboundQueue.enqueue(packet);
   resetActivityTimer();
-  if (ackOnly) {
-    if ((packet.getTagsSent() != null) && (packet.getTagsSent().size() > 0)) {
-      _log.warn("Sending a ping since the ACK we just sent has " + packet.getTagsSent().size() + " tags");
-      _connectionManager.ping(_remotePeer,_options.getRTT() * 2,false,packet.getKeyUsed(),packet.getTagsSent(),new PingNotifier());
-    }
-  }
 }

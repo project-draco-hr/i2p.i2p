@@ -1,0 +1,36 @@
+{
+  if (packet == null)   return;
+  _state=10;
+  RemoteHostId rem=packet.getRemoteHost();
+  PeerState state=_transport.getPeerState(rem);
+  if (state == null) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Packet received is not for a connected peer");
+    _state=11;
+    InboundEstablishState est=_establisher.getInboundState(rem);
+    if (est != null) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Packet received IS for an inbound establishment");
+      _state=12;
+      receivePacket(reader,packet,est);
+    }
+ else {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Packet received is not for an inbound establishment");
+      _state=13;
+      OutboundEstablishState oest=_establisher.getOutboundState(rem);
+      if (oest != null) {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Packet received IS for an outbound establishment");
+        _state=14;
+        receivePacket(reader,packet,oest);
+      }
+ else {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Packet received is not for an inbound or outbound establishment");
+        _state=15;
+        receivePacket(reader,packet);
+      }
+    }
+  }
+ else {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Packet received IS for an existing peer");
+    _state=16;
+    receivePacket(reader,packet,state);
+  }
+}

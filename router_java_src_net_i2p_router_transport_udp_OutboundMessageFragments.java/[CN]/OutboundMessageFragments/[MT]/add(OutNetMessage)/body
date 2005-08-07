@@ -1,7 +1,15 @@
 {
+  I2NPMessage msgBody=msg.getMessage();
+  RouterInfo target=msg.getTarget();
+  if ((msgBody == null) || (target == null)) {
+synchronized (_activeMessages) {
+      _activeMessages.notifyAll();
+    }
+    return;
+  }
   OutboundMessageState state=new OutboundMessageState(_context);
-  boolean ok=state.initialize(msg);
-  state.setPeer(_transport.getPeerState(msg.getTarget().getIdentity().calculateHash()));
+  boolean ok=state.initialize(msg,msgBody);
+  state.setPeer(_transport.getPeerState(target.getIdentity().calculateHash()));
   finishMessages();
   int active=0;
 synchronized (_activeMessages) {

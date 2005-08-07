@@ -1,3 +1,13 @@
 {
+  Hash nextRouter=_request.getNextRouter();
+  if (nextRouter != null) {
+    RouterInfo ri=getContext().netDb().lookupRouterInfoLocally(nextRouter);
+    if (ri == null) {
+      if (_alreadySearched)       return TunnelHistory.TUNNEL_REJECT_TRANSIENT_OVERLOAD;
+      getContext().netDb().lookupRouterInfo(nextRouter,new DeferredAccept(getContext(),true),new DeferredAccept(getContext(),false),5 * 1000);
+      _alreadySearched=true;
+      return STATUS_DEFERRED;
+    }
+  }
   return getContext().throttle().acceptTunnelRequest(_request);
 }

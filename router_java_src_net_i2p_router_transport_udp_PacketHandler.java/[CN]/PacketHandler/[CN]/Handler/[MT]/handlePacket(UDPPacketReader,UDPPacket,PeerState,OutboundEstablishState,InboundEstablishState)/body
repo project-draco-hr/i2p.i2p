@@ -1,0 +1,55 @@
+{
+  _state=43;
+  reader.initialize(packet);
+  _state=44;
+  long recvOn=packet.getBegin();
+  long sendOn=reader.readTimestamp() * 1000;
+  long skew=recvOn - sendOn;
+  if (skew > GRACE_PERIOD) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Packet too far in the future: " + new Date(sendOn / 1000) + ": "+ packet);
+    _context.statManager().addRateData("udp.droppedInvalidSkew",skew,packet.getExpiration());
+    return;
+  }
+ else   if (skew < 0 - GRACE_PERIOD) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Packet too far in the past: " + new Date(sendOn / 1000) + ": "+ packet);
+    _context.statManager().addRateData("udp.droppedInvalidSkew",0 - skew,packet.getExpiration());
+    return;
+  }
+  if (state != null) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Received packet from " + state.getRemoteHostId().toString() + " with skew "+ skew);
+    state.adjustClockSkew((short)skew);
+  }
+  _context.statManager().addRateData("udp.receivePacketSkew",skew,packet.getLifetime());
+  _state=45;
+  RemoteHostId from=packet.getRemoteHost();
+  _state=46;
+switch (reader.readPayloadType()) {
+case UDPPacket.PAYLOAD_TYPE_SESSION_REQUEST:
+    _state=47;
+  _establisher.receiveSessionRequest(from,reader);
+break;
+case UDPPacket.PAYLOAD_TYPE_SESSION_CONFIRMED:
+_state=48;
+_establisher.receiveSessionConfirmed(from,reader);
+break;
+case UDPPacket.PAYLOAD_TYPE_SESSION_CREATED:
+_state=49;
+_establisher.receiveSessionCreated(from,reader);
+break;
+case UDPPacket.PAYLOAD_TYPE_DATA:
+_state=50;
+if (outState != null) state=_establisher.receiveData(outState);
+if (_log.shouldLog(Log.INFO)) _log.info("Received new DATA packet from " + state + ": "+ packet);
+_inbound.receiveData(state,reader.getDataReader());
+break;
+case UDPPacket.PAYLOAD_TYPE_TEST:
+_state=51;
+_testManager.receiveTest(from,reader);
+break;
+default :
+_state=52;
+if (_log.shouldLog(Log.WARN)) _log.warn("Unknown payload type: " + reader.readPayloadType());
+_context.statManager().addRateData("udp.droppedInvalidUnknown",packet.getLifetime(),packet.getExpiration());
+return;
+}
+}
