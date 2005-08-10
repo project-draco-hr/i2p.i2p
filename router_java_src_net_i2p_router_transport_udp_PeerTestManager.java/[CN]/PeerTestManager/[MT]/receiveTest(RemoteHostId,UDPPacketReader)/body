@@ -12,10 +12,13 @@
     testInfo.readIP(fromIP,0);
   }
   if (((fromIP == null) && (fromPort <= 0)) || (DataHelper.eq(fromIP,from.getIP()) && (fromPort == from.getPort()))) {
+    int knownIndex=-1;
     boolean weAreCharlie=false;
 synchronized (_receiveAsCharlie) {
-      weAreCharlie=(Arrays.binarySearch(_receiveAsCharlie,nonce) != -1);
+      for (int i=0; (i < _receiveAsCharlie.length) && (knownIndex == -1); i++)       if (_receiveAsCharlie[i] == nonce)       knownIndex=i;
     }
+    weAreCharlie=(knownIndex != -1);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Receive test with nonce " + nonce + ", known as charlie @ "+ knownIndex);
     if (weAreCharlie) {
       receiveFromAliceAsCharlie(from,testInfo,nonce);
     }

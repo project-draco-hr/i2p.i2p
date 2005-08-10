@@ -1,18 +1,23 @@
 {
-  if (DataHelper.eq(from.getIP(),_bobIP.getAddress())) {
+  if ((DataHelper.eq(from.getIP(),_bobIP.getAddress())) && (from.getPort() == _bobPort)) {
     _receiveBobReplyTime=_context.clock().now();
     _receiveBobReplyPort=testInfo.readPort();
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Receive test reply from bob @ " + _bobIP + " on "+ _receiveBobReplyPort);
   }
  else {
     if (_receiveCharlieReplyTime > 0) {
       _receiveCharlieReplyPort=testInfo.readPort();
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Receive test reply from charlie @ " + _charlieIP + " on "+ _receiveCharlieReplyPort);
       testComplete();
     }
  else {
       _receiveCharlieReplyTime=_context.clock().now();
+      _charlieIntroKey=new SessionKey(new byte[SessionKey.KEYSIZE_BYTES]);
+      testInfo.readIntroKey(_charlieIntroKey.getData(),0);
       _charliePort=from.getPort();
       try {
         _charlieIP=InetAddress.getByAddress(from.getIP());
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Receive test from charlie @ " + _charlieIP + " on "+ _charliePort);
         sendTestToCharlie();
       }
  catch (      UnknownHostException uhe) {
