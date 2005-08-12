@@ -1,3 +1,32 @@
 {
+  long now=_context.clock().now();
+switch (status) {
+case CommSystemFacade.STATUS_OK:
+    _context.statManager().addRateData("udp.statusOK",1,0);
   _reachabilityStatus=status;
+_reachabilityStatusLastUpdated=now;
+break;
+case CommSystemFacade.STATUS_DIFFERENT:
+_context.statManager().addRateData("udp.statusDifferent",1,0);
+_reachabilityStatus=status;
+_reachabilityStatusLastUpdated=now;
+break;
+case CommSystemFacade.STATUS_REJECT_UNSOLICITED:
+_context.statManager().addRateData("udp.statusReject",1,0);
+_reachabilityStatus=status;
+_reachabilityStatusLastUpdated=now;
+break;
+case CommSystemFacade.STATUS_UNKNOWN:
+default :
+_context.statManager().addRateData("udp.statusUnknown",1,0);
+if (now - _reachabilityStatusLastUpdated < STATUS_GRACE_PERIOD) {
+_testEvent.forceRun();
+SimpleTimer.getInstance().addEvent(_testEvent,5 * 1000);
+}
+ else {
+_reachabilityStatus=status;
+_reachabilityStatusLastUpdated=now;
+}
+break;
+}
 }

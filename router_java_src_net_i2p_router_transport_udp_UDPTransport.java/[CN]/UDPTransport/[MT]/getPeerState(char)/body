@@ -1,10 +1,20 @@
 {
   int index=_context.random().nextInt(1024);
   List peers=_peersByCapacity[capacity - 'A'];
+  int size=0;
+  PeerState rv=null;
+  for (int i=0; i < 5; i++) {
 synchronized (peers) {
-    int size=peers.size();
-    if (size <= 0)     return null;
-    index=index % size;
-    return (PeerState)peers.get(index);
+      size=peers.size();
+      if (size > 0) {
+        index=(index + i) % size;
+        rv=(PeerState)peers.get(index);
+      }
+    }
+    if (rv == null)     break;
+    if (_context.shitlist().isShitlisted(rv.getRemotePeer()))     rv=null;
+ else     break;
   }
+  _context.statManager().addRateData("udp.peersByCapacity",size,capacity);
+  return rv;
 }
