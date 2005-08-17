@@ -1,23 +1,44 @@
 {
-  if ((DataHelper.eq(from.getIP(),_bobIP.getAddress())) && (from.getPort() == _bobPort)) {
-    _receiveBobReplyTime=_context.clock().now();
-    _receiveBobReplyPort=testInfo.readPort();
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Receive test reply from bob @ " + _bobIP + " on "+ _receiveBobReplyPort);
+  PeerTestState test=_currentTest;
+  if ((DataHelper.eq(from.getIP(),test.getBobIP().getAddress())) && (from.getPort() == test.getBobPort())) {
+    byte ip[]=new byte[testInfo.readIPSize()];
+    testInfo.readIP(ip,0);
+    try {
+      InetAddress addr=InetAddress.getByAddress(ip);
+      test.setAliceIP(addr);
+      test.setReceiveBobTime(_context.clock().now());
+      test.setAlicePort(testInfo.readPort());
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Receive test reply from bob @ " + from.getIP() + " via our "+ test.getAlicePort()+ "/"+ test.getAlicePortFromCharlie());
+      if (test.getAlicePortFromCharlie() > 0)       testComplete();
+    }
+ catch (    UnknownHostException uhe) {
+      if (_log.shouldLog(Log.ERROR))       _log.error("Unable to get our IP from bob's reply: " + from + ", "+ testInfo,uhe);
+    }
   }
  else {
-    if (_receiveCharlieReplyTime > 0) {
-      _receiveCharlieReplyPort=testInfo.readPort();
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Receive test reply from charlie @ " + _charlieIP + " on "+ _receiveCharlieReplyPort);
-      testComplete();
+    if (test.getReceiveCharlieTime() > 0) {
+      test.setAlicePortFromCharlie(testInfo.readPort());
+      byte ip[]=new byte[testInfo.readIPSize()];
+      testInfo.readIP(ip,0);
+      try {
+        InetAddress addr=InetAddress.getByAddress(ip);
+        test.setAliceIPFromCharlie(addr);
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Receive test reply from charlie @ " + test.getCharlieIP() + " via our "+ test.getAlicePort()+ "/"+ test.getAlicePortFromCharlie());
+        if (test.getReceiveBobTime() > 0)         testComplete();
+      }
+ catch (      UnknownHostException uhe) {
+        if (_log.shouldLog(Log.ERROR))         _log.error("Charlie @ " + from + " said we were an invalid IP address: "+ uhe.getMessage(),uhe);
+      }
     }
  else {
-      _receiveCharlieReplyTime=_context.clock().now();
-      _charlieIntroKey=new SessionKey(new byte[SessionKey.KEYSIZE_BYTES]);
-      testInfo.readIntroKey(_charlieIntroKey.getData(),0);
-      _charliePort=from.getPort();
+      test.setReceiveCharlieTime(_context.clock().now());
+      SessionKey charlieIntroKey=new SessionKey(new byte[SessionKey.KEYSIZE_BYTES]);
+      testInfo.readIntroKey(charlieIntroKey.getData(),0);
+      test.setCharlieIntroKey(charlieIntroKey);
       try {
-        _charlieIP=InetAddress.getByAddress(from.getIP());
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("Receive test from charlie @ " + _charlieIP + " on "+ _charliePort);
+        test.setCharlieIP(InetAddress.getByAddress(from.getIP()));
+        test.setCharliePort(from.getPort());
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Receive test from charlie @ " + from);
         sendTestToCharlie();
       }
  catch (      UnknownHostException uhe) {

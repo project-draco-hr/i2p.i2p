@@ -1,32 +1,54 @@
 {
   UDPPacketReader.PeerTestReader testInfo=reader.getPeerTestReader();
-  byte fromIP[]=null;
-  int fromPort=testInfo.readPort();
+  byte testIP[]=null;
+  int testPort=testInfo.readPort();
   long nonce=testInfo.readNonce();
-  if (nonce == _currentTestNonce) {
+  PeerTestState test=_currentTest;
+  if ((test != null) && (test.getNonce() == nonce)) {
     receiveTestReply(from,testInfo);
     return;
   }
-  if ((testInfo.readIPSize() > 0) && (fromPort > 0)) {
-    fromIP=new byte[testInfo.readIPSize()];
-    testInfo.readIP(fromIP,0);
+  if ((testInfo.readIPSize() > 0) && (testPort > 0)) {
+    testIP=new byte[testInfo.readIPSize()];
+    testInfo.readIP(testIP,0);
   }
-  if (((fromIP == null) && (fromPort <= 0)) || (DataHelper.eq(fromIP,from.getIP()) && (fromPort == from.getPort()))) {
-    int knownIndex=-1;
-    boolean weAreCharlie=false;
-synchronized (_receiveAsCharlie) {
-      for (int i=0; (i < _receiveAsCharlie.length) && (knownIndex == -1); i++)       if (_receiveAsCharlie[i] == nonce)       knownIndex=i;
-    }
-    weAreCharlie=(knownIndex != -1);
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Receive test with nonce " + nonce + ", known as charlie @ "+ knownIndex);
-    if (weAreCharlie) {
-      receiveFromAliceAsCharlie(from,testInfo,nonce);
+  PeerTestState state=null;
+synchronized (_activeTests) {
+    state=(PeerTestState)_activeTests.get(new Long(nonce));
+  }
+  if (state == null) {
+    if ((testIP == null) || (testPort <= 0)) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("test IP/port are blank coming from " + from + ", assuming we are Bob and they are alice");
+      receiveFromAliceAsBob(from,testInfo,nonce,null);
     }
  else {
-      receiveFromAliceAsBob(from,testInfo,nonce);
+      if (_recentTests.contains(new Long(nonce))) {
+      }
+ else {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("We are charlie, as te testIP/port is " + testIP + ":"+ testPort+ " and the state is unknown for "+ nonce);
+        receiveFromBobAsCharlie(from,testInfo,nonce,null);
+      }
     }
   }
  else {
-    receiveFromBobAsCharlie(from,fromIP,fromPort,nonce,testInfo);
+    if (state.getOurRole() == PeerTestState.BOB) {
+      if (DataHelper.eq(from.getIP(),state.getAliceIP().getAddress()) && (from.getPort() == state.getAlicePort())) {
+        receiveFromAliceAsBob(from,testInfo,nonce,state);
+      }
+ else       if (DataHelper.eq(from.getIP(),state.getCharlieIP().getAddress()) && (from.getPort() == state.getCharliePort())) {
+        receiveFromCharlieAsBob(from,state);
+      }
+ else {
+        if (_log.shouldLog(Log.ERROR))         _log.error("Received from a fourth party as bob!  alice: " + state.getAliceIP() + ", charlie: "+ state.getCharlieIP()+ ", dave: "+ from);
+      }
+    }
+ else     if (state.getOurRole() == PeerTestState.CHARLIE) {
+      if ((testIP == null) || (testPort <= 0)) {
+        receiveFromAliceAsCharlie(from,testInfo,nonce);
+      }
+ else {
+        receiveFromBobAsCharlie(from,testInfo,nonce,state);
+      }
+    }
   }
 }

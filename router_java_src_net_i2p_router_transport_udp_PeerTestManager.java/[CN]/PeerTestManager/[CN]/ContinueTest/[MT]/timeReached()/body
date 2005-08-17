@@ -1,15 +1,16 @@
 {
-  if (_currentTestNonce < 0) {
+  PeerTestState state=_currentTest;
+  if (state == null) {
     return;
   }
  else   if (expired()) {
     testComplete();
   }
- else {
-    if (_receiveBobReplyTime < 0) {
+ else   if (_context.clock().now() - state.getLastSendTime() >= RESEND_TIMEOUT) {
+    if (state.getReceiveBobTime() <= 0) {
       sendTestToBob();
     }
- else     if (_receiveCharlieReplyTime < 0) {
+ else     if (state.getReceiveCharlieTime() <= 0) {
       sendTestToBob();
     }
  else {
