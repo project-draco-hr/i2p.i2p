@@ -1,0 +1,27 @@
+{
+  if (!user.getAuthenticated())   return "Not logged in";
+  boolean ok=validateAddressName(name);
+  if (!ok)   return "Invalid name: " + HTMLRenderer.sanitizeString(name);
+  ok=validateAddressLocation(location);
+  if (!ok)   return "Invalid location: " + HTMLRenderer.sanitizeString(location);
+  if (!validateAddressSchema(schema))   return "Unsupported schema: " + HTMLRenderer.sanitizeString(schema);
+  FileWriter out=null;
+  try {
+    File userHostsFile=new File(user.getAddressbookLocation());
+    Properties knownHosts=getKnownHosts(user,true);
+    if (knownHosts.containsKey(name))     return "Name is already in use";
+    out=new FileWriter(userHostsFile,true);
+    out.write(name + "=" + location+ '\n');
+    return "Address " + name + " written to your hosts file ("+ userHostsFile.getName()+ ")";
+  }
+ catch (  IOException ioe) {
+    return "Error writing out host entry: " + ioe.getMessage();
+  }
+ finally {
+    if (out != null)     try {
+      out.close();
+    }
+ catch (    IOException ioe) {
+    }
+  }
+}

@@ -1,0 +1,43 @@
+{
+  I2PAppContext ctx=I2PAppContext.getGlobalContext();
+  BlogManager mgr=new BlogManager(ctx,args[0]);
+  long entryId=-1;
+  if ("NOW".equals(args[4])) {
+    entryId=ctx.clock().now();
+  }
+ else {
+    try {
+      entryId=Long.parseLong(args[4]);
+    }
+ catch (    NumberFormatException nfe) {
+      nfe.printStackTrace();
+      return;
+    }
+  }
+  StringTokenizer tok=new StringTokenizer(args[3],",");
+  String tags[]=new String[tok.countTokens()];
+  for (int i=0; i < tags.length; i++)   tags[i]=tok.nextToken();
+  BlogURI uri=new BlogURI(new Hash(Base64.decode(args[2])),entryId);
+  BlogInfo blog=mgr.getArchive().getBlogInfo(uri);
+  if (blog == null) {
+    System.err.println("Blog does not exist: " + uri);
+    return;
+  }
+  SigningPrivateKey key=mgr.getMyPrivateKey(blog);
+  try {
+    byte smlData[]=read(args[6]);
+    EntryContainer c=new EntryContainer(uri,tags,smlData);
+    for (int i=7; i < args.length; i++) {
+      c.addAttachment(read(args[i]),new File(args[i]).getName(),"Attached file","application/octet-stream");
+    }
+    SessionKey entryKey=null;
+    if (!"NONE".equals(args[5]))     entryKey=new SessionKey(Base64.decode(args[5]));
+    c.seal(ctx,key,entryKey);
+    boolean ok=mgr.getArchive().storeEntry(c);
+    System.out.println("Blog entry created: " + c + "? "+ ok);
+    if (ok)     mgr.getArchive().regenerateIndex();
+  }
+ catch (  IOException ioe) {
+    ioe.printStackTrace();
+  }
+}

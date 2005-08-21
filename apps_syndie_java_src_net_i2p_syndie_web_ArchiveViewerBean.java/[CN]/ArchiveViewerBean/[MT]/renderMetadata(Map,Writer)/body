@@ -1,0 +1,51 @@
+{
+  String blogStr=getString(parameters,PARAM_BLOG);
+  if (blogStr != null) {
+    Hash blog=new Hash(Base64.decode(blogStr));
+    Archive archive=BlogManager.instance().getArchive();
+    BlogInfo info=archive.getBlogInfo(blog);
+    if (info == null) {
+      out.write("Blog " + blog.toBase64() + " does not exist");
+      return;
+    }
+    String props[]=info.getProperties();
+    out.write("<table border=\"0\">");
+    for (int i=0; i < props.length; i++) {
+      if (props[i].equals(BlogInfo.OWNER_KEY)) {
+        out.write("<tr><td><b>Blog:</b></td><td>");
+        String blogURL=HTMLRenderer.getPageURL(blog,null,-1,-1,-1,false,false);
+        out.write("<a href=\"" + blogURL + "\">"+ Base64.encode(blog.getData())+ "</td></tr>\n");
+      }
+ else       if (props[i].equals(BlogInfo.SIGNATURE)) {
+        continue;
+      }
+ else       if (props[i].equals(BlogInfo.POSTERS)) {
+        SigningPublicKey keys[]=info.getPosters();
+        if ((keys != null) && (keys.length > 0)) {
+          out.write("<tr><td><b>Allowed authors:</b></td><td>");
+          for (int j=0; j < keys.length; j++) {
+            out.write(keys[j].calculateHash().toBase64());
+            if (j + 1 < keys.length)             out.write("<br />\n");
+          }
+          out.write("</td></tr>\n");
+        }
+      }
+ else {
+        out.write("<tr><td>" + HTMLRenderer.sanitizeString(props[i]) + ":</td><td>"+ HTMLRenderer.sanitizeString(info.getProperty(props[i]))+ "</td></tr>\n");
+      }
+    }
+    List tags=BlogManager.instance().getArchive().getIndex().getBlogTags(blog);
+    if ((tags != null) && (tags.size() > 0)) {
+      out.write("<tr><td>Known tags:</td><td>");
+      for (int i=0; i < tags.size(); i++) {
+        String tag=(String)tags.get(i);
+        out.write("<a href=\"" + HTMLRenderer.getPageURL(blog,tag,-1,-1,-1,false,false) + "\">"+ HTMLRenderer.sanitizeString(tag)+ "</a> ");
+      }
+      out.write("</td></tr>");
+    }
+    out.write("</table>");
+  }
+ else {
+    out.write("Blog not specified");
+  }
+}

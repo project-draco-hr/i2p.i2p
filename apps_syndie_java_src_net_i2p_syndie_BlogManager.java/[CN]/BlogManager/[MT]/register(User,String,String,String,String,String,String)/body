@@ -1,0 +1,40 @@
+{
+  String hashedRegistrationPassword=getRegistrationPassword();
+  if (hashedRegistrationPassword != null) {
+    if (!hashedRegistrationPassword.equals(Base64.encode(_context.sha().calculateHash(registrationPassword.getBytes()).getData())))     return "Invalid registration password";
+  }
+  String userHash=Base64.encode(_context.sha().calculateHash(login.getBytes()).getData());
+  File userFile=new File(_userDir,userHash);
+  if (userFile.exists()) {
+    return "Cannot register the login " + login + ": it already exists";
+  }
+ else {
+    BlogInfo info=createBlog(blogName,blogDescription,contactURL,null);
+    String hashedPassword=Base64.encode(_context.sha().calculateHash(password.getBytes()).getData());
+    FileWriter out=null;
+    try {
+      out=new FileWriter(userFile);
+      out.write("password=" + hashedPassword + "\n");
+      out.write("blog=" + Base64.encode(info.getKey().calculateHash().getData()) + "\n");
+      out.write("lastid=-1\n");
+      out.write("lastmetaedition=0\n");
+      out.write("addressbook=userhosts-" + userHash + ".txt\n");
+      out.write("showimages=false\n");
+      out.write("showexpanded=false\n");
+    }
+ catch (    IOException ioe) {
+      ioe.printStackTrace();
+      return "Internal error registering - " + ioe.getMessage();
+    }
+ finally {
+      if (out != null)       try {
+        out.close();
+      }
+ catch (      IOException ioe) {
+      }
+    }
+    String loginResult=login(user,login,password);
+    _archive.regenerateIndex();
+    return loginResult;
+  }
+}

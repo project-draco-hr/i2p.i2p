@@ -1,0 +1,13 @@
+{
+  System.out.println("Sealing " + _entryURI);
+  if (entryKey == null)   _format=FORMAT_ZIP_UNENCRYPTED;
+ else   _format=FORMAT_ZIP_ENCRYPTED;
+  setHeader(HEADER_BLOGKEY,Base64.encode(_entryURI.getKeyHash().getData()));
+  if (_entryURI.getEntryId() < 0)   _entryURI.setEntryId(ctx.clock().now());
+  setHeader(HEADER_ENTRYID,Long.toString(_entryURI.getEntryId()));
+  _rawData=createRawData(ctx,entryKey);
+  ByteArrayOutputStream baos=new ByteArrayOutputStream(1024);
+  write(baos,false);
+  byte data[]=baos.toByteArray();
+  _signature=ctx.dsa().sign(data,signingKey);
+}

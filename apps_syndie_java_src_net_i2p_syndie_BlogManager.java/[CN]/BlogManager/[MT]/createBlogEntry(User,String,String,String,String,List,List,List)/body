@@ -1,0 +1,74 @@
+{
+  if (!user.getAuthenticated())   return null;
+  BlogInfo info=getArchive().getBlogInfo(user.getBlog());
+  if (info == null)   return null;
+  SigningPrivateKey privkey=getMyPrivateKey(info);
+  if (privkey == null)   return null;
+  long entryId=-1;
+  long now=_context.clock().now();
+  long dayBegin=getDayBegin(now);
+  if (user.getMostRecentEntry() >= dayBegin)   entryId=user.getMostRecentEntry() + 1;
+ else   entryId=dayBegin;
+  StringTokenizer tok=new StringTokenizer(tags," ,\n\t");
+  String tagList[]=new String[tok.countTokens()];
+  for (int i=0; i < tagList.length; i++)   tagList[i]=tok.nextToken().trim();
+  BlogURI uri=new BlogURI(user.getBlog(),entryId);
+  try {
+    StringBuffer raw=new StringBuffer(sml.length() + 128);
+    raw.append("Subject: ").append(subject).append('\n');
+    raw.append("Tags: ");
+    for (int i=0; i < tagList.length; i++)     raw.append(tagList[i]).append('\t');
+    raw.append('\n');
+    if ((entryHeaders != null) && (entryHeaders.trim().length() > 0)) {
+      System.out.println("Entry headers: " + entryHeaders);
+      BufferedReader userHeaders=new BufferedReader(new InputStreamReader(new ByteArrayInputStream(entryHeaders.getBytes())));
+      String line=null;
+      while ((line=userHeaders.readLine()) != null) {
+        line=line.trim();
+        System.out.println("Line: " + line);
+        if (line.length() <= 0)         continue;
+        int split=line.indexOf('=');
+        int split2=line.indexOf(':');
+        if ((split < 0) || ((split2 > 0) && (split2 < split)))         split=split2;
+        String key=line.substring(0,split).trim();
+        String val=line.substring(split + 1).trim();
+        raw.append(key).append(": ").append(val).append('\n');
+      }
+    }
+    raw.append('\n');
+    raw.append(sml);
+    EntryContainer c=new EntryContainer(uri,tagList,raw.toString().getBytes());
+    if ((fileNames != null) && (fileStreams != null) && (fileNames.size() == fileStreams.size())) {
+      for (int i=0; i < fileNames.size(); i++) {
+        String name=(String)fileNames.get(i);
+        InputStream in=(InputStream)fileStreams.get(i);
+        String fileType=(fileTypes != null ? (String)fileTypes.get(i) : "application/octet-stream");
+        ByteArrayOutputStream baos=new ByteArrayOutputStream(1024);
+        byte buf[]=new byte[1024];
+        while (true) {
+          int read=in.read(buf);
+          if (read == -1)           break;
+          baos.write(buf,0,read);
+        }
+        byte att[]=baos.toByteArray();
+        if ((att != null) && (att.length > 0))         c.addAttachment(att,new File(name).getName(),null,fileType);
+      }
+    }
+    SessionKey entryKey=null;
+    c.seal(_context,privkey,null);
+    boolean ok=getArchive().storeEntry(c);
+    if (ok) {
+      getArchive().regenerateIndex();
+      user.setMostRecentEntry(entryId);
+      saveUser(user);
+      return uri;
+    }
+ else {
+      return null;
+    }
+  }
+ catch (  IOException ioe) {
+    ioe.printStackTrace();
+    return null;
+  }
+}

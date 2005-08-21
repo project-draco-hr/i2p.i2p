@@ -1,0 +1,23 @@
+{
+  if (_signature == null)   throw new NullPointerException("sig is null");
+  if (info == null)   throw new NullPointerException("info is null");
+  if (info.getKey() == null)   throw new NullPointerException("info key is null");
+  if (info.getKey().getData() == null)   throw new NullPointerException("info key data is null");
+  ByteArrayOutputStream out=new ByteArrayOutputStream(_rawData.length + 512);
+  try {
+    write(out,false);
+    byte dat[]=out.toByteArray();
+    ByteArrayInputStream in=new ByteArrayInputStream(dat);
+    boolean ok=ctx.dsa().verifySignature(_signature,in,info.getKey());
+    if (!ok && info.getPosters() != null) {
+      for (int i=0; !ok && i < info.getPosters().length; i++) {
+        in.reset();
+        ok=ctx.dsa().verifySignature(_signature,in,info.getPosters()[i]);
+      }
+    }
+    return ok;
+  }
+ catch (  IOException ioe) {
+    return false;
+  }
+}

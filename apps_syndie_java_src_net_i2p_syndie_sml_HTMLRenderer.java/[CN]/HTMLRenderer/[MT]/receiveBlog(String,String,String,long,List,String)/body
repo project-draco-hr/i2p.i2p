@@ -1,0 +1,52 @@
+{
+  Blog b=new Blog();
+  b.name=name;
+  b.hash=hash;
+  b.tag=tag;
+  b.entryId=entryId;
+  b.locations=locations;
+  if (!_blogs.contains(b))   _blogs.add(b);
+  if (!continueBody()) {
+    return;
+  }
+  if (hash == null)   return;
+  System.out.println("Receiving the blog: " + name + "/"+ hash+ "/"+ tag+ "/"+ entryId+ "/"+ locations+ ": "+ description);
+  byte blogData[]=Base64.decode(hash);
+  if ((blogData == null) || (blogData.length != Hash.HASH_LENGTH))   return;
+  Hash blog=new Hash(blogData);
+  if (entryId > 0) {
+    String pageURL=getPageURL(blog,tag,entryId,-1,-1,true,(_user != null ? _user.getShowImages() : false));
+    _bodyBuffer.append("<a href=\"").append(pageURL).append("\">");
+    if ((description != null) && (description.trim().length() > 0)) {
+      _bodyBuffer.append(sanitizeString(description));
+    }
+ else     if ((name != null) && (name.trim().length() > 0)) {
+      _bodyBuffer.append(sanitizeString(name));
+    }
+ else {
+      _bodyBuffer.append("[view entry]");
+    }
+    _bodyBuffer.append("</a>");
+  }
+  String url=getPageURL(blog,null,-1,-1,-1,(_user != null ? _user.getShowExpanded() : false),(_user != null ? _user.getShowImages() : false));
+  _bodyBuffer.append(" [<a href=\"").append(url);
+  _bodyBuffer.append("\">");
+  if ((name != null) && (name.trim().length() > 0))   _bodyBuffer.append(sanitizeString(name));
+ else   _bodyBuffer.append("view");
+  _bodyBuffer.append("</a> (<a href=\"").append(getMetadataURL(blog)).append("\">meta</a>)");
+  if ((tag != null) && (tag.trim().length() > 0)) {
+    url=getPageURL(blog,tag,-1,-1,-1,false,false);
+    _bodyBuffer.append(" <a href=\"").append(url);
+    _bodyBuffer.append("\">Tag: ").append(sanitizeString(tag)).append("</a>");
+  }
+  if ((locations != null) && (locations.size() > 0)) {
+    _bodyBuffer.append(" <select name=\"archiveLocation\">");
+    for (int i=0; i < locations.size(); i++) {
+      SafeURL surl=(SafeURL)locations.get(i);
+      _bodyBuffer.append("<option value=\"").append(Base64.encode(surl.toString())).append("\">");
+      _bodyBuffer.append(sanitizeString(surl.toString())).append("</option>\n");
+    }
+    _bodyBuffer.append("</select>");
+  }
+  _bodyBuffer.append("] ");
+}

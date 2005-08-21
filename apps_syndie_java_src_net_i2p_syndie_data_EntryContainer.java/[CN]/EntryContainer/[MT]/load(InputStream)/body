@@ -1,0 +1,41 @@
+{
+  String fmt=DataHelper.readLine(source).trim();
+  if (FORMAT_ZIP_UNENCRYPTED_STR.equals(fmt)) {
+    _format=FORMAT_ZIP_UNENCRYPTED;
+  }
+ else   if (FORMAT_ZIP_ENCRYPTED_STR.equals(fmt)) {
+    _format=FORMAT_ZIP_ENCRYPTED;
+  }
+ else {
+    throw new IOException("Unsupported entry format: " + fmt);
+  }
+  String line=null;
+  while ((line=DataHelper.readLine(source)) != null) {
+    line=line.trim();
+    int len=line.length();
+    if (len <= 0)     break;
+    int split=line.indexOf(':');
+    if ((split <= 0) || (split >= len - 2))     throw new IOException("Invalid format of the syndie entry: line=" + line);
+    String key=line.substring(0,split);
+    String val=line.substring(split + 1);
+    _rawKeys.add(key);
+    _rawValues.add(val);
+  }
+  parseHeaders();
+  String sigStr=DataHelper.readLine(source);
+  sigStr=sigStr.substring("Signature:".length() + 1).trim();
+  _signature=new Signature(Base64.decode(sigStr));
+  line=DataHelper.readLine(source).trim();
+  int dataSize=-1;
+  try {
+    int index=line.indexOf("Size:");
+    if (index == 0)     dataSize=Integer.parseInt(line.substring("Size:".length() + 1).trim());
+  }
+ catch (  NumberFormatException nfe) {
+    throw new IOException("Invalid entry size: " + line);
+  }
+  byte data[]=new byte[dataSize];
+  int read=DataHelper.read(source,data);
+  if (read != dataSize)   throw new IOException("Incomplete entry: read " + read + " expected "+ dataSize);
+  _rawData=data;
+}

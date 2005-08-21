@@ -1,0 +1,39 @@
+{
+  int dataOffset=0;
+  if (zipKey != null) {
+    byte iv[]=new byte[16];
+    System.arraycopy(_rawData,0,iv,0,iv.length);
+    ctx.aes().decrypt(_rawData,iv.length,_rawData,iv.length,zipKey,iv,_rawData.length - iv.length);
+    dataOffset=iv.length;
+  }
+  ByteArrayInputStream in=new ByteArrayInputStream(_rawData,dataOffset,_rawData.length - dataOffset);
+  ZipInputStream zi=new ZipInputStream(in);
+  Map attachments=new HashMap();
+  Map attachmentMeta=new HashMap();
+  while (true) {
+    ZipEntry entry=zi.getNextEntry();
+    if (entry == null)     break;
+    ByteArrayOutputStream out=new ByteArrayOutputStream(1024);
+    byte buf[]=new byte[1024];
+    int read=-1;
+    while ((read=zi.read(buf)) != -1)     out.write(buf,0,read);
+    byte entryData[]=out.toByteArray();
+    String name=entry.getName();
+    if (ZIP_ENTRY.equals(name)) {
+      _entryData=new Entry(new String(entryData));
+    }
+ else     if (name.startsWith(ZIP_ATTACHMENT_PREFIX)) {
+      attachments.put(name,(Object)entryData);
+    }
+ else     if (name.startsWith(ZIP_ATTACHMENT_META_PREFIX)) {
+      attachmentMeta.put(name,(Object)entryData);
+    }
+  }
+  _attachments=new Attachment[attachments.size()];
+  for (int i=0; i < attachments.size(); i++) {
+    byte data[]=(byte[])attachments.get(ZIP_ATTACHMENT_PREFIX + i + ZIP_ATTACHMENT_SUFFIX);
+    byte metadata[]=(byte[])attachmentMeta.get(ZIP_ATTACHMENT_META_PREFIX + i + ZIP_ATTACHMENT_META_SUFFIX);
+    if ((data != null) && (metadata != null))     _attachments[i]=new Attachment(data,metadata);
+ else     System.out.println("Unable to get " + i + ": "+ data+ "/"+ metadata);
+  }
+}

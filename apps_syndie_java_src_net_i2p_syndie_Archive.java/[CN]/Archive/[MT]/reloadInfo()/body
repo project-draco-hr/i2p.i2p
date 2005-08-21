@@ -1,0 +1,26 @@
+{
+  File f[]=_rootDir.listFiles();
+  List info=new ArrayList();
+  for (int i=0; i < f.length; i++) {
+    if (f[i].isDirectory()) {
+      File meta=new File(f[i],METADATA_FILE);
+      if (meta.exists()) {
+        BlogInfo bi=new BlogInfo();
+        try {
+          bi.load(new FileInputStream(meta));
+          info.add(bi);
+        }
+ catch (        IOException ioe) {
+          ioe.printStackTrace();
+        }
+      }
+    }
+  }
+synchronized (_blogInfo) {
+    _blogInfo.clear();
+    for (int i=0; i < info.size(); i++) {
+      BlogInfo bi=(BlogInfo)info.get(i);
+      _blogInfo.put(bi.getKey().calculateHash(),bi);
+    }
+  }
+}

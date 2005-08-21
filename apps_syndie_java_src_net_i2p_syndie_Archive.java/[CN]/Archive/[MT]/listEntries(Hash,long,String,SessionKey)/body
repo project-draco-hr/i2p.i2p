@@ -1,0 +1,58 @@
+{
+  List rv=new ArrayList();
+  BlogInfo info=getBlogInfo(blog);
+  if (info == null)   return rv;
+  File blogDir=new File(_rootDir,blog.toBase64());
+  File entries[]=blogDir.listFiles(_entryFilenameFilter);
+  if (entries == null)   return rv;
+  for (int i=0; i < entries.length; i++) {
+    try {
+      EntryContainer entry=null;
+      if (blogKey == null) {
+        File entryDir=getEntryDir(entries[i]);
+        if (!entryDir.exists()) {
+          if (!extractEntry(entries[i],entryDir,info)) {
+            System.err.println("Entry " + entries[i].getPath() + " is not valid");
+            continue;
+          }
+        }
+        entry=getCachedEntry(entryDir);
+      }
+ else {
+        entry=new EntryContainer();
+        entry.load(new FileInputStream(entries[i]));
+        boolean ok=entry.verifySignature(_context,info);
+        if (!ok) {
+          System.err.println("Keyed entry " + entries[i].getPath() + " is not valid");
+          continue;
+        }
+        entry.parseRawData(_context,blogKey);
+        entry.setCompleteSize((int)entries[i].length());
+      }
+      if (entryId >= 0) {
+        if (entry.getURI().getEntryId() == entryId) {
+          rv.add(entry);
+          return rv;
+        }
+      }
+ else       if (tag != null) {
+        String tags[]=entry.getTags();
+        for (int j=0; j < tags.length; j++) {
+          if (tags[j].equals(tag)) {
+            rv.add(entry);
+            System.out.println("cached entry matched requested tag [" + tag + "]: "+ entry.getURI());
+            break;
+          }
+        }
+      }
+ else {
+        System.out.println("cached entry is ok and no id or tag was requested: " + entry.getURI());
+        rv.add(entry);
+      }
+    }
+ catch (    IOException ioe) {
+      ioe.printStackTrace();
+    }
+  }
+  return rv;
+}

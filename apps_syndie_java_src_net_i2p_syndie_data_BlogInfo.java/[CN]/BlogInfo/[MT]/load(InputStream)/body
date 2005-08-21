@@ -1,0 +1,34 @@
+{
+  BufferedReader reader=new BufferedReader(new InputStreamReader(in));
+  List names=new ArrayList();
+  List vals=new ArrayList();
+  String line=null;
+  while ((line=reader.readLine()) != null) {
+    line=line.trim();
+    int len=line.length();
+    int split=line.indexOf(':');
+    if ((len <= 0) || (split <= 0) || (split >= len - 2))     continue;
+    String key=line.substring(0,split).trim();
+    String val=line.substring(split + 1).trim();
+    names.add(key);
+    vals.add(val);
+  }
+  _optionNames=new String[names.size()];
+  _optionValues=new String[names.size()];
+  for (int i=0; i < _optionNames.length; i++) {
+    _optionNames[i]=(String)names.get(i);
+    _optionValues[i]=(String)vals.get(i);
+  }
+  String keyStr=getProperty(OWNER_KEY);
+  if (keyStr == null)   throw new IOException("Owner not found");
+  _key=new SigningPublicKey(Base64.decode(keyStr));
+  String postersStr=getProperty(POSTERS);
+  if (postersStr != null) {
+    StringTokenizer tok=new StringTokenizer(postersStr,", \t");
+    _posters=new SigningPublicKey[tok.countTokens()];
+    for (int i=0; tok.hasMoreTokens(); i++)     _posters[i]=new SigningPublicKey(Base64.decode(tok.nextToken()));
+  }
+  String sigStr=getProperty(SIGNATURE);
+  if (sigStr == null)   throw new IOException("Signature not found");
+  _signature=new Signature(Base64.decode(sigStr));
+}

@@ -1,0 +1,54 @@
+{
+  if (!user.getAuthenticated())   return;
+  String userHash=Base64.encode(_context.sha().calculateHash(user.getUsername().getBytes()).getData());
+  File userFile=new File(_userDir,userHash);
+  FileWriter out=null;
+  try {
+    out=new FileWriter(userFile);
+    out.write("password=" + user.getHashedPassword() + "\n");
+    out.write("blog=" + user.getBlog().toBase64() + "\n");
+    out.write("lastid=" + user.getMostRecentEntry() + "\n");
+    out.write("lastmetaedition=" + user.getLastMetaEntry() + "\n");
+    out.write("lastlogin=" + user.getLastLogin() + "\n");
+    out.write("addressbook=" + user.getAddressbookLocation() + "\n");
+    out.write("showimages=" + user.getShowImages() + "\n");
+    out.write("showexpanded=" + user.getShowExpanded() + "\n");
+    StringBuffer buf=new StringBuffer();
+    buf.append("groups=");
+    Map groups=user.getBlogGroups();
+    for (Iterator iter=groups.keySet().iterator(); iter.hasNext(); ) {
+      String name=(String)iter.next();
+      List selectors=(List)groups.get(name);
+      buf.append(name).append(':');
+      for (int i=0; i < selectors.size(); i++) {
+        buf.append(selectors.get(i));
+        if (i + 1 < selectors.size())         buf.append(",");
+      }
+      if (iter.hasNext())       buf.append(' ');
+    }
+    buf.append('\n');
+    out.write(buf.toString());
+    List shitlistedBlogs=user.getShitlistedBlogs();
+    if (shitlistedBlogs.size() > 0) {
+      buf.setLength(0);
+      buf.append("shitlistedblogs=");
+      for (int i=0; i < shitlistedBlogs.size(); i++) {
+        Hash blog=(Hash)shitlistedBlogs.get(i);
+        buf.append(blog.toBase64());
+        if (i + 1 < shitlistedBlogs.size())         buf.append(',');
+      }
+      buf.append('\n');
+      out.write(buf.toString());
+    }
+  }
+ catch (  IOException ioe) {
+    ioe.printStackTrace();
+  }
+ finally {
+    if (out != null)     try {
+      out.close();
+    }
+ catch (    IOException ioe) {
+    }
+  }
+}

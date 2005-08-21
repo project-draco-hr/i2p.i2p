@@ -1,0 +1,33 @@
+{
+  BlogManager mgr=new BlogManager(I2PAppContext.getGlobalContext(),args[0]);
+  long id=-1;
+  try {
+    id=Long.parseLong(args[3]);
+  }
+ catch (  NumberFormatException nfe) {
+    nfe.printStackTrace();
+    return;
+  }
+  SessionKey entryKey=null;
+  if (!("NONE".equals(args[4])))   entryKey=new SessionKey(Base64.decode(args[5]));
+  EntryContainer entry=mgr.getArchive().getEntry(new BlogURI(new Hash(Base64.decode(args[2])),id),entryKey);
+  if (entry != null) {
+    HTMLRenderer renderer=new HTMLRenderer();
+    boolean summaryOnly="true".equalsIgnoreCase(args[5]);
+    boolean showImages="true".equalsIgnoreCase(args[6]);
+    try {
+      File f=File.createTempFile("syndie",".html");
+      Writer out=new FileWriter(f);
+      renderer.render(null,mgr.getArchive(),entry,out,summaryOnly,showImages);
+      out.flush();
+      out.close();
+      System.out.println("Rendered to " + f.getAbsolutePath() + ": "+ f.length());
+    }
+ catch (    IOException ioe) {
+      ioe.printStackTrace();
+    }
+  }
+ else {
+    System.err.println("Entry does not exist");
+  }
+}

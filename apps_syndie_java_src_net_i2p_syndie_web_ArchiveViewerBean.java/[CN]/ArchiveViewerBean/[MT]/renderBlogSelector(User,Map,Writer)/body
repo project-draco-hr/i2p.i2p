@@ -1,0 +1,64 @@
+{
+  out.write("<select name=\"");
+  out.write(PARAM_SELECTOR);
+  out.write("\">");
+  out.write("<option value=\"");
+  out.write(SEL_ALL);
+  out.write("\">All posts from all blogs</option>\n");
+  Map groups=null;
+  if (user != null)   groups=user.getBlogGroups();
+  if (groups != null) {
+    for (Iterator iter=groups.keySet().iterator(); iter.hasNext(); ) {
+      String name=(String)iter.next();
+      out.write("<option value=\"group://" + Base64.encode(name.getBytes()) + "\">"+ "Group: "+ HTMLRenderer.sanitizeString(name)+ "</option>\n");
+    }
+  }
+  Archive archive=BlogManager.instance().getArchive();
+  ArchiveIndex index=archive.getIndex();
+  List allTags=new ArrayList();
+  Set blogs=index.getUniqueBlogs();
+  for (Iterator iter=blogs.iterator(); iter.hasNext(); ) {
+    Hash cur=(Hash)iter.next();
+    String blog=Base64.encode(cur.getData());
+    out.write("<option value=\"blog://");
+    out.write(blog);
+    out.write("\">");
+    BlogInfo info=archive.getBlogInfo(cur);
+    String name=info.getProperty(BlogInfo.NAME);
+    if (name != null)     name=HTMLRenderer.sanitizeString(name);
+ else     name=Base64.encode(cur.getData());
+    out.write(name);
+    out.write("- all posts</option>\n");
+    List tags=index.getBlogTags(cur);
+    for (int j=0; j < tags.size(); j++) {
+      String tag=(String)tags.get(j);
+      if (!allTags.contains(tag))       allTags.add(tag);
+      out.write("<option value=\"blogtag://");
+      out.write(blog);
+      out.write("/");
+      out.write(Base64.encode(tag));
+      out.write("\">");
+      out.write(name);
+      out.write("- posts with the tag &quot;");
+      out.write(tag);
+      out.write("&quot;</option>\n");
+    }
+  }
+  for (int i=0; i < allTags.size(); i++) {
+    String tag=(String)allTags.get(i);
+    out.write("<option value=\"tag://");
+    out.write(Base64.encode(tag));
+    out.write("\">Posts in any blog with the tag &quot;");
+    out.write(tag);
+    out.write("&quot;</option>\n");
+  }
+  out.write("</select>");
+  int numPerPage=getInt(parameters,PARAM_NUM_PER_PAGE,5);
+  int pageNum=getInt(parameters,PARAM_PAGE_NUMBER,0);
+  boolean expandEntries=getBool(parameters,PARAM_EXPAND_ENTRIES,(user != null ? user.getShowExpanded() : false));
+  boolean showImages=getBool(parameters,PARAM_SHOW_IMAGES,(user != null ? user.getShowImages() : false));
+  out.write("<input type=\"hidden\" name=\"" + PARAM_NUM_PER_PAGE + "\" value=\""+ numPerPage+ "\" />");
+  out.write("<input type=\"hidden\" name=\"" + PARAM_PAGE_NUMBER + "\" value=\""+ pageNum+ "\" />");
+  out.write("<input type=\"hidden\" name=\"" + PARAM_EXPAND_ENTRIES + "\" value=\""+ expandEntries+ "\" />");
+  out.write("<input type=\"hidden\" name=\"" + PARAM_SHOW_IMAGES + "\" value=\""+ showImages+ "\" />");
+}

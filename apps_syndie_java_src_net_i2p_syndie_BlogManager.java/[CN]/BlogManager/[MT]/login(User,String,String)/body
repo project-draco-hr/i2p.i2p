@@ -1,0 +1,26 @@
+{
+  File userFile=new File(_userDir,Base64.encode(_context.sha().calculateHash(login.getBytes()).getData()));
+  System.out.println("Attempting to login to " + login + " w/ pass = "+ pass+ ": file = "+ userFile.getAbsolutePath()+ " passHash = "+ Base64.encode(_context.sha().calculateHash(pass.getBytes()).getData()));
+  if (userFile.exists()) {
+    try {
+      Properties props=new Properties();
+      BufferedReader in=new BufferedReader(new FileReader(userFile));
+      String line=null;
+      while ((line=in.readLine()) != null) {
+        int split=line.indexOf('=');
+        if (split <= 0)         continue;
+        String key=line.substring(0,split);
+        String val=line.substring(split + 1);
+        props.setProperty(key.trim(),val.trim());
+      }
+      return user.login(login,pass,props);
+    }
+ catch (    IOException ioe) {
+      ioe.printStackTrace();
+      return "Error logging in - corrupt userfile";
+    }
+  }
+ else {
+    return "User does not exist";
+  }
+}

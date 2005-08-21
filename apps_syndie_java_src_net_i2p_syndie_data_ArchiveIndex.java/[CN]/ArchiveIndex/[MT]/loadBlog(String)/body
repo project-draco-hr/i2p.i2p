@@ -1,0 +1,20 @@
+{
+  StringTokenizer tok=new StringTokenizer(line.trim()," \n\t");
+  if (tok.countTokens() < 4)   return;
+  tok.nextToken();
+  Hash keyHash=new Hash(Base64.decode(tok.nextToken()));
+  long when=getIndexDate(tok.nextToken());
+  String tag=tok.nextToken();
+  BlogSummary summary=new BlogSummary();
+  summary.blog=keyHash;
+  summary.tag=tag.trim();
+  summary.lastUpdated=when;
+  summary.entries=new ArrayList();
+  while (tok.hasMoreTokens()) {
+    String entry=tok.nextToken();
+    long id=Archive.getEntryIdFromIndexName(entry);
+    int kb=Archive.getSizeFromIndexName(entry);
+    summary.entries.add(new EntrySummary(new BlogURI(keyHash,id),kb));
+  }
+  _blogs.add(summary);
+}

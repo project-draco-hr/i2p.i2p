@@ -1,0 +1,31 @@
+{
+  BlogURI uri=container.getURI();
+  BlogInfo info=getBlogInfo(uri);
+  if (info == null) {
+    System.out.println("no blog metadata for the uri " + uri);
+    return false;
+  }
+  if (!container.verifySignature(_context,info)) {
+    System.out.println("Not storing the invalid blog entry at " + uri);
+    return false;
+  }
+ else {
+  }
+  ByteArrayOutputStream baos=new ByteArrayOutputStream();
+  try {
+    container.write(baos,true);
+    File blogDir=new File(_rootDir,uri.getKeyHash().toBase64());
+    blogDir.mkdirs();
+    byte data[]=baos.toByteArray();
+    File entryFile=new File(blogDir,getEntryFilename(uri.getEntryId()));
+    FileOutputStream out=new FileOutputStream(entryFile);
+    out.write(data);
+    out.close();
+    container.setCompleteSize(data.length);
+    return true;
+  }
+ catch (  IOException ioe) {
+    ioe.printStackTrace();
+    return false;
+  }
+}

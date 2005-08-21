@@ -1,0 +1,42 @@
+{
+  String blogStr=getString(parameters,PARAM_BLOG);
+  Hash blog=null;
+  if (blogStr != null)   blog=new Hash(Base64.decode(blogStr));
+  String tag=getString(parameters,PARAM_TAG);
+  if (tag != null)   tag=new String(Base64.decode(tag));
+  long entryId=-1;
+  if (blogStr != null) {
+    String entryIdStr=getString(parameters,PARAM_ENTRY);
+    try {
+      entryId=Long.parseLong(entryIdStr);
+    }
+ catch (    NumberFormatException nfe) {
+    }
+  }
+  String group=getString(parameters,PARAM_GROUP);
+  if (group != null)   group=new String(Base64.decode(group));
+  String sel=getString(parameters,PARAM_SELECTOR);
+  if (sel != null) {
+    Selector s=new Selector(sel);
+    blog=s.blog;
+    tag=s.tag;
+    entryId=s.entry;
+    group=s.group;
+  }
+  int numPerPage=getInt(parameters,PARAM_NUM_PER_PAGE,5);
+  int pageNum=getInt(parameters,PARAM_PAGE_NUMBER,0);
+  boolean expandEntries=getBool(parameters,PARAM_EXPAND_ENTRIES,(user != null ? user.getShowExpanded() : false));
+  boolean showImages=getBool(parameters,PARAM_SHOW_IMAGES,(user != null ? user.getShowImages() : false));
+  boolean regenerateIndex=getBool(parameters,PARAM_REGENERATE_INDEX,false);
+  try {
+    renderBlogs(user,blog,tag,entryId,group,numPerPage,pageNum,expandEntries,showImages,regenerateIndex,out);
+  }
+ catch (  IOException ioe) {
+    ioe.printStackTrace();
+    throw ioe;
+  }
+catch (  RuntimeException re) {
+    re.printStackTrace();
+    throw re;
+  }
+}
