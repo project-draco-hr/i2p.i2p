@@ -1,0 +1,70 @@
+{
+  Archive archive=BlogManager.instance().getArchive();
+  StringBuffer buf=new StringBuffer(512);
+  buf.append("<b>New blogs:</b> <select name=\"blog\"><option value=\"ALL\">All</option>\n");
+  Set localBlogs=archive.getIndex().getUniqueBlogs();
+  Set remoteBlogs=_remoteIndex.getUniqueBlogs();
+  int newBlogs=0;
+  for (Iterator iter=remoteBlogs.iterator(); iter.hasNext(); ) {
+    Hash blog=(Hash)iter.next();
+    if (!localBlogs.contains(blog)) {
+      buf.append("<option value=\"" + blog.toBase64() + "\">"+ blog.toBase64()+ "</option>\n");
+      newBlogs++;
+    }
+  }
+  if (newBlogs > 0) {
+    out.write(buf.toString());
+    out.write("</select> <input type=\"submit\" name=\"action\" value=\"Fetch metadata\" /><br />\n");
+  }
+  int newEntries=0;
+  out.write("<table border=\"1\" width=\"100%\">\n");
+  for (Iterator iter=remoteBlogs.iterator(); iter.hasNext(); ) {
+    Hash blog=(Hash)iter.next();
+    buf=new StringBuffer(1024);
+    int shownEntries=0;
+    buf.append("<tr><td colspan=\"5\" align=\"left\" valign=\"top\">\n");
+    BlogInfo info=archive.getBlogInfo(blog);
+    if (info != null) {
+      buf.append("<a href=\"" + HTMLRenderer.getPageURL(blog,null,-1,-1,-1,user.getShowExpanded(),user.getShowImages()) + "\"><b>"+ HTMLRenderer.sanitizeString(info.getProperty(BlogInfo.NAME))+ "</b></a>: "+ HTMLRenderer.sanitizeString(info.getProperty(BlogInfo.DESCRIPTION))+ "\n");
+    }
+ else {
+      buf.append("<b>" + blog.toBase64() + "</b>\n");
+    }
+    buf.append("</td></tr>\n");
+    buf.append("<tr><td>&nbsp;</td><td nowrap=\"true\"><b>Posted on</b></td><td nowrap=\"true\"><b>#</b></td><td nowrap=\"true\"><b>Size</b></td><td width=\"90%\" nowrap=\"true\"><b>Tags</b></td></tr>\n");
+    List entries=new ArrayList();
+    _remoteIndex.selectMatchesOrderByEntryId(entries,blog,null);
+    for (int i=0; i < entries.size(); i++) {
+      BlogURI uri=(BlogURI)entries.get(i);
+      buf.append("<tr>\n");
+      if (!archive.getIndex().getEntryIsKnown(uri)) {
+        buf.append("<td><input type=\"checkbox\" name=\"entry\" value=\"" + uri.toString() + "\" /></td>\n");
+        newEntries++;
+        shownEntries++;
+      }
+ else {
+        String page=HTMLRenderer.getPageURL(blog,null,uri.getEntryId(),-1,-1,user.getShowExpanded(),user.getShowImages());
+        buf.append("<td><a href=\"" + page + "\">(local)</a></td>\n");
+      }
+      buf.append("<td>" + getDate(uri.getEntryId()) + "</td>\n");
+      buf.append("<td>" + getId(uri.getEntryId()) + "</td>\n");
+      buf.append("<td>" + _remoteIndex.getBlogEntrySizeKB(uri) + "KB</td>\n");
+      buf.append("<td>");
+      for (Iterator titer=new TreeSet(_remoteIndex.getBlogEntryTags(uri)).iterator(); titer.hasNext(); ) {
+        String tag=(String)titer.next();
+        buf.append("<a href=\"" + HTMLRenderer.getPageURL(blog,tag,-1,-1,-1,user.getShowExpanded(),user.getShowImages()) + "\">"+ tag+ "</a> \n");
+      }
+      buf.append("</td>\n");
+      buf.append("</tr>\n");
+    }
+    if (shownEntries > 0)     out.write(buf.toString());
+  }
+  out.write("</table>\n");
+  if (newEntries > 0) {
+    out.write("<input type=\"submit\" name=\"action\" value=\"Fetch selected entries\" /> \n");
+    out.write("<input type=\"submit\" name=\"action\" value=\"Fetch all new entries\" /> \n");
+  }
+ else {
+    out.write(HTMLRenderer.sanitizeString(_remoteLocation) + " has no new posts to offer us\n");
+  }
+}

@@ -19,7 +19,7 @@
         _context.statManager().addRateData("udp.sendVolleyTime",state.getLifetime(),toSend);
       }
       state.push();
-      int rto=peer.getRTO() * state.getPushCount();
+      int rto=peer.getRTO();
       state.setNextSendTime(now + rto);
       if (peer.getSendWindowBytesRemaining() > 0)       _throttle.unchoke(peer.getRemotePeer());
       return true;
@@ -27,7 +27,7 @@
  else {
       _context.statManager().addRateData("udp.sendRejected",state.getPushCount(),state.getLifetime());
       if (_log.shouldLog(Log.WARN))       _log.warn("Allocation of " + size + " rejected w/ wsize="+ peer.getSendWindowBytes()+ " available="+ peer.getSendWindowBytesRemaining()+ " for message "+ state.getMessageId()+ ": "+ state);
-      state.setNextSendTime((now + 1024) & ~SECOND_MASK);
+      state.setNextSendTime(now + (_context.random().nextInt(2 * ACKSender.ACK_FREQUENCY)));
       if (_log.shouldLog(Log.WARN))       _log.warn("Retransmit after choke for next send time in " + (state.getNextSendTime() - now) + "ms");
       _throttle.choke(peer.getRemotePeer());
     }

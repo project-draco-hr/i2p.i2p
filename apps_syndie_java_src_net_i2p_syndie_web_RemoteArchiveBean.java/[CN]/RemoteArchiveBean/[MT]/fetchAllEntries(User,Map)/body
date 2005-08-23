@@ -1,0 +1,27 @@
+{
+  ArchiveIndex localIndex=BlogManager.instance().getArchive().getIndex();
+  List uris=new ArrayList();
+  List entries=new ArrayList();
+  for (Iterator iter=_remoteIndex.getUniqueBlogs().iterator(); iter.hasNext(); ) {
+    Hash blog=(Hash)iter.next();
+    _remoteIndex.selectMatchesOrderByEntryId(entries,blog,null);
+    for (int i=0; i < entries.size(); i++) {
+      BlogURI uri=(BlogURI)entries.get(i);
+      if (!localIndex.getEntryIsKnown(uri))       uris.add(uri);
+    }
+    entries.clear();
+  }
+  List urls=new ArrayList(uris.size());
+  List tmpFiles=new ArrayList(uris.size());
+  for (int i=0; i < uris.size(); i++) {
+    urls.add(buildEntryURL((BlogURI)uris.get(i)));
+    try {
+      tmpFiles.add(File.createTempFile("fetchBlog",".txt",BlogManager.instance().getTempDir()));
+    }
+ catch (    IOException ioe) {
+      _statusMessages.add("Internal error creating temporary file to fetch " + HTMLRenderer.sanitizeString(uris.get(i).toString()) + ": "+ ioe.getMessage());
+    }
+  }
+  for (int i=0; i < urls.size(); i++)   _statusMessages.add("Fetch all entries: " + HTMLRenderer.sanitizeString((String)urls.get(i)));
+  fetch(urls,tmpFiles,user,new BlogStatusListener());
+}

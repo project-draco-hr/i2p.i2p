@@ -1,11 +1,15 @@
 {
   if (!info.verify(_context)) {
     System.err.println("Not storing the invalid blog " + info);
-    return;
+    return false;
   }
+  boolean isNew=true;
 synchronized (_blogInfo) {
-    _blogInfo.put(info.getKey().calculateHash(),info);
+    BlogInfo old=(BlogInfo)_blogInfo.get(info.getKey().calculateHash());
+    if ((old == null) || (old.getEdition() < info.getEdition()))     _blogInfo.put(info.getKey().calculateHash(),info);
+ else     isNew=false;
   }
+  if (!isNew)   return true;
   try {
     File blogDir=new File(_rootDir,info.getKey().calculateHash().toBase64());
     blogDir.mkdirs();
@@ -14,8 +18,10 @@ synchronized (_blogInfo) {
     info.write(out);
     out.close();
     System.out.println("Blog info written to " + blogFile.getPath());
+    return true;
   }
  catch (  IOException ioe) {
     ioe.printStackTrace();
+    return false;
   }
 }

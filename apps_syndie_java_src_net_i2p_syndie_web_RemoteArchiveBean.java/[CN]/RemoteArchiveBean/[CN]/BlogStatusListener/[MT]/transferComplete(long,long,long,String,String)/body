@@ -1,0 +1,41 @@
+{
+  _statusMessages.add("Fetch of " + HTMLRenderer.sanitizeString(url) + " successful");
+  File file=new File(outputFile);
+  FileInputStream in=null;
+  try {
+    EntryContainer c=new EntryContainer();
+    in=new FileInputStream(file);
+    c.load(in);
+    BlogURI uri=c.getURI();
+    if ((uri == null) || (uri.getKeyHash() == null)) {
+      _statusMessages.add("Blog post at " + HTMLRenderer.sanitizeString(url) + " was corrupt - no URI");
+      return;
+    }
+    Archive a=BlogManager.instance().getArchive();
+    BlogInfo info=a.getBlogInfo(uri);
+    if (info == null) {
+      _statusMessages.add("Blog post " + uri.toString() + " cannot be imported, as we don't have their blog metadata");
+      return;
+    }
+    boolean ok=a.storeEntry(c);
+    if (!ok) {
+      _statusMessages.add("Blog post at " + url + ": "+ uri.toString()+ " has an invalid signature");
+      return;
+    }
+ else {
+      _statusMessages.add("Blog post " + uri.toString() + " imported");
+      BlogManager.instance().getArchive().regenerateIndex();
+    }
+  }
+ catch (  IOException ioe) {
+    ioe.printStackTrace();
+  }
+ finally {
+    if (in != null)     try {
+      in.close();
+    }
+ catch (    IOException ioe) {
+    }
+    file.delete();
+  }
+}

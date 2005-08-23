@@ -1,6 +1,14 @@
 {
   if (ARTIFICIAL_DROP_PROBABILITY > 0) {
-    if (_context.random().nextFloat() <= ARTIFICIAL_DROP_PROBABILITY)     return -1;
+    int v=_context.random().nextInt(1000);
+    if (v < ARTIFICIAL_DROP_PROBABILITY * 1000) {
+      if (_log.shouldLog(Log.ERROR))       _log.error("Drop with v=" + v + " p="+ ARTIFICIAL_DROP_PROBABILITY+ " packet size: "+ packet.getPacket().getLength());
+      _context.statManager().addRateData("udp.droppedInboundProbabalistically",1,0);
+      return -1;
+    }
+ else {
+      _context.statManager().addRateData("udp.acceptedInboundProbabalistically",1,0);
+    }
   }
   if ((ARTIFICIAL_DELAY > 0) || (ARTIFICIAL_DELAY_BASE > 0)) {
     SimpleTimer.getInstance().addEvent(new ArtificiallyDelayedReceive(packet),ARTIFICIAL_DELAY_BASE + _context.random().nextInt(ARTIFICIAL_DELAY));

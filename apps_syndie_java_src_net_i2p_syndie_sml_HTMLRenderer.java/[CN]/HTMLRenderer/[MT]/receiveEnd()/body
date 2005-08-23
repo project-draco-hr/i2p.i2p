@@ -1,68 +1,90 @@
 {
   _postBodyBuffer.append("</td></tr>\n");
-  _postBodyBuffer.append("<tr>\n");
-  _postBodyBuffer.append("<form action=\"").append(getAttachmentURLBase()).append("\">\n");
-  _postBodyBuffer.append("<input type=\"hidden\" name=\"").append(ArchiveViewerBean.PARAM_BLOG);
-  _postBodyBuffer.append("\" value=\"");
-  if (_entry != null)   _postBodyBuffer.append(Base64.encode(_entry.getURI().getKeyHash().getData()));
- else   _postBodyBuffer.append("unknown");
-  _postBodyBuffer.append("\" />\n");
-  _postBodyBuffer.append("<input type=\"hidden\" name=\"").append(ArchiveViewerBean.PARAM_ENTRY);
-  _postBodyBuffer.append("\" value=\"");
-  if (_entry != null)   _postBodyBuffer.append(_entry.getURI().getEntryId());
- else   _postBodyBuffer.append("unknown");
-  _postBodyBuffer.append("\" />\n");
-  _postBodyBuffer.append("<td valign=\"top\" align=\"left\" style=\"entry.attachments.cell\" bgcolor=\"#77ff77\">\n");
-  if ((_entry != null) && (_entry.getAttachments() != null) && (_entry.getAttachments().length > 0)) {
-    _postBodyBuffer.append("<b>Attachments:</b> ");
-    _postBodyBuffer.append("<select name=\"").append(ArchiveViewerBean.PARAM_ATTACHMENT).append("\">\n");
-    for (int i=0; i < _entry.getAttachments().length; i++) {
-      _postBodyBuffer.append("<option value=\"").append(i).append("\">");
-      Attachment a=_entry.getAttachments()[i];
-      _postBodyBuffer.append(sanitizeString(a.getName()));
-      if ((a.getDescription() != null) && (a.getDescription().trim().length() > 0)) {
-        _postBodyBuffer.append(": ");
-        _postBodyBuffer.append(sanitizeString(a.getDescription()));
+  if (_cutBody) {
+    _postBodyBuffer.append("<tr class=\"syndieEntryAttachmentsCell\">\n");
+    _postBodyBuffer.append("<td colspan=\"2\" valign=\"top\" align=\"left\" class=\"syndieEntryAttachmentsCell\">");
+    _postBodyBuffer.append("<a href=\"").append(getEntryURL()).append("\">View details...</a> ");
+    if ((_entry != null) && (_entry.getAttachments() != null) && (_entry.getAttachments().length > 0)) {
+      int num=_entry.getAttachments().length;
+      if (num == 1)       _postBodyBuffer.append("1 attachment ");
+ else       _postBodyBuffer.append(num + " attachments ");
+    }
+    int blogs=_blogs.size();
+    if (blogs == 1)     _postBodyBuffer.append("1 blog reference ");
+ else     if (blogs > 1)     _postBodyBuffer.append(blogs).append(" blog references ");
+    int links=_links.size();
+    if (links == 1)     _postBodyBuffer.append("1 external link ");
+ else     if (links > 1)     _postBodyBuffer.append(links).append(" external links");
+    int addrs=_addresses.size();
+    if (addrs == 1)     _postBodyBuffer.append("1 address ");
+ else     if (addrs > 1)     _postBodyBuffer.append(addrs).append(" addresses ");
+    _postBodyBuffer.append("</td></tr>\n");
+  }
+ else {
+    _postBodyBuffer.append("<tr class=\"syndieEntryAttachmentsCell\">\n");
+    _postBodyBuffer.append("<form action=\"").append(getAttachmentURLBase()).append("\">\n");
+    _postBodyBuffer.append("<input type=\"hidden\" name=\"").append(ArchiveViewerBean.PARAM_BLOG);
+    _postBodyBuffer.append("\" value=\"");
+    if (_entry != null)     _postBodyBuffer.append(Base64.encode(_entry.getURI().getKeyHash().getData()));
+ else     _postBodyBuffer.append("unknown");
+    _postBodyBuffer.append("\" />\n");
+    _postBodyBuffer.append("<input type=\"hidden\" name=\"").append(ArchiveViewerBean.PARAM_ENTRY);
+    _postBodyBuffer.append("\" value=\"");
+    if (_entry != null)     _postBodyBuffer.append(_entry.getURI().getEntryId());
+ else     _postBodyBuffer.append("unknown");
+    _postBodyBuffer.append("\" />\n");
+    _postBodyBuffer.append("<td colspan=\"2\" valign=\"top\" align=\"left\" class=\"syndieEntryAttachmentsCell\">\n");
+    if ((_entry != null) && (_entry.getAttachments() != null) && (_entry.getAttachments().length > 0)) {
+      _postBodyBuffer.append("<b>Attachments:</b> ");
+      _postBodyBuffer.append("<select name=\"").append(ArchiveViewerBean.PARAM_ATTACHMENT).append("\">\n");
+      for (int i=0; i < _entry.getAttachments().length; i++) {
+        _postBodyBuffer.append("<option value=\"").append(i).append("\">");
+        Attachment a=_entry.getAttachments()[i];
+        _postBodyBuffer.append(sanitizeString(a.getName()));
+        if ((a.getDescription() != null) && (a.getDescription().trim().length() > 0)) {
+          _postBodyBuffer.append(": ");
+          _postBodyBuffer.append(sanitizeString(a.getDescription()));
+        }
+        _postBodyBuffer.append(" (").append(a.getDataLength() / 1024).append("KB");
+        _postBodyBuffer.append(", type ").append(sanitizeString(a.getMimeType())).append(")</option>\n");
       }
-      _postBodyBuffer.append(" (").append(a.getDataLength() / 1024).append("KB");
-      _postBodyBuffer.append(", type ").append(sanitizeString(a.getMimeType())).append(")</option>\n");
+      _postBodyBuffer.append("</select>\n");
+      _postBodyBuffer.append("<input type=\"submit\" value=\"Download\" name=\"Download\" /><br />\n");
     }
-    _postBodyBuffer.append("</select>\n");
-    _postBodyBuffer.append("<input type=\"submit\" value=\"Download\" name=\"Download\" /><br />\n");
-  }
-  if (_blogs.size() > 0) {
-    _postBodyBuffer.append("<b>Blog references:</b> ");
-    for (int i=0; i < _blogs.size(); i++) {
-      Blog b=(Blog)_blogs.get(i);
-      _postBodyBuffer.append("<a href=\"").append(getPageURL(new Hash(Base64.decode(b.hash)),b.tag,b.entryId,-1,-1,(_user != null ? _user.getShowExpanded() : false),(_user != null ? _user.getShowImages() : false)));
-      _postBodyBuffer.append("\">").append(sanitizeString(b.name)).append("</a> ");
+    if (_blogs.size() > 0) {
+      _postBodyBuffer.append("<b>Blog references:</b> ");
+      for (int i=0; i < _blogs.size(); i++) {
+        Blog b=(Blog)_blogs.get(i);
+        _postBodyBuffer.append("<a href=\"").append(getPageURL(new Hash(Base64.decode(b.hash)),b.tag,b.entryId,-1,-1,(_user != null ? _user.getShowExpanded() : false),(_user != null ? _user.getShowImages() : false)));
+        _postBodyBuffer.append("\">").append(sanitizeString(b.name)).append("</a> ");
+      }
+      _postBodyBuffer.append("<br />\n");
     }
-    _postBodyBuffer.append("<br />\n");
-  }
-  if (_links.size() > 0) {
-    _postBodyBuffer.append("<b>External links:</b> ");
-    for (int i=0; i < _links.size(); i++) {
-      Link l=(Link)_links.get(i);
-      _postBodyBuffer.append("<a href=\"externallink.jsp?schema=");
-      _postBodyBuffer.append(sanitizeURL(l.schema)).append("&location=");
-      _postBodyBuffer.append(sanitizeURL(l.location));
-      _postBodyBuffer.append("\">").append(sanitizeString(l.location));
-      _postBodyBuffer.append(" (").append(sanitizeString(l.schema)).append(")</a> ");
+    if (_links.size() > 0) {
+      _postBodyBuffer.append("<b>External links:</b> ");
+      for (int i=0; i < _links.size(); i++) {
+        Link l=(Link)_links.get(i);
+        _postBodyBuffer.append("<a href=\"externallink.jsp?schema=");
+        _postBodyBuffer.append(sanitizeURL(l.schema)).append("&location=");
+        _postBodyBuffer.append(sanitizeURL(l.location));
+        _postBodyBuffer.append("\">").append(sanitizeString(l.location));
+        _postBodyBuffer.append(" (").append(sanitizeString(l.schema)).append(")</a> ");
+      }
+      _postBodyBuffer.append("<br />\n");
     }
-    _postBodyBuffer.append("<br />\n");
-  }
-  if (_addresses.size() > 0) {
-    _postBodyBuffer.append("<b>Addresses:</b> ");
-    for (int i=0; i < _addresses.size(); i++) {
-      Address a=(Address)_addresses.get(i);
-      _postBodyBuffer.append("<a href=\"addaddress.jsp?schema=");
-      _postBodyBuffer.append(sanitizeURL(a.schema)).append("&location=");
-      _postBodyBuffer.append(sanitizeURL(a.location)).append("&name=");
-      _postBodyBuffer.append(sanitizeURL(a.name));
-      _postBodyBuffer.append("\">").append(sanitizeString(a.name));
+    if (_addresses.size() > 0) {
+      _postBodyBuffer.append("<b>Addresses:</b> ");
+      for (int i=0; i < _addresses.size(); i++) {
+        Address a=(Address)_addresses.get(i);
+        _postBodyBuffer.append("<a href=\"addaddress.jsp?schema=");
+        _postBodyBuffer.append(sanitizeURL(a.schema)).append("&location=");
+        _postBodyBuffer.append(sanitizeURL(a.location)).append("&name=");
+        _postBodyBuffer.append(sanitizeURL(a.name));
+        _postBodyBuffer.append("\">").append(sanitizeString(a.name));
+      }
+      _postBodyBuffer.append("<br />\n");
     }
-    _postBodyBuffer.append("<br />\n");
+    _postBodyBuffer.append("</td>\n</form>\n</tr>\n");
   }
-  _postBodyBuffer.append("</td>\n</form>\n</tr>\n");
   _postBodyBuffer.append("</table>\n");
 }

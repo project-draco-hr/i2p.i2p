@@ -1,19 +1,30 @@
 {
   _consecutiveFailedSends=0;
   _lastFailedSendPeriod=-1;
-  if (_sendWindowBytes <= _slowStartThreshold) {
-    _sendWindowBytes+=bytesACKed;
-  }
+  if (numSends < 2) {
+    if (_sendWindowBytes <= _slowStartThreshold) {
+      _sendWindowBytes+=bytesACKed;
+    }
  else {
-    double prob=((double)bytesACKed) / ((double)_sendWindowBytes);
-    if (_context.random().nextDouble() <= prob)     _sendWindowBytes+=bytesACKed;
+      if (false) {
+        _sendWindowBytes+=16;
+      }
+ else {
+        float prob=((float)bytesACKed) / ((float)_sendWindowBytes);
+        float v=_context.random().nextFloat();
+        if (v < 0)         v=0 - v;
+        if (v <= prob)         _sendWindowBytes+=bytesACKed;
+      }
+    }
   }
   if (_sendWindowBytes > MAX_SEND_WINDOW_BYTES)   _sendWindowBytes=MAX_SEND_WINDOW_BYTES;
   _lastReceiveTime=_context.clock().now();
-  if (_sendWindowBytesRemaining + bytesACKed <= _sendWindowBytes)   _sendWindowBytesRemaining+=bytesACKed;
- else   _sendWindowBytesRemaining=_sendWindowBytes;
+  if (false) {
+    if (_sendWindowBytesRemaining + bytesACKed <= _sendWindowBytes)     _sendWindowBytesRemaining+=bytesACKed;
+ else     _sendWindowBytesRemaining=_sendWindowBytes;
+  }
   _messagesSent++;
-  if (numSends <= 2)   recalculateTimeouts(lifetime);
+  if (numSends < 2)   recalculateTimeouts(lifetime);
  else   _log.warn("acked after numSends=" + numSends + " w/ lifetime="+ lifetime+ " and size="+ bytesACKed);
   _context.statManager().addRateData("udp.sendBps",_sendBps,lifetime);
 }

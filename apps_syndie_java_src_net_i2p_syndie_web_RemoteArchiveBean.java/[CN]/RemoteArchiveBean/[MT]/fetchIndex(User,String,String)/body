@@ -1,0 +1,31 @@
+{
+  _fetchIndexInProgress=true;
+  _remoteIndex=null;
+  _remoteLocation=location;
+  _remoteSchema=schema;
+  _proxyHost=null;
+  _proxyPort=-1;
+  if ("eep".equals(_remoteSchema)) {
+    _proxyHost=user.getEepProxyHost();
+    _proxyPort=user.getEepProxyPort();
+  }
+ else   if ("web".equals(_remoteSchema)) {
+    _proxyHost=user.getWebProxyHost();
+    _proxyPort=user.getWebProxyPort();
+  }
+ else   if ("tor".equals(_remoteSchema)) {
+    _proxyHost=user.getTorProxyHost();
+    _proxyPort=user.getTorProxyPort();
+  }
+ else {
+    _statusMessages.add(new String("Remote schema " + HTMLRenderer.sanitizeString(schema) + " currently not supported"));
+    _fetchIndexInProgress=false;
+    return;
+  }
+  _statusMessages.add("Fetching index from " + HTMLRenderer.sanitizeString(_remoteLocation));
+  File archiveFile=new File(BlogManager.instance().getTempDir(),user.getBlog().toBase64() + "_remoteArchive.txt");
+  archiveFile.delete();
+  EepGet eep=new EepGet(I2PAppContext.getGlobalContext(),((_proxyHost != null) && (_proxyPort > 0)),_proxyHost,_proxyPort,0,archiveFile.getAbsolutePath(),location);
+  eep.addStatusListener(new IndexFetcherStatusListener(archiveFile));
+  eep.fetch();
+}
