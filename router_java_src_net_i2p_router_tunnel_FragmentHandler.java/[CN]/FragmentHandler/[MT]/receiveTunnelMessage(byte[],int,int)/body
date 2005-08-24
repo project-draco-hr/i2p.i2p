@@ -18,7 +18,14 @@
     _log.debug("Fragments begin at offset=" + offset + " padding="+ padding);
   }
   try {
-    while (offset < length)     offset=receiveFragment(preprocessed,offset,length);
+    while (offset < length) {
+      int off=receiveFragment(preprocessed,offset,length);
+      if (off < 0) {
+        _context.statManager().addRateData("tunnel.corruptMessage",1,1);
+        return;
+      }
+      offset=off;
+    }
   }
  catch (  RuntimeException e) {
     if (_log.shouldLog(Log.ERROR))     _log.error("Corrupt fragment received: offset = " + offset,e);
