@@ -18,6 +18,15 @@
     int addrs=_addresses.size();
     if (addrs == 1)     _postBodyBuffer.append("1 address ");
  else     if (addrs > 1)     _postBodyBuffer.append(addrs).append(" addresses ");
+    if (_entry != null) {
+      List replies=_archive.getIndex().getReplies(_entry.getURI());
+      if ((replies != null) && (replies.size() > 0)) {
+        if (replies.size() == 1)         _postBodyBuffer.append("1 reply ");
+ else         _postBodyBuffer.append(replies.size()).append(" replies ");
+      }
+    }
+    String inReplyTo=(String)_headers.get(HEADER_IN_REPLY_TO);
+    if ((inReplyTo != null) && (inReplyTo.trim().length() > 0))     _postBodyBuffer.append(" <a href=\"").append(getPageURL(sanitizeTagParam(inReplyTo))).append("\">(view parent)</a>\n");
     _postBodyBuffer.append("</td></tr>\n");
   }
  else {
@@ -83,6 +92,33 @@
         _postBodyBuffer.append("\">").append(sanitizeString(a.name));
       }
       _postBodyBuffer.append("<br />\n");
+    }
+    if (_entry != null) {
+      List replies=_archive.getIndex().getReplies(_entry.getURI());
+      if ((replies != null) && (replies.size() > 0)) {
+        _postBodyBuffer.append("<b>Replies:</b> ");
+        for (int i=0; i < replies.size(); i++) {
+          BlogURI reply=(BlogURI)replies.get(i);
+          _postBodyBuffer.append("<a href=\"");
+          _postBodyBuffer.append(getPageURL(reply.getKeyHash(),null,reply.getEntryId(),-1,-1,true,_user.getShowImages()));
+          _postBodyBuffer.append("\">");
+          BlogInfo replyAuthor=_archive.getBlogInfo(reply);
+          if (replyAuthor != null) {
+            _postBodyBuffer.append(sanitizeString(replyAuthor.getProperty(BlogInfo.NAME)));
+          }
+ else {
+            _postBodyBuffer.append(reply.getKeyHash().toBase64().substring(0,16));
+          }
+          _postBodyBuffer.append(" on ");
+          _postBodyBuffer.append(getEntryDate(reply.getEntryId()));
+          _postBodyBuffer.append("</a> ");
+        }
+        _postBodyBuffer.append("<br />");
+      }
+    }
+    String inReplyTo=(String)_headers.get(HEADER_IN_REPLY_TO);
+    if ((inReplyTo != null) && (inReplyTo.trim().length() > 0)) {
+      _postBodyBuffer.append(" <a href=\"").append(getPageURL(sanitizeTagParam(inReplyTo))).append("\">(view parent)</a><br />\n");
     }
     _postBodyBuffer.append("</td>\n</form>\n</tr>\n");
   }

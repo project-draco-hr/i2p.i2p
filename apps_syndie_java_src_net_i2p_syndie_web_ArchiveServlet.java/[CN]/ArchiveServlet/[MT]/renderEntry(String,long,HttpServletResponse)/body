@@ -1,0 +1,26 @@
+{
+  byte b[]=Base64.decode(blog);
+  if ((b == null) || (b.length != Hash.HASH_LENGTH)) {
+    resp.sendError(404,"Invalid blog requested");
+    return;
+  }
+  Hash h=new Hash(b);
+  BlogInfo info=BlogManager.instance().getArchive().getBlogInfo(h);
+  if (info == null) {
+    resp.sendError(404,"Blog does not exist");
+    return;
+  }
+  File root=BlogManager.instance().getArchive().getArchiveDir();
+  File blogDir=new File(root,blog);
+  if (!blogDir.exists()) {
+    resp.sendError(404,"Blog does not exist");
+    return;
+  }
+  File entry=new File(blogDir,entryId + ".snd");
+  if (!entry.exists()) {
+    resp.sendError(404,"Entry does not exist");
+    return;
+  }
+  resp.setContentType("application/x-syndie-post");
+  dump(entry,resp);
+}

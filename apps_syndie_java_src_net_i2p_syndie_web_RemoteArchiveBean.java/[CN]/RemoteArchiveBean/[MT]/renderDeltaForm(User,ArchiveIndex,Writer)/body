@@ -17,7 +17,9 @@
     out.write("</select> <input type=\"submit\" name=\"action\" value=\"Fetch metadata\" /><br />\n");
   }
   int newEntries=0;
+  int localNew=0;
   out.write("<table border=\"1\" width=\"100%\">\n");
+  List entries=new ArrayList();
   for (Iterator iter=remoteBlogs.iterator(); iter.hasNext(); ) {
     Hash blog=(Hash)iter.next();
     buf=new StringBuffer(1024);
@@ -32,7 +34,7 @@
     }
     buf.append("</td></tr>\n");
     buf.append("<tr><td>&nbsp;</td><td nowrap=\"true\"><b>Posted on</b></td><td nowrap=\"true\"><b>#</b></td><td nowrap=\"true\"><b>Size</b></td><td width=\"90%\" nowrap=\"true\"><b>Tags</b></td></tr>\n");
-    List entries=new ArrayList();
+    entries.clear();
     _remoteIndex.selectMatchesOrderByEntryId(entries,blog,null);
     for (int i=0; i < entries.size(); i++) {
       BlogURI uri=(BlogURI)entries.get(i);
@@ -57,8 +59,60 @@
       buf.append("</td>\n");
       buf.append("</tr>\n");
     }
+    entries.clear();
+    localIndex.selectMatchesOrderByEntryId(entries,blog,null);
+    buf.append("<tr><td colspan=\"5\">Entries we have, but the remote Syndie doesn't:</td></tr>\n");
+    for (int i=0; i < entries.size(); i++) {
+      BlogURI uri=(BlogURI)entries.get(i);
+      if (!_remoteIndex.getEntryIsKnown(uri)) {
+        buf.append("<tr>\n");
+        buf.append("<td><input type=\"checkbox\" name=\"localentry\" value=\"" + uri.toString() + "\" /></td>\n");
+        shownEntries++;
+        newEntries++;
+        localNew++;
+        buf.append("<td>" + getDate(uri.getEntryId()) + "</td>\n");
+        buf.append("<td>" + getId(uri.getEntryId()) + "</td>\n");
+        buf.append("<td>" + localIndex.getBlogEntrySizeKB(uri) + "KB</td>\n");
+        buf.append("<td>");
+        for (Iterator titer=new TreeSet(localIndex.getBlogEntryTags(uri)).iterator(); titer.hasNext(); ) {
+          String tag=(String)titer.next();
+          buf.append("<a href=\"" + HTMLRenderer.getPageURL(blog,tag,-1,-1,-1,user.getShowExpanded(),user.getShowImages()) + "\">"+ tag+ "</a> \n");
+        }
+        buf.append("</td>\n");
+        buf.append("</tr>\n");
+      }
+    }
     if (shownEntries > 0)     out.write(buf.toString());
   }
+  int newBefore=localNew;
+  buf.setLength(0);
+  buf.append("<tr><td colspan=\"5\">Blogs the remote Syndie doesn't have</td></tr>\n");
+  for (Iterator iter=localBlogs.iterator(); iter.hasNext(); ) {
+    Hash blog=(Hash)iter.next();
+    if (remoteBlogs.contains(blog)) {
+      System.err.println("Remote index has " + blog.toBase64());
+      continue;
+    }
+    entries.clear();
+    localIndex.selectMatchesOrderByEntryId(entries,blog,null);
+    for (int i=0; i < entries.size(); i++) {
+      BlogURI uri=(BlogURI)entries.get(i);
+      buf.append("<tr>\n");
+      buf.append("<td><input type=\"checkbox\" name=\"localentry\" value=\"" + uri.toString() + "\" /></td>\n");
+      buf.append("<td>" + getDate(uri.getEntryId()) + "</td>\n");
+      buf.append("<td>" + getId(uri.getEntryId()) + "</td>\n");
+      buf.append("<td>" + localIndex.getBlogEntrySizeKB(uri) + "KB</td>\n");
+      buf.append("<td>");
+      for (Iterator titer=new TreeSet(localIndex.getBlogEntryTags(uri)).iterator(); titer.hasNext(); ) {
+        String tag=(String)titer.next();
+        buf.append("<a href=\"" + HTMLRenderer.getPageURL(blog,tag,-1,-1,-1,user.getShowExpanded(),user.getShowImages()) + "\">"+ tag+ "</a> \n");
+      }
+      buf.append("</td>\n");
+      buf.append("</tr>\n");
+      localNew++;
+    }
+  }
+  if (localNew > newBefore)   out.write(buf.toString());
   out.write("</table>\n");
   if (newEntries > 0) {
     out.write("<input type=\"submit\" name=\"action\" value=\"Fetch selected entries\" /> \n");
@@ -66,5 +120,8 @@
   }
  else {
     out.write(HTMLRenderer.sanitizeString(_remoteLocation) + " has no new posts to offer us\n");
+  }
+  if (localNew > 0) {
+    out.write("<input type=\"submit\" name=\"action\" value=\"Post selected entries\" /> \n");
   }
 }

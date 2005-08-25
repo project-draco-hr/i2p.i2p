@@ -1,4 +1,6 @@
 {
+  String tags[]=(_entry != null ? _entry.getTags() : null);
+  if ((tags != null) && (tags.length > 0))   _preBodyBuffer.append("<form action=\"index.jsp\">");
   _preBodyBuffer.append("<td nowrap=\"true\" align=\"right\" valign=\"top\" class=\"syndieEntryMetaCell\">\n");
   BlogInfo info=null;
   if (_entry != null)   info=_archive.getBlogInfo(_entry.getURI());
@@ -12,25 +14,24 @@
  else {
     _preBodyBuffer.append("[unknown blog]");
   }
-  String tags[]=(_entry != null ? _entry.getTags() : null);
   if ((tags != null) && (tags.length > 0)) {
     _preBodyBuffer.append(" Tags: ");
-    _preBodyBuffer.append("<i>");
+    _preBodyBuffer.append("<select name=\"selector\">");
     for (int i=0; tags != null && i < tags.length; i++) {
-      _preBodyBuffer.append("<a href=\"");
-      _preBodyBuffer.append(getPageURL(_entry.getURI().getKeyHash(),tags[i],-1,-1,-1,(_user != null ? _user.getShowExpanded() : false),(_user != null ? _user.getShowImages() : false)));
-      _preBodyBuffer.append("\">");
+      _preBodyBuffer.append("<option value=\"blogtag://");
+      _preBodyBuffer.append(_entry.getURI().getKeyHash().toBase64());
+      _preBodyBuffer.append('/').append(Base64.encode(tags[i])).append("\">");
       _preBodyBuffer.append(sanitizeString(tags[i]));
-      _preBodyBuffer.append("</a>");
-      if (i + 1 < tags.length)       _preBodyBuffer.append(", ");
+      _preBodyBuffer.append("</option>\n");
     }
-    _preBodyBuffer.append("</i>");
+    _preBodyBuffer.append("</select>");
+    _preBodyBuffer.append("<input type=\"submit\" value=\"View\" />\n");
   }
   _preBodyBuffer.append(" ");
   if (_entry != null)   _preBodyBuffer.append(getEntryDate(_entry.getURI().getEntryId()));
  else   _preBodyBuffer.append(getEntryDate(new Date().getTime()));
-  String inReplyTo=(String)_headers.get(HEADER_IN_REPLY_TO);
-  if ((inReplyTo != null) && (inReplyTo.trim().length() > 0))   _preBodyBuffer.append(" <a href=\"").append(getPageURL(sanitizeTagParam(inReplyTo))).append("\">In reply to</a>\n");
   if ((_user != null) && (_user.getAuthenticated()))   _preBodyBuffer.append(" <a href=\"").append(getPostURL(_user.getBlog(),true)).append("\">Reply</a>\n");
-  _preBodyBuffer.append("\n</td></tr>\n");
+  _preBodyBuffer.append("\n</td>");
+  if ((tags != null) && (tags.length > 0))   _preBodyBuffer.append("</form>");
+  _preBodyBuffer.append("</tr>\n");
 }

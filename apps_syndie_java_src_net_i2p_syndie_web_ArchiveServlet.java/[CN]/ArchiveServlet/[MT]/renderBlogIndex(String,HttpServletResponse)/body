@@ -1,0 +1,24 @@
+{
+  byte b[]=Base64.decode(blog);
+  if ((b == null) || (b.length != Hash.HASH_LENGTH)) {
+    resp.sendError(404,"Invalid blog requested");
+    return;
+  }
+  Hash h=new Hash(b);
+  BlogInfo info=BlogManager.instance().getArchive().getBlogInfo(h);
+  if (info == null) {
+    resp.sendError(404,"Blog does not exist");
+    return;
+  }
+  resp.setContentType("text/html");
+  OutputStream out=resp.getOutputStream();
+  out.write("<a href=\"..\">..</a><br />\n".getBytes());
+  out.write(("<a href=\"" + Archive.METADATA_FILE + "\">"+ Archive.METADATA_FILE+ "</a><br />\n").getBytes());
+  List entries=new ArrayList(64);
+  BlogManager.instance().getArchive().getIndex().selectMatchesOrderByEntryId(entries,h,null);
+  for (int i=0; i < entries.size(); i++) {
+    BlogURI entry=(BlogURI)entries.get(i);
+    out.write(("<a href=\"" + entry.getEntryId() + ".snd\">"+ entry.getEntryId()+ ".snd</a><br />\n").getBytes());
+  }
+  out.close();
+}

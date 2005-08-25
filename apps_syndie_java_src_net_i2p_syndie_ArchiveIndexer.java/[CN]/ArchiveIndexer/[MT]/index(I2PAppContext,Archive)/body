@@ -27,6 +27,7 @@
   long newSize=0;
   long totalSize=0;
   int newBlogs=0;
+  SMLParser parser=new SMLParser();
   for (int i=0; i < blogs.size(); i++) {
     BlogInfo cur=(BlogInfo)blogs.get(i);
     Hash key=cur.getKey().calculateHash();
@@ -54,6 +55,14 @@
       if (entry.getURI().getEntryId() >= newSince) {
         newEntries++;
         newSize+=entry.getCompleteSize();
+      }
+      HeaderReceiver rec=new HeaderReceiver();
+      parser.parse(entry.getEntry().getText(),rec);
+      String reply=rec.getHeader(HTMLRenderer.HEADER_IN_REPLY_TO);
+      if (reply != null) {
+        BlogURI parent=new BlogURI(reply.trim());
+        if ((parent.getKeyHash() != null) && (parent.getEntryId() >= 0))         rv.addReply(parent,entry.getURI());
+ else         System.err.println("Parent of " + entry.getURI() + " is not valid: ["+ reply.trim()+ "]");
       }
     }
     long lowestEntryId=-1;
