@@ -1,0 +1,40 @@
+{
+  try {
+    URL u=new URL(_url);
+    String h=u.getHost();
+    int p=u.getPort();
+    if (p <= 0)     p=80;
+    String path=u.getPath();
+    boolean isProxy=true;
+    if ((_proxyHost == null) || (_proxyPort <= 0)) {
+      isProxy=false;
+      _proxyHost=h;
+      _proxyPort=p;
+    }
+    Socket s=new Socket(_proxyHost,_proxyPort);
+    OutputStream out=s.getOutputStream();
+    String sep=getSeparator();
+    long length=calcContentLength(sep,_fields);
+    String header=getHeader(isProxy,path,h,p,sep,length);
+    System.out.println("Header: \n" + header);
+    out.write(header.getBytes());
+    out.flush();
+    if (false) {
+      out.write(("--" + sep + "\ncontent-disposition: form-data; name=\"field1\"\n\nStuff goes here\n--"+ sep+ "--\n").getBytes());
+    }
+ else {
+      sendFields(out,sep,_fields);
+    }
+    out.flush();
+    BufferedReader in=new BufferedReader(new InputStreamReader(s.getInputStream()));
+    String line=null;
+    while ((line=in.readLine()) != null)     System.out.println("recv: [" + line + "]");
+    out.close();
+  }
+ catch (  Exception e) {
+    e.printStackTrace();
+  }
+ finally {
+    if (_onCompletion != null)     _onCompletion.run();
+  }
+}
