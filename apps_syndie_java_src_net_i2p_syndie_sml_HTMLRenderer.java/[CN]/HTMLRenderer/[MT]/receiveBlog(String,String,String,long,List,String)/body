@@ -1,11 +1,4 @@
 {
-  Blog b=new Blog();
-  b.name=name;
-  b.hash=hash;
-  b.tag=tag;
-  b.entryId=entryId;
-  b.locations=locations;
-  if (!_blogs.contains(b))   _blogs.add(b);
   if (!continueBody()) {
     return;
   }
@@ -13,6 +6,13 @@
   System.out.println("Receiving the blog: " + name + "/"+ hash+ "/"+ tag+ "/"+ entryId+ "/"+ locations+ ": "+ description);
   byte blogData[]=Base64.decode(hash);
   if ((blogData == null) || (blogData.length != Hash.HASH_LENGTH))   return;
+  Blog b=new Blog();
+  b.name=name;
+  b.hash=hash;
+  b.tag=tag;
+  b.entryId=entryId;
+  b.locations=locations;
+  if (!_blogs.contains(b))   _blogs.add(b);
   Hash blog=new Hash(blogData);
   if (entryId > 0) {
     String pageURL=getPageURL(blog,tag,entryId,-1,-1,true,(_user != null ? _user.getShowImages() : false));
@@ -40,13 +40,12 @@
     _bodyBuffer.append("\">Tag: ").append(sanitizeString(tag)).append("</a>");
   }
   if ((locations != null) && (locations.size() > 0)) {
-    _bodyBuffer.append(" <select name=\"archiveLocation\">");
+    _bodyBuffer.append(" Archives: ");
     for (int i=0; i < locations.size(); i++) {
       SafeURL surl=(SafeURL)locations.get(i);
-      _bodyBuffer.append("<option value=\"").append(Base64.encode(surl.toString())).append("\">");
-      _bodyBuffer.append(sanitizeString(surl.toString())).append("</option>\n");
+      if (_user.getAuthenticated() && _user.getAllowAccessRemote())       _bodyBuffer.append("<a href=\"").append(getArchiveURL(blog,surl)).append("\">").append(sanitizeString(surl.toString())).append("</a> ");
+ else       _bodyBuffer.append(sanitizeString(surl.toString())).append(' ');
     }
-    _bodyBuffer.append("</select>");
   }
   _bodyBuffer.append("] ");
 }

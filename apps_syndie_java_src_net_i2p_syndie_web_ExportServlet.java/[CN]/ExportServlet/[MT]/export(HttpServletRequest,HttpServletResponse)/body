@@ -1,0 +1,31 @@
+{
+  String meta[]=req.getParameterValues("meta");
+  String entries[]=req.getParameterValues("entry");
+  resp.setContentType("application/x-syndie-zip");
+  resp.setStatus(200);
+  OutputStream out=resp.getOutputStream();
+  ZipOutputStream zo=new ZipOutputStream(out);
+  List metaFiles=getMetaFiles(meta);
+  ZipEntry ze=null;
+  byte buf[]=new byte[1024];
+  int read=-1;
+  for (int i=0; metaFiles != null && i < metaFiles.size(); i++) {
+    ze=new ZipEntry("meta" + i);
+    ze.setTime(0);
+    zo.putNextEntry(ze);
+    FileInputStream in=new FileInputStream((File)metaFiles.get(i));
+    while ((read=in.read(buf)) != -1)     zo.write(buf,0,read);
+    zo.closeEntry();
+  }
+  List entryFiles=getEntryFiles(entries);
+  for (int i=0; entryFiles != null && i < entryFiles.size(); i++) {
+    ze=new ZipEntry("entry" + i);
+    ze.setTime(0);
+    zo.putNextEntry(ze);
+    FileInputStream in=new FileInputStream((File)entryFiles.get(i));
+    while ((read=in.read(buf)) != -1)     zo.write(buf,0,read);
+    zo.closeEntry();
+  }
+  zo.finish();
+  zo.close();
+}

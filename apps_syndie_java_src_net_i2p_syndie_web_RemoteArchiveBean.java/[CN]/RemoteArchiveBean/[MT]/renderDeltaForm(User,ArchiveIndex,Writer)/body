@@ -22,7 +22,7 @@
   List entries=new ArrayList();
   for (Iterator iter=remoteBlogs.iterator(); iter.hasNext(); ) {
     Hash blog=(Hash)iter.next();
-    buf=new StringBuffer(1024);
+    buf.setLength(0);
     int shownEntries=0;
     buf.append("<tr><td colspan=\"5\" align=\"left\" valign=\"top\">\n");
     BlogInfo info=archive.getBlogInfo(blog);
@@ -59,6 +59,11 @@
       buf.append("</td>\n");
       buf.append("</tr>\n");
     }
+    if (shownEntries > 0) {
+      out.write(buf.toString());
+      buf.setLength(0);
+    }
+    int remote=shownEntries;
     entries.clear();
     localIndex.selectMatchesOrderByEntryId(entries,blog,null);
     buf.append("<tr><td colspan=\"5\">Entries we have, but the remote Syndie doesn't:</td></tr>\n");
@@ -82,7 +87,7 @@
         buf.append("</tr>\n");
       }
     }
-    if (shownEntries > 0)     out.write(buf.toString());
+    if (shownEntries > remote)     out.write(buf.toString());
   }
   int newBefore=localNew;
   buf.setLength(0);
@@ -124,4 +129,5 @@
   if (localNew > 0) {
     out.write("<input type=\"submit\" name=\"action\" value=\"Post selected entries\" /> \n");
   }
+  out.write("<hr />\n");
 }
