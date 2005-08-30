@@ -1,9 +1,20 @@
 {
+  Log l=ctx.logManager().getLog(getClass());
   int length=getLength(ctx,settings);
-  if (length < 0)   return null;
-  if (shouldSelectExplicit(settings))   return selectExplicit(ctx,settings,length);
+  if (length < 0) {
+    if (l.shouldLog(Log.DEBUG))     l.debug("Length requested is zero: " + settings);
+    return null;
+  }
+  if (shouldSelectExplicit(settings)) {
+    List rv=selectExplicit(ctx,settings,length);
+    if (l.shouldLog(Log.DEBUG))     l.debug("Explicit peers selected: " + rv);
+    return rv;
+  }
+  HashSet exclude=new HashSet(1);
+  exclude.add(ctx.routerHash());
   HashSet matches=new HashSet(length);
-  ctx.profileOrganizer().selectNotFailingPeers(length,null,matches,true);
+  ctx.profileOrganizer().selectNotFailingPeers(length,exclude,matches,false);
+  if (l.shouldLog(Log.DEBUG))   l.debug("profileOrganizer.selectNotFailing(" + length + ") found "+ matches);
   matches.remove(ctx.routerHash());
   ArrayList rv=new ArrayList(matches);
   Collections.shuffle(rv,ctx.random());
