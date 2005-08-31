@@ -1,10 +1,13 @@
 {
-  File userFile=new File(_userDir,Base64.encode(_context.sha().calculateHash(login.getBytes()).getData()));
-  System.out.println("Attempting to login to " + login + " w/ pass = "+ pass+ ": file = "+ userFile.getAbsolutePath()+ " passHash = "+ Base64.encode(_context.sha().calculateHash(pass.getBytes()).getData()));
+  Hash userHash=_context.sha().calculateHash(DataHelper.getUTF8(login));
+  Hash passHash=_context.sha().calculateHash(DataHelper.getUTF8(pass));
+  File userFile=new File(_userDir,Base64.encode(userHash.getData()));
+  System.out.println("Attempting to login to " + login + " w/ pass = "+ pass+ ": file = "+ userFile.getAbsolutePath()+ " passHash = "+ Base64.encode(passHash.getData()));
   if (userFile.exists()) {
     try {
       Properties props=new Properties();
-      BufferedReader in=new BufferedReader(new FileReader(userFile));
+      FileInputStream fin=new FileInputStream(userFile);
+      BufferedReader in=new BufferedReader(new InputStreamReader(fin,"UTF-8"));
       String line=null;
       while ((line=in.readLine()) != null) {
         int split=line.indexOf('=');

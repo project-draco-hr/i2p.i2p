@@ -13,17 +13,48 @@
       String blogStr=selector.substring(SEL_BLOGTAG.length(),tagStart);
       blog=new Hash(Base64.decode(blogStr));
       tag=selector.substring(tagStart + 1);
-      if (tag != null)       tag=new String(Base64.decode(tag));
+      String origTag=tag;
+      byte rawDecode[]=null;
+      if (tag != null) {
+        rawDecode=Base64.decode(tag);
+        tag=DataHelper.getUTF8(rawDecode);
+      }
       System.out.println("Selector [" + selector + "] blogString: ["+ blogStr+ "] tag: ["+ tag+ "]");
+      if (false && tag != null) {
+        StringBuffer b=new StringBuffer(tag.length() * 2);
+        for (int j=0; j < tag.length(); j++) {
+          b.append((int)tag.charAt(j));
+          if (rawDecode.length > j)           b.append('.').append((int)rawDecode[j]);
+          b.append(' ');
+        }
+        b.append("encoded as ");
+        for (int j=0; j < origTag.length(); j++) {
+          b.append((int)origTag.charAt(j)).append(' ');
+        }
+        System.out.println("selected tag: " + b.toString());
+      }
     }
  else     if (selector.startsWith(SEL_TAG)) {
       tag=selector.substring(SEL_TAG.length());
-      if (tag != null)       tag=new String(Base64.decode(tag));
+      byte rawDecode[]=null;
+      if (tag != null) {
+        rawDecode=Base64.decode(tag);
+        tag=DataHelper.getUTF8(rawDecode);
+      }
       System.out.println("Selector [" + selector + "] tag: ["+ tag+ "]");
+      if (false && tag != null) {
+        StringBuffer b=new StringBuffer(tag.length() * 2);
+        for (int j=0; j < tag.length(); j++) {
+          b.append((int)tag.charAt(j));
+          if (rawDecode.length > j)           b.append('.').append((int)rawDecode[j]);
+          b.append(' ');
+        }
+        System.out.println("selected tag: " + b.toString());
+      }
     }
  else     if (selector.startsWith(SEL_ENTRY)) {
       int entryStart=selector.lastIndexOf('/');
-      String blogStr=selector.substring(SEL_ENTRY.length(),entryStart);
+      String blogStr=blogStr=selector.substring(SEL_ENTRY.length(),entryStart);
       String entryStr=selector.substring(entryStart + 1);
       try {
         entry=Long.parseLong(entryStr);
@@ -34,7 +65,7 @@
       }
     }
  else     if (selector.startsWith(SEL_GROUP)) {
-      group=new String(Base64.decode(selector.substring(SEL_GROUP.length())));
+      group=DataHelper.getUTF8(Base64.decode(selector.substring(SEL_GROUP.length())));
       System.out.println("Selector [" + selector + "] group: ["+ group+ "]");
     }
   }

@@ -1,26 +1,35 @@
 {
+  System.err.println("Register [" + login + "] pass ["+ password+ "] name ["+ blogName+ "] descr ["+ blogDescription+ "] contact ["+ contactURL+ "]");
+  System.err.println("reference bad string: [" + EncodingTestGenerator.TEST_STRING + "]");
   String hashedRegistrationPassword=getRegistrationPassword();
   if (hashedRegistrationPassword != null) {
-    if (!hashedRegistrationPassword.equals(Base64.encode(_context.sha().calculateHash(registrationPassword.getBytes()).getData())))     return "Invalid registration password";
+    try {
+      if (!hashedRegistrationPassword.equals(Base64.encode(_context.sha().calculateHash(registrationPassword.getBytes("UTF-8")).getData())))       return "Invalid registration password";
+    }
+ catch (    UnsupportedEncodingException uee) {
+      return "Error registering";
+    }
   }
-  String userHash=Base64.encode(_context.sha().calculateHash(login.getBytes()).getData());
+  String userHash=Base64.encode(_context.sha().calculateHash(DataHelper.getUTF8(login)).getData());
   File userFile=new File(_userDir,userHash);
   if (userFile.exists()) {
     return "Cannot register the login " + login + ": it already exists";
   }
  else {
     BlogInfo info=createBlog(blogName,blogDescription,contactURL,null);
-    String hashedPassword=Base64.encode(_context.sha().calculateHash(password.getBytes()).getData());
-    FileWriter out=null;
+    String hashedPassword=Base64.encode(_context.sha().calculateHash(DataHelper.getUTF8(password)).getData());
+    FileOutputStream out=null;
     try {
-      out=new FileWriter(userFile);
-      out.write("password=" + hashedPassword + "\n");
-      out.write("blog=" + Base64.encode(info.getKey().calculateHash().getData()) + "\n");
-      out.write("lastid=-1\n");
-      out.write("lastmetaedition=0\n");
-      out.write("addressbook=userhosts-" + userHash + ".txt\n");
-      out.write("showimages=false\n");
-      out.write("showexpanded=false\n");
+      out=new FileOutputStream(userFile);
+      BufferedWriter bw=new BufferedWriter(new OutputStreamWriter(out,"UTF-8"));
+      bw.write("password=" + hashedPassword + "\n");
+      bw.write("blog=" + Base64.encode(info.getKey().calculateHash().getData()) + "\n");
+      bw.write("lastid=-1\n");
+      bw.write("lastmetaedition=0\n");
+      bw.write("addressbook=userhosts-" + userHash + ".txt\n");
+      bw.write("showimages=false\n");
+      bw.write("showexpanded=false\n");
+      bw.flush();
     }
  catch (    IOException ioe) {
       ioe.printStackTrace();

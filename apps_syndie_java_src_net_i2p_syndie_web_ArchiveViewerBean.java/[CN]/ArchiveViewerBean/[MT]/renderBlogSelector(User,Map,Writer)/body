@@ -20,7 +20,7 @@
   if (groups != null) {
     for (Iterator iter=groups.keySet().iterator(); iter.hasNext(); ) {
       String name=(String)iter.next();
-      out.write("<option value=\"group://" + Base64.encode(name.getBytes()) + "\">"+ "Group: "+ HTMLRenderer.sanitizeString(name)+ "</option>\n");
+      out.write("<option value=\"group://" + Base64.encode(DataHelper.getUTF8(name)) + "\">"+ "Group: "+ HTMLRenderer.sanitizeString(name)+ "</option>\n");
     }
   }
   Archive archive=BlogManager.instance().getArchive();
@@ -54,11 +54,36 @@
     List tags=index.getBlogTags(cur);
     for (int j=0; j < tags.size(); j++) {
       String tag=(String)tags.get(j);
+      if (false) {
+        StringBuffer b=new StringBuffer(tag.length() * 2);
+        for (int k=0; k < tag.length(); k++) {
+          b.append((int)tag.charAt(k));
+          b.append(' ');
+        }
+        System.out.println("tag in select: " + tag + ": "+ b.toString());
+      }
       if (!allTags.contains(tag))       allTags.add(tag);
       out.write("<option value=\"blogtag://");
       out.write(blog);
       out.write("/");
-      out.write(Base64.encode(tag));
+      byte utf8tag[]=DataHelper.getUTF8(tag);
+      String encoded=Base64.encode(utf8tag);
+      if (false) {
+        byte utf8dec[]=Base64.decode(encoded);
+        String travel=DataHelper.getUTF8(utf8dec);
+        StringBuffer b=new StringBuffer();
+        for (int k=0; k < travel.length(); k++) {
+          b.append((int)travel.charAt(k));
+          b.append(' ');
+        }
+        b.append(" encoded into: ");
+        for (int k=0; k < encoded.length(); k++) {
+          b.append((int)encoded.charAt(k));
+          b.append(' ');
+        }
+        System.out.println("UTF8(unbase64(base64(UTF8(tag)))) == tag: " + b.toString());
+      }
+      out.write(encoded);
       out.write("\">");
       out.write(name);
       out.write("- posts with the tag &quot;");
@@ -69,7 +94,7 @@
   for (int i=0; i < allTags.size(); i++) {
     String tag=(String)allTags.get(i);
     out.write("<option value=\"tag://");
-    out.write(Base64.encode(tag));
+    out.write(Base64.encode(DataHelper.getUTF8(tag)));
     out.write("\">Posts in any blog with the tag &quot;");
     out.write(tag);
     out.write("&quot;</option>\n");
