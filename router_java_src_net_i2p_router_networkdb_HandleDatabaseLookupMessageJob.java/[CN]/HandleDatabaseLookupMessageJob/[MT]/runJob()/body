@@ -6,14 +6,15 @@
   }
   LeaseSet ls=getContext().netDb().lookupLeaseSetLocally(_message.getSearchKey());
   if (ls != null) {
-    if (answerAllQueries() || ls.getReceivedAsPublished()) {
+    boolean publish=getContext().clientManager().shouldPublishLeaseSet(_message.getSearchKey());
+    if (publish && (answerAllQueries() || ls.getReceivedAsPublished())) {
       getContext().statManager().addRateData("netDb.lookupsMatchedReceivedPublished",1,0);
       sendData(_message.getSearchKey(),ls,fromKey,_message.getReplyTunnel());
     }
  else {
       Set routerInfoSet=getContext().netDb().findNearestRouters(_message.getSearchKey(),CLOSENESS_THRESHOLD,_message.getDontIncludePeers());
       if (getContext().clientManager().isLocal(ls.getDestination())) {
-        if (weAreClosest(routerInfoSet)) {
+        if (publish && weAreClosest(routerInfoSet)) {
           getContext().statManager().addRateData("netDb.lookupsMatchedLocalClosest",1,0);
           sendData(_message.getSearchKey(),ls,fromKey,_message.getReplyTunnel());
         }
