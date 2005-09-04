@@ -14,9 +14,22 @@
         if ((s.entry >= 0) && (s.blog != null) && (s.group == null)&& (s.tag == null))         rv.add(new BlogURI(s.blog,s.entry));
  else         index.selectMatchesOrderByEntryId(rv,s.blog,s.tag);
       }
-      return rv;
     }
+    PetNameDB db=user.getPetNameDB();
+    for (Iterator iter=db.getNames().iterator(); iter.hasNext(); ) {
+      String name=(String)iter.next();
+      PetName pn=db.get(name);
+      if ("syndie".equals(pn.getNetwork()) && "syndieblog".equals(pn.getProtocol()) && pn.isMember(group)) {
+        byte pnLoc[]=Base64.decode(pn.getLocation());
+        if (pnLoc != null) {
+          Hash pnHash=new Hash(pnLoc);
+          index.selectMatchesOrderByEntryId(rv,pnHash,null);
+        }
+      }
+    }
+    if (rv.size() > 0)     return rv;
   }
   index.selectMatchesOrderByEntryId(rv,blog,tag);
+  filterIgnored(user,rv);
   return rv;
 }

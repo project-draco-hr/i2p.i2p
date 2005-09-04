@@ -2,17 +2,32 @@
   String tags[]=(_entry != null ? _entry.getTags() : null);
   if ((tags != null) && (tags.length > 0))   _preBodyBuffer.append("<form action=\"index.jsp\">");
   _preBodyBuffer.append("<td nowrap=\"true\" align=\"right\" valign=\"top\" class=\"syndieEntryMetaCell\">\n");
+  String knownName=null;
+  if ((_entry != null) && (_user != null))   knownName=_user.getPetNameDB().getNameByLocation(_entry.getURI().getKeyHash().toBase64());
   BlogInfo info=null;
   if (_entry != null)   info=_archive.getBlogInfo(_entry.getURI());
   if (info != null) {
     _preBodyBuffer.append("<a href=\"").append(getMetadataURL()).append("\">");
-    String nameStr=info.getProperty("Name");
-    if (nameStr == null)     _preBodyBuffer.append("[no name]");
- else     _preBodyBuffer.append(sanitizeString(nameStr));
+    if (knownName != null) {
+      _preBodyBuffer.append(sanitizeString(knownName));
+    }
+ else {
+      String nameStr=info.getProperty("Name");
+      if (nameStr == null)       _preBodyBuffer.append("[no name]");
+ else       _preBodyBuffer.append(sanitizeString(nameStr));
+    }
     _preBodyBuffer.append("</a>");
   }
  else {
     _preBodyBuffer.append("[unknown blog]");
+  }
+  if ((_user != null) && (_user.getAuthenticated()) && (_entry != null)) {
+    PetName pn=_user.getPetNameDB().get(knownName);
+    if ((pn == null) || (!pn.isMember("Favorites")))     _preBodyBuffer.append(" <input type=\"submit\" name=\"action\" value=\"Bookmark blog\" />");
+    if ((pn == null) || (!pn.isMember("Ignore")))     _preBodyBuffer.append(" <input type=\"submit\" name=\"action\" value=\"Ignore blog\" />");
+ else     _preBodyBuffer.append(" <input type=\"submit\" name=\"action\" value=\"Unignore blog\" />");
+    _preBodyBuffer.append(" <input type=\"hidden\" name=\"blog\" value=\"").append(_entry.getURI().getKeyHash().toBase64()).append("\" />");
+    if (info != null)     _preBodyBuffer.append(" <input type=\"hidden\" name=\"name\" value=\"").append(sanitizeTagParam(info.getProperty("Name"))).append("\" />");
   }
   if ((tags != null) && (tags.length > 0)) {
     _preBodyBuffer.append(" Tags: ");
@@ -30,7 +45,9 @@
   _preBodyBuffer.append(" ");
   if (_entry != null)   _preBodyBuffer.append(getEntryDate(_entry.getURI().getEntryId()));
  else   _preBodyBuffer.append(getEntryDate(new Date().getTime()));
-  if ((_user != null) && (_user.getAuthenticated()))   _preBodyBuffer.append(" <a href=\"").append(getPostURL(_user.getBlog(),true)).append("\">Reply</a>\n");
+  if ((_user != null) && (_user.getAuthenticated())) {
+    _preBodyBuffer.append(" <a href=\"").append(getPostURL(_user.getBlog(),true)).append("\">Reply</a>\n");
+  }
   _preBodyBuffer.append("\n</td>");
   if ((tags != null) && (tags.length > 0))   _preBodyBuffer.append("</form>");
   _preBodyBuffer.append("</tr>\n");

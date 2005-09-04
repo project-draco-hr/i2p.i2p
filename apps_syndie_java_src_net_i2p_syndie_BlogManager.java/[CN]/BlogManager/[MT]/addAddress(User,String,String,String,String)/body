@@ -1,0 +1,19 @@
+{
+  if (!user.getAuthenticated())   return "Not logged in";
+  boolean ok=validateAddressName(name);
+  if (!ok)   return "Invalid name: " + HTMLRenderer.sanitizeString(name);
+  ok=validateAddressLocation(location);
+  if (!ok)   return "Invalid location: " + HTMLRenderer.sanitizeString(location);
+  if (!validateAddressSchema(schema))   return "Unsupported schema: " + HTMLRenderer.sanitizeString(schema);
+  PetNameDB names=user.getPetNameDB();
+  if (names.exists(name))   return "Name is already in use";
+  PetName pn=new PetName(name,schema,protocol,location);
+  names.set(name,pn);
+  try {
+    names.store(user.getAddressbookLocation());
+    return "Address " + name + " written to your addressbook";
+  }
+ catch (  IOException ioe) {
+    return "Error writing out the name: " + ioe.getMessage();
+  }
+}
