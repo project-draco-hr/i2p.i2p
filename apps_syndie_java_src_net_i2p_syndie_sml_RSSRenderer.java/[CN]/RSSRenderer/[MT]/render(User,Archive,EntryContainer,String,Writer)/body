@@ -1,0 +1,20 @@
+{
+  if (entry == null)   return;
+  prepare(user,archive,entry,entry.getEntry().getText(),out,true,false);
+  out.write("   <item>\n");
+  out.write("    <title>" + sanitizeXML(sanitizeString((String)_headers.get(HEADER_SUBJECT))) + "</title>\n");
+  out.write("    <link>" + urlPrefix + sanitizeXML(getEntryURL())+ "</link>\n");
+  out.write("    <guid isPermalink=\"false\">" + urlPrefix + entry.getURI().toString()+ "</guid>\n");
+  out.write("    <pubDate>" + getRFC822Date(entry.getURI().getEntryId()) + "</pubDate>\n");
+  String author=user.getPetNameDB().getNameByLocation(entry.getURI().getKeyHash().toBase64());
+  if (author == null) {
+    BlogInfo info=archive.getBlogInfo(entry.getURI());
+    if (info != null)     author=info.getProperty(BlogInfo.NAME);
+  }
+  if (author == null)   author=entry.getURI().getKeyHash().toBase64();
+  out.write("    <author>" + sanitizeXML(sanitizeString(author)) + "@syndie.invalid</author>\n");
+  String tags[]=entry.getTags();
+  if (tags != null)   for (int i=0; i < tags.length; i++)   out.write("    <category>" + sanitizeXML(sanitizeString(tags[i])) + "</category>\n");
+  out.write("    <description>" + sanitizeXML(_bodyBuffer.toString()) + "</description>\n");
+  out.write("   </item>\n");
+}
