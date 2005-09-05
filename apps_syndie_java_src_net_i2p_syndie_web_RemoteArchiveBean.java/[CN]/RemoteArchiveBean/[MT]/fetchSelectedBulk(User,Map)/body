@@ -19,31 +19,59 @@
     for (int i=0; i < uris.size(); i++)     entries[i]=((BlogURI)uris.get(i)).toString();
   }
   if ((entries == null) || (entries.length <= 0))   return;
-  StringBuffer url=new StringBuffer(512);
-  url.append(buildExportURL());
-  Set meta=new HashSet();
-  for (int i=0; i < entries.length; i++) {
-    BlogURI uri=new BlogURI(entries[i]);
-    if (uri.getEntryId() >= 0) {
-      url.append("entry=").append(uri.toString()).append('&');
-      meta.add(uri.getKeyHash());
-      _statusMessages.add("Scheduling blog post fetching for " + HTMLRenderer.sanitizeString(entries[i]));
+  if (_exportCapable) {
+    StringBuffer url=new StringBuffer(512);
+    url.append(buildExportURL());
+    Set meta=new HashSet();
+    for (int i=0; i < entries.length; i++) {
+      BlogURI uri=new BlogURI(entries[i]);
+      if (uri.getEntryId() >= 0) {
+        url.append("entry=").append(uri.toString()).append('&');
+        meta.add(uri.getKeyHash());
+        _statusMessages.add("Scheduling bulk blog post fetch of " + HTMLRenderer.sanitizeString(entries[i]));
+      }
+    }
+    for (Iterator iter=meta.iterator(); iter.hasNext(); ) {
+      Hash blog=(Hash)iter.next();
+      url.append("meta=").append(blog.toBase64()).append('&');
+      _statusMessages.add("Scheduling bulk blog metadata fetch of " + blog.toBase64());
+    }
+    List urls=new ArrayList(1);
+    urls.add(url.toString());
+    List tmpFiles=new ArrayList(1);
+    try {
+      File tmp=File.createTempFile("fetchBulk",".zip",BlogManager.instance().getTempDir());
+      tmpFiles.add(tmp);
+      fetch(urls,tmpFiles,user,new BulkFetchListener(tmp));
+    }
+ catch (    IOException ioe) {
+      _statusMessages.add("Internal error creating temporary file to fetch " + HTMLRenderer.sanitizeString(url.toString()) + ": "+ ioe.getMessage());
     }
   }
-  for (Iterator iter=meta.iterator(); iter.hasNext(); ) {
-    Hash blog=(Hash)iter.next();
-    url.append("meta=").append(blog.toBase64()).append('&');
-    _statusMessages.add("Scheduling blog metadata fetching for " + blog.toBase64());
-  }
-  List urls=new ArrayList(1);
-  urls.add(url.toString());
-  List tmpFiles=new ArrayList(1);
-  try {
-    File tmp=File.createTempFile("fetchBulk",".zip",BlogManager.instance().getTempDir());
-    tmpFiles.add(tmp);
-    fetch(urls,tmpFiles,user,new BulkFetchListener(tmp));
-  }
- catch (  IOException ioe) {
-    _statusMessages.add("Internal error creating temporary file to fetch " + HTMLRenderer.sanitizeString(url.toString()) + ": "+ ioe.getMessage());
+ else {
+    List urls=new ArrayList(entries.length + 8);
+    for (int i=0; i < entries.length; i++) {
+      BlogURI uri=new BlogURI(entries[i]);
+      if (uri.getEntryId() >= 0) {
+        String metaURL=buildMetaURL(uri.getKeyHash());
+        if (!urls.contains(metaURL)) {
+          urls.add(metaURL);
+          _statusMessages.add("Scheduling blog metadata fetch of " + HTMLRenderer.sanitizeString(entries[i]));
+        }
+        urls.add(buildEntryURL(uri));
+        _statusMessages.add("Scheduling blog post fetch of " + HTMLRenderer.sanitizeString(entries[i]));
+      }
+    }
+    List tmpFiles=new ArrayList(1);
+    try {
+      for (int i=0; i < urls.size(); i++) {
+        File t=File.createTempFile("fetchBulk",".dat",BlogManager.instance().getTempDir());
+        tmpFiles.add(t);
+      }
+      fetch(urls,tmpFiles,user,new BlogStatusListener());
+    }
+ catch (    IOException ioe) {
+      _statusMessages.add("Internal error creating temporary file to fetch posts: " + HTMLRenderer.sanitizeString(urls.toString()));
+    }
   }
 }
