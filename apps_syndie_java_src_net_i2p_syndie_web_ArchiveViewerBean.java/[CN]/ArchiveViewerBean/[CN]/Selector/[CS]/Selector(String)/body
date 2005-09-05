@@ -6,12 +6,19 @@
     if (selector.startsWith(SEL_BLOG)) {
       String blogStr=selector.substring(SEL_BLOG.length());
       System.out.println("Selector [" + selector + "] blogString: ["+ blogStr+ "]");
-      blog=new Hash(Base64.decode(blogStr));
+      byte h[]=Base64.decode(blogStr);
+      if (h != null)       blog=new Hash(h);
+ else       System.out.println("blog string does not decode properly: [" + blogStr + "]");
     }
  else     if (selector.startsWith(SEL_BLOGTAG)) {
       int tagStart=selector.lastIndexOf('/');
       String blogStr=selector.substring(SEL_BLOGTAG.length(),tagStart);
       blog=new Hash(Base64.decode(blogStr));
+      if (blog.getData() == null) {
+        System.out.println("Blog string [" + blogStr + "] does not decode");
+        blog=null;
+        return;
+      }
       tag=selector.substring(tagStart + 1);
       String origTag=tag;
       byte rawDecode[]=null;
@@ -58,7 +65,9 @@
       String entryStr=selector.substring(entryStart + 1);
       try {
         entry=Long.parseLong(entryStr);
-        blog=new Hash(Base64.decode(blogStr));
+        Hash h=new Hash(Base64.decode(blogStr));
+        if (h.getData() != null)         blog=h;
+ else         System.out.println("Blog does not decode [" + blogStr + "]");
         System.out.println("Selector [" + selector + "] blogString: ["+ blogStr+ "] entry: ["+ entry+ "]");
       }
  catch (      NumberFormatException nfe) {
