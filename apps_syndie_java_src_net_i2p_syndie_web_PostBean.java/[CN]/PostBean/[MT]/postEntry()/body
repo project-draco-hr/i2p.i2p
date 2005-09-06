@@ -5,5 +5,27 @@
     File f=(File)_localFiles.get(i);
     localStreams.add(new FileInputStream(f));
   }
-  return BlogManager.instance().createBlogEntry(_user,_subject,_tags,_headers,_text,_filenames,localStreams,_fileTypes);
+  BlogURI uri=BlogManager.instance().createBlogEntry(_user,_subject,_tags,_headers,_text,_filenames,localStreams,_fileTypes);
+  System.err.println("Posted the entry " + uri.toString() + " (archive = "+ _archive+ ")");
+  if ((uri != null) && (_user.getAllowAccessRemote())) {
+    PetName pn=_user.getPetNameDB().get(_archive);
+    System.err.println("Archive to petname? " + pn + " (protocol: "+ (pn != null ? pn.getProtocol() : "")+ ")");
+    if ((pn != null) && ("syndiearchive".equals(pn.getProtocol()))) {
+      RemoteArchiveBean r=new RemoteArchiveBean();
+      Map params=new HashMap();
+      params.put("localentry",new String[]{uri.toString()});
+      String proxyHost=BlogManager.instance().getDefaultProxyHost();
+      String port=BlogManager.instance().getDefaultProxyPort();
+      int proxyPort=4444;
+      try {
+        proxyPort=Integer.parseInt(port);
+      }
+ catch (      NumberFormatException nfe) {
+      }
+      System.err.println("Posting the entry " + uri.toString() + " to "+ pn.getLocation());
+      r.postSelectedEntries(_user,params,proxyHost,proxyPort,pn.getLocation());
+      System.err.println("Post status: " + r.getStatus());
+    }
+  }
+  return uri;
 }
