@@ -1,9 +1,11 @@
 {
-  _postBodyBuffer.append("</td></tr>\n");
+  _postBodyBuffer.append("</td></tr>\n<!-- end of the post body -->");
   if (_cutBody) {
-    _postBodyBuffer.append("<tr class=\"syndieEntryAttachmentsCell\">\n");
-    _postBodyBuffer.append("<td colspan=\"2\" valign=\"top\" align=\"left\" class=\"syndieEntryAttachmentsCell\">");
-    _postBodyBuffer.append("<a href=\"").append(getEntryURL()).append("\">View details...</a> ");
+    _postBodyBuffer.append("<!-- beginning of the post summary -->\n");
+    _postBodyBuffer.append("<tr ").append(getClass("summ")).append("\">\n");
+    _postBodyBuffer.append("<td colspan=\"2\" valign=\"top\" align=\"left\" ").append(getClass("summ")).append(" >");
+    _postBodyBuffer.append("<a ").append(getClass("summLink")).append(" href=\"").append(getEntryURL()).append("\">View details...</a> ");
+    _postBodyBuffer.append(getSpan("summ"));
     if ((_entry != null) && (_entry.getAttachments() != null) && (_entry.getAttachments().length > 0)) {
       int num=_entry.getAttachments().length;
       if (num == 1)       _postBodyBuffer.append("1 attachment ");
@@ -29,11 +31,13 @@
       }
     }
     String inReplyTo=(String)_headers.get(HEADER_IN_REPLY_TO);
-    if ((inReplyTo != null) && (inReplyTo.trim().length() > 0))     _postBodyBuffer.append(" <a href=\"").append(getPageURL(sanitizeTagParam(inReplyTo))).append("\">(view parent)</a>\n");
-    _postBodyBuffer.append("</td></tr>\n");
+    if ((inReplyTo != null) && (inReplyTo.trim().length() > 0))     _postBodyBuffer.append(" <a ").append(getClass("summParent")).append(" href=\"").append(getPageURL(sanitizeTagParam(inReplyTo))).append("\">(view parent)</a>\n");
+    _postBodyBuffer.append("</span></td></tr>\n");
+    _postBodyBuffer.append("<!-- end of the post summary -->\n");
   }
  else {
-    _postBodyBuffer.append("<tr class=\"syndieEntryAttachmentsCell\">\n");
+    _postBodyBuffer.append("<!-- beginning of the post summary details -->\n");
+    _postBodyBuffer.append("<tr ").append(getClass("summDetail")).append(">\n");
     _postBodyBuffer.append("<form action=\"").append(getAttachmentURLBase()).append("\">\n");
     _postBodyBuffer.append("<input type=\"hidden\" name=\"").append(ArchiveViewerBean.PARAM_BLOG);
     _postBodyBuffer.append("\" value=\"");
@@ -45,10 +49,10 @@
     if (_entry != null)     _postBodyBuffer.append(_entry.getURI().getEntryId());
  else     _postBodyBuffer.append("unknown");
     _postBodyBuffer.append("\" />\n");
-    _postBodyBuffer.append("<td colspan=\"2\" valign=\"top\" align=\"left\" class=\"syndieEntryAttachmentsCell\">\n");
+    _postBodyBuffer.append("<td colspan=\"2\" valign=\"top\" align=\"left\" ").append(getClass("summDetail")).append(" >\n");
     if ((_entry != null) && (_entry.getAttachments() != null) && (_entry.getAttachments().length > 0)) {
-      _postBodyBuffer.append("<b>Attachments:</b> ");
-      _postBodyBuffer.append("<select name=\"").append(ArchiveViewerBean.PARAM_ATTACHMENT).append("\">\n");
+      _postBodyBuffer.append(getSpan("summDetailAttachment")).append("Attachments:</span> ");
+      _postBodyBuffer.append("<select ").append(getClass("summDetailAttachmentId")).append(" name=\"").append(ArchiveViewerBean.PARAM_ATTACHMENT).append("\">\n");
       for (int i=0; i < _entry.getAttachments().length; i++) {
         _postBodyBuffer.append("<option value=\"").append(i).append("\">");
         Attachment a=_entry.getAttachments()[i];
@@ -61,71 +65,78 @@
         _postBodyBuffer.append(", type ").append(sanitizeString(a.getMimeType())).append(")</option>\n");
       }
       _postBodyBuffer.append("</select>\n");
-      _postBodyBuffer.append("<input type=\"submit\" value=\"Download\" name=\"Download\" /><br />\n");
+      _postBodyBuffer.append("<input ").append(getClass("summDetailAttachmentDl")).append(" type=\"submit\" value=\"Download\" name=\"Download\" /><br />\n");
     }
     if (_blogs.size() > 0) {
-      _postBodyBuffer.append("<b>Blog references:</b> ");
+      _postBodyBuffer.append(getSpan("summDetailBlog")).append("Blog references:</span>");
       for (int i=0; i < _blogs.size(); i++) {
         Blog b=(Blog)_blogs.get(i);
-        _postBodyBuffer.append("<a href=\"").append(getPageURL(new Hash(Base64.decode(b.hash)),b.tag,b.entryId,-1,-1,(_user != null ? _user.getShowExpanded() : false),(_user != null ? _user.getShowImages() : false)));
+        _postBodyBuffer.append("<a ").append(getClass("summDetailBlogLink")).append(" href=\"");
+        boolean expanded=(_user != null ? _user.getShowExpanded() : false);
+        boolean images=(_user != null ? _user.getShowImages() : false);
+        _postBodyBuffer.append(getPageURL(new Hash(Base64.decode(b.hash)),b.tag,b.entryId,-1,-1,expanded,images));
         _postBodyBuffer.append("\">").append(sanitizeString(b.name)).append("</a> ");
       }
       _postBodyBuffer.append("<br />\n");
     }
     if (_links.size() > 0) {
-      _postBodyBuffer.append("<b>External links:</b> ");
+      _postBodyBuffer.append(getSpan("summDetailExternal")).append("External links:</span> ");
       for (int i=0; i < _links.size(); i++) {
         Link l=(Link)_links.get(i);
-        _postBodyBuffer.append("<a href=\"externallink.jsp?schema=");
-        _postBodyBuffer.append(sanitizeURL(l.schema)).append("&location=");
-        _postBodyBuffer.append(sanitizeURL(l.location));
+        _postBodyBuffer.append("<a ").append(getClass("summDetailExternalLink")).append(" href=\"externallink.jsp?");
+        if (l.schema != null)         _postBodyBuffer.append("schema=").append(sanitizeURL(l.schema)).append('&');
+        if (l.location != null)         _postBodyBuffer.append("location=").append(sanitizeURL(l.location)).append('&');
         _postBodyBuffer.append("\">").append(sanitizeString(l.location));
-        _postBodyBuffer.append(" (").append(sanitizeString(l.schema)).append(")</a> ");
+        _postBodyBuffer.append(getSpan("summDetailExternalNet")).append(" (").append(sanitizeString(l.schema)).append(")</span></a> ");
       }
       _postBodyBuffer.append("<br />\n");
     }
     if (_addresses.size() > 0) {
-      _postBodyBuffer.append("<b>Addresses:</b>");
+      _postBodyBuffer.append(getSpan("summDetailAddr")).append("Addresses:</span>");
       for (int i=0; i < _addresses.size(); i++) {
         Address a=(Address)_addresses.get(i);
         String knownName=null;
         if (_user != null)         knownName=_user.getPetNameDB().getNameByLocation(a.location);
         if (knownName != null) {
-          _postBodyBuffer.append(' ').append(sanitizeString(knownName));
+          _postBodyBuffer.append(' ').append(getSpan("summDetailAddrKnown"));
+          _postBodyBuffer.append(sanitizeString(knownName)).append("</span>");
         }
  else {
-          _postBodyBuffer.append(" <a href=\"addresses.jsp?network=");
-          _postBodyBuffer.append(sanitizeTagParam(a.schema)).append("&location=");
-          _postBodyBuffer.append(sanitizeTagParam(a.location)).append("&name=");
-          _postBodyBuffer.append(sanitizeTagParam(a.name)).append("&protocol=");
-          _postBodyBuffer.append(sanitizeTagParam(a.protocol));
+          _postBodyBuffer.append(" <a ").append(getClass("summDetailAddrLink")).append(" href=\"addresses.jsp?");
+          if (a.schema != null)           _postBodyBuffer.append("network=").append(sanitizeTagParam(a.schema)).append('&');
+          if (a.location != null)           _postBodyBuffer.append("location=").append(sanitizeTagParam(a.location)).append('&');
+          if (a.name != null)           _postBodyBuffer.append("name=").append(sanitizeTagParam(a.name)).append('&');
+          if (a.protocol != null)           _postBodyBuffer.append("protocol=").append(sanitizeTagParam(a.protocol)).append('&');
           _postBodyBuffer.append("\">").append(sanitizeString(a.name)).append("</a>");
         }
       }
       _postBodyBuffer.append("<br />\n");
     }
     if (_archives.size() > 0) {
-      _postBodyBuffer.append("<b>Archives:</b>");
+      _postBodyBuffer.append(getSpan("summDetailArchive")).append("Archives:</span>");
       for (int i=0; i < _archives.size(); i++) {
         ArchiveRef a=(ArchiveRef)_archives.get(i);
-        _postBodyBuffer.append(" <a href=\"").append(getArchiveURL(null,new SafeURL(a.locationSchema + "://" + a.location)));
+        _postBodyBuffer.append(" <a ").append(getClass("summDetailArchiveLink")).append(" href=\"").append(getArchiveURL(null,new SafeURL(a.locationSchema + "://" + a.location)));
         _postBodyBuffer.append("\">").append(sanitizeString(a.name)).append("</a>");
-        if (a.description != null)         _postBodyBuffer.append(": ").append(sanitizeString(a.description));
-        _postBodyBuffer.append(" <a href=\"");
-        _postBodyBuffer.append(getBookmarkURL(a.name,a.location,a.locationSchema,"syndiearchive"));
-        _postBodyBuffer.append("\">bookmark</a>");
+        if (a.description != null)         _postBodyBuffer.append(": ").append(getSpan("summDetailArchiveDesc")).append(sanitizeString(a.description)).append("</span>");
+        if (null == _user.getPetNameDB().getNameByLocation(a.location)) {
+          _postBodyBuffer.append(" <a ").append(getClass("summDetailArchiveBookmark")).append(" href=\"");
+          _postBodyBuffer.append(getBookmarkURL(a.name,a.location,a.locationSchema,"syndiearchive"));
+          _postBodyBuffer.append("\">bookmark</a>");
+        }
       }
       _postBodyBuffer.append("<br />\n");
     }
     if (_entry != null) {
       List replies=_archive.getIndex().getReplies(_entry.getURI());
       if ((replies != null) && (replies.size() > 0)) {
-        _postBodyBuffer.append("<b>Replies:</b> ");
+        _postBodyBuffer.append(getSpan("summDetailReplies")).append("Replies:</span> ");
         for (int i=0; i < replies.size(); i++) {
           BlogURI reply=(BlogURI)replies.get(i);
-          _postBodyBuffer.append("<a href=\"");
+          _postBodyBuffer.append("<a ").append(getClass("summDetailReplyLink")).append(" href=\"");
           _postBodyBuffer.append(getPageURL(reply.getKeyHash(),null,reply.getEntryId(),-1,-1,true,_user.getShowImages()));
           _postBodyBuffer.append("\">");
+          _postBodyBuffer.append(getSpan("summDetailReplyAuthor"));
           BlogInfo replyAuthor=_archive.getBlogInfo(reply);
           if (replyAuthor != null) {
             _postBodyBuffer.append(sanitizeString(replyAuthor.getProperty(BlogInfo.NAME)));
@@ -133,18 +144,20 @@
  else {
             _postBodyBuffer.append(reply.getKeyHash().toBase64().substring(0,16));
           }
-          _postBodyBuffer.append(" on ");
+          _postBodyBuffer.append("</span> on ");
+          _postBodyBuffer.append(getSpan("summDetailReplyDate"));
           _postBodyBuffer.append(getEntryDate(reply.getEntryId()));
-          _postBodyBuffer.append("</a> ");
+          _postBodyBuffer.append("</a></span> ");
         }
         _postBodyBuffer.append("<br />");
       }
     }
     String inReplyTo=(String)_headers.get(HEADER_IN_REPLY_TO);
     if ((inReplyTo != null) && (inReplyTo.trim().length() > 0)) {
-      _postBodyBuffer.append(" <a href=\"").append(getPageURL(sanitizeTagParam(inReplyTo))).append("\">(view parent)</a><br />\n");
+      _postBodyBuffer.append(" <a ").append(getClass("summDetailParent")).append(" href=\"").append(getPageURL(sanitizeTagParam(inReplyTo))).append("\">(view parent)</a><br />\n");
     }
     _postBodyBuffer.append("</td>\n</form>\n</tr>\n");
+    _postBodyBuffer.append("<!-- end of the post summary details -->\n");
   }
   _postBodyBuffer.append("</table>\n");
 }
