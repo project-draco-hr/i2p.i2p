@@ -32,8 +32,16 @@
  else {
     RouterInfo info=getContext().netDb().lookupRouterInfoLocally(_message.getSearchKey());
     if ((info != null) && (info.isCurrent(EXPIRE_DELAY))) {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("We do have key " + _message.getSearchKey().toBase64() + " locally as a router info.  sending to "+ fromKey.toBase64());
-      sendData(_message.getSearchKey(),info,fromKey,_message.getReplyTunnel());
+      if (isUnreachable(info) && !publishUnreachable()) {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Not answering a query for a netDb peer who isn't reachable");
+        Set us=new HashSet(1);
+        us.add(getContext().router().getRouterInfo());
+        sendClosest(_message.getSearchKey(),us,fromKey,_message.getReplyTunnel());
+      }
+ else {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("We do have key " + _message.getSearchKey().toBase64() + " locally as a router info.  sending to "+ fromKey.toBase64());
+        sendData(_message.getSearchKey(),info,fromKey,_message.getReplyTunnel());
+      }
     }
  else {
       Set routerInfoSet=getContext().netDb().findNearestRouters(_message.getSearchKey(),MAX_ROUTERS_RETURNED,_message.getDontIncludePeers());
