@@ -10,7 +10,6 @@ synchronized (_peersByIdent) {
       }
     }
   }
-  if ((oldPeer != null) && (_log.shouldLog(Log.WARN)))   _log.warn("Peer already connected: old=" + oldPeer + " new="+ peer,new Exception("dup"));
   oldPeer=null;
   RemoteHostId remoteId=peer.getRemoteHostId();
   if (remoteId == null)   return false;
@@ -25,6 +24,8 @@ synchronized (_peersByRemoteHost) {
   _context.shitlist().unshitlistRouter(peer.getRemotePeer());
   if (SHOULD_FLOOD_PEERS)   _flooder.addPeer(peer);
   _expireEvent.add(peer);
+  _introManager.add(peer);
   if (oldEstablishedOn > 0)   _context.statManager().addRateData("udp.alreadyConnected",oldEstablishedOn,0);
+  if (introducersRequired() && (_introducersSelectedOn < _context.clock().now() - 10 * 60 * 1000))   rebuildExternalAddress();
   return true;
 }

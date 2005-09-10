@@ -1,0 +1,20 @@
+{
+  long nonce=_context.random().nextLong(MAX_NONCE);
+  while (true) {
+synchronized (_liveIntroductions) {
+      OutboundEstablishState old=(OutboundEstablishState)_liveIntroductions.put(new Long(nonce),state);
+      if (old != null) {
+        nonce=_context.random().nextLong(MAX_NONCE);
+      }
+ else {
+        break;
+      }
+    }
+  }
+  SimpleTimer.getInstance().addEvent(new FailIntroduction(state,nonce),INTRO_ATTEMPT_TIMEOUT);
+  state.setIntroNonce(nonce);
+  _context.statManager().addRateData("udp.sendIntroRelayRequest",1,0);
+  _transport.send(_builder.buildRelayRequest(state,_transport.getIntroKey()));
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Send intro for " + state.getRemoteHostId().toString() + " with our intro key as "+ _transport.getIntroKey().toBase64());
+  state.introSent();
+}

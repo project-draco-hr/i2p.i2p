@@ -1,0 +1,25 @@
+{
+  long nonce=reader.getRelayResponseReader().readNonce();
+  OutboundEstablishState state=null;
+synchronized (_liveIntroductions) {
+    state=(OutboundEstablishState)_liveIntroductions.remove(new Long(nonce));
+  }
+  if (state == null)   return;
+  int sz=reader.getRelayResponseReader().readCharlieIPSize();
+  byte ip[]=new byte[sz];
+  reader.getRelayResponseReader().readCharlieIP(ip,0);
+  InetAddress addr=null;
+  try {
+    addr=InetAddress.getByAddress(ip);
+  }
+ catch (  UnknownHostException uhe) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Introducer for " + state + " ("+ bob+ ") sent us an invalid IP for our targer: "+ Base64.encode(ip),uhe);
+    state.introductionFailed();
+    notifyActivity();
+    return;
+  }
+  _context.statManager().addRateData("udp.receiveIntroRelayResponse",state.getLifetime(),0);
+  int port=reader.getRelayResponseReader().readCharliePort();
+  state.introduced(addr,ip,port);
+  notifyActivity();
+}

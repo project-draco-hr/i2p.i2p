@@ -1,13 +1,25 @@
 {
+  boolean isNew=false;
   InboundEstablishState state=null;
 synchronized (_inboundStates) {
     state=(InboundEstablishState)_inboundStates.get(from);
     if (state == null) {
       state=new InboundEstablishState(_context,from.getIP(),from.getPort(),_transport.getLocalPort());
+      isNew=true;
       _inboundStates.put(from,state);
     }
   }
   state.receiveSessionRequest(reader.getSessionRequestReader());
+  if (isNew) {
+    if (!_transport.introducersRequired()) {
+      long tag=_context.random().nextLong(MAX_TAG_VALUE);
+      state.setSentRelayTag(tag);
+      if (_log.shouldLog(Log.INFO))       _log.info("Received session request from " + from + ", sending relay tag "+ tag);
+    }
+ else {
+      if (_log.shouldLog(Log.INFO))       _log.info("Received session request, but our status is " + _transport.getReachabilityStatus());
+    }
+  }
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Receive session request from: " + state.getRemoteHostId().toString());
   notifyActivity();
 }

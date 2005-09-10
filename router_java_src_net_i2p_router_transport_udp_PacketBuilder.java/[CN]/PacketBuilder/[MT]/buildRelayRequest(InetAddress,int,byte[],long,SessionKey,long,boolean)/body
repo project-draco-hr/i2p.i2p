@@ -1,0 +1,41 @@
+{
+  UDPPacket packet=UDPPacket.acquire(_context);
+  byte data[]=packet.getPacket().getData();
+  Arrays.fill(data,0,data.length,(byte)0x0);
+  int off=UDPPacket.MAC_SIZE + UDPPacket.IV_SIZE;
+  byte ourIP[]=getOurExplicitIP();
+  int ourPort=getOurExplicitPort();
+  data[off]=PEER_RELAY_REQUEST_FLAG_BYTE;
+  off++;
+  long now=_context.clock().now() / 1000;
+  DataHelper.toLong(data,off,4,now);
+  if (_log.shouldLog(Log.INFO))   _log.info("Sending intro relay request to " + introHost + ":"+ introPort);
+  off+=4;
+  DataHelper.toLong(data,off,4,introTag);
+  off+=4;
+  if (ourIP != null) {
+    DataHelper.toLong(data,off,1,ourIP.length);
+    off++;
+    System.arraycopy(ourIP,0,data,off,ourIP.length);
+    off+=ourIP.length;
+  }
+ else {
+    DataHelper.toLong(data,off,1,0);
+    off++;
+  }
+  DataHelper.toLong(data,off,2,ourPort);
+  off+=2;
+  DataHelper.toLong(data,off,1,0);
+  off++;
+  off+=0;
+  System.arraycopy(ourIntroKey.getData(),0,data,off,SessionKey.KEYSIZE_BYTES);
+  off+=SessionKey.KEYSIZE_BYTES;
+  if (_log.shouldLog(Log.WARN))   _log.warn("wrote alice intro key: " + Base64.encode(data,off - SessionKey.KEYSIZE_BYTES,SessionKey.KEYSIZE_BYTES) + " with nonce "+ introNonce+ " size="+ (off + 4 + (16 - (off + 4) % 16))+ " and data: "+ Base64.encode(data,0,off));
+  DataHelper.toLong(data,off,4,introNonce);
+  off+=4;
+  if ((off % 16) != 0)   off+=16 - (off % 16);
+  packet.getPacket().setLength(off);
+  if (encrypt)   authenticate(packet,new SessionKey(introKey),new SessionKey(introKey));
+  setTo(packet,introHost,introPort);
+  return packet;
+}

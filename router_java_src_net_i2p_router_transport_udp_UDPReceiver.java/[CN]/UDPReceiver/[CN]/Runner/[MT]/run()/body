@@ -23,9 +23,13 @@ synchronized (Runner.this) {
       if (size > 0) {
         FIFOBandwidthLimiter.Request req=_context.bandwidthLimiter().requestInbound(size,"UDP receiver");
         while (req.getPendingInboundRequested() > 0)         req.waitForNextAllocation();
+        int queued=receive(packet);
+        _context.statManager().addRateData("udp.receivePacketSize",size,queued);
       }
-      int queued=receive(packet);
-      _context.statManager().addRateData("udp.receivePacketSize",size,queued);
+ else {
+        _context.statManager().addRateData("udp.receiveHolePunch",1,0);
+        if (_log.shouldLog(Log.INFO))         _log.info("Received a 0 byte udp packet from " + packet.getPacket().getAddress() + ":"+ packet.getPacket().getPort());
+      }
     }
  catch (    IOException ioe) {
       if (_socketChanged) {
