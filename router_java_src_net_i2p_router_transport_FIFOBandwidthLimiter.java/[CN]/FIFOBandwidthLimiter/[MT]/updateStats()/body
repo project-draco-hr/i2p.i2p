@@ -1,0 +1,27 @@
+{
+  long now=_context.clock().now();
+  long time=now - _lastStatsUpdated;
+  if (time >= 1000) {
+    long totS=_totalAllocatedOutboundBytes;
+    long totR=_totalAllocatedInboundBytes;
+    long sent=totS - _lastTotalSent;
+    long recv=totR - _lastTotalReceived;
+    _lastTotalSent=totS;
+    _lastTotalReceived=totR;
+    _lastStatsUpdated=now;
+    if (_sendBps <= 0)     _sendBps=((float)sent * time) / 1000f;
+ else     _sendBps=(0.9f) * _sendBps + (0.1f) * ((float)sent * time) / 1000f;
+    if (_recvBps <= 0)     _recvBps=((float)recv * time) / 1000f;
+ else     _recvBps=(0.9f) * _recvBps + (0.1f) * ((float)recv * time) / 1000f;
+    if (_log.shouldLog(Log.INFO)) {
+      _log.info("BW: time = " + time + " sent: "+ sent+ " recv: "+ recv);
+      _context.statManager().getStatLog().addData("bw","bw.sendBps1s",(long)_sendBps,sent);
+      _context.statManager().getStatLog().addData("bw","bw.recvBps1s",(long)_recvBps,recv);
+    }
+  }
+  if (60 * 1000 + _lastRateUpdated <= now) {
+    _lastRateUpdated=now;
+    _context.statManager().addRateData("bw.sendRate",(long)_sendBps,0);
+    _context.statManager().addRateData("bw.recvRate",(long)_recvBps,0);
+  }
+}
