@@ -1,0 +1,21 @@
+{
+  long token=getContext().random().nextLong(I2NPMessage.MAX_ID_VALUE);
+  msg.setReplyToken(token);
+  msg.setReplyGateway(getContext().routerHash());
+  if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": send(dbStore) w/ token expected " + token);
+  _state.addPending(peer.getIdentity().getHash());
+  SendSuccessJob onReply=new SendSuccessJob(getContext(),peer);
+  FailedJob onFail=new FailedJob(getContext(),peer,getContext().clock().now());
+  StoreMessageSelector selector=new StoreMessageSelector(getContext(),getJobId(),peer,token,expiration);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("sending store directly to " + peer.getIdentity().getHash());
+  OutNetMessage m=new OutNetMessage(getContext());
+  m.setExpiration(expiration);
+  m.setMessage(msg);
+  m.setOnFailedReplyJob(onFail);
+  m.setOnFailedSendJob(onFail);
+  m.setOnReplyJob(onReply);
+  m.setPriority(STORE_PRIORITY);
+  m.setReplySelector(selector);
+  m.setTarget(peer);
+  getContext().commSystem().processMessage(m);
+}
