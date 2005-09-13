@@ -8,17 +8,20 @@
   Hash router=null;
   long messageId=-1;
   if (type == TYPE_TUNNEL) {
+    if (offset + 4 >= preprocessed.length)     return -1;
     long id=DataHelper.fromLong(preprocessed,offset,4);
     tunnelId=new TunnelId(id);
     offset+=4;
   }
   if ((type == TYPE_ROUTER) || (type == TYPE_TUNNEL)) {
     byte h[]=new byte[Hash.HASH_LENGTH];
+    if (offset + Hash.HASH_LENGTH >= preprocessed.length)     return -1;
     System.arraycopy(preprocessed,offset,h,0,Hash.HASH_LENGTH);
     router=new Hash(h);
     offset+=Hash.HASH_LENGTH;
   }
   if (fragmented) {
+    if (offset + 4 >= preprocessed.length)     return -1;
     messageId=DataHelper.fromLong(preprocessed,offset,4);
     if (_log.shouldLog(Log.DEBUG))     _log.debug("reading messageId " + messageId + " at offset "+ offset+ " type = "+ type+ " router = "+ (router != null ? router.toBase64().substring(0,4) : "n/a")+ " tunnelId = "+ tunnelId);
     offset+=4;
@@ -28,6 +31,7 @@
     offset++;
     offset+=extendedSize;
   }
+  if (offset + 2 >= preprocessed.length)   return -1;
   int size=(int)DataHelper.fromLong(preprocessed,offset,2);
   offset+=2;
   boolean isNew=false;
