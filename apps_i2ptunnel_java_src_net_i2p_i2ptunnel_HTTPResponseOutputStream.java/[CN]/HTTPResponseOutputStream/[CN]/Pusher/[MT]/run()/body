@@ -1,0 +1,33 @@
+{
+  OutputStream to=null;
+  InternalGZIPInputStream in=null;
+  try {
+    long start=System.currentTimeMillis();
+    in=new InternalGZIPInputStream(_in);
+    byte buf[]=new byte[8192];
+    int read=-1;
+    while ((read=in.read(buf)) != -1) {
+      if (_log.shouldLog(Log.INFO))       _log.info("Read " + read + " and writing it to the browser/streams");
+      _out.write(buf,0,read);
+    }
+    if (_log.shouldLog(Log.INFO))     _log.info("Decompressed: " + _dataWritten + ", "+ in.getTotalRead()+ "/"+ in.getTotalExpanded());
+    long end=System.currentTimeMillis();
+    long compressed=in.getTotalRead();
+    long expanded=in.getTotalExpanded();
+    double ratio=0;
+    if (expanded > 0)     ratio=compressed / expanded;
+    _context.statManager().addRateData("i2ptunnel.http.compressionRatio",(int)(100d * ratio),end - start);
+    _context.statManager().addRateData("i2ptunnel.http.compressed",compressed,end - start);
+    _context.statManager().addRateData("i2ptunnel.http.expanded",expanded,end - start);
+  }
+ catch (  IOException ioe) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Error decompressing: " + _dataWritten + ", "+ in.getTotalRead()+ "/"+ in.getTotalExpanded(),ioe);
+  }
+ finally {
+    if (_out != null)     try {
+      _out.close();
+    }
+ catch (    IOException ioe) {
+    }
+  }
+}

@@ -18,7 +18,8 @@
             int valLen=i - (j + 2);
             if ((keyLen <= 0) || (valLen <= 0))             throw new IOException("Invalid header @ " + j);
             String key=new String(_headerBuffer.getData(),lastEnd + 1,keyLen);
-            String val=new String(_headerBuffer.getData(),j + 2,valLen);
+            String val=new String(_headerBuffer.getData(),j + 2,valLen).trim();
+            if (_log.shouldLog(Log.INFO))             _log.info("Response header [" + key + "] = ["+ val+ "]");
             if ("Connection".equalsIgnoreCase(key)) {
               out.write("Connection: close\n".getBytes());
               connectionSent=true;
@@ -26,6 +27,9 @@
  else             if ("Proxy-Connection".equalsIgnoreCase(key)) {
               out.write("Proxy-Connection: close\n".getBytes());
               proxyConnectionSent=true;
+            }
+ else             if (("Content-encoding".equalsIgnoreCase(key)) && ("x-i2p-gzip".equalsIgnoreCase(val))) {
+              _gzip=true;
             }
  else {
               out.write((key.trim() + ": " + val.trim()+ "\n").getBytes());
@@ -39,7 +43,11 @@
   }
   if (!connectionSent)   out.write("Connection: close\n".getBytes());
   if (!proxyConnectionSent)   out.write("Proxy-Connection: close\n".getBytes());
-  out.write("\n".getBytes());
+  finishHeaders();
   if (_headerBuffer.getData().length == CACHE_SIZE)   _cache.release(_headerBuffer);
  else   _headerBuffer=null;
+  if (_log.shouldLog(Log.INFO))   _log.info("After headers: gzip? " + _gzip);
+  if (shouldCompress()) {
+    beginProcessing();
+  }
 }
