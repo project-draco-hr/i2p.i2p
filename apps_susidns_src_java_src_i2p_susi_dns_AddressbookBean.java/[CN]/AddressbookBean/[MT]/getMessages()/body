@@ -1,0 +1,76 @@
+{
+  loadConfig();
+  String message="";
+  if (action != null) {
+    if (lastSerial != null && serial != null && serial.compareTo(lastSerial) == 0) {
+      boolean changed=false;
+      if (action.compareToIgnoreCase("add") == 0) {
+        if (addressbook != null && hostname != null && destination != null) {
+          addressbook.put(hostname,destination);
+          changed=true;
+          message+="Destination added.<br/>";
+        }
+      }
+      if (action.compareToIgnoreCase("delete") == 0) {
+        Iterator it=deletionMarks.iterator();
+        int deleted=0;
+        while (it.hasNext()) {
+          String name=(String)it.next();
+          addressbook.remove(name);
+          changed=true;
+          deleted++;
+        }
+        if (changed) {
+          message+="" + deleted + " destination(s) deleted.<br/>";
+        }
+      }
+      if (changed) {
+        try {
+          save();
+          message+="Addressbook saved.<br/>";
+        }
+ catch (        Exception e) {
+          Debug.debug(e.getClass().getName() + ": " + e.getMessage());
+          message+="ERROR: Could not write addressbook file.<br/>";
+        }
+      }
+    }
+ else {
+      message+="Invalid nonce. Are you being spoofed?";
+    }
+  }
+  action=null;
+  addressbook=new Properties();
+  try {
+    addressbook.load(new FileInputStream(getFileName()));
+    LinkedList list=new LinkedList();
+    Enumeration e=addressbook.keys();
+    while (e.hasMoreElements()) {
+      String name=(String)e.nextElement();
+      String destination=addressbook.getProperty(name);
+      if (filter != null && filter.length() > 0) {
+        if (filter.compareTo("0-9") == 0) {
+          char first=name.charAt(0);
+          if (first < '0' || first > '9')           continue;
+        }
+ else         if (!name.toLowerCase().startsWith(filter.toLowerCase())) {
+          continue;
+        }
+      }
+      if (search != null && search.length() > 0) {
+        if (name.indexOf(search) == -1) {
+          continue;
+        }
+      }
+      list.addLast(new AddressBean(name,destination));
+    }
+    Object array[]=list.toArray();
+    Arrays.sort(array,sorter);
+    entries=array;
+  }
+ catch (  Exception e) {
+    Debug.debug(e.getClass().getName() + ": " + e.getMessage());
+  }
+  if (message.length() > 0)   message="<p class=\"messages\">" + message + "</p>";
+  return message;
+}
