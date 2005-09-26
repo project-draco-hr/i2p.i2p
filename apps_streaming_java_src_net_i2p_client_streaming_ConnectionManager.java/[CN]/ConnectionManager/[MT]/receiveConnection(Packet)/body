@@ -1,7 +1,6 @@
 {
   Connection con=new Connection(_context,this,_schedulerChooser,_outboundQueue,_conPacketHandler,new ConnectionOptions(_defaultOptions));
-  byte receiveId[]=new byte[4];
-  _context.random().nextBytes(receiveId);
+  long receiveId=_context.random().nextLong(Packet.MAX_STREAM_ID - 1) + 1;
   boolean reject=false;
   int active=0;
   int total=0;
@@ -15,15 +14,13 @@ synchronized (_connectionLock) {
     }
  else {
       while (true) {
-        ByteArray ba=new ByteArray(receiveId);
-        Connection oldCon=(Connection)_connectionByInboundId.put(ba,con);
+        Connection oldCon=(Connection)_connectionByInboundId.put(new Long(receiveId),con);
         if (oldCon == null) {
           break;
         }
  else {
-          _connectionByInboundId.put(ba,oldCon);
-          receiveId=new byte[4];
-          _context.random().nextBytes(receiveId);
+          _connectionByInboundId.put(new Long(receiveId),oldCon);
+          receiveId=_context.random().nextLong(Packet.MAX_STREAM_ID - 1) + 1;
         }
       }
     }
@@ -36,7 +33,7 @@ synchronized (_connectionLock) {
     reply.setFlag(Packet.FLAG_SIGNATURE_INCLUDED);
     reply.setAckThrough(synPacket.getSequenceNum());
     reply.setSendStreamId(synPacket.getReceiveStreamId());
-    reply.setReceiveStreamId(null);
+    reply.setReceiveStreamId(0);
     reply.setOptionalFrom(_session.getMyDestination());
     _outboundQueue.enqueue(reply);
     return null;
@@ -47,7 +44,7 @@ synchronized (_connectionLock) {
   }
  catch (  I2PException ie) {
 synchronized (_connectionLock) {
-      _connectionByInboundId.remove(new ByteArray(receiveId));
+      _connectionByInboundId.remove(new Long(receiveId));
     }
     return null;
   }

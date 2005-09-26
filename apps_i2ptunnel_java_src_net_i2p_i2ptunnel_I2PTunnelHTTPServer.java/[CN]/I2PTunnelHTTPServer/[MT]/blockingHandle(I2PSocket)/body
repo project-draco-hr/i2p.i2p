@@ -8,6 +8,8 @@
     Properties headers=readHeaders(in,command);
     if ((_spoofHost != null) && (_spoofHost.trim().length() > 0))     headers.setProperty("Host",_spoofHost);
     headers.setProperty("Connection","close");
+    String enc=headers.getProperty("Accept-encoding");
+    headers.setProperty("Accept-encoding","identity;q=1, *;q=0");
     String modifiedHeader=formatHeaders(headers,command);
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Modified header: [" + modifiedHeader + "]");
     socket.setReadTimeout(readTimeout);
@@ -19,7 +21,6 @@
       String val=opts.getProperty("i2ptunnel.gzip");
       if ((val != null) && (!Boolean.valueOf(val).booleanValue()))       allowGZIP=false;
     }
-    String enc=headers.getProperty("Accept-encoding");
     if (_log.shouldLog(Log.INFO))     _log.info("HTTP server encoding header: " + enc);
     if (allowGZIP && (enc != null) && (enc.indexOf("x-i2p-gzip") >= 0)) {
       I2PThread req=new I2PThread(new CompressedRequestor(s,socket,modifiedHeader),"http compressor");

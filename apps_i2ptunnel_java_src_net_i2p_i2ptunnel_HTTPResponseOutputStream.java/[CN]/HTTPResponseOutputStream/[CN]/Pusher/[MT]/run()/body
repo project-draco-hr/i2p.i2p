@@ -1,24 +1,25 @@
 {
   OutputStream to=null;
-  InternalGZIPInputStream in=null;
+  _in=null;
   long start=System.currentTimeMillis();
   long written=0;
   try {
-    in=new InternalGZIPInputStream(_in);
+    _in=new InternalGZIPInputStream(_inRaw);
     byte buf[]=new byte[8192];
     int read=-1;
-    while ((read=in.read(buf)) != -1) {
+    while ((read=_in.read(buf)) != -1) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Read " + read + " and writing it to the browser/streams");
       _out.write(buf,0,read);
       _out.flush();
       written+=read;
     }
-    if (_log.shouldLog(Log.INFO))     _log.info("Decompressed: " + written + ", "+ in.getTotalRead()+ "/"+ in.getTotalExpanded());
+    if (_log.shouldLog(Log.INFO))     _log.info("Decompressed: " + written + ", "+ _in.getTotalRead()+ "/"+ _in.getTotalExpanded());
   }
  catch (  IOException ioe) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("Error decompressing: " + written + ", "+ in.getTotalRead()+ "/"+ in.getTotalExpanded(),ioe);
+    if (_log.shouldLog(Log.WARN))     _log.warn("Error decompressing: " + written + ", "+ _in.getTotalRead()+ "/"+ _in.getTotalExpanded(),ioe);
   }
  finally {
+    if (_log.shouldLog(Log.WARN))     _log.warn("After decompression, written=" + written + " read="+ _in.getTotalRead()+ ", expanded="+ _in.getTotalExpanded()+ ", remaining="+ _in.getRemaining()+ ", finished="+ _in.getFinished());
     if (_out != null)     try {
       _out.close();
     }
@@ -26,8 +27,8 @@
     }
   }
   long end=System.currentTimeMillis();
-  double compressed=in.getTotalRead();
-  double expanded=in.getTotalExpanded();
+  double compressed=_in.getTotalRead();
+  double expanded=_in.getTotalExpanded();
   double ratio=0;
   if (expanded > 0)   ratio=compressed / expanded;
   _context.statManager().addRateData("i2ptunnel.httpCompressionRatio",(int)(100d * ratio),end - start);

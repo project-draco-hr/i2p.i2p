@@ -1,7 +1,6 @@
 {
   Connection con=null;
-  byte receiveId[]=new byte[4];
-  _context.random().nextBytes(receiveId);
+  long receiveId=_context.random().nextLong(Packet.MAX_STREAM_ID - 1) + 1;
   long expiration=_context.clock().now() + opts.getConnectTimeout();
   if (opts.getConnectTimeout() <= 0)   expiration=_context.clock().now() + DEFAULT_STREAM_DELAY_MAX;
   _numWaiting++;
@@ -29,11 +28,10 @@ synchronized (_connectionLock) {
  else {
         con=new Connection(_context,this,_schedulerChooser,_outboundQueue,_conPacketHandler,opts);
         con.setRemotePeer(peer);
-        ByteArray ba=new ByteArray(receiveId);
-        while (_connectionByInboundId.containsKey(ba)) {
-          _context.random().nextBytes(receiveId);
+        while (_connectionByInboundId.containsKey(new Long(receiveId))) {
+          receiveId=_context.random().nextLong(Packet.MAX_STREAM_ID - 1) + 1;
         }
-        _connectionByInboundId.put(ba,con);
+        _connectionByInboundId.put(new Long(receiveId),con);
         break;
       }
     }
