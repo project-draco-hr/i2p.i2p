@@ -2,30 +2,31 @@
   if (buffer.length - offset < length)   throw new IllegalArgumentException("len=" + buffer.length + " off="+ offset+ " length="+ length);
   if (length < 22)   throw new IllegalArgumentException("Too small: len=" + buffer.length);
   int cur=offset;
-  _sendStreamId=DataHelper.fromLong(buffer,cur,4);
+  setSendStreamId(DataHelper.fromLong(buffer,cur,4));
   cur+=4;
-  _receiveStreamId=DataHelper.fromLong(buffer,cur,4);
+  setReceiveStreamId(DataHelper.fromLong(buffer,cur,4));
   cur+=4;
-  _sequenceNum=DataHelper.fromLong(buffer,cur,4);
+  setSequenceNum(DataHelper.fromLong(buffer,cur,4));
   cur+=4;
-  _ackThrough=DataHelper.fromLong(buffer,cur,4);
+  setAckThrough(DataHelper.fromLong(buffer,cur,4));
   cur+=4;
   int numNacks=(int)DataHelper.fromLong(buffer,cur,1);
   cur++;
   if (length < 22 + numNacks * 4)   throw new IllegalArgumentException("Too small with " + numNacks + " nacks: "+ length);
   if (numNacks > 0) {
-    _nacks=new long[numNacks];
+    long nacks[]=new long[numNacks];
     for (int i=0; i < numNacks; i++) {
-      _nacks[i]=DataHelper.fromLong(buffer,cur,4);
+      nacks[i]=DataHelper.fromLong(buffer,cur,4);
       cur+=4;
     }
+    setNacks(nacks);
   }
  else {
-    _nacks=null;
+    setNacks(null);
   }
-  _resendDelay=(int)DataHelper.fromLong(buffer,cur,1);
+  setResendDelay((int)DataHelper.fromLong(buffer,cur,1));
   cur++;
-  _flags=(int)DataHelper.fromLong(buffer,cur,2);
+  setFlags((int)DataHelper.fromLong(buffer,cur,2));
   cur+=2;
   int optionSize=(int)DataHelper.fromLong(buffer,cur,2);
   cur+=2;
@@ -33,32 +34,31 @@
   int payloadBegin=cur + optionSize;
   int payloadSize=length - payloadBegin;
   if ((payloadSize < 0) || (payloadSize > MAX_PAYLOAD_SIZE))   throw new IllegalArgumentException("length: " + length + " offset: "+ offset+ " begin: "+ payloadBegin);
-  _payload=new ByteArray(new byte[payloadSize]);
-  System.arraycopy(buffer,payloadBegin,_payload.getData(),0,payloadSize);
-  _payload.setValid(payloadSize);
-  _payload.setOffset(0);
+  _payload=new ByteArray(buffer,payloadBegin,payloadSize);
   if (isFlagSet(FLAG_DELAY_REQUESTED)) {
-    _optionDelay=(int)DataHelper.fromLong(buffer,cur,2);
+    setOptionalDelay((int)DataHelper.fromLong(buffer,cur,2));
     cur+=2;
   }
   if (isFlagSet(FLAG_FROM_INCLUDED)) {
-    _optionFrom=new Destination();
+    Destination optionFrom=new Destination();
     try {
-      cur+=_optionFrom.readBytes(buffer,cur);
+      cur+=optionFrom.readBytes(buffer,cur);
+      setOptionalFrom(optionFrom);
     }
  catch (    DataFormatException dfe) {
       throw new IllegalArgumentException("Bad from field: " + dfe.getMessage());
     }
   }
   if (isFlagSet(FLAG_MAX_PACKET_SIZE_INCLUDED)) {
-    _optionMaxSize=(int)DataHelper.fromLong(buffer,cur,2);
+    setOptionalMaxSize((int)DataHelper.fromLong(buffer,cur,2));
     cur+=2;
   }
   if (isFlagSet(FLAG_SIGNATURE_INCLUDED)) {
-    _optionSignature=new Signature();
+    Signature optionSignature=new Signature();
     byte buf[]=new byte[Signature.SIGNATURE_BYTES];
     System.arraycopy(buffer,cur,buf,0,Signature.SIGNATURE_BYTES);
-    _optionSignature.setData(buf);
+    optionSignature.setData(buf);
+    setOptionalSignature(optionSignature);
     cur+=Signature.SIGNATURE_BYTES;
   }
 }

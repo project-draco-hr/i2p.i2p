@@ -21,11 +21,13 @@ synchronized (_outboundPackets) {
     if (remaining < 0)     remaining=0;
     if (packet.isFlagSet(Packet.FLAG_CLOSE) || (remaining < 2)) {
       packet.setOptionalDelay(0);
+      packet.setFlag(Packet.FLAG_DELAY_REQUESTED);
     }
  else {
       int delay=_options.getRTO() / 2;
       packet.setOptionalDelay(delay);
-      _log.debug("Requesting ack delay of " + delay + "ms for packet "+ packet);
+      if (delay > 0)       packet.setFlag(Packet.FLAG_DELAY_REQUESTED);
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Requesting ack delay of " + delay + "ms for packet "+ packet);
     }
     packet.setFlag(Packet.FLAG_DELAY_REQUESTED);
     long timeout=_options.getRTO();
