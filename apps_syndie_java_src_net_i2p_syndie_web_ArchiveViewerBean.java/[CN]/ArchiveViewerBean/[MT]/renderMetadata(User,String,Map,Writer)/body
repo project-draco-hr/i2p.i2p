@@ -1,4 +1,7 @@
 {
+  if (parameters.get("action") != null) {
+    updateMetadata(viewer,parameters,out);
+  }
   String blogStr=getString(parameters,PARAM_BLOG);
   if (blogStr != null) {
     Hash blog=new Hash(Base64.decode(blogStr));
@@ -8,7 +11,12 @@
       out.write("Blog " + blog.toBase64() + " does not exist");
       return;
     }
+    boolean isUser=((viewer != null) && (viewer.getAuthenticated()) && (viewer.getBlog().equals(info.getKey().calculateHash())));
     String props[]=info.getProperties();
+    if (isUser) {
+      out.write("<form action=\"" + getURL(currentURI,parameters) + "\" method=\"GET\">\n");
+      out.write("<input type=\"hidden\" name=\"submit_blog\" value=\"" + blog.toBase64() + "\" />\n");
+    }
     out.write("<table class=\"b_meta\" border=\"0\">");
     for (int i=0; i < props.length; i++) {
       if (props[i].equals(BlogInfo.OWNER_KEY)) {
@@ -32,7 +40,10 @@
         }
       }
  else {
-        out.write("<tr class=\"b_metaField\"><td class=\"b_metaField\"><span class=\"b_metaField\">" + HTMLRenderer.sanitizeString(props[i]) + ":</span></td><td class=\"b_metaValue\"><span class=\"b_metaValue\">"+ HTMLRenderer.sanitizeString(info.getProperty(props[i]))+ "</span></td></tr>\n");
+        String field=HTMLRenderer.sanitizeString(props[i]);
+        String val=HTMLRenderer.sanitizeString(info.getProperty(props[i]));
+        out.write("<tr class=\"b_metaField\"><td class=\"b_metaField\"><span class=\"b_metaField\">" + field + ":</span></td><td class=\"b_metaValue\"><span class=\"b_metaValue\">"+ val+ "</span></td></tr>\n");
+        if (isUser && (!field.equals("Edition")))         out.write("<tr class=\"b_metaField\"><td>&nbsp;</td><td class=\"b_metaValue\"><input type=\"text\" name=\"" + HTMLRenderer.sanitizeTagParam(props[i]) + "\" value=\""+ HTMLRenderer.sanitizeTagParam(info.getProperty(props[i]))+ "\" size=\"40\" ></td></tr>");
       }
     }
     List tags=BlogManager.instance().getArchive().getIndex().getBlogTags(blog);
@@ -44,6 +55,7 @@
       }
       out.write("</td></tr>");
     }
+    if (isUser)     out.write("<tr class=\"b_metaField\"><td colspan=\"2\" class=\"b_metaField\"><input type=\"submit\" name=\"action\" value=\"Save changes\" class=\"b_metaSave\" /></td></tr>\n");
     out.write("</table>");
   }
  else {

@@ -1,0 +1,23 @@
+{
+  if ((viewer == null) || (!viewer.getAuthenticated()))   return;
+  String blogStr=getString(parameters,PARAM_BLOG);
+  if (blogStr != null) {
+    Hash blog=new Hash(Base64.decode(blogStr));
+    Archive archive=BlogManager.instance().getArchive();
+    BlogInfo info=archive.getBlogInfo(blog);
+    if (info != null) {
+      boolean isUser=viewer.getBlog().equals(info.getKey().calculateHash());
+      if (!isUser)       return;
+      Properties toSave=new Properties();
+      String existing[]=info.getProperties();
+      for (int i=0; i < existing.length; i++) {
+        String newVal=getString(parameters,existing[i]);
+        if ((newVal != null) && (newVal.length() > 0))         toSave.setProperty(existing[i],newVal.trim());
+ else         toSave.setProperty(existing[i],info.getProperty(existing[i]));
+      }
+      boolean saved=BlogManager.instance().updateMetadata(viewer,blog,toSave);
+      if (saved)       out.write("<p><em class=\"b_msgOk\">Blog metadata saved</em></p>\n");
+ else       out.write("<p><em class=\"b_msgErr\">Blog metadata could not be saved</em></p>\n");
+    }
+  }
+}
