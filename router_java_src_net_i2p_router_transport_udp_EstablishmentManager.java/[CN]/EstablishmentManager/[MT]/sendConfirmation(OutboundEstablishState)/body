@@ -2,7 +2,11 @@
   long now=_context.clock().now();
   boolean valid=state.validateSessionCreated();
   if (!valid)   return;
-  _transport.externalAddressReceived(state.getReceivedIP(),state.getReceivedPort());
+  if (!_transport.isValid(state.getReceivedIP()) || !_transport.isValid(state.getRemoteHostId().getIP())) {
+    state.fail();
+    return;
+  }
+  _transport.externalAddressReceived(state.getRemoteIdentity().calculateHash(),state.getReceivedIP(),state.getReceivedPort());
   state.prepareSessionConfirmed();
   UDPPacket packets[]=_builder.buildSessionConfirmedPackets(state,_context.router().getRouterInfo().getIdentity());
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Send confirm to: " + state.getRemoteHostId().toString());

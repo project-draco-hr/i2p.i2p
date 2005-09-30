@@ -16,6 +16,10 @@ synchronized (_inboundStates) {
         _context.statManager().addRateData("udp.inboundEstablishFailedState",cur.getState(),cur.getLifetime());
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Removing expired inbound state");
       }
+ else       if (cur.getState() == InboundEstablishState.STATE_FAILED) {
+        iter.remove();
+        _context.statManager().addRateData("udp.inboundEstablishFailedState",cur.getState(),cur.getLifetime());
+      }
  else {
         if (cur.getNextSendTime() <= now) {
           inboundState=cur;
@@ -53,6 +57,8 @@ break;
 if (_log.shouldLog(Log.WARN)) _log.warn("why are we confirmed with no identity? " + inboundState);
 break;
 }
+case InboundEstablishState.STATE_FAILED:
+break;
 case InboundEstablishState.STATE_UNKNOWN:
 default :
 if (_log.shouldLog(Log.ERROR)) _log.error("hrm, state is unknown for " + inboundState);

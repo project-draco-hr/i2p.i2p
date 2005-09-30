@@ -1,8 +1,12 @@
 {
   UDPPacket packet=UDPPacket.acquire(_context);
+  byte toIP[]=state.getSentIP();
+  if ((_transport != null) && (!_transport.isValid(toIP))) {
+    return null;
+  }
   InetAddress to=null;
   try {
-    to=InetAddress.getByAddress(state.getSentIP());
+    to=InetAddress.getByAddress(toIP);
   }
  catch (  UnknownHostException uhe) {
     if (_log.shouldLog(Log.ERROR))     _log.error("How did we think this was a valid IP?  " + state.getRemoteHostId().toString());
@@ -21,8 +25,8 @@
   off+=state.getSentX().length;
   DataHelper.toLong(data,off,1,state.getSentIP().length);
   off+=1;
-  System.arraycopy(state.getSentIP(),0,data,off,state.getSentIP().length);
-  off+=state.getSentIP().length;
+  System.arraycopy(toIP,0,data,off,state.getSentIP().length);
+  off+=toIP.length;
   DataHelper.toLong(data,off,2,state.getSentPort());
   off+=2;
   if ((off % 16) != 0)   off+=16 - (off % 16);
