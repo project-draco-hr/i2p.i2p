@@ -1,8 +1,11 @@
 {
   resp.setContentType("text/plain;charset=utf-8");
-  resp.setHeader(HEADER_EXPORT_CAPABLE,"true");
-  OutputStream out=resp.getOutputStream();
   ArchiveIndex index=BlogManager.instance().getArchive().getIndex();
-  out.write(DataHelper.getUTF8(index.toString()));
+  byte[] indexUTF8=DataHelper.getUTF8(index.toString());
+  resp.setHeader(HEADER_EXPORT_CAPABLE,"true");
+  Hash hash=I2PAppContext.getGlobalContext().sha().calculateHash(indexUTF8);
+  resp.setHeader("ETag","\"" + hash.toBase64() + "\"");
+  OutputStream out=resp.getOutputStream();
+  out.write(indexUTF8);
   out.close();
 }
