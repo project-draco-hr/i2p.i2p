@@ -47,8 +47,13 @@
   boolean isNew=false;
   boolean allowAck=true;
   if ((!packet.isFlagSet(Packet.FLAG_SYNCHRONIZE)) && ((packet.getSendStreamId() <= 0) || (packet.getReceiveStreamId() <= 0)))   allowAck=false;
-  if (allowAck)   isNew=con.getInputStream().messageReceived(packet.getSequenceNum(),packet.getPayload());
- else   isNew=con.getInputStream().messageReceived(con.getInputStream().getHighestReadyBockId(),null);
+  if (allowAck) {
+    isNew=con.getInputStream().messageReceived(packet.getSequenceNum(),packet.getPayload());
+  }
+ else {
+    con.getInputStream().notifyActivity();
+    isNew=false;
+  }
   if ((packet.getSequenceNum() == 0) && (packet.getPayloadSize() > 0)) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("seq=0 && size=" + packet.getPayloadSize() + ": isNew? "+ isNew+ " packet: "+ packet+ " con: "+ con);
   }
@@ -93,9 +98,13 @@
   }
   con.eventOccurred();
   if (fastAck) {
-    if (con.getLastSendTime() + 2000 < _context.clock().now()) {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Fast ack for dup " + packet);
-      con.ackImmediately();
+    if (!isNew) {
+    }
+ else {
+      if (con.getLastSendTime() + 2000 < _context.clock().now()) {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Fast ack for dup " + packet);
+        con.ackImmediately();
+      }
     }
   }
   if (ackOnly || !isNew) {
