@@ -2,9 +2,13 @@
   resp.setContentType("text/plain;charset=utf-8");
   ArchiveIndex index=BlogManager.instance().getArchive().getIndex();
   byte[] indexUTF8=DataHelper.getUTF8(index.toString());
+  String newEtag="\"" + I2PAppContext.getGlobalContext().sha().calculateHash(indexUTF8).toBase64() + "\"";
+  if (etag != null && etag.equals(newEtag)) {
+    resp.sendError(304,"Archive not modified");
+    return;
+  }
   resp.setHeader(HEADER_EXPORT_CAPABLE,"true");
-  Hash hash=I2PAppContext.getGlobalContext().sha().calculateHash(indexUTF8);
-  resp.setHeader("ETag","\"" + hash.toBase64() + "\"");
+  resp.setHeader("ETag",newEtag);
   OutputStream out=resp.getOutputStream();
   out.write(indexUTF8);
   out.close();
