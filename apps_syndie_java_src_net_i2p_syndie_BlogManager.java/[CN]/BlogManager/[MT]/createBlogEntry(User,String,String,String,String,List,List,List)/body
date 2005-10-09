@@ -4,11 +4,7 @@
   if (info == null)   return null;
   SigningPrivateKey privkey=getMyPrivateKey(info);
   if (privkey == null)   return null;
-  long entryId=-1;
-  long now=_context.clock().now();
-  long dayBegin=getDayBegin(now);
-  if (user.getMostRecentEntry() >= dayBegin)   entryId=user.getMostRecentEntry() + 1;
- else   entryId=dayBegin;
+  long entryId=getNextBlogEntry(user);
   StringTokenizer tok=new StringTokenizer(tags," ,\n\t");
   String tagList[]=new String[tok.countTokens()];
   for (int i=0; i < tagList.length; i++)   tagList[i]=tok.nextToken().trim();
@@ -20,12 +16,12 @@
     for (int i=0; i < tagList.length; i++)     raw.append(tagList[i]).append('\t');
     raw.append('\n');
     if ((entryHeaders != null) && (entryHeaders.trim().length() > 0)) {
-      System.out.println("Entry headers: " + entryHeaders);
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Creating entry with headers: " + entryHeaders);
       BufferedReader userHeaders=new BufferedReader(new InputStreamReader(new ByteArrayInputStream(DataHelper.getUTF8(entryHeaders)),"UTF-8"));
       String line=null;
       while ((line=userHeaders.readLine()) != null) {
         line=line.trim();
-        System.out.println("Line: " + line);
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("header line: " + line);
         if (line.length() <= 0)         continue;
         int split=line.indexOf('=');
         int split2=line.indexOf(':');
@@ -68,7 +64,7 @@
     }
   }
  catch (  IOException ioe) {
-    ioe.printStackTrace();
+    _log.error("Error creating post",ioe);
     return null;
   }
 }

@@ -13,8 +13,8 @@
         if (entryDir.exists())         entry=getCachedEntry(entryDir);
         if ((entry == null) || !entryDir.exists()) {
           if (!extractEntry(entries[i],entryDir,info)) {
-            System.err.println("Entry " + entries[i].getPath() + " is not valid");
-            new Exception("foo!!!!").printStackTrace();
+            _log.error("Entry " + entries[i].getPath() + " is not valid");
+            entries[i].delete();
             continue;
           }
           entry=getCachedEntry(entryDir);
@@ -25,8 +25,8 @@
         entry.load(new FileInputStream(entries[i]));
         boolean ok=entry.verifySignature(_context,info);
         if (!ok) {
-          System.err.println("Keyed entry " + entries[i].getPath() + " is not valid");
-          new Exception("foo!!!!!!").printStackTrace();
+          _log.error("Keyed entry " + entries[i].getPath() + " is not valid");
+          entries[i].delete();
           continue;
         }
         entry.parseRawData(_context,blogKey);
@@ -43,18 +43,18 @@
         for (int j=0; j < tags.length; j++) {
           if (tags[j].equals(tag)) {
             rv.add(entry);
-            System.out.println("cached entry matched requested tag [" + tag + "]: "+ entry.getURI());
+            if (_log.shouldLog(Log.DEBUG))             _log.debug("cached entry matched requested tag [" + tag + "]: "+ entry.getURI());
             break;
           }
         }
       }
  else {
-        System.out.println("cached entry is ok and no id or tag was requested: " + entry.getURI());
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("cached entry is ok and no id or tag was requested: " + entry.getURI());
         rv.add(entry);
       }
     }
  catch (    IOException ioe) {
-      ioe.printStackTrace();
+      _log.error("Error listing entries",ioe);
     }
   }
   return rv;

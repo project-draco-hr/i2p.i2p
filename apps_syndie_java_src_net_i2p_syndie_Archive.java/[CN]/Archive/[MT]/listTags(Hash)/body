@@ -11,8 +11,8 @@
       if (entryDir.exists())       entry=getCachedEntry(entryDir);
       if ((entry == null) || (!entryDir.exists())) {
         if (!extractEntry(entries[j],entryDir,info)) {
-          System.err.println("Entry " + entries[j].getPath() + " is not valid");
-          new Exception("foo!!").printStackTrace();
+          if (_log.shouldLog(Log.ERROR))           _log.error("Entry " + entries[j].getPath() + " is not valid");
+          entries[j].delete();
           continue;
         }
         entry=getCachedEntry(entryDir);
@@ -20,13 +20,13 @@
       String tags[]=entry.getTags();
       for (int t=0; t < tags.length; t++) {
         if (!rv.contains(tags[t])) {
-          System.out.println("Found a new tag in cached " + entry.getURI() + ": "+ tags[t]);
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("Found a new tag in cached " + entry.getURI() + ": "+ tags[t]);
           rv.add(tags[t]);
         }
       }
     }
  catch (    IOException ioe) {
-      ioe.printStackTrace();
+      _log.error("Error listing tags",ioe);
     }
   }
   return rv;

@@ -1,0 +1,59 @@
+{
+  Hash blogHash=new Hash(Base64.decode(blogHashStr));
+  User user=mgr.getUser(blogHash);
+  long entryId=-1;
+  if ("NOW".equalsIgnoreCase(entryIdDef)) {
+    entryId=ctx.clock().now();
+  }
+ else   if ("NEXT".equalsIgnoreCase(entryIdDef) || (entryIdDef == null)) {
+    entryId=mgr.getNextBlogEntry(user);
+  }
+ else {
+    try {
+      entryId=Long.parseLong(entryIdDef);
+    }
+ catch (    NumberFormatException nfe) {
+      nfe.printStackTrace();
+      return null;
+    }
+  }
+  String tagVals[]=new String[(tags != null ? tags.size() : 0)];
+  if (tags != null)   for (int i=0; i < tags.size(); i++)   tagVals[i]=((String)tags.get(i)).trim();
+  BlogURI uri=new BlogURI(blogHash,entryId);
+  BlogInfo blog=mgr.getArchive().getBlogInfo(uri);
+  if (blog == null) {
+    System.err.println("Blog does not exist: " + uri);
+    return null;
+  }
+  SigningPrivateKey key=mgr.getMyPrivateKey(blog);
+  try {
+    byte smlData[]=read(smlFilename);
+    EntryContainer c=new EntryContainer(uri,tagVals,smlData);
+    if ((attachmentFilenames != null) && (attachmentFilenames.size() == attachmentNames.size()) && (attachmentFilenames.size() == attachmentDescriptions.size())&& (attachmentFilenames.size() == attachmentMimeTypes.size())) {
+      for (int i=0; i < attachmentFilenames.size(); i++) {
+        File attachmentFile=new File((String)attachmentFilenames.get(i));
+        String name=(String)attachmentNames.get(i);
+        String descr=(String)attachmentDescriptions.get(i);
+        String mimetype=(String)attachmentMimeTypes.get(i);
+        c.addAttachment(read(attachmentFile.getAbsolutePath()),name,descr,mimetype);
+      }
+    }
+    SessionKey entryKey=null;
+    if ((entryKeyDef != null) && (entryKeyDef.trim().length() > 0) && (!"NONE".equalsIgnoreCase(entryKeyDef)))     entryKey=new SessionKey(Base64.decode(entryKeyDef));
+    c.seal(ctx,key,entryKey);
+    if (storeLocal) {
+      boolean ok=mgr.getArchive().storeEntry(c);
+      if (!ok) {
+        System.err.println("Error: store failed");
+        return null;
+      }
+    }
+    user.setMostRecentEntry(uri.getEntryId());
+    mgr.storeUser(user);
+    return c;
+  }
+ catch (  IOException ioe) {
+    ioe.printStackTrace();
+    return null;
+  }
+}
