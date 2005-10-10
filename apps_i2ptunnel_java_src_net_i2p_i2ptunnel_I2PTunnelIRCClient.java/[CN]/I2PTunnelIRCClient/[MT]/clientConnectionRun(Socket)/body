@@ -1,0 +1,23 @@
+{
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("got a connection.");
+  Destination dest=pickDestination();
+  I2PSocket i2ps=null;
+  try {
+    i2ps=createI2PSocket(dest);
+    i2ps.setReadTimeout(readTimeout);
+    Thread in=new Thread(new IrcInboundFilter(s,i2ps));
+    in.start();
+    Thread out=new Thread(new IrcOutboundFilter(s,i2ps));
+    out.start();
+  }
+ catch (  Exception ex) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Error connecting",ex);
+    l.log(ex.getMessage());
+    closeSocket(s);
+    if (i2ps != null) {
+synchronized (sockLock) {
+        mySockets.remove(sockLock);
+      }
+    }
+  }
+}

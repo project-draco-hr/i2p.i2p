@@ -1,7 +1,9 @@
 {
+  int remaining=0;
   boolean stillWaiting=false;
 synchronized (_waitingSockets) {
     stillWaiting=_waitingSockets.remove(_s);
+    remaining=_waitingSockets.size();
   }
   if (stillWaiting) {
     try {
@@ -9,6 +11,12 @@ synchronized (_waitingSockets) {
     }
  catch (    IOException ioe) {
     }
-    if (_log.shouldLog(Log.INFO))     _log.info("Closed a waiting socket because of backlog");
+    if (_log.shouldLog(Log.INFO)) {
+      _context.statManager().addRateData("i2ptunnel.client.closeBacklog",remaining,0);
+      _log.info("Closed a waiting socket because of backlog");
+    }
+  }
+ else {
+    _context.statManager().addRateData("i2ptunnel.client.closeNoBacklog",remaining,0);
   }
 }
