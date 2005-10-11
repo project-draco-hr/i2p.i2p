@@ -1,10 +1,11 @@
 {
   long beforeMsgs=_context.clock().now();
-  receiveMessages(from,data);
+  int fragmentsIncluded=receiveMessages(from,data);
   long afterMsgs=_context.clock().now();
-  receiveACKs(from,data);
+  int acksIncluded=receiveACKs(from,data);
   long afterACKs=_context.clock().now();
   from.packetReceived();
   _context.statManager().addRateData("udp.receiveMessagePeriod",afterMsgs - beforeMsgs,afterACKs - beforeMsgs);
   _context.statManager().addRateData("udp.receiveACKPeriod",afterACKs - afterMsgs,afterACKs - beforeMsgs);
+  if ((fragmentsIncluded > 0) && (acksIncluded > 0))   _context.statManager().addRateData("udp.receivePiggyback",acksIncluded,fragmentsIncluded);
 }
