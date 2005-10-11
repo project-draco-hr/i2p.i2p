@@ -3,7 +3,9 @@
     int fragments=state.getFragmentCount();
     if (fragments < 0)     return null;
     List msgIds=peer.getCurrentFullACKs();
-    List partialACKBitfields=null;
+    List partialACKBitfields=new ArrayList();
+    peer.fetchPartialACKs(partialACKBitfields);
+    int piggybackedPartialACK=partialACKBitfields.size();
     List remaining=new ArrayList(msgIds);
     int sparseCount=0;
     UDPPacket rv[]=new UDPPacket[fragments];
@@ -23,6 +25,7 @@
     }
     if (sparseCount > 0)     _context.statManager().addRateData("udp.sendSparse",sparseCount,state.getLifetime());
     if (piggybackedAck > 0)     _context.statManager().addRateData("udp.sendPiggyback",piggybackedAck,state.getLifetime());
+    if (piggybackedPartialACK - partialACKBitfields.size() > 0)     _context.statManager().addRateData("udp.sendPiggybackPartial",piggybackedPartialACK - partialACKBitfields.size(),state.getLifetime());
     if (_log.shouldLog(Log.INFO))     _log.info("Building packet for " + state + " to "+ peer+ " with sparse count: "+ sparseCount);
     peer.packetsTransmitted(fragments - sparseCount);
     return rv;
