@@ -5,18 +5,16 @@
       state.fragment(fragmentSize(peer.getMTU()));
       if (_log.shouldLog(Log.INFO))       _log.info("Fragmenting " + state);
     }
+    OutboundMessageState curRetransMsg=(OutboundMessageState)_retransmitters.get(peer);
+    if ((curRetransMsg != null) && (curRetransMsg != state)) {
+      _context.statManager().addRateData("udp.blockedRetransmissions",peer.getPacketsRetransmitted(),peer.getPacketsTransmitted());
+      return false;
+    }
     int size=state.getUnackedSize();
     if (peer.allocateSendingBytes(size)) {
       if (_log.shouldLog(Log.INFO))       _log.info("Allocation of " + size + " allowed with "+ peer.getSendWindowBytesRemaining()+ "/"+ peer.getSendWindowBytes()+ " remaining"+ " for message "+ state.getMessageId()+ ": "+ state);
       if (state.getPushCount() > 0) {
-        OutboundMessageState curRetransMsg=(OutboundMessageState)_retransmitters.get(peer);
-        if ((curRetransMsg != null) && (curRetransMsg == state)) {
-          _context.statManager().addRateData("udp.blockedRetransmissions",peer.getPacketsRetransmitted(),peer.getPacketsTransmitted());
-          return false;
-        }
- else {
-          _retransmitters.put(peer,state);
-        }
+        _retransmitters.put(peer,state);
         int fragments=state.getFragmentCount();
         int toSend=0;
         for (int i=0; i < fragments; i++) {
