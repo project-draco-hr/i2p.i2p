@@ -5,6 +5,7 @@ synchronized (_activeMessages) {
       PeerState peer=state.getPeer();
       if (state.isComplete()) {
         _activeMessages.remove(i);
+        locked_removeRetransmitter(state);
         _transport.succeeded(state.getMessage());
         if ((peer != null) && (peer.getSendWindowBytesRemaining() > 0))         _throttle.unchoke(peer.getRemotePeer());
         state.releaseResources();
@@ -16,6 +17,7 @@ synchronized (_activeMessages) {
       }
  else       if (state.isExpired()) {
         _activeMessages.remove(i);
+        locked_removeRetransmitter(state);
         _context.statManager().addRateData("udp.sendFailed",state.getPushCount(),state.getLifetime());
         if (state.getMessage() != null) {
           _transport.failed(state);
@@ -33,6 +35,7 @@ synchronized (_activeMessages) {
       }
  else       if (state.getPushCount() > MAX_VOLLEYS) {
         _activeMessages.remove(i);
+        locked_removeRetransmitter(state);
         _context.statManager().addRateData("udp.sendAggressiveFailed",state.getPushCount(),state.getLifetime());
         if (state.getMessage() != null) {
           _transport.failed(state);

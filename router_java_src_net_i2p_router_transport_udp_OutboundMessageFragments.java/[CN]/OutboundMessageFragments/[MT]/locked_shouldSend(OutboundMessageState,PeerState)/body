@@ -9,12 +9,23 @@
     if (peer.allocateSendingBytes(size)) {
       if (_log.shouldLog(Log.INFO))       _log.info("Allocation of " + size + " allowed with "+ peer.getSendWindowBytesRemaining()+ "/"+ peer.getSendWindowBytes()+ " remaining"+ " for message "+ state.getMessageId()+ ": "+ state);
       if (state.getPushCount() > 0) {
+        OutboundMessageState curRetransMsg=(OutboundMessageState)_retransmitters.get(peer);
+        if ((curRetransMsg != null) && (curRetransMsg == state)) {
+          _context.statManager().addRateData("udp.blockedRetransmissions",peer.getPacketsRetransmitted(),peer.getPacketsTransmitted());
+          return false;
+        }
+ else {
+          _retransmitters.put(peer,state);
+        }
         int fragments=state.getFragmentCount();
         int toSend=0;
         for (int i=0; i < fragments; i++) {
           if (state.needsSending(i))           toSend++;
         }
         peer.messageRetransmitted(toSend);
+        _packetsRetransmitted+=toSend;
+        _context.statManager().addRateData("udp.peerPacketsRetransmitted",peer.getPacketsRetransmitted(),peer.getPacketsTransmitted());
+        _context.statManager().addRateData("udp.packetsRetransmitted",_packetsRetransmitted,peer.getPacketsTransmitted());
         if (_log.shouldLog(Log.WARN))         _log.warn("Retransmitting " + state + " to "+ peer);
         _context.statManager().addRateData("udp.sendVolleyTime",state.getLifetime(),toSend);
       }
