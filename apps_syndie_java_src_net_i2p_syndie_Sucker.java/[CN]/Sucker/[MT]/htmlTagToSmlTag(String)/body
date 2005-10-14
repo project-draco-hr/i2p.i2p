@@ -1,0 +1,50 @@
+{
+  String ret="";
+  if (importEnclosures && htmlTag.startsWith("<img")) {
+    System.out.println("Found image tag: " + htmlTag);
+    int a, b;
+    a=htmlTag.indexOf("src=\"") + 5;
+    b=a + 1;
+    while (htmlTag.charAt(b) != '\"')     b++;
+    String imageLink=htmlTag.substring(a,b);
+    if (pendingEndLink) {
+      ret="[/link]";
+      pendingEndLink=false;
+    }
+    ret+="[img attachment=\"" + "" + attachmentCounter + "\"]";
+    a=htmlTag.indexOf("alt=\"") + 5;
+    if (a >= 5) {
+      b=a + 1;
+      while (htmlTag.charAt(b) != '\"')       b++;
+      String altText=htmlTag.substring(a,b);
+      ret+=altText;
+    }
+    ret+="[/img]";
+    if (imageLink.indexOf("http") < 0)     imageLink=baseUrl + "/" + imageLink;
+    fetchAttachment(imageLink);
+    System.out.println("Converted to: " + ret);
+    return ret;
+  }
+  if (importRefs && htmlTag.startsWith("<a ")) {
+    System.out.println("Found link tag: " + htmlTag);
+    int a, b;
+    a=htmlTag.indexOf("href=\"") + 6;
+    b=a + 1;
+    while (htmlTag.charAt(b) != '\"')     b++;
+    String link=htmlTag.substring(a,b);
+    if (link.indexOf("http") < 0)     link=baseUrl + "/" + link;
+    String schema="web";
+    ret+="[link schema=\"" + schema + "\" location=\""+ link+ "\"]";
+    pendingEndLink=true;
+    System.out.println("Converted to: " + ret);
+    return ret;
+  }
+  if ("</a>".equals(htmlTag)) {
+    if (pendingEndLink)     return "[/link]";
+  }
+  if ("<b>".equals(htmlTag))   return "[b]";
+  if ("</b>".equals(htmlTag))   return "[/b]";
+  if ("<i>".equals(htmlTag))   return "[i]";
+  if ("</i>".equals(htmlTag))   return "[/i]";
+  return null;
+}
