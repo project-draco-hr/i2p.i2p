@@ -1,22 +1,18 @@
 {
   System.out.println("Fetch attachment from: " + link);
   String attachmentPath=messagePath + "." + attachmentCounter;
-  try {
-    link=link.replaceAll("&amp;","&");
-    URL attachmentUrl=new URL(link);
-    InputStream is=attachmentUrl.openStream();
-    FileOutputStream fos=new FileOutputStream(attachmentPath);
-    while (true) {
-      int i=is.read();
-      if (i < 0)       break;
-      fos.write(i);
-    }
-  }
- catch (  MalformedURLException e) {
-    e.printStackTrace();
-  }
-catch (  IOException e) {
-    e.printStackTrace();
+  link=link.replaceAll("&amp;","&");
+  int numRetries=2;
+  File fetched=new File(attachmentPath);
+  EepGet get=new EepGet(I2PAppContext.getGlobalContext(),shouldProxy,proxyHost,proxyPortNum,numRetries,fetched.getAbsolutePath(),link);
+  SuckerFetchListener lsnr=new SuckerFetchListener();
+  get.addStatusListener(lsnr);
+  get.fetch();
+  boolean ok=lsnr.waitForSuccess();
+  if (!ok) {
+    System.err.println("Unable to retrieve the url after " + numRetries + " tries.");
+    fetched.delete();
+    return;
   }
   attachmentCounter++;
 }
