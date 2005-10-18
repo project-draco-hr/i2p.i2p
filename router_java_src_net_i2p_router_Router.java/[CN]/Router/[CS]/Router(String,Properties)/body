@@ -7,9 +7,27 @@
     System.exit(-1);
   }
   _config=new Properties();
+  if (configFilename == null) {
+    if (envProps != null) {
+      _configFilename=envProps.getProperty(PROP_CONFIG_FILE);
+    }
+    if (_configFilename == null)     _configFilename=System.getProperty(PROP_CONFIG_FILE,"router.config");
+  }
+ else {
+    _configFilename=configFilename;
+  }
+  readConfig();
+  if (envProps == null) {
+    envProps=_config;
+  }
+ else {
+    for (Iterator iter=_config.keySet().iterator(); iter.hasNext(); ) {
+      String k=(String)iter.next();
+      String v=_config.getProperty(k);
+      envProps.setProperty(k,v);
+    }
+  }
   _context=new RouterContext(this,envProps);
-  if (configFilename == null)   _configFilename=_context.getProperty(PROP_CONFIG_FILE,"router.config");
- else   _configFilename=configFilename;
   _routerInfo=null;
   _higherVersionSeen=false;
   _log=_context.logManager().getLog(Router.class);

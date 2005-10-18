@@ -1,0 +1,35 @@
+{
+  File infoDir=getInfoDir();
+  if (!infoDir.exists())   infoDir.mkdirs();
+  while (true) {
+    File peerFiles[]=infoDir.listFiles();
+    if ((peerFiles != null) && (peerFiles.length > 0)) {
+      for (int i=0; i < peerFiles.length; i++) {
+        if (peerFiles[i].isFile() && !peerFiles[i].isHidden()) {
+          if (!_us.routerHash().toBase64().equals(peerFiles[i].getName())) {
+            System.out.println("Reading info: " + peerFiles[i].getAbsolutePath());
+            try {
+              FileInputStream in=new FileInputStream(peerFiles[i]);
+              RouterInfo ri=new RouterInfo();
+              ri.readBytes(in);
+              peerRead(ri);
+            }
+ catch (            IOException ioe) {
+              System.err.println("Error reading " + peerFiles[i].getAbsolutePath());
+              ioe.printStackTrace();
+            }
+catch (            DataFormatException dfe) {
+              System.err.println("Corrupt " + peerFiles[i].getAbsolutePath());
+              dfe.printStackTrace();
+            }
+          }
+        }
+      }
+    }
+    try {
+      Thread.sleep(30 * 1000);
+    }
+ catch (    InterruptedException ie) {
+    }
+  }
+}
