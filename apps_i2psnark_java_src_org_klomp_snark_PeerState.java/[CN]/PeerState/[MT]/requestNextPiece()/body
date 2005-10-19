@@ -1,0 +1,19 @@
+{
+  if (bitfield != null) {
+    int nextPiece=listener.wantPiece(peer,bitfield);
+    if (Snark.debug >= Snark.DEBUG)     Snark.debug(peer + " want piece " + nextPiece,Snark.DEBUG);
+synchronized (this) {
+      if (nextPiece != -1 && (lastRequest == null || lastRequest.piece != nextPiece)) {
+        int piece_length=metainfo.getPieceLength(nextPiece);
+        byte[] bs=new byte[piece_length];
+        int length=Math.min(piece_length,PARTSIZE);
+        Request req=new Request(nextPiece,bs,0,length);
+        outstandingRequests.add(req);
+        if (!choked)         out.sendRequest(req);
+        lastRequest=req;
+        return true;
+      }
+    }
+  }
+  return false;
+}

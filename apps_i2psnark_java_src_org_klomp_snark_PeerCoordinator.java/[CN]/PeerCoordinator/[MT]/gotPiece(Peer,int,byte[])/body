@@ -1,0 +1,32 @@
+{
+  if (halted)   return true;
+synchronized (wantedPieces) {
+    Integer p=new Integer(piece);
+    if (!wantedPieces.contains(p)) {
+      if (Snark.debug >= Snark.INFO)       Snark.debug(peer + " piece " + piece+ " no longer needed",Snark.INFO);
+      return true;
+    }
+    try {
+      if (storage.putPiece(piece,bs)) {
+        if (Snark.debug >= Snark.INFO)         Snark.debug("Recv p" + piece + " "+ peer,Snark.INFO);
+      }
+ else {
+        downloaded-=metainfo.getPieceLength(piece);
+        if (Snark.debug >= Snark.NOTICE)         Snark.debug("Got BAD piece " + piece + " from "+ peer,Snark.NOTICE);
+        return false;
+      }
+    }
+ catch (    IOException ioe) {
+      Snark.fatal("Error writing storage",ioe);
+    }
+    wantedPieces.remove(p);
+  }
+synchronized (peers) {
+    Iterator it=peers.iterator();
+    while (it.hasNext()) {
+      Peer p=(Peer)it.next();
+      if (p.isConnected())       p.have(piece);
+    }
+  }
+  return true;
+}

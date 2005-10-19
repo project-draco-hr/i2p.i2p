@@ -1,0 +1,26 @@
+{
+  boolean resume=false;
+  for (int i=0; i < rafs.length; i++) {
+    long length=rafs[i].length();
+    if (length == lengths[i]) {
+      if (listener != null)       listener.storageAllocated(this,length);
+      resume=true;
+    }
+ else     if (length == 0)     allocateFile(i);
+ else     throw new IOException("File '" + names[i] + "' exists, but has wrong length");
+  }
+  if (resume) {
+    pieces=metainfo.getPieces();
+    byte[] piece=new byte[metainfo.getPieceLength(0)];
+    for (int i=0; i < pieces; i++) {
+      int length=getUncheckedPiece(i,piece,0);
+      boolean correctHash=metainfo.checkPiece(i,piece,0,length);
+      if (correctHash) {
+        bitfield.set(i);
+        needed--;
+      }
+      if (listener != null)       listener.storageChecked(this,i,correctHash);
+    }
+  }
+  if (listener != null)   listener.storageAllChecked(this);
+}

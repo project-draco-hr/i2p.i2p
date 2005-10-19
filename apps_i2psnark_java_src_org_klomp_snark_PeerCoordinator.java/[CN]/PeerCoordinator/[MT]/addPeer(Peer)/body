@@ -1,0 +1,24 @@
+{
+  if (halted) {
+    peer.disconnect(false);
+    return;
+  }
+  boolean need_more;
+synchronized (peers) {
+    need_more=!peer.isConnected() && peers.size() < MAX_CONNECTIONS;
+  }
+  if (need_more) {
+    final PeerListener listener=this;
+    final BitField bitfield=storage.getBitField();
+    Runnable r=new Runnable(){
+      public void run(){
+        peer.runConnection(listener,bitfield);
+      }
+    }
+;
+    String threadName=peer.toString();
+    new Thread(r,threadName).start();
+  }
+ else   if (Snark.debug >= Snark.INFO)   if (peer.isConnected())   Snark.debug("Add peer already connected: " + peer,Snark.INFO);
+ else   Snark.debug("MAX_CONNECTIONS = " + MAX_CONNECTIONS + " not accepting extra peer: "+ peer,Snark.INFO);
+}

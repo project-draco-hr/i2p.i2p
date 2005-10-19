@@ -1,0 +1,40 @@
+{
+  while (!stop) {
+    try {
+      final I2PSocket socket=serverSocket.accept();
+      Thread t=new Thread("Connection-" + socket){
+        public void run(){
+          try {
+            InputStream in=socket.getInputStream();
+            OutputStream out=socket.getOutputStream();
+            BufferedInputStream bis=new BufferedInputStream(in);
+            BufferedOutputStream bos=new BufferedOutputStream(out);
+            peeracceptor.connection(socket,bis,bos);
+          }
+ catch (          IOException ioe) {
+            try {
+              socket.close();
+            }
+ catch (            IOException ignored) {
+            }
+          }
+        }
+      }
+;
+      t.start();
+    }
+ catch (    I2PException ioe) {
+      Snark.debug("Error while accepting: " + ioe,Snark.ERROR);
+      stop=true;
+    }
+catch (    IOException ioe) {
+      Snark.debug("Error while accepting: " + ioe,Snark.ERROR);
+      stop=true;
+    }
+  }
+  try {
+    serverSocket.close();
+  }
+ catch (  I2PException ignored) {
+  }
+}

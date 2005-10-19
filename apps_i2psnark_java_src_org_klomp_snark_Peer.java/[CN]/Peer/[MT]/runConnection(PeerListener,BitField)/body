@@ -1,0 +1,29 @@
+{
+  if (state != null)   throw new IllegalStateException("Peer already started");
+  try {
+    if (din == null) {
+      I2PSocket sock=I2PSnarkUtil.instance().connect(peerID);
+      BufferedInputStream bis=new BufferedInputStream(sock.getInputStream());
+      BufferedOutputStream bos=new BufferedOutputStream(sock.getOutputStream());
+      byte[] id=handshake(bis,bos);
+      byte[] expected_id=peerID.getID();
+      if (!Arrays.equals(expected_id,id))       throw new IOException("Unexpected peerID '" + PeerID.idencode(id) + "' expected '"+ PeerID.idencode(expected_id)+ "'");
+    }
+    PeerConnectionIn in=new PeerConnectionIn(this,din);
+    PeerConnectionOut out=new PeerConnectionOut(this,dout);
+    PeerState s=new PeerState(this,listener,metainfo,in,out);
+    if (bitfield != null)     s.out.sendBitfield(bitfield);
+    state=s;
+    listener.connected(this);
+    s.in.run();
+  }
+ catch (  IOException eofe) {
+  }
+catch (  Throwable t) {
+    Snark.debug(this + ": " + t,Snark.ERROR);
+    t.printStackTrace();
+  }
+ finally {
+    if (deregister)     listener.disconnected(this);
+  }
+}

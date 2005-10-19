@@ -1,0 +1,34 @@
+{
+  if (Snark.debug >= Snark.DEBUG)   Snark.debug("getChunk(" + piece + ","+ begin+ ","+ length+ ") "+ peer,Snark.DEBUG);
+  int r=getFirstOutstandingRequest(piece);
+  if (r == -1) {
+    if (Snark.debug >= Snark.INFO)     Snark.debug("Unrequested 'piece: " + piece + ", "+ begin+ ", "+ length+ "' received from "+ peer,Snark.INFO);
+    downloaded=0;
+    return null;
+  }
+  Request req;
+synchronized (this) {
+    req=(Request)outstandingRequests.get(r);
+    while (req.piece == piece && req.off != begin && r < outstandingRequests.size() - 1) {
+      r++;
+      req=(Request)outstandingRequests.get(r);
+    }
+    if (req.piece != piece || req.off != begin || req.len != length) {
+      if (Snark.debug >= Snark.INFO)       Snark.debug("Unrequested or unneeded 'piece: " + piece + ", "+ begin+ ", "+ length+ "' received from "+ peer,Snark.INFO);
+      downloaded=0;
+      return null;
+    }
+    if (r != 0) {
+      if (Snark.debug >= Snark.INFO)       System.err.print("Some requests dropped, got " + req + ", wanted:");
+      for (int i=0; i < r; i++) {
+        Request dropReq=(Request)outstandingRequests.remove(0);
+        outstandingRequests.add(dropReq);
+        if (Snark.debug >= Snark.INFO)         System.err.print(" " + dropReq);
+      }
+      if (Snark.debug >= Snark.INFO)       System.err.println(" " + peer);
+    }
+    outstandingRequests.remove(0);
+  }
+  addRequest();
+  return req;
+}

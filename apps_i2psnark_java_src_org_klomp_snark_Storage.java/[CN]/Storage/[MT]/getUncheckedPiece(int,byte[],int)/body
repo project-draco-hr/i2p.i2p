@@ -1,0 +1,27 @@
+{
+  long start=piece * metainfo.getPieceLength(0);
+  int length=metainfo.getPieceLength(piece);
+  int i=0;
+  long raflen=lengths[i];
+  while (start > raflen) {
+    i++;
+    start-=raflen;
+    raflen=lengths[i];
+  }
+  int read=0;
+  while (read < length) {
+    int need=length - read;
+    int len=(start + need < raflen) ? need : (int)(raflen - start);
+synchronized (rafs[i]) {
+      rafs[i].seek(start);
+      rafs[i].readFully(bs,off + read,len);
+    }
+    read+=len;
+    if (need - len > 0) {
+      i++;
+      raflen=lengths[i];
+      start=0;
+    }
+  }
+  return length;
+}

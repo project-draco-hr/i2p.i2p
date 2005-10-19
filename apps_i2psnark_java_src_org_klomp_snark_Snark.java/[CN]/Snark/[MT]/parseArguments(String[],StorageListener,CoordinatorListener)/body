@@ -1,0 +1,71 @@
+{
+  int user_port=-1;
+  String ip=null;
+  String torrent=null;
+  int i=0;
+  while (i < args.length) {
+    if (args[i].equals("--debug")) {
+      debug=INFO;
+      i++;
+      if (i < args.length) {
+        try {
+          int level=Integer.parseInt(args[i]);
+          if (level >= 0) {
+            debug=level;
+            i++;
+          }
+        }
+ catch (        NumberFormatException nfe) {
+        }
+      }
+    }
+ else     if (args[i].equals("--port")) {
+      if (args.length - 1 < i + 1)       usage("--port needs port number to listen on");
+      try {
+        user_port=Integer.parseInt(args[i + 1]);
+      }
+ catch (      NumberFormatException nfe) {
+        usage("--port argument must be a number (" + nfe + ")");
+      }
+      i+=2;
+    }
+ else     if (args[i].equals("--no-commands")) {
+      command_interpreter=false;
+      i++;
+    }
+ else     if (args[i].equals("--eepproxy")) {
+      String proxyHost=args[i + 1];
+      String proxyPort=args[i + 2];
+      I2PSnarkUtil.instance().setProxy(proxyHost,Integer.parseInt(proxyPort));
+      i+=3;
+    }
+ else     if (args[i].equals("--i2cp")) {
+      String i2cpHost=args[i + 1];
+      String i2cpPort=args[i + 2];
+      Properties opts=null;
+      if (i + 3 < args.length) {
+        if (!args[i + 3].startsWith("--")) {
+          opts=new Properties();
+          StringTokenizer tok=new StringTokenizer(args[i + 3]," \t");
+          while (tok.hasMoreTokens()) {
+            String str=tok.nextToken();
+            int split=str.indexOf('=');
+            if (split > 0) {
+              opts.setProperty(str.substring(0,split),str.substring(split + 1));
+            }
+          }
+        }
+      }
+      I2PSnarkUtil.instance().setI2CPConfig(i2cpHost,Integer.parseInt(i2cpPort),opts);
+      i+=3 + (opts != null ? 1 : 0);
+    }
+ else {
+      torrent=args[i];
+      i++;
+      break;
+    }
+  }
+  if (torrent == null || i != args.length)   if (torrent != null && torrent.startsWith("-"))   usage("Unknow option '" + torrent + "'.");
+ else   usage("Need exactly one <url>, <file> or <dir>.");
+  return new Snark(torrent,ip,user_port,slistener,clistener);
+}

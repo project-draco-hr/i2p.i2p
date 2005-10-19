@@ -1,0 +1,24 @@
+{
+  din=new DataInputStream(bis);
+  dout=new DataOutputStream(bos);
+  dout.write(19);
+  dout.write("BitTorrent protocol".getBytes("UTF-8"));
+  byte[] zeros=new byte[8];
+  dout.write(zeros);
+  byte[] shared_hash=metainfo.getInfoHash();
+  dout.write(shared_hash);
+  dout.write(my_id);
+  dout.flush();
+  byte b=din.readByte();
+  if (b != 19)   throw new IOException("Handshake failure, expected 19, got " + (b & 0xff));
+  byte[] bs=new byte[19];
+  din.readFully(bs);
+  String bittorrentProtocol=new String(bs,"UTF-8");
+  if (!"BitTorrent protocol".equals(bittorrentProtocol))   throw new IOException("Handshake failure, expected " + "'Bittorrent protocol', got '" + bittorrentProtocol + "'");
+  din.readFully(zeros);
+  bs=new byte[20];
+  din.readFully(bs);
+  if (!Arrays.equals(shared_hash,bs))   throw new IOException("Unexpected MetaInfo hash");
+  din.readFully(bs);
+  return bs;
+}

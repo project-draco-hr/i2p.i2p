@@ -1,0 +1,69 @@
+{
+  String announce=I2PSnarkUtil.instance().rewriteAnnounce(meta.getAnnounce());
+  String infoHash=urlencode(meta.getInfoHash());
+  String peerID=urlencode(coordinator.getID());
+  long uploaded=coordinator.getUploaded();
+  long downloaded=coordinator.getDownloaded();
+  long left=coordinator.getLeft();
+  boolean completed=(left == 0);
+  try {
+    boolean started=false;
+    while (!started) {
+      try {
+        TrackerInfo info=doRequest(announce,infoHash,peerID,uploaded,downloaded,left,STARTED_EVENT);
+        Iterator it=info.getPeers().iterator();
+        while (it.hasNext())         coordinator.addPeer((Peer)it.next());
+        started=true;
+      }
+ catch (      IOException ioe) {
+        Snark.debug("WARNING: Could not contact tracker at '" + announce + "': "+ ioe,Snark.WARNING);
+      }
+      if (!started && !stop) {
+        Snark.debug("         Retrying in one minute...",Snark.DEBUG);
+        try {
+          Thread.sleep(60 * 1000);
+        }
+ catch (        InterruptedException interrupt) {
+        }
+      }
+    }
+    while (!stop) {
+      try {
+        Thread.sleep(SLEEP * 60 * 1000);
+      }
+ catch (      InterruptedException interrupt) {
+      }
+      if (stop)       break;
+      uploaded=coordinator.getUploaded();
+      downloaded=coordinator.getDownloaded();
+      left=coordinator.getLeft();
+      String event;
+      if (!completed && left == 0) {
+        completed=true;
+        event=COMPLETED_EVENT;
+      }
+ else       event=NO_EVENT;
+      if (event == COMPLETED_EVENT || coordinator.needPeers() || System.currentTimeMillis() > lastRequestTime + interval) {
+        try {
+          TrackerInfo info=doRequest(announce,infoHash,peerID,uploaded,downloaded,left,event);
+          Iterator it=info.getPeers().iterator();
+          while (it.hasNext())           coordinator.addPeer((Peer)it.next());
+        }
+ catch (        IOException ioe) {
+          Snark.debug("WARNING: Could not contact tracker at '" + announce + "': "+ ioe,Snark.WARNING);
+        }
+      }
+    }
+  }
+ catch (  Throwable t) {
+    Snark.debug("TrackerClient: " + t,Snark.ERROR);
+    t.printStackTrace();
+  }
+ finally {
+    try {
+      TrackerInfo info=doRequest(announce,infoHash,peerID,uploaded,downloaded,left,STOPPED_EVENT);
+    }
+ catch (    IOException ioe) {
+    }
+  }
+}

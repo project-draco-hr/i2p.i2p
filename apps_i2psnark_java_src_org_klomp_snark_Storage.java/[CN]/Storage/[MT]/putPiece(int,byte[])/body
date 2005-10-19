@@ -1,0 +1,40 @@
+{
+  int length=bs.length;
+  boolean correctHash=metainfo.checkPiece(piece,bs,0,length);
+  if (listener != null)   listener.storageChecked(this,piece,correctHash);
+  if (!correctHash)   return false;
+  boolean complete;
+synchronized (bitfield) {
+    if (bitfield.get(piece))     return true;
+ else {
+      bitfield.set(piece);
+      needed--;
+      complete=needed == 0;
+    }
+  }
+  long start=piece * metainfo.getPieceLength(0);
+  int i=0;
+  long raflen=lengths[i];
+  while (start > raflen) {
+    i++;
+    start-=raflen;
+    raflen=lengths[i];
+  }
+  int written=0;
+  int off=0;
+  while (written < length) {
+    int need=length - written;
+    int len=(start + need < raflen) ? need : (int)(raflen - start);
+synchronized (rafs[i]) {
+      rafs[i].seek(start);
+      rafs[i].write(bs,off + written,len);
+    }
+    written+=len;
+    if (need - len > 0) {
+      i++;
+      raflen=lengths[i];
+      start=0;
+    }
+  }
+  return true;
+}

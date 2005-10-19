@@ -1,0 +1,55 @@
+{
+  try {
+    while (!quit) {
+      Message m=null;
+      PeerState state=null;
+synchronized (sendQueue) {
+        while (!quit && sendQueue.isEmpty()) {
+          try {
+            dout.flush();
+            sendQueue.wait();
+          }
+ catch (          InterruptedException ie) {
+          }
+        }
+        state=peer.state;
+        if (!quit && state != null) {
+          Iterator it=sendQueue.iterator();
+          while (m == null && it.hasNext()) {
+            Message nm=(Message)it.next();
+            if (nm.type == Message.PIECE) {
+              if (state.choking)               it.remove();
+              nm=null;
+            }
+ else             if (nm.type == Message.REQUEST && state.choked) {
+              it.remove();
+              nm=null;
+            }
+            if (m == null && nm != null) {
+              m=nm;
+              it.remove();
+            }
+          }
+          if (m == null && sendQueue.size() > 0)           m=(Message)sendQueue.remove(0);
+        }
+      }
+      if (m != null) {
+        if (Snark.debug >= Snark.ALL)         Snark.debug("Send " + peer + ": "+ m,Snark.ALL);
+        m.sendMessage(dout);
+        if (m.type == Message.CHOKE)         removeMessage(Message.PIECE);
+        if (m.type == Message.PIECE)         state.uploaded(m.len);
+        m=null;
+      }
+    }
+  }
+ catch (  IOException ioe) {
+  }
+catch (  Throwable t) {
+    Snark.debug(peer + ": " + t,Snark.ERROR);
+    t.printStackTrace();
+  }
+ finally {
+    quit=true;
+    peer.disconnect();
+  }
+}

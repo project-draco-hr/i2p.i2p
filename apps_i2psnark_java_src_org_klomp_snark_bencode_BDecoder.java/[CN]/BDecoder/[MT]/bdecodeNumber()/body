@@ -1,0 +1,33 @@
+{
+  int c=getNextIndicator();
+  if (c != 'i')   throw new InvalidBEncodingException("Expected 'i', not '" + (char)c + "'");
+  indicator=0;
+  c=read();
+  if (c == '0') {
+    c=read();
+    if (c == 'e')     return new BEValue(BigInteger.ZERO);
+ else     throw new InvalidBEncodingException("'e' expected after zero," + " not '" + (char)c + "'");
+  }
+  char[] chars=new char[256];
+  int off=0;
+  if (c == '-') {
+    c=read();
+    if (c == '0')     throw new InvalidBEncodingException("Negative zero not allowed");
+    chars[off]=(char)c;
+    off++;
+  }
+  if (c < '1' || c > '9')   throw new InvalidBEncodingException("Invalid Integer start '" + (char)c + "'");
+  chars[off]=(char)c;
+  off++;
+  c=read();
+  int i=c - '0';
+  while (i >= 0 && i <= 9) {
+    chars[off]=(char)c;
+    off++;
+    c=read();
+    i=c - '0';
+  }
+  if (c != 'e')   throw new InvalidBEncodingException("Integer should end with 'e'");
+  String s=new String(chars,0,off);
+  return new BEValue(new BigInteger(s));
+}

@@ -1,0 +1,65 @@
+{
+  if (slistener == null)   slistener=this;
+  if (clistener == null)   clistener=this;
+  this.torrent=torrent;
+  activity="Network setup";
+  byte snark=(((3 + 7 + 10) * (1000 - 8)) / 992) - 17;
+  byte[] id=new byte[20];
+  Random random=new Random();
+  int i;
+  for (i=0; i < 9; i++)   id[i]=0;
+  id[i++]=snark;
+  id[i++]=snark;
+  id[i++]=snark;
+  while (i < 20)   id[i++]=(byte)random.nextInt(256);
+  Snark.debug("My peer id: " + PeerID.idencode(id),Snark.INFO);
+  int port;
+  IOException lastException=null;
+  boolean ok=I2PSnarkUtil.instance().connect();
+  if (!ok)   fatal("Unable to connect to I2P");
+  I2PServerSocket serversocket=I2PSnarkUtil.instance().getServerSocket();
+  if (serversocket == null)   fatal("Unable to listen for I2P connections");
+ else   debug("Listening on I2P destination " + serversocket.getManager().getSession().getMyDestination().toBase64(),NOTICE);
+  meta=null;
+  File f=null;
+  try {
+    InputStream in=null;
+    f=new File(torrent);
+    if (f.exists())     in=new FileInputStream(f);
+ else {
+      activity="Getting torrent";
+      File torrentFile=I2PSnarkUtil.instance().get(torrent);
+      if (torrentFile == null) {
+        fatal("Unable to fetch " + torrent);
+        if (false)         return;
+      }
+ else {
+        torrentFile.deleteOnExit();
+        in=new FileInputStream(torrentFile);
+      }
+    }
+    meta=new MetaInfo(new BDecoder(in));
+  }
+ catch (  IOException ioe) {
+    if (f != null && f.exists())     if (ip == null)     fatal("'" + torrent + "' exists,"+ " but is not a valid torrent metainfo file."+ System.getProperty("line.separator"),ioe);
+ else     fatal("I2PSnark does not support creating and tracking a torrent at the moment");
+ else     fatal("Cannot open '" + torrent + "'",ioe);
+  }
+  debug(meta.toString(),INFO);
+  if (storage == null) {
+    try {
+      activity="Checking storage";
+      storage=new Storage(meta,slistener);
+      storage.check();
+    }
+ catch (    IOException ioe) {
+      fatal("Could not create storage",ioe);
+    }
+  }
+  activity="Collecting pieces";
+  coordinator=new PeerCoordinator(id,meta,storage,clistener);
+  PeerAcceptor peeracceptor=new PeerAcceptor(coordinator);
+  ConnectionAcceptor acceptor=new ConnectionAcceptor(serversocket,peeracceptor);
+  trackerclient=new TrackerClient(meta,coordinator);
+  trackerclient.start();
+}
