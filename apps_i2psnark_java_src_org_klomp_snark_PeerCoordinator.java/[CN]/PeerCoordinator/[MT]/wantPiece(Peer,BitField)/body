@@ -1,17 +1,30 @@
 {
   if (halted)   return -1;
 synchronized (wantedPieces) {
-    Integer piece=null;
+    Piece piece=null;
+    Collections.sort(wantedPieces);
+    List requested=new ArrayList();
     Iterator it=wantedPieces.iterator();
     while (piece == null && it.hasNext()) {
-      Integer i=(Integer)it.next();
-      if (havePieces.get(i.intValue())) {
-        it.remove();
-        piece=i;
+      Piece p=(Piece)it.next();
+      if (havePieces.get(p.getId()) && !p.isRequested()) {
+        piece=p;
+      }
+ else       if (p.isRequested()) {
+        requested.add(p);
       }
     }
-    if (piece == null)     return -1;
-    wantedPieces.add(piece);
-    return piece.intValue();
+    if (piece == null) {
+      Iterator it2=requested.iterator();
+      while (piece == null && it2.hasNext()) {
+        Piece p=(Piece)it2.next();
+        if (havePieces.get(p.getId())) {
+          piece=p;
+        }
+      }
+      if (piece == null)       return -1;
+    }
+    piece.setRequested(true);
+    return piece.getId();
   }
 }
