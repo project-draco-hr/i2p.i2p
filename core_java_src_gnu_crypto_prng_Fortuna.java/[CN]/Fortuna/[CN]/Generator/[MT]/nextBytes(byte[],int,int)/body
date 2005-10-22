@@ -1,0 +1,20 @@
+{
+  if (!seeded)   throw new IllegalStateException("generator not seeded");
+  int count=0;
+  do {
+    int amount=Math.min(LIMIT,length - count);
+    super.nextBytes(out,offset + count,amount);
+    count+=amount;
+    for (int i=0; i < key.length; i+=counter.length) {
+      CryptixRijndael_Algorithm.blockEncrypt(counter,buffer,0,0,cryptixKey);
+      incrementCounter();
+      int l=Math.min(key.length - i,16);
+      System.arraycopy(buffer,0,key,i,l);
+    }
+    resetKey();
+  }
+ while (count < length);
+  CryptixRijndael_Algorithm.blockEncrypt(counter,buffer,0,0,cryptixKey);
+  incrementCounter();
+  ndx=0;
+}

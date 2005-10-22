@@ -10,11 +10,19 @@
       totalSize=-1;
     }
   }
+  byte buf[]=new byte[1024];
+  initSeed(buf);
   for (int i=0; i < POOL_SIZE; i++) {
     if (totalSize < 0)     _pool[i]=new BufferedRandomSource(context);
  else     if (totalSize > 0)     _pool[i]=new BufferedRandomSource(context,(totalSize * 1024) / POOL_SIZE);
  else     _pool[i]=new RandomSource(context);
-    _pool[i].nextBoolean();
+    _pool[i].setSeed(buf);
+    if (i > 0) {
+      _pool[i - 1].nextBytes(buf);
+      _pool[i].setSeed(buf);
+    }
   }
+  _pool[0].nextBytes(buf);
+  System.out.println("seeded and initialized: " + Base64.encode(buf));
   _nextPool=0;
 }
