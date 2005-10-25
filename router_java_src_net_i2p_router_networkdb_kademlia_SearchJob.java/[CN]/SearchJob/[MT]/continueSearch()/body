@@ -9,40 +9,44 @@
     requeuePending();
     return;
   }
-  List closestHashes=getClosestRouters(_state.getTarget(),toCheck,_state.getAttempted());
-  if ((closestHashes == null) || (closestHashes.size() <= 0)) {
-    if (_state.getPending().size() <= 0) {
-      if (_log.shouldLog(Log.INFO))       _log.info(getJobId() + ": No peers left, and none pending!  Already searched: " + _state.getAttempted().size()+ " failed: "+ _state.getFailed().size());
-      fail();
-    }
+  int sent=0;
+  Set attempted=_state.getAttempted();
+  while (sent <= 0) {
+    List closestHashes=getClosestRouters(_state.getTarget(),toCheck,attempted);
+    if ((closestHashes == null) || (closestHashes.size() <= 0)) {
+      if (_state.getPending().size() <= 0) {
+        if (_log.shouldLog(Log.INFO))         _log.info(getJobId() + ": No peers left, and none pending!  Already searched: " + _state.getAttempted().size()+ " failed: "+ _state.getFailed().size());
+        fail();
+      }
  else {
-      if (_log.shouldLog(Log.INFO))       _log.info(getJobId() + ": No peers left, but some are pending!  Pending: " + _state.getPending().size()+ " attempted: "+ _state.getAttempted().size()+ " failed: "+ _state.getFailed().size());
-      requeuePending();
+        if (_log.shouldLog(Log.INFO))         _log.info(getJobId() + ": No peers left, but some are pending!  Pending: " + _state.getPending().size()+ " attempted: "+ _state.getAttempted().size()+ " failed: "+ _state.getFailed().size());
+        requeuePending();
+      }
       return;
     }
-  }
  else {
-    _state.addPending(closestHashes);
-    int sent=0;
-    for (Iterator iter=closestHashes.iterator(); iter.hasNext(); ) {
-      Hash peer=(Hash)iter.next();
-      DataStructure ds=_facade.getDataStore().get(peer);
-      if ((ds == null) || !(ds instanceof RouterInfo)) {
-        if (_log.shouldLog(Log.WARN))         _log.warn(getJobId() + ": Error selecting closest hash that wasnt a router! " + peer+ " : "+ (ds == null ? "null" : ds.getClass().getName()));
-        _state.replyTimeout(peer);
-      }
- else {
-        if (getContext().shitlist().isShitlisted(peer)) {
+      attempted.addAll(closestHashes);
+      for (Iterator iter=closestHashes.iterator(); iter.hasNext(); ) {
+        Hash peer=(Hash)iter.next();
+        DataStructure ds=_facade.getDataStore().get(peer);
+        if (ds == null) {
+          if (_log.shouldLog(Log.INFO))           _log.info("Next closest peer " + peer + " was only recently referred to us, sending a search for them");
+          getContext().netDb().lookupRouterInfo(peer,null,null,_timeoutMs);
+        }
+ else         if (!(ds instanceof RouterInfo)) {
+          if (_log.shouldLog(Log.WARN))           _log.warn(getJobId() + ": Error selecting closest hash that wasnt a router! " + peer+ " : "+ (ds == null ? "null" : ds.getClass().getName()));
+          _state.replyTimeout(peer);
         }
  else {
-          sendSearch((RouterInfo)ds);
-          sent++;
+          if (getContext().shitlist().isShitlisted(peer)) {
+          }
+ else {
+            _state.addPending(peer);
+            sendSearch((RouterInfo)ds);
+            sent++;
+          }
         }
       }
-    }
-    if (sent <= 0) {
-      if (_log.shouldLog(Log.WARN))       _log.warn(getJobId() + ": No new peer queued up, so we are going to requeue " + "ourselves in our search for "+ _state.getTarget().toBase64());
-      requeuePending(0);
     }
   }
 }

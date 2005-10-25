@@ -10,15 +10,21 @@
   }
  else {
     Hash peer=_msg.getReply(_curIndex);
+    boolean shouldAdd=false;
     RouterInfo info=getContext().netDb().lookupRouterInfoLocally(peer);
     if (info == null) {
       boolean sendsBadInfo=getContext().profileOrganizer().peerSendsBadReplies(_peer);
       if (!sendsBadInfo) {
-        getContext().netDb().lookupRouterInfo(peer,new ReplyVerifiedJob(getContext(),peer),new ReplyNotVerifiedJob(getContext(),peer),_timeoutMs);
-        _repliesPendingVerification++;
+        if (getContext().shitlist().isShitlisted(peer)) {
+          if (_log.shouldLog(Log.INFO))           _log.info("Not looking for a shitlisted peer...");
+          getContext().statManager().addRateData("netDb.searchReplyValidationSkipped",1,0);
+        }
+ else {
+          shouldAdd=true;
+        }
       }
  else {
-        if (_log.shouldLog(Log.WARN))         _log.warn("Peer " + _peer.toBase64() + " sends us bad replies, so not verifying "+ peer.toBase64());
+        if (_log.shouldLog(Log.INFO))         _log.info("Peer " + _peer.toBase64() + " sends us bad replies, so not verifying "+ peer.toBase64());
         getContext().statManager().addRateData("netDb.searchReplyValidationSkipped",1,0);
       }
     }
@@ -26,8 +32,10 @@
       _duplicatePeers++;
     }
     if (_log.shouldLog(Log.DEBUG))     _log.debug(getJobId() + ": dbSearchReply received on search referencing router " + peer);
-    if (_facade.getKBuckets().add(peer))     _newPeers++;
- else     _seenPeers++;
+    if (shouldAdd) {
+      if (_facade.getKBuckets().add(peer))       _newPeers++;
+ else       _seenPeers++;
+    }
     _curIndex++;
     requeue(0);
   }
