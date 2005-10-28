@@ -6,21 +6,7 @@
   if ((_entry != null) && (_user != null))   pn=_user.getPetNameDB().getByLocation(_entry.getURI().getKeyHash().toBase64());
   BlogInfo info=null;
   if (_entry != null)   info=_archive.getBlogInfo(_entry.getURI());
-  if (info != null) {
-    _preBodyBuffer.append("<a ").append(getClass("metaLink")).append(" href=\"").append(getMetadataURL()).append("\">");
-    if (pn != null) {
-      _preBodyBuffer.append(getSpan("metaKnown")).append(sanitizeString(pn.getName())).append("</span>");
-    }
- else {
-      String nameStr=info.getProperty("Name");
-      if (nameStr == null)       _preBodyBuffer.append(getSpan("metaUnknown")).append("[no name]</span>");
- else       _preBodyBuffer.append(getSpan("metaUnknown")).append(sanitizeString(nameStr)).append("</span>");
-    }
-    _preBodyBuffer.append("</a>");
-  }
- else {
-    _preBodyBuffer.append(getSpan("metaUnknown")).append("[unknown blog]</span>");
-  }
+  renderMetaPetname(pn,info);
   if ((_user != null) && (_user.getAuthenticated()) && (_entry != null)) {
     if ((pn == null) || (!pn.isMember("Favorites")))     _preBodyBuffer.append(" <input ").append(getClass("bookmark")).append(" type=\"submit\" name=\"action\" value=\"Bookmark blog\" />");
     if ((pn == null) || (!pn.isMember("Ignore")))     _preBodyBuffer.append(" <input ").append(getClass("ignore")).append(" type=\"submit\" name=\"action\" value=\"Ignore blog\" />");
@@ -48,7 +34,17 @@
   _preBodyBuffer.append("</span>");
   if ((_user != null) && (_user.getAuthenticated())) {
     _preBodyBuffer.append(" <a ").append(getClass("replyLink"));
-    _preBodyBuffer.append(" href=\"").append(getPostURL(_user.getBlog(),true)).append("\">Reply</a>\n");
+    String subject=(String)_headers.get(HEADER_SUBJECT);
+    if (subject != null) {
+      if (!subject.startsWith("re:"))       subject="re: " + subject;
+    }
+ else {
+      subject="re: ";
+    }
+    StringBuffer tagStr=new StringBuffer(32);
+    if ((tags != null) && (tags.length > 0))     for (int i=0; i < tags.length; i++)     tagStr.append(tags[i]).append('\t');
+    String replyURL=getPostURL(_user.getBlog(),true,subject,tagStr.toString());
+    _preBodyBuffer.append(" href=\"").append(replyURL).append("\">Reply</a>\n");
   }
   _preBodyBuffer.append("\n</td>");
   _preBodyBuffer.append("</tr>\n");
