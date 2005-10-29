@@ -3,12 +3,22 @@
   if (msg.getTarget() == null)   return;
   if (msg.getTarget().getIdentity() == null)   return;
   Hash to=msg.getTarget().getIdentity().calculateHash();
-  if (getPeerState(to) != null) {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Sending outbound message to an established peer: " + to.toBase64());
+  PeerState peer=getPeerState(to);
+  if (peer != null) {
+    long lastSend=peer.getLastSendFullyTime();
+    long lastRecv=peer.getLastReceiveTime();
+    long now=_context.clock().now();
+    if ((lastSend > 0) && (lastRecv > 0)) {
+      if ((now - lastSend > MAX_IDLE_TIME) && (now - lastRecv > MAX_IDLE_TIME) && (peer.getConsecutiveFailedSends() > 0)) {
+        dropPeer(peer,false);
+        _establisher.establish(msg);
+        _context.statManager().addRateData("udp.proactiveReestablish",now - lastSend,now - peer.getKeyEstablishedTime());
+        return;
+      }
+    }
     _outboundMessages.add(msg);
   }
  else {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Sending outbound message to an unestablished peer: " + to.toBase64());
     _establisher.establish(msg);
   }
 }
