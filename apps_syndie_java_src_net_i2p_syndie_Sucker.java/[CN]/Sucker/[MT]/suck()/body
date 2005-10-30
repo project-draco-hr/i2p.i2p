@@ -1,22 +1,31 @@
 {
   SyndFeed feed;
+  int idx=urlToLoad.lastIndexOf('/');
+  if (idx > 0)   baseUrl=urlToLoad.substring(0,idx);
+ else   baseUrl=urlToLoad;
+  debugLog("Processing: " + urlToLoad);
+  debugLog("Base url: " + baseUrl);
   try {
-    File f=new File(outputDir);
-    f.mkdirs();
+    File lastIdFile=null;
+    if (!pushToSyndie) {
+      lastIdFile=new File(historyPath + ".lastId");
+      if (!lastIdFile.exists())       lastIdFile.createNewFile();
+      FileInputStream fis=new FileInputStream(lastIdFile);
+      String number=readLine(fis);
+      try {
+        messageNumber=Integer.parseInt(number);
+      }
+ catch (      NumberFormatException e) {
+        messageNumber=0;
+      }
+      File f=new File(outputDir);
+      f.mkdirs();
+    }
+ else {
+      messageNumber=bm.getNextBlogEntry(user);
+    }
     historyFile=new File(historyPath);
     if (!historyFile.exists())     historyFile.createNewFile();
-    int messageNumber;
-    File lastIdFile=new File(historyPath + ".lastId");
-    if (!lastIdFile.exists())     lastIdFile.createNewFile();
-    FileInputStream fis=new FileInputStream(lastIdFile);
-    String number=readLine(fis);
-    try {
-      messageNumber=Integer.parseInt(number);
-    }
- catch (    NumberFormatException e) {
-      messageNumber=0;
-    }
-    SyndFeedInput input=new SyndFeedInput();
     shouldProxy=false;
     proxyPortNum=-1;
     if ((proxyHost != null) && (proxyPort != null)) {
@@ -40,40 +49,27 @@
       System.err.println("Unable to retrieve the url after " + numRetries + " tries.");
       return;
     }
+    if (get.getNotModified()) {
+      debugLog("not modified, saving network bytes from useless fetch");
+      return;
+    }
+    SyndFeedInput input=new SyndFeedInput();
     feed=input.build(new XmlReader(fetched));
     List entries=feed.getEntries();
     FileOutputStream hos=new FileOutputStream(historyFile,true);
-    ListIterator iter=entries.listIterator();
-    while (iter.hasNext()) {
+    for (int i=entries.size() - 1; i >= 0; i--) {
+      SyndEntry e=(SyndEntry)entries.get(i);
       attachmentCounter=0;
-      SyndEntry e=(SyndEntry)iter.next();
-      String feedHash=sha1(urlToLoad);
-      String itemHash=sha1(e.getTitle() + e.getDescription());
-      Date d=e.getPublishedDate();
-      String time;
-      if (d != null)       time="" + d.getTime();
- else       time="" + new Date().getTime();
-      String outputFileName=outputDir + "/" + messageNumber;
-      String messageId=feedHash + ":" + itemHash+ ":"+ time+ ":"+ outputFileName;
-      if (!existsInHistory(messageId)) {
-        System.out.println("new: " + messageId);
-        if (convertToSml(e,"" + messageNumber)) {
-          if (pushScript != null) {
-            if (!execPushScript("" + messageNumber,time)) {
-              System.out.println("################## push failed");
-            }
- else {
-              System.out.println("push success");
-              hos.write(messageId.getBytes());
-              hos.write("\n".getBytes());
-            }
-          }
-        }
-        messageNumber++;
+      String messageId=convertToSml(e);
+      if (messageId != null) {
+        hos.write(messageId.getBytes());
+        hos.write("\n".getBytes());
       }
     }
-    FileOutputStream fos=new FileOutputStream(lastIdFile);
-    fos.write(("" + messageNumber).getBytes());
+    if (!pushToSyndie) {
+      FileOutputStream fos=new FileOutputStream(lastIdFile);
+      fos.write(("" + messageNumber).getBytes());
+    }
   }
  catch (  MalformedURLException e) {
     e.printStackTrace();
@@ -87,5 +83,5 @@ catch (  FeedException e) {
 catch (  IOException e) {
     e.printStackTrace();
   }
-  System.out.println("Done.");
+  debugLog("Done.");
 }

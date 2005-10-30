@@ -2,7 +2,7 @@
   String ret="";
   String htmlTagLowerCase=htmlTag.toLowerCase();
   if (importEnclosures && htmlTagLowerCase.startsWith("<img")) {
-    System.out.println("Found image tag: " + htmlTag);
+    debugLog("Found image tag: " + htmlTag);
     int a, b;
     a=htmlTagLowerCase.indexOf("src=\"") + 5;
     b=a + 1;
@@ -15,19 +15,21 @@
     ret+="[img attachment=\"" + "" + attachmentCounter + "\"]";
     a=htmlTagLowerCase.indexOf("alt=\"") + 5;
     if (a >= 5) {
-      b=a + 1;
-      while (htmlTagLowerCase.charAt(b) != '\"')       b++;
-      String altText=htmlTag.substring(a,b);
-      ret+=altText;
+      b=a;
+      if (htmlTagLowerCase.charAt(b) != '\"') {
+        while (htmlTagLowerCase.charAt(b) != '\"')         b++;
+        String altText=htmlTag.substring(a,b);
+        ret+=altText;
+      }
     }
     ret+="[/img]";
     if (imageLink.indexOf("http") < 0)     imageLink=baseUrl + "/" + imageLink;
     fetchAttachment(imageLink);
-    System.out.println("Converted to: " + ret);
+    debugLog("Converted to: " + ret);
     return ret;
   }
   if (importRefs && htmlTagLowerCase.startsWith("<a ")) {
-    System.out.println("Found link tag: " + htmlTag);
+    debugLog("Found link tag: " + htmlTag);
     int a, b;
     a=htmlTagLowerCase.indexOf("href=\"") + 6;
     b=a + 1;
@@ -36,8 +38,9 @@
     if (link.indexOf("http") < 0)     link=baseUrl + "/" + link;
     String schema="web";
     ret+="[link schema=\"" + schema + "\" location=\""+ link+ "\"]";
-    pendingEndLink=true;
-    System.out.println("Converted to: " + ret);
+    if (htmlTagLowerCase.endsWith("/>"))     ret+="[/link]";
+ else     pendingEndLink=true;
+    debugLog("Converted to: " + ret);
     return ret;
   }
   if ("</a>".equals(htmlTagLowerCase)) {
@@ -47,5 +50,7 @@
   if ("</b>".equals(htmlTagLowerCase))   return "[/b]";
   if ("<i>".equals(htmlTagLowerCase))   return "[i]";
   if ("</i>".equals(htmlTagLowerCase))   return "[/i]";
+  if ("<em>".equals(htmlTagLowerCase))   return "[i]";
+  if ("</em>".equals(htmlTagLowerCase))   return "[/i]";
   return null;
 }

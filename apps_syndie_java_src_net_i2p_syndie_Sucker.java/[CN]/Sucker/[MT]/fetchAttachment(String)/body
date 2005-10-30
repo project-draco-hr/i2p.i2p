@@ -1,9 +1,23 @@
 {
-  System.out.println("Fetch attachment from: " + link);
-  String attachmentPath=messagePath + "." + attachmentCounter;
   link=link.replaceAll("&amp;","&");
+  debugLog("Fetch attachment from: " + link);
+  File fetched;
+  if (pushToSyndie) {
+    try {
+      fetched=File.createTempFile("sucker",".attachment");
+      fetched.deleteOnExit();
+    }
+ catch (    IOException e) {
+      e.printStackTrace();
+      return;
+    }
+    fetched.deleteOnExit();
+  }
+ else {
+    String attachmentPath=messagePath + "." + attachmentCounter;
+    fetched=new File(attachmentPath);
+  }
   int numRetries=2;
-  File fetched=new File(attachmentPath);
   EepGet get=new EepGet(I2PAppContext.getGlobalContext(),shouldProxy,proxyHost,proxyPortNum,numRetries,fetched.getAbsolutePath(),link);
   SuckerFetchListener lsnr=new SuckerFetchListener();
   get.addStatusListener(lsnr);
@@ -13,6 +27,21 @@
     System.err.println("Unable to retrieve the url after " + numRetries + " tries.");
     fetched.delete();
     return;
+  }
+  String filename=EepGet.suggestName(link);
+  String contentType=get.getContentType();
+  if (contentType == null)   contentType="text/plain";
+  debugLog("successful fetch of filename " + filename);
+  if (fileNames == null)   fileNames=new ArrayList();
+  if (fileTypes == null)   fileTypes=new ArrayList();
+  if (fileStreams == null)   fileStreams=new ArrayList();
+  fileNames.add(filename);
+  fileTypes.add(contentType);
+  try {
+    fileStreams.add(new FileInputStream(fetched));
+  }
+ catch (  FileNotFoundException e) {
+    e.printStackTrace();
   }
   attachmentCounter++;
 }

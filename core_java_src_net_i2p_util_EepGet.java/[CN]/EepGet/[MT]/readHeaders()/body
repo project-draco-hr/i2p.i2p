@@ -8,7 +8,8 @@
 switch (responseCode) {
 case 200:
     _out=new FileOutputStream(_outputFile,false);
-  rcOk=true;
+  _alreadyTransferred=0;
+rcOk=true;
 break;
 case 206:
 _out=new FileOutputStream(_outputFile,true);
@@ -26,6 +27,7 @@ return;
 default :
 rcOk=false;
 }
+buf.setLength(0);
 byte lookahead[]=new byte[3];
 while (true) {
 int cur=_proxyIn.read();
@@ -53,7 +55,7 @@ increment(lookahead,cur);
 if (isEndOfHeaders(lookahead)) {
 if (!rcOk) throw new IOException("Invalid HTTP response code: " + responseCode);
 if (_encodingChunked) {
-readChunkLength();
+_bytesRemaining=readChunkLength();
 }
 return;
 }
