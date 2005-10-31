@@ -1,18 +1,25 @@
 {
   BlogManager bm=BlogManager.instance();
   if (_lastUpdate + bm.getUpdateDelay() * 60 * 60* 1000 > System.currentTimeMillis()) {
-    return;
+    if (!_woken)     return;
   }
   _lastUpdate=System.currentTimeMillis();
   _log.debug("Update started.");
   String[] archives=bm.getUpdateArchives();
   for (int i=0; i < archives.length; i++) {
+    _log.debug("Fetching " + archives[i]);
     fetchArchive(archives[i]);
+    _log.debug("Done fetching " + archives[i]);
   }
+  _log.debug("Done fetching archives");
   List rssFeeds=bm.getRssFeeds();
   Iterator iter=rssFeeds.iterator();
   while (iter.hasNext()) {
-    Sucker sucker=new Sucker((String[])iter.next());
+    String args[]=(String[])iter.next();
+    _log.debug("rss feed begin: " + args[0]);
+    Sucker sucker=new Sucker(args);
     sucker.suck();
+    _log.debug("rss feed end: " + args[0]);
   }
+  _log.debug("Done with all updating");
 }
