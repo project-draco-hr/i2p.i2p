@@ -46,12 +46,16 @@ synchronized (_activeMessages) {
       _context.statManager().addRateData("udp.sendConfirmTime",state.getLifetime(),state.getLifetime());
       if (state.getFragmentCount() > 1)       _context.statManager().addRateData("udp.sendConfirmFragments",state.getFragmentCount(),state.getLifetime());
       if (numSends > 1)       _context.statManager().addRateData("udp.sendConfirmVolley",numSends,state.getFragmentCount());
+      if (state.getMessage() != null)       state.getMessage().timestamp("partial ack to complete after " + numSends);
       _transport.succeeded(state.getMessage());
       if (state.getPeer() != null) {
         state.getPeer().messageACKed(state.getFragmentCount() * state.getFragmentSize(),state.getLifetime(),0);
         if (state.getPeer().getSendWindowBytesRemaining() > 0)         _throttle.unchoke(state.getPeer().getRemotePeer());
       }
       state.releaseResources();
+    }
+ else {
+      if (state.getMessage() != null)       state.getMessage().timestamp("partial ack after " + numSends + ": "+ bitfield.toString());
     }
     return;
   }

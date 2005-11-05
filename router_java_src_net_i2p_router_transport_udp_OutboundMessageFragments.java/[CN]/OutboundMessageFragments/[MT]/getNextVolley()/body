@@ -20,6 +20,7 @@ synchronized (_activeMessages) {
             if (peer == null) {
               _activeMessages.remove(cur);
               locked_removeRetransmitter(state);
+              if (state.getMessage() != null)               state.getMessage().timestamp("peer disconnected");
               _transport.failed(state);
               if (_log.shouldLog(Log.WARN))               _log.warn("Peer disconnected for " + state);
               if ((peer != null) && (peer.getSendWindowBytesRemaining() > 0))               _throttle.unchoke(peer.getRemotePeer());
@@ -55,5 +56,11 @@ synchronized (_activeMessages) {
  catch (    InterruptedException ie) {
     }
   }
-  return preparePackets(state,peer);
+  UDPPacket packets[]=preparePackets(state,peer);
+  if ((state != null) && (state.getMessage() != null)) {
+    int valid=0;
+    for (int i=0; packets != null && i < packets.length; i++)     if (packets[i] != null)     valid++;
+    state.getMessage().timestamp("sending a volley of " + valid + " lastReceived: "+ (_context.clock().now() - peer.getLastReceiveTime())+ " lastSentFully: "+ (_context.clock().now() - peer.getLastSendFullyTime()));
+  }
+  return packets;
 }

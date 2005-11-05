@@ -3,12 +3,20 @@
   if (state.getNextSendTime() <= now) {
     if (!state.isFragmented()) {
       state.fragment(fragmentSize(peer.getMTU()));
+      if (state.getMessage() != null)       state.getMessage().timestamp("fragment into " + state.getFragmentCount());
       if (_log.shouldLog(Log.INFO))       _log.info("Fragmenting " + state);
     }
     OutboundMessageState curRetransMsg=(OutboundMessageState)_retransmitters.get(peer);
     if ((curRetransMsg != null) && (curRetransMsg != state)) {
       _context.statManager().addRateData("udp.blockedRetransmissions",peer.getPacketsRetransmitted(),peer.getPacketsTransmitted());
-      return false;
+      if ((state.getMaxSends() <= 0) || (THROTTLE_RESENDS)) {
+        if (state.getMessage() != null)         state.getMessage().timestamp("choked, with another message retransmitting");
+        return false;
+      }
+ else {
+        if (curRetransMsg.isExpired() || curRetransMsg.isComplete())         _retransmitters.remove(peer);
+        if (state.getMessage() != null)         state.getMessage().timestamp("another message is retransmitting, but since we've already begun sending...");
+      }
     }
     int size=state.getUnackedSize();
     if (peer.allocateSendingBytes(size)) {
@@ -35,10 +43,13 @@
     }
  else {
       _context.statManager().addRateData("udp.sendRejected",state.getPushCount(),state.getLifetime());
+      if (state.getMessage() != null)       state.getMessage().timestamp("send rejected, available=" + peer.getSendWindowBytesRemaining());
       if (_log.shouldLog(Log.WARN))       _log.warn("Allocation of " + size + " rejected w/ wsize="+ peer.getSendWindowBytes()+ " available="+ peer.getSendWindowBytesRemaining()+ " for message "+ state.getMessageId()+ ": "+ state);
       state.setNextSendTime(now + (_context.random().nextInt(2 * ACKSender.ACK_FREQUENCY)));
       if (_log.shouldLog(Log.WARN))       _log.warn("Retransmit after choke for next send time in " + (state.getNextSendTime() - now) + "ms");
       _throttle.choke(peer.getRemotePeer());
+      if (state.getMessage() != null)       state.getMessage().timestamp("choked, not enough available, wsize=" + peer.getSendWindowBytes() + " available="+ peer.getSendWindowBytesRemaining());
+      return false;
     }
   }
   return false;

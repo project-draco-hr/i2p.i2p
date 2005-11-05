@@ -13,6 +13,7 @@ synchronized (_activeMessages) {
           _nextPacketMessage--;
           if (_nextPacketMessage < 0)           _nextPacketMessage=0;
         }
+        if (state.getMessage() != null)         state.getMessage().timestamp("sending complete");
         i--;
       }
  else       if (state.isExpired()) {
@@ -20,6 +21,7 @@ synchronized (_activeMessages) {
         locked_removeRetransmitter(state);
         _context.statManager().addRateData("udp.sendFailed",state.getPushCount(),state.getLifetime());
         if (state.getMessage() != null) {
+          state.getMessage().timestamp("expired in the active pool");
           _transport.failed(state);
         }
  else {
@@ -38,6 +40,7 @@ synchronized (_activeMessages) {
         locked_removeRetransmitter(state);
         _context.statManager().addRateData("udp.sendAggressiveFailed",state.getPushCount(),state.getLifetime());
         if (state.getMessage() != null) {
+          state.getMessage().timestamp("too many sends");
           _transport.failed(state);
         }
  else {
