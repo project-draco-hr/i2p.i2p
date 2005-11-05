@@ -16,10 +16,19 @@
   _transport.addRemotePeerState(peer);
   _context.statManager().addRateData("udp.outboundEstablishTime",state.getLifetime(),0);
   sendOurInfo(peer);
+  int i=0;
   while (true) {
     OutNetMessage msg=state.getNextQueuedMessage();
     if (msg == null)     break;
-    _transport.send(msg);
+    if (now - Router.CLOCK_FUDGE_FACTOR > msg.getExpiration()) {
+      msg.timestamp("took too long but established...");
+      _transport.failed(msg);
+    }
+ else {
+      msg.timestamp("session fully established and sent " + i);
+      _transport.send(msg);
+    }
+    i++;
   }
   return peer;
 }

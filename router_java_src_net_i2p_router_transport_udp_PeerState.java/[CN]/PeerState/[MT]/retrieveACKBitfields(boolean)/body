@@ -1,0 +1,44 @@
+{
+  List rv=null;
+  int bytesRemaining=countMaxACKData();
+synchronized (_currentACKs) {
+    rv=new ArrayList(_currentACKs.size());
+    int oldIndex=_currentACKsResend.size();
+    while ((bytesRemaining >= 4) && (_currentACKs.size() > 0)) {
+      Long val=(Long)_currentACKs.remove(0);
+      long id=val.longValue();
+      rv.add(new FullACKBitfield(id));
+      _currentACKsResend.add(val);
+      bytesRemaining-=4;
+    }
+    if (_currentACKs.size() <= 0)     _wantACKSendSince=-1;
+    if (alwaysIncludeRetransmissions || rv.size() > 0) {
+      for (int i=0; (i < oldIndex) && (bytesRemaining >= 4); i++) {
+        rv.add(new FullACKBitfield(((Long)_currentACKsResend.get(i)).longValue()));
+        bytesRemaining-=4;
+      }
+    }
+    while (_currentACKsResend.size() > MAX_RESEND_ACKS)     _currentACKsResend.remove(0);
+  }
+  int partialIncluded=0;
+  if (bytesRemaining > 4) {
+    List partial=new ArrayList();
+    fetchPartialACKs(partial);
+    for (int i=0; (bytesRemaining > 4) && (i < partial.size()); i++) {
+      ACKBitfield bitfield=(ACKBitfield)partial.get(i);
+      int bytes=(bitfield.fragmentCount() / 7) + 1;
+      if (bytesRemaining > bytes + 4) {
+        if (rv == null)         rv=new ArrayList(partial.size());
+        rv.add(bitfield);
+        bytesRemaining-=bytes + 4;
+        partialIncluded++;
+      }
+ else {
+      }
+    }
+  }
+  _lastACKSend=_context.clock().now();
+  if (rv == null)   rv=Collections.EMPTY_LIST;
+  if (partialIncluded > 0)   _context.statManager().addRateData("udp.sendACKPartial",partialIncluded,rv.size() - partialIncluded);
+  return rv;
+}

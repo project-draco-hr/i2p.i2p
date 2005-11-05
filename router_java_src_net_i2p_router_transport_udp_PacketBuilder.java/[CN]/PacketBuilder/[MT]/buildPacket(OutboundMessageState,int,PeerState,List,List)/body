@@ -1,5 +1,11 @@
 {
   UDPPacket packet=UDPPacket.acquire(_context);
+  StringBuffer msg=null;
+  boolean acksIncluded=false;
+  if (_log.shouldLog(Log.WARN)) {
+    msg=new StringBuffer(128);
+    msg.append("building data packet with acks to ").append(peer.getRemotePeer().toBase64().substring(0,6));
+  }
   byte data[]=packet.getPacket().getData();
   Arrays.fill(data,0,data.length,(byte)0x0);
   int start=UDPPacket.MAC_SIZE + UDPPacket.IV_SIZE;
@@ -16,10 +22,12 @@
   if ((ackIdsRemaining != null) && (ackIdsRemaining.size() > 0)) {
     DataHelper.toLong(data,off,1,ackIdsRemaining.size());
     off++;
-    while (ackIdsRemaining.size() > 0) {
-      Long ackId=(Long)ackIdsRemaining.remove(0);
+    for (int i=0; i < ackIdsRemaining.size(); i++) {
+      Long ackId=(Long)ackIdsRemaining.get(i);
       DataHelper.toLong(data,off,4,ackId.longValue());
       off+=4;
+      if (msg != null)       msg.append(" full ack: ").append(ackId.longValue());
+      acksIncluded=true;
     }
   }
   if ((partialACKsRemaining != null) && (partialACKsRemaining.size() > 0)) {
@@ -41,10 +49,13 @@
         off++;
       }
       partialACKsRemaining.remove(i);
+      if (msg != null)       msg.append(" partial ack: ").append(bitfield);
+      acksIncluded=true;
       i--;
     }
     DataHelper.toLong(data,numPartialOffset,1,origNumRemaining - partialACKsRemaining.size());
   }
+  if ((msg != null) && (acksIncluded))   _log.warn(msg.toString());
   DataHelper.toLong(data,off,1,1);
   off++;
   DataHelper.toLong(data,off,4,state.getMessageId());
