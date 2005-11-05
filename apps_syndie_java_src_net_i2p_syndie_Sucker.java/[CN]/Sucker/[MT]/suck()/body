@@ -1,9 +1,11 @@
 {
   SyndFeed feed;
+  File fetched=null;
+  tempFiles=new ArrayList();
   int idx=urlToLoad.lastIndexOf('/');
   if (idx > 0)   baseUrl=urlToLoad.substring(0,idx);
  else   baseUrl=urlToLoad;
-  debugLog("Processing: " + urlToLoad);
+  infoLog("Processing: " + urlToLoad);
   debugLog("Base url: " + baseUrl);
   try {
     File lastIdFile=null;
@@ -38,8 +40,7 @@
       }
     }
     int numRetries=2;
-    File fetched=File.createTempFile("sucker",".fetch");
-    fetched.deleteOnExit();
+    fetched=File.createTempFile("sucker",".fetch");
     EepGet get=new EepGet(I2PAppContext.getGlobalContext(),shouldProxy,proxyHost,proxyPortNum,numRetries,fetched.getAbsolutePath(),urlToLoad);
     SuckerFetchListener lsnr=new SuckerFetchListener();
     get.addStatusListener(lsnr);
@@ -47,10 +48,12 @@
     boolean ok=lsnr.waitForSuccess();
     if (!ok) {
       System.err.println("Unable to retrieve the url after " + numRetries + " tries.");
+      fetched.delete();
       return;
     }
     if (get.getNotModified()) {
       debugLog("not modified, saving network bytes from useless fetch");
+      fetched.delete();
       return;
     }
     SyndFeedInput input=new SyndFeedInput();
@@ -83,5 +86,6 @@ catch (  FeedException e) {
 catch (  IOException e) {
     e.printStackTrace();
   }
+  if (fetched != null)   fetched.delete();
   debugLog("Done.");
 }

@@ -1,7 +1,8 @@
 {
+  final String ignoreTags[]={"span","tr","td","th","div","input"};
   String ret="";
   String htmlTagLowerCase=htmlTag.toLowerCase();
-  if (importEnclosures && htmlTagLowerCase.startsWith("<img")) {
+  if (htmlTagLowerCase.startsWith("<img")) {
     debugLog("Found image tag: " + htmlTag);
     int a, b;
     a=htmlTagLowerCase.indexOf("src=\"") + 5;
@@ -28,7 +29,7 @@
     debugLog("Converted to: " + ret);
     return ret;
   }
-  if (importRefs && htmlTagLowerCase.startsWith("<a ")) {
+  if (htmlTagLowerCase.startsWith("<a ")) {
     debugLog("Found link tag: " + htmlTag);
     int a, b;
     a=htmlTagLowerCase.indexOf("href=\"") + 6;
@@ -44,7 +45,10 @@
     return ret;
   }
   if ("</a>".equals(htmlTagLowerCase)) {
-    if (pendingEndLink)     return "[/link]";
+    if (pendingEndLink) {
+      pendingEndLink=false;
+      return "[/link]";
+    }
   }
   if ("<b>".equals(htmlTagLowerCase))   return "[b]";
   if ("</b>".equals(htmlTagLowerCase))   return "[/b]";
@@ -52,5 +56,17 @@
   if ("</i>".equals(htmlTagLowerCase))   return "[/i]";
   if ("<em>".equals(htmlTagLowerCase))   return "[i]";
   if ("</em>".equals(htmlTagLowerCase))   return "[/i]";
+  if (htmlTagLowerCase.startsWith("<br")) {
+    stripNewlines=true;
+    return "\n";
+  }
+  if ("</br>".equals(htmlTagLowerCase))   return "";
+  if (htmlTagLowerCase.startsWith("<table") || "</table>".equals(htmlTagLowerCase))   return "[hr][/hr]";
+  for (int i=0; i < ignoreTags.length; i++) {
+    String openTag="<" + ignoreTags[i];
+    String closeTag="</" + ignoreTags[i];
+    if (htmlTagLowerCase.startsWith(openTag))     return "";
+    if (htmlTagLowerCase.startsWith(closeTag))     return "";
+  }
   return null;
 }

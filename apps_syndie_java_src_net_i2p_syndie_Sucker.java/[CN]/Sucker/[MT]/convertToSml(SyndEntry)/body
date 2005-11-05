@@ -1,5 +1,6 @@
 {
   String subject;
+  stripNewlines=false;
   String feedHash=sha1(urlToLoad);
   String itemHash=sha1(e.getTitle() + e.getDescription());
   Date d=e.getPublishedDate();
@@ -9,7 +10,7 @@
   String outputFileName=outputDir + "/" + messageNumber;
   String messageId=feedHash + ":" + itemHash+ ":"+ time+ ":"+ outputFileName;
   if (existsInHistory(messageId))   return null;
-  debugLog("new: " + messageId);
+  infoLog("new: " + messageId);
   try {
     String sml="";
     subject=e.getTitle();
@@ -49,10 +50,10 @@
       debugLog("");
       BlogURI uri=bm.createBlogEntry(user,false,subject,tags,null,sml,fileNames,fileStreams,fileTypes);
       if (uri == null) {
-        debugLog("pushToSyndie failure.");
+        errorLog("pushToSyndie failure.");
         return null;
       }
- else       debugLog("pushToSyndie success, uri: " + uri.toString());
+ else       infoLog("pushToSyndie success, uri: " + uri.toString());
     }
  else {
       FileOutputStream fos;
@@ -61,14 +62,15 @@
       fos.write(sml.getBytes());
       if (pushScript != null) {
         if (!execPushScript("" + messageNumber,time)) {
-          debugLog("################## push failed");
+          errorLog("push script failed");
         }
  else {
-          debugLog("push success");
+          infoLog("push script success: nr " + messageNumber);
         }
       }
     }
     messageNumber++;
+    deleteTempFiles();
     return messageId;
   }
  catch (  FileNotFoundException e1) {
@@ -77,5 +79,6 @@
 catch (  IOException e2) {
     e2.printStackTrace();
   }
+  deleteTempFiles();
   return null;
 }
