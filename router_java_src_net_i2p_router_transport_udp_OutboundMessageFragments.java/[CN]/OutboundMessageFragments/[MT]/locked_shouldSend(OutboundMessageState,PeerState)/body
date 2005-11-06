@@ -7,14 +7,20 @@
       if (_log.shouldLog(Log.INFO))       _log.info("Fragmenting " + state);
     }
     OutboundMessageState curRetransMsg=(OutboundMessageState)_retransmitters.get(peer);
+    if ((curRetransMsg != null) && ((curRetransMsg.isExpired() || curRetransMsg.isComplete()))) {
+      _retransmitters.remove(peer);
+      curRetransMsg=null;
+    }
     if ((curRetransMsg != null) && (curRetransMsg != state)) {
       _context.statManager().addRateData("udp.blockedRetransmissions",peer.getPacketsRetransmitted(),peer.getPacketsTransmitted());
-      if ((state.getMaxSends() <= 0) || (THROTTLE_RESENDS)) {
+      if ((state.getMaxSends() <= 0) && (!THROTTLE_INITIAL_SEND)) {
+        if (state.getMessage() != null)         state.getMessage().timestamp("another message is retransmitting, but we want to send our first volley...");
+      }
+ else       if ((state.getMaxSends() <= 0) || (THROTTLE_RESENDS)) {
         if (state.getMessage() != null)         state.getMessage().timestamp("choked, with another message retransmitting");
         return false;
       }
  else {
-        if (curRetransMsg.isExpired() || curRetransMsg.isComplete())         _retransmitters.remove(peer);
         if (state.getMessage() != null)         state.getMessage().timestamp("another message is retransmitting, but since we've already begun sending...");
       }
     }
