@@ -1,0 +1,91 @@
+{
+  EntryContainer entry=archive.getEntry(post);
+  if (entry == null)   return;
+  out.write("<!-- body begin -->\n");
+  out.write("<!-- body meta begin -->\n");
+  out.write("<tr class=\"postMeta\" id=\"" + post.toString() + "\">\n");
+  HeaderReceiver rec=new HeaderReceiver();
+  SMLParser parser=new SMLParser(I2PAppContext.getGlobalContext());
+  HTMLRenderer rend=new HTMLRenderer(I2PAppContext.getGlobalContext());
+  parser.parse(entry.getEntry().getText(),rec);
+  String subject=rec.getHeader(HTMLRenderer.HEADER_SUBJECT);
+  if (subject == null)   subject="";
+  out.write(" <td colspan=\"3\" class=\"postMetaSubject\">");
+  out.write(subject);
+  out.write("</td></tr>\n");
+  out.write("<tr class=\"postMeta\"><td colspan=\"3\" class=\"postMetaLink\">\n");
+  out.write("<a href=\"");
+  out.write(HTMLRenderer.getMetadataURL(post.getKeyHash()));
+  out.write("\" title=\"View the author's profile\">");
+  String author=null;
+  PetName pn=user.getPetNameDB().getByLocation(post.getKeyHash().toBase64());
+  if (pn == null) {
+    BlogInfo info=archive.getBlogInfo(post.getKeyHash());
+    if (info != null)     author=info.getProperty(BlogInfo.NAME);
+  }
+ else {
+    author=pn.getName();
+  }
+  if ((author == null) || (author.trim().length() <= 0))   author=post.getKeyHash().toBase64().substring(0,6);
+  ThreadNode node=index.getNode(post);
+  out.write(author);
+  out.write("</a> @ ");
+  out.write(rend.getEntryDate(post.getEntryId()));
+  Collection tags=node.getTags();
+  if ((tags != null) && (tags.size() > 0)) {
+    out.write("\nTags: \n");
+    for (Iterator tagIter=tags.iterator(); tagIter.hasNext(); ) {
+      String tag=(String)tagIter.next();
+      if (ALLOW_FILTER_BY_TAG) {
+        out.write("<a href=\"");
+        out.write(getFilterByTagLink(req,node,user,tag));
+        out.write("\" title=\"Filter threads to only include posts tagged as '");
+        out.write(tag);
+        out.write("'\">");
+      }
+      out.write(" " + tag);
+      if (ALLOW_FILTER_BY_TAG)       out.write("</a>\n");
+    }
+  }
+  out.write("\n<a href=\"");
+  out.write(getViewPostLink(req,node,user,true));
+  out.write("\" title=\"Select a shareable link directly to this post\">permalink</a>\n");
+  out.write("</td>\n</tr>\n");
+  out.write("<!-- body meta end -->\n");
+  out.write("<!-- body post begin -->\n");
+  out.write("<tr class=\"postData\">\n");
+  out.write("<td colspan=\"3\">\n");
+  rend.render(user,archive,entry,out,false,true);
+  out.write("</td>\n</tr>\n");
+  out.write("<!-- body post end -->\n");
+  out.write("<!-- body details begin -->\n");
+  out.write("<!-- body details end -->\n");
+  if (inlineReply && user.getAuthenticated()) {
+    String refuseReplies=rec.getHeader(HTMLRenderer.HEADER_REFUSE_REPLIES);
+    if ((user.getBlog().equals(post.getKeyHash())) || (refuseReplies == null) || (!Boolean.valueOf(refuseReplies).booleanValue())) {
+      out.write("<!-- body reply begin -->\n");
+      out.write("<form action=\"post.jsp\" method=\"POST\" enctype=\"multipart/form-data\">\n");
+      out.write("<input type=\"hidden\" name=\"inReplyTo\" value=\"");
+      out.write(Base64.encode(post.toString()));
+      out.write("\" />");
+      out.write("<input type=\"hidden\" name=\"entrysubject\" value=\"re: ");
+      out.write(HTMLRenderer.sanitizeTagParam(subject));
+      out.write("\" />");
+      out.write("<tr class=\"postReply\">\n");
+      out.write("<td colspan=\"3\">Reply: (<a href=\"smlref.jsp\" title=\"SML cheatsheet\">SML reference</a>)</td>\n</tr>\n");
+      out.write("<tr class=\"postReplyText\">\n");
+      out.write("<td colspan=\"3\"><textarea name=\"entrytext\" rows=\"2\" cols=\"100\"></textarea></td>\n");
+      out.write("</tr>\n");
+      out.write("<tr class=\"postReplyOptions\">\n");
+      out.write(" <td colspan=\"3\">\n");
+      out.write(" <input type=\"submit\" value=\"Preview...\" name=\"Post\" />\n");
+      out.write(" Tags: <input type=\"text\" size=\"10\" name=\"entrytags\" />\n");
+      out.write(" in a new thread? <input type=\"checkbox\" name=\"replyInNewThread\" />\n");
+      out.write(" allow replies? <input type=\"checkbox\" name=\"allowReplies\" checked=\"true\" />\n");
+      out.write(" attachment: <input type=\"file\" name=\"entryfile0\" />\n");
+      out.write(" </td>\n</tr>\n</form>\n");
+      out.write("<!-- body reply end -->\n");
+    }
+  }
+  out.write("<!-- body end -->\n");
+}

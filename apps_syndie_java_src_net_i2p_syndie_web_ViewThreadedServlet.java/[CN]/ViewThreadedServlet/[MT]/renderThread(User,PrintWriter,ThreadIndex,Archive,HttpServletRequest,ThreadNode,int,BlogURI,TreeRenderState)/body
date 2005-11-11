@@ -1,0 +1,99 @@
+{
+  boolean isFavorite=false;
+  HTMLRenderer rend=new HTMLRenderer(I2PAppContext.getGlobalContext());
+  SMLParser parser=new SMLParser(I2PAppContext.getGlobalContext());
+  PetName pn=user.getPetNameDB().getByLocation(node.getEntry().getKeyHash().toBase64());
+  if (pn != null) {
+    if (pn.isMember(FilteredThreadIndex.GROUP_FAVORITE)) {
+      isFavorite=true;
+    }
+  }
+  state.incrementRowsWritten();
+  if (state.getRowsWritten() % 2 == 0)   out.write("<tr class=\"threadEven\">\n");
+ else   out.write("<tr class=\"threadOdd\">\n");
+  out.write("<td class=\"threadFlag\">");
+  out.write(getFlagHTML(user,node));
+  out.write("</td>\n<td class=\"threadLeft\">\n");
+  for (int i=0; i < depth; i++)   out.write("<img src=\"images/threadIndent.png\" alt=\"\" border=\"0\" />");
+  boolean showChildren=false;
+  int childCount=node.getChildCount();
+  if (childCount > 0) {
+    boolean allowCollapse=false;
+    if (visibleEntry != null) {
+      if (node.getEntry().equals(visibleEntry)) {
+      }
+ else       if (node.containsEntry(visibleEntry)) {
+        showChildren=true;
+        allowCollapse=true;
+      }
+    }
+ else {
+    }
+    if (allowCollapse) {
+      out.write("<a href=\"");
+      out.write(getCollapseLink(req,node));
+      out.write("\" title=\"collapse thread\"><img border=\"0\" src=\"images/collapse.png\" alt=\"-\" /></a>\n");
+    }
+ else {
+      out.write("<a href=\"");
+      out.write(getExpandLink(req,node));
+      out.write("\" title=\"expand thread\"><img border=\"0\" src=\"images/expand.png\" alt=\"+\" /></a>\n");
+    }
+  }
+ else {
+    out.write("<img src=\"images/noSubthread.png\" alt=\"\" border=\"0\" />\n");
+  }
+  out.write("<a href=\"");
+  out.write(getProfileLink(req,node.getEntry().getKeyHash()));
+  out.write("\" title=\"View the user's profile\">");
+  if (pn == null) {
+    BlogInfo info=archive.getBlogInfo(node.getEntry().getKeyHash());
+    String name=null;
+    if (info != null)     name=info.getProperty(BlogInfo.NAME);
+    if ((name == null) || (name.trim().length() <= 0))     name=node.getEntry().getKeyHash().toBase64().substring(0,6);
+    out.write(name);
+  }
+ else {
+    out.write(pn.getName());
+  }
+  out.write("</a>\n");
+  if (isFavorite) {
+    out.write("<img src=\"images/favorites.png\" alt=\"favorites\" border=\"0\" />\n");
+  }
+ else {
+    if (user.getAuthenticated()) {
+      out.write("(<a href=\"");
+      out.write(getAddToGroupLink(req,node.getEntry().getKeyHash(),user,FilteredThreadIndex.GROUP_FAVORITE));
+      out.write("\" title=\"Add as a friend\"><img src=\"images/addToFavorites.png\" alt=\"friend\" border=\"0\" /></a>\n");
+      out.write("/<a href=\"");
+      out.write(getAddToGroupLink(req,node.getEntry().getKeyHash(),user,FilteredThreadIndex.GROUP_IGNORE));
+      out.write("\" title=\"Add to killfile\"><img src=\"images/addToIgnored.png\" alt=\"ignore\" border=\"0\" /></a>)\n");
+    }
+  }
+  out.write(" @ ");
+  out.write("<a href=\"");
+  out.write(getViewPostLink(req,node,user,false));
+  out.write("\" title=\"View post\">");
+  out.write(rend.getEntryDate(node.getEntry().getEntryId()));
+  out.write(": ");
+  EntryContainer entry=archive.getEntry(node.getEntry());
+  HeaderReceiver rec=new HeaderReceiver();
+  parser.parse(entry.getEntry().getText(),rec);
+  String subject=rec.getHeader(HTMLRenderer.HEADER_SUBJECT);
+  if (subject == null)   subject="";
+  out.write(subject);
+  out.write("</a>\n</td><td class=\"threadRight\">\n");
+  out.write("<a href=\"");
+  out.write(getViewThreadLink(req,node,user));
+  out.write("\" title=\"View all posts in the thread\">view thread</a>\n");
+  out.write("</td></tr>\n");
+  boolean rendered=true;
+  if (showChildren) {
+    for (int i=0; i < node.getChildCount(); i++) {
+      ThreadNode child=node.getChild(i);
+      boolean childRendered=renderThread(user,out,index,archive,req,child,depth + 1,visibleEntry,state);
+      rendered=rendered || childRendered;
+    }
+  }
+  return rendered;
+}
