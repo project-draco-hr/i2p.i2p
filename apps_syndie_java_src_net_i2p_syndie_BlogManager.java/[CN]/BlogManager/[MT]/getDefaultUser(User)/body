@@ -1,0 +1,39 @@
+{
+  if (isSingleUser()) {
+    Hash userHash=_context.sha().calculateHash(DataHelper.getUTF8(DEFAULT_LOGIN));
+    File userFile=new File(_userDir,Base64.encode(userHash.getData()));
+    if (_log.shouldLog(Log.INFO))     _log.info("Attempting to login to the default user: " + userFile.getAbsolutePath());
+    if (userFile.exists()) {
+      Properties props=loadUserProps(userFile);
+      if (props == null) {
+        user.invalidate();
+        _log.error("Error reading the default user file: " + userFile);
+        return;
+      }
+      String ok=user.login(DEFAULT_LOGIN,DEFAULT_PASS,props);
+      if (User.LOGIN_OK.equals(ok)) {
+        return;
+      }
+ else {
+        user.invalidate();
+        _log.error("Error logging into the default user: " + ok);
+        return;
+      }
+    }
+ else {
+      String ok=register(user,DEFAULT_LOGIN,DEFAULT_PASS,"","default","Default Syndie blog","");
+      if (User.LOGIN_OK.equals(ok)) {
+        _log.info("Default user created: " + user);
+        return;
+      }
+ else {
+        user.invalidate();
+        _log.error("Error registering the default user: " + ok);
+        return;
+      }
+    }
+  }
+ else {
+    return;
+  }
+}
