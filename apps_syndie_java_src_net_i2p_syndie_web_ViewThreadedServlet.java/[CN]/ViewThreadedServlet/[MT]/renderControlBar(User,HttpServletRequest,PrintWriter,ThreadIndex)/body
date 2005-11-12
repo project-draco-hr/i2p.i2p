@@ -3,12 +3,16 @@
   out.write(req.getRequestURI());
   out.write("\" method=\"GET\">\n");
   String tags="";
+  String author="";
   Enumeration params=req.getParameterNames();
   while (params.hasMoreElements()) {
     String param=(String)params.nextElement();
     String val=req.getParameter(param);
     if (ThreadedHTMLRenderer.PARAM_TAGS.equals(param)) {
       tags=val;
+    }
+ else     if (ThreadedHTMLRenderer.PARAM_AUTHOR.equals(param)) {
+      author=val;
     }
  else     if (SKIP_TAGS.contains(param)) {
     }
@@ -20,12 +24,22 @@
   }
   out.write("<tr class=\"controlBar\"><td colspan=\"2\">\n");
   out.write("<!-- control bar begin -->\n");
-  out.write("Filter: <select name=\"filter\" disabled=\"true\" >\n");
-  out.write(" <option value=\"all\">All posts in all threads</option>\n");
-  out.write(" <option value=\"self\">Threads you have posted in</option>\n");
-  out.write(" <option value=\"favorites\">Threads your friends have posted in</option>\n");
-  out.write(" </select>\n");
-  out.write("Tags: <input type=\"text\" name=\"" + ThreadedHTMLRenderer.PARAM_TAGS + "\" size=\"30\" value=\""+ tags+ "\" />\n");
+  out.write("Filter: <select name=\"" + ThreadedHTMLRenderer.PARAM_AUTHOR + "\">\n");
+  PetNameDB db=user.getPetNameDB();
+  TreeSet names=new TreeSet(db.getNames());
+  out.write("<option value=\"\">Any authors</option>\n");
+  if (author.equals(user.getBlog().toBase64()))   out.write("<option value=\"" + user.getBlog().toBase64() + "\" selected=\"true\">Threads you posted in</option>\n");
+ else   out.write("<option value=\"" + user.getBlog().toBase64() + "\">Threads you posted in</option>\n");
+  for (Iterator iter=names.iterator(); iter.hasNext(); ) {
+    String name=(String)iter.next();
+    PetName pn=db.getByName(name);
+    if ("syndieblog".equals(pn.getProtocol())) {
+      if (author.equals(pn.getLocation()))       out.write("<option value=\"" + pn.getLocation() + "\" selected=\"true\">Threads "+ name+ " posted in</option>\n");
+ else       out.write("<option value=\"" + pn.getLocation() + "\">Threads "+ name+ " posted in</option>\n");
+    }
+  }
+  out.write("</select>\n");
+  out.write("Tags: <input type=\"text\" name=\"" + ThreadedHTMLRenderer.PARAM_TAGS + "\" size=\"10\" value=\""+ tags+ "\" />\n");
   out.write("<input type=\"submit\" name=\"action\" value=\"Go\" />\n");
   out.write("</td><td class=\"controlBarRight\"><a href=\"#threads\" title=\"Jump to the thread navigation\">Threads</a></td>\n");
   out.write("<!-- control bar end -->\n");
