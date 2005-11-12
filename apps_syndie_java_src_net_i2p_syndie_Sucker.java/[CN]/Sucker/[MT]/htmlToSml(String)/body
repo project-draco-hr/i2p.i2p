@@ -1,36 +1,43 @@
 {
   String sml="";
-  int i;
+  int i=0;
   pendingEndLink=false;
-  for (i=0; i < html.length(); ) {
+  while (i < html.length()) {
     char c=html.charAt(i);
-    if (c == '<') {
+switch (c) {
+case '<':
       int tagLen=findTagLen(html.substring(i));
-      if (tagLen <= 0) {
-        sml+="&lt;";
-        i++;
-        continue;
-      }
-      String htmlTag=html.substring(i,i + tagLen);
-      String smlTag=htmlTagToSmlTag(htmlTag);
-      if (smlTag != null) {
-        sml+=smlTag;
-        i+=tagLen;
-        sml+=" ";
-      }
- else {
-        sml+="&lt;";
-        i++;
-        continue;
-      }
+    if (tagLen <= 0) {
+      sml+="&lt;";
+      break;
     }
- else {
-      if (!stripNewlines || (c != '\r' && c != '\n')) {
-        sml+=c;
-        if (c == '[' || c == ']')         sml+=c;
-      }
-      i++;
-    }
-  }
-  return sml;
+  String htmlTag=html.substring(i,i + tagLen);
+String smlTag=htmlTagToSmlTag(htmlTag);
+if (smlTag != null) {
+sml+=smlTag;
+i+=tagLen;
+sml+=" ";
+continue;
+}
+sml+="&lt;";
+break;
+case '\r':
+if (!stripNewlines) sml+='\r';
+break;
+case '\n':
+if (!stripNewlines) sml+='\n';
+break;
+case '[':
+sml+="&#91;";
+break;
+case ']':
+sml+="&#93;";
+break;
+default :
+sml+=c;
+break;
+}
+i++;
+}
+return sml;
 }
