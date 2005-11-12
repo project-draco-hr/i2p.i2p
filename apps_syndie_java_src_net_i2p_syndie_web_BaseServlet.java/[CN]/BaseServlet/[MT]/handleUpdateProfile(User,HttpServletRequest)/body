@@ -1,0 +1,49 @@
+{
+  if ((user == null) || (!user.getAuthenticated()) || (user.getBlog() == null))   return;
+  String action=req.getParameter("action");
+  if ((action == null) || !("Update profile".equals(action)))   return;
+  String name=req.getParameter(ThreadedHTMLRenderer.PARAM_PROFILE_NAME);
+  String desc=req.getParameter(ThreadedHTMLRenderer.PARAM_PROFILE_DESC);
+  String url=req.getParameter(ThreadedHTMLRenderer.PARAM_PROFILE_URL);
+  String other=req.getParameter(ThreadedHTMLRenderer.PARAM_PROFILE_OTHER);
+  Properties opts=new Properties();
+  if (!empty(name))   opts.setProperty(BlogInfo.NAME,name.trim());
+  if (!empty(desc))   opts.setProperty(BlogInfo.DESCRIPTION,desc.trim());
+  if (!empty(url))   opts.setProperty(BlogInfo.CONTACT_URL,url.trim());
+  if (!empty(other)) {
+    StringBuffer key=new StringBuffer();
+    StringBuffer val=null;
+    for (int i=0; i < other.length(); i++) {
+      char c=other.charAt(i);
+      if ((c == ':') || (c == '=')) {
+        if (val != null) {
+          val.append(c);
+        }
+ else {
+          val=new StringBuffer();
+        }
+      }
+ else       if ((c == '\n') || (c == '\r')) {
+        String k=key.toString().trim();
+        String v=(val != null ? val.toString().trim() : "");
+        if ((k.length() > 0) && (v.length() > 0)) {
+          opts.setProperty(k,v);
+        }
+        key.setLength(0);
+        val=null;
+      }
+ else       if (val != null) {
+        val.append(c);
+      }
+ else {
+        key.append(c);
+      }
+    }
+    String k=key.toString().trim();
+    String v=(val != null ? val.toString().trim() : "");
+    if ((k.length() > 0) && (v.length() > 0)) {
+      opts.setProperty(k,v);
+    }
+  }
+  boolean updated=BlogManager.instance().updateMetadata(user,user.getBlog(),opts);
+}

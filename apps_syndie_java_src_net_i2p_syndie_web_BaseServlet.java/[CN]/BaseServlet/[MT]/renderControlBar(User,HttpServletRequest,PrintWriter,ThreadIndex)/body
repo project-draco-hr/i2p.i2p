@@ -1,6 +1,6 @@
 {
   out.write("<form action=\"");
-  out.write(req.getRequestURI());
+  out.write(getControlTarget());
   out.write("\" method=\"GET\">\n");
   String tags="";
   String author="";
@@ -28,13 +28,15 @@
   PetNameDB db=user.getPetNameDB();
   TreeSet names=new TreeSet(db.getNames());
   out.write("<option value=\"\">Any authors</option>\n");
-  if (author.equals(user.getBlog().toBase64()))   out.write("<option value=\"" + user.getBlog().toBase64() + "\" selected=\"true\">Threads you posted in</option>\n");
- else   out.write("<option value=\"" + user.getBlog().toBase64() + "\">Threads you posted in</option>\n");
+  if (user.getBlog() != null) {
+    if ((author != null) && (author.equals(user.getBlog().toBase64())))     out.write("<option value=\"" + user.getBlog().toBase64() + "\" selected=\"true\">Threads you posted in</option>\n");
+ else     out.write("<option value=\"" + user.getBlog().toBase64() + "\">Threads you posted in</option>\n");
+  }
   for (Iterator iter=names.iterator(); iter.hasNext(); ) {
     String name=(String)iter.next();
     PetName pn=db.getByName(name);
     if ("syndieblog".equals(pn.getProtocol())) {
-      if (author.equals(pn.getLocation()))       out.write("<option value=\"" + pn.getLocation() + "\" selected=\"true\">Threads "+ name+ " posted in</option>\n");
+      if ((author != null) && (author.equals(pn.getLocation())))       out.write("<option value=\"" + pn.getLocation() + "\" selected=\"true\">Threads "+ name+ " posted in</option>\n");
  else       out.write("<option value=\"" + pn.getLocation() + "\">Threads "+ name+ " posted in</option>\n");
     }
   }

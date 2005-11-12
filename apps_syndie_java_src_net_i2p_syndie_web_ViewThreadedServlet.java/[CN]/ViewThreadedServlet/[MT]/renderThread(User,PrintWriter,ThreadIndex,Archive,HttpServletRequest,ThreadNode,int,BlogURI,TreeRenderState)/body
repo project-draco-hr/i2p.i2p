@@ -1,5 +1,6 @@
 {
   boolean isFavorite=false;
+  boolean ignored=false;
   HTMLRenderer rend=new HTMLRenderer(I2PAppContext.getGlobalContext());
   SMLParser parser=new SMLParser(I2PAppContext.getGlobalContext());
   PetName pn=user.getPetNameDB().getByLocation(node.getEntry().getKeyHash().toBase64());
@@ -7,6 +8,7 @@
     if (pn.isMember(FilteredThreadIndex.GROUP_FAVORITE)) {
       isFavorite=true;
     }
+    if (pn.isMember(FilteredThreadIndex.GROUP_IGNORE))     ignored=true;
   }
   state.incrementRowsWritten();
   if (state.getRowsWritten() % 2 == 0)   out.write("<tr class=\"threadEven\">\n");
@@ -57,11 +59,14 @@
     out.write(trim(pn.getName(),30));
   }
   out.write("</a>\n");
-  if (node.getEntry().getKeyHash().equals(user.getBlog())) {
+  if ((user.getBlog() != null) && (node.getEntry().getKeyHash().equals(user.getBlog()))) {
     out.write("<img src=\"images/self.png\" alt=\"You wrote this\" border=\"0\" />\n");
   }
  else   if (isFavorite) {
     out.write("<img src=\"images/favorites.png\" alt=\"favorites\" border=\"0\" />\n");
+  }
+ else   if (ignored) {
+    out.write("<img src=\"images/addToIgnored.png\" alt=\"ignored\" border=\"0\" />\n");
   }
  else {
     if (user.getAuthenticated()) {
