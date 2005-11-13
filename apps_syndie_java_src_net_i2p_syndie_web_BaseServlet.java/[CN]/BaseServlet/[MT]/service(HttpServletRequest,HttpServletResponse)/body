@@ -7,9 +7,10 @@
   String pass=req.getParameter("password");
   String action=req.getParameter("action");
   boolean forceNewIndex=false;
+  boolean authAction=authAction(req);
   if (req.getParameter("regenerateIndex") != null)   forceNewIndex=true;
   User oldUser=user;
-  user=handleRegister(user,req);
+  if (authAction)   user=handleRegister(user,req);
   if (oldUser != user)   forceNewIndex=true;
   if (user == null) {
     if ("Login".equals(action)) {
@@ -21,20 +22,22 @@
     }
     forceNewIndex=true;
   }
- else   if ("Login".equals(action)) {
+ else   if (authAction && "Login".equals(action)) {
     user=BlogManager.instance().login(login,pass);
     if (!user.getAuthenticated())     user=BlogManager.instance().getDefaultUser();
     forceNewIndex=true;
   }
- else   if ("Logout".equals(action)) {
+ else   if (authAction && "Logout".equals(action)) {
     user=BlogManager.instance().getDefaultUser();
     forceNewIndex=true;
   }
   req.getSession().setAttribute("user",user);
-  handleAdmin(user,req);
-  forceNewIndex=handleAddressbook(user,req) || forceNewIndex;
-  forceNewIndex=handleBookmarking(user,req) || forceNewIndex;
-  handleUpdateProfile(user,req);
+  if (authAction) {
+    handleAdmin(user,req);
+    forceNewIndex=handleAddressbook(user,req) || forceNewIndex;
+    forceNewIndex=handleBookmarking(user,req) || forceNewIndex;
+    handleUpdateProfile(user,req);
+  }
   FilteredThreadIndex index=(FilteredThreadIndex)req.getSession().getAttribute("threadIndex");
   Collection tags=getFilteredTags(req);
   Collection filteredAuthors=getFilteredAuthors(req);

@@ -1,8 +1,12 @@
 {
+  MultiPartRequest req=new MultiPartRequest(rawRequest);
+  if (!authAction(req.getString(PARAM_AUTH_ACTION))) {
+    out.write("<tr><td colspan=\"3\"><span class=\"b_postMsgErro\">Invalid form submission... stale data?</span></td></tr>");
+    return;
+  }
   out.write("<tr><td colspan=\"3\">");
   post.reinitialize();
   post.setUser(user);
-  MultiPartRequest req=new MultiPartRequest(rawRequest);
   boolean inNewThread=getInNewThread(req.getString(PARAM_IN_NEW_THREAD));
   boolean refuseReplies=getRefuseReplies(req.getString(PARAM_REFUSE_REPLIES));
   String entrySubject=req.getString(PARAM_SUBJECT);
@@ -18,8 +22,8 @@
   if ((replyTo != null) && (replyTo.trim().length() > 0)) {
     byte r[]=Base64.decode(replyTo);
     if (r != null) {
-      if (entryHeaders == null)       entryHeaders=HTMLRenderer.HEADER_IN_REPLY_TO + ": " + new String(r,"UTF-8");
- else       entryHeaders=entryHeaders + '\n' + HTMLRenderer.HEADER_IN_REPLY_TO+ ": "+ new String(r,"UTF-8");
+      if (entryHeaders == null)       entryHeaders=HTMLRenderer.HEADER_IN_REPLY_TO + ": entry://" + new String(r,"UTF-8");
+ else       entryHeaders=entryHeaders + '\n' + HTMLRenderer.HEADER_IN_REPLY_TO+ ": entry://"+ new String(r,"UTF-8");
     }
  else {
       replyTo=null;
@@ -59,6 +63,7 @@
   }
   post.renderPreview(out);
   out.write("<hr /><span class=\"b_postConfirm\"><form action=\"" + getPostURI() + "\" method=\"POST\">\n");
+  writeAuthActionFields(out);
   out.write("Please confirm that the above is ok");
   if (BlogManager.instance().authorizeRemote(user)) {
     out.write(", and select what additional archives you want the post transmitted to.");
