@@ -1,0 +1,83 @@
+{
+  out.write("<tr><td colspan=\"3\">");
+  post.reinitialize();
+  post.setUser(user);
+  MultiPartRequest req=new MultiPartRequest(rawRequest);
+  boolean inNewThread=getInNewThread(req.getString(PARAM_IN_NEW_THREAD));
+  boolean refuseReplies=getRefuseReplies(req.getString(PARAM_REFUSE_REPLIES));
+  String entrySubject=req.getString(PARAM_SUBJECT);
+  String entryTags=req.getString(PARAM_TAGS);
+  String entryText=req.getString(PARAM_TEXT);
+  String entryHeaders=req.getString(PARAM_HEADERS);
+  String style="";
+  if ((style != null) && (style.trim().length() > 0)) {
+    if (entryHeaders == null)     entryHeaders=HTMLRenderer.HEADER_STYLE + ": " + style;
+ else     entryHeaders=entryHeaders + '\n' + HTMLRenderer.HEADER_STYLE+ ": "+ style;
+  }
+  String replyTo=req.getString(PARAM_PARENT);
+  if ((replyTo != null) && (replyTo.trim().length() > 0)) {
+    byte r[]=Base64.decode(replyTo);
+    if (r != null) {
+      if (entryHeaders == null)       entryHeaders=HTMLRenderer.HEADER_IN_REPLY_TO + ": " + new String(r,"UTF-8");
+ else       entryHeaders=entryHeaders + '\n' + HTMLRenderer.HEADER_IN_REPLY_TO+ ": "+ new String(r,"UTF-8");
+    }
+ else {
+      replyTo=null;
+    }
+  }
+  if ((entryHeaders == null) || (entryHeaders.trim().length() <= 0))   entryHeaders=ThreadedHTMLRenderer.HEADER_FORCE_NEW_THREAD + ": " + inNewThread+ '\n'+ ThreadedHTMLRenderer.HEADER_REFUSE_REPLIES+ ": "+ refuseReplies;
+ else   entryHeaders=entryHeaders.trim() + '\n' + ThreadedHTMLRenderer.HEADER_FORCE_NEW_THREAD+ ": "+ inNewThread+ '\n'+ ThreadedHTMLRenderer.HEADER_REFUSE_REPLIES+ ": "+ refuseReplies;
+  String includeNames=req.getString(PARAM_INCLUDENAMES);
+  if ((includeNames != null) && (includeNames.trim().length() > 0)) {
+    PetNameDB db=user.getPetNameDB();
+    if (entryHeaders == null)     entryHeaders="";
+    for (Iterator iter=db.getNames().iterator(); iter.hasNext(); ) {
+      PetName pn=db.getByName((String)iter.next());
+      if ((pn != null) && (pn.getIsPublic())) {
+        entryHeaders=entryHeaders.trim() + '\n' + HTMLRenderer.HEADER_PETNAME+ ": "+ pn.getName()+ "\t"+ pn.getNetwork()+ "\t"+ pn.getProtocol()+ "\t"+ pn.getLocation();
+      }
+    }
+  }
+  post.setSubject(entrySubject);
+  post.setTags(entryTags);
+  post.setText(entryText);
+  post.setHeaders(entryHeaders);
+  for (int i=0; i < 32; i++) {
+    String filename=req.getFilename("entryfile" + i);
+    if ((filename != null) && (filename.trim().length() > 0)) {
+      Hashtable params=req.getParams("entryfile" + i);
+      String type="application/octet-stream";
+      for (Iterator iter=params.keySet().iterator(); iter.hasNext(); ) {
+        String cur=(String)iter.next();
+        if ("content-type".equalsIgnoreCase(cur)) {
+          type=(String)params.get(cur);
+          break;
+        }
+      }
+      post.addAttachment(filename.trim(),req.getInputStream("entryfile" + i),type);
+    }
+  }
+  post.renderPreview(out);
+  out.write("<hr /><span class=\"b_postConfirm\"><form action=\"" + getPostURI() + "\" method=\"POST\">\n");
+  out.write("Please confirm that the above is ok");
+  if (BlogManager.instance().authorizeRemote(user)) {
+    out.write(", and select what additional archives you want the post transmitted to.");
+    out.write("Otherwise, just hit your browser's back arrow and make changes.\n");
+    out.write("<select class=\"b_postConfirm\" name=\"" + PARAM_REMOTE_ARCHIVE + "\">\n");
+    out.write("<option name=\"\">-None-</option>\n");
+    PetNameDB db=user.getPetNameDB();
+    TreeSet names=new TreeSet();
+    for (Iterator iter=db.getNames().iterator(); iter.hasNext(); ) {
+      String name=(String)iter.next();
+      PetName pn=db.getByName(name);
+      if ("syndiearchive".equals(pn.getProtocol()))       names.add(pn.getName());
+    }
+    for (Iterator iter=names.iterator(); iter.hasNext(); ) {
+      String name=(String)iter.next();
+      out.write("<option value=\"" + HTMLRenderer.sanitizeTagParam(name) + "\">"+ HTMLRenderer.sanitizeString(name)+ "</option>\n");
+    }
+    out.write("</select><br />\n");
+  }
+  out.write("</span><input class=\"b_postConfirm\" type=\"submit\" name=\"" + PARAM_ACTION + "\" value=\""+ ACTION_CONFIRM+ "\" />\n");
+  out.write("</td></tr>\n");
+}
