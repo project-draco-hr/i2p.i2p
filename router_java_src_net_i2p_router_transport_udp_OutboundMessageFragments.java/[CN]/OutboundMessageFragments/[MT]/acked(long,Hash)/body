@@ -29,7 +29,10 @@ synchronized (_activeMessages) {
   }
   if (state != null) {
     int numSends=state.getMaxSends();
-    if (state.getMessage() != null)     state.getMessage().timestamp("acked after " + numSends + " lastReceived: "+ (_context.clock().now() - state.getPeer().getLastReceiveTime())+ " lastSentFully: "+ (_context.clock().now() - state.getPeer().getLastSendFullyTime()));
+    if (state.getMessage() != null) {
+      PeerState peer=state.getPeer();
+      if (peer != null)       state.getMessage().timestamp("acked after " + numSends + " lastReceived: "+ (_context.clock().now() - peer.getLastReceiveTime())+ " lastSentFully: "+ (_context.clock().now() - peer.getLastSendFullyTime()));
+    }
     if (_log.shouldLog(Log.INFO))     _log.info("Received ack of " + messageId + " by "+ ackedBy.toBase64()+ " after "+ state.getLifetime()+ " and "+ numSends+ " sends");
     _context.statManager().addRateData("udp.sendConfirmTime",state.getLifetime(),state.getLifetime());
     if (state.getFragmentCount() > 1)     _context.statManager().addRateData("udp.sendConfirmFragments",state.getFragmentCount(),state.getLifetime());
