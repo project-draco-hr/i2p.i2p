@@ -3,10 +3,14 @@
     String ls_str;
     String cli=pushScript + " " + outputDir+ " "+ id+ " "+ time;
     Process pushScript_proc=Runtime.getRuntime().exec(cli);
-    DataInputStream ls_in=new DataInputStream(pushScript_proc.getInputStream());
+    InputStream ls_in=pushScript_proc.getInputStream();
     try {
-      while ((ls_str=ls_in.readLine()) != null) {
-        infoLog(pushScript + ": " + ls_str);
+      StringBuffer buf=new StringBuffer();
+      while (true) {
+        boolean eof=DataHelper.readLine(ls_in,buf);
+        if (buf.length() > 0)         infoLog(pushScript + ": " + buf.toString());
+        buf.setLength(0);
+        if (eof)         break;
       }
     }
  catch (    IOException e) {
