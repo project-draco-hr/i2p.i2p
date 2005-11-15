@@ -15,19 +15,33 @@
   if (user == null) {
     if ("Login".equals(action)) {
       user=BlogManager.instance().login(login,pass);
-      if (!user.getAuthenticated())       user=BlogManager.instance().getDefaultUser();
+      if (!user.getAuthenticated()) {
+        user=BlogManager.instance().getDefaultUser();
+        if (_log.shouldLog(Log.INFO))         _log.info("Explicit login failed for [" + login + "], using default login");
+      }
+ else {
+        if (_log.shouldLog(Log.INFO))         _log.info("Explicit login successful for [" + login + "]");
+      }
     }
  else {
       user=BlogManager.instance().getDefaultUser();
+      if (_log.shouldLog(Log.INFO))       _log.info("Implicit login for the default user");
     }
     forceNewIndex=true;
   }
  else   if (authAction && "Login".equals(action)) {
     user=BlogManager.instance().login(login,pass);
-    if (!user.getAuthenticated())     user=BlogManager.instance().getDefaultUser();
+    if (!user.getAuthenticated()) {
+      if (_log.shouldLog(Log.INFO))       _log.info("Explicit relogin failed for [" + login + "] from ["+ user.getUsername()+ "], using default user");
+      user=BlogManager.instance().getDefaultUser();
+    }
+ else {
+      if (_log.shouldLog(Log.INFO))       _log.info("Explicit relogin successful for [" + login + "] from ["+ user.getUsername()+ "]");
+    }
     forceNewIndex=true;
   }
  else   if (authAction && "Logout".equals(action)) {
+    if (_log.shouldLog(Log.INFO))     _log.info("Explicit logout successful for [" + user.getUsername() + "], using default login");
     user=BlogManager.instance().getDefaultUser();
     forceNewIndex=true;
   }
@@ -38,12 +52,17 @@
     forceNewIndex=handleBookmarking(user,req) || forceNewIndex;
     handleUpdateProfile(user,req);
   }
+  if (user.resetDataImported()) {
+    forceNewIndex=true;
+    if (_log.shouldLog(Log.INFO))     _log.info("Data imported, force regenerate");
+  }
   FilteredThreadIndex index=(FilteredThreadIndex)req.getSession().getAttribute("threadIndex");
   Collection tags=getFilteredTags(req);
   Collection filteredAuthors=getFilteredAuthors(req);
   if (forceNewIndex || (index == null) || (!index.getFilteredTags().equals(tags))|| (!index.getFilteredAuthors().equals(filteredAuthors))) {
     index=new FilteredThreadIndex(user,BlogManager.instance().getArchive(),getFilteredTags(req),filteredAuthors);
     req.getSession().setAttribute("threadIndex",index);
+    if (_log.shouldLog(Log.INFO))     _log.info("New filtered index created (forced? " + forceNewIndex + ")");
   }
   render(user,req,resp.getWriter(),index);
 }
