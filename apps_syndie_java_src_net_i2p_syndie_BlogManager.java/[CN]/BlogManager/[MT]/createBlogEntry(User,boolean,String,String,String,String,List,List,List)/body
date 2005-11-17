@@ -5,6 +5,7 @@
   SigningPrivateKey privkey=getMyPrivateKey(info);
   if (privkey == null)   return null;
   long entryId=getNextBlogEntry(user);
+  _log.debug("Next blog entry ID = " + entryId + " for user "+ user.getUsername());
   StringTokenizer tok=new StringTokenizer(tags," ,\n\t");
   String tagList[]=new String[tok.countTokens()];
   for (int i=0; i < tagList.length; i++)   tagList[i]=tok.nextToken().trim();
@@ -56,9 +57,15 @@
     boolean ok=getArchive().storeEntry(c);
     if (ok) {
       getArchive().regenerateIndex();
+      long prevEntryId=user.getMostRecentEntry();
       user.setMostRecentEntry(entryId);
-      if (shouldAuthenticate)       saveUser(user);
- else       storeUser(user);
+      if (shouldAuthenticate) {
+        saveUser(user);
+      }
+ else {
+        storeUser(user);
+      }
+      _log.debug("New entry posted, entryId=" + entryId + " prev="+ prevEntryId);
       return uri;
     }
  else {

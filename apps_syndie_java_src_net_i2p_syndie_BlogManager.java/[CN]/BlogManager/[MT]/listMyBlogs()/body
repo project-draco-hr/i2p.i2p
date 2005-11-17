@@ -3,9 +3,11 @@
   List rv=new ArrayList();
   for (int i=0; i < files.length; i++) {
     if (files[i].isFile() && !files[i].isHidden()) {
+      FileInputStream in=null;
       try {
         SigningPublicKey pub=new SigningPublicKey();
-        pub.readBytes(new FileInputStream(files[i]));
+        in=new FileInputStream(files[i]);
+        pub.readBytes(in);
         BlogInfo info=_archive.getBlogInfo(pub.calculateHash());
         if (info != null)         rv.add(info);
       }
@@ -14,6 +16,13 @@
       }
 catch (      DataFormatException dfe) {
         _log.error("Error listing the blog",dfe);
+      }
+ finally {
+        if (in != null)         try {
+          in.close();
+        }
+ catch (        IOException ioe) {
+        }
       }
     }
   }

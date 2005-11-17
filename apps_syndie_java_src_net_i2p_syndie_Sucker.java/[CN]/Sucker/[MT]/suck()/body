@@ -12,13 +12,21 @@
     if (!pushToSyndie) {
       lastIdFile=new File(historyPath + ".lastId");
       if (!lastIdFile.exists())       lastIdFile.createNewFile();
-      FileInputStream fis=new FileInputStream(lastIdFile);
-      String number=readLine(fis);
+      FileInputStream fis=null;
       try {
+        fis=new FileInputStream(lastIdFile);
+        String number=readLine(fis);
         messageNumber=Integer.parseInt(number);
       }
  catch (      NumberFormatException e) {
         messageNumber=0;
+      }
+ finally {
+        if (fis != null)         try {
+          fis.close();
+        }
+ catch (        IOException ioe) {
+        }
       }
       File f=new File(outputDir);
       f.mkdirs();
@@ -65,20 +73,40 @@
     feed=input.build(new XmlReader(fetched));
     List entries=feed.getEntries();
     _log.debug("entries: " + entries.size());
-    FileOutputStream hos=new FileOutputStream(historyFile,true);
-    for (int i=entries.size() - 1; i >= 0; i--) {
-      SyndEntry e=(SyndEntry)entries.get(i);
-      attachmentCounter=0;
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Syndicate entry: " + e.getLink());
-      String messageId=convertToSml(e);
-      if (messageId != null) {
-        hos.write(messageId.getBytes());
-        hos.write("\n".getBytes());
+    FileOutputStream hos=null;
+    try {
+      hos=new FileOutputStream(historyFile,true);
+      for (int i=entries.size() - 1; i >= 0; i--) {
+        SyndEntry e=(SyndEntry)entries.get(i);
+        attachmentCounter=0;
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Syndicate entry: " + e.getLink());
+        String messageId=convertToSml(e);
+        if (messageId != null) {
+          hos.write(messageId.getBytes());
+          hos.write("\n".getBytes());
+        }
+      }
+    }
+  finally {
+      if (hos != null)       try {
+        hos.close();
+      }
+ catch (      IOException ioe) {
       }
     }
     if (!pushToSyndie) {
-      FileOutputStream fos=new FileOutputStream(lastIdFile);
-      fos.write(("" + messageNumber).getBytes());
+      FileOutputStream fos=null;
+      try {
+        fos=new FileOutputStream(lastIdFile);
+        fos.write(("" + messageNumber).getBytes());
+      }
+  finally {
+        if (fos != null)         try {
+          fos.close();
+        }
+ catch (        IOException ioe) {
+        }
+      }
     }
     _log.debug("done fetching");
   }
