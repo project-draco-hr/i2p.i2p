@@ -25,7 +25,16 @@
  else     _sendWindowBytesRemaining=_sendWindowBytes;
   }
   _messagesSent++;
-  if (numSends < 2)   recalculateTimeouts(lifetime);
+  if (numSends < 2) {
+    recalculateTimeouts(lifetime);
+    if (_mtu <= MIN_MTU) {
+      if (_context.random().nextInt((int)_mtuDecreases) <= 0) {
+        _context.statManager().addRateData("udp.mtuIncrease",_packetsRetransmitted,_packetsTransmitted);
+        _mtu=LARGE_MTU;
+        _mtuIncreases++;
+      }
+    }
+  }
  else   if (_log.shouldLog(Log.WARN))   _log.warn("acked after numSends=" + numSends + " w/ lifetime="+ lifetime+ " and size="+ bytesACKed);
   _context.statManager().addRateData("udp.sendBps",_sendBps,lifetime);
 }

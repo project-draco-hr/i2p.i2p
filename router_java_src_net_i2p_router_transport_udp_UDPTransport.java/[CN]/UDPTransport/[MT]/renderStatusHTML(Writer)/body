@@ -23,7 +23,7 @@ synchronized (_peersByIdent) {
   buf.append("     <td><b><a href=\"#def.up\">up</a></b></td><td><b><a href=\"#def.skew\">skew</a></b></td>\n");
   buf.append("     <td><b><a href=\"#def.cwnd\">cwnd</a></b></td><td><b><a href=\"#def.ssthresh\">ssthresh</a></b></td>\n");
   buf.append("     <td><b><a href=\"#def.rtt\">rtt</a></b></td><td><b><a href=\"#def.dev\">dev</a></b></td><td><b><a href=\"#def.rto\">rto</a></b></td>\n");
-  buf.append("     <td><b><a href=\"#def.send\">send</a></b></td><td><b><a href=\"#def.recv\">recv</a></b></td>\n");
+  buf.append("     <td><b><a href=\"#def.mtu\">mtu</a></b></td><td><b><a href=\"#def.send\">send</a></b></td><td><b><a href=\"#def.recv\">recv</a></b></td>\n");
   buf.append("     <td><b><a href=\"#def.resent\">resent</a></b></td><td><b><a href=\"#def.dupRecv\">dupRecv</a></b></td>\n");
   buf.append(" </tr>\n");
   out.write(buf.toString());
@@ -117,6 +117,11 @@ synchronized (_peersByIdent) {
     buf.append("<td valign=\"top\" ><code>");
     buf.append(rto);
     buf.append("</code></td>");
+    buf.append("<td valign=\"top\" ><code>");
+    buf.append(peer.getMTU()).append('/');
+    buf.append(peer.getMTUIncreases()).append('/');
+    buf.append(peer.getMTUDecreases());
+    buf.append("</code></td>");
     long sent=peer.getPacketsTransmitted();
     long recv=peer.getPacketsReceived();
     buf.append("<td valign=\"top\" ><code>");
@@ -149,7 +154,7 @@ synchronized (_peersByIdent) {
     dupRecvTotal+=dupRecv;
     numPeers++;
   }
-  buf.append("<tr><td colspan=\"14\"><hr /></td></tr>\n");
+  buf.append("<tr><td colspan=\"15\"><hr /></td></tr>\n");
   buf.append(" <tr><td colspan=\"2\"><b>Total</b></td>");
   buf.append("     <td>");
   buf.append(formatKBps(bpsIn)).append("KBps/").append(formatKBps(bpsOut));
@@ -163,12 +168,12 @@ synchronized (_peersByIdent) {
   buf.append(numPeers > 0 ? rttTotal / numPeers : 0);
   buf.append("</td><td>&nbsp;</td><td>");
   buf.append(numPeers > 0 ? rtoTotal / numPeers : 0);
-  buf.append("</td>\n     <td>");
+  buf.append("</td>\n     <td>&nbsp;</td><td>");
   buf.append(sendTotal).append("</td><td>").append(recvTotal).append("</td>\n");
   buf.append("     <td>").append(resentTotal);
   buf.append("</td><td>").append(dupRecvTotal).append("</td>\n");
   buf.append(" </tr>\n");
-  buf.append("<tr><td colspan=\"14\" valign=\"top\" align=\"left\">");
+  buf.append("<tr><td colspan=\"15\" valign=\"top\" align=\"left\">");
   long bytesTransmitted=_context.bandwidthLimiter().getTotalAllocatedOutboundBytes();
   double averagePacketSize=_context.statManager().getRate("udp.sendPacketSize").getLifetimeAverageValue();
   resentTotal=(long)_context.statManager().getRate("udp.packetsRetransmitted").getLifetimeEventCount();
