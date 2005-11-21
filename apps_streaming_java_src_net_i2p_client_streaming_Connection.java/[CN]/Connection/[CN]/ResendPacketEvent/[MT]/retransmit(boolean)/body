@@ -13,7 +13,7 @@ synchronized (_outboundPackets) {
   if ((resend) && (_packet.getAckTime() < 0)) {
     if (!isLowest) {
       if (_log.shouldLog(Log.WARN))       _log.warn("Delaying resend of " + _packet + " as there are "+ _activeResends+ " active resends already in play");
-      SimpleTimer.getInstance().addEvent(ResendPacketEvent.this,1000);
+      RetransmissionTimer.getInstance().addEvent(ResendPacketEvent.this,1000);
       _nextSendTime=1000 + _context.clock().now();
       return false;
     }
@@ -70,7 +70,7 @@ synchronized (_outboundPackets) {
       long timeout=rto << (numSends - 1);
       if ((timeout > MAX_RESEND_DELAY) || (timeout <= 0))       timeout=MAX_RESEND_DELAY;
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Scheduling resend in " + timeout + "ms for "+ _packet);
-      SimpleTimer.getInstance().addEvent(ResendPacketEvent.this,timeout);
+      RetransmissionTimer.getInstance().addEvent(ResendPacketEvent.this,timeout);
       _nextSendTime=timeout + _context.clock().now();
     }
     return true;

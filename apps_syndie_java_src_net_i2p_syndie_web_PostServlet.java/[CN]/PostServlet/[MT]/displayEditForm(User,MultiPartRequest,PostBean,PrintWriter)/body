@@ -1,8 +1,7 @@
 {
-  post.reinitialize();
-  post.setUser(user);
-  String parentURI=req.getParameter(PARAM_PARENT);
+  String parentURI=req.getString(PARAM_PARENT);
   String subject=getParam(req,PARAM_SUBJECT);
+  out.write("<hr />\n");
   out.write("<form action=\"" + getPostURI() + "\" method=\"POST\" enctype=\"multipart/form-data\">\n");
   writeAuthActionFields(out);
   out.write("<tr><td colspan=\"3\">\n");
@@ -20,16 +19,23 @@
   out.write("Refuse replies? <input type=\"checkbox\" value=\"true\" name=\"" + PARAM_REFUSE_REPLIES + (refuseReplies ? "\" checked=\"true\" " : "\" ")+ " /><br />\n");
   out.write("<span class=\"b_postField\">Include public names?</span> ");
   out.write("<input class=\"b_postNames\" type=\"checkbox\" name=\"" + PARAM_INCLUDENAMES + "\" value=\"true\" /><br />\n");
-  out.write(ATTACHMENT_FIELDS);
+  int newCount=0;
+  for (int i=0; i < 32 && newCount < 3; i++) {
+    String filename=req.getFilename("entryfile" + i);
+    if ((filename != null) && (filename.trim().length() > 0)) {
+      out.write("<span class=\"b_postField\">Attachment " + i + ":</span> ");
+      out.write(HTMLRenderer.sanitizeString(filename));
+      out.write("<br />");
+    }
+ else {
+      out.write("<span class=\"b_postField\">Attachment " + i + ":</span> ");
+      out.write("<input class=\"b_postField\" type=\"file\" name=\"entryfile" + i + "\" ");
+      out.write("/><br />");
+      newCount++;
+    }
+  }
   out.write("<hr />\n");
   out.write("<input class=\"b_postPreview\" type=\"submit\" name=\"Post\" value=\"Preview...\" /> ");
   out.write("<input class=\"b_postReset\" type=\"reset\" value=\"Cancel\" />\n");
-  if (parentURI != null) {
-    out.write("<hr /><span id=\"parentText\" class=\"b_postParent\">");
-    String decoded=DataHelper.getUTF8(Base64.decode(parentURI));
-    post.renderReplyPreview(out,"entry://" + decoded);
-    out.write("</span><hr/>\n");
-  }
-  out.write("</td></tr>\n");
   out.write("</form>\n");
 }
