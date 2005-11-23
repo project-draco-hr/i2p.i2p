@@ -1,17 +1,21 @@
 {
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Preprocess queue with " + pending.size() + " to send");
-  if (DISABLE_BATCHING || getSendDelay() <= 0) {
-    if (_log.shouldLog(Log.INFO))     _log.info("No batching, send all messages immediately");
-    while (pending.size() > 0) {
-      TunnelGateway.Pending msg=(TunnelGateway.Pending)pending.get(0);
-      send(pending,0,0,sender,rec);
-      if (msg.getOffset() >= msg.getData().length) {
-        notePreprocessing(msg.getMessageId(),msg.getFragmentNumber());
-        pending.remove(0);
+  if (false) {
+    if (DISABLE_BATCHING || getSendDelay() <= 0) {
+      if (_log.shouldLog(Log.INFO))       _log.info("No batching, send all messages immediately");
+      while (pending.size() > 0) {
+        TunnelGateway.Pending msg=(TunnelGateway.Pending)pending.get(0);
+        send(pending,0,0,sender,rec);
+        if (msg.getOffset() >= msg.getData().length) {
+          notePreprocessing(msg.getMessageId(),msg.getFragmentNumber());
+          pending.remove(0);
+        }
       }
+      return false;
     }
-    return false;
   }
+  int batchCount=0;
+  int beforeLooping=pending.size();
   while (pending.size() > 0) {
     int allocated=0;
     for (int i=0; i < pending.size(); i++) {
@@ -27,40 +31,64 @@
           allocated-=curWanted;
           if (_log.shouldLog(Log.DEBUG))           _log.debug("Pushback of " + curWanted + " (message "+ (i + 1)+ ")");
         }
-        if (_pendingSince > 0)         _context.statManager().addRateData("tunnel.batchDelaySent",pending.size(),0);
+        if (_pendingSince > 0) {
+          long waited=_context.clock().now() - _pendingSince;
+          _context.statManager().addRateData("tunnel.batchDelaySent",pending.size(),waited);
+        }
         _pendingSince=0;
         send(pending,0,i,sender,rec);
-        if (_log.shouldLog(Log.INFO))         _log.info("Allocated=" + allocated + " so we sent "+ (i + 1)+ " (last complete? "+ (msg.getOffset() >= msg.getData().length)+ ")");
+        if (_log.shouldLog(Log.INFO))         _log.info("Allocated=" + allocated + " so we sent "+ (i + 1)+ " (last complete? "+ (msg.getOffset() >= msg.getData().length)+ ", off="+ msg.getOffset()+ ", count="+ pending.size()+ ")");
         for (int j=0; j < i; j++) {
           TunnelGateway.Pending cur=(TunnelGateway.Pending)pending.remove(0);
+          if (cur.getOffset() < cur.getData().length)           throw new IllegalArgumentException("i=" + i + " j="+ j+ " off="+ cur.getOffset()+ " len="+ cur.getData().length+ " alloc="+ allocated);
           notePreprocessing(cur.getMessageId(),cur.getFragmentNumber());
+          _context.statManager().addRateData("tunnel.writeDelay",cur.getLifetime(),cur.getData().length);
         }
         if (msg.getOffset() >= msg.getData().length) {
           TunnelGateway.Pending cur=(TunnelGateway.Pending)pending.remove(0);
           notePreprocessing(cur.getMessageId(),cur.getFragmentNumber());
+          _context.statManager().addRateData("tunnel.writeDelay",cur.getLifetime(),cur.getData().length);
         }
         if (i > 0)         _context.statManager().addRateData("tunnel.batchMultipleCount",i + 1,0);
         allocated=0;
-        break;
+        batchCount++;
       }
     }
+    display(allocated,pending,"after looping to clear " + (beforeLooping - pending.size()));
     if (allocated > 0) {
-      if ((_pendingSince > 0) && (_pendingSince + getSendDelay() <= _context.clock().now())) {
-        if (_log.shouldLog(Log.INFO))         _log.info("Passed through pending list, with " + allocated + "/"+ pending.size()+ " left to clean up, but we've waited, so flush");
+      if ((pending.size() > FORCE_BATCH_FLUSH) || ((_pendingSince > 0) && (getDelayAmount() <= 0))) {
         if (pending.size() > 1)         _context.statManager().addRateData("tunnel.batchMultipleCount",pending.size(),0);
         _context.statManager().addRateData("tunnel.batchDelaySent",pending.size(),0);
         send(pending,0,pending.size() - 1,sender,rec);
-        while (pending.size() > 0) {
-          TunnelGateway.Pending cur=(TunnelGateway.Pending)pending.remove(0);
-          notePreprocessing(cur.getMessageId(),cur.getFragmentNumber());
+        int beforeSize=pending.size();
+        for (int i=0; i < pending.size(); i++) {
+          TunnelGateway.Pending cur=(TunnelGateway.Pending)pending.get(i);
+          if (cur.getOffset() >= cur.getData().length) {
+            pending.remove(i);
+            notePreprocessing(cur.getMessageId(),cur.getFragmentNumber());
+            _context.statManager().addRateData("tunnel.writeDelay",cur.getLifetime(),cur.getData().length);
+            i--;
+          }
         }
-        _pendingSince=0;
-        return false;
+        if (pending.size() > 0) {
+          _pendingSince=_context.clock().now();
+          _context.statManager().addRateData("tunnel.batchFlushRemaining",pending.size(),beforeSize);
+          display(allocated,pending,"flushed, some remain");
+          return true;
+        }
+ else {
+          long delayAmount=_context.clock().now() - _pendingSince;
+          _pendingSince=0;
+          if (batchCount > 1)           _context.statManager().addRateData("tunnel.batchCount",batchCount,0);
+          display(allocated,pending,"flushed " + (beforeSize) + ", no remaining after "+ delayAmount);
+          return false;
+        }
       }
  else {
-        if (_log.shouldLog(Log.INFO))         _log.info("Passed through pending list, with " + allocated + "/"+ pending.size()+ " left to clean up, but we've haven't waited, so don't flush (wait="+ (_context.clock().now() - _pendingSince)+ " / "+ _pendingSince+ ")");
         _context.statManager().addRateData("tunnel.batchDelay",pending.size(),0);
         if (_pendingSince <= 0)         _pendingSince=_context.clock().now();
+        if (batchCount > 1)         _context.statManager().addRateData("tunnel.batchCount",batchCount,0);
+        display(allocated,pending,"dont flush");
         return true;
       }
     }

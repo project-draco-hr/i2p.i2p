@@ -1,10 +1,16 @@
 {
   _messagesSent++;
   boolean delayedFlush=false;
+  long delayAmount=-1;
+  int remaining=0;
+  long beforeLock=_context.clock().now();
+  long afterAdded=-1;
   Pending cur=new PendingImpl(msg,toRouter,toTunnel);
 synchronized (_queue) {
     _queue.add(cur);
+    afterAdded=_context.clock().now();
     delayedFlush=_preprocessor.preprocessQueue(_queue,_sender,_receiver);
+    if (delayedFlush)     delayAmount=_preprocessor.getDelayAmount();
     _lastFlush=_context.clock().now();
     for (int i=0; i < _queue.size(); i++) {
       Pending m=(Pending)_queue.get(i);
@@ -14,8 +20,10 @@ synchronized (_queue) {
         i--;
       }
     }
+    remaining=_queue.size();
   }
   if (delayedFlush) {
-    SimpleTimer.getInstance().addEvent(_delayedFlush,_flushFrequency);
+    FlushTimer.getInstance().addEvent(_delayedFlush,delayAmount);
   }
+  _context.statManager().addRateData("tunnel.lockedGatewayAdd",afterAdded - beforeLock,remaining);
 }

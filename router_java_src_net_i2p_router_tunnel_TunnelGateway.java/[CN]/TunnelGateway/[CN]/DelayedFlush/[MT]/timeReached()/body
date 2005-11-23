@@ -1,8 +1,20 @@
 {
   boolean wantRequeue=false;
+  int remaining=0;
+  long beforeLock=_context.clock().now();
+  long afterChecked=-1;
+  long delayAmount=-1;
+  if (_queue.size() > 10000)   System.out.println("foo!");
 synchronized (_queue) {
-    if (_queue.size() > 0)     wantRequeue=_preprocessor.preprocessQueue(_queue,_sender,_receiver);
+    if (_queue.size() > 10000)     System.out.println("foo!");
+    afterChecked=_context.clock().now();
+    if (_queue.size() > 0) {
+      wantRequeue=_preprocessor.preprocessQueue(_queue,_sender,_receiver);
+      if (wantRequeue)       delayAmount=_preprocessor.getDelayAmount();
+    }
+    remaining=_queue.size();
   }
-  if (wantRequeue)   SimpleTimer.getInstance().addEvent(_delayedFlush,_flushFrequency);
+  if (wantRequeue)   FlushTimer.getInstance().addEvent(_delayedFlush,delayAmount);
  else   _lastFlush=_context.clock().now();
+  _context.statManager().addRateData("tunnel.lockedGatewayCheck",afterChecked - beforeLock,remaining);
 }
