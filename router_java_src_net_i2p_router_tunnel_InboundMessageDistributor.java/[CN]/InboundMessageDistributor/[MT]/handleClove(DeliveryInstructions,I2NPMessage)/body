@@ -10,15 +10,32 @@ case DeliveryInstructions.DELIVERY_MODE_LOCAL:
     if (data instanceof DatabaseStoreMessage) {
       DatabaseStoreMessage dsm=(DatabaseStoreMessage)data;
       try {
-        if (dsm.getValueType() == DatabaseStoreMessage.KEY_TYPE_LEASESET)         _context.netDb().store(dsm.getKey(),dsm.getLeaseSet());
- else         _context.netDb().store(dsm.getKey(),dsm.getRouterInfo());
+        if (dsm.getValueType() == DatabaseStoreMessage.KEY_TYPE_LEASESET) {
+          if (_client != null)           dsm.getLeaseSet().setReceivedAsPublished(false);
+          _context.netDb().store(dsm.getKey(),dsm.getLeaseSet());
+        }
+ else {
+          if (_client != null) {
+            _context.statManager().addRateData("tunnel.dropDangerousClientTunnelMessage",1,DatabaseStoreMessage.MESSAGE_TYPE);
+            _log.error("Dropped dangerous message down a tunnel for " + _client.toBase64() + ": "+ dsm,new Exception("cause"));
+            return;
+          }
+          _context.netDb().store(dsm.getKey(),dsm.getRouterInfo());
+        }
       }
  catch (      IllegalArgumentException iae) {
         if (_log.shouldLog(Log.WARN))         _log.warn("Bad store attempt",iae);
       }
     }
  else {
-      _context.inNetMessagePool().add(data,null,null);
+      if ((_client != null) && (data.getType() != DeliveryStatusMessage.MESSAGE_TYPE)) {
+        _context.statManager().addRateData("tunnel.dropDangerousClientTunnelMessage",1,data.getType());
+        _log.error("Dropped dangerous message down a tunnel for " + _client.toBase64() + ": "+ data,new Exception("cause"));
+        return;
+      }
+ else {
+        _context.inNetMessagePool().add(data,null,null);
+      }
     }
     return;
   }
