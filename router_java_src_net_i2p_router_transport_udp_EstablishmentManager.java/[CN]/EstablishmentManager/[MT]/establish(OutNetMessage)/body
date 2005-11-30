@@ -5,15 +5,22 @@
     return;
   }
   UDPAddress addr=new UDPAddress(ra);
+  RemoteHostId to=null;
   InetAddress remAddr=addr.getHostAddress();
   int port=addr.getPort();
-  RemoteHostId to=new RemoteHostId(remAddr.getAddress(),port);
-  if (!_transport.isValid(to.getIP())) {
-    _transport.failed(msg);
-    _context.shitlist().shitlistRouter(msg.getTarget().getIdentity().calculateHash(),"Invalid SSU address");
-    return;
+  if ((remAddr != null) && (port > 0)) {
+    to=new RemoteHostId(remAddr.getAddress(),port);
+    if (!_transport.isValid(to.getIP())) {
+      _transport.failed(msg);
+      _context.shitlist().shitlistRouter(msg.getTarget().getIdentity().calculateHash(),"Invalid SSU address");
+      return;
+    }
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Add outbound establish state to: " + to);
   }
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Add outobund establish state to: " + to);
+ else {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Add indirect outbound establish state to: " + addr);
+    to=new RemoteHostId(msg.getTarget().getIdentity().calculateHash().getData());
+  }
   OutboundEstablishState state=null;
   int deferred=0;
 synchronized (_outboundStates) {

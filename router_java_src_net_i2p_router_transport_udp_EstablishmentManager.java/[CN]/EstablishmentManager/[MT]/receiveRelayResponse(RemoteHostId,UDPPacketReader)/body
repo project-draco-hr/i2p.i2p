@@ -20,6 +20,12 @@ synchronized (_liveIntroductions) {
   }
   _context.statManager().addRateData("udp.receiveIntroRelayResponse",state.getLifetime(),0);
   int port=reader.getRelayResponseReader().readCharliePort();
+  if (_log.shouldLog(Log.INFO))   _log.info("Received relay intro for " + state.getRemoteIdentity().calculateHash().toBase64() + " - they are on "+ addr.toString()+ ":"+ port+ " (according to "+ bob.toString(true)+ ")");
+  RemoteHostId oldId=state.getRemoteHostId();
   state.introduced(addr,ip,port);
+synchronized (_outboundStates) {
+    _outboundStates.remove(oldId);
+    _outboundStates.put(state.getRemoteHostId(),state);
+  }
   notifyActivity();
 }
