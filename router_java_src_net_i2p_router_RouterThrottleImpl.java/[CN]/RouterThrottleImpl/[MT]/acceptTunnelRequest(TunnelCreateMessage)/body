@@ -1,4 +1,8 @@
 {
+  if (_context.getProperty(Router.PROP_SHUTDOWN_IN_PROGRESS) != null) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Refusing tunnel request since we are shutting down ASAP");
+    return TunnelHistory.TUNNEL_REJECT_CRIT;
+  }
   long lag=_context.jobQueue().getMaxLag();
   RateStat rs=_context.statManager().getRate("router.throttleNetworkCause");
   Rate r=null;
@@ -25,11 +29,22 @@
     _context.statManager().addRateData("router.throttleTunnelProcessingTime1m",(long)processTime,(long)processTime);
     return TunnelHistory.TUNNEL_REJECT_TRANSIENT_OVERLOAD;
   }
-  int numTunnels=_context.tunnelManager().getParticipatingCount();
-  if (_context.getProperty(Router.PROP_SHUTDOWN_IN_PROGRESS) != null) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("Refusing tunnel request since we are shutting down ASAP");
-    return TunnelHistory.TUNNEL_REJECT_CRIT;
+  rs=_context.statManager().getRate("transport.sendMessageFailureLifetime");
+  r=null;
+  if (rs != null)   r=rs.getRate(60 * 1000);
+  double failCount=(r != null ? r.getCurrentEventCount() + r.getLastEventCount() : 0);
+  if (failCount > 100) {
+    long periods=r.getLifetimePeriods();
+    long maxFailCount=r.getExtremeEventCount();
+    if ((periods > 0) && (maxFailCount > 100)) {
+      if (_context.random().nextInt((int)maxFailCount) <= failCount) {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Refusing tunnel request with the job lag of " + lag + "since the 1 minute message failure count is too high ("+ failCount+ "/"+ maxFailCount+ ")");
+        _context.statManager().addRateData("router.throttleTunnelFailCount1m",(long)failCount,(long)maxFailCount);
+        return TunnelHistory.TUNNEL_REJECT_TRANSIENT_OVERLOAD;
+      }
+    }
   }
+  int numTunnels=_context.tunnelManager().getParticipatingCount();
   if (numTunnels > getMinThrottleTunnels()) {
     double growthFactor=getTunnelGrowthFactor();
     Rate avgTunnels=_context.statManager().getRate("tunnel.participatingTunnels").getRate(60 * 60 * 1000);
