@@ -1,6 +1,8 @@
 {
   boolean isFavorite=false;
   boolean ignored=false;
+  boolean displayed=false;
+  if ((visibleURIs != null) && (visibleURIs.contains(node.getEntry())))   displayed=true;
   HTMLRenderer rend=new HTMLRenderer(I2PAppContext.getGlobalContext());
   SMLParser parser=new SMLParser(I2PAppContext.getGlobalContext());
   PetName pn=user.getPetNameDB().getByLocation(node.getEntry().getKeyHash().toBase64());
@@ -48,6 +50,7 @@
   out.write("<a href=\"");
   out.write(getProfileLink(req,node.getEntry().getKeyHash()));
   out.write("\" title=\"View the user's profile\">");
+  if (displayed)   out.write("<b>");
   if (pn == null) {
     BlogInfo info=archive.getBlogInfo(node.getEntry().getKeyHash());
     String name=null;
@@ -58,6 +61,7 @@
  else {
     out.write(trim(pn.getName(),30));
   }
+  if (displayed)   out.write("</b>");
   out.write("</a>\n");
   if ((user.getBlog() != null) && (node.getEntry().getKeyHash().equals(user.getBlog()))) {
     out.write("<img src=\"images/self.png\" alt=\"You wrote this\" border=\"0\" />\n");
@@ -80,7 +84,12 @@
   }
   out.write(": ");
   out.write("<a href=\"");
-  out.write(getViewPostLink(req,node,user,false));
+  if (false) {
+    out.write(getViewPostLink(req,node,user,false));
+  }
+ else {
+    out.write(getViewThreadLink(req,node,user));
+  }
   out.write("\" title=\"View post\">");
   EntryContainer entry=archive.getEntry(node.getEntry());
   if (entry == null)   throw new RuntimeException("Unable to fetch the entry " + node.getEntry());
@@ -88,14 +97,38 @@
   parser.parse(entry.getEntry().getText(),rec);
   String subject=rec.getHeader(HTMLRenderer.HEADER_SUBJECT);
   if ((subject == null) || (subject.trim().length() <= 0))   subject="(no subject)";
-  out.write(trim(subject,40));
+  if (displayed) {
+    out.write("<b>");
+    out.write(trim(subject,40));
+    out.write("</b>");
+  }
+ else {
+    out.write(trim(subject,40));
+  }
   out.write("</a>");
-  out.write(" (<a href=\"");
-  out.write(getViewThreadLink(req,node,user));
-  out.write("\" title=\"View all posts in the thread\">full thread</a>)\n");
+  if (false) {
+    out.write(" (<a href=\"");
+    out.write(getViewThreadLink(req,node,user));
+    out.write("\" title=\"View all posts in the thread\">full thread</a>)\n");
+  }
   out.write("</span><span class=\"threadInfoRight\">");
   out.write(" <a href=\"");
-  out.write(getViewPostLink(req,new BlogURI(node.getMostRecentPostAuthor(),node.getMostRecentPostDate()),user));
+  BlogURI newestURI=new BlogURI(node.getMostRecentPostAuthor(),node.getMostRecentPostDate());
+  if (false) {
+    out.write(getViewPostLink(req,newestURI,user));
+  }
+ else {
+    List paths=new ArrayList();
+    paths.add(node);
+    ThreadNode cur=null;
+    while (paths.size() > 0) {
+      cur=(ThreadNode)paths.remove(0);
+      if (cur.getEntry().equals(newestURI))       break;
+      for (int i=cur.getChildCount() - 1; i >= 0; i--)       paths.add(cur.getChild(i));
+      if (paths.size() <= 0)       cur=null;
+    }
+    if (cur != null)     out.write(getViewThreadLink(req,cur,user));
+  }
   out.write("\" title=\"View the most recent post\">latest - ");
   long dayBegin=BlogManager.instance().getDayBegin();
   long postId=node.getMostRecentPostDate();
@@ -116,7 +149,7 @@
   if (showChildren) {
     for (int i=0; i < node.getChildCount(); i++) {
       ThreadNode child=node.getChild(i);
-      boolean childRendered=renderThread(user,out,index,archive,req,child,depth + 1,visibleEntry,state);
+      boolean childRendered=renderThread(user,out,index,archive,req,child,depth + 1,visibleEntry,state,visibleURIs);
       rendered=rendered || childRendered;
     }
   }
