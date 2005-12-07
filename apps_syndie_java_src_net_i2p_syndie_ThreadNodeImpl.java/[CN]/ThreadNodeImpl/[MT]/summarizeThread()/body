@@ -1,8 +1,8 @@
 {
   _recursiveAuthors.add(_entry.getKeyHash());
   _recursiveEntries.add(_entry);
-  _mostRecentPostDate=_entry.getEntryId();
-  _mostRecentPostAuthor=_entry.getKeyHash();
+  _mostRecentPostDate=-1;
+  _mostRecentPostAuthor=null;
   for (int i=0; i < _children.size(); i++) {
     ThreadNodeImpl node=(ThreadNodeImpl)_children.get(i);
     node.summarizeThread();
@@ -14,4 +14,16 @@
     _recursiveAuthors.addAll(node.getRecursiveAuthors());
     _recursiveEntries.addAll(node.getRecursiveEntries());
   }
+  if (_mostRecentPostDate < 0) {
+    _mostRecentPostDate=_entry.getEntryId();
+    _mostRecentPostAuthor=_entry.getKeyHash();
+  }
+  TreeSet ordered=new TreeSet(new WritableThreadIndex.NewestNodeFirstComparator());
+  for (int i=0; i < _children.size(); i++) {
+    ThreadNodeImpl kid=(ThreadNodeImpl)_children.get(i);
+    ordered.add(kid);
+  }
+  List kids=new ArrayList(ordered.size());
+  for (Iterator iter=ordered.iterator(); iter.hasNext(); )   kids.add(iter.next());
+  _children=kids;
 }
