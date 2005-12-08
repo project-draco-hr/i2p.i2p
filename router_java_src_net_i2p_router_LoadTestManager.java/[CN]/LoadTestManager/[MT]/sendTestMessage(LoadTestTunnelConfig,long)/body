@@ -1,0 +1,23 @@
+{
+  if (_context.clock().now() > tunnel.getExpiration())   return;
+  RouterInfo target=_context.netDb().lookupRouterInfoLocally(tunnel.getPeer(0));
+  if (target == null) {
+    log(tunnel,"lookup failed");
+    return;
+  }
+  I2NPMessage payloadMessage=createPayloadMessage();
+  TunnelGatewayMessage tm=new TunnelGatewayMessage(_context);
+  tm.setMessage(payloadMessage);
+  tm.setTunnelId(tunnel.getReceiveTunnelId(0));
+  tm.setMessageExpiration(payloadMessage.getMessageExpiration());
+  OutNetMessage om=new OutNetMessage(_context);
+  om.setMessage(tm);
+  SendAgain failed=new SendAgain(_context,tunnel,payloadMessage.getUniqueId(),false,count + 1);
+  om.setOnFailedReplyJob(failed);
+  om.setOnReplyJob(new SendAgain(_context,tunnel,payloadMessage.getUniqueId(),true,count + 1));
+  om.setReplySelector(new Selector(tunnel,payloadMessage.getUniqueId(),count + 1));
+  om.setTarget(target);
+  om.setExpiration(tm.getMessageExpiration());
+  om.setPriority(40);
+  _context.outNetMessagePool().add(om);
+}
