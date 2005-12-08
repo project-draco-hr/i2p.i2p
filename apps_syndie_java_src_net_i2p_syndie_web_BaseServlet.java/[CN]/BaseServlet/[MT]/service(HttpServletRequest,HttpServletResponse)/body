@@ -60,12 +60,15 @@
     if (_log.shouldLog(Log.INFO))     _log.info("Data imported, force regenerate");
   }
   FilteredThreadIndex index=(FilteredThreadIndex)req.getSession().getAttribute("threadIndex");
+  boolean authorOnly=Boolean.valueOf(req.getParameter(ThreadedHTMLRenderer.PARAM_THREAD_AUTHOR)).booleanValue();
+  if ((index != null) && (authorOnly != index.getFilterAuthorsByRoot()))   forceNewIndex=true;
   Collection tags=getFilteredTags(req);
   Collection filteredAuthors=getFilteredAuthors(req);
   boolean tagsChanged=((index != null) && (!index.getFilteredTags().equals(tags)));
   boolean authorsChanged=((index != null) && (!index.getFilteredAuthors().equals(filteredAuthors)));
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("authorOnly=" + authorOnly + " forceNewIndex? "+ forceNewIndex+ " authors="+ filteredAuthors);
   if (forceNewIndex || (index == null) || (tagsChanged)|| (authorsChanged)) {
-    index=new FilteredThreadIndex(user,BlogManager.instance().getArchive(),getFilteredTags(req),filteredAuthors);
+    index=new FilteredThreadIndex(user,BlogManager.instance().getArchive(),getFilteredTags(req),filteredAuthors,authorOnly);
     req.getSession().setAttribute("threadIndex",index);
     if (_log.shouldLog(Log.INFO))     _log.info("New filtered index created (forced? " + forceNewIndex + ", tagsChanged? "+ tagsChanged+ ", authorsChanged? "+ authorsChanged+ ")");
   }
