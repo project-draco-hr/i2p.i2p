@@ -2,7 +2,17 @@
   super(ctx);
   _pool=pool;
   _cfg=cfg;
-  long rebuildOn=cfg.getExpiration() - pool.getSettings().getRebuildPeriod();
-  rebuildOn-=ctx.random().nextInt(pool.getSettings().getRebuildPeriod() * 2);
+  long rebuildOn;
+  if (_pool.getSettings().isExploratory()) {
+    rebuildOn=cfg.getExpiration() - (((pool.getSettings().getRebuildPeriod() * 7) / 2));
+    rebuildOn-=ctx.random().nextInt(pool.getSettings().getRebuildPeriod() / 2);
+  }
+ else   if ((pool.getSettings().getQuantity() + pool.getSettings().getBackupQuantity()) == 1) {
+    rebuildOn=cfg.getExpiration() - (pool.getSettings().getRebuildPeriod() * 4);
+  }
+ else {
+    rebuildOn=cfg.getExpiration() - (pool.getSettings().getRebuildPeriod() * 2);
+    rebuildOn-=ctx.random().nextInt(pool.getSettings().getRebuildPeriod() * 2);
+  }
   getTiming().setStartAfter(rebuildOn);
 }

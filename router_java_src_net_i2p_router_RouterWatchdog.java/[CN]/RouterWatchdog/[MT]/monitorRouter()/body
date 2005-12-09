@@ -1,6 +1,7 @@
 {
   boolean ok=verifyJobQueueLiveliness();
-  ok=ok && verifyClientLiveliness();
+  int netErrors=(int)_context.statManager().getRate("udp.sendException").getRate(60 * 1000).getLastEventCount();
+  ok=ok && (verifyClientLiveliness() || netErrors >= 5);
   if (!ok) {
     dumpStatus();
     if (shutdownOnHang()) {

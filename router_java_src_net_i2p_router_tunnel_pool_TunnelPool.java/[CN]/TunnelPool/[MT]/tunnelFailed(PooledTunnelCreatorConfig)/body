@@ -15,11 +15,17 @@ synchronized (_tunnels) {
   if (_settings.isInbound() && (_settings.getDestination() != null)) {
     if (ls != null) {
       _context.clientManager().requestLeaseSet(_settings.getDestination(),ls);
+      if (_settings.isExploratory())       refreshBuilders(3,4);
+ else       refreshBuilders(1,4);
     }
  else {
       if (_log.shouldLog(Log.WARN))       _log.warn(toString() + ": unable to build a new leaseSet on failure (" + remaining+ " remaining), request a new tunnel");
-      if (remaining < _settings.getBackupQuantity() + _settings.getQuantity())       buildFallback();
+      if (remaining < _settings.getBackupQuantity() + _settings.getQuantity())       if (!buildFallback())       if (_settings.isExploratory())       refreshBuilders(3,4);
+ else       refreshBuilders(1,4);
     }
   }
-  refreshBuilders();
+ else {
+    if (_settings.isExploratory())     refreshBuilders(3,4);
+ else     refreshBuilders(1,4);
+  }
 }
