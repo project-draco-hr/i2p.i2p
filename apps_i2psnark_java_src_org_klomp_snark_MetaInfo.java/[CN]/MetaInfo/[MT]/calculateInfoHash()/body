@@ -1,9 +1,22 @@
 {
   Map info=createInfoMap();
+  StringBuffer buf=new StringBuffer(128);
+  buf.append("info: ");
+  for (Iterator iter=info.keySet().iterator(); iter.hasNext(); ) {
+    String key=(String)iter.next();
+    Object val=info.get(key);
+    buf.append(key).append('=');
+    if (val instanceof byte[])     buf.append(Base64.encode((byte[])val,true));
+ else     buf.append(val.toString());
+  }
+  _log.debug(buf.toString());
   byte[] infoBytes=BEncoder.bencode(info);
+  _log.debug("info bencoded: [" + Base64.encode(infoBytes,true) + "]");
   try {
     MessageDigest digest=MessageDigest.getInstance("SHA");
-    return digest.digest(infoBytes);
+    byte hash[]=digest.digest(infoBytes);
+    _log.debug("info hash: [" + net.i2p.data.Base64.encode(hash) + "]");
+    return hash;
   }
  catch (  NoSuchAlgorithmException nsa) {
     throw new InternalError(nsa.toString());
