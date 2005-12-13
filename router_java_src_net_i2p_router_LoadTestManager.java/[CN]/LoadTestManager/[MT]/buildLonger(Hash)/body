@@ -1,0 +1,36 @@
+{
+  long expiration=_context.clock().now() + 10 * 60 * 1000;
+  LoadTestTunnelConfig cfg=new LoadTestTunnelConfig(_context,3,true);
+  cfg.setPeer(0,peer);
+  HopConfig hop=cfg.getConfig(0);
+  hop.setExpiration(expiration);
+  hop.setIVKey(_context.keyGenerator().generateSessionKey());
+  hop.setLayerKey(_context.keyGenerator().generateSessionKey());
+  Hash fastPeer=pickFastPeer(peer);
+  if (fastPeer == null) {
+    if (_log.shouldLog(Log.INFO))     _log.info("Unable to pick a fast peer for the load test of " + peer.toBase64());
+    buildOneHop(peer);
+    return;
+  }
+ else   if (fastPeer.equals(peer)) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Can't test the peer with themselves, going one hop for " + peer.toBase64());
+    buildOneHop(peer);
+    return;
+  }
+  cfg.setPeer(1,fastPeer);
+  hop=cfg.getConfig(1);
+  hop.setExpiration(expiration);
+  hop.setIVKey(_context.keyGenerator().generateSessionKey());
+  hop.setLayerKey(_context.keyGenerator().generateSessionKey());
+  cfg.setPeer(2,_context.routerHash());
+  hop=cfg.getConfig(2);
+  hop.setExpiration(expiration);
+  hop.setIVKey(_context.keyGenerator().generateSessionKey());
+  hop.setLayerKey(_context.keyGenerator().generateSessionKey());
+  cfg.setExpiration(expiration);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Config for " + peer.toBase64() + " with fastPeer: "+ fastPeer.toBase64()+ ": "+ cfg);
+  CreatedJob onCreated=new CreatedJob(_context,cfg);
+  FailedJob fail=new FailedJob(_context,cfg);
+  RequestTunnelJob req=new RequestTunnelJob(_context,cfg,onCreated,fail,cfg.getLength() - 1,false,true);
+  _context.jobQueue().addJob(req);
+}

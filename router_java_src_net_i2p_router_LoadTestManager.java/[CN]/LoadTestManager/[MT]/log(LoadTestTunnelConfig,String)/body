@@ -1,14 +1,17 @@
 {
   StringBuffer buf=new StringBuffer(128);
-  Hash peer=tunnel.getPeer(0);
-  if (peer != null)   buf.append(peer.toBase64());
- else   buf.append("[unknown_peer]");
-  buf.append(" ");
-  TunnelId id=tunnel.getReceiveTunnelId(0);
-  if (id != null)   buf.append(id.getTunnelId());
- else   buf.append("[unknown_tunnel]");
-  buf.append(" ");
-  buf.append(_context.clock().now()).append(" ").append(msg).append("\n");
+  for (int i=0; i < tunnel.getLength() - 1; i++) {
+    Hash peer=tunnel.getPeer(i);
+    if ((peer != null) && (peer.equals(_context.routerHash())))     continue;
+ else     if (peer != null)     buf.append(peer.toBase64());
+ else     buf.append("[unknown_peer]");
+    buf.append(" ");
+    TunnelId id=tunnel.getReceiveTunnelId(i);
+    if (id != null)     buf.append(id.getTunnelId());
+ else     buf.append("[unknown_tunnel]");
+    buf.append(" ");
+    buf.append(_context.clock().now()).append(" hop ").append(i).append(" ").append(msg).append("\n");
+  }
   try {
 synchronized (_out) {
       _out.write(buf.toString());
