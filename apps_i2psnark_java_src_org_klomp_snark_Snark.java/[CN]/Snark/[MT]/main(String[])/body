@@ -1,9 +1,22 @@
 {
   System.out.println(copyright);
   System.out.println();
+  if ((args.length > 0) && ("--config".equals(args[0]))) {
+    SnarkManager sm=SnarkManager.instance();
+    if (args.length > 1)     sm.loadConfig(args[1]);
+    System.out.println("Running in multitorrent mode");
+    while (true) {
+      try {
+synchronized (sm) {
+          sm.wait();
+        }
+      }
+ catch (      InterruptedException ie) {
+      }
+    }
+  }
   Snark snark=parseArguments(args);
   SnarkShutdown snarkhook=new SnarkShutdown(snark.storage,snark.coordinator,snark.acceptor,snark.trackerclient,snark);
-  Runtime.getRuntime().addShutdownHook(snarkhook);
   Timer timer=new Timer(true);
   TimerTask monitor=new PeerMonitorTask(snark.coordinator);
   timer.schedule(monitor,PeerMonitorTask.MONITOR_PERIOD,PeerMonitorTask.MONITOR_PERIOD);
@@ -19,9 +32,9 @@
         line=line.toLowerCase();
         if ("quit".equals(line))         quit=true;
  else         if ("list".equals(line)) {
-synchronized (coordinator.peers) {
-            System.out.println(coordinator.peers.size() + " peers -" + " (i)nterested,"+ " (I)nteresting,"+ " (c)hoking,"+ " (C)hoked:");
-            Iterator it=coordinator.peers.iterator();
+synchronized (snark.coordinator.peers) {
+            System.out.println(snark.coordinator.peers.size() + " peers -" + " (i)nterested,"+ " (I)nteresting,"+ " (c)hoking,"+ " (C)hoked:");
+            Iterator it=snark.coordinator.peers.iterator();
             while (it.hasNext()) {
               Peer peer=(Peer)it.next();
               System.out.println(peer);
@@ -30,14 +43,14 @@ synchronized (coordinator.peers) {
           }
         }
  else         if ("info".equals(line)) {
-          System.out.println("Name: " + meta.getName());
-          System.out.println("Torrent: " + torrent);
-          System.out.println("Tracker: " + meta.getAnnounce());
-          List files=meta.getFiles();
+          System.out.println("Name: " + snark.meta.getName());
+          System.out.println("Torrent: " + snark.torrent);
+          System.out.println("Tracker: " + snark.meta.getAnnounce());
+          List files=snark.meta.getFiles();
           System.out.println("Files: " + ((files == null) ? 1 : files.size()));
-          System.out.println("Pieces: " + meta.getPieces());
-          System.out.println("Piece size: " + meta.getPieceLength(0) / 1024 + " KB");
-          System.out.println("Total size: " + meta.getTotalLength() / (1024 * 1024) + " MB");
+          System.out.println("Pieces: " + snark.meta.getPieces());
+          System.out.println("Piece size: " + snark.meta.getPieceLength(0) / 1024 + " KB");
+          System.out.println("Total size: " + snark.meta.getTotalLength() / (1024 * 1024) + " MB");
         }
  else         if ("".equals(line) || "help".equals(line)) {
           System.out.println(usage);

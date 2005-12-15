@@ -1,0 +1,30 @@
+{
+  File sfile=new File(filename);
+  try {
+    filename=sfile.getCanonicalPath();
+  }
+ catch (  IOException ioe) {
+    _log.error("Unable to add the torrent " + filename,ioe);
+    addMessage("ERR: Could not add the torrent '" + filename + "': "+ ioe.getMessage());
+    return;
+  }
+  File dataDir=getDataDir();
+  Snark torrent=null;
+synchronized (_snarks) {
+    torrent=(Snark)_snarks.get(filename);
+    if (torrent == null) {
+      torrent=new Snark(filename,null,-1,null,null,false,dataDir.getPath());
+      _snarks.put(filename,torrent);
+    }
+ else {
+      return;
+    }
+  }
+  if (shouldAutoStart()) {
+    torrent.startTorrent();
+    addMessage("Torrent added and started: '" + filename + "'");
+  }
+ else {
+    addMessage("Torrent added: '" + filename + "'");
+  }
+}

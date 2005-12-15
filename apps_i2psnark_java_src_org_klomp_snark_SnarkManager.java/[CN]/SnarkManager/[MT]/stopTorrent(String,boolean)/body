@@ -1,0 +1,25 @@
+{
+  File sfile=new File(filename);
+  try {
+    filename=sfile.getCanonicalPath();
+  }
+ catch (  IOException ioe) {
+    _log.error("Unable to remove the torrent " + filename,ioe);
+    addMessage("ERR: Could not remove the torrent '" + filename + "': "+ ioe.getMessage());
+    return null;
+  }
+  int remaining=0;
+  Snark torrent=null;
+synchronized (_snarks) {
+    if (shouldRemove)     torrent=(Snark)_snarks.remove(filename);
+ else     torrent=(Snark)_snarks.get(filename);
+    remaining=_snarks.size();
+  }
+  if (torrent != null) {
+    torrent.stopTorrent();
+    if (remaining == 0) {
+    }
+    addMessage("Torrent stopped: '" + filename + "'");
+  }
+  return torrent;
+}

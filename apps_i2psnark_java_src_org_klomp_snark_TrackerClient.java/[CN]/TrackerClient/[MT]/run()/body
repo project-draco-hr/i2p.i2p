@@ -12,8 +12,20 @@
     while (!started) {
       try {
         TrackerInfo info=doRequest(announce,infoHash,peerID,uploaded,downloaded,left,STARTED_EVENT);
-        Iterator it=info.getPeers().iterator();
-        while (it.hasNext())         coordinator.addPeer((Peer)it.next());
+        if (!completed) {
+          Iterator it=info.getPeers().iterator();
+          while (it.hasNext()) {
+            Peer cur=(Peer)it.next();
+            coordinator.addPeer(cur);
+            int delay=3000;
+            int c=((int)cur.getPeerID().getAddress().calculateHash().toBase64().charAt(0)) % 10;
+            try {
+              Thread.sleep(delay * c);
+            }
+ catch (            InterruptedException ie) {
+            }
+          }
+        }
         started=true;
       }
  catch (      IOException ioe) {
@@ -47,8 +59,20 @@
       if (event == COMPLETED_EVENT || coordinator.needPeers() || System.currentTimeMillis() > lastRequestTime + interval) {
         try {
           TrackerInfo info=doRequest(announce,infoHash,peerID,uploaded,downloaded,left,event);
-          Iterator it=info.getPeers().iterator();
-          while (it.hasNext())           coordinator.addPeer((Peer)it.next());
+          if ((left > 0) && (!completed)) {
+            Iterator it=info.getPeers().iterator();
+            while (it.hasNext()) {
+              Peer cur=(Peer)it.next();
+              coordinator.addPeer(cur);
+              int delay=3000;
+              int c=((int)cur.getPeerID().getAddress().calculateHash().toBase64().charAt(0)) % 10;
+              try {
+                Thread.sleep(delay * c);
+              }
+ catch (              InterruptedException ie) {
+              }
+            }
+          }
         }
  catch (        IOException ioe) {
           Snark.debug("WARNING: Could not contact tracker at '" + announce + "': "+ ioe,Snark.WARNING);

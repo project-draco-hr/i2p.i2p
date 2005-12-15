@@ -1,0 +1,17 @@
+{
+  boolean coordinatorChanged=false;
+  if (coordinator.halted()) {
+    PeerCoordinatorSet set=PeerCoordinatorSet.instance();
+    set.remove(coordinator);
+    PeerCoordinator newCoord=new PeerCoordinator(coordinator.getID(),coordinator.getMetaInfo(),coordinator.getStorage(),coordinator.getListener());
+    set.add(newCoord);
+    coordinator=newCoord;
+    coordinatorChanged=true;
+  }
+  if (trackerclient.halted() || coordinatorChanged) {
+    TrackerClient newClient=new TrackerClient(coordinator.getMetaInfo(),coordinator);
+    if (!trackerclient.halted())     trackerclient.halt();
+    trackerclient=newClient;
+  }
+  trackerclient.start();
+}

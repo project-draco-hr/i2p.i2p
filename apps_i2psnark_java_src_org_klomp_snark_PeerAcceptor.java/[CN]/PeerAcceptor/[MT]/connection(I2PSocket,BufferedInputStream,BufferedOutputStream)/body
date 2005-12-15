@@ -1,7 +1,36 @@
 {
-  if (coordinator.needPeers()) {
-    Peer peer=new Peer(socket,bis,bos,coordinator.getID(),coordinator.getMetaInfo());
-    coordinator.addPeer(peer);
+  bis.mark(LOOKAHEAD_SIZE);
+  byte peerInfoHash[]=readHash(bis);
+  bis.reset();
+  if (coordinator != null) {
+    MetaInfo meta=coordinator.getMetaInfo();
+    if (DataHelper.eq(meta.getInfoHash(),peerInfoHash)) {
+      if (coordinator.needPeers()) {
+        Peer peer=new Peer(socket,bis,bos,coordinator.getID(),coordinator.getMetaInfo());
+        coordinator.addPeer(peer);
+      }
+ else       socket.close();
+    }
+ else {
+      throw new IOException("Peer wants another torrent (" + Base64.encode(peerInfoHash) + ") while we only support ("+ Base64.encode(meta.getInfoHash())+ ")");
+    }
   }
- else   socket.close();
+ else {
+    for (Iterator iter=coordinators.iterator(); iter.hasNext(); ) {
+      PeerCoordinator cur=(PeerCoordinator)iter.next();
+      MetaInfo meta=cur.getMetaInfo();
+      if (DataHelper.eq(meta.getInfoHash(),peerInfoHash)) {
+        if (cur.needPeers()) {
+          Peer peer=new Peer(socket,bis,bos,cur.getID(),cur.getMetaInfo());
+          cur.addPeer(peer);
+          return;
+        }
+ else {
+          socket.close();
+          return;
+        }
+      }
+    }
+    throw new IOException("Peer wants another torrent (" + Base64.encode(peerInfoHash) + ") while we don't support that hash");
+  }
 }
