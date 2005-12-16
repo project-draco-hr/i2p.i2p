@@ -5,13 +5,17 @@
   if (fetched == null) {
     throw new IOException("Error fetching " + s);
   }
-  fetched.deleteOnExit();
-  InputStream in=new FileInputStream(fetched);
-  TrackerInfo info=new TrackerInfo(in,coordinator.getID(),coordinator.getMetaInfo());
-  if (Snark.debug >= Snark.INFO)   Snark.debug("TrackerClient response: " + info,Snark.INFO);
-  lastRequestTime=System.currentTimeMillis();
-  String failure=info.getFailureReason();
-  if (failure != null)   throw new IOException(failure);
-  interval=info.getInterval() * 1000;
-  return info;
+  try {
+    InputStream in=new FileInputStream(fetched);
+    TrackerInfo info=new TrackerInfo(in,coordinator.getID(),coordinator.getMetaInfo());
+    if (Snark.debug >= Snark.INFO)     Snark.debug("TrackerClient response: " + info,Snark.INFO);
+    lastRequestTime=System.currentTimeMillis();
+    String failure=info.getFailureReason();
+    if (failure != null)     throw new IOException(failure);
+    interval=info.getInterval() * 1000;
+    return info;
+  }
+  finally {
+    fetched.delete();
+  }
 }

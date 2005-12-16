@@ -1,0 +1,138 @@
+{
+  String action=req.getParameter("action");
+  if (action == null) {
+  }
+ else   if ("Add torrent".equals(action)) {
+    String newFile=req.getParameter("newFile");
+    String newURL=req.getParameter("newURL");
+    File f=null;
+    if ((newFile != null) && (newFile.trim().length() > 0))     f=new File(newFile.trim());
+    if ((f != null) && (!f.exists())) {
+      _manager.addMessage("Torrent file " + newFile + " does not exist");
+    }
+    if ((f != null) && (f.exists())) {
+      File local=new File(_manager.getDataDir(),f.getName());
+      String canonical=null;
+      try {
+        canonical=local.getCanonicalPath();
+        if (local.exists()) {
+          if (_manager.getTorrent(canonical) != null)           _manager.addMessage("Torrent already running: " + newFile);
+ else           _manager.addMessage("Torrent already in the queue: " + newFile);
+        }
+ else {
+          boolean ok=FileUtil.copy(f.getAbsolutePath(),local.getAbsolutePath(),true);
+          if (ok) {
+            _manager.addMessage("Copying torrent to " + local.getAbsolutePath());
+            _manager.addTorrent(canonical);
+          }
+ else {
+            _manager.addMessage("Unable to copy the torrent to " + local.getAbsolutePath() + " from "+ f.getAbsolutePath());
+          }
+        }
+      }
+ catch (      IOException ioe) {
+        _log.warn("hrm: " + local,ioe);
+      }
+    }
+ else     if ((newURL != null) && (newURL.trim().length() > "http://.i2p/".length())) {
+      _manager.addMessage("Fetching " + newURL);
+      I2PThread fetch=new I2PThread(new FetchAndAdd(newURL),"Fetch and add");
+      fetch.start();
+    }
+ else {
+    }
+  }
+ else   if ("Stop".equals(action)) {
+    String torrent=req.getParameter("torrent");
+    if (torrent != null) {
+      byte infoHash[]=Base64.decode(torrent);
+      if ((infoHash != null) && (infoHash.length == 20)) {
+        for (Iterator iter=_manager.listTorrentFiles().iterator(); iter.hasNext(); ) {
+          String name=(String)iter.next();
+          Snark snark=_manager.getTorrent(name);
+          if ((snark != null) && (DataHelper.eq(infoHash,snark.meta.getInfoHash()))) {
+            _manager.stopTorrent(name,false);
+            break;
+          }
+        }
+      }
+    }
+  }
+ else   if ("Start".equals(action)) {
+    String torrent=req.getParameter("torrent");
+    if (torrent != null) {
+      byte infoHash[]=Base64.decode(torrent);
+      if ((infoHash != null) && (infoHash.length == 20)) {
+        for (Iterator iter=_manager.listTorrentFiles().iterator(); iter.hasNext(); ) {
+          String name=(String)iter.next();
+          Snark snark=_manager.getTorrent(name);
+          if ((snark != null) && (DataHelper.eq(infoHash,snark.meta.getInfoHash()))) {
+            snark.startTorrent();
+            _manager.addMessage("Starting up torrent " + name);
+            break;
+          }
+        }
+      }
+    }
+  }
+ else   if ("Remove".equals(action)) {
+    String torrent=req.getParameter("torrent");
+    if (torrent != null) {
+      byte infoHash[]=Base64.decode(torrent);
+      if ((infoHash != null) && (infoHash.length == 20)) {
+        for (Iterator iter=_manager.listTorrentFiles().iterator(); iter.hasNext(); ) {
+          String name=(String)iter.next();
+          Snark snark=_manager.getTorrent(name);
+          if ((snark != null) && (DataHelper.eq(infoHash,snark.meta.getInfoHash()))) {
+            _manager.stopTorrent(name,true);
+            break;
+          }
+        }
+      }
+    }
+  }
+ else   if ("Delete".equals(action)) {
+    String torrent=req.getParameter("torrent");
+    if (torrent != null) {
+      byte infoHash[]=Base64.decode(torrent);
+      if ((infoHash != null) && (infoHash.length == 20)) {
+        for (Iterator iter=_manager.listTorrentFiles().iterator(); iter.hasNext(); ) {
+          String name=(String)iter.next();
+          Snark snark=_manager.getTorrent(name);
+          if ((snark != null) && (DataHelper.eq(infoHash,snark.meta.getInfoHash()))) {
+            _manager.stopTorrent(name,true);
+            File f=new File(name);
+            f.delete();
+            _manager.addMessage("Torrent file deleted: " + f.getAbsolutePath());
+            List files=snark.meta.getFiles();
+            String dataFile=snark.meta.getName();
+            for (int i=0; files != null && i < files.size(); i++) {
+              File df=new File(_manager.getDataDir(),(String)files.get(i));
+              boolean deleted=FileUtil.rmdir(df,false);
+              if (deleted)               _manager.addMessage("Data dir deleted: " + df.getAbsolutePath());
+ else               _manager.addMessage("Data dir could not be deleted: " + df.getAbsolutePath());
+            }
+            if (dataFile != null) {
+              f=new File(_manager.getDataDir(),dataFile);
+              boolean deleted=f.delete();
+              if (deleted)               _manager.addMessage("Data file deleted: " + f.getAbsolutePath());
+ else               _manager.addMessage("Data file could not be deleted: " + f.getAbsolutePath());
+            }
+            break;
+          }
+        }
+      }
+    }
+  }
+ else   if ("Save configuration".equals(action)) {
+    String dataDir=req.getParameter("dataDir");
+    boolean autoStart=req.getParameter("autoStart") != null;
+    String seedPct=req.getParameter("seedPct");
+    String eepHost=req.getParameter("eepHost");
+    String eepPort=req.getParameter("eepPort");
+    String i2cpHost=req.getParameter("i2cpHost");
+    String i2cpPort=req.getParameter("i2cpPort");
+    String i2cpOpts=req.getParameter("i2cpOpts");
+    _manager.updateConfig(dataDir,autoStart,seedPct,eepHost,eepPort,i2cpHost,i2cpPort,i2cpOpts);
+  }
+}

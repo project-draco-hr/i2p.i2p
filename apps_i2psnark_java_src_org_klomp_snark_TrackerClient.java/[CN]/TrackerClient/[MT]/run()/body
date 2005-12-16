@@ -12,8 +12,10 @@
     while (!started) {
       try {
         TrackerInfo info=doRequest(announce,infoHash,peerID,uploaded,downloaded,left,STARTED_EVENT);
+        Set peers=info.getPeers();
+        coordinator.trackerSeenPeers=peers.size();
         if (!completed) {
-          Iterator it=info.getPeers().iterator();
+          Iterator it=peers.iterator();
           while (it.hasNext()) {
             Peer cur=(Peer)it.next();
             coordinator.addPeer(cur);
@@ -27,9 +29,11 @@
           }
         }
         started=true;
+        coordinator.trackerProblems=null;
       }
  catch (      IOException ioe) {
         Snark.debug("WARNING: Could not contact tracker at '" + announce + "': "+ ioe,Snark.WARNING);
+        coordinator.trackerProblems=ioe.getMessage();
       }
       if (!started && !stop) {
         Snark.debug("         Retrying in one minute...",Snark.DEBUG);
@@ -59,8 +63,10 @@
       if (event == COMPLETED_EVENT || coordinator.needPeers() || System.currentTimeMillis() > lastRequestTime + interval) {
         try {
           TrackerInfo info=doRequest(announce,infoHash,peerID,uploaded,downloaded,left,event);
+          Set peers=info.getPeers();
+          coordinator.trackerSeenPeers=peers.size();
           if ((left > 0) && (!completed)) {
-            Iterator it=info.getPeers().iterator();
+            Iterator it=peers.iterator();
             while (it.hasNext()) {
               Peer cur=(Peer)it.next();
               coordinator.addPeer(cur);

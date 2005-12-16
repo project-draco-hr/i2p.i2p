@@ -1,4 +1,5 @@
 {
+  stopped=false;
   boolean coordinatorChanged=false;
   if (coordinator.halted()) {
     PeerCoordinatorSet set=PeerCoordinatorSet.instance();
@@ -8,10 +9,13 @@
     coordinator=newCoord;
     coordinatorChanged=true;
   }
-  if (trackerclient.halted() || coordinatorChanged) {
+  if (!trackerclient.started() && !coordinatorChanged) {
+    trackerclient.start();
+  }
+ else   if (trackerclient.halted() || coordinatorChanged) {
     TrackerClient newClient=new TrackerClient(coordinator.getMetaInfo(),coordinator);
     if (!trackerclient.halted())     trackerclient.halt();
     trackerclient=newClient;
+    trackerclient.start();
   }
-  trackerclient.start();
 }
