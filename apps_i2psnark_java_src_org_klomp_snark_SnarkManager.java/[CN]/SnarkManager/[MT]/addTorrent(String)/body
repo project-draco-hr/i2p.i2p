@@ -1,4 +1,12 @@
 {
+  if (!I2PSnarkUtil.instance().connected()) {
+    addMessage("Connecting to I2P");
+    boolean ok=I2PSnarkUtil.instance().connect();
+    if (!ok) {
+      addMessage("Error connecting to I2P - check your I2CP settings");
+      return;
+    }
+  }
   File sfile=new File(filename);
   try {
     filename=sfile.getCanonicalPath();
@@ -13,9 +21,36 @@
 synchronized (_snarks) {
     torrent=(Snark)_snarks.get(filename);
     if (torrent == null) {
-      torrent=new Snark(filename,null,-1,null,null,false,dataDir.getPath());
-      torrent.completeListener=this;
-      _snarks.put(filename,torrent);
+      FileInputStream fis=null;
+      try {
+        fis=new FileInputStream(sfile);
+        MetaInfo info=new MetaInfo(fis);
+        fis.close();
+        fis=null;
+        List files=info.getFiles();
+        if ((files != null) && (files.size() > MAX_FILES_PER_TORRENT)) {
+          sfile.delete();
+          addMessage("Too many files in " + sfile.getName() + " ("+ files.size()+ "), deleting it");
+          return;
+        }
+ else {
+          torrent=new Snark(filename,null,-1,null,null,false,dataDir.getPath());
+          torrent.completeListener=this;
+          _snarks.put(filename,torrent);
+        }
+      }
+ catch (      IOException ioe) {
+        addMessage("Torrent in " + sfile.getName() + " is invalid: "+ ioe.getMessage());
+        if (sfile.exists())         sfile.delete();
+        return;
+      }
+ finally {
+        if (fis != null)         try {
+          fis.close();
+        }
+ catch (        IOException ioe) {
+        }
+      }
     }
  else {
       return;
