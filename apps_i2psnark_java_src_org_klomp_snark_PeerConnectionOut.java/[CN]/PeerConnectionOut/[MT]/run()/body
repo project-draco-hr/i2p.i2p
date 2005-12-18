@@ -1,10 +1,10 @@
 {
   try {
-    while (!quit) {
+    while (!quit && peer.isConnected()) {
       Message m=null;
       PeerState state=null;
 synchronized (sendQueue) {
-        while (!quit && sendQueue.isEmpty()) {
+        while (!quit && peer.isConnected() && sendQueue.isEmpty()) {
           try {
             dout.flush();
             sendQueue.wait();
@@ -13,7 +13,7 @@ synchronized (sendQueue) {
           }
         }
         state=peer.state;
-        if (!quit && state != null) {
+        if (!quit && state != null && peer.isConnected()) {
           Iterator it=sendQueue.iterator();
           while (m == null && it.hasNext()) {
             Message nm=(Message)it.next();
@@ -46,8 +46,8 @@ synchronized (sendQueue) {
  catch (  IOException ioe) {
   }
 catch (  Throwable t) {
-    Snark.debug(peer + ": " + t,Snark.ERROR);
-    t.printStackTrace();
+    I2PSnarkUtil.instance().debug(peer.toString(),Snark.ERROR,t);
+    if (t instanceof OutOfMemoryError)     throw (OutOfMemoryError)t;
   }
  finally {
     quit=true;
