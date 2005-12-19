@@ -18,25 +18,33 @@ synchronized (sendQueue) {
           while (m == null && it.hasNext()) {
             Message nm=(Message)it.next();
             if (nm.type == Message.PIECE) {
-              if (state.choking)               it.remove();
+              if (state.choking) {
+                it.remove();
+                SimpleTimer.getInstance().removeEvent(nm.expireEvent);
+              }
               nm=null;
             }
  else             if (nm.type == Message.REQUEST && state.choked) {
               it.remove();
+              SimpleTimer.getInstance().removeEvent(nm.expireEvent);
               nm=null;
             }
             if (m == null && nm != null) {
               m=nm;
+              SimpleTimer.getInstance().removeEvent(nm.expireEvent);
               it.remove();
             }
           }
-          if (m == null && sendQueue.size() > 0)           m=(Message)sendQueue.remove(0);
+          if (m == null && sendQueue.size() > 0) {
+            m=(Message)sendQueue.remove(0);
+            SimpleTimer.getInstance().removeEvent(m.expireEvent);
+          }
         }
       }
       if (m != null) {
-        if (Snark.debug >= Snark.ALL)         Snark.debug("Send " + peer + ": "+ m,Snark.ALL);
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Send " + peer + ": "+ m+ " on "+ peer.metainfo.getName());
         m.sendMessage(dout);
+        lastSent=System.currentTimeMillis();
         if (m.type == Message.CHOKE)         removeMessage(Message.PIECE);
         if (m.type == Message.PIECE)         state.uploaded(m.len);
         m=null;
@@ -44,9 +52,10 @@ synchronized (sendQueue) {
     }
   }
  catch (  IOException ioe) {
+    if (_log.shouldLog(Log.INFO))     _log.info("IOError sending to " + peer,ioe);
   }
 catch (  Throwable t) {
-    I2PSnarkUtil.instance().debug(peer.toString(),Snark.ERROR,t);
+    _log.error("Error sending to " + peer,t);
     if (t instanceof OutOfMemoryError)     throw (OutOfMemoryError)t;
   }
  finally {

@@ -1,23 +1,22 @@
 {
-  if (Snark.debug >= Snark.DEBUG)   Snark.debug(peer + " rcv request(" + piece+ ", "+ begin+ ", "+ length+ ") ",Snark.DEBUG);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug(peer + " rcv request(" + piece+ ", "+ begin+ ", "+ length+ ") ");
   if (choking) {
-    if (Snark.debug >= Snark.INFO)     Snark.debug("Request received, but choking " + peer,Snark.INFO);
+    if (_log.shouldLog(Log.INFO))     _log.info("Request received, but choking " + peer);
     return;
   }
   if (piece < 0 || piece >= metainfo.getPieces() || begin < 0 || begin > metainfo.getPieceLength(piece) || length <= 0 || length > 4 * PARTSIZE) {
-    if (Snark.debug >= Snark.INFO)     Snark.debug("Got strange 'request: " + piece + ", "+ begin+ ", "+ length+ "' message from "+ peer,Snark.INFO);
+    if (_log.shouldLog(Log.WARN))     _log.warn("Got strange 'request: " + piece + ", "+ begin+ ", "+ length+ "' message from "+ peer);
     return;
   }
   byte[] pieceBytes=listener.gotRequest(peer,piece);
   if (pieceBytes == null) {
-    if (Snark.debug >= Snark.INFO)     Snark.debug("Got request for unknown piece: " + piece,Snark.INFO);
+    if (_log.shouldLog(Log.WARN))     _log.warn("Got request for unknown piece: " + piece);
     return;
   }
   if (begin >= pieceBytes.length || begin + length > pieceBytes.length) {
-    if (Snark.debug >= Snark.INFO)     Snark.debug("Got out of range 'request: " + piece + ", "+ begin+ ", "+ length+ "' message from "+ peer,Snark.INFO);
+    if (_log.shouldLog(Log.WARN))     _log.warn("Got out of range 'request: " + piece + ", "+ begin+ ", "+ length+ "' message from "+ peer);
     return;
   }
-  if (Snark.debug >= Snark.DEBUG)   Snark.debug("Sending (" + piece + ", "+ begin+ ", "+ length+ ")"+ " to "+ peer,Snark.DEBUG);
+  if (_log.shouldLog(Log.INFO))   _log.info("Sending (" + piece + ", "+ begin+ ", "+ length+ ")"+ " to "+ peer);
   out.sendPiece(piece,begin,length,pieceBytes);
-  if (begin + length == pieceBytes.length)   if (Snark.debug >= Snark.DEBUG)   Snark.debug("Send p" + piece + " "+ peer,Snark.DEBUG);
 }
