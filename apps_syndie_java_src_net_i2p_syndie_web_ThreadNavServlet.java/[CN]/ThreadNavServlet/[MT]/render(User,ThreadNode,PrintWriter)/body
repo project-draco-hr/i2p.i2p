@@ -1,6 +1,7 @@
 {
   Archive archive=BlogManager.instance().getArchive();
   String blog=node.getEntry().getKeyHash().toBase64();
+  out.write("<rdf:li rdf:resource=\"entry://" + blog + "/"+ node.getEntry().getEntryId()+ "\">\n");
   out.write("<rdf:Description rdf:about=\"entry://" + blog + "/"+ node.getEntry().getEntryId()+ "\">");
   PetName pn=user.getPetNameDB().getByLocation(blog);
   String name=null;
@@ -14,7 +15,7 @@
     if (info != null)     name=info.getProperty(BlogInfo.NAME);
     if ((name == null) || (name.trim().length() <= 0))     name=node.getEntry().getKeyHash().toBase64().substring(0,6);
   }
-  out.write("<syndie:author syndie:blog=\"" + blog + "\" syndie:name=\""+ HTMLRenderer.sanitizeStrippedXML(name)+ "\" />\n");
+  out.write("<syndie:author syndie:blog=\"" + blog + "\">"+ HTMLRenderer.sanitizeStrippedXML(name)+ "</syndie:author>\n");
   if ((user.getBlog() != null) && (node.containsAuthor(user.getBlog())))   out.write("<syndie:threadself />\n");
   EntryContainer entry=archive.getEntry(node.getEntry());
   if (entry == null)   throw new RuntimeException("Unable to fetch the entry " + node.getEntry());
@@ -26,10 +27,13 @@
   out.write("<syndie:subject>" + HTMLRenderer.sanitizeStrippedXML(subject) + "</syndie:subject>\n");
   long dayBegin=BlogManager.instance().getDayBegin();
   long postId=node.getEntry().getEntryId();
-  int daysAgo=(int)((dayBegin - postId + 24 * 60 * 60* 1000 - 1) / (24 * 60 * 60* 1000));
+  int daysAgo=(int)((dayBegin - postId + 24 * 60 * 60* 1000l - 1l) / (24 * 60 * 60* 1000l));
   out.write("<syndie:age>" + daysAgo + "</syndie:age>\n");
   out.write("<syndie:children>");
+  out.write("<rdf:Seq rdf:about=\"entry://" + blog + "/"+ node.getEntry().getEntryId()+ "\">");
   for (int i=0; i < node.getChildCount(); i++)   render(user,node.getChild(i),out);
+  out.write("</rdf:Seq>\n");
   out.write("</syndie:children>\n");
   out.write("</rdf:Description>\n");
+  out.write("</rdf:li>\n");
 }
