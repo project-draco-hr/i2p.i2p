@@ -1,14 +1,21 @@
 {
   byte peerInfoHash[]=null;
-  try {
+  if (in instanceof BufferedInputStream) {
+    in.mark(LOOKAHEAD_SIZE);
     peerInfoHash=readHash(in);
-    _log.info("infohash read from " + socket.getPeerDestination().calculateHash().toBase64() + ": "+ Base64.encode(peerInfoHash));
+    in.reset();
   }
- catch (  IOException ioe) {
-    _log.info("Unable to read the infohash from " + socket.getPeerDestination().calculateHash().toBase64());
-    throw ioe;
+ else {
+    try {
+      peerInfoHash=readHash(in);
+      _log.info("infohash read from " + socket.getPeerDestination().calculateHash().toBase64() + ": "+ Base64.encode(peerInfoHash));
+    }
+ catch (    IOException ioe) {
+      _log.info("Unable to read the infohash from " + socket.getPeerDestination().calculateHash().toBase64());
+      throw ioe;
+    }
+    in=new SequenceInputStream(new ByteArrayInputStream(peerInfoHash),in);
   }
-  in=new SequenceInputStream(new ByteArrayInputStream(peerInfoHash),in);
   if (coordinator != null) {
     MetaInfo meta=coordinator.getMetaInfo();
     if (DataHelper.eq(meta.getInfoHash(),peerInfoHash)) {

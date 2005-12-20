@@ -4,15 +4,23 @@
   try {
     if (din == null) {
       sock=I2PSnarkUtil.instance().connect(peerID);
+      _log.debug("Connected to " + peerID + ": "+ sock);
       if ((sock == null) || (sock.isClosed())) {
         throw new IOException("Unable to reach " + peerID);
       }
-      InputStream in=new BufferedInputStream(sock.getInputStream());
+      InputStream in=sock.getInputStream();
       OutputStream out=sock.getOutputStream();
-      if (true)       out=new BufferedOutputStream(out);
+      if (true) {
+        out=new BufferedOutputStream(out);
+        in=new BufferedInputStream(sock.getInputStream());
+      }
       byte[] id=handshake(in,out);
       byte[] expected_id=peerID.getID();
       if (!Arrays.equals(expected_id,id))       throw new IOException("Unexpected peerID '" + PeerID.idencode(id) + "' expected '"+ PeerID.idencode(expected_id)+ "'");
+      _log.debug("Handshake got matching IDs with " + toString());
+    }
+ else {
+      _log.debug("Already have din [" + sock + "] with "+ toString());
     }
     PeerConnectionIn in=new PeerConnectionIn(this,din);
     PeerConnectionOut out=new PeerConnectionOut(this,dout);
@@ -20,6 +28,8 @@
     if (bitfield != null)     s.out.sendBitfield(bitfield);
     state=s;
     listener.connected(this);
+    _log.debug("Start running the reader with " + toString());
+    out.startup();
     s.in.run();
   }
  catch (  IOException eofe) {

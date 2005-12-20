@@ -138,4 +138,33 @@
     String i2cpOpts=req.getParameter("i2cpOpts");
     _manager.updateConfig(dataDir,autoStart,seedPct,eepHost,eepPort,i2cpHost,i2cpPort,i2cpOpts);
   }
+ else   if ("Create torrent".equals(action)) {
+    String baseData=req.getParameter("baseFile");
+    if (baseData != null) {
+      File baseFile=new File(_manager.getDataDir(),baseData);
+      String announceURL=req.getParameter("announceURL");
+      String announceURLOther=req.getParameter("announceURLOther");
+      if ((announceURLOther != null) && (announceURLOther.trim().length() > "http://.i2p/announce".length()))       announceURL=announceURLOther;
+      if (baseFile.exists()) {
+        try {
+          Storage s=new Storage(baseFile,announceURL,null);
+          s.create();
+          MetaInfo info=s.getMetaInfo();
+          File torrentFile=new File(baseFile.getParent(),baseFile.getName() + ".torrent");
+          if (torrentFile.exists())           throw new IOException("Cannot overwrite an existing .torrent file: " + torrentFile.getPath());
+          FileOutputStream out=new FileOutputStream(torrentFile);
+          out.write(info.getTorrentData());
+          out.close();
+          _manager.addMessage("Torrent created for " + baseFile.getName() + ": "+ torrentFile.getAbsolutePath());
+          _manager.addTorrent(torrentFile.getCanonicalPath());
+        }
+ catch (        IOException ioe) {
+          _manager.addMessage("Error creating a torrent for " + baseFile.getAbsolutePath() + ": "+ ioe.getMessage());
+        }
+      }
+ else {
+        _manager.addMessage("Cannot create a torrent for the nonexistant data: " + baseFile.getAbsolutePath());
+      }
+    }
+  }
 }
