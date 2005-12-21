@@ -1,21 +1,23 @@
 {
   List interested=new LinkedList();
-  Iterator it=peers.iterator();
-  while (it.hasNext()) {
-    Peer peer=(Peer)it.next();
-    boolean remove=false;
-    if (uploaders < MAX_UPLOADERS && peer.isChoking() && peer.isInterested()) {
-      if (!peer.isChoked())       interested.add(0,peer);
- else       interested.add(peer);
+synchronized (peers) {
+    Iterator it=peers.iterator();
+    while (it.hasNext()) {
+      Peer peer=(Peer)it.next();
+      boolean remove=false;
+      if (uploaders < MAX_UPLOADERS && peer.isChoking() && peer.isInterested()) {
+        if (!peer.isChoked())         interested.add(0,peer);
+ else         interested.add(peer);
+      }
     }
-  }
-  while (uploaders < MAX_UPLOADERS && interested.size() > 0) {
-    Peer peer=(Peer)interested.remove(0);
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Unchoke: " + peer);
-    peer.setChoking(false);
-    uploaders++;
-    peers.remove(peer);
-    peers.add(peer);
-    peerCount=peers.size();
+    while (uploaders < MAX_UPLOADERS && interested.size() > 0) {
+      Peer peer=(Peer)interested.remove(0);
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Unchoke: " + peer);
+      peer.setChoking(false);
+      uploaders++;
+      peers.remove(peer);
+      peers.add(peer);
+      peerCount=peers.size();
+    }
   }
 }
