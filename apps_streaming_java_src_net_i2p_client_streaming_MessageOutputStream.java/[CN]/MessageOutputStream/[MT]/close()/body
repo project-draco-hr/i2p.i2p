@@ -1,5 +1,10 @@
 {
-  if (_closed)   return;
+  if (_closed) {
+synchronized (_dataLock) {
+      _dataLock.notifyAll();
+    }
+    return;
+  }
   _closed=true;
   flush();
   _log.debug("Output stream closed after writing " + _written);
@@ -11,6 +16,7 @@ synchronized (_dataLock) {
       _valid=0;
       locked_updateBufferSize();
     }
+    _dataLock.notifyAll();
   }
   if (ba != null) {
     _dataCache.release(ba);
