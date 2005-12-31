@@ -1,6 +1,6 @@
 {
   long expiration=_context.clock().now() + 10 * 60 * 1000;
-  LoadTestTunnelConfig cfg=new LoadTestTunnelConfig(_context,2,true);
+  PooledTunnelCreatorConfig cfg=new PooledTunnelCreatorConfig(_context,2,true);
   cfg.setPeer(0,peer);
   HopConfig hop=cfg.getConfig(0);
   hop.setExpiration(expiration);
@@ -13,8 +13,9 @@
   hop.setLayerKey(_context.keyGenerator().generateSessionKey());
   cfg.setExpiration(expiration);
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Config for " + peer.toBase64() + ": "+ cfg);
-  CreatedJob onCreated=new CreatedJob(_context,cfg);
-  FailedJob fail=new FailedJob(_context,cfg);
+  LoadTestTunnelConfig ltCfg=new LoadTestTunnelConfig(cfg);
+  CreatedJob onCreated=new CreatedJob(_context,ltCfg);
+  FailedJob fail=new FailedJob(_context,ltCfg);
   RequestTunnelJob req=new RequestTunnelJob(_context,cfg,onCreated,fail,cfg.getLength() - 1,false,true);
   _context.jobQueue().addJob(req);
 }
