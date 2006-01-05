@@ -1,6 +1,16 @@
 {
   I2NPMessage message=_message;
   if (_log.shouldLog(Log.INFO))   _log.info(getJobId() + ": Reply from " + _peer.toBase64()+ " with message "+ message.getClass().getName());
+  long howLong=System.currentTimeMillis() - _sentOn;
+  int msgSize=1024;
+  if (_replyTunnel != null) {
+    for (int i=0; i < _replyTunnel.getLength(); i++)     getContext().profileManager().tunnelDataPushed(_replyTunnel.getPeer(i),howLong,msgSize);
+    _replyTunnel.incrementVerifiedBytesTransferred(msgSize);
+  }
+  if (_outTunnel != null) {
+    for (int i=0; i < _outTunnel.getLength(); i++)     getContext().profileManager().tunnelDataPushed(_outTunnel.getPeer(i),howLong,msgSize);
+    _outTunnel.incrementVerifiedBytesTransferred(msgSize);
+  }
   if (message instanceof DatabaseStoreMessage) {
     long timeToReply=_state.dataFound(_peer);
     DatabaseStoreMessage msg=(DatabaseStoreMessage)message;

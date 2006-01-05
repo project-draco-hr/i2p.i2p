@@ -1,0 +1,21 @@
+{
+  double lowPeak=_peakTunnel1mThroughput[THROUGHPUT_COUNT - 1];
+  if (size > lowPeak) {
+synchronized (_peakTunnel1mThroughput) {
+      for (int i=0; i < THROUGHPUT_COUNT; i++) {
+        if (size > _peakTunnel1mThroughput[i]) {
+          for (int j=THROUGHPUT_COUNT - 1; j > i; j--)           _peakTunnel1mThroughput[j]=_peakTunnel1mThroughput[j - 1];
+          _peakTunnel1mThroughput[i]=size;
+          break;
+        }
+      }
+    }
+    if (_log.shouldLog(Log.WARN)) {
+      StringBuffer buf=new StringBuffer(128);
+      buf.append("Updating 1m throughput after ").append(size).append(" to ");
+      for (int i=0; i < THROUGHPUT_COUNT; i++)       buf.append(_peakTunnel1mThroughput[i]).append(',');
+      buf.append(" for ").append(_peer.toBase64());
+      _log.warn(buf.toString());
+    }
+  }
+}
