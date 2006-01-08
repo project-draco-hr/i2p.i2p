@@ -1,0 +1,27 @@
+{
+  List rv=new ArrayList(1);
+  if (info == null)   return rv;
+  ArchiveIndex aindex=archive.getIndex();
+  BlogURI uri=getEntry(req);
+  if (uri != null) {
+    rv.add(uri);
+    return rv;
+  }
+  aindex.selectMatchesOrderByEntryId(rv,info.getKey().calculateHash(),null);
+  for (int i=0; i < rv.size(); i++) {
+    BlogURI curURI=(BlogURI)rv.get(i);
+    ThreadNode node=index.getNode(curURI);
+    if ((node != null) && (node.getParent() == null)) {
+      Collection tags=node.getTags();
+      if ((tags != null) && (tags.contains(BlogInfoData.TAG))) {
+        rv.remove(i);
+        i--;
+      }
+    }
+ else {
+      rv.remove(i);
+      i--;
+    }
+  }
+  return rv;
+}

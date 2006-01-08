@@ -1,0 +1,34 @@
+{
+  String title=null;
+  String desc=null;
+  BlogInfoData data=null;
+  if (info != null) {
+    title=info.getProperty(BlogInfo.NAME);
+    desc=info.getProperty(BlogInfo.DESCRIPTION);
+    String dataURI=info.getProperty(BlogInfo.SUMMARY_ENTRY_ID);
+    if (dataURI != null) {
+      EntryContainer entry=archive.getEntry(new BlogURI(dataURI));
+      if (entry != null) {
+        data=new BlogInfoData();
+        try {
+          data.load(entry);
+        }
+ catch (        IOException ioe) {
+          data=null;
+          if (_log.shouldLog(Log.WARN))           _log.warn("Error loading the blog info data from " + dataURI,ioe);
+        }
+      }
+    }
+  }
+  String pageTitle="Syndie :: Blogs" + (desc != null ? " :: " + desc : "");
+  if (title != null)   pageTitle=pageTitle + " (" + title+ ")";
+  pageTitle=HTMLRenderer.sanitizeString(pageTitle);
+  out.write("<html>\n<head>\n<title>" + pageTitle + "</title>\n");
+  out.write("<style>");
+  renderStyle(out,info,data,req);
+  out.write("</style></head>");
+  renderHeader(user,req,out,info,data,title,desc);
+  renderReferences(out,info,data);
+  renderBody(user,out,info,data,posts,offset,archive,req);
+  out.write("</body></html>\n");
+}

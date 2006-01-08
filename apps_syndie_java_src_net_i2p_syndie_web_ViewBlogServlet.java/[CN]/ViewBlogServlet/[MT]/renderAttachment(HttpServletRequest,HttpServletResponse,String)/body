@@ -1,0 +1,31 @@
+{
+  int split=attachment.lastIndexOf('/');
+  if (split <= 0)   return false;
+  BlogURI uri=new BlogURI("blog://" + attachment.substring(0,split));
+  try {
+    int attachmentId=Integer.parseInt(attachment.substring(split + 1));
+    if (attachmentId < 0)     return false;
+    EntryContainer entry=BlogManager.instance().getArchive().getEntry(uri);
+    if (entry == null) {
+      System.out.println("Could not render the attachment [" + uri + "] / "+ attachmentId);
+      return false;
+    }
+    Attachment attachments[]=entry.getAttachments();
+    if (attachmentId >= attachments.length) {
+      System.out.println("Out of range attachment on " + uri + ": "+ attachmentId);
+      return false;
+    }
+    resp.setContentType(ArchiveViewerBean.getAttachmentContentType(attachments[attachmentId]));
+    boolean inline=ArchiveViewerBean.getAttachmentShouldShowInline(attachments[attachmentId]);
+    String filename=ArchiveViewerBean.getAttachmentFilename(attachments[attachmentId]);
+    if (inline)     resp.setHeader("Content-Disposition","inline; filename=\"" + filename + "\"");
+ else     resp.setHeader("Content-Disposition","attachment; filename=\"" + filename + "\"");
+    int len=ArchiveViewerBean.getAttachmentContentLength(attachments[attachmentId]);
+    if (len >= 0)     resp.setContentLength(len);
+    ArchiveViewerBean.renderAttachment(attachments[attachmentId],resp.getOutputStream());
+    return true;
+  }
+ catch (  NumberFormatException nfe) {
+  }
+  return false;
+}
