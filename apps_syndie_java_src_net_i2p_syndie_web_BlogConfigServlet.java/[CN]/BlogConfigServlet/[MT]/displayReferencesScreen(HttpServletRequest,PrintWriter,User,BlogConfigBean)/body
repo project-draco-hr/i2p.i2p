@@ -1,0 +1,46 @@
+{
+  out.write("<form action=\"" + getScreenURL(req,SCREEN_REFERENCES,false) + "\" method=\"POST\">\n");
+  writeAuthActionFields(out);
+  out.write("<ol class=\"syndieReferenceGroupList\">\n");
+  boolean defaultFound=false;
+  for (int i=0; i < bean.getGroupCount(); i++) {
+    List group=bean.getGroup(i);
+    String groupName=null;
+    PetName pn=(PetName)group.get(0);
+    if (pn.getGroupCount() <= 0) {
+      groupName=ViewBlogServlet.DEFAULT_GROUP_NAME;
+      defaultFound=true;
+    }
+ else {
+      groupName=pn.getGroup(0);
+    }
+    out.write("<li><b>Group:</b> " + HTMLRenderer.sanitizeString(groupName) + "\n");
+    if (i > 0)     out.write(" <a href=\"" + getScreenURL(req,SCREEN_REFERENCES,true) + "moveFrom="+ i+ "&amp;moveTo="+ (i - 1)+ "\" title=\"Move higher\">^</a>");
+    if (i + 1 < bean.getGroupCount())     out.write(" <a href=\"" + getScreenURL(req,SCREEN_REFERENCES,true) + "moveFrom="+ i+ "&amp;moveTo="+ (i + 1)+ "\" title=\"Move lower\">v</a>");
+    out.write(" <a href=\"" + getScreenURL(req,SCREEN_REFERENCES,true) + "delete="+ i+ "\" title=\"Delete\">X</a>");
+    out.write("<ol class=\"syndieReferenceGroupElementList\">\n");
+    for (int j=0; j < group.size(); j++) {
+      out.write("<li>" + ViewBlogServlet.renderLink(user.getBlog(),(PetName)group.get(j)));
+      if (j > 0)       out.write(" <a href=\"" + getScreenURL(req,SCREEN_REFERENCES,true) + "moveRefFrom="+ i+ "."+ j+ "&amp;moveRefTo="+ i+ "."+ (j - 1)+ "\" title=\"Move higher\">^</a>");
+      if (j + 1 < group.size())       out.write(" <a href=\"" + getScreenURL(req,SCREEN_REFERENCES,true) + "moveRefFrom="+ i+ "."+ j+ "&amp;moveRefTo="+ i+ "."+ (j + 1)+ "\" title=\"Move lower\">v</a>");
+      out.write(" <a href=\"" + getScreenURL(req,SCREEN_REFERENCES,true) + "delete="+ i+ "."+ j+ "\" title=\"Delete\">X</a>");
+      out.write("</li>\n");
+    }
+    out.write("</ol><!-- end of the syndieReferenceGroupElementList -->\n");
+    out.write("</li>\n");
+  }
+  out.write("</ol><!-- end of the syndieReferenceGroupList -->\n");
+  out.write("Add a new element: <br />Group: <select name=\"new.group\"><option value=\"\">Select a group...</option>");
+  for (int i=0; i < bean.getGroupCount(); i++) {
+    List group=bean.getGroup(i);
+    String groupName=null;
+    PetName pn=(PetName)group.get(0);
+    if (pn.getGroupCount() <= 0)     groupName=ViewBlogServlet.DEFAULT_GROUP_NAME;
+ else     groupName=pn.getGroup(0);
+    if (groupName != null)     out.write("<option value=\"" + HTMLRenderer.sanitizeTagParam(groupName) + "\">"+ HTMLRenderer.sanitizeString(groupName)+ "</option>\n");
+  }
+  if (!defaultFound)   out.write("<option value=\"" + ViewBlogServlet.DEFAULT_GROUP_NAME + "\">"+ ViewBlogServlet.DEFAULT_GROUP_NAME+ "</option>\n");
+  out.write("</select> or <input type=\"text\" size=\"12\" name=\"new.groupOther\" /><br />" + "Type: <select name=\"new.type\"><option value=\"blog\">Syndie blog</option>\n" + "<option value=\"blogpost\">Post within a syndie blog</option>\n"+ "<option value=\"blogpostattachment\">Attachment within a syndie blog</option>\n"+ "<option value=\"eepsite\">Eepsite</option>\n"+ "<option value=\"website\">Website</option>\n</select><br />\n"+ "Name: <input type=\"text\" size=\"20\" name=\"new.name\" /><br /> "+ "Location: <input type=\"text\" name=\"new.location\" size=\"40\" />\n"+ "<ul><li>Blogs should be specified as <code>$base64Key</code></li>\n"+ "<li>Blog posts should be specified as <code>$base64Key/$postEntryId</code></li>\n"+ "<li>Blog post attachments should be specified as <code>$base64Key/$postEntryId/$attachmentNum</code></li>\n"+ "</ul><hr />\n");
+  out.write("<input type=\"submit\" name=\"action\" value=\"Save changes\">\n");
+  out.write("</form>\n");
+}

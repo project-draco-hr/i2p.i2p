@@ -1,0 +1,94 @@
+{
+  StringBuffer buf=new StringBuffer(64);
+  String type=pn.getProtocol();
+  if ("syndieblog".equals(type)) {
+    String loc=pn.getLocation();
+    if (loc != null) {
+      buf.append("<a href=\"blog.jsp?").append(PARAM_BLOG).append("=");
+      buf.append(HTMLRenderer.sanitizeTagParam(pn.getLocation()));
+      buf.append("\" title=\"View ").append(HTMLRenderer.sanitizeTagParam(pn.getName())).append("\">");
+    }
+    buf.append(HTMLRenderer.sanitizeString(pn.getName()));
+    if (loc != null) {
+      buf.append("</a>");
+    }
+  }
+ else   if ("syndieblogpost".equals(type)) {
+    String loc=pn.getLocation();
+    if (loc != null) {
+      buf.append("<a href=\"blog.jsp?").append(PARAM_BLOG).append("=");
+      buf.append(blogFrom.toBase64()).append("&amp;");
+      buf.append(PARAM_ENTRY).append("=").append(HTMLRenderer.sanitizeTagParam(pn.getLocation()));
+      buf.append("\" title=\"View the specified post\">");
+    }
+    buf.append(HTMLRenderer.sanitizeString(pn.getName()));
+    if (loc != null) {
+      buf.append("</a>");
+    }
+  }
+ else   if ("syndieblogattachment".equals(type)) {
+    String loc=pn.getLocation();
+    if (loc != null) {
+      int split=loc.lastIndexOf('/');
+      try {
+        int attachmentId=-1;
+        if (split > 0)         attachmentId=Integer.parseInt(loc.substring(split + 1));
+        if (attachmentId < 0) {
+          loc=null;
+        }
+ else {
+          BlogURI post=null;
+          if (loc.startsWith("blog://"))           post=new BlogURI(loc.substring(0,split));
+ else           post=new BlogURI("blog://" + loc.substring(0,split));
+          EntryContainer entry=BlogManager.instance().getArchive().getEntry(post);
+          if (entry != null) {
+            Attachment attachments[]=entry.getAttachments();
+            if (attachmentId < attachments.length) {
+              buf.append("<a href=\"blog.jsp?").append(PARAM_BLOG).append("=");
+              buf.append(blogFrom.toBase64()).append("&amp;");
+              buf.append(PARAM_ATTACHMENT).append("=").append(HTMLRenderer.sanitizeTagParam(loc));
+              buf.append("\" title=\"");
+              buf.append("'");
+              buf.append(HTMLRenderer.sanitizeTagParam(attachments[attachmentId].getName()));
+              buf.append("', ");
+              buf.append(attachments[attachmentId].getDataLength() / 1024).append("KB, ");
+              buf.append("of type ").append(HTMLRenderer.sanitizeTagParam(attachments[attachmentId].getMimeType()));
+              buf.append("\">");
+              buf.append(HTMLRenderer.sanitizeString(pn.getName()));
+              buf.append("</a>");
+            }
+ else {
+              loc=null;
+            }
+          }
+ else {
+            loc=null;
+          }
+        }
+      }
+ catch (      Exception e) {
+        e.printStackTrace();
+        loc=null;
+      }
+    }
+    if (loc == null)     buf.append(HTMLRenderer.sanitizeString(pn.getName()));
+  }
+ else   if (("eepsite".equals(type)) || ("i2p".equals(type)) || ("website".equals(type))|| ("http".equals(type))|| ("web".equals(type))) {
+    String loc=pn.getLocation();
+    if (loc != null) {
+      buf.append("<a href=\"externallink.jsp?");
+      if (pn.getNetwork() != null)       buf.append("schema=").append(Base64.encode(pn.getNetwork())).append("&amp;");
+      if (pn.getLocation() != null)       buf.append("location=").append(Base64.encode(pn.getLocation())).append("&amp;");
+      buf.append("\" title=\"View ").append(HTMLRenderer.sanitizeTagParam(pn.getLocation())).append("\">");
+    }
+    buf.append(HTMLRenderer.sanitizeString(pn.getName()));
+    if (loc != null) {
+      buf.append("</a>");
+    }
+  }
+ else {
+    buf.append("<a href=\"\" title=\"go somewhere? ").append(HTMLRenderer.sanitizeString(pn.toString())).append("\">");
+    buf.append(HTMLRenderer.sanitizeString(pn.getName())).append("</a>");
+  }
+  return buf.toString();
+}
