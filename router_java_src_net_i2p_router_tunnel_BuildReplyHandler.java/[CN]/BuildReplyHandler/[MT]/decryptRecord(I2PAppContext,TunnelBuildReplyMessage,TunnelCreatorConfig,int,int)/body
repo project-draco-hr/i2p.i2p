@@ -1,0 +1,27 @@
+{
+  Log log=ctx.logManager().getLog(getClass());
+  if (hop >= cfg.getLength()) {
+    if (log.shouldLog(Log.DEBUG))     log.debug("Record " + recordNum + "/"+ hop+ " is fake, so consider it valid...");
+    return 0;
+  }
+  ByteArray rec=reply.getRecord(recordNum);
+  int off=rec.getOffset();
+  for (int j=cfg.getLength() - 1; j >= hop; j--) {
+    HopConfig hopConfig=cfg.getConfig(j);
+    SessionKey replyKey=hopConfig.getReplyKey();
+    byte replyIV[]=hopConfig.getReplyIV().getData();
+    int replyIVOff=hopConfig.getReplyIV().getOffset();
+    if (log.shouldLog(Log.DEBUG))     log.debug("Decrypting record " + recordNum + "/"+ hop+ " with replyKey "+ replyKey.toBase64()+ "/"+ Base64.encode(replyIV,replyIVOff,16));
+    ctx.aes().decrypt(rec.getData(),off,rec.getData(),off,replyKey,replyIV,replyIVOff,TunnelBuildReplyMessage.RECORD_SIZE);
+  }
+  Hash h=ctx.sha().calculateHash(rec.getData(),off + Hash.HASH_LENGTH,TunnelBuildReplyMessage.RECORD_SIZE - Hash.HASH_LENGTH);
+  if (!DataHelper.eq(h.getData(),0,rec.getData(),off,Hash.HASH_LENGTH)) {
+    if (log.shouldLog(Log.DEBUG))     log.debug("Failed verification on " + recordNum + "/"+ hop+ ": "+ h.toBase64()+ " calculated, "+ Base64.encode(rec.getData(),off,Hash.HASH_LENGTH)+ " expected\n"+ "Record: "+ Base64.encode(rec.getData()));
+    return -1;
+  }
+ else {
+    int rv=(int)DataHelper.fromLong(rec.getData(),off + TunnelBuildReplyMessage.RECORD_SIZE - 1,1);
+    if (log.shouldLog(Log.DEBUG))     log.debug("Verified: " + rv + " for record "+ recordNum+ "/"+ hop);
+    return rv;
+  }
+}

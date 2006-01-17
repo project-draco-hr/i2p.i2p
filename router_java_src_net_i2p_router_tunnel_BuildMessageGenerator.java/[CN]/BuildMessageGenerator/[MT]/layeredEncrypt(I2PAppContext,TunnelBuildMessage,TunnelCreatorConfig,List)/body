@@ -1,0 +1,15 @@
+{
+  for (int i=0; i < TunnelBuildMessage.RECORD_COUNT; i++) {
+    ByteArray rec=msg.getRecord(i);
+    Integer hopNum=(Integer)order.get(i);
+    int hop=hopNum.intValue();
+    if (hop >= cfg.getLength())     continue;
+    for (int j=hop - 1; j >= 0; j--) {
+      HopConfig hopConfig=cfg.getConfig(j);
+      SessionKey key=hopConfig.getReplyKey();
+      byte iv[]=hopConfig.getReplyIV().getData();
+      int off=rec.getOffset();
+      ctx.aes().decrypt(rec.getData(),off,rec.getData(),off,key,iv,TunnelBuildMessage.RECORD_SIZE);
+    }
+  }
+}

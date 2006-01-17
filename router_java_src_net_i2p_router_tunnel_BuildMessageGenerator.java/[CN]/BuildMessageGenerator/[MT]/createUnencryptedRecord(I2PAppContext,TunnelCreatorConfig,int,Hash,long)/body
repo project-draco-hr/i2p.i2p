@@ -1,0 +1,40 @@
+{
+  if (hop < cfg.getLength()) {
+    HopConfig hopConfig=cfg.getConfig(hop);
+    Hash peer=cfg.getPeer(hop);
+    long recvTunnelId=hopConfig.getReceiveTunnel().getTunnelId();
+    long nextTunnelId=-1;
+    Hash nextPeer=null;
+    if (hop + 1 < cfg.getLength()) {
+      nextTunnelId=cfg.getConfig(hop + 1).getReceiveTunnel().getTunnelId();
+      nextPeer=cfg.getPeer(hop + 1);
+    }
+ else {
+      if ((replyTunnel >= 0) && (replyRouter != null)) {
+        nextTunnelId=replyTunnel;
+        nextPeer=replyRouter;
+      }
+ else {
+        nextTunnelId=0;
+        nextPeer=peer;
+      }
+    }
+    SessionKey layerKey=hopConfig.getLayerKey();
+    SessionKey ivKey=hopConfig.getIVKey();
+    SessionKey replyKey=hopConfig.getReplyKey();
+    byte iv[]=hopConfig.getReplyIV().getData();
+    if ((iv == null) || (iv.length != BuildRequestRecord.IV_SIZE)) {
+      iv=new byte[BuildRequestRecord.IV_SIZE];
+      ctx.random().nextBytes(iv);
+      hopConfig.getReplyIV().setData(iv);
+    }
+    boolean isInGW=(cfg.isInbound() && (hop == 0));
+    boolean isOutEnd=(!cfg.isInbound() && (hop + 1 >= cfg.getLength()));
+    BuildRequestRecord rec=new BuildRequestRecord();
+    rec.createRecord(ctx,recvTunnelId,peer,nextTunnelId,nextPeer,layerKey,ivKey,replyKey,iv,isInGW,isOutEnd);
+    return rec;
+  }
+ else {
+    return null;
+  }
+}

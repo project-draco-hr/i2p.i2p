@@ -1,0 +1,29 @@
+{
+  _peers=new Hash[4];
+  _pubKeys=new PublicKey[_peers.length];
+  _privKeys=new PrivateKey[_peers.length];
+  for (int i=0; i < _peers.length; i++) {
+    byte buf[]=new byte[Hash.HASH_LENGTH];
+    Arrays.fill(buf,(byte)i);
+    Hash h=new Hash(buf);
+    _peers[i]=h;
+    Object kp[]=ctx.keyGenerator().generatePKIKeypair();
+    _pubKeys[i]=(PublicKey)kp[0];
+    _privKeys[i]=(PrivateKey)kp[1];
+  }
+  TunnelCreatorConfig cfg=new TunnelCreatorConfig(null,_peers.length,false);
+  long now=ctx.clock().now();
+  for (int i=0; i < _peers.length; i++) {
+    cfg.setPeer(i,_peers[i]);
+    HopConfig hop=cfg.getConfig(i);
+    hop.setExpiration(now + 10 * 60 * 1000);
+    hop.setIVKey(ctx.keyGenerator().generateSessionKey());
+    hop.setLayerKey(ctx.keyGenerator().generateSessionKey());
+    hop.setReplyKey(ctx.keyGenerator().generateSessionKey());
+    byte iv[]=new byte[BuildRequestRecord.IV_SIZE];
+    Arrays.fill(iv,(byte)i);
+    hop.setReplyIV(new ByteArray(iv));
+    hop.setReceiveTunnelId(new TunnelId(i + 1));
+  }
+  return cfg;
+}

@@ -1,0 +1,32 @@
+{
+  Log log=ctx.logManager().getLog(getClass());
+  BuildRequestRecord rv=null;
+  int ourHop=-1;
+  for (int i=0; i < TunnelBuildMessage.RECORD_COUNT; i++) {
+    ByteArray rec=msg.getRecord(i);
+    int off=rec.getOffset();
+    int len=BuildRequestRecord.PEER_SIZE;
+    if (DataHelper.eq(ourHash.getData(),0,rec.getData(),off,len)) {
+      BuildRequestRecord req=new BuildRequestRecord();
+      boolean ok=req.decryptRecord(ctx,privKey,ourHash,rec);
+      if (ok)       rv=req;
+ else       return null;
+      ourHop=i;
+    }
+  }
+  if (rv == null) {
+    return null;
+  }
+  SessionKey replyKey=rv.readReplyKey();
+  byte iv[]=rv.readReplyIV();
+  int ivOff=0;
+  for (int i=0; i < TunnelBuildMessage.RECORD_COUNT; i++) {
+    if (i != ourHop) {
+      if (log.shouldLog(Log.DEBUG))       log.debug("Encrypting record " + i + "/? with replyKey "+ replyKey.toBase64()+ "/"+ Base64.encode(iv,ivOff,16));
+      ByteArray data=msg.getRecord(i);
+      ctx.aes().encrypt(data.getData(),data.getOffset(),data.getData(),data.getOffset(),replyKey,iv,ivOff,data.getValid());
+    }
+  }
+  msg.setRecord(ourHop,null);
+  return rv;
+}

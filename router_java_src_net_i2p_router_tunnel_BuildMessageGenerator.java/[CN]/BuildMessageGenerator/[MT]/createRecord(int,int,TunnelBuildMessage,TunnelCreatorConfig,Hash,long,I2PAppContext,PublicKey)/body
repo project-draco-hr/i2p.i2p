@@ -1,0 +1,16 @@
+{
+  Log log=ctx.logManager().getLog(getClass());
+  BuildRequestRecord req=null;
+  if ((!cfg.isInbound()) && (hop + 1 == cfg.getLength()))   req=createUnencryptedRecord(ctx,cfg,hop,replyRouter,replyTunnel);
+ else   req=createUnencryptedRecord(ctx,cfg,hop,null,-1);
+  byte encrypted[]=new byte[TunnelBuildMessage.RECORD_SIZE];
+  if (hop < cfg.getLength()) {
+    Hash peer=cfg.getPeer(hop);
+    if (peerKey == null)     throw new RuntimeException("hop = " + hop + " recordNum = "+ recordNum+ " len = "+ cfg.getLength());
+    req.encryptRecord(ctx,peerKey,peer,encrypted,0);
+  }
+ else {
+    ctx.random().nextBytes(encrypted);
+  }
+  msg.setRecord(recordNum,new ByteArray(encrypted));
+}
