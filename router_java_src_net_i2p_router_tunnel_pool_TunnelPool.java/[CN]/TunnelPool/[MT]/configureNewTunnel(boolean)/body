@@ -1,0 +1,36 @@
+{
+  TunnelPoolSettings settings=getSettings();
+  List peers=null;
+  long expiration=_context.clock().now() + settings.getDuration();
+  if (!forceZeroHop) {
+    peers=_peerSelector.selectPeers(_context,settings);
+    if ((peers == null) || (peers.size() <= 0)) {
+      if (peers == null) {
+        if (_log.shouldLog(Log.ERROR))         _log.error("No peers to put in the new tunnel! selectPeers returned null!  boo, hiss!");
+      }
+ else {
+        if (_log.shouldLog(Log.ERROR))         _log.error("No peers to put in the new tunnel! selectPeers returned an empty list?!");
+      }
+      return null;
+    }
+  }
+ else {
+    peers=new ArrayList(1);
+    peers.add(_context.routerHash());
+  }
+  PooledTunnelCreatorConfig cfg=new PooledTunnelCreatorConfig(_context,peers.size(),settings.isInbound(),settings.getDestination());
+  for (int i=0; i < peers.size(); i++) {
+    int j=peers.size() - 1 - i;
+    cfg.setPeer(j,(Hash)peers.get(i));
+    HopConfig hop=cfg.getConfig(j);
+    hop.setExpiration(expiration);
+    hop.setIVKey(_context.keyGenerator().generateSessionKey());
+    hop.setLayerKey(_context.keyGenerator().generateSessionKey());
+  }
+  cfg.setExpiration(expiration);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Config contains " + peers + ": "+ cfg);
+synchronized (_inProgress) {
+    _inProgress.add(cfg);
+  }
+  return cfg;
+}

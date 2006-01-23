@@ -1,0 +1,29 @@
+{
+  StringBuffer buf=null;
+  if (_log.shouldLog(Log.DEBUG)) {
+    buf=new StringBuffer(128);
+    buf.append("Allowed: ");
+  }
+  int allowed=20;
+  String prop=_context.getProperty("router.tunnelConcurrentBuilds");
+  if (prop != null)   try {
+    allowed=Integer.valueOf(prop).intValue();
+  }
+ catch (  NumberFormatException nfe) {
+  }
+  int concurrent=0;
+synchronized (_currentlyBuilding) {
+    concurrent=_currentlyBuilding.size();
+    allowed-=concurrent;
+    if (buf != null)     buf.append(allowed).append(" ").append(_currentlyBuilding.toString());
+  }
+  if (buf != null)   _log.debug(buf.toString());
+  _context.statManager().addRateData("tunnel.concurrentBuilds",concurrent,0);
+  long lag=_context.jobQueue().getMaxLag();
+  if ((lag > 2000) && (_context.router().getUptime() > 5 * 60 * 1000)) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Too lagged [" + lag + "], don't allow building");
+    _context.statManager().addRateData("tunnel.concurrentBuildsLagged",concurrent,lag);
+    return 0;
+  }
+  return allowed;
+}

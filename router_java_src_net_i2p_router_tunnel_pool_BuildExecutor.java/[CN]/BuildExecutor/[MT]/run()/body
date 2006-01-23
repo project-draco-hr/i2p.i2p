@@ -1,0 +1,54 @@
+{
+  _isRunning=true;
+  List wanted=new ArrayList(8);
+  List pools=new ArrayList(8);
+  while (!_manager.isShutdown()) {
+    try {
+      _manager.listPools(pools);
+      for (int i=0; i < pools.size(); i++) {
+        TunnelPool pool=(TunnelPool)pools.get(i);
+        int howMany=pool.countHowManyToBuild();
+        for (int j=0; j < howMany; j++)         wanted.add(pool);
+      }
+      int allowed=allowed();
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Allowed: " + allowed + " wanted: "+ wanted);
+      allowed=buildZeroHopTunnels(wanted,allowed);
+      if ((allowed > 0) && (wanted.size() > 0)) {
+        Collections.shuffle(wanted,_context.random());
+        for (int i=0; (i < allowed) && (wanted.size() > 0); i++) {
+          TunnelPool pool=(TunnelPool)wanted.remove(0);
+          PooledTunnelCreatorConfig cfg=pool.configureNewTunnel();
+          if (cfg != null) {
+            if (_log.shouldLog(Log.DEBUG))             _log.debug("Configuring new tunnel " + i + " for "+ pool+ ": "+ cfg);
+synchronized (_currentlyBuilding) {
+              _currentlyBuilding.add(cfg);
+            }
+            buildTunnel(pool,cfg);
+            if (cfg.getLength() <= 1)             i--;
+          }
+ else {
+            i--;
+          }
+        }
+      }
+ else {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Nothin' doin, wait for a while");
+        try {
+synchronized (_currentlyBuilding) {
+            if (allowed <= 0)             _currentlyBuilding.wait(_context.random().nextInt(5 * 1000));
+ else             _currentlyBuilding.wait(_context.random().nextInt(30 * 1000));
+          }
+        }
+ catch (        InterruptedException ie) {
+        }
+      }
+      wanted.clear();
+      pools.clear();
+    }
+ catch (    Exception e) {
+      if (_log.shouldLog(Log.CRIT))       _log.log(Log.CRIT,"B0rked in the tunnel builder",e);
+    }
+  }
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Done building");
+  _isRunning=false;
+}

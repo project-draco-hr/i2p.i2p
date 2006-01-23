@@ -1,12 +1,10 @@
 {
   _alive=true;
-  _refreshJob.getTiming().setStartAfter(_context.clock().now() + 60 * 1000);
-  _context.jobQueue().addJob(_refreshJob);
-  int added=refreshBuilders(0,0);
-  if (added <= 0) {
+  _manager.getExecutor().repoll();
+  if (_settings.isInbound() && (_settings.getDestination() != null)) {
     LeaseSet ls=null;
 synchronized (_tunnels) {
-      if (_settings.isInbound() && (_settings.getDestination() != null))       ls=locked_buildNewLeaseSet();
+      ls=locked_buildNewLeaseSet();
     }
     if (ls != null)     _context.clientManager().requestLeaseSet(_settings.getDestination(),ls);
   }

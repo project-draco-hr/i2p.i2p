@@ -8,10 +8,11 @@
   payload.setRecipient(_target);
   payload.setDeliveryInstructions(instructions);
   payload.setRequestAck(false);
-  payload.setExpiration(getContext().clock().now() + RequestTunnelJob.HOP_REQUEST_TIMEOUT);
+  payload.setExpiration(_payload.getMessageExpiration());
+  int timeout=(int)(payload.getExpiration() - getContext().clock().now());
   GarlicMessage msg=GarlicMessageBuilder.buildMessage(getContext(),payload,_sentKey,_sentTags);
-  OutNetMessage dummyMessage=getContext().messageRegistry().registerPending(_replySelector,_onReply,_onTimeout,TIMEOUT);
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Scheduling timeout job (" + _onTimeout + ") to be run in "+ TIMEOUT+ "ms");
+  OutNetMessage dummyMessage=getContext().messageRegistry().registerPending(_replySelector,_onReply,_onTimeout,timeout);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Scheduling timeout job (" + _onTimeout + ") to be run in "+ timeout+ "ms");
   TunnelInfo out=getContext().tunnelManager().selectOutboundTunnel();
   if (out == null) {
     if (_onTimeout != null)     getContext().jobQueue().addJob(_onTimeout);

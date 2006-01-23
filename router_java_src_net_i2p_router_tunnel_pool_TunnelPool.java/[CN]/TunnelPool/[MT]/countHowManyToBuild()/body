@@ -1,0 +1,36 @@
+{
+  int wanted=getSettings().getBackupQuantity() + getSettings().getQuantity();
+  boolean allowZeroHop=((getSettings().getLength() + getSettings().getLengthVariance()) <= 0);
+  long expireAfter=_context.clock().now() + (2 * _settings.getRebuildPeriod());
+  expireAfter+=_expireSkew;
+  long earliestExpire=-1;
+  int live=0;
+  int fallback=0;
+  int usable=0;
+synchronized (_tunnels) {
+    boolean enough=_tunnels.size() > wanted;
+    for (int i=0; i < _tunnels.size(); i++) {
+      TunnelInfo info=(TunnelInfo)_tunnels.get(i);
+      if (info.getExpiration() > expireAfter) {
+        if (allowZeroHop || (info.getLength() > 1)) {
+          usable++;
+          if ((info.getExpiration() < earliestExpire) || (earliestExpire < 0))           earliestExpire=info.getExpiration();
+        }
+      }
+      live++;
+      if ((info.getLength() <= 1) && (info.getExpiration() > expireAfter))       fallback++;
+    }
+  }
+  if (usable < wanted) {
+    earliestExpire=0;
+  }
+  int inProgress=0;
+synchronized (_inProgress) {
+    inProgress=_inProgress.size();
+    for (int i=0; i < _inProgress.size(); i++) {
+      PooledTunnelCreatorConfig cfg=(PooledTunnelCreatorConfig)_inProgress.get(i);
+      if (cfg.getLength() <= 1)       fallback++;
+    }
+  }
+  return countHowManyToBuild(allowZeroHop,earliestExpire,usable,wanted,inProgress,fallback);
+}

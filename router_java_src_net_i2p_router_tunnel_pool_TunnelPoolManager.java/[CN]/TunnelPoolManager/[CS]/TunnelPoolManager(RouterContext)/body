@@ -5,18 +5,12 @@
   ctx.inNetMessagePool().registerHandlerJobBuilder(TunnelCreateMessage.MESSAGE_TYPE,builder);
   _clientInboundPools=new HashMap(4);
   _clientOutboundPools=new HashMap(4);
-  _outstandingBuilds=0;
-  _maxOutstandingBuilds=DEFAULT_MAX_OUTSTANDING_BUILDS;
-  String max=ctx.getProperty(PROP_MAX_OUTSTANDING_BUILDS,String.valueOf(DEFAULT_MAX_OUTSTANDING_BUILDS));
-  if (max != null) {
-    try {
-      _maxOutstandingBuilds=Integer.parseInt(max);
-    }
- catch (    NumberFormatException nfe) {
-      _maxOutstandingBuilds=DEFAULT_MAX_OUTSTANDING_BUILDS;
-    }
-  }
   _loadTestManager=new LoadTestManager(_context);
+  _isShutdown=false;
+  _executor=new BuildExecutor(ctx,this);
+  I2PThread execThread=new I2PThread(_executor,"BuildExecutor");
+  execThread.setDaemon(true);
+  execThread.start();
   ctx.statManager().createRateStat("tunnel.testSuccessTime","How long do successful tunnel tests take?","Tunnels",new long[]{10 * 60 * 1000l,60 * 60 * 1000l,3 * 60 * 60* 1000l,24 * 60 * 60* 1000l});
   ctx.statManager().createRateStat("tunnel.participatingTunnels","How many tunnels are we participating in?","Tunnels",new long[]{10 * 60 * 1000l,60 * 60 * 1000l,3 * 60 * 60* 1000l,24 * 60 * 60* 1000l});
 }

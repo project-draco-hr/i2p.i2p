@@ -1,4 +1,5 @@
 {
+  boolean avoidZeroHop=((getSettings().getLength() + getSettings().getLengthVariance()) > 0);
   long period=curPeriod();
 synchronized (_tunnels) {
     if (_lastSelectionPeriod == period) {
@@ -11,6 +12,15 @@ synchronized (_tunnels) {
     }
  else {
       Collections.shuffle(_tunnels,_context.random());
+      if (avoidZeroHop) {
+        for (int i=0; i < _tunnels.size(); i++) {
+          TunnelInfo info=(TunnelInfo)_tunnels.get(i);
+          if ((info.getLength() > 1) && (info.getExpiration() > _context.clock().now())) {
+            _lastSelected=info;
+            return info;
+          }
+        }
+      }
       for (int i=0; i < _tunnels.size(); i++) {
         TunnelInfo info=(TunnelInfo)_tunnels.get(i);
         if (info.getExpiration() > _context.clock().now()) {

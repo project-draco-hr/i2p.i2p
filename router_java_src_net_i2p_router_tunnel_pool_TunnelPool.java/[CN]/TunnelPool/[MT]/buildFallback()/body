@@ -1,10 +1,16 @@
 {
   int quantity=_settings.getBackupQuantity() + _settings.getQuantity();
-  int usable=countUsableTunnels(1);
-  if (usable >= quantity)   return false;
-  if ((usable == 0) && (_settings.getAllowZeroHop())) {
+  int usable=0;
+synchronized (_tunnels) {
+    usable=_tunnels.size();
+  }
+  if (usable > 0)   return false;
+  if (_settings.getAllowZeroHop()) {
+    if ((_settings.getLength() + _settings.getLengthVariance() > 0) && (_settings.getDestination() != null) && (_context.profileOrganizer().countActivePeers() > 0)) {
+      return false;
+    }
     if (_log.shouldLog(Log.INFO))     _log.info(toString() + ": building a fallback tunnel (usable: " + usable+ " needed: "+ quantity+ ")");
-    _builder.buildTunnel(_context,this,true);
+    _manager.getExecutor().buildTunnel(this,configureNewTunnel(true));
     return true;
   }
   return false;

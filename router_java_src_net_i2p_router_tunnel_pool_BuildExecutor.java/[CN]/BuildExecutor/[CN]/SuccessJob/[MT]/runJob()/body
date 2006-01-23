@@ -1,0 +1,18 @@
+{
+  _log.debug("Created successfully: " + _cfg);
+  if (_cfg.isInbound()) {
+    getContext().tunnelDispatcher().joinInbound(_cfg);
+  }
+ else {
+    getContext().tunnelDispatcher().joinOutbound(_cfg);
+  }
+  _pool.addTunnel(_cfg);
+  _pool.getManager().buildComplete(_cfg);
+  TestJob testJob=(_cfg.getLength() > 1 ? new TestJob(getContext(),_cfg,_pool) : null);
+  ExpireJob expireJob=new ExpireJob(getContext(),_cfg,_pool);
+  _cfg.setTunnelPool(_pool);
+  _cfg.setTestJob(testJob);
+  _cfg.setExpireJob(expireJob);
+  if (_cfg.getLength() > 1)   getContext().jobQueue().addJob(testJob);
+  getContext().jobQueue().addJob(expireJob);
+}

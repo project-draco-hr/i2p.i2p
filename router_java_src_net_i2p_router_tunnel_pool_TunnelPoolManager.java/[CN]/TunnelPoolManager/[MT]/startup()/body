@@ -1,10 +1,15 @@
 {
-  TunnelBuilder builder=new TunnelBuilder();
+  _isShutdown=false;
+  if (!_executor.isRunning()) {
+    I2PThread t=new I2PThread(_executor,"BuildExecutor");
+    t.setDaemon(true);
+    t.start();
+  }
   ExploratoryPeerSelector selector=new ExploratoryPeerSelector();
   TunnelPoolSettings inboundSettings=new TunnelPoolSettings();
   inboundSettings.setIsExploratory(true);
   inboundSettings.setIsInbound(true);
-  _inboundExploratory=new TunnelPool(_context,this,inboundSettings,selector,builder);
+  _inboundExploratory=new TunnelPool(_context,this,inboundSettings,selector);
   _inboundExploratory.startup();
   try {
     Thread.sleep(3 * 1000);
@@ -14,7 +19,7 @@
   TunnelPoolSettings outboundSettings=new TunnelPoolSettings();
   outboundSettings.setIsExploratory(true);
   outboundSettings.setIsInbound(false);
-  _outboundExploratory=new TunnelPool(_context,this,outboundSettings,selector,builder);
+  _outboundExploratory=new TunnelPool(_context,this,outboundSettings,selector);
   _outboundExploratory.startup();
   _context.jobQueue().addJob(new BootstrapPool(_context,_inboundExploratory));
   _context.jobQueue().addJob(new BootstrapPool(_context,_outboundExploratory));
