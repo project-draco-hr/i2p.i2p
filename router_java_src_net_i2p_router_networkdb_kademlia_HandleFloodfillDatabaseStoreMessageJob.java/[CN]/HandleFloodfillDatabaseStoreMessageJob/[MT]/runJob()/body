@@ -1,5 +1,6 @@
 {
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Handling database store message");
+  long recvBegin=System.currentTimeMillis();
   String invalidMessage=null;
   boolean wasNew=false;
   if (_message.getValueType() == DatabaseStoreMessage.KEY_TYPE_LEASESET) {
@@ -8,7 +9,7 @@
       LeaseSet ls=_message.getLeaseSet();
       ls.setReceivedAsPublished(true);
       LeaseSet match=getContext().netDb().store(_message.getKey(),_message.getLeaseSet());
-      if (match == null) {
+      if ((match == null) || (match.getEarliestLeaseDate() < _message.getLeaseSet().getEarliestLeaseDate())) {
         wasNew=true;
       }
  else {
@@ -24,8 +25,8 @@
     getContext().statManager().addRateData("netDb.storeRouterInfoHandled",1,0);
     if (_log.shouldLog(Log.INFO))     _log.info("Handling dbStore of router " + _message.getKey() + " with publishDate of "+ new Date(_message.getRouterInfo().getPublished()));
     try {
-      Object match=getContext().netDb().store(_message.getKey(),_message.getRouterInfo());
-      wasNew=(null == match);
+      RouterInfo match=getContext().netDb().store(_message.getKey(),_message.getRouterInfo());
+      wasNew=((null == match) || (match.getPublished() < _message.getRouterInfo().getPublished()));
       getContext().profileManager().heardAbout(_message.getKey());
     }
  catch (    IllegalArgumentException iae) {
@@ -35,15 +36,26 @@
  else {
     if (_log.shouldLog(Log.ERROR))     _log.error("Invalid DatabaseStoreMessage data type - " + _message.getValueType() + ": "+ _message);
   }
+  long recvEnd=System.currentTimeMillis();
+  getContext().statManager().addRateData("netDb.storeRecvTime",recvEnd - recvBegin,0);
   if (_message.getReplyToken() > 0)   sendAck();
+  long ackEnd=System.currentTimeMillis();
   if (_from != null)   _fromHash=_from.getHash();
   if (_fromHash != null) {
     if (invalidMessage == null) {
       getContext().profileManager().dbStoreReceived(_fromHash,wasNew);
-      getContext().statManager().addRateData("netDb.storeHandled",1,0);
+      getContext().statManager().addRateData("netDb.storeHandled",ackEnd - recvEnd,0);
       if (FloodfillNetworkDatabaseFacade.floodfillEnabled(getContext()) && (_message.getReplyToken() > 0)) {
-        if (_message.getValueType() == DatabaseStoreMessage.KEY_TYPE_LEASESET)         _facade.flood(_message.getLeaseSet());
- else         _facade.flood(_message.getRouterInfo());
+        if (wasNew) {
+          long floodBegin=System.currentTimeMillis();
+          if (_message.getValueType() == DatabaseStoreMessage.KEY_TYPE_LEASESET)           _facade.flood(_message.getLeaseSet());
+ else           _facade.flood(_message.getRouterInfo());
+          long floodEnd=System.currentTimeMillis();
+          getContext().statManager().addRateData("netDb.storeFloodNew",floodEnd - floodBegin,0);
+        }
+ else {
+          getContext().statManager().addRateData("netDb.storeFloodOld",1,0);
+        }
       }
     }
  else {

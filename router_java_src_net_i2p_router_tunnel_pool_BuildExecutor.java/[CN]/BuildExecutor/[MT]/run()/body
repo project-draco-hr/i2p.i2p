@@ -13,33 +13,41 @@
       int allowed=allowed();
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Allowed: " + allowed + " wanted: "+ wanted);
       allowed=buildZeroHopTunnels(wanted,allowed);
-      if ((allowed > 0) && (wanted.size() > 0)) {
-        Collections.shuffle(wanted,_context.random());
-        for (int i=0; (i < allowed) && (wanted.size() > 0); i++) {
-          TunnelPool pool=(TunnelPool)wanted.remove(0);
-          PooledTunnelCreatorConfig cfg=pool.configureNewTunnel();
-          if (cfg != null) {
-            if (_log.shouldLog(Log.DEBUG))             _log.debug("Configuring new tunnel " + i + " for "+ pool+ ": "+ cfg);
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Zero hops built, Allowed: " + allowed + " wanted: "+ wanted);
+      TunnelManagerFacade mgr=_context.tunnelManager();
+      if ((mgr == null) || (mgr.selectInboundTunnel() == null) || (mgr.selectOutboundTunnel() == null)) {
 synchronized (_currentlyBuilding) {
-              _currentlyBuilding.add(cfg);
-            }
-            buildTunnel(pool,cfg);
-            if (cfg.getLength() <= 1)             i--;
-          }
- else {
-            i--;
-          }
+          _currentlyBuilding.wait(5 * 1000 + _context.random().nextInt(5 * 1000));
         }
       }
  else {
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("Nothin' doin, wait for a while");
-        try {
+        if ((allowed > 0) && (wanted.size() > 0)) {
+          Collections.shuffle(wanted,_context.random());
+          for (int i=0; (i < allowed) && (wanted.size() > 0); i++) {
+            TunnelPool pool=(TunnelPool)wanted.remove(0);
+            PooledTunnelCreatorConfig cfg=pool.configureNewTunnel();
+            if (cfg != null) {
+              if (_log.shouldLog(Log.DEBUG))               _log.debug("Configuring new tunnel " + i + " for "+ pool+ ": "+ cfg);
 synchronized (_currentlyBuilding) {
-            if (allowed <= 0)             _currentlyBuilding.wait(_context.random().nextInt(5 * 1000));
- else             _currentlyBuilding.wait(_context.random().nextInt(30 * 1000));
+                _currentlyBuilding.add(cfg);
+              }
+              buildTunnel(pool,cfg);
+            }
+ else {
+              i--;
+            }
           }
         }
- catch (        InterruptedException ie) {
+ else {
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("Nothin' doin, wait for a while");
+          try {
+synchronized (_currentlyBuilding) {
+              if (allowed <= 0)               _currentlyBuilding.wait(_context.random().nextInt(5 * 1000));
+ else               _currentlyBuilding.wait(_context.random().nextInt(30 * 1000));
+            }
+          }
+ catch (          InterruptedException ie) {
+          }
         }
       }
       wanted.clear();

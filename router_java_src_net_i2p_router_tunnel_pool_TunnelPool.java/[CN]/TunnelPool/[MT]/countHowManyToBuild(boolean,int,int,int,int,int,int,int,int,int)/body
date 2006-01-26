@@ -1,0 +1,76 @@
+{
+  int rv=0;
+  int remainingWanted=standardAmount - expireLater;
+  if (allowZeroHop)   remainingWanted-=fallback;
+  for (int i=0; i < expire270s && remainingWanted > 0; i++)   remainingWanted--;
+  if (remainingWanted > 0) {
+    for (int i=0; i < expire210s && remainingWanted > 0; i++) {
+      remainingWanted--;
+    }
+    if (remainingWanted > 0) {
+      for (int i=0; i < expire150s && remainingWanted > 0; i++) {
+        remainingWanted--;
+      }
+      if (remainingWanted > 0) {
+        for (int i=0; i < expire90s && remainingWanted > 0; i++) {
+          remainingWanted--;
+        }
+        if (remainingWanted > 0) {
+          for (int i=0; i < expire30s && remainingWanted > 0; i++) {
+            remainingWanted--;
+          }
+          if (remainingWanted > 0) {
+            rv=(((expire270s > 0) && _context.random().nextBoolean()) ? 1 : 0);
+            rv+=expire210s;
+            rv+=2 * expire150s;
+            rv+=4 * expire90s;
+            rv+=6 * expire30s;
+            rv+=6 * remainingWanted;
+            rv-=inProgress;
+            rv-=expireLater;
+          }
+ else {
+            rv=(((expire270s > 0) && _context.random().nextBoolean()) ? 1 : 0);
+            rv+=expire210s;
+            rv+=2 * expire150s;
+            rv+=4 * expire90s;
+            rv+=6 * expire30s;
+            rv-=inProgress;
+            rv-=expireLater;
+          }
+        }
+ else {
+          rv=(((expire270s > 0) && _context.random().nextBoolean()) ? 1 : 0);
+          rv+=expire210s;
+          rv+=2 * expire150s;
+          rv+=4 * expire90s;
+          rv-=inProgress;
+          rv-=expireLater;
+        }
+      }
+ else {
+        rv=(((expire270s > 0) && _context.random().nextBoolean()) ? 1 : 0);
+        rv+=expire210s;
+        rv+=2 * expire150s;
+        rv-=inProgress;
+        rv-=expireLater;
+      }
+    }
+ else {
+      rv=(((expire270s > 0) && _context.random().nextBoolean()) ? 1 : 0);
+      rv+=expire210s;
+      rv-=inProgress;
+      rv-=expireLater;
+    }
+  }
+ else {
+    rv=(((expire270s > 0) && _context.random().nextBoolean()) ? 1 : 0);
+    rv-=inProgress;
+    rv-=expireLater;
+  }
+  if (allowZeroHop && (rv > standardAmount))   rv=standardAmount;
+  if (rv + inProgress + expireLater+ fallback > 4 * standardAmount)   rv=4 * standardAmount - inProgress - expireLater - fallback;
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Count: rv: " + rv + " allow? "+ allowZeroHop+ " 30s "+ expire30s+ " 90s "+ expire90s+ " 150s "+ expire150s+ " 210s "+ expire210s+ " 270s "+ expire270s+ " later "+ expireLater+ " std "+ standardAmount+ " inProgress "+ inProgress+ " fallback "+ fallback+ " for "+ toString());
+  if (rv < 0)   return 0;
+  return rv;
+}

@@ -4,13 +4,14 @@ synchronized (LeaveTunnel.this) {
     _configs.add(cfg);
     _times.add(dropTime);
   }
+  if (_log.shouldLog(Log.INFO)) {
+    long now=getContext().clock().now();
+    _log.info("Scheduling leave in " + DataHelper.formatDuration(dropTime.longValue() - now) + ": "+ cfg);
+  }
   long oldAfter=getTiming().getStartAfter();
-  if (oldAfter < getContext().clock().now()) {
+  if ((oldAfter <= 0) || (oldAfter < getContext().clock().now()) || (oldAfter >= dropTime.longValue())) {
     getTiming().setStartAfter(dropTime.longValue());
     getContext().jobQueue().addJob(LeaveTunnel.this);
-  }
- else   if (oldAfter >= dropTime.longValue()) {
-    getTiming().setStartAfter(dropTime.longValue());
   }
  else {
   }

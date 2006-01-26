@@ -1,28 +1,45 @@
 {
   int wanted=getSettings().getBackupQuantity() + getSettings().getQuantity();
   boolean allowZeroHop=((getSettings().getLength() + getSettings().getLengthVariance()) <= 0);
-  long expireAfter=_context.clock().now() + (2 * _settings.getRebuildPeriod());
-  expireAfter+=_expireSkew;
-  long earliestExpire=-1;
-  int live=0;
+  long expireAfter=_context.clock().now() + _expireSkew;
+  int expire30s=0;
+  int expire90s=0;
+  int expire150s=0;
+  int expire210s=0;
+  int expire270s=0;
+  int expireLater=0;
   int fallback=0;
-  int usable=0;
 synchronized (_tunnels) {
     boolean enough=_tunnels.size() > wanted;
     for (int i=0; i < _tunnels.size(); i++) {
       TunnelInfo info=(TunnelInfo)_tunnels.get(i);
-      if (info.getExpiration() > expireAfter) {
-        if (allowZeroHop || (info.getLength() > 1)) {
-          usable++;
-          if ((info.getExpiration() < earliestExpire) || (earliestExpire < 0))           earliestExpire=info.getExpiration();
+      if (allowZeroHop || (info.getLength() > 1)) {
+        long timeToExpire=info.getExpiration() - expireAfter;
+        if (timeToExpire <= 0) {
+        }
+ else         if (timeToExpire <= 30 * 1000) {
+          expire30s++;
+        }
+ else         if (timeToExpire <= 90 * 1000) {
+          expire90s++;
+        }
+ else         if (timeToExpire <= 150 * 1000) {
+          expire150s++;
+        }
+ else         if (timeToExpire <= 210 * 1000) {
+          expire210s++;
+        }
+ else         if (timeToExpire <= 270 * 1000) {
+          expire270s++;
+        }
+ else {
+          expireLater++;
         }
       }
-      live++;
-      if ((info.getLength() <= 1) && (info.getExpiration() > expireAfter))       fallback++;
+ else       if (info.getExpiration() > expireAfter) {
+        fallback++;
+      }
     }
-  }
-  if (usable < wanted) {
-    earliestExpire=0;
   }
   int inProgress=0;
 synchronized (_inProgress) {
@@ -32,5 +49,5 @@ synchronized (_inProgress) {
       if (cfg.getLength() <= 1)       fallback++;
     }
   }
-  return countHowManyToBuild(allowZeroHop,earliestExpire,usable,wanted,inProgress,fallback);
+  return countHowManyToBuild(allowZeroHop,expire30s,expire90s,expire150s,expire210s,expire270s,expireLater,wanted,inProgress,fallback);
 }

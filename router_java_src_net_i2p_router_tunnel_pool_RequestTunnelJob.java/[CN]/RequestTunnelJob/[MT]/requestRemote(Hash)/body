@@ -4,8 +4,9 @@
   TunnelId nextTunnel=(nextHop != null ? nextHop.getReceiveTunnel() : null);
   TunnelInfo replyTunnel=getContext().tunnelManager().selectInboundTunnel();
   if (replyTunnel == null) {
-    if (_log.shouldLog(Log.ERROR))     _log.error("No inbound tunnels to build tunnels with!");
+    if (_log.shouldLog(Log.WARN))     _log.warn("No inbound tunnels to build tunnels with!");
     tunnelFail();
+    return;
   }
   Hash replyGateway=replyTunnel.getPeer(0);
   SessionKey replyKey=getContext().keyGenerator().generateSessionKey();
@@ -23,6 +24,9 @@
   msg.setReplyTag(replyTag);
   int duration=10 * 60;
   msg.setDurationSeconds(duration);
+  long now=getContext().clock().now();
+  if (_isExploratory)   msg.setMessageExpiration(now + HOP_REQUEST_TIMEOUT_EXPLORATORY);
+ else   msg.setMessageExpiration(now + HOP_REQUEST_TIMEOUT_CLIENT);
   if (_currentHop == 0)   msg.setIsGateway(true);
  else   msg.setIsGateway(false);
   if (_log.shouldLog(Log.DEBUG))   _log.debug("** Send remote request to " + peer.toBase64().substring(0,4) + " using nonce "+ msg.getNonce()+ " with replies on "+ replyTunnel);

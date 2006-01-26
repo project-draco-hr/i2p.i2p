@@ -1,20 +1,42 @@
 {
+  long sortTime=0;
+  int coalesceTime=0;
+  long thresholdTime=0;
+  long placeTime=0;
+  int profileCount=0;
+  long uptime=_context.router().getUptime();
+  long expireOlderThan=-1;
+  if (uptime > 60 * 60 * 1000) {
+    expireOlderThan=_context.clock().now() - 6 * 60 * 60* 1000;
+  }
+  long start=System.currentTimeMillis();
 synchronized (_reorganizeLock) {
     Set allPeers=_strictCapacityOrder;
     Set reordered=new TreeSet(_comp);
+    long sortStart=System.currentTimeMillis();
     for (Iterator iter=_strictCapacityOrder.iterator(); iter.hasNext(); ) {
       PeerProfile prof=(PeerProfile)iter.next();
-      if (shouldCoalesce)       prof.coalesceStats();
+      if ((expireOlderThan > 0) && (prof.getLastSendSuccessful() <= expireOlderThan))       continue;
+      if (shouldCoalesce) {
+        long coalesceStart=System.currentTimeMillis();
+        prof.coalesceStats();
+        coalesceTime+=(int)(System.currentTimeMillis() - coalesceStart);
+      }
       reordered.add(prof);
+      profileCount++;
     }
+    sortTime=System.currentTimeMillis() - sortStart;
     _strictCapacityOrder=reordered;
+    long thresholdStart=System.currentTimeMillis();
     locked_calculateThresholds(allPeers);
+    thresholdTime=System.currentTimeMillis() - thresholdStart;
     _failingPeers.clear();
     _fastPeers.clear();
     _highCapacityPeers.clear();
     _notFailingPeers.clear();
     _notFailingPeersList.clear();
     _wellIntegratedPeers.clear();
+    long placeStart=System.currentTimeMillis();
     for (Iterator iter=allPeers.iterator(); iter.hasNext(); ) {
       PeerProfile profile=(PeerProfile)iter.next();
       locked_placeProfile(profile);
@@ -22,6 +44,7 @@ synchronized (_reorganizeLock) {
     locked_unfailAsNecessary();
     locked_promoteFastAsNecessary();
     Collections.shuffle(_notFailingPeersList,_context.random());
+    placeTime=System.currentTimeMillis() - placeStart;
     if (_log.shouldLog(Log.DEBUG)) {
       _log.debug("Profiles reorganized.  averages: [integration: " + _thresholdIntegrationValue + ", capacity: "+ _thresholdCapacityValue+ ", speed: "+ _thresholdSpeedValue+ "]");
       StringBuffer buf=new StringBuffer(512);
@@ -33,4 +56,10 @@ synchronized (_reorganizeLock) {
       _log.debug("fast: " + _fastPeers.values());
     }
   }
+  long total=System.currentTimeMillis() - start;
+  _context.statManager().addRateData("peer.profileSortTime",sortTime,profileCount);
+  _context.statManager().addRateData("peer.profileCoalesceTime",coalesceTime,profileCount);
+  _context.statManager().addRateData("peer.profileThresholdTime",thresholdTime,profileCount);
+  _context.statManager().addRateData("peer.profilePlaceTime",placeTime,profileCount);
+  _context.statManager().addRateData("peer.profileReorgTime",total,profileCount);
 }
