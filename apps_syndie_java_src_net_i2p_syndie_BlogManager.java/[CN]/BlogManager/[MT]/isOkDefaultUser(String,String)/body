@@ -1,0 +1,24 @@
+{
+  User t=new User(_context);
+  Hash userHash=_context.sha().calculateHash(DataHelper.getUTF8(defaultUser));
+  File userFile=new File(_userDir,Base64.encode(userHash.getData()));
+  if (userFile.exists()) {
+    Properties props=loadUserProps(userFile);
+    if (props == null) {
+      _log.error("Error reading the default user file: " + userFile);
+      return false;
+    }
+    String ok=t.login(defaultUser,defaultPass,props);
+    if (User.LOGIN_OK.equals(ok)) {
+      return true;
+    }
+ else {
+      _log.error("Error logging into the default user, so configuration change rejected: " + ok);
+      return false;
+    }
+  }
+ else {
+    _log.error("Not setting the default user to a nonexistant user [" + defaultUser + "]");
+    return false;
+  }
+}

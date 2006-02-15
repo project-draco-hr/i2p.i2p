@@ -1,62 +1,12 @@
 {
+  int included=0;
   if (entry.getAttachments() != null) {
     for (int i=0; i < _entry.getAttachments().length; i++) {
       Attachment a=_entry.getAttachments()[i];
-      out.write("    <enclosure url=\"" + urlPrefix + sanitizeXML(getAttachmentURL(i))+ "\" length=\""+ a.getDataLength()+ "\" type=\""+ sanitizeTagParam(a.getMimeType())+ "\" syndietype=\"attachment\" />\n");
+      out.write("    <media:content url=\"" + urlPrefix + sanitizeXML(getAttachmentURL(i))+ "\" fileSize=\""+ a.getDataLength()+ "\" type=\""+ sanitizeTagParam(a.getMimeType())+ "\">");
+      out.write("    </media:content>\n");
+      if (included == 0)       out.write("    <enclosure url=\"" + urlPrefix + sanitizeXML(getAttachmentURL(i))+ "\" length=\""+ a.getDataLength()+ "\" type=\""+ sanitizeTagParam(a.getMimeType())+ "\" syndietype=\"attachment\" />\n");
+      included++;
     }
-  }
-  if (_blogs.size() > 0) {
-    for (int i=0; i < _blogs.size(); i++) {
-      Blog b=(Blog)_blogs.get(i);
-      out.write("    <enclosure url=\"" + urlPrefix + sanitizeXML(getPageURL(new Hash(Base64.decode(b.hash)),b.tag,b.entryId,-1,-1,(_user != null ? _user.getShowExpanded() : false),(_user != null ? _user.getShowImages() : false)))+ "\" length=\"1\" type=\"text/html\" syndietype=\"blog\" />\n");
-    }
-  }
-  if (_links.size() > 0) {
-    for (int i=0; i < _links.size(); i++) {
-      Link l=(Link)_links.get(i);
-      StringBuffer url=new StringBuffer(128);
-      url.append("externallink.jsp?schema=");
-      url.append(sanitizeURL(l.schema)).append("&location=");
-      url.append(sanitizeURL(l.location));
-      out.write("    <enclosure url=\"" + urlPrefix + sanitizeXML(url)+ "\" length=\"1\" type=\"text/html\" syndietype=\"link\" />\n");
-    }
-  }
-  if (_addresses.size() > 0) {
-    for (int i=0; i < _addresses.size(); i++) {
-      Address a=(Address)_addresses.get(i);
-      PetName pn=null;
-      if (_user != null)       pn=_user.getPetNameDB().getByLocation(a.location);
-      if (pn == null) {
-        StringBuffer url=new StringBuffer(128);
-        url.append("addresses.jsp?").append(AddressesServlet.PARAM_NAME).append('=');
-        url.append(sanitizeTagParam(a.schema)).append("&").append(AddressesServlet.PARAM_LOC).append("=");
-        url.append(sanitizeTagParam(a.location)).append("&").append(AddressesServlet.PARAM_NAME).append("=");
-        url.append(sanitizeTagParam(a.name)).append("&").append(AddressesServlet.PARAM_PROTO).append("=");
-        url.append(sanitizeTagParam(a.protocol));
-        out.write("    <enclosure url=\"" + urlPrefix + sanitizeXML(url)+ "\" length=\"1\" type=\"text/html\" syndietype=\"address\" />\n");
-      }
-    }
-  }
-  if (_archives.size() > 0) {
-    for (int i=0; i < _archives.size(); i++) {
-      ArchiveRef a=(ArchiveRef)_archives.get(i);
-      String url=getArchiveURL(null,new SafeURL(a.locationSchema + "://" + a.location));
-      out.write("    <enclosure url=\"" + urlPrefix + sanitizeXML(url)+ "\" length=\"1\" type=\"text/html\" syndietype=\"archive\" />\n");
-    }
-  }
-  if (_entry != null) {
-    List replies=_archive.getIndex().getReplies(_entry.getURI());
-    if ((replies != null) && (replies.size() > 0)) {
-      for (int i=0; i < replies.size(); i++) {
-        BlogURI reply=(BlogURI)replies.get(i);
-        String url=getPageURL(reply.getKeyHash(),null,reply.getEntryId(),-1,-1,true,_user.getShowImages());
-        out.write("    <enclosure url=\"" + urlPrefix + sanitizeXML(url)+ "\" length=\"1\" type=\"text/html\" syndietype=\"reply\" />\n");
-      }
-    }
-  }
-  String inReplyTo=(String)_headers.get(HEADER_IN_REPLY_TO);
-  if ((inReplyTo != null) && (inReplyTo.trim().length() > 0)) {
-    String url=getPageURL(sanitizeTagParam(inReplyTo));
-    out.write("    <enclosure url=\"" + urlPrefix + sanitizeXML(url)+ "\" length=\"1\" type=\"text/html\" syndietype=\"parent\" />\n");
   }
 }
