@@ -1,0 +1,54 @@
+{
+  prepare(ctx,cfg);
+  if (cfg.getLength() <= 1) {
+    buildZeroHop(ctx,pool,cfg,exec);
+    return;
+  }
+  Log log=ctx.logManager().getLog(BuildRequestor.class);
+  cfg.setTunnelPool(pool);
+  TunnelInfo pairedTunnel=null;
+  if (pool.getSettings().isExploratory() || !USE_PAIRED_CLIENT_TUNNELS) {
+    if (pool.getSettings().isInbound())     pairedTunnel=ctx.tunnelManager().selectOutboundTunnel();
+ else     pairedTunnel=ctx.tunnelManager().selectInboundTunnel();
+  }
+ else {
+    if (pool.getSettings().isInbound())     pairedTunnel=ctx.tunnelManager().selectOutboundTunnel(pool.getSettings().getDestination());
+ else     pairedTunnel=ctx.tunnelManager().selectInboundTunnel(pool.getSettings().getDestination());
+  }
+  if (pairedTunnel == null) {
+    if (log.shouldLog(Log.WARN))     log.warn("Couldn't find a paired tunnel for " + cfg + ", fall back on exploratory tunnels for pairing");
+    if (!pool.getSettings().isExploratory() && USE_PAIRED_CLIENT_TUNNELS)     if (pool.getSettings().isInbound())     pairedTunnel=ctx.tunnelManager().selectOutboundTunnel();
+ else     pairedTunnel=ctx.tunnelManager().selectInboundTunnel();
+  }
+  if (pairedTunnel == null) {
+    if (log.shouldLog(Log.ERROR))     log.error("Tunnel build failed, as we couldn't find a paired tunnel for " + cfg);
+    exec.buildComplete(cfg,pool);
+    return;
+  }
+  TunnelBuildMessage msg=createTunnelBuildMessage(ctx,pool,cfg,pairedTunnel,exec);
+  if (msg == null) {
+    if (log.shouldLog(Log.ERROR))     log.error("Tunnel build failed, as we couldn't create the tunnel build message for " + cfg);
+    exec.buildComplete(cfg,pool);
+    return;
+  }
+  cfg.setPairedTunnel(pairedTunnel);
+  if (cfg.isInbound()) {
+    if (log.shouldLog(Log.DEBUG))     log.debug("Sending the tunnel build request out the tunnel " + pairedTunnel + " to "+ cfg.getPeer(0).toBase64()+ " for "+ cfg+ " waiting for the reply of "+ cfg.getReplyMessageId());
+    ctx.tunnelDispatcher().dispatchOutbound(msg,pairedTunnel.getSendTunnelId(0),cfg.getPeer(0));
+  }
+ else {
+    if (log.shouldLog(Log.DEBUG))     log.debug("Sending the tunnel build request directly to " + cfg.getPeer(1).toBase64() + " for "+ cfg+ " waiting for the reply of "+ cfg.getReplyMessageId()+ " with msgId="+ msg.getUniqueId());
+    OutNetMessage outMsg=new OutNetMessage(ctx);
+    outMsg.setExpiration(msg.getMessageExpiration());
+    outMsg.setMessage(msg);
+    outMsg.setPriority(PRIORITY);
+    RouterInfo peer=ctx.netDb().lookupRouterInfoLocally(cfg.getPeer(1));
+    if (peer == null) {
+      if (log.shouldLog(Log.ERROR))       log.error("Could not find the next hop to send the outbound request to: " + cfg);
+      exec.buildComplete(cfg,pool);
+      return;
+    }
+    outMsg.setTarget(peer);
+    ctx.outNetMessagePool().add(outMsg);
+  }
+}

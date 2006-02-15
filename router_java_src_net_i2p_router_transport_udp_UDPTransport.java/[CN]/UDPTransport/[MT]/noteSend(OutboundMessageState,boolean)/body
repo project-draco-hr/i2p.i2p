@@ -1,0 +1,32 @@
+{
+  int pushCount=msg.getPushCount();
+  int sends=msg.getMaxSends();
+  boolean expired=msg.isExpired();
+  OutNetMessage m=msg.getMessage();
+  PeerState p=msg.getPeer();
+  StringBuffer buf=new StringBuffer(64);
+  buf.append(" lifetime: ").append(msg.getLifetime());
+  buf.append(" sends: ").append(sends);
+  buf.append(" pushes: ").append(pushCount);
+  buf.append(" expired? ").append(expired);
+  buf.append(" unacked: ").append(msg.getUnackedSize());
+  if (!successful) {
+    buf.append(" consec_failed: ").append(p.getConsecutiveFailedSends());
+    long timeSinceSend=_context.clock().now() - p.getLastSendFullyTime();
+    buf.append(" lastFullSend: ").append(timeSinceSend);
+    long timeSinceRecv=_context.clock().now() - p.getLastReceiveTime();
+    buf.append(" lastRecv: ").append(timeSinceRecv);
+    buf.append(" xfer: ").append(p.getSendBps()).append("/").append(p.getReceiveBps());
+    buf.append(" mtu: ").append(p.getMTU());
+    buf.append(" rto: ").append(p.getRTO());
+    buf.append(" sent: ").append(p.getMessagesSent()).append("/").append(p.getPacketsTransmitted());
+    buf.append(" recv: ").append(p.getMessagesReceived()).append("/").append(p.getPacketsReceived());
+    buf.append(" uptime: ").append(_context.clock().now() - p.getKeyEstablishedTime());
+  }
+  if ((m != null) && (p != null)) {
+    _context.messageHistory().sendMessage(m.getMessageType(),msg.getMessageId(),m.getExpiration(),p.getRemotePeer(),successful,buf.toString());
+  }
+ else {
+    _context.messageHistory().sendMessage("establish",msg.getMessageId(),-1,(p != null ? p.getRemotePeer() : null),successful,buf.toString());
+  }
+}

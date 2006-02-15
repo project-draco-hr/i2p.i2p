@@ -1,6 +1,9 @@
 {
   if (_finished)   return;
-  long token=getContext().random().nextLong(I2NPMessage.MAX_ID_VALUE);
+  boolean wantACK=true;
+  int existingTags=GarlicMessageBuilder.estimateAvailableTags(getContext(),_leaseSet.getEncryptionKey());
+  if (existingTags > 30)   wantACK=false;
+  long token=(wantACK ? getContext().random().nextLong(I2NPMessage.MAX_ID_VALUE) : -1);
   PublicKey key=_leaseSet.getEncryptionKey();
   SessionKey sessKey=new SessionKey();
   Set tags=new HashSet();
@@ -8,10 +11,10 @@
   if (_shouldBundle) {
     replyLeaseSet=getContext().netDb().lookupLeaseSetLocally(_from.calculateHash());
   }
-  _inTunnel=selectInboundTunnel();
+  if (wantACK)   _inTunnel=selectInboundTunnel();
   buildClove();
   if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": Clove built to " + _toString);
-  GarlicMessage msg=OutboundClientMessageJobHelper.createGarlicMessage(getContext(),token,_overallExpiration,key,_clove,_from.calculateHash(),_to,_inTunnel,sessKey,tags,true,replyLeaseSet);
+  GarlicMessage msg=OutboundClientMessageJobHelper.createGarlicMessage(getContext(),token,_overallExpiration,key,_clove,_from.calculateHash(),_to,_inTunnel,sessKey,tags,wantACK,replyLeaseSet);
   if (msg == null) {
     if (_log.shouldLog(Log.WARN))     _log.warn(getJobId() + ": Unable to create the garlic message (no tunnels left) to " + _toString);
     getContext().statManager().addRateData("client.dispatchNoTunnels",getContext().clock().now() - _start,0);
@@ -19,9 +22,14 @@
     return;
   }
   if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": send() - token expected " + token+ " to "+ _toString);
-  SendSuccessJob onReply=new SendSuccessJob(getContext(),sessKey,tags);
-  SendTimeoutJob onFail=new SendTimeoutJob(getContext());
-  ReplySelector selector=new ReplySelector(token);
+  SendSuccessJob onReply=null;
+  SendTimeoutJob onFail=null;
+  ReplySelector selector=null;
+  if (wantACK) {
+    onReply=new SendSuccessJob(getContext(),sessKey,tags);
+    onFail=new SendTimeoutJob(getContext());
+    selector=new ReplySelector(token);
+  }
   if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": Placing GarlicMessage into the new tunnel message bound for " + _toString+ " at "+ _lease.getTunnelId()+ " on "+ _lease.getGateway().toBase64());
   _outTunnel=selectOutboundTunnel();
   if (_outTunnel != null) {
@@ -38,4 +46,5 @@
   _clientMessage=null;
   _clove=null;
   getContext().statManager().addRateData("client.dispatchPrepareTime",getContext().clock().now() - _start,0);
+  if (!wantACK)   getContext().statManager().addRateData("client.dispatchNoACK",1,0);
 }

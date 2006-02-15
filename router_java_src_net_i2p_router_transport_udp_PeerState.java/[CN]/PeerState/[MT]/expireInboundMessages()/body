@@ -1,0 +1,21 @@
+{
+  int rv=0;
+synchronized (_inboundMessages) {
+    for (Iterator iter=_inboundMessages.values().iterator(); iter.hasNext(); ) {
+      InboundMessageState state=(InboundMessageState)iter.next();
+      if (state.isExpired()) {
+        iter.remove();
+      }
+ else {
+        if (state.isComplete()) {
+          _log.error("inbound message is complete, but wasn't handled inline? " + state + " with "+ this);
+          iter.remove();
+        }
+ else {
+          rv++;
+        }
+      }
+    }
+  }
+  return rv;
+}

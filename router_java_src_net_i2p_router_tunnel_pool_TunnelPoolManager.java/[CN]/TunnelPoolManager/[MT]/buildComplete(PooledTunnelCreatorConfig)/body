@@ -1,0 +1,32 @@
+{
+  buildComplete();
+  _loadTestManager.addTunnelTestCandidate(cfg);
+  if (cfg.getLength() > 1) {
+    TunnelPool pool=cfg.getTunnelPool();
+    if (pool == null) {
+      _log.error("How does this not have a pool?  " + cfg,new Exception("baf"));
+      if (cfg.getDestination() != null) {
+        if (cfg.isInbound()) {
+synchronized (_clientInboundPools) {
+            pool=(TunnelPool)_clientInboundPools.get(cfg.getDestination());
+          }
+        }
+ else {
+synchronized (_clientOutboundPools) {
+            pool=(TunnelPool)_clientOutboundPools.get(cfg.getDestination());
+          }
+        }
+      }
+ else {
+        if (cfg.isInbound()) {
+          pool=_inboundExploratory;
+        }
+ else {
+          pool=_outboundExploratory;
+        }
+      }
+      cfg.setTunnelPool(pool);
+    }
+    _context.jobQueue().addJob(new TestJob(_context,cfg,pool));
+  }
+}

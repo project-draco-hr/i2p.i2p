@@ -1,18 +1,16 @@
 {
   while (_keepRunning) {
-    try {
 synchronized (_inboundQueue) {
-        if (_inboundQueue.size() > 0) {
-          UDPPacket rv=(UDPPacket)_inboundQueue.remove(0);
-          _inboundQueue.notifyAll();
-          return rv;
-        }
- else {
-          _inboundQueue.wait(500);
-        }
+      if (_inboundQueue.size() <= 0)       try {
+        _inboundQueue.wait();
       }
-    }
- catch (    InterruptedException ie) {
+ catch (      InterruptedException ie) {
+      }
+      if (_inboundQueue.size() > 0) {
+        UDPPacket rv=(UDPPacket)_inboundQueue.remove(0);
+        if (_inboundQueue.size() > 0)         _inboundQueue.notifyAll();
+        return rv;
+      }
     }
   }
   return null;

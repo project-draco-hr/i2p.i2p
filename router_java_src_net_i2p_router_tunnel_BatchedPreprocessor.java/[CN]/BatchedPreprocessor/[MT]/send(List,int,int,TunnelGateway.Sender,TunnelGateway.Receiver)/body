@@ -1,5 +1,5 @@
 {
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Sending " + startAt + ":"+ sendThrough+ " out of "+ pending.size());
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Sending " + startAt + ":"+ sendThrough+ " out of "+ pending);
   byte preprocessed[]=_dataCache.acquire().getData();
   int offset=0;
   offset=writeFragments(pending,startAt,sendThrough,preprocessed,offset);
@@ -14,5 +14,9 @@
     return;
   }
   preprocess(preprocessed,offset);
-  sender.sendPreprocessed(preprocessed,rec);
+  long msgId=sender.sendPreprocessed(preprocessed,rec);
+  for (int i=0; i < pending.size(); i++) {
+    TunnelGateway.Pending cur=(TunnelGateway.Pending)pending.get(i);
+    cur.addMessageId(msgId);
+  }
 }

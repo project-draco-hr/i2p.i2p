@@ -1,7 +1,12 @@
 {
   RouterAddress ra=msg.getTarget().getTargetAddress(_transport.getStyle());
   if (ra == null) {
-    _transport.failed(msg);
+    _transport.failed(msg,"Remote peer has no address, cannot establish");
+    return;
+  }
+  if (msg.getTarget().getNetworkId() != Router.NETWORK_ID) {
+    _context.shitlist().shitlistRouter(msg.getTarget().getIdentity().calculateHash());
+    _transport.failed(msg,"Remote peer is on the wrong network, cannot establish");
     return;
   }
   UDPAddress addr=new UDPAddress(ra);
@@ -11,7 +16,7 @@
   if ((remAddr != null) && (port > 0)) {
     to=new RemoteHostId(remAddr.getAddress(),port);
     if (!_transport.isValid(to.getIP())) {
-      _transport.failed(msg);
+      _transport.failed(msg,"Remote peer's IP isn't valid");
       _context.shitlist().shitlistRouter(msg.getTarget().getIdentity().calculateHash(),"Invalid SSU address");
       return;
     }

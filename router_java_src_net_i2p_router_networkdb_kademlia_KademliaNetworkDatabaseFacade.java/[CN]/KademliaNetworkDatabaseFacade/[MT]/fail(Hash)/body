@@ -4,14 +4,18 @@
   Object o=_ds.get(dbEntry);
   if (o instanceof RouterInfo)   isRouterInfo=true;
   if (isRouterInfo) {
-    int remaining=_kb.size();
-    if (remaining < MIN_REMAINING_ROUTERS) {
-      if (_log.shouldLog(Log.ERROR))       _log.error("Not removing " + dbEntry + " because we have so few routers left ("+ remaining+ ") - perhaps a reseed is necessary?");
-      return;
+    if (((RouterInfo)o).getNetworkId() != Router.NETWORK_ID) {
     }
-    if (System.currentTimeMillis() < _started + DONT_FAIL_PERIOD) {
-      if (_log.shouldLog(Log.WARN))       _log.warn("Not failing the key " + dbEntry.toBase64() + " since we've just started up and don't want to drop /everyone/");
-      return;
+ else {
+      int remaining=_kb.size();
+      if (remaining < MIN_REMAINING_ROUTERS) {
+        if (_log.shouldLog(Log.WARN))         _log.warn("Not removing " + dbEntry + " because we have so few routers left ("+ remaining+ ") - perhaps a reseed is necessary?");
+        return;
+      }
+      if (System.currentTimeMillis() < _started + DONT_FAIL_PERIOD) {
+        if (_log.shouldLog(Log.WARN))         _log.warn("Not failing the key " + dbEntry.toBase64() + " since we've just started up and don't want to drop /everyone/");
+        return;
+      }
     }
     _context.peerManager().removeCapabilities(dbEntry);
     boolean removed=_kb.remove(dbEntry);

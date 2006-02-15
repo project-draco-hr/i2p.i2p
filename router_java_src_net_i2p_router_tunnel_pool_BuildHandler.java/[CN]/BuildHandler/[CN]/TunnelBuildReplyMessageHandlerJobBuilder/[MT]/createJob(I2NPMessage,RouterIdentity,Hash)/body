@@ -1,0 +1,13 @@
+{
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Receive tunnel build reply message " + receivedMessage.getUniqueId() + " from "+ (fromHash != null ? fromHash.toBase64() : from != null ? from.calculateHash().toBase64() : "a tunnel"));
+  if (HANDLE_REPLIES_INLINE) {
+    handleReply(new BuildReplyMessageState(receivedMessage,from,fromHash));
+  }
+ else {
+synchronized (_inboundBuildReplyMessages) {
+      _inboundBuildReplyMessages.add(new BuildReplyMessageState(receivedMessage,from,fromHash));
+    }
+    _exec.repoll();
+  }
+  return _buildReplyMessageHandlerJob;
+}

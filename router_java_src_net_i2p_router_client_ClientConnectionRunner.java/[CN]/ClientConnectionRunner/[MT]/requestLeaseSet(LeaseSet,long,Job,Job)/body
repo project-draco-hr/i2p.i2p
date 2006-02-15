@@ -1,6 +1,33 @@
 {
-  if (_dead)   return;
-  if ((_currentLeaseSet != null) && (_currentLeaseSet.equals(set)))   return;
-  if (_leaseRequest != null)   return;
-  _context.jobQueue().addJob(new RequestLeaseSetJob(_context,this,set,_context.clock().now() + expirationTime,onCreateJob,onFailedJob));
+  if (_dead) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Requesting leaseSet from a dead client: " + set);
+    if (onFailedJob != null)     _context.jobQueue().addJob(onFailedJob);
+    return;
+  }
+  if ((_currentLeaseSet != null) && (_currentLeaseSet.equals(set))) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Requested leaseSet hasn't changed");
+    if (onCreateJob != null)     _context.jobQueue().addJob(onCreateJob);
+    return;
+  }
+  LeaseRequestState state=null;
+synchronized (this) {
+    state=_leaseRequest;
+    if (state != null) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Already requesting " + state);
+      LeaseSet requested=state.getRequested();
+      LeaseSet granted=state.getGranted();
+      long ours=set.getEarliestLeaseDate();
+      if (((requested != null) && (requested.getEarliestLeaseDate() > ours)) || ((granted != null) && (granted.getEarliestLeaseDate() > ours))) {
+      }
+ else {
+        SimpleTimer.getInstance().addEvent(new Rerequest(set,expirationTime,onCreateJob,onFailedJob),3 * 1000);
+      }
+      return;
+    }
+ else {
+      _leaseRequest=state=new LeaseRequestState(onCreateJob,onFailedJob,_context.clock().now() + expirationTime,set);
+      _log.debug("Not already requesting, continue to request " + set);
+    }
+  }
+  _context.jobQueue().addJob(new RequestLeaseSetJob(_context,this,set,_context.clock().now() + expirationTime,onCreateJob,onFailedJob,state));
 }

@@ -1,0 +1,42 @@
+{
+  Log log=ctx.logManager().getLog(BuildRequestor.class);
+  long replyTunnel=0;
+  Hash replyRouter=null;
+  if (cfg.isInbound()) {
+    replyTunnel=0;
+    replyRouter=ctx.routerHash();
+  }
+ else {
+    replyTunnel=pairedTunnel.getReceiveTunnelId(0).getTunnelId();
+    replyRouter=pairedTunnel.getPeer(0);
+  }
+  BuildMessageGenerator gen=new BuildMessageGenerator();
+  TunnelBuildMessage msg=new TunnelBuildMessage(ctx);
+  long replyMessageId=ctx.random().nextLong(I2NPMessage.MAX_ID_VALUE);
+  cfg.setReplyMessageId(replyMessageId);
+  List order=new ArrayList(ORDER);
+  Collections.shuffle(order,ctx.random());
+  cfg.setReplyOrder(order);
+  if (log.shouldLog(Log.DEBUG))   log.debug("Build order: " + order + " for "+ cfg);
+  for (int i=0; i < BuildMessageGenerator.ORDER.length; i++) {
+    int hop=((Integer)order.get(i)).intValue();
+    PublicKey key=null;
+    if (BuildMessageGenerator.isBlank(cfg,hop)) {
+    }
+ else {
+      Hash peer=cfg.getPeer(hop);
+      RouterInfo peerInfo=ctx.netDb().lookupRouterInfoLocally(peer);
+      if (peerInfo == null) {
+        if (log.shouldLog(Log.ERROR))         log.error("Peer selected for hop " + i + "/"+ hop+ " was not found locally: "+ peer.toBase64()+ " for "+ cfg);
+        return null;
+      }
+ else {
+        key=peerInfo.getIdentity().getPublicKey();
+      }
+    }
+    if (log.shouldLog(Log.DEBUG))     log.debug(cfg.getReplyMessageId() + ": record " + i+ "/"+ hop+ " has key "+ key+ " for "+ cfg);
+    gen.createRecord(i,hop,msg,cfg,replyRouter,replyTunnel,ctx,key);
+  }
+  gen.layeredEncrypt(ctx,msg,cfg,order);
+  return msg;
+}

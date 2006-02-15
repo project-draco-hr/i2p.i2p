@@ -1,11 +1,13 @@
 {
   if (_log.shouldLog(Log.INFO))   _log.info("Add remote peer state: " + peer);
+  Hash remotePeer=peer.getRemotePeer();
   long oldEstablishedOn=-1;
   PeerState oldPeer=null;
-  if (peer.getRemotePeer() != null) {
+  if (remotePeer != null) {
 synchronized (_peersByIdent) {
-      oldPeer=(PeerState)_peersByIdent.put(peer.getRemotePeer(),peer);
+      oldPeer=(PeerState)_peersByIdent.put(remotePeer,peer);
       if ((oldPeer != null) && (oldPeer != peer)) {
+        peer.loadFrom(oldPeer);
         oldEstablishedOn=oldPeer.getKeyEstablishedTime();
       }
     }
@@ -16,6 +18,7 @@ synchronized (_peersByIdent) {
 synchronized (_peersByRemoteHost) {
     oldPeer=(PeerState)_peersByRemoteHost.put(remoteId,peer);
     if ((oldPeer != null) && (oldPeer != peer)) {
+      peer.loadFrom(oldPeer);
       oldEstablishedOn=oldPeer.getKeyEstablishedTime();
     }
   }

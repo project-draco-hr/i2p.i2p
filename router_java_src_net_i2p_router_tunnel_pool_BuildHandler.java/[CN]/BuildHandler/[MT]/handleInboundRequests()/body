@@ -1,0 +1,34 @@
+{
+  List handled=null;
+synchronized (_inboundBuildMessages) {
+    int toHandle=_inboundBuildMessages.size();
+    if (toHandle > 0) {
+      if (toHandle > MAX_HANDLE_AT_ONCE)       toHandle=MAX_HANDLE_AT_ONCE;
+      handled=new ArrayList(toHandle);
+      for (int i=0; i < toHandle; i++)       handled.add(_inboundBuildMessages.remove(0));
+    }
+  }
+  if (handled != null) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Handling " + handled.size() + " requests");
+    for (int i=0; i < handled.size(); i++) {
+      BuildMessageState state=(BuildMessageState)handled.get(i);
+      handleRequest(state);
+    }
+    handled.clear();
+  }
+synchronized (_inboundBuildEndMessages) {
+    int toHandle=_inboundBuildEndMessages.size();
+    if (toHandle > 0) {
+      if (handled == null)       handled=new ArrayList(_inboundBuildEndMessages);
+ else       handled.addAll(_inboundBuildEndMessages);
+      _inboundBuildEndMessages.clear();
+    }
+  }
+  if (handled != null) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Handling " + handled.size() + " requests that are actually replies");
+    for (int i=0; i < handled.size(); i++) {
+      BuildEndMessageState state=(BuildEndMessageState)handled.get(i);
+      handleRequestAsInboundEndpoint(state);
+    }
+  }
+}

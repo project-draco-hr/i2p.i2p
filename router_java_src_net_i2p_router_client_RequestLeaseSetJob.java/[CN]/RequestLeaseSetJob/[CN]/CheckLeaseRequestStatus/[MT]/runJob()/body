@@ -1,12 +1,18 @@
 {
-  if (_runner.isDead())   return;
+  if (_runner.isDead()) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Already dead, dont try to expire the leaseSet lookup");
+    return;
+  }
   if (_req.getIsSuccessful()) {
     RequestLeaseSetJob.CheckLeaseRequestStatus.this.getContext().statManager().addRateData("client.requestLeaseSetSuccess",1,0);
     return;
   }
  else {
     RequestLeaseSetJob.CheckLeaseRequestStatus.this.getContext().statManager().addRateData("client.requestLeaseSetTimeout",1,0);
-    if (_log.shouldLog(Log.CRIT))     _log.log(Log.CRIT,"Failed to receive a leaseSet in the time allotted (" + new Date(_req.getExpiration()) + ") for "+ _runner.getConfig().getDestination().calculateHash().toBase64());
+    if (_log.shouldLog(Log.CRIT)) {
+      long waited=System.currentTimeMillis() - _start;
+      _log.log(Log.CRIT,"Failed to receive a leaseSet in the time allotted (" + waited + "): "+ _req+ " for "+ _runner.getConfig().getDestination().calculateHash().toBase64());
+    }
     _runner.disconnectClient("Took too long to request leaseSet");
     if (_req.getOnFailed() != null)     RequestLeaseSetJob.this.getContext().jobQueue().addJob(_req.getOnFailed());
   }

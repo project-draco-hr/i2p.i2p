@@ -1,7 +1,14 @@
 {
-  CompleteJob onCreated=new CompleteJob(_context,cfg,new SuccessJob(_context,cfg,pool),pool);
-  CompleteJob onFailed=new CompleteJob(_context,cfg,null,pool);
-  RequestTunnelJob j=new RequestTunnelJob(_context,cfg,onCreated,onFailed,cfg.getLength() - 1,false,cfg.getDestination() == null);
-  if (cfg.getLength() <= 1)   j.runJob();
- else   j.runJob();
+  long beforeBuild=System.currentTimeMillis();
+  BuildRequestor.request(_context,pool,cfg,this);
+  long buildTime=System.currentTimeMillis() - beforeBuild;
+  if (cfg.getLength() <= 1)   _context.statManager().addRateData("tunnel.buildRequestZeroHopTime",buildTime,buildTime);
+ else   _context.statManager().addRateData("tunnel.buildRequestTime",buildTime,buildTime);
+  long id=cfg.getReplyMessageId();
+  if (id > 0) {
+synchronized (_recentBuildIds) {
+      while (_recentBuildIds.size() > 64)       _recentBuildIds.remove(0);
+      _recentBuildIds.add(new Long(id));
+    }
+  }
 }

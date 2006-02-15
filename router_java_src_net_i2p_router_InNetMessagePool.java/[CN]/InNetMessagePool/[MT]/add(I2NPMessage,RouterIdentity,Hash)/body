@@ -14,7 +14,7 @@
     if (_log.shouldLog(level))     _log.log(level,"Duplicate message received [" + messageBody.getUniqueId() + " expiring on "+ exp+ "]: "+ messageBody.getClass().getName()+ ": "+ invalidReason+ ": "+ messageBody);
     _context.statManager().addRateData("inNetPool.dropped",1,0);
     _context.statManager().addRateData("inNetPool.duplicate",1,0);
-    _context.messageHistory().droppedOtherMessage(messageBody);
+    _context.messageHistory().droppedOtherMessage(messageBody,(fromRouter != null ? fromRouter.calculateHash() : fromRouterHash));
     _context.messageHistory().messageProcessingError(messageBody.getUniqueId(),messageBody.getClass().getName(),"Duplicate/expired");
     return -1;
   }
@@ -52,7 +52,7 @@
     int replies=handleReplies(messageBody);
     if (replies <= 0) {
       if (!jobFound) {
-        _context.messageHistory().droppedOtherMessage(messageBody);
+        _context.messageHistory().droppedOtherMessage(messageBody,(fromRouter != null ? fromRouter.calculateHash() : fromRouterHash));
         if (type == DeliveryStatusMessage.MESSAGE_TYPE) {
           long timeSinceSent=_context.clock().now() - ((DeliveryStatusMessage)messageBody).getArrival();
           if (_log.shouldLog(Log.WARN))           _log.warn("Dropping unhandled delivery status message created " + timeSinceSent + "ms ago: "+ messageBody);

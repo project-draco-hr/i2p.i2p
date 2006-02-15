@@ -1,0 +1,12 @@
+{
+  Log log=ctx.logManager().getLog(BuildRequestor.class);
+  if (log.shouldLog(Log.DEBUG))   log.debug("Build zero hop tunnel " + cfg);
+  exec.buildComplete(cfg,pool);
+  if (cfg.isInbound())   ctx.tunnelDispatcher().joinInbound(cfg);
+ else   ctx.tunnelDispatcher().joinOutbound(cfg);
+  pool.addTunnel(cfg);
+  exec.buildSuccessful(cfg);
+  ExpireJob expireJob=new ExpireJob(ctx,cfg,pool);
+  cfg.setExpireJob(expireJob);
+  ctx.jobQueue().addJob(expireJob);
+}

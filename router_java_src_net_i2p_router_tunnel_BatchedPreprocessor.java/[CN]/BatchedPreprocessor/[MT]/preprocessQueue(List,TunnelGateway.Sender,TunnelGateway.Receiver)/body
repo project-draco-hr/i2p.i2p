@@ -1,19 +1,5 @@
 {
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Preprocess queue with " + pending.size() + " to send");
-  if (false) {
-    if (DISABLE_BATCHING || getSendDelay() <= 0) {
-      if (_log.shouldLog(Log.INFO))       _log.info("No batching, send all messages immediately");
-      while (pending.size() > 0) {
-        TunnelGateway.Pending msg=(TunnelGateway.Pending)pending.get(0);
-        send(pending,0,0,sender,rec);
-        if (msg.getOffset() >= msg.getData().length) {
-          notePreprocessing(msg.getMessageId(),msg.getFragmentNumber());
-          pending.remove(0);
-        }
-      }
-      return false;
-    }
-  }
   int batchCount=0;
   int beforeLooping=pending.size();
   while (pending.size() > 0) {
@@ -29,7 +15,7 @@
           i--;
           msg=(TunnelGateway.Pending)pending.get(i);
           allocated-=curWanted;
-          if (_log.shouldLog(Log.DEBUG))           _log.debug("Pushback of " + curWanted + " (message "+ (i + 1)+ ")");
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("Pushback of " + curWanted + " (message "+ (i + 1)+ " in "+ pending+ ")");
         }
         if (_pendingSince > 0) {
           long waited=_context.clock().now() - _pendingSince;
@@ -41,12 +27,12 @@
         for (int j=0; j < i; j++) {
           TunnelGateway.Pending cur=(TunnelGateway.Pending)pending.remove(0);
           if (cur.getOffset() < cur.getData().length)           throw new IllegalArgumentException("i=" + i + " j="+ j+ " off="+ cur.getOffset()+ " len="+ cur.getData().length+ " alloc="+ allocated);
-          notePreprocessing(cur.getMessageId(),cur.getFragmentNumber());
+          notePreprocessing(cur.getMessageId(),cur.getFragmentNumber(),cur.getData().length,cur.getMessageIds(),"flushed allocated");
           _context.statManager().addRateData("tunnel.writeDelay",cur.getLifetime(),cur.getData().length);
         }
         if (msg.getOffset() >= msg.getData().length) {
           TunnelGateway.Pending cur=(TunnelGateway.Pending)pending.remove(0);
-          notePreprocessing(cur.getMessageId(),cur.getFragmentNumber());
+          notePreprocessing(cur.getMessageId(),cur.getFragmentNumber(),msg.getData().length,msg.getMessageIds(),"flushed tail, remaining: " + pending);
           _context.statManager().addRateData("tunnel.writeDelay",cur.getLifetime(),cur.getData().length);
         }
         if (i > 0)         _context.statManager().addRateData("tunnel.batchMultipleCount",i + 1,0);
@@ -65,7 +51,7 @@
           TunnelGateway.Pending cur=(TunnelGateway.Pending)pending.get(i);
           if (cur.getOffset() >= cur.getData().length) {
             pending.remove(i);
-            notePreprocessing(cur.getMessageId(),cur.getFragmentNumber());
+            notePreprocessing(cur.getMessageId(),cur.getFragmentNumber(),cur.getData().length,cur.getMessageIds(),"flushed remaining");
             _context.statManager().addRateData("tunnel.writeDelay",cur.getLifetime(),cur.getData().length);
             i--;
           }

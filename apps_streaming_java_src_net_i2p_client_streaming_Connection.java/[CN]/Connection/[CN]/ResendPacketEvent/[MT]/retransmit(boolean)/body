@@ -10,13 +10,15 @@ synchronized (_outboundPackets) {
     if (_packet.getSequenceNum() == _highestAckedThrough + 1)     isLowest=true;
     if (_outboundPackets.containsKey(new Long(_packet.getSequenceNum())))     resend=true;
   }
-  if ((resend) && (_packet.getAckTime() < 0)) {
-    if (!isLowest) {
+  if ((resend) && (_packet.getAckTime() <= 0)) {
+    boolean fastRetransmit=((_packet.getNACKs() >= FAST_RETRANSMIT_THRESHOLD) && (_packet.getNumSends() == 1));
+    if ((!isLowest) && (!fastRetransmit)) {
       if (_log.shouldLog(Log.WARN))       _log.warn("Delaying resend of " + _packet + " as there are "+ _activeResends+ " active resends already in play");
       RetransmissionTimer.getInstance().addEvent(ResendPacketEvent.this,1000);
       _nextSendTime=1000 + _context.clock().now();
       return false;
     }
+    if (fastRetransmit)     _context.statManager().addRateData("stream.fastRetransmit",_packet.getLifetime(),_packet.getLifetime());
     _inputStream.updateAcks(_packet);
     int choke=getOptions().getChoke();
     _packet.setOptionalDelay(choke);

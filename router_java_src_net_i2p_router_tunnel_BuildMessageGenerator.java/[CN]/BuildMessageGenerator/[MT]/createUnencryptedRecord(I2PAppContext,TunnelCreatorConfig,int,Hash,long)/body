@@ -1,8 +1,11 @@
 {
+  Log log=ctx.logManager().getLog(BuildMessageGenerator.class);
   if (hop < cfg.getLength()) {
     HopConfig hopConfig=cfg.getConfig(hop);
     Hash peer=cfg.getPeer(hop);
-    long recvTunnelId=hopConfig.getReceiveTunnel().getTunnelId();
+    long recvTunnelId=-1;
+    if (cfg.isInbound() || (hop > 0))     recvTunnelId=hopConfig.getReceiveTunnel().getTunnelId();
+ else     recvTunnelId=0;
     long nextTunnelId=-1;
     Hash nextPeer=null;
     if (hop + 1 < cfg.getLength()) {
@@ -30,8 +33,16 @@
     }
     boolean isInGW=(cfg.isInbound() && (hop == 0));
     boolean isOutEnd=(!cfg.isInbound() && (hop + 1 >= cfg.getLength()));
+    long nextMsgId=-1;
+    if (isOutEnd || (cfg.isInbound() && (hop + 2 >= cfg.getLength()))) {
+      nextMsgId=cfg.getReplyMessageId();
+    }
+ else {
+      nextMsgId=ctx.random().nextLong(I2NPMessage.MAX_ID_VALUE);
+    }
+    if (log.shouldLog(Log.DEBUG))     log.debug("Hop " + hop + " has the next message ID of "+ nextMsgId+ " for "+ cfg+ " with replyKey "+ replyKey.toBase64()+ " and replyIV "+ Base64.encode(iv));
     BuildRequestRecord rec=new BuildRequestRecord();
-    rec.createRecord(ctx,recvTunnelId,peer,nextTunnelId,nextPeer,layerKey,ivKey,replyKey,iv,isInGW,isOutEnd);
+    rec.createRecord(ctx,recvTunnelId,peer,nextTunnelId,nextPeer,nextMsgId,layerKey,ivKey,replyKey,iv,isInGW,isOutEnd);
     return rec;
   }
  else {

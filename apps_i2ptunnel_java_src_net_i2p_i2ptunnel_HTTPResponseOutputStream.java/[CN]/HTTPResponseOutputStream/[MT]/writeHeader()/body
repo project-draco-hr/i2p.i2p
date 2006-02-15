@@ -8,31 +8,33 @@
       if (lastEnd == -1) {
         responseLine=new String(_headerBuffer.getData(),0,i + 1);
         responseLine=filterResponseLine(responseLine);
-        responseLine=(responseLine.trim() + "\n");
+        responseLine=(responseLine.trim() + "\r\n");
         out.write(responseLine.getBytes());
       }
  else {
         for (int j=lastEnd + 1; j < i; j++) {
           if (_headerBuffer.getData()[j] == ':') {
             int keyLen=j - (lastEnd + 1);
-            int valLen=i - (j + 2);
-            if ((keyLen <= 0) || (valLen <= 0))             throw new IOException("Invalid header @ " + j);
+            int valLen=i - (j + 1);
+            if ((keyLen <= 0) || (valLen < 0))             throw new IOException("Invalid header @ " + j);
             String key=new String(_headerBuffer.getData(),lastEnd + 1,keyLen);
-            String val=new String(_headerBuffer.getData(),j + 2,valLen).trim();
+            String val=null;
+            if (valLen == 0)             val="";
+ else             val=new String(_headerBuffer.getData(),j + 2,valLen).trim();
             if (_log.shouldLog(Log.INFO))             _log.info("Response header [" + key + "] = ["+ val+ "]");
             if ("Connection".equalsIgnoreCase(key)) {
-              out.write("Connection: close\n".getBytes());
+              out.write("Connection: close\r\n".getBytes());
               connectionSent=true;
             }
  else             if ("Proxy-Connection".equalsIgnoreCase(key)) {
-              out.write("Proxy-Connection: close\n".getBytes());
+              out.write("Proxy-Connection: close\r\n".getBytes());
               proxyConnectionSent=true;
             }
  else             if (("Content-encoding".equalsIgnoreCase(key)) && ("x-i2p-gzip".equalsIgnoreCase(val))) {
               _gzip=true;
             }
  else {
-              out.write((key.trim() + ": " + val.trim()+ "\n").getBytes());
+              out.write((key.trim() + ": " + val.trim()+ "\r\n").getBytes());
             }
             break;
           }
@@ -41,8 +43,8 @@
       lastEnd=i;
     }
   }
-  if (!connectionSent)   out.write("Connection: close\n".getBytes());
-  if (!proxyConnectionSent)   out.write("Proxy-Connection: close\n".getBytes());
+  if (!connectionSent)   out.write("Connection: close\r\n".getBytes());
+  if (!proxyConnectionSent)   out.write("Proxy-Connection: close\r\n".getBytes());
   finishHeaders();
   boolean shouldCompress=shouldCompress();
   if (_log.shouldLog(Log.INFO))   _log.info("After headers: gzip? " + _gzip + " compress? "+ shouldCompress);

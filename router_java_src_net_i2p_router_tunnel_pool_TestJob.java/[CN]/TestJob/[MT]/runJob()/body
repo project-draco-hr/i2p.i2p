@@ -1,4 +1,5 @@
 {
+  if (_pool == null)   return;
   long lag=getContext().jobQueue().getMaxLag();
   if (lag > 3000) {
     if (_log.shouldLog(Log.WARN))     _log.warn("Deferring test of " + _cfg + " due to job lag = "+ lag);
@@ -27,12 +28,12 @@
     long testExpiration=getContext().clock().now() + testPeriod;
     DeliveryStatusMessage m=new DeliveryStatusMessage(getContext());
     m.setArrival(getContext().clock().now());
-    m.setMessageExpiration(testExpiration + 2 * testPeriod);
+    m.setMessageExpiration(testExpiration);
     m.setMessageId(getContext().random().nextLong(I2NPMessage.MAX_ID_VALUE));
-    ReplySelector sel=new ReplySelector(getContext(),m.getMessageId(),testExpiration + 2 * testPeriod);
+    ReplySelector sel=new ReplySelector(getContext(),m.getMessageId(),testExpiration);
     OnTestReply onReply=new OnTestReply(getContext());
     OnTestTimeout onTimeout=new OnTestTimeout(getContext());
-    OutNetMessage msg=getContext().messageRegistry().registerPending(sel,onReply,onTimeout,3 * testPeriod);
+    OutNetMessage msg=getContext().messageRegistry().registerPending(sel,onReply,onTimeout,testPeriod);
     onReply.setSentMessage(msg);
     sendTest(m);
   }

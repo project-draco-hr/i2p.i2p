@@ -7,14 +7,27 @@
     int off=rec.getOffset();
     int len=BuildRequestRecord.PEER_SIZE;
     if (DataHelper.eq(ourHash.getData(),0,rec.getData(),off,len)) {
+      boolean isDup=_filter.add(rec.getData(),off + len,32);
+      if (isDup) {
+        if (log.shouldLog(Log.WARN))         log.debug(msg.getUniqueId() + ": A record matching our hash was found, but it seems to be a duplicate");
+        ctx.statManager().addRateData("tunnel.buildRequestDup",1,0);
+        return null;
+      }
       BuildRequestRecord req=new BuildRequestRecord();
       boolean ok=req.decryptRecord(ctx,privKey,ourHash,rec);
-      if (ok)       rv=req;
- else       return null;
+      if (ok) {
+        if (log.shouldLog(Log.DEBUG))         log.debug(msg.getUniqueId() + ": A record matching our hash was found and decrypted");
+        rv=req;
+      }
+ else {
+        if (log.shouldLog(Log.DEBUG))         log.debug(msg.getUniqueId() + ": A record matching our hash was found, but could not be decrypted");
+        return null;
+      }
       ourHop=i;
     }
   }
   if (rv == null) {
+    if (log.shouldLog(Log.DEBUG))     log.debug(msg.getUniqueId() + ": No records matching our hash was found");
     return null;
   }
   SessionKey replyKey=rv.readReplyKey();
@@ -22,8 +35,8 @@
   int ivOff=0;
   for (int i=0; i < TunnelBuildMessage.RECORD_COUNT; i++) {
     if (i != ourHop) {
-      if (log.shouldLog(Log.DEBUG))       log.debug("Encrypting record " + i + "/? with replyKey "+ replyKey.toBase64()+ "/"+ Base64.encode(iv,ivOff,16));
       ByteArray data=msg.getRecord(i);
+      if (log.shouldLog(Log.DEBUG))       log.debug("Encrypting record " + i + "/?/"+ data.getOffset()+ "/"+ data.getValid()+ " with replyKey "+ replyKey.toBase64()+ "/"+ Base64.encode(iv,ivOff,16));
       ctx.aes().encrypt(data.getData(),data.getOffset(),data.getData(),data.getOffset(),replyKey,iv,ivOff,data.getValid());
     }
   }

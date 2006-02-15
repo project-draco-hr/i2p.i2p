@@ -12,7 +12,14 @@
     UDPPacket rv[]=new UDPPacket[fragments];
     for (int i=0; i < fragments; i++) {
       if (state.needsSending(i)) {
-        rv[i]=_builder.buildPacket(state,i,peer,remaining,partialACKBitfields);
+        try {
+          rv[i]=_builder.buildPacket(state,i,peer,remaining,partialACKBitfields);
+        }
+ catch (        ArrayIndexOutOfBoundsException aioobe) {
+          _log.log(Log.CRIT,"Corrupt trying to build a packet - please tell jrandom: " + partialACKBitfields + " / "+ remaining+ " / "+ msgIds);
+          sparseCount++;
+          continue;
+        }
         if (rv[i] == null) {
           sparseCount++;
           continue;
@@ -42,6 +49,15 @@
     if (piggybackedPartialACK - partialACKBitfields.size() > 0)     _context.statManager().addRateData("udp.sendPiggybackPartial",piggybackedPartialACK - partialACKBitfields.size(),state.getLifetime());
     if (_log.shouldLog(Log.INFO))     _log.info("Building packet for " + state + " to "+ peer+ " with sparse count: "+ sparseCount);
     peer.packetsTransmitted(fragments - sparseCount);
+    if (state.getPushCount() > 1) {
+      int toSend=fragments - sparseCount;
+      peer.messageRetransmitted(toSend);
+      _packetsRetransmitted+=toSend;
+      _context.statManager().addRateData("udp.peerPacketsRetransmitted",peer.getPacketsRetransmitted(),peer.getPacketsTransmitted());
+      _context.statManager().addRateData("udp.packetsRetransmitted",state.getLifetime(),peer.getPacketsTransmitted());
+      if (_log.shouldLog(Log.WARN))       _log.warn("Retransmitting " + state + " to "+ peer);
+      _context.statManager().addRateData("udp.sendVolleyTime",state.getLifetime(),toSend);
+    }
     return rv;
   }
  else {

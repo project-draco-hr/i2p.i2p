@@ -1,5 +1,10 @@
 {
   state.setReceiveCharlieTime(_context.clock().now());
+  state.incrementPacketsRelayed();
+  if (state.getPacketsRelayed() > MAX_RELAYED_PER_TEST) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Received from charlie (" + from + ") as bob ("+ state+ "), but we've already relayed too many, so drop it");
+    return;
+  }
   UDPPacket packet=_packetBuilder.buildPeerTestToAlice(state.getAliceIP(),state.getAlicePort(),state.getAliceIntroKey(),state.getCharlieIntroKey(),state.getNonce());
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Receive from charlie @ " + from + " as bob, sending alice back the ok @ "+ state.getAliceIP()+ ":"+ state.getAlicePort());
   _transport.send(packet);

@@ -1,0 +1,26 @@
+{
+  long timeSinceReceived=System.currentTimeMillis() - state.recvTime;
+  if (_log.shouldLog(Log.DEBUG))   _log.debug(state.msg.getUniqueId() + ": handling request after " + timeSinceReceived);
+  if (timeSinceReceived > BuildRequestor.REQUEST_TIMEOUT * 2) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Not even trying to handle/decrypt the request " + state.msg.getUniqueId() + ", since we received it a long time ago: "+ timeSinceReceived);
+    return;
+  }
+  long beforeDecrypt=System.currentTimeMillis();
+  BuildRequestRecord req=_processor.decrypt(_context,state.msg,_context.routerHash(),_context.keyManager().getPrivateKey());
+  long decryptTime=System.currentTimeMillis() - beforeDecrypt;
+  _context.statManager().addRateData("tunnel.decryptRequestTime",decryptTime,decryptTime);
+  if (req == null) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("The request " + state.msg.getUniqueId() + " could not be decrypted");
+    return;
+  }
+  Hash nextPeer=req.readNextIdentity();
+  RouterInfo nextPeerInfo=_context.netDb().lookupRouterInfoLocally(nextPeer);
+  if (nextPeerInfo == null) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Request " + state.msg.getUniqueId() + "/"+ req.readReceiveTunnelId()+ "/"+ req.readNextTunnelId()+ " handled, looking for the next peer "+ nextPeer.toBase64());
+    _context.netDb().lookupRouterInfo(nextPeer,new HandleReq(_context,state,req,nextPeer),new TimeoutReq(_context,state,req,nextPeer),NEXT_HOP_LOOKUP_TIMEOUT);
+  }
+ else {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Request " + state.msg.getUniqueId() + " handled and we know the next peer "+ nextPeer.toBase64());
+    handleReq(nextPeerInfo,state,req,nextPeer);
+  }
+}

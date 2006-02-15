@@ -6,9 +6,16 @@
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Peer " + peer.toBase64() + " is shitlisted, dont select it");
     return false;
   }
-  if (null != netDb.lookupRouterInfoLocally(peer)) {
-    if (_log.shouldLog(Log.INFO))     _log.info("Peer " + peer.toBase64() + " is locally known, allowing its use");
-    return true;
+  RouterInfo info=netDb.lookupRouterInfoLocally(peer);
+  if (null != info) {
+    if (info.getIdentity().isHidden()) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Peer " + peer.toBase64() + " is marked as hidden, disallowing its use");
+      return false;
+    }
+ else {
+      if (_log.shouldLog(Log.INFO))       _log.info("Peer " + peer.toBase64() + " is locally known, allowing its use");
+      return true;
+    }
   }
  else {
     if (_log.shouldLog(Log.WARN))     _log.warn("Peer " + peer.toBase64() + " is NOT locally known, disallowing its use");

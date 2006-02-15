@@ -4,9 +4,13 @@
     byte preprocessed[][]=preprocess(msg);
     for (int i=0; i < preprocessed.length; i++) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Preprocessed: fragment " + i + "/"+ (preprocessed.length - 1)+ " in "+ msg.getMessageId()+ ": "+ Base64.encode(preprocessed[i]));
-      sender.sendPreprocessed(preprocessed[i],rec);
+      long id=sender.sendPreprocessed(preprocessed[i],rec);
+      msg.addMessageId(id);
     }
-    notePreprocessing(msg.getMessageId(),preprocessed.length);
+    notePreprocessing(msg.getMessageId(),msg.getFragmentNumber(),preprocessed.length,msg.getMessageIds(),null);
+    if (preprocessed.length != msg.getFragmentNumber() + 1) {
+      throw new RuntimeException("wtf, preprocessed " + msg.getMessageId() + " into "+ msg.getFragmentNumber()+ "/"+ preprocessed.length+ " fragments, size = "+ msg.getData().length);
+    }
   }
   return false;
 }

@@ -5,7 +5,8 @@
     UDPPacket packet=_endpoint.receive();
     _state=3;
     if (packet == null)     continue;
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Received the packet " + packet);
+    packet.received();
+    if (_log.shouldLog(Log.INFO))     _log.info("Received the packet " + packet);
     _state=4;
     long queueTime=packet.getLifetime();
     long handleStart=_context.clock().now();
@@ -19,12 +20,20 @@
       if (_log.shouldLog(Log.ERROR))       _log.error("Crazy error handling a packet: " + packet,e);
     }
     long handleTime=_context.clock().now() - handleStart;
+    packet.afterHandling();
     _context.statManager().addRateData("udp.handleTime",handleTime,packet.getLifetime());
     _context.statManager().addRateData("udp.queueTime",queueTime,packet.getLifetime());
     _state=8;
+    if (_log.shouldLog(Log.INFO))     _log.info("Done receiving the packet " + packet);
     if (handleTime > 1000) {
       if (_log.shouldLog(Log.WARN))       _log.warn("Took " + handleTime + " to process the packet "+ packet+ ": "+ _reader);
     }
+    long timeToDequeue=packet.getTimeSinceEnqueue() - packet.getTimeSinceReceived();
+    long timeToVerify=0;
+    long beforeRecv=packet.getTimeSinceReceiveFragments();
+    if (beforeRecv > 0)     timeToVerify=beforeRecv - packet.getTimeSinceReceived();
+    if (timeToDequeue > 50)     _context.statManager().addRateData("udp.packetDequeueTime",timeToDequeue,timeToDequeue);
+    if (timeToVerify > 50)     _context.statManager().addRateData("udp.packetVerifyTime",timeToVerify,timeToVerify);
     packet.release();
     _state=9;
   }
