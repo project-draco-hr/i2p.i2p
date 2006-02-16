@@ -13,13 +13,27 @@
   }
   _log.debug("Done fetching archives");
   List rssFeeds=bm.getRssFeeds();
+  List allEntries=new ArrayList();
   Iterator iter=rssFeeds.iterator();
   while (iter.hasNext()) {
     String args[]=(String[])iter.next();
     _log.debug("rss feed begin: " + args[0]);
     Sucker sucker=new Sucker(args);
-    sucker.suck();
+    allEntries.addAll(sucker.suck());
     _log.debug("rss feed end: " + args[0]);
+  }
+  if (ALLOW_REMOTE_PUSH && (allEntries.size() > 0)) {
+    String pushedRemoteArchive=getAutomaticallyPushedArchive();
+    if (pushedRemoteArchive != null) {
+      _log.debug("Pushing all of the new entries to " + pushedRemoteArchive + ": "+ allEntries);
+      User user=new User();
+      RemoteArchiveBean rab=new RemoteArchiveBean();
+      rab.fetchIndex(user,"web",pushedRemoteArchive,bm.getDefaultProxyHost(),bm.getDefaultProxyPort(),true);
+      if (rab.getRemoteIndex() != null) {
+        rab.postSelectedEntries(user,allEntries,pushedRemoteArchive);
+        _log.debug(rab.getStatus());
+      }
+    }
   }
   _log.debug("Done with all updating");
 }
