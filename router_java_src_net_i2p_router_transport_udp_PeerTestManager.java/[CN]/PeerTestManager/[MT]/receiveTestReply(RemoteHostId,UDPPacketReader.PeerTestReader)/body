@@ -1,4 +1,5 @@
 {
+  _context.statManager().addRateData("udp.receiveTestReply",1,0);
   PeerTestState test=_currentTest;
   if (expired())   return;
   if (_currentTestComplete)   return;
@@ -10,7 +11,7 @@
       test.setAliceIP(addr);
       test.setReceiveBobTime(_context.clock().now());
       test.setAlicePort(testInfo.readPort());
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Receive test reply from bob @ " + from.getIP() + " via our "+ test.getAlicePort()+ "/"+ test.getAlicePortFromCharlie());
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Receive test reply from bob @ " + from + " via our "+ test.getAlicePort()+ "/"+ test.getAlicePortFromCharlie());
       if (test.getAlicePortFromCharlie() > 0)       testComplete(false);
     }
  catch (    UnknownHostException uhe) {
@@ -22,6 +23,7 @@
     long recentBegin=_context.clock().now() - CHARLIE_RECENT_PERIOD;
     if ((charlieSession != null) && (charlieSession.getLastACKSend() > recentBegin) && (charlieSession.getLastSendTime() > recentBegin)) {
       if (_log.shouldLog(Log.WARN))       _log.warn("Bob chose a charlie we already have a session to, cancelling the test and rerunning (bob: " + _currentTest + ", charlie: "+ from+ ")");
+      _currentTestComplete=true;
       _context.statManager().addRateData("udp.statusKnownCharlie",1,0);
       honorStatus(CommSystemFacade.STATUS_UNKNOWN);
       return;

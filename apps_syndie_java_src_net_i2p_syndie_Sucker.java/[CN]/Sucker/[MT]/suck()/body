@@ -1,25 +1,26 @@
 {
+  _state.entriesPosted=new ArrayList();
   SyndFeed feed;
   File fetched=null;
-  tempFiles=new ArrayList();
-  int idx=urlToLoad.lastIndexOf('/');
-  if (idx > 0)   baseUrl=urlToLoad.substring(0,idx);
- else   baseUrl=urlToLoad;
-  infoLog("Processing: " + urlToLoad);
-  debugLog("Base url: " + baseUrl);
+  _state.tempFiles=new ArrayList();
+  int idx=_state.urlToLoad.lastIndexOf('/');
+  if (idx > 0)   _state.baseUrl=_state.urlToLoad.substring(0,idx);
+ else   _state.baseUrl=_state.urlToLoad;
+  infoLog("Processing: " + _state.urlToLoad);
+  debugLog("Base url: " + _state.baseUrl);
   try {
     File lastIdFile=null;
-    if (!pushToSyndie) {
-      lastIdFile=new File(historyPath + ".lastId");
+    if (!_state.pushToSyndie) {
+      lastIdFile=new File(_state.historyPath + ".lastId");
       if (!lastIdFile.exists())       lastIdFile.createNewFile();
       FileInputStream fis=null;
       try {
         fis=new FileInputStream(lastIdFile);
         String number=readLine(fis);
-        messageNumber=Integer.parseInt(number);
+        _state.messageNumber=Integer.parseInt(number);
       }
  catch (      NumberFormatException e) {
-        messageNumber=0;
+        _state.messageNumber=0;
       }
  finally {
         if (fis != null)         try {
@@ -28,21 +29,21 @@
  catch (        IOException ioe) {
         }
       }
-      File f=new File(outputDir);
+      File f=new File(_state.outputDir);
       f.mkdirs();
     }
  else {
-      messageNumber=bm.getNextBlogEntry(user);
+      _state.messageNumber=_state.bm.getNextBlogEntry(_state.user);
     }
-    _log.debug("message number: " + messageNumber);
-    historyFile=new File(historyPath);
-    if (!historyFile.exists())     historyFile.createNewFile();
-    shouldProxy=false;
-    proxyPortNum=-1;
-    if ((proxyHost != null) && (proxyPort != null)) {
+    _log.debug("message number: " + _state.messageNumber);
+    _state.historyFile=new File(_state.historyPath);
+    if (!_state.historyFile.exists())     _state.historyFile.createNewFile();
+    _state.shouldProxy=false;
+    _state.proxyPortNum=-1;
+    if ((_state.proxyHost != null) && (_state.proxyPort != null)) {
       try {
-        proxyPortNum=Integer.parseInt(proxyPort);
-        if (proxyPortNum > 0)         shouldProxy=true;
+        _state.proxyPortNum=Integer.parseInt(_state.proxyPort);
+        if (_state.proxyPortNum > 0)         _state.shouldProxy=true;
       }
  catch (      NumberFormatException nfe) {
         nfe.printStackTrace();
@@ -50,10 +51,10 @@
     }
     int numRetries=2;
     fetched=File.createTempFile("sucker",".fetch");
-    EepGet get=new EepGet(I2PAppContext.getGlobalContext(),shouldProxy,proxyHost,proxyPortNum,numRetries,fetched.getAbsolutePath(),urlToLoad);
+    EepGet get=new EepGet(I2PAppContext.getGlobalContext(),_state.shouldProxy,_state.proxyHost,_state.proxyPortNum,numRetries,fetched.getAbsolutePath(),_state.urlToLoad);
     SuckerFetchListener lsnr=new SuckerFetchListener();
     get.addStatusListener(lsnr);
-    _log.debug("fetching [" + urlToLoad + "] / "+ shouldProxy+ "/"+ proxyHost+ "/"+ proxyHost);
+    _log.debug("fetching [" + _state.urlToLoad + "] / "+ _state.shouldProxy+ "/"+ _state.proxyHost+ "/"+ _state.proxyHost);
     get.fetch();
     _log.debug("fetched: " + get.getNotModified() + "/"+ get.getETag());
     boolean ok=lsnr.waitForSuccess();
@@ -61,13 +62,13 @@
       _log.debug("success? " + ok);
       System.err.println("Unable to retrieve the url after " + numRetries + " tries.");
       fetched.delete();
-      return;
+      return _state.entriesPosted;
     }
     _log.debug("fetched successfully? " + ok);
     if (get.getNotModified()) {
       debugLog("not modified, saving network bytes from useless fetch");
       fetched.delete();
-      return;
+      return _state.entriesPosted;
     }
     SyndFeedInput input=new SyndFeedInput();
     feed=input.build(new XmlReader(fetched));
@@ -75,12 +76,12 @@
     _log.debug("entries: " + entries.size());
     FileOutputStream hos=null;
     try {
-      hos=new FileOutputStream(historyFile,true);
+      hos=new FileOutputStream(_state.historyFile,true);
       for (int i=entries.size() - 1; i >= 0; i--) {
         SyndEntry e=(SyndEntry)entries.get(i);
-        attachmentCounter=0;
+        _state.attachmentCounter=0;
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Syndicate entry: " + e.getLink());
-        String messageId=convertToSml(e);
+        String messageId=convertToSml(_state,e);
         if (messageId != null) {
           hos.write(messageId.getBytes());
           hos.write("\n".getBytes());
@@ -94,11 +95,11 @@
  catch (      IOException ioe) {
       }
     }
-    if (!pushToSyndie) {
+    if (!_state.pushToSyndie) {
       FileOutputStream fos=null;
       try {
         fos=new FileOutputStream(lastIdFile);
-        fos.write(("" + messageNumber).getBytes());
+        fos.write(("" + _state.messageNumber).getBytes());
       }
   finally {
         if (fos != null)         try {
@@ -124,4 +125,5 @@ catch (  IOException e) {
   }
   if (fetched != null)   fetched.delete();
   debugLog("Done.");
+  return _state.entriesPosted;
 }
