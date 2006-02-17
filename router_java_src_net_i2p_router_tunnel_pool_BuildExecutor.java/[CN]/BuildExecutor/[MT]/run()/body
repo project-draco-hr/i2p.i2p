@@ -2,9 +2,10 @@
   _isRunning=true;
   List wanted=new ArrayList(8);
   List pools=new ArrayList(8);
+  boolean pendingRemaining=false;
   while (!_manager.isShutdown()) {
     try {
-      _repoll=false;
+      _repoll=pendingRemaining;
       _manager.listPools(pools);
       for (int i=0; i < pools.size(); i++) {
         TunnelPool pool=(TunnelPool)pools.get(i);
@@ -55,8 +56,7 @@ synchronized (_currentlyBuilding) {
           }
         }
       }
-      boolean pendingRemaining=_handler.handleInboundRequests();
-      if (pendingRemaining)       _repoll=true;
+      pendingRemaining=_handler.handleInboundRequests();
       wanted.clear();
       pools.clear();
     }
