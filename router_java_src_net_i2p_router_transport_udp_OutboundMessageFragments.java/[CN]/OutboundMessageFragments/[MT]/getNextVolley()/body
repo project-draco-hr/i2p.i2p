@@ -9,6 +9,13 @@
 synchronized (_activeMessages) {
         for (int i=0; i < _activeMessages.size(); i++) {
           int cur=(i + _nextPacketMessage) % _activeMessages.size();
+          if (cur == 0) {
+            long ts=System.currentTimeMillis();
+            long cycleTime=ts - _lastCycleTime;
+            _lastCycleTime=ts;
+            _context.statManager().addRateData("udp.sendCycleTime",cycleTime,_activeMessages.size());
+            if (cycleTime > 1000)             _context.statManager().addRateData("udp.sendCycleTimeSlow",cycleTime,_activeMessages.size());
+          }
           state=(OutboundMessageState)_activeMessages.get(cur);
           peer=state.getPeer();
           if (peer == null)           peer=_transport.getPeerState(state.getMessage().getTarget().getIdentity().calculateHash());

@@ -14,6 +14,17 @@
     _lastSendRefill=now;
   }
   if (IGNORE_CWIN || size <= _sendWindowBytesRemaining || (ALWAYS_ALLOW_FIRST_PUSH && messagePushCount == 0)) {
+    if ((messagePushCount == 0) && (_concurrentMessagesActive > _concurrentMessagesAllowed)) {
+      _consecutiveRejections++;
+      _context.statManager().addRateData("udp.rejectConcurrentActive",_concurrentMessagesActive,_consecutiveRejections);
+      return false;
+    }
+ else     if (messagePushCount == 0) {
+      _context.statManager().addRateData("udp.allowConcurrentActive",_concurrentMessagesActive,_concurrentMessagesAllowed);
+      _concurrentMessagesActive++;
+      if (_consecutiveRejections > 0)       _context.statManager().addRateData("udp.rejectConcurrentSequence",_consecutiveRejections,_concurrentMessagesActive);
+      _consecutiveRejections=0;
+    }
     _sendWindowBytesRemaining-=size;
     _sendBytes+=size;
     _lastSendTime=now;
