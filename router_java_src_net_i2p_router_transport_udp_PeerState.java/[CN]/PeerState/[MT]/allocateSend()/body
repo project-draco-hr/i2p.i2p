@@ -1,0 +1,21 @@
+{
+  int total=0;
+  Map msgs=_outboundMessages;
+  if (_dead)   return null;
+synchronized (msgs) {
+    for (Iterator iter=msgs.values().iterator(); iter.hasNext(); ) {
+      OutboundMessageState state=(OutboundMessageState)iter.next();
+      if (locked_shouldSend(state)) {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Allocate sending to " + _remotePeer.toBase64() + ": "+ state.getMessageId());
+        return state;
+      }
+ else {
+        OutNetMessage msg=state.getMessage();
+        if (msg != null)         msg.timestamp("passed over for allocation with " + msgs.size() + " peers");
+      }
+    }
+    total=msgs.size();
+  }
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Nothing to send to " + _remotePeer.toBase64() + ", with "+ total+ " remaining");
+  return null;
+}

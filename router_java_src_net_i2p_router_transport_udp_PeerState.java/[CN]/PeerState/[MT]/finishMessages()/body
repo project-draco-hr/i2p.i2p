@@ -1,0 +1,54 @@
+{
+  int rv=0;
+  Map msgs=_outboundMessages;
+  if (_dead)   return 0;
+  List succeeded=null;
+  List failed=null;
+synchronized (msgs) {
+    for (Iterator iter=msgs.keySet().iterator(); iter.hasNext(); ) {
+      Long id=(Long)iter.next();
+      OutboundMessageState state=(OutboundMessageState)msgs.get(id);
+      if (state.isComplete()) {
+        iter.remove();
+        if (_retransmitter == state)         _retransmitter=null;
+        if (succeeded == null)         succeeded=new ArrayList(4);
+        succeeded.add(state);
+      }
+ else       if (state.isExpired()) {
+        iter.remove();
+        if (_retransmitter == state)         _retransmitter=null;
+        _context.statManager().addRateData("udp.sendFailed",state.getPushCount(),state.getLifetime());
+        if (failed == null)         failed=new ArrayList(4);
+        failed.add(state);
+      }
+ else       if (state.getPushCount() > OutboundMessageFragments.MAX_VOLLEYS) {
+        iter.remove();
+        if (state == _retransmitter)         _retransmitter=null;
+        _context.statManager().addRateData("udp.sendAggressiveFailed",state.getPushCount(),state.getLifetime());
+        if (failed == null)         failed=new ArrayList(4);
+        failed.add(state);
+      }
+    }
+    rv=msgs.size();
+  }
+  for (int i=0; succeeded != null && i < succeeded.size(); i++) {
+    OutboundMessageState state=(OutboundMessageState)succeeded.get(i);
+    _transport.succeeded(state);
+    state.releaseResources();
+    OutNetMessage msg=state.getMessage();
+    if (msg != null)     msg.timestamp("sending complete");
+  }
+  for (int i=0; failed != null && i < failed.size(); i++) {
+    OutboundMessageState state=(OutboundMessageState)failed.get(i);
+    OutNetMessage msg=state.getMessage();
+    if (msg != null) {
+      msg.timestamp("expired in the active pool");
+      _transport.failed(state);
+    }
+ else {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Unable to send a direct message: " + state);
+    }
+    state.releaseResources();
+  }
+  return rv;
+}

@@ -1,0 +1,45 @@
+{
+  if (_dead)   return;
+  if (bitfield.receivedComplete()) {
+    acked(bitfield.getMessageId());
+    return;
+  }
+  Map msgs=_outboundMessages;
+  OutboundMessageState state=null;
+  boolean isComplete=false;
+synchronized (msgs) {
+    state=(OutboundMessageState)msgs.get(new Long(bitfield.getMessageId()));
+    if (state != null) {
+      if (state.acked(bitfield)) {
+        isComplete=true;
+        msgs.remove(new Long(bitfield.getMessageId()));
+        if (state == _retransmitter)         _retransmitter=null;
+      }
+    }
+  }
+  if (state != null) {
+    int numSends=state.getMaxSends();
+    int bits=bitfield.fragmentCount();
+    int numACKed=0;
+    for (int i=0; i < bits; i++)     if (bitfield.received(i))     numACKed++;
+    _context.statManager().addRateData("udp.partialACKReceived",numACKed,state.getLifetime());
+    if (_log.shouldLog(Log.INFO))     _log.info("Received partial ack of " + state.getMessageId() + " by "+ _remotePeer.toBase64()+ " after "+ state.getLifetime()+ " and "+ numSends+ " sends: "+ bitfield+ ": completely removed? "+ isComplete+ ": "+ state);
+    if (isComplete) {
+      _context.statManager().addRateData("udp.sendConfirmTime",state.getLifetime(),state.getLifetime());
+      if (state.getFragmentCount() > 1)       _context.statManager().addRateData("udp.sendConfirmFragments",state.getFragmentCount(),state.getLifetime());
+      if (numSends > 1)       _context.statManager().addRateData("udp.sendConfirmVolley",numSends,state.getFragmentCount());
+      if (state.getMessage() != null)       state.getMessage().timestamp("partial ack to complete after " + numSends);
+      _transport.succeeded(state);
+      messageACKed(state.getFragmentCount() * state.getFragmentSize(),state.getLifetime(),0);
+      state.releaseResources();
+    }
+ else {
+      if (state.getMessage() != null)       state.getMessage().timestamp("partial ack after " + numSends + ": "+ bitfield.toString());
+    }
+    return;
+  }
+ else {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Received an ACK for a message not pending: " + bitfield);
+    return;
+  }
+}

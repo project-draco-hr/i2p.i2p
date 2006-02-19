@@ -1,57 +1,11 @@
 {
-  OutboundMessageState state=null;
-synchronized (_activeMessages) {
-    for (int i=0; i < _activeMessages.size(); i++) {
-      state=(OutboundMessageState)_activeMessages.get(i);
-      if (state.getMessageId() == messageId) {
-        OutNetMessage msg=state.getMessage();
-        if (msg != null) {
-          Hash expectedBy=msg.getTarget().getIdentity().getHash();
-          if (!expectedBy.equals(ackedBy)) {
-            state=null;
-            _activeMessages.notifyAll();
-            return 0;
-          }
-        }
-        _activeMessages.remove(i);
-        if (i < _nextPacketMessage) {
-          _nextPacketMessage--;
-          if (_nextPacketMessage < 0)           _nextPacketMessage=0;
-        }
-        locked_removeRetransmitter(state);
-        break;
-      }
- else {
-        state=null;
-      }
-    }
-    _activeMessages.notifyAll();
-  }
-  if (state != null) {
-    int numSends=state.getMaxSends();
-    if (state.getMessage() != null) {
-      PeerState peer=state.getPeer();
-      if (peer != null)       state.getMessage().timestamp("acked after " + numSends + " lastReceived: "+ (_context.clock().now() - peer.getLastReceiveTime())+ " lastSentFully: "+ (_context.clock().now() - peer.getLastSendFullyTime()));
-    }
-    if (_log.shouldLog(Log.INFO))     _log.info("Received ack of " + messageId + " by "+ ackedBy.toBase64()+ " after "+ state.getLifetime()+ " and "+ numSends+ " sends");
-    _context.statManager().addRateData("udp.sendConfirmTime",state.getLifetime(),state.getLifetime());
-    if (state.getFragmentCount() > 1)     _context.statManager().addRateData("udp.sendConfirmFragments",state.getFragmentCount(),state.getLifetime());
-    if (numSends > 1)     _context.statManager().addRateData("udp.sendConfirmVolley",numSends,state.getFragmentCount());
-    _transport.succeeded(state);
-    int numFragments=state.getFragmentCount();
-    PeerState peer=state.getPeer();
-    if (peer != null) {
-      peer.messageACKed(numFragments * state.getFragmentSize(),state.getLifetime(),numSends);
-      if (peer.getSendWindowBytesRemaining() > 0)       _throttle.unchoke(peer.getRemotePeer());
-    }
- else {
-      if (_log.shouldLog(Log.WARN))       _log.warn("message acked, but no peer attacked: " + state);
-    }
-    state.releaseResources();
-    return numFragments;
+  PeerState peer=_transport.getPeerState(ackedBy);
+  if (peer != null) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("acked [" + messageId + "] by "+ ackedBy.toBase64());
+    return peer.acked(messageId);
   }
  else {
-    if (_log.shouldLog(Log.WARN))     _log.warn("Received an ACK for a message not pending: " + messageId);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("acked [" + messageId + "] by an unknown remote peer?  "+ ackedBy.toBase64());
     return 0;
   }
 }

@@ -3,66 +3,47 @@
   OutboundMessageState state=null;
   while (_alive && (state == null)) {
     long now=_context.clock().now();
-    long nextSend=-1;
+    int nextSendDelay=-1;
     finishMessages();
     try {
-synchronized (_activeMessages) {
-        for (int i=0; i < _activeMessages.size(); i++) {
-          int cur=(i + _nextPacketMessage) % _activeMessages.size();
+synchronized (_activePeers) {
+        for (int i=0; i < _activePeers.size(); i++) {
+          int cur=(i + _nextPeer) % _activePeers.size();
           if (cur == 0) {
             long ts=System.currentTimeMillis();
             long cycleTime=ts - _lastCycleTime;
-            _lastCycleTime=ts;
-            _context.statManager().addRateData("udp.sendCycleTime",cycleTime,_activeMessages.size());
-            if (cycleTime > 1000)             _context.statManager().addRateData("udp.sendCycleTimeSlow",cycleTime,_activeMessages.size());
+            _context.statManager().addRateData("udp.sendCycleTime",cycleTime,_activePeers.size());
+            if (cycleTime > 1000)             _context.statManager().addRateData("udp.sendCycleTimeSlow",cycleTime,_activePeers.size());
           }
-          state=(OutboundMessageState)_activeMessages.get(cur);
-          peer=state.getPeer();
-          if (peer == null)           peer=_transport.getPeerState(state.getMessage().getTarget().getIdentity().calculateHash());
-          if ((peer != null) && locked_shouldSend(state,peer)) {
-            _nextPacketMessage=i + 1;
+          peer=(PeerState)_activePeers.get(i);
+          state=peer.allocateSend();
+          if (state != null) {
+            _nextPeer=i + 1;
             break;
           }
  else {
-            if (peer == null) {
-              _activeMessages.remove(cur);
-              locked_removeRetransmitter(state);
-              if (state.getMessage() != null)               state.getMessage().timestamp("peer disconnected");
-              _transport.failed(state);
-              if (_log.shouldLog(Log.ERROR))               _log.error("Peer disconnected for " + state);
-              if ((peer != null) && (peer.getSendWindowBytesRemaining() > 0))               _throttle.unchoke(peer.getRemotePeer());
-              state.releaseResources();
-              i--;
-            }
-            long time=state.getNextSendTime();
-            if ((nextSend < 0) || (time < nextSend))             nextSend=time;
-            state=null;
+            int delay=peer.getNextDelay();
+            if ((nextSendDelay <= 0) || (delay < nextSendDelay))             nextSendDelay=delay;
             peer=null;
+            state=null;
           }
         }
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Done looping, next peer we are sending for: " + (peer != null ? peer.getRemotePeer().toBase64() : "none"));
         if (state == null) {
-          if (nextSend <= 0) {
-            _activeMessages.notifyAll();
-            _activeMessages.wait(1000);
-          }
- else {
-            long delay=nextSend - now;
-            if (delay <= 0)             delay=10;
-            if (delay > 1000)             delay=1000;
-            _allowExcess=true;
-            _activeMessages.notifyAll();
-            _activeMessages.wait(delay);
-          }
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("wait for " + nextSendDelay);
+          if (nextSendDelay > 0)           _activePeers.wait(nextSendDelay);
+ else           _activePeers.wait(1000);
         }
  else {
-          _activeMessages.notifyAll();
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("dont wait: alive=" + _alive + " state = "+ state);
         }
-        _allowExcess=false;
       }
     }
  catch (    InterruptedException ie) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Woken up while waiting");
     }
   }
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Sending " + state);
   UDPPacket packets[]=preparePackets(state,peer);
   if ((state != null) && (state.getMessage() != null)) {
     int valid=0;

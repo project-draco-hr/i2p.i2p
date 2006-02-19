@@ -1,8 +1,8 @@
 {
   if (msg == null)   return;
   int consecutive=0;
+  OutNetMessage m=msg.getMessage();
   if ((msg.getPeer() != null) && ((msg.getMaxSends() >= OutboundMessageFragments.MAX_VOLLEYS) || (msg.isExpired()))) {
-    OutNetMessage m=msg.getMessage();
     long recvDelay=_context.clock().now() - msg.getPeer().getLastReceiveTime();
     long sendDelay=_context.clock().now() - msg.getPeer().getLastSendFullyTime();
     if (m != null)     m.timestamp("message failure - volleys = " + msg.getMaxSends() + " lastReceived: "+ recvDelay+ " lastSentFully: "+ sendDelay+ " expired? "+ msg.isExpired());
@@ -12,5 +12,5 @@
  else     if (consecutive > 2 * MAX_CONSECUTIVE_FAILED)     dropPeer(msg.getPeer(),false);
   }
   noteSend(msg,false);
-  super.afterSend(msg.getMessage(),false);
+  if (m != null)   super.afterSend(m,false);
 }
