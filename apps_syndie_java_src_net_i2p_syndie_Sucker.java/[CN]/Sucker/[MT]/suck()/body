@@ -36,8 +36,6 @@
       _state.messageNumber=_state.bm.getNextBlogEntry(_state.user);
     }
     _log.debug("message number: " + _state.messageNumber);
-    _state.historyFile=new File(_state.historyPath);
-    if (!_state.historyFile.exists())     _state.historyFile.createNewFile();
     _state.shouldProxy=false;
     _state.proxyPortNum=-1;
     if ((_state.proxyHost != null) && (_state.proxyPort != null)) {
@@ -60,7 +58,7 @@
     boolean ok=lsnr.waitForSuccess();
     if (!ok) {
       _log.debug("success? " + ok);
-      System.err.println("Unable to retrieve the url after " + numRetries + " tries.");
+      System.err.println("Unable to retrieve the url [" + _state.urlToLoad + "] after "+ numRetries+ " tries.");
       fetched.delete();
       return _state.entriesPosted;
     }
@@ -74,27 +72,32 @@
     feed=input.build(new XmlReader(fetched));
     List entries=feed.getEntries();
     _log.debug("entries: " + entries.size());
-    FileOutputStream hos=null;
-    try {
-      hos=new FileOutputStream(_state.historyFile,true);
-      for (int i=entries.size() - 1; i >= 0; i--) {
-        SyndEntry e=(SyndEntry)entries.get(i);
-        _state.attachmentCounter=0;
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("Syndicate entry: " + e.getLink());
-        String messageId=convertToSml(_state,e);
-        if (messageId != null) {
-          hos.write(messageId.getBytes());
-          hos.write("\n".getBytes());
-        }
-      }
+    loadHistory();
+    List feedMessageIds=new ArrayList();
+    for (int i=entries.size() - 1; i >= 0; i--) {
+      SyndEntry e=(SyndEntry)entries.get(i);
+      _state.attachmentCounter=0;
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Syndicate entry: " + e.getLink());
+      String feedHash=sha1(_state.urlToLoad);
+      String itemHash=sha1(e.getTitle() + e.getDescription());
+      Date d=e.getPublishedDate();
+      String time;
+      if (d != null)       time="" + d.getTime();
+ else       time="" + new Date().getTime();
+      String outputFileName=_state.outputDir + "/" + _state.messageNumber;
+      String messageId=feedHash + ":" + itemHash+ ":"+ time+ ":"+ outputFileName;
+      feedMessageIds.add(messageId);
+      if (existsInHistory(_state,messageId))       continue;
+      infoLog("new: " + messageId);
+      processEntry(_state,e,time);
     }
-  finally {
-      if (hos != null)       try {
-        hos.close();
-      }
- catch (      IOException ioe) {
-      }
+    pruneHistory(_state.urlToLoad,42 * 10);
+    Iterator iter=feedMessageIds.iterator();
+    while (iter.hasNext()) {
+      String newMessageId=(String)iter.next();
+      if (!existsInHistory(_state,newMessageId))       addHistory(newMessageId);
     }
+    storeHistory();
     if (!_state.pushToSyndie) {
       FileOutputStream fos=null;
       try {

@@ -25,7 +25,7 @@
       }
     }
     ret+="[/img]";
-    if (imageLink.indexOf("http") < 0)     imageLink=state.baseUrl + "/" + imageLink;
+    if (!imageLink.startsWith("http://"))     imageLink=state.baseUrl + "/" + imageLink;
     fetchAttachment(state,imageLink);
     debugLog("Converted to: " + ret);
     return ret;
@@ -38,7 +38,7 @@
     while ((b < htmlTagLowerCase.length()) && (htmlTagLowerCase.charAt(b) != '\"'))     b++;
     if (b >= htmlTagLowerCase.length())     return null;
     String link=htmlTag.substring(a,b);
-    if (link.indexOf("http") < 0)     link=state.baseUrl + "/" + link;
+    if (!link.startsWith("http://"))     link=state.baseUrl + "/" + link;
     String schema="web";
     ret+="[link schema=\"" + schema + "\" location=\""+ link+ "\"]";
     if (htmlTagLowerCase.endsWith("/>"))     ret+="[/link]";
@@ -51,6 +51,7 @@
       state.pendingEndLink=false;
       return "[/link]";
     }
+    return "";
   }
   if ("<b>".equals(htmlTagLowerCase))   return "[b]";
   if ("</b>".equals(htmlTagLowerCase))   return "[/b]";
@@ -69,7 +70,13 @@
   if ("<li>".equals(htmlTagLowerCase))   return "\n * ";
   if ("</li>".equals(htmlTagLowerCase))   return "";
   if ("</br>".equals(htmlTagLowerCase))   return "";
+  if (htmlTagLowerCase.startsWith("<hr"))   return "";
+  if ("</img>".equals(htmlTagLowerCase))   return "";
+  if ("</font>".equals(htmlTagLowerCase))   return "";
+  if ("<blockquote>".equals(htmlTagLowerCase))   return "[quote]";
+  if ("</blockquote>".equals(htmlTagLowerCase))   return "[/quote]";
   if (htmlTagLowerCase.startsWith("<table") || "</table>".equals(htmlTagLowerCase))   return "[hr][/hr]";
+  if (htmlTagLowerCase.startsWith("<font"))   return "";
   for (int i=0; i < ignoreTags.length; i++) {
     String openTag="<" + ignoreTags[i];
     String closeTag="</" + ignoreTags[i];

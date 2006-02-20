@@ -1,16 +1,6 @@
 {
   String subject;
   state.stripNewlines=false;
-  String feedHash=sha1(state.urlToLoad);
-  String itemHash=sha1(e.getTitle() + e.getDescription());
-  Date d=e.getPublishedDate();
-  String time;
-  if (d != null)   time="" + d.getTime();
- else   time="" + new Date().getTime();
-  String outputFileName=state.outputDir + "/" + state.messageNumber;
-  String messageId=feedHash + ":" + itemHash+ ":"+ time+ ":"+ outputFileName;
-  if (existsInHistory(state,messageId))   return null;
-  infoLog("new: " + messageId);
   try {
     String sml="";
     subject=e.getTitle();
@@ -28,7 +18,6 @@
     SyndContent content;
     List l=e.getContents();
     if (l != null) {
-      debugLog("There is content");
       iter=l.iterator();
       while (iter.hasNext()) {
         content=(SyndContent)iter.next();
@@ -52,7 +41,7 @@
       }
     }
     String source=e.getLink();
-    if (source.indexOf("http") < 0)     source=state.baseUrl + source;
+    if (!source.startsWith("http://"))     source=state.baseUrl + source;
     sml+="[link schema=\"web\" location=\"" + source + "\"]source[/link]\n";
     if (state.pushToSyndie) {
       debugLog("user.blog: " + state.user.getBlogStr());
@@ -64,7 +53,7 @@
       BlogURI uri=state.bm.createBlogEntry(state.user,false,subject,tags,null,sml,state.fileNames,state.fileStreams,state.fileTypes);
       if (uri == null) {
         errorLog("pushToSyndie failure.");
-        return null;
+        return false;
       }
  else {
         state.entriesPosted.add(uri);
@@ -87,7 +76,7 @@
     }
     state.messageNumber++;
     deleteTempFiles(state);
-    return messageId;
+    return true;
   }
  catch (  FileNotFoundException e1) {
     e1.printStackTrace();
@@ -96,5 +85,5 @@ catch (  IOException e2) {
     e2.printStackTrace();
   }
   deleteTempFiles(state);
-  return null;
+  return false;
 }
