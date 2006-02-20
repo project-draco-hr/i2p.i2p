@@ -1,8 +1,14 @@
 {
+  int remaining=0;
   MessagePayloadMessage msg=null;
 synchronized (_availableMessages) {
     msg=(MessagePayloadMessage)_availableMessages.remove(new Long(msgId));
+    remaining=_availableMessages.size();
   }
-  if (msg == null)   return null;
+  _context.statManager().addRateData("client.availableMessages",remaining,0);
+  if (msg == null) {
+    _log.error("Receive message " + msgId + " had no matches, remaining="+ remaining);
+    return null;
+  }
   return msg.getPayload().getUnencryptedData();
 }

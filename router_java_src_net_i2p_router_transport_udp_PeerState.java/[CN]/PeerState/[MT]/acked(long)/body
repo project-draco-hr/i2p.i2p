@@ -1,16 +1,23 @@
 {
   OutboundMessageState state=null;
-  Map msgs=_outboundMessages;
+  List msgs=_outboundMessages;
   if (_dead)   return 0;
 synchronized (msgs) {
-    state=(OutboundMessageState)msgs.remove(new Long(messageId));
+    int sz=msgs.size();
+    for (int i=0; i < sz; i++) {
+      state=(OutboundMessageState)msgs.get(i);
+      if (state.getMessageId() == messageId) {
+        msgs.remove(i);
+        break;
+      }
+ else {
+        state=null;
+      }
+    }
     if ((state != null) && (state == _retransmitter))     _retransmitter=null;
   }
   if (state != null) {
     int numSends=state.getMaxSends();
-    if (state.getMessage() != null) {
-      state.getMessage().timestamp("acked after " + numSends + " lastReceived: "+ (_context.clock().now() - getLastReceiveTime())+ " lastSentFully: "+ (_context.clock().now() - getLastSendFullyTime()));
-    }
     if (_log.shouldLog(Log.INFO))     _log.info("Received ack of " + messageId + " by "+ _remotePeer.toBase64()+ " after "+ state.getLifetime()+ " and "+ numSends+ " sends");
     _context.statManager().addRateData("udp.sendConfirmTime",state.getLifetime(),state.getLifetime());
     if (state.getFragmentCount() > 1)     _context.statManager().addRateData("udp.sendConfirmFragments",state.getFragmentCount(),state.getLifetime());

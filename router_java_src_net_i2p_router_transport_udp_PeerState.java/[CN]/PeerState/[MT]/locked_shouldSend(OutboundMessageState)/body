@@ -8,16 +8,14 @@
     }
     if ((_retransmitter != null) && ((_retransmitter.isExpired() || _retransmitter.isComplete())))     _retransmitter=null;
     if ((_retransmitter != null) && (_retransmitter != state)) {
-      _context.statManager().addRateData("udp.blockedRetransmissions",getPacketsRetransmitted(),getPacketsTransmitted());
-      if ((state.getMaxSends() <= 0) && (!THROTTLE_INITIAL_SEND)) {
-        if (state.getMessage() != null)         state.getMessage().timestamp("another message is retransmitting, but we want to send our first volley...");
+      _context.statManager().addRateData("udp.blockedRetransmissions",_packetsRetransmitted,_packetsTransmitted);
+      int max=state.getMaxSends();
+      if ((max <= 0) && (!THROTTLE_INITIAL_SEND)) {
       }
- else       if ((state.getMaxSends() <= 0) || (THROTTLE_RESENDS)) {
-        if (state.getMessage() != null)         state.getMessage().timestamp("choked, with another message retransmitting");
+ else       if ((max <= 0) || (THROTTLE_RESENDS)) {
         return false;
       }
  else {
-        if (state.getMessage() != null)         state.getMessage().timestamp("another message is retransmitting, but since we've already begun sending...");
       }
     }
     int size=state.getUnackedSize();
@@ -31,11 +29,9 @@
     }
  else {
       _context.statManager().addRateData("udp.sendRejected",state.getPushCount(),state.getLifetime());
-      if (state.getMessage() != null)       state.getMessage().timestamp("send rejected, available=" + getSendWindowBytesRemaining());
       if (_log.shouldLog(Log.WARN))       _log.warn("Allocation of " + size + " rejected w/ wsize="+ getSendWindowBytes()+ " available="+ getSendWindowBytesRemaining()+ " for message "+ state.getMessageId()+ ": "+ state);
       state.setNextSendTime(now + (_context.random().nextInt(2 * ACKSender.ACK_FREQUENCY)));
       if (_log.shouldLog(Log.WARN))       _log.warn("Retransmit after choke for next send time in " + (state.getNextSendTime() - now) + "ms");
-      if (state.getMessage() != null)       state.getMessage().timestamp("choked, not enough available, wsize=" + getSendWindowBytes() + " available="+ getSendWindowBytesRemaining());
       return false;
     }
   }

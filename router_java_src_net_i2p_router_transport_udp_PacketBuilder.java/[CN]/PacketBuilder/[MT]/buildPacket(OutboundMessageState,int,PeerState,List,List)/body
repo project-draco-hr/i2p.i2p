@@ -1,5 +1,5 @@
 {
-  UDPPacket packet=UDPPacket.acquire(_context);
+  UDPPacket packet=UDPPacket.acquire(_context,false);
   StringBuffer msg=null;
   boolean acksIncluded=false;
   if (_log.shouldLog(Log.INFO)) {
@@ -66,18 +66,25 @@
   if (fragment == state.getFragmentCount() - 1)   data[off]|=1;
   off++;
   int size=state.fragmentSize(fragment);
-  if (size < 0)   return null;
+  if (size < 0) {
+    packet.release();
+    return null;
+  }
   DataHelper.toLong(data,off,2,size);
   data[off]&=(byte)0x3F;
   off+=2;
   int sizeWritten=state.writeFragment(data,off,fragment);
   if (sizeWritten != size) {
     _log.error("Size written: " + sizeWritten + " but size: "+ size+ " for fragment "+ fragment+ " of "+ state.getMessageId());
+    packet.release();
     return null;
   }
  else   if (_log.shouldLog(Log.DEBUG))   _log.debug("Size written: " + sizeWritten + " for fragment "+ fragment+ " of "+ state.getMessageId());
   size=sizeWritten;
-  if (size < 0)   return null;
+  if (size < 0) {
+    packet.release();
+    return null;
+  }
   off+=size;
   int padSize=16 - (off % 16);
   if (padSize > 0) {

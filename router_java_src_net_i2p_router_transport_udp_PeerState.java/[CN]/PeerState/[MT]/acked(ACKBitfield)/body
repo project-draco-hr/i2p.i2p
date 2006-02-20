@@ -4,16 +4,23 @@
     acked(bitfield.getMessageId());
     return;
   }
-  Map msgs=_outboundMessages;
+  List msgs=_outboundMessages;
   OutboundMessageState state=null;
   boolean isComplete=false;
 synchronized (msgs) {
-    state=(OutboundMessageState)msgs.get(new Long(bitfield.getMessageId()));
-    if (state != null) {
-      if (state.acked(bitfield)) {
-        isComplete=true;
-        msgs.remove(new Long(bitfield.getMessageId()));
-        if (state == _retransmitter)         _retransmitter=null;
+    for (int i=0; i < msgs.size(); i++) {
+      state=(OutboundMessageState)msgs.get(i);
+      if (state.getMessageId() == bitfield.getMessageId()) {
+        boolean complete=state.acked(bitfield);
+        if (complete) {
+          isComplete=true;
+          msgs.remove(i);
+          if (state == _retransmitter)           _retransmitter=null;
+        }
+        break;
+      }
+ else {
+        state=null;
       }
     }
   }
@@ -28,13 +35,11 @@ synchronized (msgs) {
       _context.statManager().addRateData("udp.sendConfirmTime",state.getLifetime(),state.getLifetime());
       if (state.getFragmentCount() > 1)       _context.statManager().addRateData("udp.sendConfirmFragments",state.getFragmentCount(),state.getLifetime());
       if (numSends > 1)       _context.statManager().addRateData("udp.sendConfirmVolley",numSends,state.getFragmentCount());
-      if (state.getMessage() != null)       state.getMessage().timestamp("partial ack to complete after " + numSends);
       _transport.succeeded(state);
       messageACKed(state.getFragmentCount() * state.getFragmentSize(),state.getLifetime(),0);
       state.releaseResources();
     }
  else {
-      if (state.getMessage() != null)       state.getMessage().timestamp("partial ack after " + numSends + ": "+ bitfield.toString());
     }
     return;
   }

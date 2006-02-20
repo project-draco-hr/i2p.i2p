@@ -1,11 +1,12 @@
 {
   _socketChanged=false;
+  FIFOBandwidthLimiter.Request req=_context.bandwidthLimiter().createRequest();
   while (_keepRunning) {
     if (_socketChanged) {
       Thread.currentThread().setName(_name + "." + _id);
       _socketChanged=false;
     }
-    UDPPacket packet=UDPPacket.acquire(_context);
+    UDPPacket packet=UDPPacket.acquire(_context,true);
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Before throttling receive");
     while (!_context.throttle().acceptNetworkMessage())     try {
       Thread.sleep(10);
@@ -21,7 +22,7 @@ synchronized (Runner.this) {
       if (_log.shouldLog(Log.INFO))       _log.info("After blocking socket.receive: packet is " + size + " bytes on "+ System.identityHashCode(packet));
       packet.resetBegin();
       if (size > 0) {
-        FIFOBandwidthLimiter.Request req=_context.bandwidthLimiter().requestInbound(size,"UDP receiver");
+        req=_context.bandwidthLimiter().requestInbound(size,"UDP receiver");
         while (req.getPendingInboundRequested() > 0)         req.waitForNextAllocation();
         int queued=receive(packet);
         _context.statManager().addRateData("udp.receivePacketSize",size,queued);

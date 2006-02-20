@@ -2,13 +2,14 @@
   int rv=0;
   if (data.readACKsIncluded()) {
     int fragments=0;
-    long acks[]=data.readACKs();
-    if (acks != null) {
-      rv+=acks.length;
-      _context.statManager().addRateData("udp.receivedACKs",acks.length,0);
-      for (int i=0; i < acks.length; i++) {
-        if (_log.shouldLog(Log.INFO))         _log.info("Full ACK of message " + acks[i] + " received!");
-        fragments+=_outbound.acked(acks[i],from.getRemotePeer());
+    int ackCount=data.readACKCount();
+    if (ackCount > 0) {
+      rv+=ackCount;
+      _context.statManager().addRateData("udp.receivedACKs",ackCount,0);
+      for (int i=0; i < ackCount; i++) {
+        long id=data.readACK(i);
+        if (_log.shouldLog(Log.INFO))         _log.info("Full ACK of message " + id + " received!");
+        fragments+=_outbound.acked(id,from.getRemotePeer());
       }
     }
  else {

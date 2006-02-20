@@ -2,7 +2,7 @@
   List rv=null;
   int bytesRemaining=countMaxACKData();
 synchronized (_currentACKs) {
-    rv=new ArrayList(_currentACKs.size());
+    rv=new ArrayList(16);
     int oldIndex=_currentACKsResend.size();
     while ((bytesRemaining >= 4) && (_currentACKs.size() > 0)) {
       Long val=(Long)_currentACKs.remove(0);
@@ -14,7 +14,10 @@ synchronized (_currentACKs) {
     if (_currentACKs.size() <= 0)     _wantACKSendSince=-1;
     if (alwaysIncludeRetransmissions || rv.size() > 0) {
       for (int i=0; (i < oldIndex) && (bytesRemaining >= 4); i++) {
-        rv.add(new FullACKBitfield(((Long)_currentACKsResend.get(i)).longValue()));
+        Long cur=(Long)_currentACKsResend.get(i);
+        long c=cur.longValue();
+        FullACKBitfield bf=new FullACKBitfield(c);
+        rv.add(bf);
         bytesRemaining-=4;
       }
     }

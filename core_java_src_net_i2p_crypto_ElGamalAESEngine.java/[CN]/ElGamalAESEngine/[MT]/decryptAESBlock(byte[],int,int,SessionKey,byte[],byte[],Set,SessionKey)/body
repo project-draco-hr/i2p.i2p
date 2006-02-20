@@ -4,9 +4,10 @@
   try {
     SessionKey newKey=null;
     Hash readHash=null;
-    List tags=new ArrayList();
+    List tags=null;
     int cur=0;
     long numTags=DataHelper.fromLong(decrypted,cur,2);
+    if (numTags > 0)     tags=new ArrayList((int)numTags);
     cur+=2;
     if ((numTags < 0) || (numTags > 200))     throw new Exception("Invalid number of session tags");
     if (numTags * SessionTag.BYTE_LENGTH > decrypted.length - 2) {
@@ -40,7 +41,7 @@
     Hash calcHash=_context.sha().calculateHash(unencrData);
     boolean eq=calcHash.equals(readHash);
     if (eq) {
-      foundTags.addAll(tags);
+      if (tags != null)       foundTags.addAll(tags);
       if (newKey != null)       foundKey.setData(newKey.getData());
       return unencrData;
     }

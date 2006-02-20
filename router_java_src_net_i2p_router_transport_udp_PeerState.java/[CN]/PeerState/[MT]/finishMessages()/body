@@ -1,28 +1,34 @@
 {
   int rv=0;
-  Map msgs=_outboundMessages;
+  List msgs=_outboundMessages;
   if (_dead)   return 0;
   List succeeded=null;
   List failed=null;
 synchronized (msgs) {
-    for (Iterator iter=msgs.keySet().iterator(); iter.hasNext(); ) {
-      Long id=(Long)iter.next();
-      OutboundMessageState state=(OutboundMessageState)msgs.get(id);
+    int size=msgs.size();
+    for (int i=0; i < size; i++) {
+      OutboundMessageState state=(OutboundMessageState)msgs.get(i);
       if (state.isComplete()) {
-        iter.remove();
+        msgs.remove(i);
+        i--;
+        size--;
         if (_retransmitter == state)         _retransmitter=null;
         if (succeeded == null)         succeeded=new ArrayList(4);
         succeeded.add(state);
       }
  else       if (state.isExpired()) {
-        iter.remove();
+        msgs.remove(i);
+        i--;
+        size--;
         if (_retransmitter == state)         _retransmitter=null;
         _context.statManager().addRateData("udp.sendFailed",state.getPushCount(),state.getLifetime());
         if (failed == null)         failed=new ArrayList(4);
         failed.add(state);
       }
  else       if (state.getPushCount() > OutboundMessageFragments.MAX_VOLLEYS) {
-        iter.remove();
+        msgs.remove(i);
+        i--;
+        size--;
         if (state == _retransmitter)         _retransmitter=null;
         _context.statManager().addRateData("udp.sendAggressiveFailed",state.getPushCount(),state.getLifetime());
         if (failed == null)         failed=new ArrayList(4);
