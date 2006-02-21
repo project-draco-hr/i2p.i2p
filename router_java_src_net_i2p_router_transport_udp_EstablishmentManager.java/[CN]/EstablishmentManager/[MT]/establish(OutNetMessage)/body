@@ -28,16 +28,24 @@
   }
   OutboundEstablishState state=null;
   int deferred=0;
+  boolean rejected=false;
+  int queueCount=0;
 synchronized (_outboundStates) {
     state=(OutboundEstablishState)_outboundStates.get(to);
     if (state == null) {
       if (_outboundStates.size() >= getMaxConcurrentEstablish()) {
         List queued=(List)_queuedOutbound.get(to);
         if (queued == null) {
-          queued=new ArrayList(1);
-          _queuedOutbound.put(to,queued);
+          if (_queuedOutbound.size() > MAX_QUEUED_OUTBOUND) {
+            rejected=true;
+          }
+ else {
+            queued=new ArrayList(1);
+            _queuedOutbound.put(to,queued);
+          }
         }
-        queued.add(msg);
+        queueCount=queued.size();
+        if ((queueCount < MAX_QUEUED_PER_PEER) && (!rejected))         queued.add(msg);
         deferred=_queuedOutbound.size();
       }
  else {
@@ -51,6 +59,16 @@ synchronized (_outboundStates) {
       List queued=(List)_queuedOutbound.remove(to);
       if (queued != null)       for (int i=0; i < queued.size(); i++)       state.addMessage((OutNetMessage)queued.get(i));
     }
+  }
+  if (rejected) {
+    _transport.failed(msg,"Too many pending outbound connections");
+    _context.statManager().addRateData("udp.establishRejected",deferred,0);
+    return;
+  }
+  if (queueCount >= MAX_QUEUED_PER_PEER) {
+    _transport.failed(msg,"Too many pending messages for the given peer");
+    _context.statManager().addRateData("udp.establishOverflow",queueCount,deferred);
+    return;
   }
   if (deferred > 0)   msg.timestamp("too many deferred establishers: " + deferred);
  else   if (state != null)   msg.timestamp("establish state already waiting " + state.getLifetime());
