@@ -1,11 +1,20 @@
 {
   String forceIntroducers=_context.getProperty(PROP_FORCE_INTRODUCERS);
-  if ((forceIntroducers != null) && (Boolean.valueOf(forceIntroducers).booleanValue()))   return true;
-switch (getReachabilityStatus()) {
+  if ((forceIntroducers != null) && (Boolean.valueOf(forceIntroducers).booleanValue())) {
+    if (_log.shouldLog(Log.INFO))     _log.info("Force introducers specified");
+    return true;
+  }
+  short status=getReachabilityStatus();
+switch (status) {
 case CommSystemFacade.STATUS_REJECT_UNSOLICITED:
 case CommSystemFacade.STATUS_DIFFERENT:
-    return true;
+    if (_log.shouldLog(Log.INFO))     _log.info("Require introducers, because our status is " + status);
+  return true;
 default :
-  return false;
+if (!allowDirectUDP()) {
+  if (_log.shouldLog(Log.INFO))   _log.info("Require introducers, because we do not allow direct UDP connections");
+  return true;
+}
+return false;
 }
 }

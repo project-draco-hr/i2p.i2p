@@ -19,53 +19,42 @@
     }
   }
   Properties options=new Properties();
-  boolean introducersRequired=introducersRequired();
-  if (introducersRequired) {
-    List peers=new ArrayList(PUBLIC_RELAY_COUNT);
-    int found=0;
-    _introManager.pickInbound(peers,PUBLIC_RELAY_COUNT);
-    if (_log.shouldLog(Log.INFO))     _log.info("Introducers required, picked peers: " + peers);
-    for (int i=0; i < peers.size(); i++) {
-      PeerState peer=(PeerState)peers.get(i);
-      RouterInfo ri=_context.netDb().lookupRouterInfoLocally(peer.getRemotePeer());
-      if (ri == null) {
-        if (_log.shouldLog(Log.INFO))         _log.info("Picked peer has no local routerInfo: " + peer);
-        continue;
-      }
-      RouterAddress ra=ri.getTargetAddress(STYLE);
-      if (ra == null) {
-        if (_log.shouldLog(Log.INFO))         _log.info("Picked peer has no SSU address: " + ri);
-        continue;
-      }
-      UDPAddress ura=new UDPAddress(ra);
-      options.setProperty(UDPAddress.PROP_INTRO_HOST_PREFIX + i,peer.getRemoteHostId().toHostString());
-      options.setProperty(UDPAddress.PROP_INTRO_PORT_PREFIX + i,String.valueOf(peer.getRemotePort()));
-      options.setProperty(UDPAddress.PROP_INTRO_KEY_PREFIX + i,Base64.encode(ura.getIntroKey()));
-      options.setProperty(UDPAddress.PROP_INTRO_TAG_PREFIX + i,String.valueOf(peer.getTheyRelayToUsAs()));
-      found++;
-    }
-    if (found > 0) {
-      if (_log.shouldLog(Log.INFO))       _log.info("Picked peers: " + found);
-      _introducersSelectedOn=_context.clock().now();
-    }
-  }
+  boolean directIncluded=false;
   if (allowDirectUDP() && (_externalListenPort > 0) && (_externalListenHost != null)&& (isValid(_externalListenHost.getAddress()))) {
     options.setProperty(UDPAddress.PROP_PORT,String.valueOf(_externalListenPort));
     options.setProperty(UDPAddress.PROP_HOST,_externalListenHost.getHostAddress());
-    if (introducersRequired)     options.setProperty(UDPAddress.PROP_CAPACITY,"" + UDPAddress.CAPACITY_TESTING);
- else     options.setProperty(UDPAddress.PROP_CAPACITY,"" + UDPAddress.CAPACITY_TESTING + UDPAddress.CAPACITY_INTRODUCER);
+    directIncluded=true;
   }
-  options.setProperty(UDPAddress.PROP_INTRO_KEY,_introKey.toBase64());
-  RouterAddress addr=new RouterAddress();
-  addr.setCost(5);
-  addr.setExpiration(null);
-  addr.setTransportStyle(STYLE);
-  addr.setOptions(options);
-  boolean wantsRebuild=false;
-  if ((_externalAddress == null) || !(_externalAddress.equals(addr)))   wantsRebuild=true;
-  RouterAddress oldAddress=_externalAddress;
-  _externalAddress=addr;
-  if (_log.shouldLog(Log.INFO))   _log.info("Address rebuilt: " + addr);
-  replaceAddress(addr,oldAddress);
-  if (allowRebuildRouterInfo)   _context.router().rebuildRouterInfo();
+  boolean introducersRequired=introducersRequired();
+  boolean introducersIncluded=false;
+  if (introducersRequired || !directIncluded) {
+    int found=_introManager.pickInbound(options,PUBLIC_RELAY_COUNT);
+    if (found > 0) {
+      if (_log.shouldLog(Log.INFO))       _log.info("Picked peers: " + found);
+      _introducersSelectedOn=_context.clock().now();
+      introducersIncluded=true;
+    }
+  }
+  if (introducersRequired)   options.setProperty(UDPAddress.PROP_CAPACITY,"" + UDPAddress.CAPACITY_TESTING);
+ else   options.setProperty(UDPAddress.PROP_CAPACITY,"" + UDPAddress.CAPACITY_TESTING + UDPAddress.CAPACITY_INTRODUCER);
+  if (directIncluded || introducersIncluded) {
+    options.setProperty(UDPAddress.PROP_INTRO_KEY,_introKey.toBase64());
+    RouterAddress addr=new RouterAddress();
+    addr.setCost(5);
+    addr.setExpiration(null);
+    addr.setTransportStyle(STYLE);
+    addr.setOptions(options);
+    boolean wantsRebuild=false;
+    if ((_externalAddress == null) || !(_externalAddress.equals(addr)))     wantsRebuild=true;
+    RouterAddress oldAddress=_externalAddress;
+    _externalAddress=addr;
+    if (_log.shouldLog(Log.INFO))     _log.info("Address rebuilt: " + addr);
+    replaceAddress(addr,oldAddress);
+    if (allowRebuildRouterInfo && wantsRebuild)     _context.router().rebuildRouterInfo();
+    _needsRebuild=false;
+  }
+ else {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Wanted to rebuild my SSU address, but couldn't specify either the direct or indirect info (needs introducers? " + introducersRequired + ")",new Exception("source"));
+    _needsRebuild=true;
+  }
 }

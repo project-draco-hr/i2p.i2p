@@ -12,9 +12,11 @@
     _log.warn(buf.toString(),new Exception("Dropped by"));
   }
   peer.dropOutbound();
+  peer.expireInboundMessages();
   _introManager.remove(peer);
   _fragments.dropPeer(peer);
-  if (introducersRequired())   rebuildExternalAddress();
+  PeerState altByIdent=null;
+  PeerState altByHost=null;
   if (peer.getRemotePeer() != null) {
     dropPeerCapacities(peer);
     if (shouldShitlist) {
@@ -27,16 +29,19 @@
       _context.statManager().addRateData("udp.droppedPeerInactive",now - peer.getLastReceiveTime(),now - peer.getKeyEstablishedTime());
     }
 synchronized (_peersByIdent) {
-      _peersByIdent.remove(peer.getRemotePeer());
+      altByIdent=(PeerState)_peersByIdent.remove(peer.getRemotePeer());
     }
   }
   RemoteHostId remoteId=peer.getRemoteHostId();
   if (remoteId != null) {
 synchronized (_peersByRemoteHost) {
-      _peersByRemoteHost.remove(remoteId);
+      altByHost=(PeerState)_peersByRemoteHost.remove(remoteId);
     }
   }
   _activeThrottle.unchoke(peer.getRemotePeer());
   if (SHOULD_FLOOD_PEERS)   _flooder.removePeer(peer);
   _expireEvent.remove(peer);
+  if (needsRebuild())   rebuildExternalAddress();
+  if ((altByIdent != null) && (peer != altByIdent))   dropPeer(altByIdent,shouldShitlist);
+  if ((altByHost != null) && (peer != altByHost))   dropPeer(altByHost,shouldShitlist);
 }
