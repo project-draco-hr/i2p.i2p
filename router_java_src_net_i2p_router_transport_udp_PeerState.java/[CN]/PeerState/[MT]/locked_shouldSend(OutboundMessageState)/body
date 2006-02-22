@@ -6,8 +6,12 @@
       if (state.getMessage() != null)       state.getMessage().timestamp("fragment into " + state.getFragmentCount());
       if (_log.shouldLog(Log.INFO))       _log.info("Fragmenting " + state);
     }
-    if ((_retransmitter != null) && ((_retransmitter.isExpired() || _retransmitter.isComplete())))     _retransmitter=null;
-    if ((_retransmitter != null) && (_retransmitter != state)) {
+    OutboundMessageState retrans=_retransmitter;
+    if ((retrans != null) && ((retrans.isExpired() || retrans.isComplete()))) {
+      _retransmitter=null;
+      retrans=null;
+    }
+    if ((retrans != null) && (retrans != state)) {
       _context.statManager().addRateData("udp.blockedRetransmissions",_packetsRetransmitted,_packetsTransmitted);
       int max=state.getMaxSends();
       if ((max <= 0) && (!THROTTLE_INITIAL_SEND)) {

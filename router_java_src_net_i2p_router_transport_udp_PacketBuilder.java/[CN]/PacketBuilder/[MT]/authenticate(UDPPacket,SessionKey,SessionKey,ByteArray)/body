@@ -1,4 +1,5 @@
 {
+  long before=System.currentTimeMillis();
   int encryptOffset=packet.getPacket().getOffset() + UDPPacket.IV_SIZE + UDPPacket.MAC_SIZE;
   int encryptSize=packet.getPacket().getLength() - UDPPacket.IV_SIZE - UDPPacket.MAC_SIZE- packet.getPacket().getOffset();
   byte data[]=packet.getPacket().getData();
@@ -18,4 +19,7 @@
   System.arraycopy(ba.getData(),0,data,hmacOff,UDPPacket.MAC_SIZE);
   System.arraycopy(iv.getData(),0,data,hmacOff + UDPPacket.MAC_SIZE,UDPPacket.IV_SIZE);
   _hmacCache.release(ba);
+  long timeToAuth=System.currentTimeMillis() - before;
+  _context.statManager().addRateData("udp.packetAuthTime",timeToAuth,timeToAuth);
+  if (timeToAuth > 100)   _context.statManager().addRateData("udp.packetAuthTimeSlow",timeToAuth,timeToAuth);
 }
