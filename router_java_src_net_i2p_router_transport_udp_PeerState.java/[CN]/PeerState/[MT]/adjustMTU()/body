@@ -1,0 +1,22 @@
+{
+  double retransPct=0;
+  if (_packetsTransmitted > 0) {
+    retransPct=(double)_packetsRetransmitted / (double)_packetsTransmitted;
+    boolean wantLarge=retransPct < .25d;
+    if (wantLarge && _mtu != LARGE_MTU) {
+      if (_context.random().nextLong(_mtuDecreases) <= 0) {
+        _mtu=LARGE_MTU;
+        _mtuIncreases++;
+        _context.statManager().addRateData("udp.mtuIncrease",_mtuIncreases,_mtuDecreases);
+      }
+    }
+ else     if (!wantLarge && _mtu == LARGE_MTU) {
+      _mtu=MIN_MTU;
+      _mtuDecreases++;
+      _context.statManager().addRateData("udp.mtuDecrease",_mtuDecreases,_mtuIncreases);
+    }
+  }
+ else {
+    _mtu=DEFAULT_MTU;
+  }
+}
