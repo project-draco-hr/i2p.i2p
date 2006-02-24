@@ -1,5 +1,12 @@
 {
   if (_log.shouldLog(Log.INFO))   _log.info("Received: " + packet);
+  RemoteHostId from=packet.getRemoteHost();
+  if (_transport.isInDropList(from)) {
+    if (_log.shouldLog(Log.INFO))     _log.info("Ignoring packet from the drop-listed peer: " + from);
+    _context.statManager().addRateData("udp.ignorePacketFromDroplist",packet.getLifetime(),0);
+    packet.release();
+    return 0;
+  }
   packet.enqueue();
   boolean rejected=false;
   int queueSize=0;

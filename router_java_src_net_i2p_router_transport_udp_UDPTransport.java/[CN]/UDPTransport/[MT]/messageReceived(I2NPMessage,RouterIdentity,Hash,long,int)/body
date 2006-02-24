@@ -2,9 +2,23 @@
   if (inMsg.getType() == DatabaseStoreMessage.MESSAGE_TYPE) {
     DatabaseStoreMessage dsm=(DatabaseStoreMessage)inMsg;
     if ((dsm.getRouterInfo() != null) && (dsm.getRouterInfo().getNetworkId() != Router.NETWORK_ID)) {
-      _context.shitlist().shitlistRouter(dsm.getRouterInfo().getIdentity().calculateHash(),"Part of the wrong network");
-      dropPeer(dsm.getRouterInfo().getIdentity().calculateHash());
-      if (_log.shouldLog(Log.WARN))       _log.warn("Dropping the peer " + dsm.getRouterInfo().getIdentity().calculateHash().toBase64() + " because they are in the wrong net");
+      Hash peerHash=dsm.getRouterInfo().getIdentity().calculateHash();
+      PeerState peer=getPeerState(peerHash);
+      if (peer != null) {
+        RemoteHostId remote=peer.getRemoteHostId();
+        boolean added=false;
+synchronized (_dropList) {
+          if (!_dropList.contains(remote)) {
+            while (_dropList.size() > MAX_DROPLIST_SIZE)             _dropList.remove(0);
+            _dropList.add(remote);
+            added=true;
+          }
+        }
+        if (added)         SimpleTimer.getInstance().addEvent(new RemoveDropList(remote),DROPLIST_PERIOD);
+      }
+      _context.shitlist().shitlistRouter(peerHash,"Part of the wrong network");
+      dropPeer(peerHash);
+      if (_log.shouldLog(Log.WARN))       _log.warn("Dropping the peer " + peerHash.toBase64() + " because they are in the wrong net");
       return;
     }
  else {
