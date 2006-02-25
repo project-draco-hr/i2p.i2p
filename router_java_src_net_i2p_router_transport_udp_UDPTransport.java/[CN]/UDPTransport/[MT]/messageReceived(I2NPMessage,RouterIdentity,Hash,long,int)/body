@@ -7,14 +7,19 @@
       if (peer != null) {
         RemoteHostId remote=peer.getRemoteHostId();
         boolean added=false;
+        int droplistSize=0;
 synchronized (_dropList) {
           if (!_dropList.contains(remote)) {
             while (_dropList.size() > MAX_DROPLIST_SIZE)             _dropList.remove(0);
             _dropList.add(remote);
             added=true;
           }
+          droplistSize=_dropList.size();
         }
-        if (added)         SimpleTimer.getInstance().addEvent(new RemoveDropList(remote),DROPLIST_PERIOD);
+        if (added) {
+          _context.statManager().addRateData("udp.dropPeerDroplist",droplistSize,0);
+          SimpleTimer.getInstance().addEvent(new RemoveDropList(remote),DROPLIST_PERIOD);
+        }
       }
       _context.shitlist().shitlistRouter(peerHash,"Part of the wrong network");
       dropPeer(peerHash);
