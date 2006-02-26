@@ -2,22 +2,21 @@
   verifyNotReleased();
   _beforeValidate=_context.clock().now();
   boolean eq=false;
-  ByteArray buf=_validateCache.acquire();
+  Arrays.fill(_validateBuf,(byte)0);
   int payloadLength=_packet.getLength() - MAC_SIZE - IV_SIZE;
   if (payloadLength > 0) {
     int off=0;
-    System.arraycopy(_data,_packet.getOffset() + MAC_SIZE + IV_SIZE,buf.getData(),off,payloadLength);
+    System.arraycopy(_data,_packet.getOffset() + MAC_SIZE + IV_SIZE,_validateBuf,off,payloadLength);
     off+=payloadLength;
-    System.arraycopy(_data,_packet.getOffset() + MAC_SIZE,buf.getData(),off,IV_SIZE);
+    System.arraycopy(_data,_packet.getOffset() + MAC_SIZE,_validateBuf,off,IV_SIZE);
     off+=IV_SIZE;
-    DataHelper.toLong(buf.getData(),off,2,payloadLength ^ PacketBuilder.PROTOCOL_VERSION);
+    DataHelper.toLong(_validateBuf,off,2,payloadLength ^ PacketBuilder.PROTOCOL_VERSION);
     off+=2;
-    eq=_context.hmac().verify(macKey,buf.getData(),0,off,_data,_packet.getOffset(),MAC_SIZE);
+    eq=_context.hmac().verify(macKey,_validateBuf,0,off,_data,_packet.getOffset(),MAC_SIZE);
   }
  else {
     if (_log.shouldLog(Log.WARN))     _log.warn("Payload length is " + payloadLength);
   }
-  _validateCache.release(buf);
   _afterValidate=_context.clock().now();
   _validateCount++;
   return eq;
