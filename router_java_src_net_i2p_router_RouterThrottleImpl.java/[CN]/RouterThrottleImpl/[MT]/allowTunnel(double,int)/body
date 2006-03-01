@@ -1,10 +1,13 @@
 {
   int maxKBps=Math.min(_context.bandwidthLimiter().getOutboundKBytesPerSecond(),_context.bandwidthLimiter().getInboundKBytesPerSecond());
-  int used=(int)Math.max(_context.bandwidthLimiter().getSendBps(),_context.bandwidthLimiter().getReceiveBps());
+  int used1s=get1sRate();
+  int used1m=get1mRate();
+  int used5m=get5mRate();
+  int used=Math.max(Math.max(used1s,used1m),used5m);
   int availBps=(int)(((maxKBps * 1024) - used) * getSharePercentage());
   _context.statManager().addRateData("router.throttleTunnelBytesUsed",used,maxKBps);
   _context.statManager().addRateData("router.throttleTunnelBytesAllowed",availBps,(long)bytesAllocated);
-  if (maxKBps <= 8) {
+  if (availBps <= 8 * 1024) {
     return ((numTunnels + 1) * 1024 < availBps);
   }
   double growthFactor=((double)(numTunnels + 1)) / (double)numTunnels;
@@ -16,7 +19,7 @@
     return true;
   }
  else {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Rejecting the tunnel w/ " + pctFull + " of our "+ availBps+ "Bps allowed ("+ toAllocate+ "bytes / "+ allocatedKBps+ "KBps) through "+ numTunnels+ " tunnels");
+    if (_log.shouldLog(Log.WARN))     _log.warn("Rejecting the tunnel w/ " + pctFull + " of our "+ availBps+ "Bps allowed ("+ toAllocate+ "bytes / "+ allocatedKBps+ "KBps) through "+ numTunnels+ " tunnels");
     return false;
   }
 }
