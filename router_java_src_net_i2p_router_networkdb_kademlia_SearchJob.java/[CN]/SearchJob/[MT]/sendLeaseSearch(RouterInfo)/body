@@ -6,7 +6,7 @@
     return;
   }
   TunnelId inTunnelId=inTunnel.getReceiveTunnelId(0);
-  int timeout=_facade.getPeerTimeout(router.getIdentity().getHash());
+  int timeout=getPerPeerTimeoutMs(router.getIdentity().getHash());
   long expiration=getContext().clock().now() + timeout;
   DatabaseLookupMessage msg=buildMessage(inTunnelId,inTunnel.getPeer(0),expiration);
   TunnelInfo outTunnel=getOutboundTunnelId();
@@ -19,6 +19,7 @@
   if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": Sending leaseSet search to " + router.getIdentity().getHash().toBase64()+ " for "+ msg.getSearchKey().toBase64()+ " w/ replies through ["+ msg.getFrom().toBase64()+ "] via tunnel ["+ msg.getReplyTunnel()+ "]");
   SearchMessageSelector sel=new SearchMessageSelector(getContext(),router,_expiration,_state);
   SearchUpdateReplyFoundJob reply=new SearchUpdateReplyFoundJob(getContext(),router,_state,_facade,this,outTunnel,inTunnel);
+  if (FloodfillNetworkDatabaseFacade.isFloodfill(router))   _floodfillSearchesOutstanding++;
   getContext().messageRegistry().registerPending(sel,reply,new FailedJob(getContext(),router),timeout);
   getContext().tunnelDispatcher().dispatchOutbound(msg,outTunnelId,router.getIdentity().getHash());
 }

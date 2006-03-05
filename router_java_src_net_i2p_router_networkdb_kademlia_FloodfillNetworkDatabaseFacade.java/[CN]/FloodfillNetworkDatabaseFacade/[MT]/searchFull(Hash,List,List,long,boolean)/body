@@ -1,0 +1,16 @@
+{
+synchronized (_activeFloodQueries) {
+    _activeFloodQueries.remove(key);
+  }
+  Job find=null;
+  if ((onFind != null) && (onFind.size() > 0))   find=(Job)onFind.remove(0);
+  Job fail=null;
+  if ((onFailed != null) && (onFailed.size() > 0))   fail=(Job)onFailed.remove(0);
+  SearchJob job=super.search(key,find,fail,timeoutMs,isLease);
+  if (job != null) {
+    if (_log.shouldLog(Log.INFO))     _log.info("Floodfill search timed out for " + key.toBase64() + ", falling back on normal search (#"+ job.getJobId()+ ") with "+ timeoutMs+ " remaining");
+    long expiration=timeoutMs + _context.clock().now();
+    while ((onFind != null) && (onFind.size() > 0))     job.addDeferred((Job)onFind.remove(0),null,expiration,isLease);
+    while ((onFailed != null) && (onFailed.size() > 0))     job.addDeferred(null,(Job)onFailed.remove(0),expiration,isLease);
+  }
+}

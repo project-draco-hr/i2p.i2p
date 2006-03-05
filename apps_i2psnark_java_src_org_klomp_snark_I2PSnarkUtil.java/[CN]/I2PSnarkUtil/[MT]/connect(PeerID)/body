@@ -1,8 +1,20 @@
 {
+  Hash dest=peer.getAddress().calculateHash();
+synchronized (_shitlist) {
+    if (_shitlist.contains(dest))     throw new IOException("Not trying to contact " + dest.toBase64() + ", as they are shitlisted");
+  }
   try {
-    return _manager.connect(peer.getAddress());
+    I2PSocket rv=_manager.connect(peer.getAddress());
+    if (rv != null) synchronized (_shitlist) {
+      _shitlist.remove(dest);
+    }
+    return rv;
   }
  catch (  I2PException ie) {
+synchronized (_shitlist) {
+      _shitlist.add(dest);
+    }
+    SimpleTimer.getInstance().addEvent(new Unshitlist(dest),10 * 60 * 1000);
     throw new IOException("Unable to reach the peer " + peer + ": "+ ie.getMessage());
   }
 }
