@@ -1,0 +1,18 @@
+{
+  String spec=_context.getProperty("stat.summaries",DEFAULT_DATABASES);
+  if (((spec == null) && (oldSpecs == null)) || ((spec != null) && (oldSpecs != null) && (oldSpecs.equals(spec))))   return oldSpecs;
+  List old=parseSpecs(oldSpecs);
+  List newSpecs=parseSpecs(spec);
+  for (int i=0; i < old.size(); i++) {
+    Rate r=(Rate)old.get(i);
+    if (!newSpecs.contains(r))     removeDb(r);
+  }
+  StringBuffer buf=new StringBuffer();
+  for (int i=0; i < newSpecs.size(); i++) {
+    Rate r=(Rate)newSpecs.get(i);
+    if (!old.contains(r))     addDb(r);
+    buf.append(r.getRateStat().getName()).append(".").append(r.getPeriod());
+    if (i + 1 < newSpecs.size())     buf.append(',');
+  }
+  return buf.toString();
+}

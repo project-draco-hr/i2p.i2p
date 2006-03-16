@@ -1,0 +1,28 @@
+{
+  RateStat rs=_rate.getRateStat();
+  long period=_rate.getPeriod();
+  String baseName=rs.getName() + "." + period;
+  _name=createName(_context,baseName);
+  _eventName=createName(_context,baseName + ".events");
+  try {
+    RrdDef def=new RrdDef(_name,now() / 1000,period / 1000);
+    long heartbeat=period * 3 / 1000;
+    def.addDatasource(_name,"GAUGE",heartbeat,Double.NaN,Double.NaN);
+    def.addDatasource(_eventName,"GAUGE",heartbeat,0,Double.NaN);
+    double xff=0.5;
+    int steps=1;
+    int rows=PERIODS;
+    def.addArchive("AVERAGE",xff,steps,rows);
+    _factory=(RrdMemoryBackendFactory)RrdBackendFactory.getDefaultFactory();
+    _db=new RrdDb(def,_factory);
+    _sample=_db.createSample();
+    _renderer=new SummaryRenderer(_context,this);
+    _rate.setSummaryListener(this);
+  }
+ catch (  RrdException re) {
+    _log.error("Error starting",re);
+  }
+catch (  IOException ioe) {
+    _log.error("Error starting",ioe);
+  }
+}

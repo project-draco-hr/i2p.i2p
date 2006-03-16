@@ -11,7 +11,11 @@
   clove.setExpiration(OVERALL_TIMEOUT_MS_DEFAULT + getContext().clock().now());
   clove.setId(getContext().random().nextLong(I2NPMessage.MAX_ID_VALUE));
   DataMessage msg=new DataMessage(getContext());
-  msg.setData(_clientMessage.getPayload().getEncryptedData());
+  Payload p=_clientMessage.getPayload();
+  if (p == null)   return false;
+  byte d[]=p.getEncryptedData();
+  if (d == null)   return false;
+  msg.setData(d);
   msg.setMessageExpiration(clove.getExpiration());
   clove.setPayload(msg);
   clove.setRecipientPublicKey(null);
@@ -19,4 +23,5 @@
   _clove=clove;
   _cloveId=_clove.getId();
   if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": Built payload clove with id " + clove.getId());
+  return true;
 }
