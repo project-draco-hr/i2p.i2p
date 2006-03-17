@@ -6,11 +6,27 @@
     RrdGraphDef def=new RrdGraphDef();
     def.setTimePeriod(start / 1000,end / 1000);
     String title=_listener.getRate().getRateStat().getName() + " averaged for " + DataHelper.formatDuration(_listener.getRate().getPeriod());
-    def.setTitle(title);
+    if (!hideTitle)     def.setTitle(title);
     String path=_listener.getData().getPath();
     String dsNames[]=_listener.getData().getDsNames();
-    def.datasource(_listener.getName(),path,dsNames[0],"AVERAGE","MEMORY");
-    def.area(dsNames[0],Color.BLUE,_listener.getRate().getRateStat().getDescription());
+    String plotName=null;
+    String descr=null;
+    if (showEvents) {
+      plotName=dsNames[1];
+      descr="Events per period";
+    }
+ else {
+      plotName=dsNames[0];
+      descr=_listener.getRate().getRateStat().getDescription();
+    }
+    def.datasource(plotName,path,plotName,"AVERAGE","MEMORY");
+    def.area(plotName,Color.BLUE,descr);
+    if (hideLegend)     def.setShowLegend(false);
+    if (hideGrid) {
+      def.setGridX(false);
+      def.setGridY(false);
+    }
+    System.out.println("rendering: path=" + path + " dsNames[0]="+ dsNames[0]+ " dsNames[1]="+ dsNames[1]+ " lsnr.getName="+ _listener.getName());
     def.setAntiAliasing(false);
     RrdGraph graph=new RrdGraph(def);
     byte data[]=null;
