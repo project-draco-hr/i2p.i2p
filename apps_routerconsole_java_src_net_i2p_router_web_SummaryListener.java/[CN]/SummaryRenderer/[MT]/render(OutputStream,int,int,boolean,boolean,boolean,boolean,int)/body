@@ -1,6 +1,8 @@
 {
   long end=_listener.now();
-  long start=end - _listener.getRate().getPeriod() * SummaryListener.PERIODS;
+  if (periodCount <= 0)   periodCount=SummaryListener.PERIODS;
+  if (periodCount > SummaryListener.PERIODS)   periodCount=SummaryListener.PERIODS;
+  long start=end - _listener.getRate().getPeriod() * periodCount;
   long begin=System.currentTimeMillis();
   try {
     RrdGraphDef def=new RrdGraphDef();
@@ -20,15 +22,19 @@
       descr=_listener.getRate().getRateStat().getDescription();
     }
     def.datasource(plotName,path,plotName,"AVERAGE","MEMORY");
-    def.area(plotName,Color.BLUE,descr);
+    def.area(plotName,Color.BLUE,descr + "@r");
+    if (!hideLegend) {
+      def.gprint(plotName,"AVERAGE","average: @2@s");
+      def.gprint(plotName,"MAX"," max: @2@s@r");
+    }
     if (hideLegend)     def.setShowLegend(false);
     if (hideGrid) {
       def.setGridX(false);
       def.setGridY(false);
     }
-    System.out.println("rendering: path=" + path + " dsNames[0]="+ dsNames[0]+ " dsNames[1]="+ dsNames[1]+ " lsnr.getName="+ _listener.getName());
     def.setAntiAliasing(false);
     RrdGraph graph=new RrdGraph(def);
+    System.out.println("Graph created");
     byte data[]=null;
     if ((width <= 0) || (height <= 0))     data=graph.getPNGBytes();
  else     data=graph.getPNGBytes(width,height);
