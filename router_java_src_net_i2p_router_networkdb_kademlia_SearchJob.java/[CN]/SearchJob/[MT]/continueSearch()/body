@@ -12,6 +12,12 @@
   int sent=0;
   Set attempted=_state.getAttempted();
   while (sent <= 0) {
+    boolean onlyFloodfill=onlyQueryFloodfillPeers();
+    if (_floodfillPeersExhausted && onlyFloodfill && _state.getPending().size() <= 0) {
+      if (_log.shouldLog(Log.WARN))       _log.warn(getJobId() + ": no non-floodfill peers left, and no more pending.  Searched: " + _state.getAttempted().size()+ " failed: "+ _state.getFailed().size());
+      fail();
+      return;
+    }
     List closestHashes=getClosestRouters(_state.getTarget(),toCheck,attempted);
     if ((closestHashes == null) || (closestHashes.size() <= 0)) {
       if (_state.getPending().size() <= 0) {
@@ -39,8 +45,11 @@
         }
  else {
           RouterInfo ri=(RouterInfo)ds;
-          if (!FloodfillNetworkDatabaseFacade.isFloodfill(ri))           _floodfillPeersExhausted=true;
-          if (ri.isHidden() || getContext().shitlist().isShitlisted(peer)) {
+          if (!FloodfillNetworkDatabaseFacade.isFloodfill(ri)) {
+            _floodfillPeersExhausted=true;
+            if (onlyFloodfill)             continue;
+          }
+          if (ri.isHidden()) {
           }
  else {
             _state.addPending(peer);
