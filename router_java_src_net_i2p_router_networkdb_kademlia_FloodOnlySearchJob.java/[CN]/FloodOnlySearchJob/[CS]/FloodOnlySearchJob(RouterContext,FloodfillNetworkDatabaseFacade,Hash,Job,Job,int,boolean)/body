@@ -1,0 +1,21 @@
+{
+  super(ctx,facade,key,onFind,onFailed,timeoutMs,isLease);
+  _log=ctx.logManager().getLog(FloodOnlySearchJob.class);
+  _facade=facade;
+  _key=key;
+  _onFind=new ArrayList();
+  _onFind.add(onFind);
+  _onFailed=new ArrayList();
+  _onFailed.add(onFailed);
+  _timeoutMs=Math.min(timeoutMs,SearchJob.PER_FLOODFILL_PEER_TIMEOUT);
+  _expiration=_timeoutMs + ctx.clock().now();
+  _origExpiration=_timeoutMs + ctx.clock().now();
+  _isLease=isLease;
+  _lookupsRemaining=0;
+  _dead=false;
+  _out=new ArrayList(2);
+  _replySelector=new FloodOnlyLookupSelector(getContext(),this);
+  _onReply=new FloodOnlyLookupMatchJob(getContext(),this);
+  _onTimeout=new FloodOnlyLookupTimeoutJob(getContext(),this);
+  _created=System.currentTimeMillis();
+}

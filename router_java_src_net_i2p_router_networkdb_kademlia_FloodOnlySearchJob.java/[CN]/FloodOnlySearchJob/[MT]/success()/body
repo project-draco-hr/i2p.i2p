@@ -1,0 +1,12 @@
+{
+synchronized (this) {
+    if (_dead)     return;
+    _dead=true;
+  }
+  if (_log.shouldLog(Log.INFO))   _log.info(getJobId() + ": Floodfill search for " + _key.toBase64()+ " successful");
+  _facade.complete(_key);
+  getContext().statManager().addRateData("netDb.successTime",System.currentTimeMillis() - _created,System.currentTimeMillis() - _created);
+synchronized (_onFind) {
+    while (_onFind.size() > 0)     getContext().jobQueue().addJob((Job)_onFind.remove(0));
+  }
+}
