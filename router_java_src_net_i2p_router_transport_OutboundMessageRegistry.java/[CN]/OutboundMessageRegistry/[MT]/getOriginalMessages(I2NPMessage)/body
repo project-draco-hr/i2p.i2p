@@ -1,75 +1,49 @@
 {
-  ArrayList matches=new ArrayList(2);
+  ArrayList matchedSelectors=null;
+  ArrayList removedSelectors=null;
   long beforeSync=_context.clock().now();
-  Map messages=null;
-  long matchTime=0;
-  long continueTime=0;
-  int numMessages=0;
-  long afterSync1=0;
-  long afterSearch=0;
-  int matchedRemoveCount=0;
-  StringBuffer slow=null;
-synchronized (_pendingMessages) {
-    messages=_pendingMessages;
-    numMessages=messages.size();
-    afterSync1=_context.clock().now();
-    for (Iterator iter=messages.keySet().iterator(); iter.hasNext(); ) {
-      Long exp=(Long)iter.next();
-      OutNetMessage msg=(OutNetMessage)messages.get(exp);
-      MessageSelector selector=msg.getReplySelector();
-      if (selector != null) {
-        long before=_context.clock().now();
-        boolean isMatch=selector.isMatch(message);
-        long after=_context.clock().now();
-        long diff=after - before;
-        if (diff > 100) {
-          if (_log.shouldLog(Log.WARN))           _log.warn("Matching with selector took too long (" + diff + "ms) : "+ selector.getClass().getName());
-          if (slow == null)           slow=new StringBuffer(256);
-          slow.append(selector.getClass().getName()).append(": ");
-          slow.append(diff).append(" ");
-        }
-        matchTime+=diff;
-        if (isMatch) {
-          if (_log.shouldLog(Log.DEBUG))           _log.debug("Selector matches [" + selector);
-          if (!matches.contains(msg))           matches.add(msg);
-          long beforeCon=_context.clock().now();
-          boolean continueMatching=selector.continueMatching();
-          long afterCon=_context.clock().now();
-          long diffCon=afterCon - beforeCon;
-          if (diffCon > 100) {
-            if (_log.shouldLog(Log.WARN))             _log.warn("Error continueMatching on a match took too long (" + diffCon + "ms) : "+ selector.getClass().getName());
-          }
-          continueTime+=diffCon;
-          if (continueMatching) {
-            if (_log.shouldLog(Log.DEBUG))             _log.debug("Continue matching");
-          }
- else {
-            if (_log.shouldLog(Log.DEBUG))             _log.debug("Stop matching selector " + selector + " for message "+ msg.getMessageType());
-            iter.remove();
-            matchedRemoveCount++;
-          }
-        }
- else {
+synchronized (_selectors) {
+    for (int i=0; i < _selectors.size(); i++) {
+      MessageSelector sel=(MessageSelector)_selectors.get(i);
+      boolean isMatch=sel.isMatch(message);
+      if (isMatch) {
+        if (matchedSelectors == null)         matchedSelectors=new ArrayList(1);
+        matchedSelectors.add(sel);
+        if (!sel.continueMatching()) {
+          if (removedSelectors == null)           removedSelectors=new ArrayList(1);
+          removedSelectors.add(sel);
+          _selectors.remove(i);
+          i--;
         }
       }
     }
-    afterSearch=_context.clock().now();
   }
-  long delay=_context.clock().now() - beforeSync;
-  long search=afterSearch - afterSync1;
-  long sync=afterSync1 - beforeSync;
-  int level=Log.DEBUG;
-  if (delay > 1000)   level=Log.ERROR;
-  if (_log.shouldLog(level)) {
-    StringBuffer buf=new StringBuffer(1024);
-    buf.append("getMessages took ").append(delay).append("ms with search time of");
-    buf.append(search).append("ms (match: ").append(matchTime).append("ms, continue: ");
-    buf.append(continueTime).append("ms, #: ").append(numMessages).append(") and sync time of ");
-    buf.append(sync).append("ms for ");
-    buf.append(matchedRemoveCount);
-    buf.append(" removed, ").append(matches.size()).append(" matches: slow = ");
-    if (slow != null)     buf.append(slow.toString());
-    _log.log(level,buf.toString());
+  List rv=null;
+  if (matchedSelectors != null) {
+    rv=new ArrayList(matchedSelectors.size());
+    for (int i=0; i < matchedSelectors.size(); i++) {
+      MessageSelector sel=(MessageSelector)matchedSelectors.get(i);
+      boolean removed=false;
+      OutNetMessage msg=null;
+synchronized (_selectorToMessage) {
+        if ((removedSelectors != null) && (removedSelectors.contains(sel))) {
+          msg=(OutNetMessage)_selectorToMessage.remove(sel);
+          removed=true;
+        }
+ else {
+          msg=(OutNetMessage)_selectorToMessage.get(sel);
+        }
+        if (msg != null)         rv.add(msg);
+      }
+      if (removed && msg != null) {
+synchronized (_activeMessages) {
+          _activeMessages.remove(msg);
+        }
+      }
+    }
   }
-  return matches;
+ else {
+    rv=Collections.EMPTY_LIST;
+  }
+  return rv;
 }

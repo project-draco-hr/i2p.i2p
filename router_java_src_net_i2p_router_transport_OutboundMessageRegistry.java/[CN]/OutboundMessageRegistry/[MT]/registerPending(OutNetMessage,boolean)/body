@@ -1,37 +1,16 @@
 {
-  if (msg == null)   throw new IllegalArgumentException("Null OutNetMessage specified?  wtf");
-  if (!allowEmpty) {
-    if (msg.getMessage() == null)     throw new IllegalArgumentException("OutNetMessage doesn't contain an I2NPMessage? wtf");
+  if ((!allowEmpty) && (msg.getMessage() == null))   throw new IllegalArgumentException("OutNetMessage doesn't contain an I2NPMessage? wtf");
+  MessageSelector sel=msg.getReplySelector();
+  if (sel == null)   throw new IllegalArgumentException("No reply selector?  wtf");
+  boolean alreadyPending=false;
+synchronized (_activeMessages) {
+    if (!_activeMessages.add(msg))     return;
   }
-  long beforeSync=_context.clock().now();
-  long afterSync1=0;
-  long afterDone=0;
-  try {
-    OutNetMessage oldMsg=null;
-    long l=msg.getExpiration();
-synchronized (_pendingMessages) {
-      if (_pendingMessages.containsValue(msg)) {
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("Not adding an already pending message: " + msg,new Exception("Duplicate message registration"));
-        return;
-      }
-      while (_pendingMessages.containsKey(new Long(l)))       l++;
-      _pendingMessages.put(new Long(l),msg);
-    }
-    afterSync1=_context.clock().now();
-    SimpleTimer.getInstance().addEvent(new CleanupExpiredTask(l),l - _context.clock().now());
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Register pending: " + msg.getReplySelector().getClass().getName() + " for "+ msg.getMessage()+ ": "+ msg.getReplySelector().toString(),new Exception("Register pending"));
-    afterDone=_context.clock().now();
+synchronized (_selectorToMessage) {
+    _selectorToMessage.put(sel,msg);
   }
-  finally {
-    long delay=_context.clock().now() - beforeSync;
-    long sync1=afterSync1 - beforeSync;
-    long done=afterDone - afterSync1;
-    String warn=delay + "ms (sync = " + sync1+ "ms, done = "+ done+ "ms)";
-    if ((delay > 1000) && (_log.shouldLog(Log.WARN))) {
-      _log.error("Synchronizing in the registry.register took too long!  " + warn);
-    }
- else {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Synchronizing in the registry.register was quick:  " + warn);
-    }
+synchronized (_selectors) {
+    _selectors.add(sel);
   }
+  _cleanupTask.scheduleExpiration(sel);
 }
