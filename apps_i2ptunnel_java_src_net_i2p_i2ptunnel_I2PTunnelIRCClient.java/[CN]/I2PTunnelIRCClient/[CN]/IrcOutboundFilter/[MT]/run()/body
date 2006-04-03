@@ -16,8 +16,25 @@
         String inmsg=in.readLine();
         if (inmsg == null)         break;
         if (inmsg.endsWith("\r"))         inmsg=inmsg.substring(0,inmsg.length() - 1);
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("out: [" + inmsg + "]");
         String outmsg=outboundFilter(inmsg);
         if (outmsg != null) {
+          if (outmsg.indexOf("PING") >= 0) {
+            StringTokenizer tok=new StringTokenizer(inmsg," ");
+            int tokens=tok.countTokens();
+            if ((tokens <= 2) || (tokens == 3)) {
+              tok.nextToken();
+              _expectedPong="PONG " + tok.nextToken();
+            }
+ else {
+              if (_log.shouldLog(Log.ERROR))               _log.error("IRC client sent a PING we don't understand (\"" + inmsg + "\"), so we're filtering it");
+              _expectedPong=null;
+            }
+            if (_log.shouldLog(Log.WARN)) {
+              _log.warn("outbound rewritten PING: " + outmsg + ", waiting for ["+ _expectedPong+ "]");
+              _log.warn(" - outbound was: " + inmsg);
+            }
+          }
           if (!inmsg.equals(outmsg)) {
             if (_log.shouldLog(Log.WARN)) {
               _log.warn("outbound FILTERED: " + outmsg);
