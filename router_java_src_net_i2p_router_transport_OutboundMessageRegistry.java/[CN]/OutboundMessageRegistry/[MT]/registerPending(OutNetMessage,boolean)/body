@@ -7,7 +7,22 @@ synchronized (_activeMessages) {
     if (!_activeMessages.add(msg))     return;
   }
 synchronized (_selectorToMessage) {
-    _selectorToMessage.put(sel,msg);
+    Object oldMsg=_selectorToMessage.put(sel,msg);
+    if (oldMsg != null) {
+      List multi=null;
+      if (oldMsg instanceof OutNetMessage) {
+        multi=new ArrayList(4);
+        multi.add(oldMsg);
+        multi.add(msg);
+        _selectorToMessage.put(sel,multi);
+      }
+ else       if (oldMsg instanceof List) {
+        multi=(List)oldMsg;
+        multi.add(msg);
+        _selectorToMessage.put(sel,multi);
+      }
+      if (_log.shouldLog(Log.WARN))       _log.warn("a single message selector [" + sel + "] with multiple messages ("+ multi+ ")");
+    }
   }
 synchronized (_selectors) {
     _selectors.add(sel);

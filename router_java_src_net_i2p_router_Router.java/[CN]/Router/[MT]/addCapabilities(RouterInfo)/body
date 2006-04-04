@@ -1,0 +1,37 @@
+{
+  int bwLim=Math.min(_context.bandwidthLimiter().getInboundKBytesPerSecond(),_context.bandwidthLimiter().getInboundKBytesPerSecond());
+  if (_log.shouldLog(Log.WARN))   _log.warn("Adding capabilities w/ bw limit @ " + bwLim,new Exception("caps"));
+  if (bwLim <= 16) {
+    ri.addCapability(CAPABILITY_BW16);
+  }
+ else   if (bwLim <= 32) {
+    ri.addCapability(CAPABILITY_BW32);
+  }
+ else   if (bwLim <= 64) {
+    ri.addCapability(CAPABILITY_BW64);
+  }
+ else   if (bwLim <= 128) {
+    ri.addCapability(CAPABILITY_BW128);
+  }
+ else {
+    ri.addCapability(CAPABILITY_BW256);
+  }
+  if (FloodfillNetworkDatabaseFacade.floodfillEnabled(_context))   ri.addCapability(FloodfillNetworkDatabaseFacade.CAPACITY_FLOODFILL);
+  if ("true".equalsIgnoreCase(_context.getProperty(Router.PROP_HIDDEN,"false")))   ri.addCapability(RouterInfo.CAPABILITY_HIDDEN);
+  String forceUnreachable=_context.getProperty(PROP_FORCE_UNREACHABLE);
+  if ((forceUnreachable != null) && ("true".equalsIgnoreCase(forceUnreachable))) {
+    ri.addCapability(CAPABILITY_UNREACHABLE);
+    return;
+  }
+switch (_context.commSystem().getReachabilityStatus()) {
+case CommSystemFacade.STATUS_OK:
+    ri.addCapability(CAPABILITY_REACHABLE);
+  break;
+case CommSystemFacade.STATUS_DIFFERENT:
+case CommSystemFacade.STATUS_REJECT_UNSOLICITED:
+ri.addCapability(CAPABILITY_UNREACHABLE);
+break;
+case CommSystemFacade.STATUS_UNKNOWN:
+break;
+}
+}

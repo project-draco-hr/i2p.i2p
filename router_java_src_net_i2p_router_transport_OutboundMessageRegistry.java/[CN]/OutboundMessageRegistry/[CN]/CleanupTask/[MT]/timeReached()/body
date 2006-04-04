@@ -3,6 +3,7 @@
 synchronized (_selectors) {
     for (int i=0; i < _selectors.size(); i++) {
       MessageSelector sel=(MessageSelector)_selectors.get(i);
+      if (sel == null)       continue;
       long expiration=sel.getExpiration();
       if (expiration <= now) {
         _removing.add(sel);
@@ -18,8 +19,11 @@ synchronized (_selectors) {
     for (int i=0; i < _removing.size(); i++) {
       MessageSelector sel=(MessageSelector)_removing.get(i);
       OutNetMessage msg=null;
+      List msgs=null;
 synchronized (_selectorToMessage) {
-        msg=(OutNetMessage)_selectorToMessage.remove(sel);
+        Object o=_selectorToMessage.remove(sel);
+        if (o instanceof OutNetMessage)         msg=(OutNetMessage)o;
+ else         if (o instanceof List)         msgs=(List)o;
       }
       if (msg != null) {
 synchronized (_activeMessages) {
@@ -27,6 +31,16 @@ synchronized (_activeMessages) {
         }
         Job fail=msg.getOnFailedReplyJob();
         if (fail != null)         _context.jobQueue().addJob(fail);
+      }
+ else       if (msgs != null) {
+synchronized (_activeMessages) {
+          _activeMessages.removeAll(msgs);
+        }
+        for (int j=0; j < msgs.size(); j++) {
+          msg=(OutNetMessage)msgs.get(i);
+          Job fail=msg.getOnFailedReplyJob();
+          if (fail != null)           _context.jobQueue().addJob(fail);
+        }
       }
     }
     _removing.clear();

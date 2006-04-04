@@ -1,10 +1,21 @@
 {
   MessageSelector sel=msg.getReplySelector();
-synchronized (_selectors) {
-    _selectors.add(sel);
-  }
+  boolean stillActive=false;
 synchronized (_selectorToMessage) {
-    _selectorToMessage.put(sel,msg);
+    Object old=_selectorToMessage.remove(sel);
+    if (old != null) {
+      if (old instanceof List) {
+        List l=(List)old;
+        l.remove(msg);
+        if (l.size() > 0) {
+          _selectorToMessage.put(sel,l);
+          stillActive=true;
+        }
+      }
+    }
+  }
+  if (!stillActive) synchronized (_selectors) {
+    _selectors.remove(sel);
   }
 synchronized (_activeMessages) {
     _activeMessages.remove(msg);
