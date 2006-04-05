@@ -13,10 +13,10 @@
     msg.read();
     return msg;
   }
-  long expiration=DataHelper.fromLong(buffer,offset,4) * 1000;
-  offset+=4;
-  int dataSize=len - 1 - 4;
   try {
+    long expiration=DataHelper.fromLong(buffer,offset,4) * 1000;
+    offset+=4;
+    int dataSize=len - 1 - 4;
     msg.readMessage(buffer,offset,dataSize,type,handler);
     msg.setMessageExpiration(expiration);
     msg.read();
@@ -24,5 +24,8 @@
   }
  catch (  IOException ioe) {
     throw new I2NPMessageException("IO error reading raw message",ioe);
+  }
+catch (  IllegalArgumentException iae) {
+    throw new I2NPMessageException("Corrupt message (negative expiration)",iae);
   }
 }
