@@ -1,8 +1,9 @@
 {
   long timeSinceReceived=System.currentTimeMillis() - state.recvTime;
   if (_log.shouldLog(Log.DEBUG))   _log.debug(state.msg.getUniqueId() + ": handling request after " + timeSinceReceived);
-  if (timeSinceReceived > BuildRequestor.REQUEST_TIMEOUT * 2) {
-    if (_log.shouldLog(Log.ERROR))     _log.error("Not even trying to handle/decrypt the request " + state.msg.getUniqueId() + ", since we received it a long time ago: "+ timeSinceReceived);
+  if (timeSinceReceived > BuildRequestor.REQUEST_TIMEOUT) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Not even trying to handle/decrypt the request " + state.msg.getUniqueId() + ", since we received it a long time ago: "+ timeSinceReceived);
+    _context.statManager().addRateData("tunnel.dropLoadDelay",timeSinceReceived,0);
     return;
   }
   long beforeDecrypt=System.currentTimeMillis();
