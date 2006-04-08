@@ -2,25 +2,39 @@
   _isRunning=true;
   List wanted=new ArrayList(8);
   List pools=new ArrayList(8);
-  boolean pendingRemaining=false;
+  int pendingRemaining=0;
+  long loopBegin=0;
+  long beforeHandleInboundReplies=0;
+  long afterHandleInboundReplies=0;
+  long afterBuildZeroHop=0;
+  long afterBuildReal=0;
+  long afterHandleInbound=0;
   while (!_manager.isShutdown()) {
+    loopBegin=System.currentTimeMillis();
     try {
-      _repoll=pendingRemaining;
+      _repoll=pendingRemaining > 0;
       _manager.listPools(pools);
       for (int i=0; i < pools.size(); i++) {
         TunnelPool pool=(TunnelPool)pools.get(i);
         int howMany=pool.countHowManyToBuild();
         for (int j=0; j < howMany; j++)         wanted.add(pool);
       }
+      beforeHandleInboundReplies=System.currentTimeMillis();
       _handler.handleInboundReplies();
+      afterHandleInboundReplies=System.currentTimeMillis();
       int allowed=allowed();
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Allowed: " + allowed + " wanted: "+ wanted);
       allowed=buildZeroHopTunnels(wanted,allowed);
+      afterBuildZeroHop=System.currentTimeMillis();
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Zero hops built, Allowed: " + allowed + " wanted: "+ wanted);
+      int realBuilt=0;
       TunnelManagerFacade mgr=_context.tunnelManager();
       if ((mgr == null) || (mgr.selectInboundTunnel() == null) || (mgr.selectOutboundTunnel() == null)) {
 synchronized (_currentlyBuilding) {
-          if (!_repoll)           _currentlyBuilding.wait(5 * 1000 + _context.random().nextInt(5 * 1000));
+          if (!_repoll) {
+            if (_log.shouldLog(Log.DEBUG))             _log.debug("No tunnel to build with (allowed=" + allowed + ", wanted="+ wanted.size()+ ", pending="+ pendingRemaining+ "), wait for a while");
+            _currentlyBuilding.wait(1 * 1000 + _context.random().nextInt(1 * 1000));
+          }
         }
       }
  else {
@@ -36,6 +50,7 @@ synchronized (_currentlyBuilding) {
                 _currentlyBuilding.add(cfg);
               }
               buildTunnel(pool,cfg);
+              realBuilt++;
               _handler.handleInboundReplies();
             }
  else {
@@ -44,11 +59,11 @@ synchronized (_currentlyBuilding) {
           }
         }
  else {
-          if (_log.shouldLog(Log.DEBUG))           _log.debug("Nothin' doin, wait for a while");
           try {
 synchronized (_currentlyBuilding) {
               if (!_repoll) {
-                _currentlyBuilding.wait(_context.random().nextInt(5 * 1000));
+                if (_log.shouldLog(Log.DEBUG))                 _log.debug("Nothin' doin (allowed=" + allowed + ", wanted="+ wanted.size()+ ", pending="+ pendingRemaining+ "), wait for a while");
+                _currentlyBuilding.wait(_context.random().nextInt(1 * 1000));
               }
             }
           }
@@ -56,7 +71,11 @@ synchronized (_currentlyBuilding) {
           }
         }
       }
+      afterBuildReal=System.currentTimeMillis();
       pendingRemaining=_handler.handleInboundRequests();
+      afterHandleInbound=System.currentTimeMillis();
+      if (pendingRemaining > 0)       _context.statManager().addRateData("tunnel.pendingRemaining",pendingRemaining,afterHandleInbound - afterBuildReal);
+      if (_log.shouldLog(Log.INFO))       _log.info("build loop complete, tot=" + (afterHandleInbound - loopBegin) + " inReply="+ (afterHandleInboundReplies - beforeHandleInboundReplies)+ " zeroHop="+ (afterBuildZeroHop - afterHandleInboundReplies)+ " real="+ (afterBuildReal - afterBuildZeroHop)+ " in="+ (afterHandleInbound - afterBuildReal)+ " built="+ realBuilt+ " pending="+ pendingRemaining);
       wanted.clear();
       pools.clear();
     }

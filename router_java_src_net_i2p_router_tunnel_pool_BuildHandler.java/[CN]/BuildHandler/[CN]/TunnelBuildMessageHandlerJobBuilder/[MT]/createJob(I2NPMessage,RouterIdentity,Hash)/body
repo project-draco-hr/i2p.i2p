@@ -38,23 +38,27 @@ synchronized (_inboundBuildEndMessages) {
 synchronized (_inboundBuildMessages) {
         boolean removed=false;
         int dropped=0;
-        while (_inboundBuildMessages.size() > 0) {
-          BuildMessageState cur=(BuildMessageState)_inboundBuildMessages.get(_inboundBuildMessages.size() - 1);
+        for (int i=0; i < _inboundBuildMessages.size(); i++) {
+          BuildMessageState cur=(BuildMessageState)_inboundBuildMessages.get(i);
           long age=System.currentTimeMillis() - cur.recvTime;
           if (age >= BuildRequestor.REQUEST_TIMEOUT) {
-            _inboundBuildMessages.remove(_inboundBuildMessages.size() - 1);
+            _inboundBuildMessages.remove(i);
+            i--;
             dropped++;
             _context.statManager().addRateData("tunnel.dropLoad",age,_inboundBuildMessages.size());
-          }
- else {
-            break;
           }
         }
         if (dropped > 0) {
           _context.statManager().addRateData("tunnel.dropLoadBacklog",_inboundBuildMessages.size(),_inboundBuildMessages.size());
         }
  else {
-          _inboundBuildMessages.add(new BuildMessageState(receivedMessage,from,fromHash));
+          int queueTime=estimateQueueTime(_inboundBuildMessages.size());
+          if (queueTime > BuildRequestor.REQUEST_TIMEOUT / 2) {
+            _context.statManager().addRateData("tunnel.dropLoadProactive",queueTime,_inboundBuildMessages.size());
+          }
+ else {
+            _inboundBuildMessages.add(new BuildMessageState(receivedMessage,from,fromHash));
+          }
         }
       }
       _exec.repoll();

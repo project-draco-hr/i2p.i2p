@@ -11,15 +11,17 @@
     if (_log.shouldLog(Log.ERROR))     _log.error("Already participating in a tunnel with the given Id (" + ourId + "), so gotta reject");
     if (response == 0)     response=TunnelHistory.TUNNEL_REJECT_PROBABALISTIC_REJECT;
   }
+  int proactiveDrops=countProactiveDrops();
   long recvDelay=System.currentTimeMillis() - state.recvTime;
-  if ((response == 0) && (recvDelay > BuildRequestor.REQUEST_TIMEOUT / 2)) {
-    _context.statManager().addRateData("tunnel.rejectOverloaded",recvDelay,recvDelay);
-    response=TunnelHistory.TUNNEL_REJECT_TRANSIENT_OVERLOAD;
+  if ((response == 0) && ((recvDelay > BuildRequestor.REQUEST_TIMEOUT / 2) || (proactiveDrops > MAX_PROACTIVE_DROPS))) {
+    _context.statManager().addRateData("tunnel.rejectOverloaded",recvDelay,proactiveDrops);
+    if (true || (proactiveDrops < MAX_PROACTIVE_DROPS * 2))     response=TunnelHistory.TUNNEL_REJECT_TRANSIENT_OVERLOAD;
+ else     response=TunnelHistory.TUNNEL_REJECT_BANDWIDTH;
   }
  else   if (response == 0) {
     _context.statManager().addRateData("tunnel.acceptLoad",recvDelay,recvDelay);
   }
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Responding to " + state.msg.getUniqueId() + "/"+ ourId+ " after "+ recvDelay+ " with "+ response+ " from "+ (state.fromHash != null ? state.fromHash.toBase64() : state.from != null ? state.from.calculateHash().toBase64() : "tunnel"));
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Responding to " + state.msg.getUniqueId() + "/"+ ourId+ " after "+ recvDelay+ "/"+ proactiveDrops+ " with "+ response+ " from "+ (state.fromHash != null ? state.fromHash.toBase64() : state.from != null ? state.from.calculateHash().toBase64() : "tunnel"));
   if (response == 0) {
     HopConfig cfg=new HopConfig();
     cfg.setExpiration(_context.clock().now() + 10 * 60 * 1000);
