@@ -1,12 +1,27 @@
 {
   int maxKBps=Math.min(_context.bandwidthLimiter().getOutboundKBytesPerSecond(),_context.bandwidthLimiter().getInboundKBytesPerSecond());
-  int used1s=get1sRate(_context);
+  int used1s=0;
   int used1m=get1mRate(_context);
   int used5m=0;
   int used=Math.max(Math.max(used1s,used1m),used5m);
-  int availBps=(int)(((maxKBps * 1024) - used) * getSharePercentage());
+  double share=getSharePercentage();
+  int availBps=(int)(((maxKBps * 1024) * share) - used);
   _context.statManager().addRateData("router.throttleTunnelBytesUsed",used,maxKBps);
   _context.statManager().addRateData("router.throttleTunnelBytesAllowed",availBps,(long)bytesAllocated);
+  if (true) {
+    float maxBps=maxKBps * 1024f;
+    float pctFull=(maxBps - availBps) / (maxBps);
+    double probReject=Math.pow(pctFull,16);
+    double rand=_context.random().nextFloat();
+    boolean reject=(availBps < MIN_AVAILABLE_BPS) || (rand <= probReject);
+    if (_log.shouldLog(Log.WARN))     _log.warn("reject = " + reject + " avail/maxK/used "+ availBps+ "/"+ maxKBps+ "/"+ used+ " pReject = "+ probReject+ " pFull = "+ pctFull+ " numTunnels = "+ numTunnels+ "rand = "+ rand+ " est = "+ bytesAllocated+ " share = "+ (float)share);
+    if (reject) {
+      return false;
+    }
+ else {
+      return true;
+    }
+  }
   double growthFactor=((double)(numTunnels + 1)) / (double)numTunnels;
   double toAllocate=(numTunnels > 0 ? bytesAllocated * growthFactor : 0);
   double allocatedBps=toAllocate / (10 * 60);
@@ -17,7 +32,7 @@
   }
  else {
     double probAllow=availBps / (allocatedBps + availBps);
-    boolean allow=(availBps > MIN_AVAILABLE_BPS) && (_context.random().nextDouble() <= probAllow);
+    boolean allow=(availBps > MIN_AVAILABLE_BPS) && (_context.random().nextFloat() <= probAllow);
     if (allow) {
       if (_log.shouldLog(Log.INFO))       _log.info("Probabalistically allowing the tunnel w/ " + (pctFull * 100d) + "% of our "+ availBps+ "Bps allowed ("+ toAllocate+ "bytes / "+ allocatedBps+ "Bps) through "+ numTunnels+ " tunnels");
       return true;
