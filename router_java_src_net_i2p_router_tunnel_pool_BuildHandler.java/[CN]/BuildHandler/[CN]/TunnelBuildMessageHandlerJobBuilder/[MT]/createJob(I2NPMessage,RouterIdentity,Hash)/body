@@ -41,7 +41,7 @@ synchronized (_inboundBuildMessages) {
         for (int i=0; i < _inboundBuildMessages.size(); i++) {
           BuildMessageState cur=(BuildMessageState)_inboundBuildMessages.get(i);
           long age=System.currentTimeMillis() - cur.recvTime;
-          if (age >= BuildRequestor.REQUEST_TIMEOUT / 2) {
+          if (age >= BuildRequestor.REQUEST_TIMEOUT) {
             _inboundBuildMessages.remove(i);
             i--;
             dropped++;
@@ -54,7 +54,7 @@ synchronized (_inboundBuildMessages) {
  else {
           int queueTime=estimateQueueTime(_inboundBuildMessages.size());
           float pDrop=queueTime / ((float)BuildRequestor.REQUEST_TIMEOUT / 2);
-          pDrop=pDrop * pDrop * pDrop;
+          pDrop=(float)Math.pow(pDrop,16);
           float f=_context.random().nextFloat();
           if ((pDrop > f) && (allowProactiveDrop())) {
             _context.statManager().addRateData("tunnel.dropLoadProactive",queueTime,_inboundBuildMessages.size());
