@@ -4,7 +4,7 @@
     buf=new StringBuffer(128);
     buf.append("Allowed: ");
   }
-  int allowed=20;
+  int allowed=5;
   String prop=_context.getProperty("router.tunnelConcurrentBuilds");
   if (prop != null)   try {
     allowed=Integer.valueOf(prop).intValue();
@@ -36,6 +36,7 @@ synchronized (_currentlyBuilding) {
       if (pool != null)       pool.buildComplete(cfg);
       if (cfg.getDestination() == null)       _context.statManager().addRateData("tunnel.buildExploratoryExpire",1,0);
  else       _context.statManager().addRateData("tunnel.buildClientExpire",1,0);
+      for (int j=0; j < cfg.getLength(); j++)       didNotReply(cfg.getReplyMessageId(),cfg.getPeer(j));
     }
   }
   if (buf != null)   _log.debug(buf.toString());
@@ -46,5 +47,6 @@ synchronized (_currentlyBuilding) {
     _context.statManager().addRateData("tunnel.concurrentBuildsLagged",concurrent,lag);
     return 0;
   }
+  if (isOverloaded())   return 0;
   return allowed;
 }

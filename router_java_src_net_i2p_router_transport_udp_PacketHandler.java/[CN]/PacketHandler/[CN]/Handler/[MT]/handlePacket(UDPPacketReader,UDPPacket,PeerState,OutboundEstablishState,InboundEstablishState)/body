@@ -27,14 +27,17 @@ switch (reader.readPayloadType()) {
 case UDPPacket.PAYLOAD_TYPE_SESSION_REQUEST:
     _state=47;
   _establisher.receiveSessionRequest(from,reader);
+_context.statManager().addRateData("udp.receivePacketSize.sessionRequest",packet.getPacket().getLength(),packet.getLifetime());
 break;
 case UDPPacket.PAYLOAD_TYPE_SESSION_CONFIRMED:
 _state=48;
 _establisher.receiveSessionConfirmed(from,reader);
+_context.statManager().addRateData("udp.receivePacketSize.sessionConfirmed",packet.getPacket().getLength(),packet.getLifetime());
 break;
 case UDPPacket.PAYLOAD_TYPE_SESSION_CREATED:
 _state=49;
 _establisher.receiveSessionCreated(from,reader);
+_context.statManager().addRateData("udp.receivePacketSize.sessionCreated",packet.getPacket().getLength(),packet.getLifetime());
 break;
 case UDPPacket.PAYLOAD_TYPE_DATA:
 _state=50;
@@ -56,24 +59,35 @@ _log.info(msg.toString());
 }
 packet.beforeReceiveFragments();
 _inbound.receiveData(state,dr);
+_context.statManager().addRateData("udp.receivePacketSize.dataKnown",packet.getPacket().getLength(),packet.getLifetime());
+if (dr.readFragmentCount() <= 0) _context.statManager().addRateData("udp.receivePacketSize.dataKnownAck",packet.getPacket().getLength(),packet.getLifetime());
+}
+ else {
+_context.statManager().addRateData("udp.receivePacketSize.dataUnknown",packet.getPacket().getLength(),packet.getLifetime());
+UDPPacketReader.DataReader dr=reader.getDataReader();
+if (dr.readFragmentCount() <= 0) _context.statManager().addRateData("udp.receivePacketSize.dataUnknownAck",packet.getPacket().getLength(),packet.getLifetime());
 }
 break;
 case UDPPacket.PAYLOAD_TYPE_TEST:
 _state=51;
 if (_log.shouldLog(Log.DEBUG)) _log.debug("Received test packet: " + reader + " from "+ from);
 _testManager.receiveTest(from,reader);
+_context.statManager().addRateData("udp.receivePacketSize.test",packet.getPacket().getLength(),packet.getLifetime());
 break;
 case UDPPacket.PAYLOAD_TYPE_RELAY_REQUEST:
 if (_log.shouldLog(Log.INFO)) _log.info("Received relay request packet: " + reader + " from "+ from);
 _introManager.receiveRelayRequest(from,reader);
+_context.statManager().addRateData("udp.receivePacketSize.relayRequest",packet.getPacket().getLength(),packet.getLifetime());
 break;
 case UDPPacket.PAYLOAD_TYPE_RELAY_INTRO:
 if (_log.shouldLog(Log.INFO)) _log.info("Received relay intro packet: " + reader + " from "+ from);
 _introManager.receiveRelayIntro(from,reader);
+_context.statManager().addRateData("udp.receivePacketSize.relayIntro",packet.getPacket().getLength(),packet.getLifetime());
 break;
 case UDPPacket.PAYLOAD_TYPE_RELAY_RESPONSE:
 if (_log.shouldLog(Log.INFO)) _log.info("Received relay response packet: " + reader + " from "+ from);
 _establisher.receiveRelayResponse(from,reader);
+_context.statManager().addRateData("udp.receivePacketSize.relayResponse",packet.getPacket().getLength(),packet.getLifetime());
 break;
 default :
 _state=52;
