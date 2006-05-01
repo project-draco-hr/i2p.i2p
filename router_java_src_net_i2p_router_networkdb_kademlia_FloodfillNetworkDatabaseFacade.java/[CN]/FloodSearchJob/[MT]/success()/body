@@ -3,5 +3,10 @@
   if (_log.shouldLog(Log.INFO))   _log.info(getJobId() + ": Floodfill search for " + _key.toBase64()+ " successful");
   _dead=true;
   _facade.complete(_key);
-  while (_onFind.size() > 0)   getContext().jobQueue().addJob((Job)_onFind.remove(0));
+  List removed=null;
+synchronized (_onFind) {
+    removed=new ArrayList(_onFind);
+    _onFind.clear();
+  }
+  while (removed.size() > 0)   getContext().jobQueue().addJob((Job)removed.remove(0));
 }

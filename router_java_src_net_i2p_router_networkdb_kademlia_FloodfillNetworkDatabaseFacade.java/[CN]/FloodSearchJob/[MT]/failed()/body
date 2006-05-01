@@ -7,9 +7,11 @@
     _facade.searchFull(_key,_onFind,_onFailed,timeRemaining,_isLease);
   }
  else {
-    for (int i=0; i < _onFailed.size(); i++) {
-      Job j=(Job)_onFailed.remove(0);
-      getContext().jobQueue().addJob(j);
+    List removed=null;
+synchronized (_onFailed) {
+      removed=new ArrayList(_onFailed);
+      _onFailed.clear();
     }
+    while (removed.size() > 0)     getContext().jobQueue().addJob((Job)removed.remove(0));
   }
 }
