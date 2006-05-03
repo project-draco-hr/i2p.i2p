@@ -4,7 +4,10 @@
     buf=new StringBuffer(128);
     buf.append("Allowed: ");
   }
-  int allowed=5;
+  int maxKBps=_context.bandwidthLimiter().getOutboundKBytesPerSecond();
+  int allowed=maxKBps / 6;
+  if (allowed < 2)   allowed=2;
+  if (allowed > 10)   allowed=10;
   String prop=_context.getProperty("router.tunnelConcurrentBuilds");
   if (prop != null)   try {
     allowed=Integer.valueOf(prop).intValue();
@@ -45,8 +48,12 @@ synchronized (_currentlyBuilding) {
   if ((lag > 2000) && (_context.router().getUptime() > 5 * 60 * 1000)) {
     if (_log.shouldLog(Log.WARN))     _log.warn("Too lagged [" + lag + "], don't allow building");
     _context.statManager().addRateData("tunnel.concurrentBuildsLagged",concurrent,lag);
-    return 0;
+    _log.error("Allowed was " + allowed + ", but we had lag issues, so ended up allowing "+ Math.min(allowed,1));
+    return Math.min(allowed,1);
   }
-  if (isOverloaded())   return 0;
+  if (isOverloaded()) {
+    _log.error("Allowed was " + allowed + ", but we were overloaded, so ended up allowing "+ Math.min(allowed,1));
+    return Math.min(allowed,1);
+  }
   return allowed;
 }
