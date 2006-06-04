@@ -16,7 +16,7 @@
   int numTunnels=_context.tunnelManager().getParticipatingCount();
   if (numTunnels > getMinThrottleTunnels()) {
     double tunnelGrowthFactor=getTunnelGrowthFactor();
-    Rate avgTunnels=_context.statManager().getRate("tunnel.participatingTunnels").getRate(60 * 60 * 1000);
+    Rate avgTunnels=_context.statManager().getRate("tunnel.participatingTunnels").getRate(10 * 60 * 1000);
     if (avgTunnels != null) {
       double avg=0;
       if (avgTunnels.getLastEventCount() > 0)       avg=avgTunnels.getAverageValue();
@@ -43,28 +43,28 @@
   }
   double tunnelTestTimeGrowthFactor=getTunnelTestTimeGrowthFactor();
   Rate tunnelTestTime1m=_context.statManager().getRate("tunnel.testSuccessTime").getRate(1 * 60 * 1000);
-  Rate tunnelTestTime60m=_context.statManager().getRate("tunnel.testSuccessTime").getRate(60 * 60 * 1000);
-  if ((tunnelTestTime1m != null) && (tunnelTestTime60m != null) && (tunnelTestTime1m.getLastEventCount() > 0)) {
+  Rate tunnelTestTime10m=_context.statManager().getRate("tunnel.testSuccessTime").getRate(10 * 60 * 1000);
+  if ((tunnelTestTime1m != null) && (tunnelTestTime10m != null) && (tunnelTestTime1m.getLastEventCount() > 0)) {
     double avg1m=tunnelTestTime1m.getAverageValue();
-    double avg60m=0;
-    if (tunnelTestTime60m.getLastEventCount() > 0)     avg60m=tunnelTestTime60m.getAverageValue();
- else     avg60m=tunnelTestTime60m.getLifetimeAverageValue();
-    if (avg60m < 2000)     avg60m=2000;
-    if ((avg60m > 0) && (avg1m > avg60m * tunnelTestTimeGrowthFactor)) {
-      double probAccept=(avg60m * tunnelTestTimeGrowthFactor) / avg1m;
+    double avg10m=0;
+    if (tunnelTestTime10m.getLastEventCount() > 0)     avg10m=tunnelTestTime10m.getAverageValue();
+ else     avg10m=tunnelTestTime10m.getLifetimeAverageValue();
+    if (avg10m < 2000)     avg10m=2000;
+    if ((avg10m > 0) && (avg1m > avg10m * tunnelTestTimeGrowthFactor)) {
+      double probAccept=(avg10m * tunnelTestTimeGrowthFactor) / avg1m;
       probAccept=probAccept * probAccept;
       int v=_context.random().nextInt(100);
       if (v < probAccept * 100) {
-        if (_log.shouldLog(Log.INFO))         _log.info("Probabalistically accept tunnel request (p=" + probAccept + " v="+ v+ " test time avg 1m="+ avg1m+ " 60m="+ avg60m+ ")");
+        if (_log.shouldLog(Log.INFO))         _log.info("Probabalistically accept tunnel request (p=" + probAccept + " v="+ v+ " test time avg 1m="+ avg1m+ " 10m="+ avg10m+ ")");
       }
  else {
-        if (_log.shouldLog(Log.WARN))         _log.warn("Probabalistically refusing tunnel request (test time avg 1m=" + avg1m + " 60m="+ avg60m+ ")");
-        _context.statManager().addRateData("router.throttleTunnelProbTestSlow",(long)(avg1m - avg60m),0);
+        if (_log.shouldLog(Log.WARN))         _log.warn("Probabalistically refusing tunnel request (test time avg 1m=" + avg1m + " 10m="+ avg10m+ ")");
+        _context.statManager().addRateData("router.throttleTunnelProbTestSlow",(long)(avg1m - avg10m),0);
         return TunnelHistory.TUNNEL_REJECT_PROBABALISTIC_REJECT;
       }
     }
  else {
-      if (_log.shouldLog(Log.INFO))       _log.info("Accepting tunnel request, since 60m test time average is " + avg60m + " and past 1m only has "+ avg1m+ ")");
+      if (_log.shouldLog(Log.INFO))       _log.info("Accepting tunnel request, since 60m test time average is " + avg10m + " and past 1m only has "+ avg1m+ ")");
     }
   }
   String maxTunnels=_context.getProperty(PROP_MAX_TUNNELS);
