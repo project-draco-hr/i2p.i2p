@@ -49,7 +49,7 @@
     double avg10m=0;
     if (tunnelTestTime10m.getLastEventCount() > 0)     avg10m=tunnelTestTime10m.getAverageValue();
  else     avg10m=tunnelTestTime10m.getLifetimeAverageValue();
-    if (avg10m < 2000)     avg10m=2000;
+    if (avg10m < 5000)     avg10m=5000;
     if ((avg10m > 0) && (avg1m > avg10m * tunnelTestTimeGrowthFactor)) {
       double probAccept=(avg10m * tunnelTestTimeGrowthFactor) / avg1m;
       probAccept=probAccept * probAccept;
@@ -57,7 +57,7 @@
       if (v < probAccept * 100) {
         if (_log.shouldLog(Log.INFO))         _log.info("Probabalistically accept tunnel request (p=" + probAccept + " v="+ v+ " test time avg 1m="+ avg1m+ " 10m="+ avg10m+ ")");
       }
- else {
+ else       if (false) {
         if (_log.shouldLog(Log.WARN))         _log.warn("Probabalistically refusing tunnel request (test time avg 1m=" + avg1m + " 10m="+ avg10m+ ")");
         _context.statManager().addRateData("router.throttleTunnelProbTestSlow",(long)(avg1m - avg10m),0);
         return TunnelHistory.TUNNEL_REJECT_PROBABALISTIC_REJECT;
@@ -105,7 +105,7 @@
  else     timePerRequest=(int)rs.getLifetimeAverageValue();
   }
   float pctFull=(queuedRequests * timePerRequest) / (10 * 1000f);
-  float pReject=1 - ((1 - pctFull) * (1 - pctFull));
+  float pReject=pctFull * pctFull;
   if ((pctFull >= 1) || (pReject >= _context.random().nextFloat())) {
     if (_log.shouldLog(Log.WARN))     _log.warn("Rejecting a new tunnel request because we have too many pending requests (" + queuedRequests + " at "+ timePerRequest+ "ms each, %full = "+ pctFull);
     _context.statManager().addRateData("router.throttleTunnelQueueOverload",queuedRequests,timePerRequest);
