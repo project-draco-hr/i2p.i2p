@@ -1,0 +1,20 @@
+{
+  long queueTime=0;
+  int size=0;
+synchronized (_outbound) {
+    OutNetMessage msg=_currentOutbound;
+    size=_outbound.size();
+    if ((msg == null) && (size > 0))     msg=(OutNetMessage)_outbound.get(0);
+    if (msg == null)     return false;
+    queueTime=msg.getSendTime();
+  }
+  if (getUptime() < 10 * 1000)   return false;
+  if (queueTime > 5 * 1000) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Too backlogged: queue time " + queueTime + " and the size is "+ size);
+    _context.statManager().addRateData("ntcp.sendBacklogTime",queueTime,size);
+    return true;
+  }
+ else {
+    return false;
+  }
+}

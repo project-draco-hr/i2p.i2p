@@ -1,0 +1,21 @@
+{
+  _blocks++;
+  int remaining=_size - _nextWrite;
+  int blockUsed=Math.min(buf.length,remaining);
+  if (remaining > 0) {
+    System.arraycopy(buf,0,_data,_nextWrite,blockUsed);
+    _nextWrite+=blockUsed;
+    remaining-=blockUsed;
+  }
+  if ((remaining <= 0) && (buf.length - blockUsed < 4)) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("crc wraparound required on block " + _blocks + " in message "+ _messagesRead);
+    _crc.update(buf);
+    return;
+  }
+ else   if (remaining <= 0) {
+    receiveLastBlock(buf);
+  }
+ else {
+    _crc.update(buf);
+  }
+}

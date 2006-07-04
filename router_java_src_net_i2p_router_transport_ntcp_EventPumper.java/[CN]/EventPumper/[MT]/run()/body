@@ -1,0 +1,101 @@
+{
+  List bufList=new ArrayList(16);
+  while (_alive && _selector.isOpen()) {
+    try {
+      runDelayedEvents(bufList);
+      int count=0;
+      try {
+        count=_selector.select(200);
+      }
+ catch (      IOException ioe) {
+        if (_log.shouldLog(Log.WARN))         _log.warn("Error selecting",ioe);
+      }
+      if (count <= 0)       continue;
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("select returned " + count);
+      Set selected=null;
+      try {
+        selected=_selector.selectedKeys();
+      }
+ catch (      ClosedSelectorException cse) {
+        continue;
+      }
+      for (Iterator iter=selected.iterator(); iter.hasNext(); ) {
+        try {
+          SelectionKey key=(SelectionKey)iter.next();
+          int ops=key.readyOps();
+          boolean accept=(ops & SelectionKey.OP_ACCEPT) != 0;
+          boolean connect=(ops & SelectionKey.OP_CONNECT) != 0;
+          boolean read=(ops & SelectionKey.OP_READ) != 0;
+          boolean write=(ops & SelectionKey.OP_WRITE) != 0;
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("ready ops for : " + key + " accept? "+ accept+ " connect? "+ connect+ " read? "+ read+ "/"+ ((key.interestOps() & SelectionKey.OP_READ) != 0)+ " write? "+ write+ "/"+ ((key.interestOps() & SelectionKey.OP_WRITE) != 0));
+          if (accept) {
+            processAccept(key);
+          }
+          if (connect) {
+            key.interestOps(key.interestOps() & ~SelectionKey.OP_CONNECT);
+            processConnect(key);
+          }
+          if (read) {
+            key.interestOps(key.interestOps() & ~SelectionKey.OP_READ);
+            processRead(key);
+          }
+          if (write) {
+            key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
+            processWrite(key);
+          }
+        }
+ catch (        CancelledKeyException cke) {
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("key cancelled");
+        }
+      }
+      selected.clear();
+    }
+ catch (    RuntimeException re) {
+      _log.log(Log.CRIT,"Error in the event pumper",re);
+    }
+  }
+  try {
+    if (_selector.isOpen()) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Closing down the event pumper with selection keys remaining");
+      Set keys=_selector.keys();
+      for (Iterator iter=keys.iterator(); iter.hasNext(); ) {
+        SelectionKey key=(SelectionKey)iter.next();
+        try {
+          Object att=key.attachment();
+          if (att instanceof ServerSocketChannel) {
+            ServerSocketChannel chan=(ServerSocketChannel)att;
+            chan.close();
+            key.cancel();
+          }
+ else           if (att instanceof NTCPConnection) {
+            NTCPConnection con=(NTCPConnection)att;
+            con.close();
+            key.cancel();
+          }
+        }
+ catch (        Exception ke) {
+          _log.error("Error closing key " + key + " on pumper shutdown",ke);
+        }
+      }
+      _selector.close();
+    }
+ else {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Closing down the event pumper with no selection keys remaining");
+    }
+  }
+ catch (  Exception e) {
+    _log.error("Error closing keys on pumper shutdown",e);
+  }
+synchronized (_wantsConRegister) {
+    _wantsConRegister.clear();
+  }
+synchronized (_wantsRead) {
+    _wantsRead.clear();
+  }
+synchronized (_wantsRegister) {
+    _wantsRegister.clear();
+  }
+synchronized (_wantsWrite) {
+    _wantsWrite.clear();
+  }
+}

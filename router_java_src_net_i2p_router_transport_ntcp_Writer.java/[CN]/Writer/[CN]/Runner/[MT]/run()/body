@@ -1,0 +1,35 @@
+{
+  if (_log.shouldLog(Log.INFO))   _log.info("Starting writer");
+  NTCPConnection con=null;
+  while (!_stop) {
+    try {
+synchronized (_pendingConnections) {
+        boolean keepWriting=(con != null) && _writeAfterLive.remove(con);
+        if (keepWriting) {
+        }
+ else {
+          _liveWrites.remove(con);
+          con=null;
+          if (_pendingConnections.size() <= 0) {
+            _pendingConnections.wait();
+          }
+ else {
+            con=(NTCPConnection)_pendingConnections.remove(0);
+            _liveWrites.add(con);
+          }
+        }
+      }
+    }
+ catch (    InterruptedException ie) {
+    }
+    if (!_stop && (con != null)) {
+      try {
+        con.prepareNextWrite();
+      }
+ catch (      RuntimeException re) {
+        _log.log(Log.CRIT,"Error in the ntcp writer",re);
+      }
+    }
+  }
+  if (_log.shouldLog(Log.INFO))   _log.info("Stopping writer");
+}

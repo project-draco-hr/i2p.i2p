@@ -1,0 +1,17 @@
+{
+  if (tooBacklogged()) {
+    boolean allowRequeue=false;
+    boolean successful=false;
+    _transport.afterSend(msg,successful,allowRequeue,msg.getLifetime());
+    return;
+  }
+  int enqueued=0;
+  if (FAST_LARGE)   bufferedPrepare(msg);
+synchronized (_outbound) {
+    _outbound.add(msg);
+    enqueued=_outbound.size();
+    msg.setQueueSize(enqueued);
+  }
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("messages enqueued on " + toString() + ": "+ enqueued+ " new one: "+ msg.getMessageId()+ " of "+ msg.getMessageType());
+  if (_established && _currentOutbound == null)   _transport.getWriter().wantsWrite(this);
+}

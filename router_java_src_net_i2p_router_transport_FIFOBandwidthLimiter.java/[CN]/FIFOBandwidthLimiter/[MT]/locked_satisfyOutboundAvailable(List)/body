@@ -10,6 +10,7 @@
       continue;
     }
     if (req.getAllocationsSinceWait() > 0) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("multiple allocations since wait... ntcp shouldn't do this: " + req.getRequestName());
       continue;
     }
     int requested=req.getPendingOutboundRequested();
@@ -21,9 +22,15 @@
     req.allocateBytes(0,allocated);
     satisfied.add(req);
     if (req.getPendingOutboundRequested() > 0) {
+      if (req.attachment() != null) {
+        if (_log.shouldLog(Log.INFO))         _log.info("Allocating " + allocated + " bytes outbound as a partial grant to "+ req.getRequestName()+ " (wanted "+ req.getTotalOutboundRequested()+ " bytes, waited "+ waited+ "ms) pending "+ _pendingOutboundRequests.size()+ ", longest waited "+ locked_getLongestOutboundWait()+ " out");
+      }
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Allocating " + allocated + " bytes outbound as a partial grant to "+ req.getRequestName()+ " (wanted "+ req.getTotalOutboundRequested()+ " bytes, waited "+ waited+ "ms) pending "+ _pendingOutboundRequests.size()+ ", longest waited "+ locked_getLongestOutboundWait()+ " out");
     }
  else {
+      if (req.attachment() != null) {
+        if (_log.shouldLog(Log.INFO))         _log.info("Allocating " + allocated + " bytes outbound to finish the partial grant to "+ req.getRequestName()+ " (total "+ req.getTotalOutboundRequested()+ " bytes, waited "+ waited+ "ms) pending "+ _pendingOutboundRequests.size()+ ", longest waited "+ locked_getLongestOutboundWait()+ " out)");
+      }
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Allocating " + allocated + " bytes outbound to finish the partial grant to "+ req.getRequestName()+ " (total "+ req.getTotalOutboundRequested()+ " bytes, waited "+ waited+ "ms) pending "+ _pendingOutboundRequests.size()+ ", longest waited "+ locked_getLongestOutboundWait()+ " out)");
       _pendingOutboundRequests.remove(i);
       i--;

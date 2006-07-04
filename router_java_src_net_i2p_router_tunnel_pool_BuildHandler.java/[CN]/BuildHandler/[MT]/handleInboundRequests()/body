@@ -1,6 +1,8 @@
 {
   int dropExpired=0;
+  int remaining=0;
   List handled=null;
+  long beforeFindHandled=System.currentTimeMillis();
 synchronized (_inboundBuildMessages) {
     int toHandle=_inboundBuildMessages.size();
     if (toHandle > 0) {
@@ -27,12 +29,15 @@ synchronized (_inboundBuildMessages) {
         for (int i=0; i < toHandle && _inboundBuildMessages.size() > 0; i++)         handled.add(_inboundBuildMessages.remove(0));
       }
     }
+    remaining=_inboundBuildMessages.size();
   }
   if (handled != null) {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Handling " + handled.size() + " requests");
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Handling " + handled.size() + " requests (took "+ (System.currentTimeMillis() - beforeFindHandled)+ "ms to find them)");
     for (int i=0; i < handled.size(); i++) {
       BuildMessageState state=(BuildMessageState)handled.get(i);
-      handleRequest(state);
+      long beforeHandle=System.currentTimeMillis();
+      long actualTime=handleRequest(state);
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Handle took " + (System.currentTimeMillis() - beforeHandle) + "/"+ actualTime+ " ("+ i+ " out of "+ handled.size()+ " with "+ remaining+ " remaining)");
     }
     handled.clear();
   }
@@ -51,9 +56,6 @@ synchronized (_inboundBuildEndMessages) {
       handleRequestAsInboundEndpoint(state);
     }
   }
-synchronized (_inboundBuildMessages) {
-    int remaining=_inboundBuildMessages.size();
-    if (remaining > 0)     _context.statManager().addRateData("tunnel.handleRemaining",remaining,0);
-    return remaining;
-  }
+  if (remaining > 0)   _context.statManager().addRateData("tunnel.handleRemaining",remaining,0);
+  return remaining;
 }

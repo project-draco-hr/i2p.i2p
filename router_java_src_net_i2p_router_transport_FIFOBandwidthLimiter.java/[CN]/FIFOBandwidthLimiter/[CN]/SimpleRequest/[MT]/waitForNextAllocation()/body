@@ -1,11 +1,14 @@
 {
+  _waited=true;
   _allocationsSinceWait=0;
-  if ((_outAllocated >= _outTotal) && (_inAllocated >= _inTotal))   return;
+  boolean complete=false;
   try {
 synchronized (SimpleRequest.this) {
-      SimpleRequest.this.wait();
+      if (isComplete())       complete=true;
+ else       SimpleRequest.this.wait();
     }
   }
  catch (  InterruptedException ie) {
   }
+  if (complete && _lsnr != null)   _lsnr.complete(SimpleRequest.this);
 }

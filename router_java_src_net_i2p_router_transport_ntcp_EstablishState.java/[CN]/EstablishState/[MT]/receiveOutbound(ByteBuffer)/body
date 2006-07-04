@@ -1,0 +1,119 @@
+{
+  if (_log.shouldLog(Log.DEBUG))   _log.debug(prefix() + "Receive outbound " + src+ " received="+ _received);
+  while (_received < _Y.length && src.hasRemaining()) {
+    byte c=src.get();
+    _Y[_received++]=c;
+    if (_received >= _Y.length) {
+      try {
+        _dh.setPeerPublicValue(_Y);
+        _dh.getSessionKey();
+        if (_log.shouldLog(Log.DEBUG))         _log.debug(prefix() + "DH session key calculated (" + _dh.getSessionKey().toBase64()+ ")");
+        _e_hXY_tsB=new byte[Hash.HASH_LENGTH + 4 + 12];
+      }
+ catch (      DHSessionKeyBuilder.InvalidPublicParameterException e) {
+        fail("Invalid X",e);
+        return;
+      }
+    }
+  }
+  while (_received < _Y.length + _e_hXY_tsB.length && src.hasRemaining()) {
+    int i=_received - _Y.length;
+    _received++;
+    byte c=src.get();
+    _e_hXY_tsB[i]=c;
+    if (_log.shouldLog(Log.DEBUG))     _log.debug(prefix() + "recv _e_hXY_tsB " + (int)c+ " received="+ _received);
+    if (i + 1 >= _e_hXY_tsB.length) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug(prefix() + "received _e_hXY_tsB fully");
+      byte hXY_tsB[]=new byte[_e_hXY_tsB.length];
+      _context.aes().decrypt(_e_hXY_tsB,0,hXY_tsB,0,_dh.getSessionKey(),_Y,_Y.length - 16,_e_hXY_tsB.length);
+      byte XY[]=new byte[_X.length + _Y.length];
+      System.arraycopy(_X,0,XY,0,_X.length);
+      System.arraycopy(_Y,0,XY,_X.length,_Y.length);
+      Hash h=_context.sha().calculateHash(XY);
+      if (_log.shouldLog(Log.DEBUG))       _log.debug(prefix() + "h(XY)=" + h.toBase64());
+      if (!DataHelper.eq(h.getData(),0,hXY_tsB,0,Hash.HASH_LENGTH)) {
+        fail("Invalid H(X+Y) - mitm attack attempted?");
+        return;
+      }
+      _tsB=DataHelper.fromLong(hXY_tsB,Hash.HASH_LENGTH,4);
+      _tsA=_context.clock().now() / 1000;
+      if (_log.shouldLog(Log.DEBUG))       _log.debug(prefix() + "h(X+Y) is correct, tsA-tsB=" + (_tsA - _tsB));
+      int sigSize=_X.length + _Y.length + Hash.HASH_LENGTH+ 4+ 4;
+      byte preSign[]=new byte[sigSize];
+      System.arraycopy(_X,0,preSign,0,_X.length);
+      System.arraycopy(_Y,0,preSign,_X.length,_Y.length);
+      System.arraycopy(_con.getRemotePeer().calculateHash().getData(),0,preSign,_X.length + _Y.length,Hash.HASH_LENGTH);
+      DataHelper.toLong(preSign,_X.length + _Y.length + Hash.HASH_LENGTH,4,_tsA);
+      DataHelper.toLong(preSign,_X.length + _Y.length + Hash.HASH_LENGTH+ 4,4,_tsB);
+      Signature sig=_context.dsa().sign(preSign,_context.keyManager().getSigningPrivateKey());
+      byte ident[]=_context.router().getRouterInfo().getIdentity().toByteArray();
+      int min=2 + ident.length + 4+ Signature.SIGNATURE_BYTES;
+      int rem=min % 16;
+      int padding=0;
+      if (rem > 0)       padding=16 - rem;
+      byte preEncrypt[]=new byte[min + padding];
+      DataHelper.toLong(preEncrypt,0,2,ident.length);
+      System.arraycopy(ident,0,preEncrypt,2,ident.length);
+      DataHelper.toLong(preEncrypt,2 + ident.length,4,_tsA);
+      byte pad[]=new byte[padding];
+      _context.random().nextBytes(pad);
+      System.arraycopy(pad,0,preEncrypt,2 + ident.length + 4,padding);
+      System.arraycopy(sig.getData(),0,preEncrypt,2 + ident.length + 4+ padding,Signature.SIGNATURE_BYTES);
+      _prevEncrypted=new byte[preEncrypt.length];
+      _context.aes().encrypt(preEncrypt,0,_prevEncrypted,0,_dh.getSessionKey(),_hX_xor_bobIdentHash,_hX_xor_bobIdentHash.length - 16,preEncrypt.length);
+      if (_log.shouldLog(Log.DEBUG)) {
+      }
+      _transport.getPumper().wantsWrite(_con,_prevEncrypted);
+    }
+  }
+  if (_received >= _Y.length + _e_hXY_tsB.length && src.hasRemaining()) {
+    int off=0;
+    if (_e_bobSig == null) {
+      _e_bobSig=new byte[48];
+      if (_log.shouldLog(Log.DEBUG))       _log.debug(prefix() + "receiving E(S(X+Y+Alice.identHash+tsA+tsB)+padding, sk, prev) (remaining? " + src.hasRemaining()+ ")");
+    }
+ else {
+      off=_received - _Y.length - _e_hXY_tsB.length;
+      if (_log.shouldLog(Log.DEBUG))       _log.debug(prefix() + "continuing to receive E(S(X+Y+Alice.identHash+tsA+tsB)+padding, sk, prev) (remaining? " + src.hasRemaining()+ " off="+ off+ " recv="+ _received+ ")");
+    }
+    while (src.hasRemaining() && off < _e_bobSig.length) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug(prefix() + "recv bobSig received=" + _received);
+      _e_bobSig[off++]=src.get();
+      _received++;
+      if (off >= _e_bobSig.length) {
+        byte bobSig[]=new byte[_e_bobSig.length];
+        _context.aes().decrypt(_e_bobSig,0,bobSig,0,_dh.getSessionKey(),_e_hXY_tsB,_e_hXY_tsB.length - 16,_e_bobSig.length);
+        byte bobSigData[]=new byte[Signature.SIGNATURE_BYTES];
+        System.arraycopy(bobSig,0,bobSigData,0,Signature.SIGNATURE_BYTES);
+        Signature sig=new Signature(bobSigData);
+        byte toVerify[]=new byte[_X.length + _Y.length + Hash.HASH_LENGTH+ 4+ 4];
+        int voff=0;
+        System.arraycopy(_X,0,toVerify,voff,_X.length);
+        voff+=_X.length;
+        System.arraycopy(_Y,0,toVerify,voff,_Y.length);
+        voff+=_Y.length;
+        System.arraycopy(_context.routerHash().getData(),0,toVerify,voff,Hash.HASH_LENGTH);
+        voff+=Hash.HASH_LENGTH;
+        DataHelper.toLong(toVerify,voff,4,_tsA);
+        voff+=4;
+        DataHelper.toLong(toVerify,voff,4,_tsB);
+        voff+=4;
+        _verified=_context.dsa().verifySignature(sig,toVerify,_con.getRemotePeer().getSigningPublicKey());
+        if (!_verified) {
+          fail("Signature was invalid - attempt to spoof " + _con.getRemotePeer().calculateHash().toBase64() + "?");
+          return;
+        }
+ else {
+          if (_log.shouldLog(Log.DEBUG))           _log.debug(prefix() + "signature verified from Bob.  done!");
+          prepareExtra(src);
+          byte nextWriteIV[]=new byte[16];
+          System.arraycopy(_prevEncrypted,_prevEncrypted.length - 16,nextWriteIV,0,16);
+          byte nextReadIV[]=new byte[16];
+          System.arraycopy(_e_bobSig,_e_bobSig.length - 16,nextReadIV,0,nextReadIV.length);
+          _con.finishOutboundEstablishment(_dh.getSessionKey(),1000 * (_tsA - _tsB),nextWriteIV,nextReadIV);
+          return;
+        }
+      }
+    }
+  }
+}

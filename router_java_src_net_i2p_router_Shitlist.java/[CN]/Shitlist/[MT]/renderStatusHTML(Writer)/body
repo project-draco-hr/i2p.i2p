@@ -1,25 +1,21 @@
 {
   StringBuffer buf=new StringBuffer(1024);
   buf.append("<h2>Shitlist</h2>");
-  Map shitlist=null;
-  Map causes=null;
-  purge();
-synchronized (_shitlist) {
-    shitlist=new HashMap(_shitlist);
-    causes=new HashMap(_shitlistCause);
+  Map entries=null;
+synchronized (_entries) {
+    entries=new HashMap(_entries);
   }
   buf.append("<ul>");
-  for (Iterator iter=shitlist.keySet().iterator(); iter.hasNext(); ) {
+  for (Iterator iter=entries.keySet().iterator(); iter.hasNext(); ) {
     Hash key=(Hash)iter.next();
-    Date shitDate=(Date)shitlist.get(key);
+    Entry entry=(Entry)entries.get(key);
     buf.append("<li><b>").append(key.toBase64()).append("</b>");
     buf.append(" <a href=\"netdb.jsp#").append(key.toBase64().substring(0,6)).append("\">(?)</a>");
-    buf.append(" expiring on ");
-    buf.append(shitDate);
-    String cause=(String)causes.get(key);
-    if (cause != null) {
+    buf.append(" expiring in ");
+    buf.append(DataHelper.formatDuration(entry.expireOn - _context.clock().now()));
+    if (entry.cause != null) {
       buf.append("<br />\n");
-      buf.append(cause);
+      buf.append(entry.cause);
     }
     buf.append("</li>\n");
   }

@@ -1,0 +1,37 @@
+{
+  if (_log.shouldLog(Log.INFO))   _log.info("Starting reader");
+  NTCPConnection con=null;
+  while (!_stop) {
+    try {
+synchronized (_pendingConnections) {
+        boolean keepReading=(con != null) && _readAfterLive.remove(con);
+        if (keepReading) {
+        }
+ else {
+          _liveReads.remove(con);
+          con=null;
+          if (_pendingConnections.size() <= 0) {
+            _pendingConnections.wait();
+          }
+ else {
+            con=(NTCPConnection)_pendingConnections.remove(0);
+            _liveReads.add(con);
+          }
+        }
+      }
+    }
+ catch (    InterruptedException ie) {
+    }
+    if (!_stop && (con != null)) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("begin read for " + con);
+      try {
+        processRead(con);
+      }
+ catch (      RuntimeException re) {
+        _log.log(Log.CRIT,"Error in the ntcp reader",re);
+      }
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("end read for " + con);
+    }
+  }
+  if (_log.shouldLog(Log.INFO))   _log.info("Stopping reader");
+}

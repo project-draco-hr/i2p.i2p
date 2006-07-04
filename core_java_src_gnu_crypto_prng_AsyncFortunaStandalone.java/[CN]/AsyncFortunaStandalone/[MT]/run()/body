@@ -1,0 +1,36 @@
+{
+  while (true) {
+    int toFill=-1;
+    try {
+synchronized (asyncBuffers) {
+        for (int i=0; i < BUFFERS; i++) {
+          if (status[i] == STATUS_NEED_FILL) {
+            status[i]=STATUS_FILLING;
+            toFill=i;
+            break;
+          }
+        }
+        if (toFill == -1) {
+          asyncBuffers.wait();
+        }
+      }
+    }
+ catch (    InterruptedException ie) {
+    }
+    if (toFill != -1) {
+      long before=System.currentTimeMillis();
+      doFill(asyncBuffers[toFill]);
+      long after=System.currentTimeMillis();
+synchronized (asyncBuffers) {
+        status[toFill]=STATUS_FILLED;
+        asyncBuffers.notifyAll();
+      }
+      Thread.yield();
+      try {
+        Thread.sleep((after - before) * 5);
+      }
+ catch (      InterruptedException ie) {
+      }
+    }
+  }
+}

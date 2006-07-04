@@ -1,0 +1,39 @@
+{
+  NTCPConnection con=(NTCPConnection)key.attachment();
+  ByteBuffer buf=acquireBuf();
+  try {
+    int read=con.getChannel().read(buf);
+    if (read == -1) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("EOF on " + con);
+      con.close();
+      releaseBuf(buf);
+    }
+ else     if (read == 0) {
+      key.interestOps(key.interestOps() | SelectionKey.OP_READ);
+      releaseBuf(buf);
+    }
+ else     if (read > 0) {
+      byte data[]=new byte[read];
+      buf.flip();
+      buf.get(data);
+      releaseBuf(buf);
+      ByteBuffer rbuf=ByteBuffer.wrap(data);
+      FIFOBandwidthLimiter.Request req=_context.bandwidthLimiter().requestInbound(read,"NTCP read",null,null);
+      if (req.getPendingInboundRequested() > 0) {
+        key.interestOps(key.interestOps() & ~SelectionKey.OP_READ);
+        con.queuedRecv(rbuf,req);
+      }
+ else {
+        key.interestOps(key.interestOps() | SelectionKey.OP_READ);
+        con.recv(rbuf);
+      }
+    }
+  }
+ catch (  IOException ioe) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("error reading",ioe);
+    con.close();
+    if (buf != null)     releaseBuf(buf);
+  }
+catch (  NotYetConnectedException nyce) {
+  }
+}

@@ -1,0 +1,46 @@
+{
+  TreeSet peers=new TreeSet(getComparator(sortFlags));
+synchronized (_conLock) {
+    peers.addAll(_conByIdent.values());
+  }
+  long offsetTotal=0;
+  int bpsIn=0;
+  int bpsOut=0;
+  long uptimeMsTotal=0;
+  long sendTotal=0;
+  long recvTotal=0;
+  int numPeers=0;
+  StringBuffer buf=new StringBuffer(512);
+  buf.append("<b id=\"ntcpcon\">NTCP connections: ").append(peers.size()).append("</b><br />\n");
+  buf.append("<table border=\"1\">\n");
+  buf.append(" <tr><td><b><a href=\"#def.peer\">peer</a></b></td>");
+  buf.append("     <td><b><a href=\"#def.peer\">uptime</a></b></td>");
+  buf.append("     <td><b><a href=\"#def.peer\">idle</a></b></td>");
+  buf.append("     <td><b><a href=\"#def.peer\">sent</a></b></td>");
+  buf.append("     <td><b><a href=\"#def.peer\">received</a></b></td>");
+  buf.append("     <td><b><a href=\"#def.peer\">out/in</a></b></td>");
+  buf.append("     <td><b><a href=\"#def.peer\">out queue</a></b></td>");
+  buf.append("     <td><b><a href=\"#def.peer\">skew</a></b></td>");
+  buf.append(" </tr>\n");
+  out.write(buf.toString());
+  buf.setLength(0);
+  for (Iterator iter=peers.iterator(); iter.hasNext(); ) {
+    NTCPConnection con=(NTCPConnection)iter.next();
+    buf.append("<tr><td>").append(con.getRemotePeer().calculateHash().toBase64().substring(0,8));
+    buf.append("</td><td>").append(DataHelper.formatDuration(con.getUptime()));
+    buf.append("</td><td>").append(DataHelper.formatDuration(con.getTimeSinceSend()));
+    buf.append("/").append(DataHelper.formatDuration(con.getTimeSinceReceive()));
+    buf.append("</td><td>").append(con.getMessagesSent());
+    buf.append("</td><td>").append(con.getMessagesReceived());
+    buf.append("</td><td>").append(formatRate(con.getSendRate() / 1024));
+    buf.append("/").append(formatRate(con.getRecvRate() / 1024)).append("KBps");
+    buf.append("</td><td>").append(con.getOutboundQueueSize());
+    buf.append("</td><td>").append(DataHelper.formatDuration(con.getClockSkew()));
+    buf.append("</td></tr>\n");
+    out.write(buf.toString());
+    buf.setLength(0);
+  }
+  buf.append("</table>\n");
+  out.write(buf.toString());
+  buf.setLength(0);
+}

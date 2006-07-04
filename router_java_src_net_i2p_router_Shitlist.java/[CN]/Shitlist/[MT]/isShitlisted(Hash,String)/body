@@ -1,0 +1,34 @@
+{
+  boolean rv=false;
+  boolean unshitlist=false;
+synchronized (_entries) {
+    Entry entry=(Entry)_entries.get(peer);
+    if (entry == null) {
+      rv=false;
+    }
+ else {
+      if (entry.expireOn <= _context.clock().now()) {
+        _entries.remove(peer);
+        unshitlist=true;
+        rv=false;
+      }
+ else {
+        if (entry.transports == null) {
+          rv=true;
+        }
+ else         if (entry.transports.contains(transport)) {
+          rv=true;
+        }
+ else {
+          rv=false;
+        }
+      }
+    }
+  }
+  if (unshitlist) {
+    PeerProfile prof=_context.profileOrganizer().getProfile(peer);
+    if (prof != null)     prof.unshitlist();
+    _context.messageHistory().unshitlist(peer);
+  }
+  return rv;
+}

@@ -1,0 +1,16 @@
+{
+  byte encrypted[]=new byte[_meta.length];
+synchronized (_meta) {
+    _context.random().nextBytes(_meta);
+    DataHelper.toLong(_meta,0,2,0);
+    DataHelper.toLong(_meta,2,4,_context.clock().now() / 1000);
+    Adler32 crc=new Adler32();
+    crc.update(_meta,0,_meta.length - 4);
+    DataHelper.toLong(_meta,_meta.length - 4,4,crc.getValue());
+    _context.aes().encrypt(_meta,0,encrypted,0,_sessionKey,_prevWriteEnd,0,_meta.length);
+  }
+  System.arraycopy(encrypted,encrypted.length - 16,_prevWriteEnd,0,_prevWriteEnd.length);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Sending NTCP metadata");
+  _sendingMeta=true;
+  _transport.getPumper().wantsWrite(this,encrypted);
+}

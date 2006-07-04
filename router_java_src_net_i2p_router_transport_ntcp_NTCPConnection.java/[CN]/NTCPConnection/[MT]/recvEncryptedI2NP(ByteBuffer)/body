@@ -1,0 +1,22 @@
+{
+  while (buf.hasRemaining() && !_closed) {
+    int want=Math.min(buf.remaining(),_curReadBlock.length - _curReadBlockIndex);
+    if (want > 0) {
+      buf.get(_curReadBlock,_curReadBlockIndex,want);
+      _curReadBlockIndex+=want;
+    }
+    if (_curReadBlockIndex >= _curReadBlock.length) {
+      _context.aes().decryptBlock(_curReadBlock,0,_sessionKey,_decryptBlockBuf,0);
+      DataHelper.xor(_decryptBlockBuf,0,_prevReadBlock,0,_decryptBlockBuf,0,_decryptBlockBuf.length);
+      boolean ok=recvUnencryptedI2NP();
+      if (!ok) {
+        if (_log.shouldLog(Log.ERROR))         _log.error("Read buffer " + System.identityHashCode(buf) + " contained corrupt data");
+        return;
+      }
+      byte swap[]=_prevReadBlock;
+      _prevReadBlock=_curReadBlock;
+      _curReadBlock=swap;
+      _curReadBlockIndex=0;
+    }
+  }
+}

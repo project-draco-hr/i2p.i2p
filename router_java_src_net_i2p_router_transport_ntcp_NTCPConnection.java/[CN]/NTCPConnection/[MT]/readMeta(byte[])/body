@@ -1,0 +1,23 @@
+{
+  long ourTs=_context.clock().now() / 1000;
+  long ts=DataHelper.fromLong(unencrypted,2,4);
+  Adler32 crc=new Adler32();
+  crc.update(unencrypted,0,unencrypted.length - 4);
+  long expected=crc.getValue();
+  long read=DataHelper.fromLong(unencrypted,unencrypted.length - 4,4);
+  if (read != expected) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("I2NP metadata message had a bad CRC value");
+    close();
+    return;
+  }
+ else {
+    long newSkew=(ourTs - ts);
+    if ((newSkew > Router.CLOCK_FUDGE_FACTOR) || (newSkew < 0 - Router.CLOCK_FUDGE_FACTOR)) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Peer's skew jumped too far (from " + _clockSkew + " to "+ newSkew+ "): "+ toString());
+      close();
+      return;
+    }
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Received NTCP metadata, old skew of " + _clockSkew + ", new skew of "+ newSkew);
+    _clockSkew=newSkew;
+  }
+}

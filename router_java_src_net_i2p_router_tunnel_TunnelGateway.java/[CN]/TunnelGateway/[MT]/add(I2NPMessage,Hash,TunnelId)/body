@@ -1,16 +1,20 @@
 {
   _messagesSent++;
+  long startAdd=System.currentTimeMillis();
   boolean delayedFlush=false;
   long delayAmount=-1;
   int remaining=0;
-  long beforeLock=_context.clock().now();
-  long afterAdded=-1;
   Pending cur=new PendingImpl(msg,toRouter,toTunnel);
+  long beforeLock=System.currentTimeMillis();
+  long afterAdded=-1;
+  long afterPreprocess=0;
+  long afterExpire=0;
 synchronized (_queue) {
     _queue.add(cur);
-    afterAdded=_context.clock().now();
+    afterAdded=System.currentTimeMillis();
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Added before direct flush preprocessing: " + _queue);
     delayedFlush=_preprocessor.preprocessQueue(_queue,_sender,_receiver);
+    afterPreprocess=System.currentTimeMillis();
     if (delayedFlush)     delayAmount=_preprocessor.getDelayAmount();
     _lastFlush=_context.clock().now();
     for (int i=0; i < _queue.size(); i++) {
@@ -21,6 +25,7 @@ synchronized (_queue) {
         i--;
       }
     }
+    afterExpire=System.currentTimeMillis();
     remaining=_queue.size();
     if ((remaining > 0) && (_log.shouldLog(Log.DEBUG)))     _log.debug("Remaining after preprocessing: " + _queue);
   }
@@ -28,4 +33,6 @@ synchronized (_queue) {
     FlushTimer.getInstance().addEvent(_delayedFlush,delayAmount);
   }
   _context.statManager().addRateData("tunnel.lockedGatewayAdd",afterAdded - beforeLock,remaining);
+  long complete=System.currentTimeMillis();
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Time to add the message " + msg.getUniqueId() + ": "+ (complete - startAdd)+ " delayed? "+ delayedFlush+ " remaining: "+ remaining+ " prepare: "+ (beforeLock - startAdd)+ " add: "+ (afterAdded - beforeLock)+ " preprocess: "+ (afterPreprocess - afterAdded)+ " expire: "+ (afterExpire - afterPreprocess)+ " queue flush: "+ (complete - afterExpire));
 }

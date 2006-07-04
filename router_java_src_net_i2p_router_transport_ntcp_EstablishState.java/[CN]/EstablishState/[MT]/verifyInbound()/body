@@ -1,0 +1,57 @@
+{
+  if (_corrupt)   return;
+  byte b[]=_sz_aliceIdent_tsA_padding_aliceSig.toByteArray();
+  try {
+    RouterIdentity alice=new RouterIdentity();
+    int sz=(int)DataHelper.fromLong(b,0,2);
+    if ((sz <= 0) || (sz > b.length - 2 - 4- Signature.SIGNATURE_BYTES)) {
+      fail("size is invalid",new Exception("size is " + sz));
+      return;
+    }
+    byte aliceData[]=new byte[sz];
+    System.arraycopy(b,2,aliceData,0,sz);
+    alice.fromByteArray(aliceData);
+    long tsA=DataHelper.fromLong(b,2 + sz,4);
+    long diff=1000 * Math.abs(tsA - _tsB);
+    if (diff >= Router.CLOCK_FUDGE_FACTOR) {
+      fail("Clocks too skewed (" + diff + ")");
+      return;
+    }
+ else     if (_log.shouldLog(Log.DEBUG)) {
+      _log.debug(prefix() + "Clock skew: " + diff);
+    }
+    ByteArrayOutputStream baos=new ByteArrayOutputStream(768);
+    baos.write(_X);
+    baos.write(_Y);
+    baos.write(_context.routerHash().getData());
+    baos.write(DataHelper.toLong(4,tsA));
+    baos.write(DataHelper.toLong(4,_tsB));
+    byte toVerify[]=baos.toByteArray();
+    if (_log.shouldLog(Log.DEBUG)) {
+      _log.debug(prefix() + "checking " + Base64.encode(toVerify,0,16));
+    }
+    byte s[]=new byte[Signature.SIGNATURE_BYTES];
+    System.arraycopy(b,b.length - s.length,s,0,s.length);
+    Signature sig=new Signature(s);
+    _verified=_context.dsa().verifySignature(sig,toVerify,alice.getSigningPublicKey());
+    if (_verified) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug(prefix() + "verification successful for " + _con);
+      sendInboundConfirm(alice,tsA);
+      _con.setRemotePeer(alice);
+      if (_log.shouldLog(Log.DEBUG))       _log.debug(prefix() + "e_bobSig is " + _e_bobSig.length+ " bytes long");
+      byte iv[]=new byte[16];
+      System.arraycopy(_e_bobSig,_e_bobSig.length - 16,iv,0,16);
+      _con.finishInboundEstablishment(_dh.getSessionKey(),1000 * (tsA - _tsB),iv,_prevEncrypted);
+      if (_log.shouldLog(Log.INFO))       _log.info(prefix() + "Verified remote peer as " + alice.calculateHash().toBase64());
+    }
+ else {
+      fail("Peer verification failed - spoof of " + alice.calculateHash().toBase64() + "?");
+    }
+  }
+ catch (  IOException ioe) {
+    fail("Error verifying peer",ioe);
+  }
+catch (  DataFormatException dfe) {
+    fail("Error verifying peer",dfe);
+  }
+}

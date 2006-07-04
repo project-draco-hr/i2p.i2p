@@ -1,0 +1,121 @@
+{
+  if (_log.shouldLog(Log.DEBUG))   _log.debug(prefix() + "Receiving inbound: prev received=" + _received+ " src.remaining="+ src.remaining());
+  while (_received < _X.length && src.hasRemaining()) {
+    byte c=src.get();
+    _X[_received++]=c;
+    if (_received >= _X.length) {
+      if (isCheckInfo(_context,_context.routerHash(),_X)) {
+        fail("Incoming connection was a check connection");
+        return;
+      }
+    }
+  }
+  while (_received < _X.length + _hX_xor_bobIdentHash.length && src.hasRemaining()) {
+    int i=_received - _X.length;
+    _received++;
+    byte c=src.get();
+    _hX_xor_bobIdentHash[i]=c;
+  }
+  if (_received >= _X.length + _hX_xor_bobIdentHash.length) {
+    if (_dh.getSessionKey() == null) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug(prefix() + "Enough data for a DH received");
+      Hash hX=_context.sha().calculateHash(_X);
+      byte realXor[]=DataHelper.xor(hX.getData(),_context.routerHash().getData());
+      if (_log.shouldLog(Log.DEBUG)) {
+        _log.debug(prefix() + "hx = " + Base64.encode(hX.getData()));
+        _log.debug(prefix() + "bih=" + Base64.encode(_context.routerHash().getData()));
+        _log.debug(prefix() + "xor=" + Base64.encode(realXor));
+      }
+      if (!DataHelper.eq(realXor,_hX_xor_bobIdentHash)) {
+        fail("Invalid hX_xor");
+        return;
+      }
+      try {
+        _dh.setPeerPublicValue(_X);
+        _dh.getSessionKey();
+        System.arraycopy(realXor,16,_prevEncrypted,0,_prevEncrypted.length);
+        if (_log.shouldLog(Log.DEBUG))         _log.debug(prefix() + "DH session key calculated (" + _dh.getSessionKey().toBase64()+ ")");
+        _Y=_dh.getMyPublicValueBytes();
+        byte xy[]=new byte[_X.length + _Y.length];
+        System.arraycopy(_X,0,xy,0,_X.length);
+        System.arraycopy(_Y,0,xy,_X.length,_Y.length);
+        Hash hxy=_context.sha().calculateHash(xy);
+        _tsB=_context.clock().now() / 1000l;
+        byte padding[]=new byte[12];
+        _context.random().nextBytes(padding);
+        byte toEncrypt[]=new byte[hxy.getData().length + 4 + padding.length];
+        System.arraycopy(hxy.getData(),0,toEncrypt,0,hxy.getData().length);
+        byte tsB[]=DataHelper.toLong(4,_tsB);
+        System.arraycopy(tsB,0,toEncrypt,hxy.getData().length,tsB.length);
+        System.arraycopy(padding,0,toEncrypt,hxy.getData().length + 4,padding.length);
+        if (_log.shouldLog(Log.DEBUG)) {
+          _log.debug(prefix() + "h(x+y)=" + Base64.encode(hxy.getData()));
+          _log.debug(prefix() + "tsb=" + Base64.encode(tsB));
+          _log.debug(prefix() + "unencrypted H(X+Y)+tsB+padding: " + Base64.encode(toEncrypt));
+          _log.debug(prefix() + "encryption iv= " + Base64.encode(_Y,_Y.length - 16,16));
+          _log.debug(prefix() + "encryption key= " + _dh.getSessionKey().toBase64());
+        }
+        _e_hXY_tsB=new byte[toEncrypt.length];
+        _context.aes().encrypt(toEncrypt,0,_e_hXY_tsB,0,_dh.getSessionKey(),_Y,_Y.length - 16,toEncrypt.length);
+        if (_log.shouldLog(Log.DEBUG))         _log.debug(prefix() + "encrypted H(X+Y)+tsB+padding: " + Base64.encode(_e_hXY_tsB));
+        byte write[]=new byte[_Y.length + _e_hXY_tsB.length];
+        System.arraycopy(_Y,0,write,0,_Y.length);
+        System.arraycopy(_e_hXY_tsB,0,write,_Y.length,_e_hXY_tsB.length);
+        _transport.getPumper().wantsWrite(_con,write);
+        if (!src.hasRemaining())         return;
+      }
+ catch (      DHSessionKeyBuilder.InvalidPublicParameterException e) {
+        fail("Invalid X",e);
+        return;
+      }
+    }
+    while (src.hasRemaining() && !_corrupt) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug(prefix() + "Encrypted bytes available (" + src.hasRemaining()+ ")");
+      while (_curEncryptedOffset < _curEncrypted.length && src.hasRemaining()) {
+        _curEncrypted[_curEncryptedOffset++]=src.get();
+        _received++;
+      }
+      if (_curEncryptedOffset >= _curEncrypted.length) {
+        _context.aes().decrypt(_curEncrypted,0,_curDecrypted,0,_dh.getSessionKey(),_prevEncrypted,0,_curEncrypted.length);
+        byte swap[]=new byte[16];
+        _prevEncrypted=_curEncrypted;
+        _curEncrypted=swap;
+        _curEncryptedOffset=0;
+        if (_aliceIdentSize <= 0) {
+          _aliceIdentSize=(int)DataHelper.fromLong(_curDecrypted,0,2);
+          _sz_aliceIdent_tsA_padding_aliceSigSize=2 + _aliceIdentSize + 4+ Signature.SIGNATURE_BYTES;
+          int rem=(_sz_aliceIdent_tsA_padding_aliceSigSize % 16);
+          int padding=0;
+          if (rem > 0)           padding=16 - rem;
+          _sz_aliceIdent_tsA_padding_aliceSigSize+=padding;
+          try {
+            _sz_aliceIdent_tsA_padding_aliceSig.write(_curDecrypted);
+          }
+ catch (          IOException ioe) {
+            if (_log.shouldLog(Log.ERROR))             _log.error(prefix() + "Error writing to the baos?",ioe);
+          }
+          if (_log.shouldLog(Log.DEBUG))           _log.debug(prefix() + "alice ident size decrypted as " + _aliceIdentSize+ ", making the padding at "+ padding+ " and total size at "+ _sz_aliceIdent_tsA_padding_aliceSigSize);
+        }
+ else {
+          try {
+            _sz_aliceIdent_tsA_padding_aliceSig.write(_curDecrypted);
+          }
+ catch (          IOException ioe) {
+            if (_log.shouldLog(Log.ERROR))             _log.error(prefix() + "Error writing to the baos?",ioe);
+          }
+          if (_log.shouldLog(Log.DEBUG))           _log.debug(prefix() + "subsequent block decrypted (" + _sz_aliceIdent_tsA_padding_aliceSig.size()+ ")");
+          if (_sz_aliceIdent_tsA_padding_aliceSig.size() >= _sz_aliceIdent_tsA_padding_aliceSigSize) {
+            verifyInbound();
+            if (!_corrupt && _verified && src.hasRemaining())             prepareExtra(src);
+            if (_log.shouldLog(Log.DEBUG))             _log.debug(prefix() + "verifying size (sz=" + _sz_aliceIdent_tsA_padding_aliceSig.size()+ " expected="+ _sz_aliceIdent_tsA_padding_aliceSigSize+ " corrupt="+ _corrupt+ " verified="+ _verified+ " extra="+ (_extra != null ? _extra.length : 0)+ ")");
+            return;
+          }
+        }
+      }
+ else {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug(prefix() + "end of available data with only a partial block read (" + _curEncryptedOffset+ ", "+ _received+ ")");
+      }
+    }
+    if (_log.shouldLog(Log.DEBUG))     _log.debug(prefix() + "done with the data, not yet complete or corrupt");
+  }
+}

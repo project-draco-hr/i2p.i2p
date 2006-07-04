@@ -1,0 +1,43 @@
+{
+  OutNetMessage msg=getNextMessage();
+  if (msg != null) {
+    RouterIdentity ident=msg.getTarget().getIdentity();
+    Hash ih=ident.calculateHash();
+    NTCPConnection con=null;
+    boolean isNew=false;
+synchronized (_conLock) {
+      con=(NTCPConnection)_conByIdent.get(ih);
+      if (con == null) {
+        isNew=true;
+        RouterAddress addr=msg.getTarget().getTargetAddress(STYLE);
+        if (addr != null) {
+          NTCPAddress naddr=new NTCPAddress(addr);
+          con=new NTCPConnection(_context,this,ident,naddr);
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("Send on a new con: " + con + " at "+ addr+ " for "+ ih.toBase64());
+          _conByIdent.put(ih,con);
+        }
+ else {
+          _log.error("we bid on a peer who doesn't have an ntcp address? " + msg.getTarget());
+          return;
+        }
+      }
+    }
+    if (isNew) {
+      con.enqueueInfoMessage();
+      con.send(msg);
+      try {
+        SocketChannel channel=SocketChannel.open();
+        con.setChannel(channel);
+        channel.configureBlocking(false);
+        _pumper.registerConnect(con);
+      }
+ catch (      IOException ioe) {
+        if (_log.shouldLog(Log.ERROR))         _log.error("Error opening a channel",ioe);
+        con.close();
+      }
+    }
+ else {
+      con.send(msg);
+    }
+  }
+}

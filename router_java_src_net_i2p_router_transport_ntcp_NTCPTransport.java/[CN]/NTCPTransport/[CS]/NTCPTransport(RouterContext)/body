@@ -1,0 +1,20 @@
+{
+  super(ctx);
+  _log=ctx.logManager().getLog(getClass());
+  _context.statManager().createRateStat("ntcp.sendTime","Total message lifetime when sent completely","ntcp",new long[]{60 * 1000,10 * 60 * 1000});
+  _context.statManager().createRateStat("ntcp.transmitTime","How long after message preparation before the message was fully sent","ntcp",new long[]{60 * 1000,10 * 60 * 1000});
+  _context.statManager().createRateStat("ntcp.sendQueueSize","How many messages were ahead of the current one on the connection's queue when it was first added","ntcp",new long[]{60 * 1000,10 * 60 * 1000});
+  _context.statManager().createRateStat("ntcp.receiveTime","How long it takes to receive an inbound message","ntcp",new long[]{60 * 1000,10 * 60 * 1000});
+  _context.statManager().createRateStat("ntcp.receiveSize","How large the received message was","ntcp",new long[]{60 * 1000,10 * 60 * 1000});
+  _context.statManager().createRateStat("ntcp.sendBacklogTime","How long the head of the send queue has been waiting when we fail to add a new one to the queue (period is the number of messages queued)","ntcp",new long[]{60 * 1000,10 * 60 * 1000});
+  _establishing=new ArrayList(4);
+  _conLock=new Object();
+  _conByIdent=new HashMap(64);
+  _sent=new ArrayList(4);
+  _finisher=new SendFinisher();
+  _pumper=new EventPumper(ctx,this);
+  _reader=new Reader(ctx);
+  _writer=new net.i2p.router.transport.ntcp.Writer(ctx);
+  _fastBid=new SharedBid(25);
+  _slowBid=new SharedBid(70);
+}

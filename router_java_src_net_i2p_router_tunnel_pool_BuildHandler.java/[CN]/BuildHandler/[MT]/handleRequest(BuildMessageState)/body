@@ -4,24 +4,33 @@
   if (timeSinceReceived > (BuildRequestor.REQUEST_TIMEOUT * 3)) {
     if (_log.shouldLog(Log.WARN))     _log.warn("Not even trying to handle/decrypt the request " + state.msg.getUniqueId() + ", since we received it a long time ago: "+ timeSinceReceived);
     _context.statManager().addRateData("tunnel.dropLoadDelay",timeSinceReceived,0);
-    return;
+    return -1;
   }
   long beforeDecrypt=System.currentTimeMillis();
   BuildRequestRecord req=_processor.decrypt(_context,state.msg,_context.routerHash(),_context.keyManager().getPrivateKey());
   long decryptTime=System.currentTimeMillis() - beforeDecrypt;
   _context.statManager().addRateData("tunnel.decryptRequestTime",decryptTime,decryptTime);
+  if (decryptTime > 500)   _log.warn("Took too long to decrypt the request: " + decryptTime + " for message "+ state.msg.getUniqueId()+ " received "+ (timeSinceReceived + decryptTime)+ " ago");
   if (req == null) {
     if (_log.shouldLog(Log.WARN))     _log.warn("The request " + state.msg.getUniqueId() + " could not be decrypted");
-    return;
+    return -1;
   }
+  long beforeLookup=System.currentTimeMillis();
   Hash nextPeer=req.readNextIdentity();
+  long readPeerTime=System.currentTimeMillis() - beforeLookup;
   RouterInfo nextPeerInfo=_context.netDb().lookupRouterInfoLocally(nextPeer);
+  long lookupTime=System.currentTimeMillis() - beforeLookup;
+  if (lookupTime > 500)   _log.warn("Took too long to lookup the request: " + lookupTime + "/"+ readPeerTime+ " for message "+ state.msg.getUniqueId()+ " received "+ (timeSinceReceived + decryptTime)+ " ago");
   if (nextPeerInfo == null) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Request " + state.msg.getUniqueId() + "/"+ req.readReceiveTunnelId()+ "/"+ req.readNextTunnelId()+ " handled, looking for the next peer "+ nextPeer.toBase64());
     _context.netDb().lookupRouterInfo(nextPeer,new HandleReq(_context,state,req,nextPeer),new TimeoutReq(_context,state,req,nextPeer),NEXT_HOP_LOOKUP_TIMEOUT);
+    return -1;
   }
  else {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Request " + state.msg.getUniqueId() + " handled and we know the next peer "+ nextPeer.toBase64());
+    long beforeHandle=System.currentTimeMillis();
     handleReq(nextPeerInfo,state,req,nextPeer);
+    long handleTime=System.currentTimeMillis() - beforeHandle;
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Request " + state.msg.getUniqueId() + " handled and we know the next peer "+ nextPeer.toBase64()+ " after "+ handleTime+ "/"+ decryptTime+ "/"+ lookupTime+ "/"+ timeSinceReceived);
+    return handleTime;
   }
 }

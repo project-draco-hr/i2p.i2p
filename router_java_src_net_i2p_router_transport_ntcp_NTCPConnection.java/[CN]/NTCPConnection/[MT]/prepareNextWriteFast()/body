@@ -1,0 +1,43 @@
+{
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("prepare next write w/ isInbound? " + _isInbound + " established? "+ _established);
+  if (!_isInbound && !_established) {
+    if (_establishState == null) {
+      _establishState=new EstablishState(_context,_transport,this);
+      _establishState.prepareOutbound();
+    }
+ else {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("prepare next write, but we have already prepared the first outbound and we are not yet established..." + toString());
+    }
+    return;
+  }
+  if (_nextMetaTime <= System.currentTimeMillis()) {
+    sendMeta();
+    _nextMetaTime=System.currentTimeMillis() + META_FREQUENCY + _context.random().nextInt(META_FREQUENCY);
+  }
+  OutNetMessage msg=null;
+synchronized (_outbound) {
+    if (_currentOutbound != null) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("attempt for multiple outbound messages with " + System.identityHashCode(_currentOutbound) + " already waiting and "+ _outbound.size()+ " queued");
+      return;
+    }
+    if (_outbound.size() > 0) {
+      msg=(OutNetMessage)_outbound.remove(0);
+      _currentOutbound=msg;
+    }
+ else {
+      return;
+    }
+  }
+  msg.beginTransmission();
+  long begin=System.currentTimeMillis();
+  PrepBuffer buf=(PrepBuffer)msg.releasePreparationBuffer();
+  if (buf == null)   throw new RuntimeException("buf is null for " + msg);
+  _context.aes().encrypt(buf.unencrypted,0,buf.encrypted,0,_sessionKey,_prevWriteEnd,0,buf.unencryptedLength);
+  System.arraycopy(buf.encrypted,buf.encrypted.length - 16,_prevWriteEnd,0,_prevWriteEnd.length);
+  long encryptedTime=System.currentTimeMillis();
+  _transport.getPumper().wantsWrite(this,buf.encrypted);
+  long wantsTime=System.currentTimeMillis();
+  releaseBuf(buf);
+  long releaseTime=System.currentTimeMillis();
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("prepared outbound " + System.identityHashCode(msg) + " encrypted="+ (encryptedTime - begin)+ " wantsWrite="+ (wantsTime - encryptedTime)+ " releaseBuf="+ (releaseTime - wantsTime));
+}

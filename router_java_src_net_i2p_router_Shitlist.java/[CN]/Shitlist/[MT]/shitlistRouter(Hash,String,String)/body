@@ -1,0 +1,44 @@
+{
+  if (peer == null) {
+    _log.error("wtf, why did we try to shitlist null?",new Exception("shitfaced"));
+    return false;
+  }
+  if (_context.routerHash().equals(peer)) {
+    _log.error("wtf, why did we try to shitlist ourselves?",new Exception("shitfaced"));
+    return false;
+  }
+  boolean wasAlready=false;
+  if (_log.shouldLog(Log.INFO))   _log.info("Shitlisting router " + peer.toBase64(),new Exception("Shitlist cause: " + reason));
+  long period=SHITLIST_DURATION_MS + _context.random().nextLong(SHITLIST_DURATION_MS);
+  PeerProfile prof=_context.profileOrganizer().getProfile(peer);
+  if (prof != null) {
+    period=SHITLIST_DURATION_MS << prof.incrementShitlists();
+    period+=_context.random().nextLong(period);
+  }
+  if (period > 60 * 60 * 1000)   period=60 * 60 * 1000;
+  Entry e=new Entry();
+  e.expireOn=_context.clock().now() + period;
+  e.cause=reason;
+  e.transports=null;
+  if (transport != null) {
+    e.transports=new HashSet(1);
+    e.transports.add(transport);
+  }
+synchronized (_entries) {
+    Entry old=(Entry)_entries.put(peer,e);
+    if (old != null) {
+      wasAlready=true;
+      _entries.put(peer,old);
+      if (e.transports == null) {
+        old.transports=null;
+      }
+ else       if (old.transports != null) {
+        old.transports.addAll(e.transports);
+      }
+      e=old;
+    }
+  }
+  _context.netDb().fail(peer);
+  if (!wasAlready)   _context.messageHistory().shitlist(peer,reason);
+  return wasAlready;
+}
