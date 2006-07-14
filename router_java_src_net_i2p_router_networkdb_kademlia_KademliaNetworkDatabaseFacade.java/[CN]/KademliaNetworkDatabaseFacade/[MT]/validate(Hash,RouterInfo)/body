@@ -8,7 +8,7 @@
     if (_log.shouldLog(Log.WARN))     _log.warn("Invalid routerInfo signature!  forged router structure!  router = " + routerInfo);
     return "Invalid routerInfo signature on " + key.toBase64();
   }
- else   if (!routerInfo.isCurrent(ROUTER_INFO_EXPIRATION)) {
+ else   if (!routerInfo.isCurrent(ROUTER_INFO_EXPIRATION) && (_context.router().getUptime() > 60 * 60 * 1000)) {
     if (routerInfo.getNetworkId() != Router.NETWORK_ID) {
       _context.shitlist().shitlistRouter(key,"Peer is not in our network");
       return "Peer is not in our network (" + routerInfo.getNetworkId() + ", wants "+ Router.NETWORK_ID+ "): "+ routerInfo.calculateHash().toBase64();
@@ -23,7 +23,7 @@
       if (_log.shouldLog(Log.WARN))       _log.warn("Even though the peer is old, we have only " + existing + " peers left (curPeer: "+ key.toBase64()+ " published on "+ new Date(routerInfo.getPublished()));
     }
   }
- else   if (routerInfo.getPublished() > now + Router.CLOCK_FUDGE_FACTOR) {
+ else   if (routerInfo.getPublished() > now + 2 * Router.CLOCK_FUDGE_FACTOR) {
     long age=routerInfo.getPublished() - _context.clock().now();
     if (_log.shouldLog(Log.INFO))     _log.info("Peer " + key.toBase64() + " published their routerInfo in the future?! ["+ new Date(routerInfo.getPublished())+ "]",new Exception("Rejecting store"));
     return "Peer " + key.toBase64() + " published "+ DataHelper.formatDuration(age)+ " in the future?!";
