@@ -35,6 +35,18 @@ synchronized (_currentlyBuilding) {
     for (int i=0; i < expired.size(); i++) {
       PooledTunnelCreatorConfig cfg=(PooledTunnelCreatorConfig)expired.get(i);
       if (_log.shouldLog(Log.INFO))       _log.info("Timed out waiting for reply asking for " + cfg);
+      for (int iPeer=0; iPeer < cfg.getLength(); iPeer++) {
+        Hash peer=cfg.getPeer(iPeer);
+        if (peer.toBase64().equals(_context.routerHash().toBase64())) {
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("Not recording our own expiry in stats.");
+          continue;
+        }
+        RouterInfo ri=_context.netDb().lookupRouterInfoLocally(peer);
+        String bwTier="Unknown";
+        if (ri != null)         bwTier=ri.getBandwidthTier();
+ else         if (_log.shouldLog(Log.WARN))         _log.warn("Failed detecting bwTier, null routerInfo for: " + peer);
+        _context.statManager().addRateData("tunnel.tierExpire" + bwTier,1,0);
+      }
       TunnelPool pool=cfg.getTunnelPool();
       if (pool != null)       pool.buildComplete(cfg);
       if (cfg.getDestination() == null)       _context.statManager().addRateData("tunnel.buildExploratoryExpire",1,0);

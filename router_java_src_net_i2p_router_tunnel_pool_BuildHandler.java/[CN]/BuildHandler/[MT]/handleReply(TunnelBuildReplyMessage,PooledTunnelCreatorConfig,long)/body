@@ -12,6 +12,18 @@
       int record=order.indexOf(new Integer(i));
       int howBad=statuses[record];
       if (_log.shouldLog(Log.INFO))       _log.info(msg.getUniqueId() + ": Peer " + peer.toBase64()+ " replied with status "+ howBad);
+      if (!peer.toBase64().equals(_context.routerHash().toBase64())) {
+        RouterInfo ri=_context.netDb().lookupRouterInfoLocally(peer);
+        String bwTier="Unknown";
+        if (ri != null)         bwTier=ri.getBandwidthTier();
+ else         if (_log.shouldLog(Log.WARN))         _log.warn("Failed detecting bwTier, null routerInfo for: " + peer);
+        if (howBad == 0) {
+          _context.statManager().addRateData("tunnel.tierAgree" + bwTier,1,0);
+        }
+ else {
+          _context.statManager().addRateData("tunnel.tierReject" + bwTier,1,0);
+        }
+      }
       if (howBad == 0) {
         _context.profileManager().tunnelJoined(peer,rtt);
       }
