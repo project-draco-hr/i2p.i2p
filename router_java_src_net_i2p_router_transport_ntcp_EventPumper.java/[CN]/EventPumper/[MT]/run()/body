@@ -1,4 +1,5 @@
 {
+  long lastFailsafeIteration=System.currentTimeMillis();
   List bufList=new ArrayList(16);
   while (_alive && _selector.isOpen()) {
     try {
@@ -19,36 +20,40 @@
  catch (      ClosedSelectorException cse) {
         continue;
       }
-      for (Iterator iter=selected.iterator(); iter.hasNext(); ) {
+      processKeys(selected);
+      selected.clear();
+      if (lastFailsafeIteration + FAILSAFE_ITERATION_FREQ < System.currentTimeMillis()) {
+        lastFailsafeIteration=System.currentTimeMillis();
         try {
-          SelectionKey key=(SelectionKey)iter.next();
-          int ops=key.readyOps();
-          boolean accept=(ops & SelectionKey.OP_ACCEPT) != 0;
-          boolean connect=(ops & SelectionKey.OP_CONNECT) != 0;
-          boolean read=(ops & SelectionKey.OP_READ) != 0;
-          boolean write=(ops & SelectionKey.OP_WRITE) != 0;
-          if (_log.shouldLog(Log.DEBUG))           _log.debug("ready ops for : " + key + " accept? "+ accept+ " connect? "+ connect+ " read? "+ read+ "/"+ ((key.interestOps() & SelectionKey.OP_READ) != 0)+ " write? "+ write+ "/"+ ((key.interestOps() & SelectionKey.OP_WRITE) != 0));
-          if (accept) {
-            processAccept(key);
-          }
-          if (connect) {
-            key.interestOps(key.interestOps() & ~SelectionKey.OP_CONNECT);
-            processConnect(key);
-          }
-          if (read) {
-            key.interestOps(key.interestOps() & ~SelectionKey.OP_READ);
-            processRead(key);
-          }
-          if (write) {
-            key.interestOps(key.interestOps() & ~SelectionKey.OP_WRITE);
-            processWrite(key);
+          Set all=_selector.keys();
+          int failsafeWrites=0;
+          int failsafeCloses=0;
+          long expireIdleWriteTime=60 * 60 * 1000l + _context.random().nextLong(60 * 60 * 1000l);
+          for (Iterator iter=all.iterator(); iter.hasNext(); ) {
+            try {
+              SelectionKey key=(SelectionKey)iter.next();
+              Object att=key.attachment();
+              if (!(att instanceof NTCPConnection))               continue;
+              NTCPConnection con=(NTCPConnection)att;
+              if ((con.getWriteBufCount() > 0) && ((key.interestOps() & SelectionKey.OP_WRITE) == 0)) {
+                key.interestOps(SelectionKey.OP_WRITE | key.interestOps());
+                failsafeWrites++;
+              }
+              if ((con.getTimeSinceSend() > expireIdleWriteTime) && (con.getMessagesSent() > 0)) {
+                con.close();
+                failsafeCloses++;
+              }
+            }
+ catch (            CancelledKeyException cke) {
+            }
+            if (failsafeWrites > 0)             _context.statManager().addRateData("ntcp.failsafeWrites",failsafeWrites,0);
+            if (failsafeCloses > 0)             _context.statManager().addRateData("ntcp.failsafeCloses",failsafeCloses,0);
           }
         }
- catch (        CancelledKeyException cke) {
-          if (_log.shouldLog(Log.DEBUG))           _log.debug("key cancelled");
+ catch (        ClosedSelectorException cse) {
+          continue;
         }
       }
-      selected.clear();
     }
  catch (    RuntimeException re) {
       _log.log(Log.CRIT,"Error in the event pumper",re);
