@@ -12,10 +12,16 @@ synchronized (_conLock) {
   int numPeers=0;
   int readingPeers=0;
   int writingPeers=0;
+  float bpsSend=0;
+  float bpsRecv=0;
+  long totalUptime=0;
+  long totalSend=0;
+  long totalRecv=0;
   StringBuffer buf=new StringBuffer(512);
   buf.append("<b id=\"ntcpcon\">NTCP connections: ").append(peers.size()).append("</b><br />\n");
   buf.append("<table border=\"1\">\n");
   buf.append(" <tr><td><b>peer</b></td>");
+  buf.append("     <td><b>dir</b></td>");
   buf.append("     <td><b>uptime</b></td>");
   buf.append("     <td><b>idle</b></td>");
   buf.append("     <td><b>sent</b></td>");
@@ -31,13 +37,34 @@ synchronized (_conLock) {
   for (Iterator iter=peers.iterator(); iter.hasNext(); ) {
     NTCPConnection con=(NTCPConnection)iter.next();
     buf.append("<tr><td>").append(con.getRemotePeer().calculateHash().toBase64().substring(0,8));
+    buf.append("</td><td>");
+    if (con.getIsInbound())     buf.append("in");
+ else     buf.append("out");
     buf.append("</td><td>").append(DataHelper.formatDuration(con.getUptime()));
-    buf.append("</td><td>").append(DataHelper.formatDuration(con.getTimeSinceSend()));
-    buf.append("/").append(DataHelper.formatDuration(con.getTimeSinceReceive()));
-    buf.append("</td><td>").append(con.getMessagesSent());
+    totalUptime+=con.getUptime();
+    buf.append("</td><td>").append(con.getTimeSinceSend() / 1000);
+    buf.append("s/").append(con.getTimeSinceReceive() / 1000);
+    buf.append("s</td><td>").append(con.getMessagesSent());
+    totalSend+=con.getMessagesSent();
     buf.append("</td><td>").append(con.getMessagesReceived());
-    buf.append("</td><td>").append(formatRate(con.getSendRate() / 1024));
-    buf.append("/").append(formatRate(con.getRecvRate() / 1024)).append("KBps");
+    totalRecv+=con.getMessagesReceived();
+    buf.append("</td><td>");
+    if (con.getTimeSinceSend() < 10 * 1000) {
+      buf.append(formatRate(con.getSendRate() / 1024));
+      bpsSend+=con.getSendRate();
+    }
+ else {
+      buf.append(formatRate(0));
+    }
+    buf.append("/");
+    if (con.getTimeSinceReceive() < 10 * 1000) {
+      buf.append(formatRate(con.getRecvRate() / 1024));
+      bpsRecv+=con.getRecvRate();
+    }
+ else {
+      buf.append(formatRate(0));
+    }
+    buf.append("KBps");
     long outQueue=con.getOutboundQueueSize();
     if (outQueue <= 0) {
       buf.append("</td><td>No messages");
@@ -60,6 +87,14 @@ synchronized (_conLock) {
     buf.append("</td></tr>\n");
     out.write(buf.toString());
     buf.setLength(0);
+  }
+  if (peers.size() > 0) {
+    buf.append("<tr><td colspan=\"11\"><hr /></td></tr>\n");
+    buf.append("<tr><td>").append(peers.size()).append(" peers</td><td>&nbsp;</td><td>").append(DataHelper.formatDuration(totalUptime / peers.size()));
+    buf.append("</td><td>&nbsp;</td><td>").append(totalSend).append("</td><td>").append(totalRecv);
+    buf.append("</td><td>").append(formatRate(bpsSend / 1024)).append("/").append(formatRate(bpsRecv / 1024)).append("KBps");
+    buf.append("</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td>");
+    buf.append("</tr>\n");
   }
   buf.append("</table>\n");
   buf.append("Peers currently reading I2NP messages: ").append(readingPeers).append("<br />\n");

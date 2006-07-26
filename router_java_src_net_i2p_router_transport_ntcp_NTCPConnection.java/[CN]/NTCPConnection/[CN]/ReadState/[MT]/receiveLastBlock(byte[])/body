@@ -9,7 +9,7 @@
       I2NPMessage read=h.readMessage(_dataBuf.bais);
       long timeToRecv=System.currentTimeMillis() - _stateBegin;
       releaseHandler(h);
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("I2NP message " + _messagesRead + "/"+ (read != null ? read.getUniqueId() : 0)+ " received after "+ timeToRecv+ " with "+ _size+ "/"+ (_blocks * 16)+ " bytes");
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("I2NP message " + _messagesRead + "/"+ (read != null ? read.getUniqueId() : 0)+ " received after "+ timeToRecv+ " with "+ _size+ "/"+ (_blocks * 16)+ " bytes on "+ toString());
       _context.statManager().addRateData("ntcp.receiveTime",timeToRecv,timeToRecv);
       _context.statManager().addRateData("ntcp.receiveSize",_size,timeToRecv);
       if (read != null) {
@@ -22,17 +22,20 @@
     }
  catch (    IOException ioe) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Error parsing I2NP message",ioe);
+      _context.statManager().addRateData("ntcp.corruptI2NPIOE",1,getUptime());
       close();
       return;
     }
 catch (    I2NPMessageException ime) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Error parsing I2NP message",ime);
+      _context.statManager().addRateData("ntcp.corruptI2NPIME",1,getUptime());
       close();
       return;
     }
   }
  else {
     if (_log.shouldLog(Log.ERROR))     _log.error("CRC incorrect for message " + _messagesRead + " (calc="+ val+ " expected="+ _expectedCrc+ ") size="+ _size+ " blocks "+ _blocks);
+    _context.statManager().addRateData("ntcp.corruptI2NPCRC",1,getUptime());
     close();
     return;
   }

@@ -35,8 +35,19 @@
     if (_log.shouldLog(Log.INFO))     _log.info("Binding to the explicitly specified external port: " + port);
   }
   if (_endpoint == null) {
+    String bindTo=_context.getProperty(PROP_BIND_INTERFACE);
+    InetAddress bindToAddr=null;
+    if (bindTo != null) {
+      try {
+        bindToAddr=InetAddress.getByName(bindTo);
+      }
+ catch (      UnknownHostException uhe) {
+        if (_log.shouldLog(Log.ERROR))         _log.error("Invalid SSU bind interface specified [" + bindTo + "]",uhe);
+        bindToAddr=null;
+      }
+    }
     try {
-      _endpoint=new UDPEndpoint(_context,this,port);
+      _endpoint=new UDPEndpoint(_context,this,port,bindToAddr);
     }
  catch (    SocketException se) {
       if (_log.shouldLog(Log.CRIT))       _log.log(Log.CRIT,"Unable to listen on the UDP port (" + port + ")",se);

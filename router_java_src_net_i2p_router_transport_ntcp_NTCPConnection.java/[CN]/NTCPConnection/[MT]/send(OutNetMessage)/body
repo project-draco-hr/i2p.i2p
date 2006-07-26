@@ -16,18 +16,22 @@ synchronized (_writeBufs) {
         blocks=_writeBufs.size();
       }
       if (_log.shouldLog(Log.ERROR))       _log.error("Too backlogged for too long (" + _consecutiveBacklog + " messages for "+ DataHelper.formatDuration(queueTime())+ ", sched? "+ wantsWrite+ ", blocks: "+ blocks+ ") sending to "+ _remotePeer.calculateHash().toBase64());
+      _context.statManager().addRateData("ntcp.closeOnBacklog",_consecutiveBacklog,getUptime());
       close();
     }
+    _context.statManager().addRateData("ntcp.dontSendOnBacklog",_consecutiveBacklog,msg.getLifetime());
     return;
   }
   _consecutiveBacklog=0;
   int enqueued=0;
   if (FAST_LARGE)   bufferedPrepare(msg);
+  boolean noOutbound=false;
 synchronized (_outbound) {
     _outbound.add(msg);
     enqueued=_outbound.size();
     msg.setQueueSize(enqueued);
+    noOutbound=(_currentOutbound == null);
   }
   if (_log.shouldLog(Log.DEBUG))   _log.debug("messages enqueued on " + toString() + ": "+ enqueued+ " new one: "+ msg.getMessageId()+ " of "+ msg.getMessageType());
-  if (_established && _currentOutbound == null)   _transport.getWriter().wantsWrite(this);
+  if (_established && noOutbound)   _transport.getWriter().wantsWrite(this,"enqueued");
 }

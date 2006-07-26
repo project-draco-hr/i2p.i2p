@@ -1,10 +1,32 @@
 {
-  if (_context.shitlist().isShitlisted(toAddress.getIdentity().calculateHash(),STYLE)) {
+  Hash peer=toAddress.getIdentity().calculateHash();
+  if (_context.shitlist().isShitlisted(peer,STYLE)) {
+    _context.statManager().addRateData("ntcp.attemptShitlistedPeer",1,0);
     return null;
   }
-  RouterAddress addr=toAddress.getTargetAddress(STYLE);
+ else   if (isUnreachable(peer)) {
+    _context.statManager().addRateData("ntcp.attemptUnreachablePeer",1,0);
+    return null;
+  }
   boolean established=isEstablished(toAddress.getIdentity());
-  if (established)   return _fastBid;
- else   if (addr != null)   return _slowBid;
- else   return null;
+  if (established) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("fast bid when trying to send to " + toAddress.getIdentity().calculateHash().toBase64() + " as its already established");
+    return _fastBid;
+  }
+  RouterAddress addr=toAddress.getTargetAddress(STYLE);
+  if (addr == null) {
+    markUnreachable(peer);
+    _context.statManager().addRateData("ntcp.connectFailedNoNTCPAddress",1,0);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("no bid when trying to send to " + toAddress.getIdentity().calculateHash().toBase64() + " as they don't have an ntcp address");
+    return null;
+  }
+  NTCPAddress naddr=new NTCPAddress(addr);
+  if ((naddr.getPort() <= 0) || (naddr.getHost() == null)) {
+    _context.statManager().addRateData("ntcp.connectFailedInvalidPort",1,0);
+    markUnreachable(peer);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("no bid when trying to send to " + toAddress.getIdentity().calculateHash().toBase64() + " as they don't have a valid ntcp address");
+    return null;
+  }
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("slow bid when trying to send to " + toAddress.getIdentity().calculateHash().toBase64());
+  return _slowBid;
 }

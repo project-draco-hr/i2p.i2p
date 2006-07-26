@@ -6,16 +6,19 @@
 synchronized (_pendingConnections) {
         boolean keepWriting=(con != null) && _writeAfterLive.remove(con);
         if (keepWriting) {
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("Keep writing on the same connection: " + con);
         }
  else {
           _liveWrites.remove(con);
           con=null;
           if (_pendingConnections.size() <= 0) {
+            if (_log.shouldLog(Log.DEBUG))             _log.debug("Done writing, but nothing pending, so wait");
             _pendingConnections.wait();
           }
  else {
             con=(NTCPConnection)_pendingConnections.remove(0);
             _liveWrites.add(con);
+            if (_log.shouldLog(Log.DEBUG))             _log.debug("Switch to writing on: " + con);
           }
         }
       }
@@ -24,6 +27,7 @@ synchronized (_pendingConnections) {
     }
     if (!_stop && (con != null)) {
       try {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Prepare next write on: " + con);
         con.prepareNextWrite();
       }
  catch (      RuntimeException re) {

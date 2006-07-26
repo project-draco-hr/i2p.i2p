@@ -6,6 +6,7 @@
   }
   if (msg.getTarget().getNetworkId() != Router.NETWORK_ID) {
     _context.shitlist().shitlistRouter(msg.getTarget().getIdentity().calculateHash());
+    _transport.markUnreachable(msg.getTarget().getIdentity().calculateHash());
     _transport.failed(msg,"Remote peer is on the wrong network, cannot establish");
     return;
   }
@@ -17,7 +18,7 @@
     to=new RemoteHostId(remAddr.getAddress(),port);
     if (!_transport.isValid(to.getIP())) {
       _transport.failed(msg,"Remote peer's IP isn't valid");
-      _context.shitlist().shitlistRouter(msg.getTarget().getIdentity().calculateHash(),"Invalid SSU address",UDPTransport.STYLE);
+      _transport.markUnreachable(msg.getTarget().getIdentity().calculateHash());
       return;
     }
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Add outbound establish state to: " + to);

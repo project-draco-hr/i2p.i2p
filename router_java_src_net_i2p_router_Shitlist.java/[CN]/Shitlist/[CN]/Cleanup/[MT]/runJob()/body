@@ -1,0 +1,21 @@
+{
+  _toUnshitlist.clear();
+  long now=getContext().clock().now();
+synchronized (_entries) {
+    for (Iterator iter=_entries.keySet().iterator(); iter.hasNext(); ) {
+      Hash peer=(Hash)iter.next();
+      Entry entry=(Entry)_entries.get(peer);
+      if (entry.expireOn <= now) {
+        iter.remove();
+        _toUnshitlist.add(peer);
+      }
+    }
+  }
+  for (int i=0; i < _toUnshitlist.size(); i++) {
+    Hash peer=(Hash)_toUnshitlist.get(i);
+    PeerProfile prof=_context.profileOrganizer().getProfile(peer);
+    if (prof != null)     prof.unshitlist();
+    _context.messageHistory().unshitlist(peer);
+  }
+  requeue(30 * 1000);
+}

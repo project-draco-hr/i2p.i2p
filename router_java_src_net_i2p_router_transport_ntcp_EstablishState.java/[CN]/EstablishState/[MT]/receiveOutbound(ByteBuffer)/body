@@ -11,6 +11,7 @@
         _e_hXY_tsB=new byte[Hash.HASH_LENGTH + 4 + 12];
       }
  catch (      DHSessionKeyBuilder.InvalidPublicParameterException e) {
+        _context.statManager().addRateData("ntcp.invalidDH",1,0);
         fail("Invalid X",e);
         return;
       }
@@ -32,6 +33,7 @@
       Hash h=_context.sha().calculateHash(XY);
       if (_log.shouldLog(Log.DEBUG))       _log.debug(prefix() + "h(XY)=" + h.toBase64());
       if (!DataHelper.eq(h.getData(),0,hXY_tsB,0,Hash.HASH_LENGTH)) {
+        _context.statManager().addRateData("ntcp.invalidHXY",1,0);
         fail("Invalid H(X+Y) - mitm attack attempted?");
         return;
       }
@@ -100,6 +102,7 @@
         voff+=4;
         _verified=_context.dsa().verifySignature(sig,toVerify,_con.getRemotePeer().getSigningPublicKey());
         if (!_verified) {
+          _context.statManager().addRateData("ntcp.invalidSignature",1,0);
           fail("Signature was invalid - attempt to spoof " + _con.getRemotePeer().calculateHash().toBase64() + "?");
           return;
         }

@@ -1,26 +1,34 @@
 {
   _bytesSent+=buf.capacity();
   OutNetMessage msg=null;
+  boolean bufsRemain=false;
+  boolean clearMessage=false;
 synchronized (_writeBufs) {
     if (_sendingMeta && (buf.capacity() == _meta.length)) {
       _sendingMeta=false;
     }
  else {
+      clearMessage=true;
+    }
+    _writeBufs.remove(buf);
+    bufsRemain=_writeBufs.size() > 0;
+  }
+  if (clearMessage) {
+synchronized (_outbound) {
       if (_currentOutbound != null)       msg=_currentOutbound;
       _currentOutbound=null;
     }
-    _writeBufs.remove(buf);
-  }
-  if (msg != null) {
-    _lastSendTime=System.currentTimeMillis();
-    _context.statManager().addRateData("ntcp.sendTime",msg.getSendTime(),msg.getSendTime());
-    _context.statManager().addRateData("ntcp.transmitTime",msg.getTransmissionTime(),msg.getTransmissionTime());
-    _context.statManager().addRateData("ntcp.sendQueueSize",msg.getQueueSize(),msg.getLifetime());
-    if (_log.shouldLog(Log.INFO)) {
-      _log.info("I2NP message " + _messagesWritten + "/"+ msg.getMessageId()+ " sent after "+ msg.getSendTime()+ "/"+ msg.getTransmissionTime()+ "/"+ msg.getPreparationTime()+ "/"+ msg.getLifetime()+ " queued after "+ msg.getQueueSize()+ " with "+ buf.capacity()+ " bytes (uid="+ System.identityHashCode(msg)+ ")");
+    if (msg != null) {
+      _lastSendTime=System.currentTimeMillis();
+      _context.statManager().addRateData("ntcp.sendTime",msg.getSendTime(),msg.getSendTime());
+      _context.statManager().addRateData("ntcp.transmitTime",msg.getTransmissionTime(),msg.getTransmissionTime());
+      _context.statManager().addRateData("ntcp.sendQueueSize",msg.getQueueSize(),msg.getLifetime());
+      if (_log.shouldLog(Log.INFO)) {
+        _log.info("I2NP message " + _messagesWritten + "/"+ msg.getMessageId()+ " sent after "+ msg.getSendTime()+ "/"+ msg.getTransmissionTime()+ "/"+ msg.getPreparationTime()+ "/"+ msg.getLifetime()+ " queued after "+ msg.getQueueSize()+ " with "+ buf.capacity()+ " bytes (uid="+ System.identityHashCode(msg)+ " on "+ toString()+ ")");
+      }
+      _messagesWritten++;
+      _transport.sendComplete(msg);
     }
-    _messagesWritten++;
-    _transport.sendComplete(msg);
   }
  else {
     if (_log.shouldLog(Log.INFO))     _log.info("I2NP meta message sent completely");
@@ -29,6 +37,7 @@ synchronized (_writeBufs) {
 synchronized (_outbound) {
     msgs=((_outbound.size() > 0) || (_currentOutbound != null));
   }
-  if (msgs)   _transport.getWriter().wantsWrite(this);
+  if (msgs)   _transport.getWriter().wantsWrite(this,"write completed");
+  if (bufsRemain)   _transport.getPumper().wantsWrite(this);
   updateStats();
 }

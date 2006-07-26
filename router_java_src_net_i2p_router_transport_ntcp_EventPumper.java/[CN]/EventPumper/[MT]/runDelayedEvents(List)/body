@@ -59,20 +59,22 @@ synchronized (_wantsConRegister) {
         InetSocketAddress saddr=new InetSocketAddress(naddr.getHost(),naddr.getPort());
         boolean connected=con.getChannel().connect(saddr);
         if (connected) {
+          _context.statManager().addRateData("ntcp.connectImmediate",1,0);
           key.interestOps(SelectionKey.OP_READ);
           processConnect(key);
         }
       }
  catch (      IOException ioe) {
         if (_log.shouldLog(Log.WARN))         _log.warn("error connecting",ioe);
-        if (ntcpOnly(con)) {
-          _context.shitlist().shitlistRouter(con.getRemotePeer().calculateHash(),"unable to connect: " + ioe.getMessage());
-          con.close(false);
-        }
- else {
-          _context.shitlist().shitlistRouter(con.getRemotePeer().calculateHash(),"unable to connect: " + ioe.getMessage(),NTCPTransport.STYLE);
-          con.close(true);
-        }
+        _context.statManager().addRateData("ntcp.connectFailedIOE",1,0);
+        _transport.markUnreachable(con.getRemotePeer().calculateHash());
+        con.close(true);
+      }
+catch (      UnresolvedAddressException uae) {
+        if (_log.shouldLog(Log.WARN))         _log.warn("unresolved address connecting",uae);
+        _context.statManager().addRateData("ntcp.connectFailedUnresolved",1,0);
+        _transport.markUnreachable(con.getRemotePeer().calculateHash());
+        con.close(true);
       }
     }
  catch (    ClosedChannelException cce) {

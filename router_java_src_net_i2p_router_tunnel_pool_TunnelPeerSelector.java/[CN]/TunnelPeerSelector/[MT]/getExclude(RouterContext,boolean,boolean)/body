@@ -7,94 +7,18 @@
   }
  else   if (filterSlow(ctx,isInbound,isExploratory)) {
     Log log=ctx.logManager().getLog(TunnelPeerSelector.class);
-    String excludeCaps=ctx.getProperty("router.excludePeerCaps",String.valueOf(Router.CAPABILITY_BW16));
-    Set peers=new HashSet();
-    if (excludeCaps != null) {
-      char excl[]=excludeCaps.toCharArray();
+    char excl[]=getExcludeCaps(ctx);
+    Set peers=new HashSet(1);
+    if (excl != null) {
       FloodfillNetworkDatabaseFacade fac=(FloodfillNetworkDatabaseFacade)ctx.netDb();
       List known=fac.getKnownRouterData();
       if (known != null) {
         for (int i=0; i < known.size(); i++) {
           RouterInfo peer=(RouterInfo)known.get(i);
-          String cap=peer.getCapabilities();
-          if (cap == null) {
+          boolean shouldExclude=shouldExclude(ctx,log,peer,excl);
+          if (shouldExclude) {
             peers.add(peer.getIdentity().calculateHash());
             continue;
-          }
-          for (int j=0; j < excl.length; j++) {
-            if (cap.indexOf(excl[j]) >= 0) {
-              peers.add(peer.getIdentity().calculateHash());
-              continue;
-            }
-          }
-          int maxLen=0;
-          if (cap.indexOf(FloodfillNetworkDatabaseFacade.CAPACITY_FLOODFILL) >= 0)           maxLen++;
-          if (cap.indexOf(Router.CAPABILITY_REACHABLE) >= 0)           maxLen++;
-          if (cap.indexOf(Router.CAPABILITY_UNREACHABLE) >= 0)           maxLen++;
-          if (cap.length() <= maxLen)           peers.add(peer.getIdentity().calculateHash());
-          if (filterUptime(ctx,isInbound,isExploratory)) {
-            Properties opts=peer.getOptions();
-            if (opts != null) {
-              String val=opts.getProperty("stat_uptime");
-              long uptimeMs=0;
-              if (val != null) {
-                long factor=1;
-                if (val.endsWith("ms")) {
-                  factor=1;
-                  val=val.substring(0,val.length() - 2);
-                }
- else                 if (val.endsWith("s")) {
-                  factor=1000l;
-                  val=val.substring(0,val.length() - 1);
-                }
- else                 if (val.endsWith("m")) {
-                  factor=60 * 1000l;
-                  val=val.substring(0,val.length() - 1);
-                }
- else                 if (val.endsWith("h")) {
-                  factor=60 * 60 * 1000l;
-                  val=val.substring(0,val.length() - 1);
-                }
- else                 if (val.endsWith("d")) {
-                  factor=24 * 60 * 60* 1000l;
-                  val=val.substring(0,val.length() - 1);
-                }
-                try {
-                  uptimeMs=Long.parseLong(val);
-                }
- catch (                NumberFormatException nfe) {
-                }
-                uptimeMs*=factor;
-              }
- else {
-                peers.add(peer.getIdentity().calculateHash());
-                continue;
-              }
-              long infoAge=ctx.clock().now() - peer.getPublished();
-              if (infoAge < 0) {
-                infoAge=0;
-              }
- else               if (infoAge > 24 * 60 * 60* 1000) {
-                long DONT_EXCLUDE_PERIOD=15 * 60 * 1000;
-                if (ctx.router().getUptime() < DONT_EXCLUDE_PERIOD) {
-                  if (log.shouldLog(Log.DEBUG))                   log.debug("Not excluding a long-unseen peer, since we just started up.");
-                }
- else {
-                  if (log.shouldLog(Log.DEBUG))                   log.debug("Excluding a long-unseen peer.");
-                  peers.add(peer.getIdentity().calculateHash());
-                }
-                continue;
-              }
- else {
-                if (infoAge + uptimeMs < 2 * 60 * 60* 1000) {
-                  peers.add(peer.getIdentity().calculateHash());
-                }
-              }
-            }
- else {
-              peers.add(peer.getIdentity().calculateHash());
-              continue;
-            }
           }
         }
       }

@@ -5,10 +5,12 @@
     int read=con.getChannel().read(buf);
     if (read == -1) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("EOF on " + con);
+      _context.statManager().addRateData("ntcp.readEOF",1,0);
       con.close();
       releaseBuf(buf);
     }
  else     if (read == 0) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("nothing to read for " + con + ", but stay interested");
       key.interestOps(key.interestOps() | SelectionKey.OP_READ);
       releaseBuf(buf);
     }
@@ -21,9 +23,12 @@
       FIFOBandwidthLimiter.Request req=_context.bandwidthLimiter().requestInbound(read,"NTCP read",null,null);
       if (req.getPendingInboundRequested() > 0) {
         key.interestOps(key.interestOps() & ~SelectionKey.OP_READ);
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("bw throttled reading for " + con + ", so we don't want to read anymore");
+        _context.statManager().addRateData("ntcp.queuedRecv",read,0);
         con.queuedRecv(rbuf,req);
       }
  else {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("not bw throttled reading for " + con);
         key.interestOps(key.interestOps() | SelectionKey.OP_READ);
         con.recv(rbuf);
       }
@@ -32,6 +37,7 @@
  catch (  IOException ioe) {
     if (_log.shouldLog(Log.WARN))     _log.warn("error reading",ioe);
     con.close();
+    _context.statManager().addRateData("ntcp.readError",1,0);
     if (buf != null)     releaseBuf(buf);
   }
 catch (  NotYetConnectedException nyce) {
