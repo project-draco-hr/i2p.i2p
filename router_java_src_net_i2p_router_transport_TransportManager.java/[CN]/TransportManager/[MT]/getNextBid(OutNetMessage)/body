@@ -20,8 +20,15 @@
     }
  else {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Transport " + t.getStyle() + " did not produce a bid");
+      if (t.isUnreachable(peer))       unreachableTransports++;
     }
   }
-  if (unreachableTransports >= _transports.size())   _context.shitlist().shitlistRouter(peer,"Unreachable on any transport");
+  if (unreachableTransports >= _transports.size()) {
+    _context.statManager().addRateData("transport.shitlistOnUnreachable",msg.getLifetime(),msg.getLifetime());
+    _context.shitlist().shitlistRouter(peer,"Unreachable on any transport");
+  }
+ else   if (rv == null) {
+    _context.statManager().addRateData("transport.noBidsYetNotAllUnreachable",unreachableTransports,msg.getLifetime());
+  }
   return rv;
 }
