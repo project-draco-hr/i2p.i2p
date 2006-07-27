@@ -20,7 +20,7 @@
         int written=con.getChannel().write(buf);
         totalWritten+=written;
         if (written == 0) {
-          if ((buf.remaining() > 0) || (con.getWriteBufCount() > 1)) {
+          if ((buf.remaining() > 0) || (con.getWriteBufCount() >= 1)) {
             if (_log.shouldLog(Log.DEBUG))             _log.debug("done writing, but data remains...");
             key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
           }
@@ -48,7 +48,12 @@
       }
     }
   }
- catch (  IOException ioe) {
+ catch (  CancelledKeyException cke) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("error writing",ioe);
+    _context.statManager().addRateData("ntcp.writeError",1,0);
+    con.close();
+  }
+catch (  IOException ioe) {
     if (_log.shouldLog(Log.WARN))     _log.warn("error writing",ioe);
     _context.statManager().addRateData("ntcp.writeError",1,0);
     con.close();

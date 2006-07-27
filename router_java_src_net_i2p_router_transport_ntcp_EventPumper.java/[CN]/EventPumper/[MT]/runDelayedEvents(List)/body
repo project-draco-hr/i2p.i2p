@@ -8,7 +8,11 @@ synchronized (_wantsRead) {
   while (buf.size() > 0) {
     NTCPConnection con=(NTCPConnection)buf.remove(0);
     SelectionKey key=con.getKey();
-    key.interestOps(key.interestOps() | SelectionKey.OP_READ);
+    try {
+      key.interestOps(key.interestOps() | SelectionKey.OP_READ);
+    }
+ catch (    CancelledKeyException cke) {
+    }
   }
 synchronized (_wantsWrite) {
     if (_wantsWrite.size() > 0) {
@@ -75,6 +79,9 @@ catch (      UnresolvedAddressException uae) {
         _context.statManager().addRateData("ntcp.connectFailedUnresolved",1,0);
         _transport.markUnreachable(con.getRemotePeer().calculateHash());
         con.close(true);
+      }
+catch (      CancelledKeyException cke) {
+        con.close(false);
       }
     }
  catch (    ClosedChannelException cce) {
