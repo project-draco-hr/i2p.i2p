@@ -13,15 +13,6 @@
     System.arraycopy(b,2,aliceData,0,sz);
     alice.fromByteArray(aliceData);
     long tsA=DataHelper.fromLong(b,2 + sz,4);
-    long diff=1000 * Math.abs(tsA - _tsB);
-    if (diff >= Router.CLOCK_FUDGE_FACTOR) {
-      _context.statManager().addRateData("ntcp.invalidInboundSkew",diff,0);
-      fail("Clocks too skewed (" + diff + ")");
-      return;
-    }
- else     if (_log.shouldLog(Log.DEBUG)) {
-      _log.debug(prefix() + "Clock skew: " + diff);
-    }
     ByteArrayOutputStream baos=new ByteArrayOutputStream(768);
     baos.write(_X);
     baos.write(_Y);
@@ -38,6 +29,17 @@
     _verified=_context.dsa().verifySignature(sig,toVerify,alice.getSigningPublicKey());
     if (_verified) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug(prefix() + "verification successful for " + _con);
+      long diff=1000 * Math.abs(tsA - _tsB);
+      if (diff >= Router.CLOCK_FUDGE_FACTOR) {
+        _context.statManager().addRateData("ntcp.invalidInboundSkew",diff,0);
+        _transport.markReachable(alice.calculateHash());
+        _context.shitlist().shitlistRouter(alice.calculateHash(),"Clock skew of " + diff);
+        fail("Clocks too skewed (" + diff + ")",null,true);
+        return;
+      }
+ else       if (_log.shouldLog(Log.DEBUG)) {
+        _log.debug(prefix() + "Clock skew: " + diff);
+      }
       sendInboundConfirm(alice,tsA);
       _con.setRemotePeer(alice);
       if (_log.shouldLog(Log.DEBUG))       _log.debug(prefix() + "e_bobSig is " + _e_bobSig.length+ " bytes long");

@@ -40,6 +40,17 @@
       _tsB=DataHelper.fromLong(hXY_tsB,Hash.HASH_LENGTH,4);
       _tsA=_context.clock().now() / 1000;
       if (_log.shouldLog(Log.DEBUG))       _log.debug(prefix() + "h(X+Y) is correct, tsA-tsB=" + (_tsA - _tsB));
+      long diff=1000 * Math.abs(_tsA - _tsB);
+      if (diff >= Router.CLOCK_FUDGE_FACTOR) {
+        _context.statManager().addRateData("ntcp.invalidOutboundSkew",diff,0);
+        _transport.markReachable(_con.getRemotePeer().calculateHash());
+        _context.shitlist().shitlistRouter(_con.getRemotePeer().calculateHash(),"Outbound clock skew of " + diff);
+        fail("Clocks too skewed (" + diff + ")",null,true);
+        return;
+      }
+ else       if (_log.shouldLog(Log.DEBUG)) {
+        _log.debug(prefix() + "Clock skew: " + diff);
+      }
       int sigSize=_X.length + _Y.length + Hash.HASH_LENGTH+ 4+ 4;
       byte preSign[]=new byte[sigSize];
       System.arraycopy(_X,0,preSign,0,_X.length);
