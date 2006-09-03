@@ -6,8 +6,11 @@
   long total=snark.meta.getTotalLength();
   long remaining=(long)snark.storage.needed() * (long)snark.meta.getPieceLength(0);
   if (remaining > total)   remaining=total;
-  int totalBps=4096;
-  long remainingSeconds=remaining / totalBps;
+  long downBps=snark.coordinator.getDownloadRate();
+  long upBps=snark.coordinator.getUploadRate();
+  long remainingSeconds;
+  if (downBps > 0)   remainingSeconds=remaining / downBps;
+ else   remainingSeconds=-1;
   long uploaded=snark.coordinator.getUploaded();
   boolean isRunning=!snark.stopped;
   boolean isValid=snark.meta != null;
@@ -40,12 +43,16 @@
   out.write("<td valign=\"top\" align=\"left\" class=\"snarkTorrentDownloaded " + rowClass + "\">");
   if (remaining > 0) {
     out.write(formatSize(total - remaining) + "/" + formatSize(total));
+    if (isRunning && remainingSeconds > 0)     out.write(" (ETA " + DataHelper.formatDuration(remainingSeconds * 1000) + ")");
   }
  else {
     out.write(formatSize(total));
   }
   out.write("</td>\n\t");
   out.write("<td valign=\"top\" align=\"left\" class=\"snarkTorrentUploaded " + rowClass + "\">"+ formatSize(uploaded)+ "</td>\n\t");
+  out.write("<td valign=\"top\" align=\"left\" class=\"snarkTorrentRate\">");
+  if (isRunning)   out.write(formatSize(downBps) + "ps/" + formatSize(upBps)+ "ps");
+  out.write("</td>\n\t");
   out.write("<td valign=\"top\" align=\"left\" class=\"snarkTorrentAction " + rowClass + "\">");
   if (isRunning) {
     out.write("<a href=\"" + uri + "?action=Stop&nonce="+ _nonce+ "&torrent="+ Base64.encode(snark.meta.getInfoHash())+ "\" title=\"Stop the torrent\">Stop</a>");
