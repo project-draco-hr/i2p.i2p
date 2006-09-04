@@ -7,30 +7,34 @@
   long downloaded=coordinator.getDownloaded();
   long left=coordinator.getLeft();
   boolean completed=(left == 0);
+  int sleptTime=0;
   try {
     if (!verifyConnected())     return;
     boolean started=false;
     while (!started) {
+      sleptTime=0;
       try {
         TrackerInfo info=doRequest(announce,infoHash,peerID,uploaded,downloaded,left,STARTED_EVENT);
         Set peers=info.getPeers();
         coordinator.trackerSeenPeers=peers.size();
+        coordinator.trackerProblems=null;
         if (!completed) {
           Iterator it=peers.iterator();
           while (it.hasNext()) {
             Peer cur=(Peer)it.next();
             coordinator.addPeer(cur);
-            int delay=3000;
-            int c=((int)cur.getPeerID().getAddress().calculateHash().toBase64().charAt(0)) % 10;
+            int delay=DELAY_MUL;
+            delay*=((int)cur.getPeerID().getAddress().calculateHash().toBase64().charAt(0)) % 10;
+            delay+=DELAY_MIN;
+            sleptTime+=delay;
             try {
-              Thread.sleep(delay * c);
+              Thread.sleep(delay);
             }
  catch (            InterruptedException ie) {
             }
           }
         }
         started=true;
-        coordinator.trackerProblems=null;
       }
  catch (      IOException ioe) {
         Snark.debug("WARNING: Could not contact tracker at '" + announce + "': "+ ioe,Snark.WARNING);
@@ -48,8 +52,15 @@
     Random r=new Random();
     while (!stop) {
       try {
-        int delay=SLEEP * 60 * 1000 + r.nextInt(120 * 1000);
-        Thread.sleep(delay);
+        int delay;
+        if (coordinator.trackerProblems != null) {
+          delay=60 * 1000;
+        }
+ else {
+          delay=SLEEP * 60 * 1000 + r.nextInt(120 * 1000);
+          delay-=sleptTime;
+        }
+        if (delay > 0)         Thread.sleep(delay);
       }
  catch (      InterruptedException interrupt) {
       }
@@ -67,6 +78,8 @@
       if (event == COMPLETED_EVENT || coordinator.needPeers() || System.currentTimeMillis() > lastRequestTime + interval) {
         try {
           TrackerInfo info=doRequest(announce,infoHash,peerID,uploaded,downloaded,left,event);
+          coordinator.trackerProblems=null;
+          sleptTime=0;
           Set peers=info.getPeers();
           coordinator.trackerSeenPeers=peers.size();
           if ((left > 0) && (!completed)) {
@@ -75,19 +88,23 @@
             Iterator it=ordered.iterator();
             while (it.hasNext()) {
               Peer cur=(Peer)it.next();
-              coordinator.addPeer(cur);
-              int delay=3000;
-              int c=((int)cur.getPeerID().getAddress().calculateHash().toBase64().charAt(0)) % 10;
-              try {
-                Thread.sleep(delay * c);
-              }
- catch (              InterruptedException ie) {
+              if (coordinator.addPeer(cur)) {
+                int delay=DELAY_MUL;
+                delay*=((int)cur.getPeerID().getAddress().calculateHash().toBase64().charAt(0)) % 10;
+                delay+=DELAY_MIN;
+                sleptTime+=delay;
+                try {
+                  Thread.sleep(delay);
+                }
+ catch (                InterruptedException ie) {
+                }
               }
             }
           }
         }
  catch (        IOException ioe) {
           Snark.debug("WARNING: Could not contact tracker at '" + announce + "': "+ ioe,Snark.WARNING);
+          coordinator.trackerProblems=ioe.getMessage();
         }
       }
     }
