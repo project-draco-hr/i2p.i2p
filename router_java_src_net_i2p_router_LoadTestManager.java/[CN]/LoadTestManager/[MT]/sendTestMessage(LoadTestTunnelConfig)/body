@@ -33,7 +33,16 @@
     if (_log.shouldLog(Log.DEBUG))     _log.debug("inbound and outbound found for " + tunnel);
     I2NPMessage payloadMessage=createPayloadMessage();
     if (_log.shouldLog(Log.DEBUG))     _log.debug("testing live tunnels with inbound [" + inbound + "] and outbound ["+ outbound+ "]");
-    _context.messageRegistry().registerPending(new Selector(tunnel,payloadMessage.getUniqueId()),new SendAgain(_context,tunnel,payloadMessage.getUniqueId(),true),new SendAgain(_context,tunnel,payloadMessage.getUniqueId(),false),10 * 1000);
+    long uniqueId=-1;
+    if (payloadMessage != null) {
+      uniqueId=payloadMessage.getUniqueId();
+    }
+ else {
+      tunnel.logComplete();
+      _active.remove(tunnel);
+      return;
+    }
+    _context.messageRegistry().registerPending(new Selector(tunnel,uniqueId),new SendAgain(_context,tunnel,uniqueId,true),new SendAgain(_context,tunnel,uniqueId,false),10 * 1000);
     _context.tunnelDispatcher().dispatchOutbound(payloadMessage,outbound.getSendTunnelId(0),inbound.getReceiveTunnelId(0),inbound.getPeer(0));
   }
  else {

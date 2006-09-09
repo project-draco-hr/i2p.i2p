@@ -3,7 +3,6 @@ synchronized (asyncBuffers) {
     long before=System.currentTimeMillis();
     long waited=0;
     while (status[nextBuf] != STATUS_FILLED) {
-      System.out.println(Thread.currentThread().getName() + ": Next PRNG buffer " + nextBuf+ " isn't ready ("+ status[nextBuf]+ ")");
       asyncBuffers.notifyAll();
       try {
         asyncBuffers.wait();
@@ -12,7 +11,7 @@ synchronized (asyncBuffers) {
       }
       waited=System.currentTimeMillis() - before;
     }
-    if (waited > 0)     System.out.println(Thread.currentThread().getName() + ": Took " + waited+ "ms for a full PRNG buffer to be found");
+    if (waited > 10 * 1000)     System.out.println(Thread.currentThread().getName() + ": Took " + waited+ "ms for a full PRNG buffer to be found");
     buffer=asyncBuffers[nextBuf];
     status[nextBuf]=STATUS_LIVE;
     int prev=nextBuf - 1;
