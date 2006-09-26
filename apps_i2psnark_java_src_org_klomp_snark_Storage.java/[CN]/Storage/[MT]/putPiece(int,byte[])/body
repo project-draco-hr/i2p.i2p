@@ -1,4 +1,5 @@
 {
+  byte[] bs=(byte[])ba.clone();
   int length=bs.length;
   boolean correctHash=metainfo.checkPiece(piece,bs,0,length);
   if (listener != null)   listener.storageChecked(this,piece,correctHash);
@@ -37,7 +38,13 @@ synchronized (rafs[i]) {
     }
   }
   if (complete) {
-    listener.storageCompleted(this);
+    needed=metainfo.getPieces();
+    bitfield=new BitField(needed);
+    checkCreateFiles();
+    if (needed > 0) {
+      listener.setWantedPieces(this);
+      Snark.debug("WARNING: Not really done, missing " + needed + " pieces",Snark.WARNING);
+    }
   }
   return true;
 }
