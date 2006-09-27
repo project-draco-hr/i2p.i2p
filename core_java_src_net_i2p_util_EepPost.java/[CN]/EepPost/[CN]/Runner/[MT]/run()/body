@@ -1,4 +1,5 @@
 {
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Running the post task");
   Socket s=null;
   try {
     URL u=new URL(_url);
@@ -12,16 +13,19 @@
       _proxyHost=h;
       _proxyPort=p;
     }
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Connecting to the server/proxy...");
     s=new Socket(_proxyHost,_proxyPort);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Connected");
     OutputStream out=s.getOutputStream();
     String sep=getSeparator();
     long length=calcContentLength(sep,_fields);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Separator: " + sep + " content length: "+ length);
     String header=getHeader(isProxy,path,h,p,sep,length);
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Header: \n" + header);
     out.write(header.getBytes());
     out.flush();
     if (false) {
-      out.write(("--" + sep + "\ncontent-disposition: form-data; name=\"field1\"\n\nStuff goes here\n--"+ sep+ "--\n").getBytes());
+      out.write(("--" + sep + CRLF+ "content-disposition: form-data; name=\"field1\""+ CRLF+ CRLF+ "Stuff goes here"+ CRLF+ "--"+ sep+ "--"+ CRLF).getBytes());
     }
  else {
       sendFields(out,sep,_fields);
