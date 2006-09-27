@@ -13,14 +13,14 @@
   }
  else {
     long newSkew=(ourTs - ts);
-    if ((newSkew > Router.CLOCK_FUDGE_FACTOR) || (newSkew < 0 - Router.CLOCK_FUDGE_FACTOR)) {
-      if (_log.shouldLog(Log.WARN))       _log.warn("Peer's skew jumped too far (from " + _clockSkew + " to "+ newSkew+ "): "+ toString());
+    if (Math.abs(newSkew * 1000) > Router.CLOCK_FUDGE_FACTOR) {
+      if (_log.shouldLog(Log.ERROR))       _log.error("Peer's skew jumped too far (from " + _clockSkew + " s to "+ newSkew+ " s): "+ toString());
       _context.statManager().addRateData("ntcp.corruptSkew",newSkew,getUptime());
       close();
       return;
     }
     _context.statManager().addRateData("ntcp.receiveMeta",newSkew,getUptime());
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Received NTCP metadata, old skew of " + _clockSkew + ", new skew of "+ newSkew);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Received NTCP metadata, old skew of " + _clockSkew + " s, new skew of "+ newSkew+ "s.");
     _clockSkew=newSkew;
   }
 }
