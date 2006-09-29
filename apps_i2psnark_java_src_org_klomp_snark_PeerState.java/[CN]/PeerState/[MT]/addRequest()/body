@@ -1,30 +1,24 @@
 {
   boolean more_pieces=true;
   while (more_pieces) {
-synchronized (this) {
-      more_pieces=outstandingRequests.size() < MAX_PIPELINE;
-    }
+    more_pieces=outstandingRequests.size() < MAX_PIPELINE;
     if (more_pieces && lastRequest == null)     more_pieces=requestNextPiece();
  else     if (more_pieces) {
       int pieceLength;
       boolean isLastChunk;
-synchronized (this) {
-        pieceLength=metainfo.getPieceLength(lastRequest.piece);
-        isLastChunk=lastRequest.off + lastRequest.len == pieceLength;
-      }
+      pieceLength=metainfo.getPieceLength(lastRequest.piece);
+      isLastChunk=lastRequest.off + lastRequest.len == pieceLength;
       if (isLastChunk)       more_pieces=requestNextPiece();
  else {
-synchronized (this) {
-          int nextPiece=lastRequest.piece;
-          int nextBegin=lastRequest.off + PARTSIZE;
-          byte[] bs=lastRequest.bs;
-          int maxLength=pieceLength - nextBegin;
-          int nextLength=maxLength > PARTSIZE ? PARTSIZE : maxLength;
-          Request req=new Request(nextPiece,bs,nextBegin,nextLength);
-          outstandingRequests.add(req);
-          if (!choked)           out.sendRequest(req);
-          lastRequest=req;
-        }
+        int nextPiece=lastRequest.piece;
+        int nextBegin=lastRequest.off + PARTSIZE;
+        byte[] bs=lastRequest.bs;
+        int maxLength=pieceLength - nextBegin;
+        int nextLength=maxLength > PARTSIZE ? PARTSIZE : maxLength;
+        Request req=new Request(nextPiece,bs,nextBegin,nextLength);
+        outstandingRequests.add(req);
+        if (!choked)         out.sendRequest(req);
+        lastRequest=req;
       }
     }
   }

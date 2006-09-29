@@ -2,36 +2,32 @@
   if (bitfield != null) {
     Request r=listener.getPeerPartial(bitfield);
     if (r != null) {
-synchronized (this) {
-        int[] arr=getRequestedPieces();
-        boolean found=false;
-        for (int i=0; arr[i] >= 0; i++) {
-          if (arr[i] == r.piece) {
-            found=true;
-            break;
-          }
+      int[] arr=getRequestedPieces();
+      boolean found=false;
+      for (int i=0; arr[i] >= 0; i++) {
+        if (arr[i] == r.piece) {
+          found=true;
+          break;
         }
-        if (!found) {
-          outstandingRequests.add(r);
-          if (!choked)           out.sendRequest(r);
-          lastRequest=r;
-          return true;
-        }
+      }
+      if (!found) {
+        outstandingRequests.add(r);
+        if (!choked)         out.sendRequest(r);
+        lastRequest=r;
+        return true;
       }
     }
     int nextPiece=listener.wantPiece(peer,bitfield);
     if (_log.shouldLog(Log.DEBUG))     _log.debug(peer + " want piece " + nextPiece);
-synchronized (this) {
-      if (nextPiece != -1 && (lastRequest == null || lastRequest.piece != nextPiece)) {
-        int piece_length=metainfo.getPieceLength(nextPiece);
-        byte[] bs=new byte[piece_length];
-        int length=Math.min(piece_length,PARTSIZE);
-        Request req=new Request(nextPiece,bs,0,length);
-        outstandingRequests.add(req);
-        if (!choked)         out.sendRequest(req);
-        lastRequest=req;
-        return true;
-      }
+    if (nextPiece != -1 && (lastRequest == null || lastRequest.piece != nextPiece)) {
+      int piece_length=metainfo.getPieceLength(nextPiece);
+      byte[] bs=new byte[piece_length];
+      int length=Math.min(piece_length,PARTSIZE);
+      Request req=new Request(nextPiece,bs,0,length);
+      outstandingRequests.add(req);
+      if (!choked)       out.sendRequest(req);
+      lastRequest=req;
+      return true;
     }
   }
   return false;
