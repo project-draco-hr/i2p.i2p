@@ -1,5 +1,4 @@
 {
-  Long medianPeerClockSkew=_context.commSystem().getMedianPeerClockSkew();
   if (false)   return;
   long delta=offsetMs - _offset;
   if (!force) {
@@ -17,6 +16,20 @@
       getLog().debug("Not changing offset since it is only " + delta + "ms");
       _alreadyChanged=true;
       return;
+    }
+    if (Boolean.valueOf(_context.getProperty("router.clockOffsetSanityCheck","true")).booleanValue() == true) {
+      Long peerClockSkew=_context.commSystem().getFramedAveragePeerClockSkew(50);
+      if (peerClockSkew != null) {
+        long currentPeerClockSkew=peerClockSkew.longValue();
+        long predictedPeerClockSkew=currentPeerClockSkew + (delta / 1000l);
+        if ((Math.abs(predictedPeerClockSkew) > (Math.abs(currentPeerClockSkew) + 5)) || (Math.abs(predictedPeerClockSkew) > 20)) {
+          getLog().error("Ignoring clock offset " + offsetMs + "ms (current "+ _offset+ "ms) since it would increase peer clock skew from "+ currentPeerClockSkew+ "s to "+ predictedPeerClockSkew+ "s. Broken server in pool.ntp.org?");
+          return;
+        }
+ else {
+          getLog().debug("Approving clock offset " + offsetMs + "ms (current "+ _offset+ "ms) since it would decrease peer clock skew from "+ currentPeerClockSkew+ "s to "+ predictedPeerClockSkew+ "s.");
+        }
+      }
     }
   }
   if (_alreadyChanged) {
