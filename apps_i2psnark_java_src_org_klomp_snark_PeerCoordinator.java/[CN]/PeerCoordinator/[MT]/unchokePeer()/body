@@ -1,13 +1,17 @@
 {
   List interested=new LinkedList();
 synchronized (peers) {
+    int count=0;
     Iterator it=peers.iterator();
     while (it.hasNext()) {
       Peer peer=(Peer)it.next();
       boolean remove=false;
-      if (uploaders < MAX_UPLOADERS && peer.isChoking() && peer.isInterested()) {
-        if (!peer.isChoked())         interested.add(0,peer);
- else         interested.add(peer);
+      if (peer.isChoking() && peer.isInterested()) {
+        count++;
+        if (uploaders < MAX_UPLOADERS) {
+          if (!peer.isChoked())           interested.add(0,peer);
+ else           interested.add(peer);
+        }
       }
     }
     while (uploaders < MAX_UPLOADERS && interested.size() > 0) {
@@ -15,9 +19,11 @@ synchronized (peers) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Unchoke: " + peer);
       peer.setChoking(false);
       uploaders++;
+      count--;
       peers.remove(peer);
       peers.add(peer);
       peerCount=peers.size();
     }
+    interestedAndChoking=count;
   }
 }

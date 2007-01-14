@@ -5,10 +5,7 @@ synchronized (coordinator.peers) {
     int peers=0;
     int uploaders=0;
     int downloaders=0;
-    int interested=0;
-    int interesting=0;
-    int choking=0;
-    int choked=0;
+    int removedCount=0;
     long uploaded=0;
     long downloaded=0;
     List removed=new ArrayList();
@@ -24,10 +21,6 @@ synchronized (coordinator.peers) {
       peers++;
       if (!peer.isChoking())       uploaders++;
       if (!peer.isChoked() && peer.isInteresting())       downloaders++;
-      if (peer.isInterested())       interested++;
-      if (peer.isInteresting())       interesting++;
-      if (peer.isChoking())       choking++;
-      if (peer.isChoked())       choked++;
       long upload=peer.getUploaded();
       uploaded+=upload;
       long download=peer.getDownloaded();
@@ -37,7 +30,7 @@ synchronized (coordinator.peers) {
         Snark.debug(peer + ":",Snark.DEBUG);
         Snark.debug(" ul: " + upload / KILOPERSECOND + " dl: " + download / KILOPERSECOND + " i: " + peer.isInterested() + " I: " + peer.isInteresting() + " c: " + peer.isChoking() + " C: " + peer.isChoked(),Snark.DEBUG);
       }
-      if (coordinator.uploaders >= PeerCoordinator.MAX_UPLOADERS && interested > PeerCoordinator.MAX_UPLOADERS && !peer.isChoking()) {
+      if (coordinator.uploaders >= PeerCoordinator.MAX_UPLOADERS && coordinator.interestedAndChoking > 0 && !peer.isChoking()) {
         if (!peer.isInterested()) {
           if (Snark.debug >= Snark.INFO)           Snark.debug("Choke uninterested peer: " + peer,Snark.INFO);
           peer.setChoking(true);
@@ -46,11 +39,12 @@ synchronized (coordinator.peers) {
           it.remove();
           removed.add(peer);
         }
- else         if (peer.isChoked()) {
+ else         if (peer.isInteresting() && peer.isChoked()) {
           if (Snark.debug >= Snark.DEBUG)           Snark.debug("Choke choking peer: " + peer,Snark.DEBUG);
           peer.setChoking(true);
           uploaders--;
           coordinator.uploaders--;
+          removedCount++;
           it.remove();
           removed.add(peer);
         }
@@ -59,11 +53,16 @@ synchronized (coordinator.peers) {
           peer.setChoking(true);
           uploaders--;
           coordinator.uploaders--;
+          removedCount++;
           it.remove();
           removed.add(peer);
         }
- else         if (!peer.isChoking() && download < worstdownload) {
+ else         if (peer.isInteresting() && !peer.isChoked() && download < worstdownload) {
           worstdownload=download;
+          worstDownloader=peer;
+        }
+ else         if (upload < worstdownload && coordinator.completed()) {
+          worstdownload=upload;
           worstDownloader=peer;
         }
       }
@@ -71,10 +70,11 @@ synchronized (coordinator.peers) {
       peer.keepAlive();
     }
     coordinator.uploaders=uploaders;
-    if (uploaders >= PeerCoordinator.MAX_UPLOADERS && interested > PeerCoordinator.MAX_UPLOADERS && worstDownloader != null) {
+    if (uploaders >= PeerCoordinator.MAX_UPLOADERS && coordinator.interestedAndChoking > 0 && worstDownloader != null) {
       if (Snark.debug >= Snark.DEBUG)       Snark.debug("Choke worst downloader: " + worstDownloader,Snark.DEBUG);
       worstDownloader.setChoking(true);
       coordinator.uploaders--;
+      removedCount++;
       coordinator.peers.remove(worstDownloader);
       coordinator.peerCount=coordinator.peers.size();
       removed.add(worstDownloader);
@@ -82,6 +82,7 @@ synchronized (coordinator.peers) {
     coordinator.unchokePeer();
     coordinator.peers.addAll(removed);
     coordinator.peerCount=coordinator.peers.size();
+    coordinator.interestedAndChoking+=removedCount;
     coordinator.setRateHistory(uploaded,downloaded);
   }
   if (coordinator.halted()) {

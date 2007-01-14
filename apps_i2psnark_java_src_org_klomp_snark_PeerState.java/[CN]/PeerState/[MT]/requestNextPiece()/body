@@ -21,7 +21,14 @@
     if (_log.shouldLog(Log.DEBUG))     _log.debug(peer + " want piece " + nextPiece);
     if (nextPiece != -1 && (lastRequest == null || lastRequest.piece != nextPiece)) {
       int piece_length=metainfo.getPieceLength(nextPiece);
-      byte[] bs=new byte[piece_length];
+      byte[] bs;
+      try {
+        bs=new byte[piece_length];
+      }
+ catch (      OutOfMemoryError oom) {
+        _log.warn("Out of memory, can't request piece " + nextPiece,oom);
+        return false;
+      }
       int length=Math.min(piece_length,PARTSIZE);
       Request req=new Request(nextPiece,bs,0,length);
       outstandingRequests.add(req);
