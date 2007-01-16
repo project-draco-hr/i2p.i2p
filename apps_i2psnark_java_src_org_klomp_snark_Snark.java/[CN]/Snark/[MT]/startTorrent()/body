@@ -1,4 +1,20 @@
 {
+  if (coordinator == null) {
+    I2PServerSocket serversocket=I2PSnarkUtil.instance().getServerSocket();
+    if (serversocket == null)     fatal("Unable to listen for I2P connections");
+ else {
+      Destination d=serversocket.getManager().getSession().getMyDestination();
+      debug("Listening on I2P destination " + d.toBase64() + " / "+ d.calculateHash().toBase64(),NOTICE);
+    }
+    debug("Starting PeerCoordinator, ConnectionAcceptor, and TrackerClient",NOTICE);
+    activity="Collecting pieces";
+    coordinator=new PeerCoordinator(id,meta,storage,this,this);
+    PeerCoordinatorSet set=PeerCoordinatorSet.instance();
+    set.add(coordinator);
+    ConnectionAcceptor acceptor=ConnectionAcceptor.instance();
+    acceptor.startAccepting(set,serversocket);
+    trackerclient=new TrackerClient(meta,coordinator);
+  }
   stopped=false;
   boolean coordinatorChanged=false;
   if (coordinator.halted()) {
