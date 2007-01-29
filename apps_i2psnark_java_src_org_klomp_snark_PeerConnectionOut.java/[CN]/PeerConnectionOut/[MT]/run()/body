@@ -3,10 +3,14 @@
     while (!quit && peer.isConnected()) {
       Message m=null;
       PeerState state=null;
+      boolean shouldFlush;
+synchronized (sendQueue) {
+        shouldFlush=!quit && peer.isConnected() && sendQueue.isEmpty();
+      }
+      if (shouldFlush)       dout.flush();
 synchronized (sendQueue) {
         while (!quit && peer.isConnected() && sendQueue.isEmpty()) {
           try {
-            dout.flush();
             sendQueue.wait(60 * 1000);
           }
  catch (          InterruptedException ie) {
