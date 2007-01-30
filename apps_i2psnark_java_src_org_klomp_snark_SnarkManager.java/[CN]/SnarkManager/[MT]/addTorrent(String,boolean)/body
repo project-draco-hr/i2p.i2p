@@ -20,7 +20,12 @@
   Snark torrent=null;
 synchronized (_snarks) {
     torrent=(Snark)_snarks.get(filename);
-    if (torrent == null) {
+  }
+  if (torrent == null) {
+synchronized (_addSnarkLock) {
+synchronized (_snarks) {
+        if (_snarks.get(filename) != null)         return;
+      }
       FileInputStream fis=null;
       try {
         fis=new FileInputStream(sfile);
@@ -36,7 +41,9 @@ synchronized (_snarks) {
  else {
           torrent=new Snark(filename,null,-1,null,null,false,dataDir.getPath());
           torrent.completeListener=this;
-          _snarks.put(filename,torrent);
+synchronized (_snarks) {
+            _snarks.put(filename,torrent);
+          }
         }
       }
  catch (      IOException ioe) {
@@ -52,9 +59,9 @@ synchronized (_snarks) {
         }
       }
     }
+  }
  else {
-      return;
-    }
+    return;
   }
   File f=new File(filename);
   if (!dontAutoStart && shouldAutoStart()) {
