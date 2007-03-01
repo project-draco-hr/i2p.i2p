@@ -5,15 +5,23 @@
   long stats[]={0,0,0,0};
   String nonce=req.getParameter("nonce");
   if ((nonce != null) && (nonce.equals(String.valueOf(_nonce))))   processRequest(req);
+  String peerParam=req.getParameter("p");
+  String peerString;
+  if (peerParam == null) {
+    peerString="";
+  }
+ else {
+    peerString="?p=" + peerParam;
+  }
   PrintWriter out=resp.getWriter();
   out.write(HEADER_BEGIN);
-  out.write("<meta http-equiv=\"refresh\" content=\"60;" + req.getRequestURI() + "\">\n");
+  out.write("<meta http-equiv=\"refresh\" content=\"60;" + req.getRequestURI() + peerString+ "\">\n");
   out.write(HEADER);
   out.write("<table border=\"0\" width=\"100%\">\n");
   out.write("<tr><td width=\"20%\" class=\"snarkTitle\" valign=\"top\" align=\"left\">");
   out.write("I2PSnark<br />\n");
   out.write("<table border=\"0\" width=\"100%\">\n");
-  out.write("<tr><td><a href=\"" + req.getRequestURI() + "\" class=\"snarkRefresh\">Refresh</a><br />\n");
+  out.write("<tr><td><a href=\"" + req.getRequestURI() + peerString+ "\" class=\"snarkRefresh\">Refresh</a><br />\n");
   out.write("<td><a href=\"http://forum.i2p/viewforum.php?f=21\" class=\"snarkRefresh\">Forum</a><br />\n");
   out.write("<tr><td><a href=\"http://de-ebook-archiv.i2p/pub/bt/\" class=\"snarkRefresh\">eBook</a><br />\n");
   out.write("<td><a href=\"http://gaytorrents.i2p/\" class=\"snarkRefresh\">GayTorrents</a><br />\n");
@@ -32,13 +40,19 @@
   List snarks=getSortedSnarks(req);
   String uri=req.getRequestURI();
   out.write(TABLE_HEADER);
+  if (I2PSnarkUtil.instance().connected() && snarks.size() > 0) {
+    if (peerParam != null)     out.write("(<a href=\"" + req.getRequestURI() + "\">Hide Peers</a>)<br />\n");
+ else     out.write("(<a href=\"" + req.getRequestURI() + "?p=1"+ "\">Show Peers</a>)<br />\n");
+  }
+  out.write(TABLE_HEADER2);
   out.write("<th align=\"left\" valign=\"top\">");
   if (I2PSnarkUtil.instance().connected())   out.write("<a href=\"" + uri + "?action=StopAll&nonce="+ _nonce+ "\" title=\"Stop all torrents and the i2p tunnel\">Stop All</a>");
  else   out.write("&nbsp;");
   out.write("</th></tr></thead>\n");
   for (int i=0; i < snarks.size(); i++) {
     Snark snark=(Snark)snarks.get(i);
-    displaySnark(out,snark,uri,i,stats);
+    boolean showPeers="1".equals(peerParam) || Base64.encode(snark.meta.getInfoHash()).equals(peerParam);
+    displaySnark(out,snark,uri,i,stats,showPeers);
   }
   if (snarks.size() <= 0) {
     out.write(TABLE_EMPTY);
