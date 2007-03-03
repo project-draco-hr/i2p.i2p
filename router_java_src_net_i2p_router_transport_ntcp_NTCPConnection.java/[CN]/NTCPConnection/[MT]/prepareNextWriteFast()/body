@@ -20,13 +20,19 @@ synchronized (_outbound) {
       if (_log.shouldLog(Log.WARN))       _log.warn("attempt for multiple outbound messages with " + System.identityHashCode(_currentOutbound) + " already waiting and "+ _outbound.size()+ " queued");
       return;
     }
-    if (_outbound.size() > 0) {
+    if (queueTime() > 3 * 1000) {
       msg=(OutNetMessage)_outbound.remove(0);
-      _currentOutbound=msg;
     }
  else {
-      return;
+      Iterator it=_outbound.iterator();
+      for (int i=0; it.hasNext() && i < 75; i++) {
+        OutNetMessage mmsg=(OutNetMessage)it.next();
+        if (msg == null || mmsg.getPriority() > msg.getPriority())         msg=mmsg;
+      }
+      if (msg == null)       return;
+      _outbound.remove(msg);
     }
+    _currentOutbound=msg;
   }
   msg.beginTransmission();
   long begin=System.currentTimeMillis();
