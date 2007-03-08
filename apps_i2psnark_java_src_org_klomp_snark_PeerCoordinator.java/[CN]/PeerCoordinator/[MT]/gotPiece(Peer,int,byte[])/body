@@ -27,10 +27,19 @@ synchronized (wantedPieces) {
     wantedPieces.remove(p);
   }
 synchronized (peers) {
+    List toDisconnect=new ArrayList();
     Iterator it=peers.iterator();
     while (it.hasNext()) {
       Peer p=(Peer)it.next();
-      if (p.isConnected())       p.have(piece);
+      if (p.isConnected()) {
+        if (completed() && p.isCompleted())         toDisconnect.add(p);
+ else         p.have(piece);
+      }
+    }
+    it=toDisconnect.iterator();
+    while (it.hasNext()) {
+      Peer p=(Peer)it.next();
+      p.disconnect(true);
     }
   }
   return true;
