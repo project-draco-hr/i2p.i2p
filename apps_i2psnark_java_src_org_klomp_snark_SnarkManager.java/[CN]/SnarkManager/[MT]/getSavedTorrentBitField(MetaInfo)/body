@@ -1,0 +1,20 @@
+{
+  byte[] ih=metainfo.getInfoHash();
+  String infohash=Base64.encode(ih);
+  infohash=infohash.replace('=','$');
+  String bf=_config.getProperty(PROP_META_PREFIX + infohash + PROP_META_BITFIELD_SUFFIX);
+  if (bf == null)   return null;
+  int comma=bf.indexOf(',');
+  if (comma <= 0)   return null;
+  bf=bf.substring(comma + 1).trim();
+  int len=metainfo.getPieces();
+  if (bf.equals(".")) {
+    BitField bitfield=new BitField(len);
+    for (int i=0; i < len; i++)     bitfield.set(i);
+    return bitfield;
+  }
+  byte[] bitfield=Base64.decode(bf);
+  if (bitfield == null)   return null;
+  if (bitfield.length * 8 < len)   return null;
+  return new BitField(bitfield,len);
+}

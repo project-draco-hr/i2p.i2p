@@ -1,5 +1,8 @@
 {
   File base=new File(rootDir,filterName(metainfo.getName()));
+  long savedTime=SnarkManager.instance().getSavedTorrentTime(metainfo);
+  BitField savedBitField=SnarkManager.instance().getSavedTorrentBitField(metainfo);
+  boolean useSavedBitField=savedTime > 0 && savedBitField != null;
   List files=metainfo.getFiles();
   if (files == null) {
     Snark.debug("Creating/Checking file: " + base,Snark.NOTICE);
@@ -8,6 +11,10 @@
     rafs=new RandomAccessFile[1];
     names=new String[1];
     lengths[0]=metainfo.getTotalLength();
+    if (useSavedBitField) {
+      long lm=base.lastModified();
+      if (lm <= 0 || lm > savedTime)       useSavedBitField=false;
+    }
     if (base.exists() && !base.canWrite())     rafs[0]=new RandomAccessFile(base,"r");
  else     rafs[0]=new RandomAccessFile(base,"rw");
     names[0]=base.getName();
@@ -25,6 +32,10 @@
       File f=createFileFromNames(base,(List)files.get(i));
       lengths[i]=((Long)ls.get(i)).longValue();
       total+=lengths[i];
+      if (useSavedBitField) {
+        long lm=base.lastModified();
+        if (lm <= 0 || lm > savedTime)         useSavedBitField=false;
+      }
       if (f.exists() && !f.canWrite())       rafs[i]=new RandomAccessFile(f,"r");
  else       rafs[i]=new RandomAccessFile(f,"rw");
       names[i]=f.getName();
@@ -32,5 +43,13 @@
     long metalength=metainfo.getTotalLength();
     if (total != metalength)     throw new IOException("File lengths do not add up " + total + " != "+ metalength);
   }
-  checkCreateFiles();
+  if (useSavedBitField) {
+    bitfield=savedBitField;
+    needed=metainfo.getPieces() - bitfield.count();
+    Snark.debug("Found saved state and files unchanged, skipping check",Snark.NOTICE);
+  }
+ else {
+    checkCreateFiles();
+    SnarkManager.instance().saveTorrentStatus(metainfo,bitfield);
+  }
 }
