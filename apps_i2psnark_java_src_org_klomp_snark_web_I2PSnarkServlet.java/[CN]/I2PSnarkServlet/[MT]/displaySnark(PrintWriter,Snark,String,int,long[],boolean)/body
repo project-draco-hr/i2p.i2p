@@ -40,11 +40,11 @@
   }
   String statusString="Unknown";
   if (err != null) {
-    if (isRunning && curPeers > 0 && !showPeers)     statusString="TrackerErr (" + curPeers + "/"+ knownPeers+ " <a href=\""+ uri+ "?p="+ Base64.encode(snark.meta.getInfoHash())+ "\">peers</a>)";
- else     if (isRunning)     statusString="TrackerErr (" + curPeers + "/"+ knownPeers+ " peers)";
+    if (isRunning && curPeers > 0 && !showPeers)     statusString="<a title=\"" + err + "\">TrackerErr</a> ("+ curPeers+ "/"+ knownPeers+ " <a href=\""+ uri+ "?p="+ Base64.encode(snark.meta.getInfoHash())+ "\">peers</a>)";
+ else     if (isRunning)     statusString="<a title=\"" + err + "\">TrackerErr ("+ curPeers+ "/"+ knownPeers+ " peers)";
  else {
       if (err.length() > MAX_DISPLAYED_ERROR_LENGTH)       err=err.substring(0,MAX_DISPLAYED_ERROR_LENGTH) + "...";
-      statusString="TrackerErr (" + err + ")";
+      statusString="TrackerErr<br />(" + err + ")";
     }
   }
  else   if (remaining <= 0) {
@@ -68,6 +68,11 @@
   if (remaining == 0)   out.write("<a href=\"file:///" + _manager.getDataDir().getAbsolutePath() + File.separatorChar+ snark.meta.getName()+ "\" title=\"Download the completed file\">");
   out.write(filename);
   if (remaining == 0)   out.write("</a>");
+  if (snark.meta.getAnnounce().startsWith("http://YRgrgTLG")) {
+    out.write("&nbsp;&nbsp;&nbsp;(<a href=\"http://tracker.postman.i2p/details.php?dllist=1&filelist=1&info_hash=");
+    out.write(TrackerClient.urlencode(snark.meta.getInfoHash()));
+    out.write("\" title=\"Postman Tracker\">Details</a>)");
+  }
   out.write("</td>\n\t");
   out.write("<td valign=\"top\" align=\"right\" class=\"snarkTorrentETA " + rowClass + "\">");
   if (isRunning && remainingSeconds > 0)   out.write(DataHelper.formatDuration(remainingSeconds * 1000));
@@ -112,7 +117,7 @@
  else       if ("TTMt".equals(ch))       client="I2P-BT";
  else       if ("LUFa".equals(ch))       client="Azureus";
  else       client="Unknown";
-      out.write("<font size=-1>" + client + "</font> <tt>"+ peer.toString().substring(5,9)+ "</tt>");
+      out.write("<font size=-1>" + client + "</font>&nbsp;&nbsp;<tt>"+ peer.toString().substring(5,9)+ "</tt>");
       out.write("</td>\n\t");
       out.write("<td class=\"snarkTorrentStatus " + rowClass + "\">");
       out.write("</td>\n\t");
