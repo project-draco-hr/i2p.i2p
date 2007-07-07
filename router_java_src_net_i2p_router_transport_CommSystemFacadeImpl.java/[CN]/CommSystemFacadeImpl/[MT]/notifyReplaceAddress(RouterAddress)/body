@@ -1,0 +1,62 @@
+{
+  if (UDPAddr == null)   return;
+  NTCPTransport t=(NTCPTransport)_manager.getNTCPTransport();
+  if (t == null)   return;
+  Properties UDPProps=UDPAddr.getOptions();
+  if (UDPProps == null)   return;
+  Properties newProps;
+  RouterAddress oldAddr=t.getCurrentAddress();
+  RouterAddress newAddr=oldAddr;
+  if (newAddr == null) {
+    newAddr=new RouterAddress();
+    newAddr.setCost(10);
+    newAddr.setExpiration(null);
+    newAddr.setTransportStyle(NTCPTransport.STYLE);
+    newProps=new Properties();
+  }
+ else {
+    newProps=newAddr.getOptions();
+    if (newProps == null)     newProps=new Properties();
+  }
+  boolean changed=false;
+  String oport=newProps.getProperty(NTCPAddress.PROP_PORT);
+  String enabled=_context.getProperty(PROP_I2NP_NTCP_AUTO_PORT,"false");
+  if ((enabled != null) && ("true".equalsIgnoreCase(enabled))) {
+    String nport=UDPProps.getProperty(UDPAddress.PROP_PORT);
+    if (nport == null || nport.length() <= 0)     return;
+    if (oport == null || !oport.equals(nport)) {
+      newProps.setProperty(NTCPAddress.PROP_PORT,nport);
+      changed=true;
+    }
+  }
+ else   if (oport == null || oport.length() <= 0) {
+    return;
+  }
+  String ohost=newProps.getProperty(NTCPAddress.PROP_HOST);
+  enabled=_context.getProperty(PROP_I2NP_NTCP_AUTO_IP,"false");
+  if ((enabled != null) && ("true".equalsIgnoreCase(enabled))) {
+    String nhost=UDPProps.getProperty(UDPAddress.PROP_HOST);
+    if (nhost == null || nhost.length() <= 0)     return;
+    if (ohost == null || !ohost.equalsIgnoreCase(nhost)) {
+      newProps.setProperty(NTCPAddress.PROP_HOST,nhost);
+      changed=true;
+    }
+  }
+ else   if (ohost == null || ohost.length() <= 0) {
+    return;
+  }
+  if (!changed) {
+    return;
+  }
+  _log.warn("Halting NTCP to change address");
+  t.stopListening();
+  newAddr.setOptions(newProps);
+  try {
+    Thread.sleep(5 * 1000);
+  }
+ catch (  InterruptedException ie) {
+  }
+  t.restartListening(newAddr);
+  _log.warn("Changed NTCP Address and started up, address is now " + newAddr);
+  return;
+}
