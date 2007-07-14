@@ -1,13 +1,14 @@
 {
-  long end=_listener.now();
+  long end=_listener.now() - 60 * 1000;
   if (periodCount <= 0)   periodCount=SummaryListener.PERIODS;
   if (periodCount > SummaryListener.PERIODS)   periodCount=SummaryListener.PERIODS;
   long start=end - _listener.getRate().getPeriod() * periodCount;
-  long begin=System.currentTimeMillis();
   try {
     RrdGraphDef def=new RrdGraphDef();
     def.setTimePeriod(start / 1000,end / 1000);
-    String title=_listener.getRate().getRateStat().getName() + " averaged for " + DataHelper.formatDuration(_listener.getRate().getPeriod());
+    String name=_listener.getRate().getRateStat().getName();
+    if ((name.startsWith("bw.") || name.endsWith("PacketSize")) && !showEvents)     def.setBaseValue(1024);
+    String title=name + " averaged for " + DataHelper.formatDuration(_listener.getRate().getPeriod());
     if (!hideTitle)     def.setTitle(title);
     String path=_listener.getData().getPath();
     String dsNames[]=_listener.getData().getDsNames();
@@ -38,7 +39,6 @@
     byte data[]=null;
     if ((width <= 0) || (height <= 0))     data=graph.getPNGBytes();
  else     data=graph.getPNGBytes(width,height);
-    long timeToPlot=System.currentTimeMillis() - begin;
     out.write(data);
   }
  catch (  RrdException re) {
@@ -48,5 +48,9 @@
 catch (  IOException ioe) {
     _log.error("Error rendering",ioe);
     throw ioe;
+  }
+catch (  OutOfMemoryError oom) {
+    _log.error("Error rendering",oom);
+    throw new IOException("Error plotting: " + oom.getMessage());
   }
 }
