@@ -1,15 +1,14 @@
 {
-  I2PAppContext context=I2PAppContext.getGlobalContext();
-  Log log=context.logManager().getLog(ReseedHandler.class);
-  String seedURL=context.getProperty("i2p.reseedURL",DEFAULT_SEED_URL);
+  String seedURL=_context.getProperty("i2p.reseedURL",DEFAULT_SEED_URL);
   if ((seedURL == null) || (seedURL.trim().length() <= 0))   seedURL=DEFAULT_SEED_URL;
-  System.setProperty("net.i2p.router.web.ReseedHandler.errorMessage","");
   try {
+    System.setProperty("net.i2p.router.web.ReseedHandler.errorMessage","");
+    System.setProperty("net.i2p.router.web.ReseedHandler.statusMessage","Reseeding: fetching seed URL.");
     URL dir=new URL(seedURL);
     byte contentRaw[]=readURL(dir);
     if (contentRaw == null) {
       System.setProperty("net.i2p.router.web.ReseedHandler.errorMessage","Last reseed failed fully (failed reading seed URL). " + "Ensure that nothing blocks outbound HTTP, check <a href=logs.jsp>logs</a> " + "and if nothing helps, read FAQ about reseeding manually.");
-      log.error("Failed reading seed URL: " + seedURL);
+      _log.debug("Failed reading seed URL: " + seedURL);
       return;
     }
     String content=new String(contentRaw);
@@ -24,7 +23,7 @@
       cur=end + 1;
     }
     if (urls.size() <= 0) {
-      log.error("Read " + contentRaw.length + " bytes from seed "+ seedURL+ ", but found no routerInfo URLs.");
+      _log.error("Read " + contentRaw.length + " bytes from seed "+ seedURL+ ", but found no routerInfo URLs.");
       System.setProperty("net.i2p.router.web.ReseedHandler.errorMessage","Last reseed failed fully (no routerInfo URLs at seed URL). " + "Ensure that nothing blocks outbound HTTP, check <a href=logs.jsp>logs</a> " + "and if nothing helps, read FAQ about reseeding manually.");
       return;
     }
@@ -32,6 +31,7 @@
     int errors=0;
     for (Iterator iter=urls.iterator(); iter.hasNext(); ) {
       try {
+        System.setProperty("net.i2p.router.web.ReseedHandler.statusMessage","Reseeding: fetching router info from seed URL (" + fetched + " successful, "+ errors+ " errors, "+ urls.size()+ " total).");
         fetchSeed(seedURL,(String)iter.next());
         fetched++;
         if (echoStatus) {
@@ -50,6 +50,6 @@
   }
  catch (  Throwable t) {
     System.setProperty("net.i2p.router.web.ReseedHandler.errorMessage","Last reseed failed fully (exception caught). " + "Ensure that nothing blocks outbound HTTP, check <a href=logs.jsp>logs</a> " + "and if nothing helps, read FAQ about reseeding manually.");
-    log.error("Error reseeding",t);
+    _log.error("Error reseeding",t);
   }
 }
