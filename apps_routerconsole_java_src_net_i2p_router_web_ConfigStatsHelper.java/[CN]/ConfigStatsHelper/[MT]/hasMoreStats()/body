@@ -1,5 +1,6 @@
 {
   if (_stats.size() <= 0)   return false;
+  _currentIsGraphed=false;
   _currentStatName=(String)_stats.remove(0);
   RateStat rs=_context.statManager().getRate(_currentStatName);
   if (rs != null) {
@@ -8,6 +9,16 @@
  else     if (!rs.getGroupName().equals(_currentGroup))     _currentIsFirstInGroup=true;
  else     _currentIsFirstInGroup=false;
     _currentGroup=rs.getGroupName();
+    long period=rs.getPeriods()[0];
+    if (period <= 10 * 60 * 1000) {
+      Rate r=rs.getRate(period);
+      _currentCanBeGraphed=r != null;
+      if (_currentCanBeGraphed)       _currentIsGraphed=r.getSummaryListener() != null;
+      _currentGraphName=_currentStatName + "." + period;
+    }
+ else {
+      _currentCanBeGraphed=false;
+    }
   }
  else {
     FrequencyStat fs=_context.statManager().getFrequency(_currentStatName);
@@ -17,6 +28,7 @@
  else       if (!fs.getGroupName().equals(_currentGroup))       _currentIsFirstInGroup=true;
  else       _currentIsFirstInGroup=false;
       _currentGroup=fs.getGroupName();
+      _currentCanBeGraphed=false;
     }
  else {
       if (_log.shouldLog(Log.ERROR))       _log.error("Stat does not exist?!  [" + _currentStatName + "]");
