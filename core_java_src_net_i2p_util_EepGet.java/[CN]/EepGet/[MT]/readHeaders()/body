@@ -4,6 +4,8 @@
   boolean read=DataHelper.readLine(_proxyIn,buf);
   if (!read)   throw new IOException("Unable to read the first line");
   int responseCode=handleStatus(buf.toString());
+  boolean redirect=false;
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("rc: " + responseCode + " for "+ _actualURL);
   boolean rcOk=false;
 switch (responseCode) {
 case 200:
@@ -17,10 +19,22 @@ if (_outputStream != null) _out=_outputStream;
  else _out=new FileOutputStream(_outputFile,true);
 rcOk=true;
 break;
+case 301:
+case 302:
+case 303:
+case 307:
+_alreadyTransferred=0;
+rcOk=true;
+redirect=true;
+break;
 case 304:
 _bytesRemaining=0;
 _keepFetching=false;
 _notModified=true;
+return;
+case 404:
+_keepFetching=false;
+_transferFailed=true;
 return;
 case 416:
 _bytesRemaining=0;
@@ -28,6 +42,7 @@ _keepFetching=false;
 return;
 default :
 rcOk=false;
+_transferFailed=true;
 }
 buf.setLength(0);
 byte lookahead[]=new byte[3];
@@ -59,6 +74,7 @@ if (!rcOk) throw new IOException("Invalid HTTP response code: " + responseCode);
 if (_encodingChunked) {
 _bytesRemaining=readChunkLength();
 }
+if (!redirect) _redirectLocation=null;
 return;
 }
 break;
