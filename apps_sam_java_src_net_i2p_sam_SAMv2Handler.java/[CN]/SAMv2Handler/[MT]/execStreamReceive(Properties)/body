@@ -1,0 +1,48 @@
+{
+  if (props == null) {
+    _log.debug("No parameters specified in STREAM RECEIVE message");
+    return false;
+  }
+  int id;
+{
+    String strid=props.getProperty("ID");
+    if (strid == null) {
+      _log.debug("ID not specified in STREAM RECEIVE message");
+      return false;
+    }
+    try {
+      id=Integer.parseInt(strid);
+    }
+ catch (    NumberFormatException e) {
+      _log.debug("Invalid STREAM RECEIVE ID specified: " + strid);
+      return false;
+    }
+  }
+  boolean nolimit=false;
+  long limit=0;
+{
+    String strsize=props.getProperty("LIMIT");
+    if (strsize == null) {
+      _log.debug("Limit not specified in STREAM RECEIVE message");
+      return false;
+    }
+    if (strsize.equals("NONE")) {
+      nolimit=true;
+    }
+ else {
+      try {
+        limit=Long.parseLong(strsize);
+      }
+ catch (      NumberFormatException e) {
+        _log.debug("Invalid STREAM RECEIVE size specified: " + strsize);
+        return false;
+      }
+      if (limit < 0) {
+        _log.debug("Specified limit (" + limit + ") is out of protocol limits");
+        return false;
+      }
+    }
+  }
+  streamSession.setReceiveLimit(id,limit,nolimit);
+  return true;
+}

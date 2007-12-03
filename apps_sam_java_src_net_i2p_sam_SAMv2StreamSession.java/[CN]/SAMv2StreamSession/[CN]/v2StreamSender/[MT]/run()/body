@@ -1,0 +1,47 @@
+{
+  _log.debug("run() called for socket sender " + _id);
+  ByteArray data=null;
+  while (_stillRunning) {
+    data=null;
+    try {
+synchronized (_data) {
+        if (_data.size() > 0) {
+          int formerSize=_dataSize;
+          data=(ByteArray)_data.remove(0);
+          _dataSize-=data.getValid();
+          if ((formerSize >= SOCKET_HANDLER_BUF_SIZE) && (_dataSize < SOCKET_HANDLER_BUF_SIZE))           recv.notifyStreamSendBufferFree(_id);
+        }
+ else         if (_shuttingDownGracefully) {
+          stopRunning();
+          break;
+        }
+ else {
+          _data.wait(5000);
+        }
+      }
+      if (data != null) {
+        try {
+          _out.write(data.getData(),0,data.getValid());
+          if (forceFlush) {
+            _out.flush();
+          }
+        }
+ catch (        IOException ioe) {
+          if (_log.shouldLog(Log.WARN))           _log.warn("Stream failed",ioe);
+          removeSocketHandler(_id);
+          stopRunning();
+        }
+ finally {
+          _cache.release(data,false);
+        }
+      }
+    }
+ catch (    InterruptedException ie) {
+    }
+catch (    IOException e) {
+    }
+  }
+synchronized (_data) {
+    _data.clear();
+  }
+}

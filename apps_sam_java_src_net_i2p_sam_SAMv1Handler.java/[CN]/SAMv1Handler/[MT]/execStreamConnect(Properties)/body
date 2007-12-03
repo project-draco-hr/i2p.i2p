@@ -30,34 +30,39 @@
   }
   props.remove("DESTINATION");
   try {
-    if (!streamSession.connect(id,dest,props)) {
-      _log.debug("STREAM connection failed");
-      return false;
+    try {
+      if (!streamSession.connect(id,dest,props)) {
+        _log.debug("STREAM connection failed");
+        return false;
+      }
     }
-    return writeString("STREAM STATUS RESULT=OK ID=" + id + "\n");
+ catch (    DataFormatException e) {
+      _log.debug("Invalid destination in STREAM CONNECT message");
+      notifyStreamOutgoingConnection(id,"INVALID_KEY",null);
+    }
+catch (    SAMInvalidDirectionException e) {
+      _log.debug("STREAM CONNECT failed: " + e.getMessage());
+      notifyStreamOutgoingConnection(id,"INVALID_DIRECTION",null);
+    }
+catch (    ConnectException e) {
+      _log.debug("STREAM CONNECT failed: " + e.getMessage());
+      notifyStreamOutgoingConnection(id,"CONNECTION_REFUSED",null);
+    }
+catch (    NoRouteToHostException e) {
+      _log.debug("STREAM CONNECT failed: " + e.getMessage());
+      notifyStreamOutgoingConnection(id,"CANT_REACH_PEER",null);
+    }
+catch (    InterruptedIOException e) {
+      _log.debug("STREAM CONNECT failed: " + e.getMessage());
+      notifyStreamOutgoingConnection(id,"TIMEOUT",null);
+    }
+catch (    I2PException e) {
+      _log.debug("STREAM CONNECT failed: " + e.getMessage());
+      notifyStreamOutgoingConnection(id,"I2P_ERROR",null);
+    }
   }
- catch (  DataFormatException e) {
-    _log.debug("Invalid destination in STREAM CONNECT message");
-    return writeString("STREAM STATUS RESULT=INVALID_KEY ID=" + id + "\n");
+ catch (  IOException e) {
+    return false;
   }
-catch (  SAMInvalidDirectionException e) {
-    _log.debug("STREAM CONNECT failed: " + e.getMessage());
-    return writeString("STREAM STATUS RESULT=INVALID_DIRECTION ID=" + id + "\n");
-  }
-catch (  ConnectException e) {
-    _log.debug("STREAM CONNECT failed: " + e.getMessage());
-    return writeString("STREAM STATUS RESULT=CONNECTION_REFUSED ID=" + id + "\n");
-  }
-catch (  NoRouteToHostException e) {
-    _log.debug("STREAM CONNECT failed: " + e.getMessage());
-    return writeString("STREAM STATUS RESULT=CANT_REACH_PEER ID=" + id + "\n");
-  }
-catch (  InterruptedIOException e) {
-    _log.debug("STREAM CONNECT failed: " + e.getMessage());
-    return writeString("STREAM STATUS RESULT=TIMEOUT ID=" + id + "\n");
-  }
-catch (  I2PException e) {
-    _log.debug("STREAM CONNECT failed: " + e.getMessage());
-    return writeString("STREAM STATUS RESULT=I2P_ERROR ID=" + id + "\n");
-  }
+  return true;
 }

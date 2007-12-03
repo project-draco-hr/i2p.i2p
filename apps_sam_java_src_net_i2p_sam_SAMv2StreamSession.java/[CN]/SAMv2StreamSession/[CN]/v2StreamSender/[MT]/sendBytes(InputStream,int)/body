@@ -1,0 +1,24 @@
+{
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Handler " + _id + ": sending "+ size+ " bytes");
+  ByteArray ba=_cache.acquire();
+  int read=DataHelper.read(in,ba.getData(),0,size);
+  if (read != size)   throw new IOException("Insufficient data from the SAM client (" + read + "/"+ size+ ")");
+  ba.setValid(read);
+synchronized (_data) {
+    if (_dataSize >= SOCKET_HANDLER_BUF_SIZE) {
+      _cache.release(ba,false);
+      recv.streamSendAnswer(_id,"FAILED","BUFFER_FULL");
+    }
+ else {
+      _dataSize+=size;
+      _data.add(ba);
+      _data.notifyAll();
+      if (_dataSize >= SOCKET_HANDLER_BUF_SIZE) {
+        recv.streamSendAnswer(_id,"OK","BUFFER_FULL");
+      }
+ else {
+        recv.streamSendAnswer(_id,"OK","READY");
+      }
+    }
+  }
+}
