@@ -7,7 +7,7 @@
     URL dir=new URL(seedURL);
     byte contentRaw[]=readURL(dir);
     if (contentRaw == null) {
-      System.setProperty("net.i2p.router.web.ReseedHandler.errorMessage","Last reseed failed fully (failed reading seed URL). " + "Ensure that nothing blocks outbound HTTP, check <a href=logs.jsp>logs</a> " + "and if nothing helps, read FAQ about reseeding manually.");
+      System.setProperty("net.i2p.router.web.ReseedHandler.errorMessage","Last reseed failed fully (failed reading seed URL). " + RESEED_TIPS);
       _log.debug("Failed reading seed URL: " + seedURL);
       return;
     }
@@ -24,7 +24,7 @@
     }
     if (urls.size() <= 0) {
       _log.error("Read " + contentRaw.length + " bytes from seed "+ seedURL+ ", but found no routerInfo URLs.");
-      System.setProperty("net.i2p.router.web.ReseedHandler.errorMessage","Last reseed failed fully (no routerInfo URLs at seed URL). " + "Ensure that nothing blocks outbound HTTP, check <a href=logs.jsp>logs</a> " + "and if nothing helps, read FAQ about reseeding manually.");
+      System.setProperty("net.i2p.router.web.ReseedHandler.errorMessage","Last reseed failed fully (no routerInfo URLs at seed URL). " + RESEED_TIPS);
       return;
     }
     int fetched=0;
@@ -44,12 +44,16 @@
       }
     }
     if (echoStatus)     System.out.println();
-    if (errors > 0) {
-      System.setProperty("net.i2p.router.web.ReseedHandler.errorMessage","Last reseed failed partly (" + errors + " of "+ urls.size()+ "). "+ "Ensure that nothing blocks outbound HTTP, check <a href=logs.jsp>logs</a> "+ "and if nothing helps, read FAQ about reseeding manually.");
+    int failPercent=100 * errors / urls.size();
+    if ((failPercent >= 10) && (failPercent < 90)) {
+      System.setProperty("net.i2p.router.web.ReseedHandler.errorMessage","Last reseed failed partly (" + failPercent + "% of "+ urls.size()+ "). "+ RESEED_TIPS);
+    }
+    if (failPercent >= 90) {
+      System.setProperty("net.i2p.router.web.ReseedHandler.errorMessage","Last reseed failed (" + failPercent + "% of "+ urls.size()+ "). "+ RESEED_TIPS);
     }
   }
  catch (  Throwable t) {
-    System.setProperty("net.i2p.router.web.ReseedHandler.errorMessage","Last reseed failed fully (exception caught). " + "Ensure that nothing blocks outbound HTTP, check <a href=logs.jsp>logs</a> " + "and if nothing helps, read FAQ about reseeding manually.");
+    System.setProperty("net.i2p.router.web.ReseedHandler.errorMessage","Last reseed failed fully (exception caught). " + RESEED_TIPS);
     _log.error("Error reseeding",t);
   }
 }
