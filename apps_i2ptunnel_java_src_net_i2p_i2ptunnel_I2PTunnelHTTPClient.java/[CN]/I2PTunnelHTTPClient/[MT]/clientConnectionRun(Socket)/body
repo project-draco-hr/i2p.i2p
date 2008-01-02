@@ -232,10 +232,22 @@
       }
     }
     if (_log.shouldLog(Log.DEBUG))     _log.debug(getPrefix(requestId) + "NewRequest header: [" + newRequest.toString()+ "]");
+    int postbytes=0;
     while (br.ready()) {
       int i=br.read();
       if (i != -1) {
         newRequest.append((char)i);
+        if (++postbytes > MAX_POSTBYTES) {
+          if (out != null) {
+            out.write(ERR_MAXPOST);
+            out.write("<p /><i>Generated on: ".getBytes());
+            out.write(new Date().toString().getBytes());
+            out.write("</i></body></html>\n".getBytes());
+            out.flush();
+          }
+          s.close();
+          return;
+        }
       }
     }
     if (method == null || destination == null) {
@@ -291,6 +303,13 @@ catch (  IOException ex) {
     closeSocket(s);
   }
 catch (  I2PException ex) {
+    _log.info("getPrefix(requestId) + Error trying to connect",ex);
+    l.log(ex.getMessage());
+    handleHTTPClientException(ex,out,targetRequest,usingWWWProxy,currentProxy,requestId);
+    closeSocket(s);
+  }
+catch (  OutOfMemoryError oom) {
+    IOException ex=new IOException("OOM (in POST?)");
     _log.info("getPrefix(requestId) + Error trying to connect",ex);
     l.log(ex.getMessage());
     handleHTTPClientException(ex,out,targetRequest,usingWWWProxy,currentProxy,requestId);
