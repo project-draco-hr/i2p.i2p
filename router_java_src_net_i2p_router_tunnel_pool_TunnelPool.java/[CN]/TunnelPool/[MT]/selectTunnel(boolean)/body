@@ -12,22 +12,35 @@ synchronized (_tunnels) {
     }
  else {
       Collections.shuffle(_tunnels,_context.random());
+      TunnelInfo backloggedTunnel=null;
       if (avoidZeroHop) {
         for (int i=0; i < _tunnels.size(); i++) {
           TunnelInfo info=(TunnelInfo)_tunnels.get(i);
           if ((info.getLength() > 1) && (info.getExpiration() > _context.clock().now())) {
-            _lastSelected=info;
-            return info;
+            if (_settings.isInbound() || !_context.commSystem().isBacklogged(info.getPeer(1))) {
+              _lastSelected=info;
+              return info;
+            }
+ else {
+              backloggedTunnel=info;
+            }
           }
         }
+        if (backloggedTunnel != null)         return backloggedTunnel;
       }
       for (int i=0; i < _tunnels.size(); i++) {
         TunnelInfo info=(TunnelInfo)_tunnels.get(i);
         if (info.getExpiration() > _context.clock().now()) {
-          _lastSelected=info;
-          return info;
+          if (_settings.isInbound() || info.getLength() <= 1 || !_context.commSystem().isBacklogged(info.getPeer(1))) {
+            _lastSelected=info;
+            return info;
+          }
+ else {
+            backloggedTunnel=info;
+          }
         }
       }
+      if (backloggedTunnel != null)       return backloggedTunnel;
       if (_log.shouldLog(Log.WARN))       _log.warn(toString() + ": after " + _tunnels.size()+ " tries, no unexpired ones were found: "+ _tunnels);
     }
   }

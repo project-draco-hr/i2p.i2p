@@ -4,6 +4,69 @@
   }
   int wanted=getSettings().getBackupQuantity() + getSettings().getQuantity();
   boolean allowZeroHop=((getSettings().getLength() + getSettings().getLengthVariance()) <= 0);
+  int avg=0;
+  RateStat rs=_context.statManager().getRate(_buildStatName);
+  if (rs != null) {
+    Rate r=rs.getRate(TUNNEL_LIFETIME);
+    if (r != null)     avg=(int)(TUNNEL_LIFETIME * r.getAverageValue() / wanted);
+  }
+  if (avg > 0 && avg < TUNNEL_LIFETIME / 3) {
+    final int PANIC_FACTOR=4;
+    avg+=60 * 1000;
+    if (_settings.isExploratory())     avg+=60 * 1000;
+    long now=_context.clock().now();
+    int expireSoon=0;
+    int expireLater=0;
+    int expireTime[];
+    int fallback=0;
+synchronized (_tunnels) {
+      expireTime=new int[_tunnels.size()];
+      for (int i=0; i < _tunnels.size(); i++) {
+        TunnelInfo info=(TunnelInfo)_tunnels.get(i);
+        if (allowZeroHop || (info.getLength() > 1)) {
+          int timeToExpire=(int)(info.getExpiration() - now);
+          if (timeToExpire > 0 && timeToExpire < avg) {
+            expireTime[expireSoon++]=timeToExpire;
+          }
+ else {
+            expireLater++;
+          }
+        }
+ else         if (info.getExpiration() - now > avg) {
+          fallback++;
+        }
+      }
+    }
+    int inProgress;
+synchronized (_inProgress) {
+      inProgress=_inProgress.size();
+    }
+    int remainingWanted=(wanted - expireLater) - inProgress;
+    if (allowZeroHop)     remainingWanted-=fallback;
+    int rv=0;
+    int latesttime=0;
+    if (remainingWanted > 0) {
+      if (remainingWanted > expireSoon) {
+        rv=PANIC_FACTOR * (remainingWanted - expireSoon);
+        remainingWanted=expireSoon;
+      }
+      for (int i=0; i < remainingWanted; i++) {
+        int latestidx=0;
+        for (int j=0; j < expireSoon; j++) {
+          if (expireTime[j] > latesttime) {
+            latesttime=expireTime[j];
+            latestidx=j;
+          }
+        }
+        expireTime[latestidx]=0;
+        if (latesttime > avg / 2)         rv+=1;
+ else         rv+=2 + ((PANIC_FACTOR - 2) * (((avg / 2) - latesttime) / (avg / 2)));
+      }
+    }
+    if (rv > 0 && _log.shouldLog(Log.DEBUG))     _log.debug("New Count: rv: " + rv + " allow? "+ allowZeroHop+ " avg "+ avg+ " latesttime "+ latesttime+ " soon "+ expireSoon+ " later "+ expireLater+ " std "+ wanted+ " inProgress "+ inProgress+ " fallback "+ fallback+ " for "+ toString());
+    _context.statManager().addRateData(_buildStatName,rv + inProgress,0);
+    return rv;
+  }
   long expireAfter=_context.clock().now() + _expireSkew;
   int expire30s=0;
   int expire90s=0;
@@ -52,5 +115,7 @@ synchronized (_inProgress) {
       if (cfg.getLength() <= 1)       fallback++;
     }
   }
-  return countHowManyToBuild(allowZeroHop,expire30s,expire90s,expire150s,expire210s,expire270s,expireLater,wanted,inProgress,fallback);
+  int rv=countHowManyToBuild(allowZeroHop,expire30s,expire90s,expire150s,expire210s,expire270s,expireLater,wanted,inProgress,fallback);
+  _context.statManager().addRateData(_buildStatName,(rv > 0 || inProgress > 0) ? 1 : 0,0);
+  return rv;
 }
