@@ -5,7 +5,11 @@
   int wanted=getSettings().getBackupQuantity() + getSettings().getQuantity();
   boolean allowZeroHop=((getSettings().getLength() + getSettings().getLengthVariance()) <= 0);
   int avg=0;
-  RateStat rs=_context.statManager().getRate(_buildStatName);
+  RateStat rs=_context.statManager().getRate(buildRateName());
+  if (rs == null) {
+    _context.statManager().createRateStat(buildRateName(),"Tunnel Build Frequency","Tunnels",new long[]{TUNNEL_LIFETIME});
+    rs=_context.statManager().getRate(buildRateName());
+  }
   if (rs != null) {
     Rate r=rs.getRate(TUNNEL_LIFETIME);
     if (r != null)     avg=(int)(TUNNEL_LIFETIME * r.getAverageValue() / wanted);
@@ -64,7 +68,7 @@ synchronized (_inProgress) {
       }
     }
     if (rv > 0 && _log.shouldLog(Log.DEBUG))     _log.debug("New Count: rv: " + rv + " allow? "+ allowZeroHop+ " avg "+ avg+ " latesttime "+ latesttime+ " soon "+ expireSoon+ " later "+ expireLater+ " std "+ wanted+ " inProgress "+ inProgress+ " fallback "+ fallback+ " for "+ toString());
-    _context.statManager().addRateData(_buildStatName,rv + inProgress,0);
+    _context.statManager().addRateData(buildRateName(),rv + inProgress,0);
     return rv;
   }
   long expireAfter=_context.clock().now() + _expireSkew;
@@ -116,6 +120,6 @@ synchronized (_inProgress) {
     }
   }
   int rv=countHowManyToBuild(allowZeroHop,expire30s,expire90s,expire150s,expire210s,expire270s,expireLater,wanted,inProgress,fallback);
-  _context.statManager().addRateData(_buildStatName,(rv > 0 || inProgress > 0) ? 1 : 0,0);
+  _context.statManager().addRateData(buildRateName(),(rv > 0 || inProgress > 0) ? 1 : 0,0);
   return rv;
 }
