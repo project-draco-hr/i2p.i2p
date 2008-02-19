@@ -1,7 +1,7 @@
 {
   HopConfig cur=null;
   Long nextTime=null;
-  long now=getContext().clock().now();
+  long now=getContext().clock().now() + LEAVE_BATCH_TIME;
   while (true) {
 synchronized (LeaveTunnel.this) {
       if (_configs.size() <= 0)       return;
@@ -20,7 +20,9 @@ synchronized (LeaveTunnel.this) {
  else     break;
   }
   if (nextTime != null) {
-    getTiming().setStartAfter(nextTime.longValue());
-    getContext().jobQueue().addJob(LeaveTunnel.this);
+synchronized (LeaveTunnel.this) {
+      getTiming().setStartAfter(nextTime.longValue());
+      getContext().jobQueue().addJob(LeaveTunnel.this);
+    }
   }
 }

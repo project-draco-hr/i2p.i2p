@@ -1,13 +1,16 @@
 {
   Hash key=null;
   DataStructure data=null;
+  int count=0;
   while (true) {
     try {
 synchronized (_keys) {
         if (_keyOrder.size() <= 0) {
+          count=0;
           _keys.wait();
         }
  else {
+          count++;
           key=(Hash)_keyOrder.remove(0);
           data=(DataStructure)_keys.remove(key);
         }
@@ -18,8 +21,9 @@ synchronized (_keys) {
     if ((key != null) && (data != null))     write(key,data);
     key=null;
     data=null;
-    try {
-      Thread.sleep(10 * 1000);
+    if (count >= 300)     count=0;
+    if (count == 0)     try {
+      Thread.sleep(10 * 60 * 1000);
     }
  catch (    InterruptedException ie) {
     }
