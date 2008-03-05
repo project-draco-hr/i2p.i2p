@@ -1,0 +1,27 @@
+{
+  hostname=hostname.toLowerCase();
+  String key=_hosts.getProperty(hostname);
+  if (key != null) {
+    _log.error("Found in cache: " + hostname);
+    return lookupBase64(key);
+  }
+  List URLs=getURLs();
+  if (URLs.size() == 0)   return null;
+  for (int i=0; i < URLs.size(); i++) {
+    String url=(String)URLs.get(i);
+    if (url.startsWith("http://" + hostname + "/")) {
+      _log.error("Lookup loop: " + hostname);
+      return null;
+    }
+  }
+  for (int i=0; i < URLs.size(); i++) {
+    String url=(String)URLs.get(i);
+    key=fetchAddr(url,hostname);
+    if (key != null) {
+      _log.error("Success: " + url + hostname);
+      _hosts.setProperty(hostname,key);
+      return lookupBase64(key);
+    }
+  }
+  return lookupBase64(hostname);
+}
