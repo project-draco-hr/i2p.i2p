@@ -1,4 +1,11 @@
 {
+  if (_firstTime) {
+    if (alreadyTransferred > 0) {
+      _previousWritten=alreadyTransferred;
+      System.out.println("File found with length " + alreadyTransferred + ", resuming");
+    }
+    _firstTime=false;
+  }
   for (int i=0; i < currentWrite; i++) {
     _written++;
     if ((_markSize > 0) && (_written % _markSize == 0)) {
@@ -10,13 +17,13 @@
           StringBuffer buf=new StringBuffer(50);
           buf.append(" ");
           if (bytesRemaining > 0) {
-            double pct=((double)alreadyTransferred + (double)_written) / ((double)alreadyTransferred + (double)bytesRemaining);
+            double pct=((double)_written + _previousWritten) / ((double)alreadyTransferred + (double)currentWrite + (double)bytesRemaining);
 synchronized (_pct) {
               buf.append(_pct.format(pct));
             }
             buf.append(": ");
           }
-          buf.append(_written + alreadyTransferred);
+          buf.append(_written);
           buf.append(" @ ");
           double lineKBytes=((double)_markSize * (double)_lineSize) / 1024.0d;
           double kbps=lineKBytes / ((double)timeToSend / 1000.0d);
@@ -26,7 +33,7 @@ synchronized (_kbps) {
           buf.append("KBps");
           buf.append(" / ");
           long lifetime=_context.clock().now() - _startedOn;
-          double lifetimeKBps=(1000.0d * (double)(_written + alreadyTransferred) / ((double)lifetime * 1024.0d));
+          double lifetimeKBps=(1000.0d * (double)(_written) / ((double)lifetime * 1024.0d));
 synchronized (_kbps) {
             buf.append(_kbps.format(lifetimeKBps));
           }

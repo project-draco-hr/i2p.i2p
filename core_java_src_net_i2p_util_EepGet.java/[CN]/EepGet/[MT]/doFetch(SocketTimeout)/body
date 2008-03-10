@@ -52,8 +52,7 @@
     timeout.resetTimer();
     _out.write(buf,0,read);
     _bytesTransferred+=read;
-    _alreadyTransferred+=read;
-    if ((_maxSize > -1) && (_alreadyTransferred > _maxSize))     throw new IOException("Bytes transferred " + _alreadyTransferred + " violates maximum of "+ _maxSize+ " bytes");
+    if ((_maxSize > -1) && (_alreadyTransferred + read > _maxSize))     throw new IOException("Bytes transferred " + (_alreadyTransferred + read) + " violates maximum of "+ _maxSize+ " bytes");
     remaining-=read;
     if (remaining == 0 && _encodingChunked) {
       int char1=_proxyIn.read();
@@ -78,7 +77,11 @@
       }
     }
     timeout.resetTimer();
-    if (read > 0)     for (int i=0; i < _listeners.size(); i++)     ((StatusListener)_listeners.get(i)).bytesTransferred(_alreadyTransferred,read,_bytesTransferred,_encodingChunked ? -1 : _bytesRemaining,_url);
+    if (_bytesRemaining >= read)     _bytesRemaining-=read;
+    if (read > 0) {
+      for (int i=0; i < _listeners.size(); i++)       ((StatusListener)_listeners.get(i)).bytesTransferred(_alreadyTransferred,read,_bytesTransferred,_encodingChunked ? -1 : _bytesRemaining,_url);
+      _alreadyTransferred+=read;
+    }
   }
   if (_out != null)   _out.close();
   _out=null;

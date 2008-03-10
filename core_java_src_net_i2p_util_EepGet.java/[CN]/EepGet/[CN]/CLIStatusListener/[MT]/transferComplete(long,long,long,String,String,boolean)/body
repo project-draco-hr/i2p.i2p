@@ -1,4 +1,7 @@
 {
+  long transferred;
+  if (_firstTime)   transferred=0;
+ else   transferred=alreadyTransferred - _previousWritten;
   System.out.println();
   System.out.println("== " + new Date());
   if (notModified) {
@@ -6,23 +9,24 @@
   }
  else {
     if (bytesRemaining > 0) {
-      System.out.println("== Transfer of " + url + " completed with "+ (alreadyTransferred + bytesTransferred)+ " and "+ (bytesRemaining - bytesTransferred)+ " remaining");
-      System.out.println("== Output saved to " + outputFile);
+      System.out.println("== Transfer of " + url + " completed with "+ transferred+ " transferred and "+ (bytesRemaining - bytesTransferred)+ " remaining");
     }
  else {
-      System.out.println("== Transfer of " + url + " completed with "+ (alreadyTransferred + bytesTransferred)+ " bytes transferred");
-      System.out.println("== Output saved to " + outputFile);
+      System.out.println("== Transfer of " + url + " completed with "+ transferred+ " bytes transferred");
     }
+    if (transferred > 0)     System.out.println("== Output saved to " + outputFile + " ("+ alreadyTransferred+ " bytes)");
   }
   long timeToSend=_context.clock().now() - _startedOn;
   System.out.println("== Transfer time: " + DataHelper.formatDuration(timeToSend));
-  System.out.println("== ETag: " + _etag);
-  StringBuffer buf=new StringBuffer(50);
-  buf.append("== Transfer rate: ");
-  double kbps=(1000.0d * (double)(_written) / ((double)timeToSend * 1024.0d));
+  if (_etag != null)   System.out.println("== ETag: " + _etag);
+  if (transferred > 0) {
+    StringBuffer buf=new StringBuffer(50);
+    buf.append("== Transfer rate: ");
+    double kbps=(1000.0d * (double)(transferred) / ((double)timeToSend * 1024.0d));
 synchronized (_kbps) {
-    buf.append(_kbps.format(kbps));
+      buf.append(_kbps.format(kbps));
+    }
+    buf.append("KBps");
+    System.out.println(buf.toString());
   }
-  buf.append("KBps");
-  System.out.println(buf.toString());
 }

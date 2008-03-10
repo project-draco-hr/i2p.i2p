@@ -1,6 +1,6 @@
 {
   _startedOn=-1;
-  _status="<b>Updating</b><br />";
+  _status="<b>Updating</b>";
   String updateURL=selectUpdateURL();
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Selected update URL: " + updateURL);
   boolean shouldProxy=Boolean.valueOf(_context.getProperty(ConfigUpdateHandler.PROP_SHOULD_PROXY,ConfigUpdateHandler.DEFAULT_SHOULD_PROXY)).booleanValue();
@@ -11,19 +11,19 @@
     proxyPort=Integer.parseInt(port);
   }
  catch (  NumberFormatException nfe) {
-    System.setProperty("net.i2p.router.web.UpdateHandler.updateInProgress","false");
+    System.setProperty(PROP_UPDATE_IN_PROGRESS,"false");
     return;
   }
   try {
     EepGet get=null;
-    if (shouldProxy)     get=new EepGet(_context,proxyHost,proxyPort,10,SIGNED_UPDATE_FILE,updateURL,false);
- else     get=new EepGet(_context,10,SIGNED_UPDATE_FILE,updateURL,false);
+    if (shouldProxy)     get=new EepGet(_context,proxyHost,proxyPort,20,SIGNED_UPDATE_FILE,updateURL,false);
+ else     get=new EepGet(_context,1,SIGNED_UPDATE_FILE,updateURL,false);
     get.addStatusListener(UpdateRunner.this);
     _startedOn=_context.clock().now();
     get.fetch();
   }
  catch (  Throwable t) {
     _context.logManager().getLog(UpdateHandler.class).error("Error updating",t);
-    System.setProperty("net.i2p.router.web.UpdateHandler.updateInProgress","false");
+    System.setProperty(PROP_UPDATE_IN_PROGRESS,"false");
   }
 }
