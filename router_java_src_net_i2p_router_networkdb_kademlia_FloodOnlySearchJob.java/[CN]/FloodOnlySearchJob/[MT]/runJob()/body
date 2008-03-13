@@ -9,6 +9,8 @@
 synchronized (_out) {
     _out.add(out);
   }
+  if (floodfillPeers.size() > CONCURRENT_SEARCHES)   Collections.shuffle(floodfillPeers,getContext().random());
+  int count=0;
   for (int i=0; _lookupsRemaining < CONCURRENT_SEARCHES && i < floodfillPeers.size(); i++) {
     Hash peer=(Hash)floodfillPeers.get(i);
     if (peer.equals(getContext().routerHash()))     continue;
@@ -25,9 +27,10 @@ synchronized (_out) {
     dlm.setSearchKey(_key);
     if (_log.shouldLog(Log.INFO))     _log.info(getJobId() + ": Floodfill search for " + _key.toBase64()+ " to "+ peer.toBase64());
     getContext().tunnelDispatcher().dispatchOutbound(dlm,outTunnel.getSendTunnelId(0),peer);
+    count++;
     _lookupsRemaining++;
   }
-  if (_lookupsRemaining <= 0) {
+  if (count <= 0) {
     if (_log.shouldLog(Log.INFO))     _log.info(getJobId() + ": Floodfill search for " + _key.toBase64()+ " had no peers to send to");
     failed();
   }
