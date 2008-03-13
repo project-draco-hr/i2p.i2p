@@ -23,6 +23,7 @@
   if (newlines > 0)   stats.setProperty("stat_identities",newlines + "");
   if (_includePeerRankings) {
     if (false)     stats.putAll(_context.profileManager().summarizePeers(_publishedStats));
+    boolean commentMeOutInDot33=RouterVersion.VERSION.equals("0.6.1.32");
     includeThroughput(stats);
     includeRate("tunnel.testFailedTime",stats,new long[]{10 * 60 * 1000});
     includeRate("tunnel.buildFailure",stats,new long[]{60 * 60 * 1000});
@@ -30,22 +31,42 @@
     includeRate("tunnel.corruptMessage",stats,new long[]{60 * 60 * 1000l,3 * 60 * 60* 1000l});
     includeRate("router.fastPeers",stats,new long[]{60 * 60 * 1000});
     includeRate("clock.skew",stats,new long[]{10 * 60 * 1000,3 * 60 * 60* 1000,24 * 60 * 60* 1000});
-    includeRate("crypto.elGamal.encrypt",stats,new long[]{60 * 1000,60 * 60 * 1000});
+    if (commentMeOutInDot33) {
+      includeRate("crypto.elGamal.encrypt",stats,new long[]{60 * 1000,60 * 60 * 1000});
+    }
+ else {
+      includeRate("crypto.elGamal.encrypt",stats,new long[]{60 * 60 * 1000});
+    }
     includeRate("tunnel.participatingTunnels",stats,new long[]{5 * 60 * 1000,60 * 60 * 1000});
     includeRate("client.sendAckTime",stats,new long[]{60 * 60 * 1000},true);
     long publishedUptime=_context.router().getUptime();
     if (publishedUptime < 60 * 60 * 1000)     publishedUptime=60 * 60 * 1000;
+ else     if (publishedUptime < 2 * 60 * 60* 1000 && !commentMeOutInDot33)     publishedUptime=90 * 60 * 1000;
     stats.setProperty("stat_uptime",DataHelper.formatDuration(publishedUptime));
-    includeRate("tunnel.buildRequestTime",stats,new long[]{60 * 1000,10 * 60 * 1000});
-    includeRate("tunnel.buildClientExpire",stats,new long[]{60 * 1000,10 * 60 * 1000});
-    includeRate("tunnel.buildClientReject",stats,new long[]{60 * 1000,10 * 60 * 1000});
-    includeRate("tunnel.buildClientSuccess",stats,new long[]{60 * 1000,10 * 60 * 1000});
-    includeRate("tunnel.buildExploratoryExpire",stats,new long[]{60 * 1000,10 * 60 * 1000});
-    includeRate("tunnel.buildExploratoryReject",stats,new long[]{60 * 1000,10 * 60 * 1000});
-    includeRate("tunnel.buildExploratorySuccess",stats,new long[]{60 * 1000,10 * 60 * 1000});
-    includeRate("tunnel.rejectTimeout",stats,new long[]{60 * 1000,10 * 60 * 1000});
-    includeRate("tunnel.rejectOverloaded",stats,new long[]{60 * 1000,10 * 60 * 1000});
-    includeRate("tunnel.acceptLoad",stats,new long[]{60 * 1000,10 * 60 * 1000});
+    if (commentMeOutInDot33) {
+      includeRate("tunnel.buildRequestTime",stats,new long[]{60 * 1000,10 * 60 * 1000});
+      includeRate("tunnel.buildClientExpire",stats,new long[]{60 * 1000,10 * 60 * 1000});
+      includeRate("tunnel.buildClientReject",stats,new long[]{60 * 1000,10 * 60 * 1000});
+      includeRate("tunnel.buildClientSuccess",stats,new long[]{60 * 1000,10 * 60 * 1000});
+      includeRate("tunnel.buildExploratoryExpire",stats,new long[]{60 * 1000,10 * 60 * 1000});
+      includeRate("tunnel.buildExploratoryReject",stats,new long[]{60 * 1000,10 * 60 * 1000});
+      includeRate("tunnel.buildExploratorySuccess",stats,new long[]{60 * 1000,10 * 60 * 1000});
+      includeRate("tunnel.rejectTimeout",stats,new long[]{60 * 1000,10 * 60 * 1000});
+      includeRate("tunnel.rejectOverloaded",stats,new long[]{60 * 1000,10 * 60 * 1000});
+      includeRate("tunnel.acceptLoad",stats,new long[]{60 * 1000,10 * 60 * 1000});
+    }
+ else {
+      includeRate("tunnel.buildRequestTime",stats,new long[]{10 * 60 * 1000});
+      includeRate("tunnel.buildClientExpire",stats,new long[]{10 * 60 * 1000});
+      includeRate("tunnel.buildClientReject",stats,new long[]{10 * 60 * 1000});
+      includeRate("tunnel.buildClientSuccess",stats,new long[]{10 * 60 * 1000});
+      includeRate("tunnel.buildExploratoryExpire",stats,new long[]{10 * 60 * 1000});
+      includeRate("tunnel.buildExploratoryReject",stats,new long[]{10 * 60 * 1000});
+      includeRate("tunnel.buildExploratorySuccess",stats,new long[]{10 * 60 * 1000});
+      includeRate("tunnel.rejectTimeout",stats,new long[]{10 * 60 * 1000});
+      includeRate("tunnel.rejectOverloaded",stats,new long[]{10 * 60 * 1000});
+      includeRate("tunnel.acceptLoad",stats,new long[]{10 * 60 * 1000});
+    }
     if (FloodfillNetworkDatabaseFacade.isFloodfill(_context.router().getRouterInfo())) {
       stats.setProperty("netdb.knownRouters","" + _context.netDb().getKnownRouters());
       stats.setProperty("netdb.knownLeaseSets","" + _context.netDb().getKnownLeaseSets());
