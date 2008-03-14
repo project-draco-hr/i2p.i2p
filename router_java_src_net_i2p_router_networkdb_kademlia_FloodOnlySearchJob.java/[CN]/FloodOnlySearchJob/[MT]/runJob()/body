@@ -9,7 +9,23 @@
 synchronized (_out) {
     _out.add(out);
   }
-  if (floodfillPeers.size() > CONCURRENT_SEARCHES)   Collections.shuffle(floodfillPeers,getContext().random());
+  if (floodfillPeers.size() > CONCURRENT_SEARCHES) {
+    Collections.shuffle(floodfillPeers,getContext().random());
+    List ffp=new ArrayList(floodfillPeers.size());
+    int failcount=0;
+    long before=getContext().clock().now() - 30 * 60 * 1000;
+    for (int i=0; i < floodfillPeers.size(); i++) {
+      Hash peer=(Hash)floodfillPeers.get(i);
+      PeerProfile profile=getContext().profileOrganizer().getProfile(peer);
+      if (profile == null || profile.getLastHeardFrom() < before || profile.getIsFailing() || getContext().shitlist().isShitlisted(peer)) {
+        failcount++;
+        ffp.add(peer);
+      }
+ else       ffp.add(0,peer);
+    }
+    if (_log.shouldLog(Log.INFO) && failcount > 0)     _log.info(getJobId() + ": " + failcount+ " of "+ floodfillPeers.size()+ " floodfills are not heard from, unprofiled, failing or shitlisted");
+    floodfillPeers=ffp;
+  }
   int count=0;
   for (int i=0; _lookupsRemaining < CONCURRENT_SEARCHES && i < floodfillPeers.size(); i++) {
     Hash peer=(Hash)floodfillPeers.get(i);
