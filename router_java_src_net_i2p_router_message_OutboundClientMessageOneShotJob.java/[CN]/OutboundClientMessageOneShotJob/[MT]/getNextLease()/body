@@ -5,6 +5,23 @@
     return false;
   }
   long now=getContext().clock().now();
+synchronized (_leaseCache) {
+    if (now - _cleanTime > 5 * 60 * 1000) {
+      cleanLeaseCache(_leaseCache);
+      _cleanTime=now;
+    }
+    _lease=(Lease)_leaseCache.get(_to);
+    if (_lease != null) {
+      if (!_lease.isExpired()) {
+        if (_log.shouldLog(Log.WARN))         _log.warn("Found in cache - lease for dest " + _to.calculateHash().toBase64());
+        return true;
+      }
+ else {
+        if (_log.shouldLog(Log.WARN))         _log.warn("Expired from cache - lease for dest " + _to.calculateHash().toBase64());
+        _leaseCache.remove(_to);
+      }
+    }
+  }
   List leases=new ArrayList(_leaseSet.getLeaseCount());
   for (int i=0; i < _leaseSet.getLeaseCount(); i++) {
     Lease lease=_leaseSet.getLease(i);
@@ -35,5 +52,9 @@
  else {
     _lease=(Lease)leases.get(0);
   }
+synchronized (_leaseCache) {
+    _leaseCache.put(_to,_lease);
+  }
+  if (_log.shouldLog(Log.WARN))   _log.warn("Added to cache - lease for dest " + _to.calculateHash().toBase64());
   return true;
 }
