@@ -13,11 +13,11 @@ synchronized (_leaseCache) {
     _lease=(Lease)_leaseCache.get(_to);
     if (_lease != null) {
       if (!_lease.isExpired()) {
-        if (_log.shouldLog(Log.WARN))         _log.warn("Found in cache - lease for dest " + _to.calculateHash().toBase64());
+        if (_log.shouldLog(Log.INFO))         _log.info("Found in cache - lease for " + _toString);
         return true;
       }
  else {
-        if (_log.shouldLog(Log.WARN))         _log.warn("Expired from cache - lease for dest " + _to.calculateHash().toBase64());
+        if (_log.shouldLog(Log.WARN))         _log.warn("Expired from cache - lease for " + _toString);
         _leaseCache.remove(_to);
       }
     }
@@ -38,23 +38,10 @@ synchronized (_leaseCache) {
     return false;
   }
   Collections.shuffle(leases);
-  if (false) {
-    TreeMap orderedLeases=new TreeMap();
-    for (Iterator iter=leases.iterator(); iter.hasNext(); ) {
-      Lease lease=(Lease)iter.next();
-      long id=lease.getNumFailure();
-      while (orderedLeases.containsKey(new Long(id)))       id++;
-      orderedLeases.put(new Long(id),lease);
-      if (_log.shouldLog(Log.DEBUG))       _log.debug(getJobId() + ": ranking lease we havent sent it down as " + id);
-    }
-    _lease=(Lease)orderedLeases.get(orderedLeases.firstKey());
-  }
- else {
-    _lease=(Lease)leases.get(0);
-  }
+  _lease=(Lease)leases.get(0);
 synchronized (_leaseCache) {
     _leaseCache.put(_to,_lease);
   }
-  if (_log.shouldLog(Log.WARN))   _log.warn("Added to cache - lease for dest " + _to.calculateHash().toBase64());
+  if (_log.shouldLog(Log.WARN))   _log.warn("Added to cache - lease for " + _toString);
   return true;
 }
