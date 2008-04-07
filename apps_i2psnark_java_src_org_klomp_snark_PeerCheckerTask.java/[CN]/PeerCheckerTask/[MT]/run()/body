@@ -19,6 +19,7 @@ synchronized (coordinator.peers) {
     long downloaded=0;
     List removed=new ArrayList();
     int uploadLimit=coordinator.allowedUploaders();
+    boolean overBWLimit=coordinator.overUpBWLimit();
     while (it.hasNext()) {
       Peer peer=(Peer)it.next();
       if (!peer.isConnected()) {
@@ -38,7 +39,7 @@ synchronized (coordinator.peers) {
       peer.resetCounters();
       Snark.debug(peer + ":",Snark.DEBUG);
       Snark.debug(" ul: " + upload / KILOPERSECOND + " dl: " + download / KILOPERSECOND + " i: " + peer.isInterested() + " I: " + peer.isInteresting() + " c: " + peer.isChoking() + " C: " + peer.isChoked(),Snark.DEBUG);
-      if (((coordinator.uploaders == uploadLimit && coordinator.interestedAndChoking > 0) || coordinator.uploaders > uploadLimit) && !peer.isChoking()) {
+      if (((coordinator.uploaders == uploadLimit && coordinator.interestedAndChoking > 0) || coordinator.uploaders > uploadLimit || overBWLimit) && !peer.isChoking()) {
         if (!peer.isInterested()) {
           Snark.debug("Choke uninterested peer: " + peer,Snark.INFO);
           peer.setChoking(true);
@@ -46,6 +47,13 @@ synchronized (coordinator.peers) {
           coordinator.uploaders--;
           it.remove();
           removed.add(peer);
+        }
+ else         if (overBWLimit) {
+          Snark.debug("BW limit, choke peer: " + peer,Snark.INFO);
+          peer.setChoking(true);
+          uploaders--;
+          coordinator.uploaders--;
+          removedCount++;
         }
  else         if (peer.isInteresting() && peer.isChoked()) {
           Snark.debug("Choke choking peer: " + peer,Snark.DEBUG);
@@ -96,7 +104,7 @@ synchronized (coordinator.peers) {
       coordinator.peerCount=coordinator.peers.size();
       removed.add(worstDownloader);
     }
-    coordinator.unchokePeer();
+    if (!overBWLimit)     coordinator.unchokePeer();
     coordinator.peers.addAll(removed);
     coordinator.peerCount=coordinator.peers.size();
     coordinator.interestedAndChoking+=removedCount;
