@@ -13,8 +13,13 @@ synchronized (_leaseCache) {
     _lease=(Lease)_leaseCache.get(_to);
     if (_lease != null) {
       if (!_lease.isExpired(Router.CLOCK_FUDGE_FACTOR)) {
-        if (_log.shouldLog(Log.INFO))         _log.info("Found in cache - lease for " + _toString);
-        return true;
+        for (int i=0; i < _leaseSet.getLeaseCount(); i++) {
+          Lease lease=_leaseSet.getLease(i);
+          if (_lease.equals(lease)) {
+            if (_log.shouldLog(Log.INFO))             _log.info("Found in cache - lease for " + _toString);
+            return true;
+          }
+        }
       }
       if (_log.shouldLog(Log.WARN))       _log.warn("Expired from cache - lease for " + _toString);
       _leaseCache.remove(_to);
