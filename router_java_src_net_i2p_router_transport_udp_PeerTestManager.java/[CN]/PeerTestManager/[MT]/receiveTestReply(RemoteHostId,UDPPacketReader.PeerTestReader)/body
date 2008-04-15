@@ -21,11 +21,12 @@
  else {
     PeerState charlieSession=_transport.getPeerState(from);
     long recentBegin=_context.clock().now() - CHARLIE_RECENT_PERIOD;
-    if ((charlieSession != null) && (charlieSession.getLastACKSend() > recentBegin) && (charlieSession.getLastSendTime() > recentBegin)) {
+    if ((charlieSession != null) && ((charlieSession.getLastACKSend() > recentBegin) || (charlieSession.getLastSendTime() > recentBegin))) {
       if (_log.shouldLog(Log.WARN))       _log.warn("Bob chose a charlie we already have a session to, cancelling the test and rerunning (bob: " + _currentTest + ", charlie: "+ from+ ")");
       _currentTestComplete=true;
       _context.statManager().addRateData("udp.statusKnownCharlie",1,0);
       honorStatus(CommSystemFacade.STATUS_UNKNOWN);
+      _currentTest=null;
       return;
     }
     if (test.getReceiveCharlieTime() > 0) {
@@ -36,7 +37,7 @@
         InetAddress addr=InetAddress.getByAddress(ip);
         test.setAliceIPFromCharlie(addr);
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Receive test reply from charlie @ " + test.getCharlieIP() + " via our "+ test.getAlicePort()+ "/"+ test.getAlicePortFromCharlie());
-        if (test.getReceiveBobTime() > 0)         testComplete(false);
+        if (test.getReceiveBobTime() > 0)         testComplete(true);
       }
  catch (      UnknownHostException uhe) {
         if (_log.shouldLog(Log.ERROR))         _log.error("Charlie @ " + from + " said we were an invalid IP address: "+ uhe.getMessage(),uhe);
@@ -48,6 +49,7 @@
         if (_log.shouldLog(Log.WARN))         _log.warn("Received too many packets on the test: " + test);
         return;
       }
+      if (_log.shouldLog(Log.INFO) && charlieSession != null)       _log.info("Bob chose a charlie we last acked " + DataHelper.formatDuration(_context.clock().now() - charlieSession.getLastACKSend()) + " last sent "+ DataHelper.formatDuration(_context.clock().now() - charlieSession.getLastSendTime())+ " (bob: "+ _currentTest+ ", charlie: "+ from+ ")");
       test.setReceiveCharlieTime(_context.clock().now());
       SessionKey charlieIntroKey=new SessionKey(new byte[SessionKey.KEYSIZE_BYTES]);
       testInfo.readIntroKey(charlieIntroKey.getData(),0);
