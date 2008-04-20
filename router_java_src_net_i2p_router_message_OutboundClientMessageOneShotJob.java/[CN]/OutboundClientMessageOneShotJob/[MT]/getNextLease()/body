@@ -21,17 +21,18 @@
     return false;
   }
   Collections.shuffle(leases);
-  for (int i=0; i < _leaseSet.getLeaseCount(); i++) {
-    Lease l=_leaseSet.getLease(i);
-    if (!getContext().commSystem().wasUnreachable(l.getGateway())) {
+  for (int i=0; i < leases.size(); i++) {
+    Lease l=(Lease)leases.get(i);
+    RouterInfo ri=getContext().netDb().lookupRouterInfoLocally(l.getGateway());
+    if (ri == null || ri.getCapabilities().indexOf(Router.CAPABILITY_UNREACHABLE) < 0) {
       _lease=l;
       break;
     }
-    if (_log.shouldLog(Log.WARN))     _log.warn(getJobId() + ": Skipping unreachable (by us) gateway " + l.getGateway());
+    if (_log.shouldLog(Log.WARN))     _log.warn(getJobId() + ": Skipping unreachable gateway " + l.getGateway()+ " for "+ _toString);
   }
   if (_lease == null) {
     _lease=(Lease)leases.get(0);
-    if (_log.shouldLog(Log.WARN))     _log.warn(getJobId() + ": All leases are unreachable (by us) for " + _toString);
+    if (_log.shouldLog(Log.WARN))     _log.warn(getJobId() + ": All leases are unreachable for " + _toString);
   }
   return true;
 }
