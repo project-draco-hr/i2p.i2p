@@ -13,39 +13,16 @@
     if (_log.shouldLog(Log.WARN))     _log.warn("Reject tunnel, 1m rate (" + used1m + ") indicates overload.");
     return false;
   }
-  if (true) {
-    float maxBps=maxKBps * 1024f;
-    float pctFull=(maxBps - availBps) / (maxBps);
-    double probReject=Math.pow(pctFull,16);
-    double rand=_context.random().nextFloat();
-    boolean reject=(availBps < MIN_AVAILABLE_BPS) || (rand <= probReject);
-    if (reject && _log.shouldLog(Log.WARN))     _log.warn("reject = " + reject + " avail/maxK/used "+ availBps+ "/"+ maxKBps+ "/"+ used+ " pReject = "+ probReject+ " pFull = "+ pctFull+ " numTunnels = "+ numTunnels+ "rand = "+ rand+ " est = "+ bytesAllocated+ " share = "+ (float)share);
- else     if (_log.shouldLog(Log.DEBUG))     _log.debug("reject = " + reject + " avail/maxK/used "+ availBps+ "/"+ maxKBps+ "/"+ used+ " pReject = "+ probReject+ " pFull = "+ pctFull+ " numTunnels = "+ numTunnels+ "rand = "+ rand+ " est = "+ bytesAllocated+ " share = "+ (float)share);
-    if (reject) {
-      return false;
-    }
- else {
-      return true;
-    }
-  }
-  double growthFactor=((double)(numTunnels + 1)) / (double)numTunnels;
-  double toAllocate=(numTunnels > 0 ? bytesAllocated * growthFactor : 0);
-  double allocatedBps=toAllocate / (10 * 60);
-  double pctFull=allocatedBps / availBps;
-  if ((pctFull < 1.0) && (pctFull >= 0.0)) {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Allowing the tunnel w/ " + pctFull + " of our "+ availBps+ "Bps/"+ allocatedBps+ "KBps allocated through "+ numTunnels+ " tunnels");
-    return true;
-  }
- else {
-    double probAllow=availBps / (allocatedBps + availBps);
-    boolean allow=(availBps > MIN_AVAILABLE_BPS) && (_context.random().nextFloat() <= probAllow);
-    if (allow) {
-      if (_log.shouldLog(Log.INFO))       _log.info("Probabalistically allowing the tunnel w/ " + (pctFull * 100d) + "% of our "+ availBps+ "Bps allowed ("+ toAllocate+ "bytes / "+ allocatedBps+ "Bps) through "+ numTunnels+ " tunnels");
-      return true;
-    }
- else {
-      if (_log.shouldLog(Log.WARN))       _log.warn("Rejecting the tunnel w/ " + (pctFull * 100d) + "% of our "+ availBps+ "Bps allowed ("+ toAllocate+ "bytes / "+ allocatedBps+ "Bps) through "+ numTunnels+ " tunnels");
-      return false;
-    }
-  }
+  float maxBps=maxKBps * 1024f;
+  float pctFull=(maxBps - availBps) / (maxBps);
+  double probReject=Math.pow(pctFull,16);
+  double rand=_context.random().nextFloat();
+  boolean reject=(availBps < MIN_AVAILABLE_BPS) || (rand <= probReject);
+  if (reject && _log.shouldLog(Log.WARN))   _log.warn("reject = " + reject + " avail/maxK/used "+ availBps+ "/"+ maxKBps+ "/"+ used+ " pReject = "+ probReject+ " pFull = "+ pctFull+ " numTunnels = "+ numTunnels+ "rand = "+ rand+ " est = "+ bytesAllocated+ " share = "+ (float)share);
+ else   if (_log.shouldLog(Log.DEBUG))   _log.debug("reject = " + reject + " avail/maxK/used "+ availBps+ "/"+ maxKBps+ "/"+ used+ " pReject = "+ probReject+ " pFull = "+ pctFull+ " numTunnels = "+ numTunnels+ "rand = "+ rand+ " est = "+ bytesAllocated+ " share = "+ (float)share);
+  if (probReject >= 0.9)   setTunnelStatus("Rejecting tunnels: Bandwidth limit");
+ else   if (probReject >= 0.5)   setTunnelStatus("Rejecting " + ((int)(100.0 * probReject)) + "% of tunnels: Bandwidth limit");
+ else   if (probReject >= 0.1)   setTunnelStatus("Accepting " + (100 - (int)(100.0 * probReject)) + "% of tunnels");
+ else   setTunnelStatus("Accepting tunnels");
+  return !reject;
 }
