@@ -1,9 +1,9 @@
 {
   StringBuffer buf=new StringBuffer(1024);
   buf.append("<h2>Shitlist</h2>");
-  Map entries=null;
+  Map entries=new TreeMap(new HashComparator());
 synchronized (_entries) {
-    entries=new HashMap(_entries);
+    entries.putAll(_entries);
   }
   buf.append("<ul>");
   int partial=0;
@@ -15,7 +15,7 @@ synchronized (_entries) {
       continue;
     }
     buf.append("<li><b>").append(key.toBase64()).append("</b>");
-    buf.append(" <a href=\"netdb.jsp#").append(key.toBase64().substring(0,6)).append("\">(?)</a>");
+    buf.append(" (<a href=\"netdb.jsp#").append(key.toBase64().substring(0,6)).append("\">netdb</a>)");
     buf.append(" expiring in ");
     buf.append(DataHelper.formatDuration(entry.expireOn - _context.clock().now()));
     Set transports=entry.transports;
@@ -27,9 +27,11 @@ synchronized (_entries) {
     buf.append("</li>\n");
   }
   buf.append("</ul>\n");
-  buf.append("<i>Partial shitlisted peers (only blocked on some transports): ");
-  buf.append(partial);
-  buf.append("</i>\n");
+  if (partial > 0) {
+    buf.append("<i>Partial shitlisted peers (only blocked on some transports): ");
+    buf.append(partial);
+    buf.append("</i>\n");
+  }
   out.write(buf.toString());
   out.flush();
 }
