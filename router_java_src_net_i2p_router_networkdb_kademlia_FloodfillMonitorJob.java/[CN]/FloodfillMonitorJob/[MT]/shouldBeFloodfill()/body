@@ -1,0 +1,55 @@
+{
+  if (getContext().getProperty(Router.PROP_SHUTDOWN_IN_PROGRESS) != null)   return false;
+  String enabled=getContext().getProperty(PROP_FLOODFILL_PARTICIPANT,"auto");
+  if ("true".equals(enabled))   return true;
+  if ("false".equals(enabled))   return false;
+  if (getContext().router().getUptime() < MIN_UPTIME)   return false;
+  if (getContext().router().getRouterInfo().getCapabilities().indexOf("O") < 0)   return false;
+  List floodfillPeers=_facade.getFloodfillPeers();
+  long now=getContext().clock().now();
+  if (floodfillPeers == null || floodfillPeers.size() <= 0) {
+    _lastChanged=now;
+    return true;
+  }
+  boolean wasFF=_facade.floodfillEnabled();
+  if (_lastChanged + MIN_CHANGE_DELAY > now)   return wasFF;
+  int ffcount=floodfillPeers.size();
+  int failcount=0;
+  long before=now - 60 * 60 * 1000;
+  for (int i=0; i < floodfillPeers.size(); i++) {
+    Hash peer=(Hash)floodfillPeers.get(i);
+    if (peer.equals(getContext().routerHash()))     continue;
+    PeerProfile profile=getContext().profileOrganizer().getProfile(peer);
+    if (profile == null || profile.getLastHeardFrom() < before || profile.getIsFailing() || getContext().shitlist().isShitlisted(peer) || getContext().commSystem().wasUnreachable(peer))     failcount++;
+  }
+  int good=ffcount - failcount;
+  boolean happy=getContext().router().getRouterInfo().getCapabilities().indexOf("R") >= 0;
+  happy=happy && getContext().jobQueue().getMaxLag() < 2 * 1000;
+  happy=happy && _facade.getKnownRouters() >= 200;
+  happy=happy && getContext().commSystem().countActivePeers() >= 50;
+  happy=happy && getContext().tunnelManager().getParticipatingCount() >= 100;
+  if (happy) {
+    RouterAddress ra=getContext().router().getRouterInfo().getTargetAddress("SSU");
+    if (ra == null)     happy=false;
+ else {
+      Properties props=ra.getOptions();
+      if (props == null || props.getProperty("ihost0") != null)       happy=false;
+    }
+  }
+  if (good < MIN_FF && happy) {
+    if (!wasFF) {
+      _lastChanged=now;
+      if (_log.shouldLog(Log.ERROR))       _log.error("Only " + good + " ff peers and we want "+ MIN_FF+ " so we are becoming floodfill");
+    }
+    return true;
+  }
+  if (good > MAX_FF || (good > MIN_FF && !happy)) {
+    if (wasFF) {
+      _lastChanged=now;
+      if (_log.shouldLog(Log.ERROR))       _log.error("Have " + good + " ff peers and we need only "+ MIN_FF+ " to "+ MAX_FF+ " so we are disabling floodfill; reachable? "+ happy);
+    }
+    return false;
+  }
+  if (_log.shouldLog(Log.INFO))   _log.info("Have " + good + " ff peers, not changing, enabled? "+ wasFF+ "; reachable? "+ happy);
+  return wasFF;
+}
