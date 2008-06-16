@@ -5,18 +5,44 @@
   boolean workDirCreated=workDir.mkdirs();
   if (!workDirCreated)   System.err.println("ERROR: Unable to create Jetty temporary work directory");
   _server=new Server();
-  WebApplicationContext contexts[]=null;
+  boolean rewrite=false;
+  Properties props=webAppProperties();
+  if (props.size() <= 0) {
+    props.setProperty(PREFIX + ROUTERCONSOLE + ENABLED,"true");
+    rewrite=true;
+  }
   try {
     _server.addListener(_listenHost + ':' + _listenPort);
-    _server.setRootWebApp("routerconsole");
-    contexts=_server.addWebApplications(_webAppsDir);
-    if (contexts != null) {
-      for (int i=0; i < contexts.length; i++)       initialize(contexts[i]);
+    _server.setRootWebApp(ROUTERCONSOLE);
+    WebApplicationContext wac=_server.addWebApplication("/",_webAppsDir + ROUTERCONSOLE + ".war");
+    initialize(wac);
+    File dir=new File(_webAppsDir);
+    String fileNames[]=dir.list(WarFilenameFilter.instance());
+    if (fileNames != null) {
+      for (int i=0; i < fileNames.length; i++) {
+        try {
+          String appName=fileNames[i].substring(0,fileNames[i].lastIndexOf(".war"));
+          String enabled=props.getProperty(PREFIX + appName + ENABLED);
+          if (!"false".equals(enabled)) {
+            String path=new File(dir,fileNames[i]).getCanonicalPath();
+            wac=_server.addWebApplication("/" + appName,path);
+            initialize(wac);
+            if (enabled == null) {
+              props.setProperty(PREFIX + appName + ENABLED,"true");
+              rewrite=true;
+            }
+          }
+        }
+ catch (        IOException ioe) {
+          System.err.println("Error resolving '" + fileNames[i] + "' in '"+ dir);
+        }
+      }
     }
   }
  catch (  IOException ioe) {
     ioe.printStackTrace();
   }
+  if (rewrite)   storeWebAppProperties(props);
   try {
     _server.start();
   }
