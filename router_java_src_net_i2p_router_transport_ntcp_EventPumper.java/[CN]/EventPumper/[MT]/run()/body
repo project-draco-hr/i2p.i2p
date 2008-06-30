@@ -28,6 +28,7 @@
           Set all=_selector.keys();
           int failsafeWrites=0;
           int failsafeCloses=0;
+          int failsafeInvalid=0;
           long expireIdleWriteTime=20 * 60 * 1000l;
           for (Iterator iter=all.iterator(); iter.hasNext(); ) {
             try {
@@ -35,6 +36,12 @@
               Object att=key.attachment();
               if (!(att instanceof NTCPConnection))               continue;
               NTCPConnection con=(NTCPConnection)att;
+              if ((!key.isValid()) && (!((SocketChannel)key.channel()).isConnectionPending()) && con.getTimeSinceCreated() > 2 * NTCPTransport.ESTABLISH_TIMEOUT) {
+                if (_log.shouldLog(Log.WARN))                 _log.warn("Invalid key " + con);
+                con.close();
+                failsafeInvalid++;
+                continue;
+              }
               if ((con.getWriteBufCount() > 0) && ((key.interestOps() & SelectionKey.OP_WRITE) == 0)) {
                 key.interestOps(SelectionKey.OP_WRITE | key.interestOps());
                 failsafeWrites++;
@@ -46,9 +53,10 @@
             }
  catch (            CancelledKeyException cke) {
             }
-            if (failsafeWrites > 0)             _context.statManager().addRateData("ntcp.failsafeWrites",failsafeWrites,0);
-            if (failsafeCloses > 0)             _context.statManager().addRateData("ntcp.failsafeCloses",failsafeCloses,0);
           }
+          if (failsafeWrites > 0)           _context.statManager().addRateData("ntcp.failsafeWrites",failsafeWrites,0);
+          if (failsafeCloses > 0)           _context.statManager().addRateData("ntcp.failsafeCloses",failsafeCloses,0);
+          if (failsafeInvalid > 0)           _context.statManager().addRateData("ntcp.failsafeInvalid",failsafeInvalid,0);
         }
  catch (        ClosedSelectorException cse) {
           continue;
