@@ -1,0 +1,29 @@
+{
+synchronized (_lock) {
+    try {
+      readBlocklistFile(_file);
+    }
+ catch (    OutOfMemoryError oom) {
+      _log.log(Log.CRIT,"OOM processing the blocklist");
+      disable();
+      return;
+    }
+  }
+  if (_blocklistSize <= 0)   return;
+  FloodfillNetworkDatabaseFacade fndf=(FloodfillNetworkDatabaseFacade)_context.netDb();
+  int count=0;
+  for (Iterator iter=fndf.getKnownRouterData().iterator(); iter.hasNext(); ) {
+    RouterInfo ri=(RouterInfo)iter.next();
+    Hash peer=ri.getIdentity().getHash();
+    if (isBlocklisted(peer))     count++;
+  }
+  if (count > 0 && _log.shouldLog(Log.ERROR))   _log.error("Blocklisted " + count + " routers in the netDb.");
+  for (Iterator iter=_peerBlocklist.keySet().iterator(); iter.hasNext(); ) {
+    Hash peer=(Hash)iter.next();
+    String reason="Blocklisted by router hash";
+    String comment=(String)_peerBlocklist.get(peer);
+    if (comment != null)     reason=reason + ": " + comment;
+    _context.shitlist().shitlistRouterForever(peer,reason);
+  }
+  _peerBlocklist=null;
+}
