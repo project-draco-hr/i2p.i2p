@@ -1,9 +1,4 @@
 {
-  StringBuffer buf=null;
-  if (_log.shouldLog(Log.DEBUG)) {
-    buf=new StringBuffer(128);
-    buf.append("Allowed: ");
-  }
   int maxKBps=_context.bandwidthLimiter().getOutboundKBytesPerSecond();
   int allowed=maxKBps / 6;
   if (allowed < 2)   allowed=2;
@@ -29,7 +24,6 @@ synchronized (_currentlyBuilding) {
     }
     concurrent=_currentlyBuilding.size();
     allowed-=concurrent;
-    if (buf != null)     buf.append(allowed).append(" ").append(_currentlyBuilding.toString());
   }
   if (expired != null) {
     for (int i=0; i < expired.size(); i++) {
@@ -37,21 +31,18 @@ synchronized (_currentlyBuilding) {
       if (_log.shouldLog(Log.INFO))       _log.info("Timed out waiting for reply asking for " + cfg);
       for (int iPeer=0; iPeer < cfg.getLength(); iPeer++) {
         Hash peer=cfg.getPeer(iPeer);
-        if (peer.toBase64().equals(_context.routerHash().toBase64())) {
-          if (_log.shouldLog(Log.DEBUG))           _log.debug("Not recording our own expiry in stats.");
-          continue;
-        }
+        if (peer.toBase64().equals(_context.routerHash().toBase64()))         continue;
         RouterInfo ri=_context.netDb().lookupRouterInfoLocally(peer);
         String bwTier="Unknown";
         if (ri != null)         bwTier=ri.getBandwidthTier();
- else         if (_log.shouldLog(Log.WARN))         _log.warn("Failed detecting bwTier, null routerInfo for: " + peer);
         _context.statManager().addRateData("tunnel.tierExpire" + bwTier,1,0);
+        didNotReply(cfg.getReplyMessageId(),peer);
+        _context.profileManager().tunnelTimedOut(peer);
       }
       TunnelPool pool=cfg.getTunnelPool();
       if (pool != null)       pool.buildComplete(cfg);
       if (cfg.getDestination() == null)       _context.statManager().addRateData("tunnel.buildExploratoryExpire",1,0);
  else       _context.statManager().addRateData("tunnel.buildClientExpire",1,0);
-      for (int j=0; j < cfg.getLength(); j++)       didNotReply(cfg.getReplyMessageId(),cfg.getPeer(j));
     }
   }
   _context.statManager().addRateData("tunnel.concurrentBuilds",concurrent,0);
