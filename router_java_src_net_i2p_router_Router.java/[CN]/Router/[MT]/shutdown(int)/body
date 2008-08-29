@@ -3,6 +3,15 @@
   _context.random().saveSeed();
   I2PThread.removeOOMEventListener(_oomListener);
   try {
+    for (Iterator iter=_shutdownTasks.iterator(); iter.hasNext(); ) {
+      Runnable task=(Runnable)iter.next();
+      task.run();
+    }
+  }
+ catch (  Throwable t) {
+    _log.log(Log.CRIT,"Error running shutdown task",t);
+  }
+  try {
     _context.jobQueue().shutdown();
   }
  catch (  Throwable t) {
@@ -76,14 +85,5 @@
   }
   RouterContext.listContexts().remove(_context);
   dumpStats();
-  try {
-    for (Iterator iter=_shutdownTasks.iterator(); iter.hasNext(); ) {
-      Runnable task=(Runnable)iter.next();
-      task.run();
-    }
-  }
- catch (  Throwable t) {
-    _log.log(Log.CRIT,"Error running shutdown task",t);
-  }
   finalShutdown(exitCode);
 }
