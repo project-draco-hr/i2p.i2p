@@ -6,20 +6,15 @@ synchronized (_entries) {
     entries.putAll(_entries);
   }
   buf.append("<ul>");
-  int partial=0;
   for (Iterator iter=entries.keySet().iterator(); iter.hasNext(); ) {
     Hash key=(Hash)iter.next();
     Entry entry=(Entry)entries.get(key);
-    if ((entry.transports != null) && (entry.transports.size() > 0)) {
-      partial++;
-      continue;
-    }
     buf.append("<li><b>").append(key.toBase64()).append("</b>");
     buf.append(" (<a href=\"netdb.jsp#").append(key.toBase64().substring(0,6)).append("\">netdb</a>)");
     buf.append(" expiring in ");
     buf.append(DataHelper.formatDuration(entry.expireOn - _context.clock().now()));
     Set transports=entry.transports;
-    if ((transports != null) && (transports.size() > 0))     buf.append(" on the following transports: ").append(transports);
+    if ((transports != null) && (transports.size() > 0))     buf.append(" on the following transport: ").append(transports);
     if (entry.cause != null) {
       buf.append("<br />\n");
       buf.append(entry.cause);
@@ -28,11 +23,6 @@ synchronized (_entries) {
     buf.append("</li>\n");
   }
   buf.append("</ul>\n");
-  if (partial > 0) {
-    buf.append("<i>Partial shitlisted peers (only blocked on some transports): ");
-    buf.append(partial);
-    buf.append("</i>\n");
-  }
   out.write(buf.toString());
   out.flush();
 }
