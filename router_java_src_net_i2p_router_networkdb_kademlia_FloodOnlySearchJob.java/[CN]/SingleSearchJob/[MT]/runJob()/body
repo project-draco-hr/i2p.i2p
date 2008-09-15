@@ -1,0 +1,17 @@
+{
+  _onm=getContext().messageRegistry().registerPending(_replySelector,_onReply,_onTimeout,_timeoutMs);
+  DatabaseLookupMessage dlm=new DatabaseLookupMessage(getContext(),true);
+  TunnelInfo replyTunnel=getContext().tunnelManager().selectInboundTunnel();
+  TunnelInfo outTunnel=getContext().tunnelManager().selectOutboundTunnel();
+  if ((replyTunnel == null) || (outTunnel == null)) {
+    failed();
+    return;
+  }
+  dlm.setFrom(replyTunnel.getPeer(0));
+  dlm.setMessageExpiration(getContext().clock().now() + 5 * 1000);
+  dlm.setReplyTunnel(replyTunnel.getReceiveTunnelId(0));
+  dlm.setSearchKey(_key);
+  if (_log.shouldLog(Log.INFO))   _log.info(getJobId() + ": Single search for " + _key.toBase64()+ " to "+ _to.toBase64());
+  getContext().tunnelDispatcher().dispatchOutbound(dlm,outTunnel.getSendTunnelId(0),_to);
+  _lookupsRemaining=1;
+}
