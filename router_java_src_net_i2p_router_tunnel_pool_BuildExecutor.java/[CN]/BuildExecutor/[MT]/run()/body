@@ -3,14 +3,9 @@
   List wanted=new ArrayList(8);
   List pools=new ArrayList(8);
   int pendingRemaining=0;
-  long loopBegin=0;
-  long beforeHandleInboundReplies=0;
-  long afterHandleInboundReplies=0;
-  long afterBuildZeroHop=0;
   long afterBuildReal=0;
   long afterHandleInbound=0;
   while (!_manager.isShutdown()) {
-    loopBegin=System.currentTimeMillis();
     try {
       _repoll=pendingRemaining > 0;
       _manager.listPools(pools);
@@ -20,12 +15,9 @@
         int howMany=pool.countHowManyToBuild();
         for (int j=0; j < howMany; j++)         wanted.add(pool);
       }
-      beforeHandleInboundReplies=System.currentTimeMillis();
       _handler.handleInboundReplies();
-      afterHandleInboundReplies=System.currentTimeMillis();
       int allowed=allowed();
       allowed=buildZeroHopTunnels(wanted,allowed);
-      afterBuildZeroHop=System.currentTimeMillis();
       int realBuilt=0;
       TunnelManagerFacade mgr=_context.tunnelManager();
       if ((mgr == null) || (mgr.selectInboundTunnel() == null) || (mgr.selectOutboundTunnel() == null)) {
@@ -44,6 +36,12 @@ synchronized (_currentlyBuilding) {
             TunnelPool pool=(TunnelPool)wanted.remove(0);
             PooledTunnelCreatorConfig cfg=pool.configureNewTunnel();
             if (cfg != null) {
+              if (cfg.getLength() <= 1 && !pool.needFallback()) {
+                if (_log.shouldLog(Log.DEBUG))                 _log.debug("We don't need more fallbacks for " + pool);
+                i--;
+                pool.buildComplete(cfg);
+                continue;
+              }
               if (_log.shouldLog(Log.DEBUG))               _log.debug("Configuring new tunnel " + i + " for "+ pool+ ": "+ cfg);
 synchronized (_currentlyBuilding) {
                 _currentlyBuilding.add(cfg);
@@ -57,16 +55,14 @@ synchronized (_currentlyBuilding) {
             }
           }
         }
- else {
-          try {
+        try {
 synchronized (_currentlyBuilding) {
-              if (!_repoll) {
-                _currentlyBuilding.wait(_context.random().nextInt(2 * 1000));
-              }
+            if (!_repoll) {
+              _currentlyBuilding.wait(2000 + _context.random().nextInt(2 * 1000));
             }
           }
- catch (          InterruptedException ie) {
-          }
+        }
+ catch (        InterruptedException ie) {
         }
       }
       afterBuildReal=System.currentTimeMillis();
