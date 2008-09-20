@@ -21,15 +21,16 @@ synchronized (_clientOutboundPools) {
     out.write("<h2><a name=\"" + client.toBase64().substring(0,4) + "\">Client tunnels</a> for "+ name+ " (<a href=\"/configtunnels.jsp#"+ client.toBase64().substring(0,4)+ "\">config</a>):</h2>\n");
     renderPool(out,in,outPool);
   }
-  List participating=_context.tunnelDispatcher().listParticipatingTunnels();
+  Set participating=new TreeSet(new TunnelComparator());
+  participating.addAll(_context.tunnelDispatcher().listParticipatingTunnels());
   out.write("<h2><a name=\"participating\">Participating tunnels</a>:</h2><table border=\"1\">\n");
-  out.write("<tr><td><b>Receive on</b></td><td><b>From</b></td><td>" + "<b>Send on</b></td><td><b>To</b></td><td><b>Expiration</b></td>" + "<td><b>Usage</b></td><td><b>Role</b></td></tr>\n");
+  out.write("<tr><td><b>Receive on</b></td><td><b>From</b></td><td>" + "<b>Send on</b></td><td><b>To</b></td><td><b>Expiration</b></td>" + "<td><b>Usage</b></td><td><b>Rate</b></td><td><b>Role</b></td></tr>\n");
   long processed=0;
   RateStat rs=_context.statManager().getRate("tunnel.participatingMessageCount");
   if (rs != null)   processed=(long)rs.getRate(10 * 60 * 1000).getLifetimeTotalValue();
   int inactive=0;
-  for (int i=0; i < participating.size(); i++) {
-    HopConfig cfg=(HopConfig)participating.get(i);
+  for (Iterator iter=participating.iterator(); iter.hasNext(); ) {
+    HopConfig cfg=(HopConfig)iter.next();
     if (cfg.getProcessedMessagesCount() <= 0) {
       inactive++;
       continue;
@@ -47,6 +48,11 @@ synchronized (_clientOutboundPools) {
     if (timeLeft > 0)     out.write("<td align=right>" + DataHelper.formatDuration(timeLeft) + "</td>");
  else     out.write("<td align=right>(grace period)</td>");
     out.write("<td align=right>" + cfg.getProcessedMessagesCount() + "KB</td>");
+    int lifetime=(int)((_context.clock().now() - cfg.getCreation()) / 1000);
+    if (lifetime <= 0)     lifetime=1;
+    if (lifetime > 10 * 60)     lifetime=10 * 60;
+    int bps=1024 * (int)cfg.getProcessedMessagesCount() / lifetime;
+    out.write("<td align=right>" + bps + "Bps</td>");
     if (cfg.getSendTo() == null)     out.write("<td>Outbound Endpoint</td>");
  else     if (cfg.getReceiveFrom() == null)     out.write("<td>Inbound Gateway</td>");
  else     out.write("<td>Participant</td>");
