@@ -1,13 +1,15 @@
 {
   List eventsToFire=new ArrayList(1);
-  while (true) {
+  while (runn.getAnswer()) {
     try {
 synchronized (_events) {
         long now=System.currentTimeMillis();
         long nextEventDelay=-1;
         Object nextEvent=null;
-        while (true) {
-          if (_events.size() <= 0)           break;
+        while (runn.getAnswer()) {
+          if (_events.size() <= 0) {
+            break;
+          }
           Long when=(Long)_events.firstKey();
           if (when.longValue() <= now) {
             TimedEvent evt=(TimedEvent)_events.remove(when);
@@ -24,7 +26,9 @@ synchronized (_events) {
         }
         if (eventsToFire.size() <= 0) {
           if (nextEventDelay != -1) {
-            if (_log.shouldLog(Log.DEBUG))             _log.debug("Next event in " + nextEventDelay + ": "+ nextEvent);
+            if (_log.shouldLog(Log.DEBUG)) {
+              _log.debug("Next event in " + nextEventDelay + ": "+ nextEvent);
+            }
             _events.wait(nextEventDelay);
           }
  else {
@@ -33,10 +37,7 @@ synchronized (_events) {
         }
       }
     }
- catch (    ThreadDeath td) {
-      return;
-    }
-catch (    InterruptedException ie) {
+ catch (    InterruptedException ie) {
     }
 catch (    Throwable t) {
       if (_log != null) {
@@ -50,7 +51,9 @@ catch (    Throwable t) {
     long now=System.currentTimeMillis();
     now=now - (now % 1000);
 synchronized (_readyEvents) {
-      for (int i=0; i < eventsToFire.size(); i++)       _readyEvents.add(eventsToFire.get(i));
+      for (int i=0; i < eventsToFire.size(); i++) {
+        _readyEvents.add(eventsToFire.get(i));
+      }
       _readyEvents.notifyAll();
     }
     if (_occurredTime == now) {

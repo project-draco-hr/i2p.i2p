@@ -1,13 +1,18 @@
 {
   verifySession();
-  Connection con=_connectionManager.getConnectionHandler().accept(-1);
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("receiveSocket() called: " + con);
+  Connection con=_connectionManager.getConnectionHandler().accept(_connectionManager.MgetSoTimeout());
+  if (_log.shouldLog(Log.DEBUG)) {
+    _log.debug("receiveSocket() called: " + con);
+  }
   if (con != null) {
     I2PSocketFull sock=new I2PSocketFull(con);
     con.setSocket(sock);
     return sock;
   }
  else {
-    return null;
+    if (_connectionManager.MgetSoTimeout() == -1) {
+      return null;
+    }
+    throw new SocketTimeoutException("I2PSocket timed out");
   }
 }
