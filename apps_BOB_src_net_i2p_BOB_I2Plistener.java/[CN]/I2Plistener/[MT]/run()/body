@@ -1,0 +1,51 @@
+{
+  boolean g=false;
+  I2PSocket sessSocket=null;
+  serverSocket.setSoTimeout(1000);
+  if (info.exists("INPORT")) {
+    tgwatch=2;
+  }
+  while (info.get("RUNNING").equals(true)) {
+    try {
+      try {
+        sessSocket=serverSocket.accept();
+        g=true;
+      }
+ catch (      ConnectException ce) {
+        g=false;
+      }
+catch (      SocketTimeoutException ste) {
+        g=false;
+      }
+      if (g) {
+        g=false;
+        I2PtoTCP conn_c=new I2PtoTCP(sessSocket,info);
+        Thread t=new Thread(conn_c,"BOBI2PtoTCP");
+        t.start();
+      }
+    }
+ catch (    I2PException e) {
+      System.out.println("Exception " + e);
+    }
+  }
+  try {
+    serverSocket.close();
+  }
+ catch (  I2PException e) {
+  }
+  while (Thread.activeCount() > tgwatch) {
+    try {
+      Thread.sleep(1000);
+    }
+ catch (    Exception e) {
+    }
+  }
+  I2PSession session=socketManager.getSession();
+  if (session != null) {
+    try {
+      session.destroySession();
+    }
+ catch (    I2PSessionException ex) {
+    }
+  }
+}

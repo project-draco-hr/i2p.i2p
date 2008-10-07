@@ -1,0 +1,341 @@
+{
+  dk=ns=ip=op=false;
+  try {
+    BufferedReader in=new BufferedReader(new InputStreamReader(server.getInputStream()));
+    PrintStream out=new PrintStream(server.getOutputStream());
+    prikey=new ByteArrayOutputStream();
+    out.println("BOB " + BOBversion);
+    out.println("OK");
+    while ((line=in.readLine()) != null) {
+      System.gc();
+      StringTokenizer token=new StringTokenizer(line," ");
+      String Command="";
+      String Arg="";
+      nickname info;
+      if (token.countTokens() != 0) {
+        Command=token.nextToken();
+        Command=Command.toLowerCase();
+        if (token.countTokens() != 0) {
+          Arg=token.nextToken();
+        }
+ else {
+          Arg="";
+        }
+        if (Command.equals(C_help)) {
+          for (int i=0; !C_ALL[i][0].equals(" "); i++) {
+            if (C_ALL[i][0].equalsIgnoreCase(Arg)) {
+              out.println("OK " + C_ALL[i][1]);
+            }
+          }
+        }
+ else         if (Command.equals(C_list)) {
+          for (int i=0; i < database.getcount(); i++) {
+            try {
+              info=(nickname)database.getnext(i);
+            }
+ catch (            RuntimeException b) {
+              break;
+            }
+            out.print("DATA");
+            nickprint(out,info);
+          }
+          out.println("OK Listing done");
+        }
+ else         if (Command.equals(C_quit)) {
+          break;
+        }
+ else         if (Command.equals(C_newkeys)) {
+          if (ns) {
+            if (tunnelactive(nickinfo)) {
+              out.println("ERROR tunnel is active");
+            }
+ else {
+              try {
+                prikey=new ByteArrayOutputStream();
+                d=I2PClientFactory.createClient().createDestination(prikey);
+                dk=true;
+                nickinfo.add(P_KEYS,prikey.toByteArray());
+                out.println("OK " + d.toBase64());
+              }
+ catch (              IOException ioe) {
+                BOB.error("Error generating keys" + ioe);
+                out.println("ERROR generating keys");
+              }
+catch (              I2PException ipe) {
+                BOB.error("Error generating keys" + ipe);
+                out.println("ERROR generating keys");
+              }
+            }
+          }
+ else {
+            nns(out);
+          }
+        }
+ else         if (Command.equals(C_getkeys)) {
+          if (dk) {
+            prikey=new ByteArrayOutputStream();
+            prikey.write(((byte[])nickinfo.get(P_KEYS)));
+            out.println("OK " + net.i2p.data.Base64.encode(prikey.toByteArray()));
+          }
+ else {
+            out.println("ERROR no public key has been set");
+          }
+        }
+ else         if (Command.equals(C_quiet)) {
+          if (ns) {
+            if (tunnelactive(nickinfo)) {
+              out.println("ERROR tunnel is active");
+            }
+ else {
+              nickinfo.add(P_QUIET,(Boolean.parseBoolean(Arg) == true));
+              out.println("OK Quiet set");
+            }
+          }
+ else {
+            nns(out);
+          }
+        }
+ else         if (Command.equals(C_setkeys)) {
+          if (ns) {
+            if (tunnelactive(nickinfo)) {
+              out.println("ERROR tunnel is active");
+            }
+ else {
+              prikey=new ByteArrayOutputStream();
+              prikey.write(net.i2p.data.Base64.decode(Arg));
+              if ((Arg.length() == 884) && is64ok(Arg)) {
+                nickinfo.add(P_KEYS,prikey.toByteArray());
+                out.println("OK Keys set");
+                dk=true;
+              }
+ else {
+                out.println("ERROR not in BASE64 format");
+              }
+            }
+          }
+ else {
+            nns(out);
+          }
+        }
+ else         if (Command.equals(C_setnick)) {
+          ns=dk=ip=op=false;
+          try {
+            nickinfo=(nickname)database.get(Arg);
+            if (!tunnelactive(nickinfo)) {
+              nickinfo=null;
+              ns=true;
+            }
+          }
+ catch (          RuntimeException b) {
+            nickinfo=null;
+            ns=true;
+          }
+          if (ns) {
+            nickinfo=new nickname();
+            database.add(Arg,nickinfo);
+            nickinfo.add(P_NICKNAME,Arg);
+            nickinfo.add(P_STARTING,false);
+            nickinfo.add(P_RUNNING,false);
+            nickinfo.add(P_STOPPING,false);
+            nickinfo.add(P_QUIET,false);
+            nickinfo.add(P_INHOST,"localhost");
+            nickinfo.add(P_OUTHOST,"localhost");
+            Properties Q=props;
+            Q.setProperty("inbound.nickname",(String)nickinfo.get(P_NICKNAME));
+            Q.setProperty("outbound.nickname",(String)nickinfo.get(P_NICKNAME));
+            nickinfo.add(P_PROPERTIES,Q);
+            out.println("OK Nickname set to " + Arg);
+          }
+ else {
+            out.println("ERROR tunnel is active");
+          }
+        }
+ else         if (Command.equals(C_getnick)) {
+          try {
+            nickinfo=(nickname)database.get(Arg);
+            ns=true;
+          }
+ catch (          RuntimeException b) {
+            nns(out);
+          }
+          if (ns) {
+            dk=nickinfo.exists(P_KEYS);
+            ip=nickinfo.exists(P_INPORT);
+            op=nickinfo.exists(P_OUTPORT);
+            out.println("OK Nickname set to " + Arg);
+          }
+        }
+ else         if (Command.equals(C_inport)) {
+          if (ns) {
+            if (tunnelactive(nickinfo)) {
+              out.println("ERROR tunnel is active");
+            }
+ else {
+              int prt;
+              nickinfo.kill(P_INPORT);
+              try {
+                prt=Integer.parseInt(Arg);
+                if (prt > 1 && prt < 65536) {
+                  nickinfo.add(P_INPORT,prt);
+                }
+              }
+ catch (              NumberFormatException nfe) {
+                out.println("ERROR not a number");
+              }
+              ip=nickinfo.exists(P_INPORT);
+              if (ip) {
+                out.println("OK inbound port set");
+              }
+ else {
+                out.println("ERROR port out of range");
+              }
+            }
+          }
+ else {
+            nns(out);
+          }
+        }
+ else         if (Command.equals(C_outport)) {
+          if (ns) {
+            if (tunnelactive(nickinfo)) {
+              out.println("ERROR tunnel is active");
+            }
+ else {
+              int prt;
+              nickinfo.kill(P_OUTPORT);
+              try {
+                prt=Integer.parseInt(Arg);
+                if (prt > 1 && prt < 65536) {
+                  nickinfo.add(P_OUTPORT,prt);
+                }
+              }
+ catch (              NumberFormatException nfe) {
+                out.println("ERROR not a number");
+              }
+              ip=nickinfo.exists(P_OUTPORT);
+              if (ip) {
+                out.println("OK outbound port set");
+              }
+ else {
+                out.println("ERROR port out of range");
+              }
+            }
+          }
+ else {
+            nns(out);
+          }
+        }
+ else         if (Command.equals(C_inhost)) {
+          if (ns) {
+            if (tunnelactive(nickinfo)) {
+              out.println("ERROR tunnel is active");
+            }
+ else {
+              nickinfo.add(P_INHOST,Arg);
+              out.println("OK inhost set");
+            }
+          }
+ else {
+            nns(out);
+          }
+        }
+ else         if (Command.equals(C_outhost)) {
+          if (ns) {
+            if (tunnelactive(nickinfo)) {
+              out.println("ERROR tunnel is active");
+            }
+ else {
+              nickinfo.add(P_OUTHOST,Arg);
+              out.println("OK outhost set");
+            }
+          }
+ else {
+            nns(out);
+          }
+        }
+ else         if (Command.equals(C_show)) {
+          if (ns) {
+            out.print("OK");
+            nickprint(out,nickinfo);
+          }
+ else {
+            nns(out);
+          }
+        }
+ else         if (Command.equals(C_start)) {
+          if (ns && dk && (ip || op)) {
+            if (tunnelactive(nickinfo)) {
+              out.println("ERROR tunnel is active");
+            }
+ else {
+              MUXlisten tunnel;
+              try {
+                tunnel=new MUXlisten(nickinfo,_log);
+                Thread t=new Thread(tunnel);
+                t.start();
+                nickinfo.add(P_STARTING,true);
+                out.println("OK tunnel starting");
+              }
+ catch (              I2PException e) {
+                out.println("ERROR starting tunnel: " + e);
+              }
+catch (              IOException e) {
+                out.println("ERROR starting tunnel: " + e);
+              }
+            }
+          }
+ else {
+            out.println("ERROR tunnel settings incomplete");
+          }
+        }
+ else         if (Command.equals(C_stop)) {
+          if (ns) {
+            if (nickinfo.get(P_RUNNING).equals(true) && nickinfo.get(P_STOPPING).equals(false)) {
+              nickinfo.add(P_STOPPING,true);
+              out.println("OK tunnel stopping");
+            }
+ else {
+              out.println("ERROR tunnel is inactive");
+            }
+          }
+ else {
+            nns(out);
+          }
+        }
+ else         if (Command.equals(C_clear)) {
+          if (ns) {
+            if (tunnelactive(nickinfo)) {
+              out.println("ERROR tunnel is active");
+            }
+ else {
+              database.kill(nickinfo.get(P_NICKNAME));
+              dk=ns=ip=op=false;
+              out.println("OK cleared");
+            }
+          }
+ else {
+            nns(out);
+          }
+        }
+ else         if (Command.equals(C_status)) {
+          if (database.exists(Arg)) {
+            out.print("OK ");
+            ttlpnt(out,database,Arg);
+          }
+ else {
+            nns(out);
+          }
+        }
+ else {
+          out.println("ERROR UNKNOWN COMMAND! Try help");
+        }
+      }
+    }
+    out.println("OK Bye!");
+    server.close();
+  }
+ catch (  IOException ioe) {
+    BOB.warn("IOException on socket listen: " + ioe);
+    ioe.printStackTrace();
+  }
+}

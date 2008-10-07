@@ -1,0 +1,71 @@
+{
+  database=new nickname();
+  int i=0;
+  boolean save=false;
+  Properties props=new Properties();
+  String configLocation=System.getProperty(PROP_CONFIG_LOCATION,"bob.config");
+  SimpleTimer Y=RetransmissionTimer.getInstance();
+  i=Y.hashCode();
+  try {
+    props.load(new FileInputStream(configLocation));
+  }
+ catch (  FileNotFoundException fnfe) {
+    warn("Unable to load up the BOB config file " + configLocation + ", Using defaults.");
+    warn(fnfe.toString());
+    save=true;
+  }
+catch (  IOException ioe) {
+    warn("IOException on BOB config file " + configLocation + ", using defaults.");
+    warn(ioe.toString());
+  }
+  if (!props.containsKey(I2PClient.PROP_TCP_HOST)) {
+    props.setProperty(I2PClient.PROP_TCP_HOST,"localhost");
+  }
+  if (!props.containsKey(I2PClient.PROP_TCP_PORT)) {
+    props.setProperty(I2PClient.PROP_TCP_PORT,"7654");
+  }
+  if (!props.containsKey(I2PClient.PROP_RELIABILITY)) {
+    props.setProperty(I2PClient.PROP_RELIABILITY,I2PClient.PROP_RELIABILITY_BEST_EFFORT);
+  }
+  if (!props.containsKey(PROP_BOB_PORT)) {
+    props.setProperty(PROP_BOB_PORT,"2827");
+  }
+  if (!props.containsKey("inbound.length")) {
+    props.setProperty("inbound.length","1");
+  }
+  if (!props.containsKey("outbound.length")) {
+    props.setProperty("outbound.length","1");
+  }
+  if (!props.containsKey("inbound.lengthVariance")) {
+    props.setProperty("inbound.lengthVariance","0");
+  }
+  if (!props.containsKey("outbound.lengthVariance")) {
+    props.setProperty("outbound.lengthVariance","0");
+  }
+  if (!props.containsKey(PROP_BOB_HOST)) {
+    props.setProperty(PROP_BOB_HOST,"localhost");
+  }
+  if (save) {
+    try {
+      warn("Writing new defaults file " + configLocation);
+      props.store(new FileOutputStream(configLocation),configLocation);
+    }
+ catch (    IOException ioe) {
+      warn("IOException on BOB config file " + configLocation + ", "+ ioe);
+    }
+  }
+  try {
+    ServerSocket listener=new ServerSocket(Integer.parseInt(props.getProperty(PROP_BOB_PORT)),10,InetAddress.getByName(props.getProperty(PROP_BOB_HOST)));
+    Socket server;
+    while ((i++ < maxConnections) || (maxConnections == 0)) {
+      server=listener.accept();
+      doCMDS conn_c=new doCMDS(server,props,database,_log);
+      Thread t=new Thread(conn_c);
+      t.start();
+    }
+  }
+ catch (  IOException ioe) {
+    warn("IOException on socket listen: " + ioe);
+    ioe.printStackTrace();
+  }
+}

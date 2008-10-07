@@ -1,0 +1,35 @@
+{
+  tg=new ThreadGroup(N);
+  info.add("RUNNING",true);
+  info.add("STARTING",false);
+  if (info.exists("OUTPORT")) {
+    I2Plistener conn=new I2Plistener(socketManager,info,_log);
+    Thread t=new Thread(tg,conn,"BOBI2Plistener " + N);
+    t.start();
+  }
+  if (info.exists("INPORT")) {
+    TCPlistener conn=new TCPlistener(socketManager,info,_log);
+    Thread q=new Thread(tg,conn,"BOBTCPlistener" + N);
+    q.start();
+  }
+  while (info.get("STOPPING").equals(false)) {
+    try {
+      Thread.sleep(1000);
+    }
+ catch (    InterruptedException e) {
+    }
+  }
+  info.add("RUNNING",false);
+  while (tg.activeCount() + tg.activeGroupCount() != 0) {
+    try {
+      Thread.sleep(1000);
+    }
+ catch (    InterruptedException ex) {
+    }
+  }
+  socketManager.destroySocketManager();
+  tg.destroy();
+  tg=null;
+  info.add("STOPPING",false);
+  info.add("STARTING",false);
+}

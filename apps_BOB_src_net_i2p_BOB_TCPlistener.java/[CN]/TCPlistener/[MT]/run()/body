@@ -1,0 +1,44 @@
+{
+  boolean g=false;
+  if (info.exists("OUTPORT")) {
+    tgwatch=2;
+  }
+  try {
+    ServerSocket listener=new ServerSocket(Integer.parseInt(info.get("INPORT").toString()),backlog,InetAddress.getByName(info.get("INHOST").toString()));
+    Socket server=new Socket();
+    listener.setSoTimeout(1000);
+    while (info.get("RUNNING").equals(true)) {
+      try {
+        server=listener.accept();
+        g=true;
+      }
+ catch (      SocketTimeoutException ste) {
+        g=false;
+      }
+      if (g) {
+        TCPtoI2P conn_c=new TCPtoI2P(socketManager,server,info);
+        Thread t=new Thread(conn_c,"BOBTCPtoI2P");
+        t.start();
+        g=false;
+      }
+    }
+    listener.close();
+  }
+ catch (  IOException ioe) {
+  }
+  while (Thread.activeCount() > tgwatch) {
+    try {
+      Thread.sleep(1000);
+    }
+ catch (    Exception e) {
+    }
+  }
+  I2PSession session=socketManager.getSession();
+  if (session != null) {
+    try {
+      session.destroySession();
+    }
+ catch (    I2PSessionException ex) {
+    }
+  }
+}
