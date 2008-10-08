@@ -28,6 +28,19 @@
             }
           }
         }
+ else         if (Command.equals(C_getdest)) {
+          if (ns) {
+            if (dk) {
+              out.println("OK " + nickinfo.get(P_DEST));
+            }
+ else {
+              out.println("ERROR keys not set.");
+            }
+          }
+ else {
+            nns(out);
+          }
+        }
  else         if (Command.equals(C_list)) {
           for (int i=0; i < database.getcount(); i++) {
             try {
@@ -55,7 +68,8 @@
                 d=I2PClientFactory.createClient().createDestination(prikey);
                 dk=true;
                 nickinfo.add(P_KEYS,prikey.toByteArray());
-                out.println("OK " + d.toBase64());
+                nickinfo.add(P_DEST,d.toBase64());
+                out.println("OK " + nickinfo.get(P_DEST));
               }
  catch (              IOException ioe) {
                 BOB.error("Error generating keys" + ioe);
@@ -148,6 +162,30 @@ catch (              I2PException ipe) {
           }
  else {
             out.println("ERROR tunnel is active");
+          }
+        }
+ else         if (Command.equals(C_option)) {
+          if (ns) {
+            if (tunnelactive(nickinfo)) {
+              out.println("ERROR tunnel is active");
+            }
+ else {
+              StringTokenizer otoken=new StringTokenizer(Arg,"=");
+              if (otoken.countTokens() != 2) {
+                out.println("ERROR to many or no options.");
+              }
+ else {
+                String pname=otoken.nextToken();
+                String pval=otoken.nextToken();
+                Properties Q=(Properties)nickinfo.get(P_PROPERTIES);
+                Q.setProperty(pname,pval);
+                nickinfo.add(P_PROPERTIES,Q);
+                out.println("OK " + pname + " set to "+ pval);
+              }
+            }
+          }
+ else {
+            nns(out);
           }
         }
  else         if (Command.equals(C_getnick)) {
@@ -272,8 +310,8 @@ catch (              I2PException ipe) {
               try {
                 tunnel=new MUXlisten(nickinfo,_log);
                 Thread t=new Thread(tunnel);
-                t.start();
                 nickinfo.add(P_STARTING,true);
+                t.start();
                 out.println("OK tunnel starting");
               }
  catch (              I2PException e) {
