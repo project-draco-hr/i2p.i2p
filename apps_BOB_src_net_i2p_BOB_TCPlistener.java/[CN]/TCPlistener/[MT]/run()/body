@@ -1,5 +1,7 @@
 {
   boolean g=false;
+  database.getReadLock();
+  info.getReadLock();
   if (info.exists("OUTPORT")) {
     tgwatch=2;
   }
@@ -7,7 +9,15 @@
     ServerSocket listener=new ServerSocket(Integer.parseInt(info.get("INPORT").toString()),backlog,InetAddress.getByName(info.get("INHOST").toString()));
     Socket server=new Socket();
     listener.setSoTimeout(1000);
-    while (info.get("RUNNING").equals(Boolean.TRUE)) {
+    info.releaseReadLock();
+    database.releaseReadLock();
+    boolean spin=true;
+    while (spin) {
+      database.getReadLock();
+      info.getReadLock();
+      spin=info.get("RUNNING").equals(Boolean.TRUE);
+      info.releaseReadLock();
+      database.releaseReadLock();
       try {
         server=listener.accept();
         g=true;
@@ -16,7 +26,7 @@
         g=false;
       }
       if (g) {
-        TCPtoI2P conn_c=new TCPtoI2P(socketManager,server,info);
+        TCPtoI2P conn_c=new TCPtoI2P(socketManager,server,info,database);
         Thread t=new Thread(conn_c,"BOBTCPtoI2P");
         t.start();
         g=false;

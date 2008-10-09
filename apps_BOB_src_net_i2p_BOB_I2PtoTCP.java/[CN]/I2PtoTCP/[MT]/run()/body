@@ -1,18 +1,25 @@
 {
   try {
-    sock=new Socket(info.get("OUTHOST").toString(),Integer.parseInt(info.get("OUTPORT").toString()));
+    database.getReadLock();
+    info.getReadLock();
+    String host=info.get("OUTHOST").toString();
+    int port=Integer.parseInt(info.get("OUTPORT").toString());
+    boolean tell=info.get("QUIET").equals(Boolean.FALSE);
+    info.releaseReadLock();
+    database.releaseReadLock();
+    sock=new Socket(host,port);
     InputStream in=sock.getInputStream();
     OutputStream out=sock.getOutputStream();
     InputStream Iin=I2P.getInputStream();
     OutputStream Iout=I2P.getOutputStream();
     I2P.setReadTimeout(0);
-    if (info.get("QUIET").equals(Boolean.FALSE)) {
+    if (tell) {
       out.write(I2P.getPeerDestination().toBase64().getBytes());
       out.write(10);
       out.flush();
     }
-    TCPio conn_c=new TCPio(in,Iout,info);
-    TCPio conn_a=new TCPio(Iin,out,info);
+    TCPio conn_c=new TCPio(in,Iout,info,database);
+    TCPio conn_a=new TCPio(Iin,out,info,database);
     Thread t=new Thread(conn_c,"TCPioA");
     Thread q=new Thread(conn_a,"TCPioB");
     t.start();

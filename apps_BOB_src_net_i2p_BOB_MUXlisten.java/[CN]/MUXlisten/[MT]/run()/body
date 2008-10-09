@@ -1,35 +1,64 @@
 {
-  tg=new ThreadGroup(N);
+  this.database.getWriteLock();
+  this.info.getWriteLock();
   info.add("RUNNING",Boolean.TRUE);
   info.add("STARTING",Boolean.FALSE);
-  if (info.exists("OUTPORT")) {
-    I2Plistener conn=new I2Plistener(socketManager,info,_log);
-    Thread t=new Thread(tg,conn,"BOBI2Plistener " + N);
-    t.start();
+  this.info.releaseWriteLock();
+  this.database.releaseWriteLock();
+  try {
+    tg=new ThreadGroup(N);
+    this.database.getReadLock();
+    this.info.getReadLock();
+    boolean go_out=info.exists("OUTPORT");
+    boolean come_in=info.exists("INPORT");
+    this.database.releaseReadLock();
+    this.info.releaseReadLock();
+    if (go_out) {
+      I2Plistener conn=new I2Plistener(socketManager,info,database,_log);
+      Thread t=new Thread(tg,conn,"BOBI2Plistener " + N);
+      t.start();
+    }
+    if (come_in) {
+      TCPlistener conn=new TCPlistener(socketManager,info,database,_log);
+      Thread q=new Thread(tg,conn,"BOBTCPlistener" + N);
+      q.start();
+    }
+    boolean spin=true;
+    while (spin) {
+      try {
+        Thread.sleep(1000);
+      }
+ catch (      InterruptedException e) {
+      }
+      this.database.getReadLock();
+      this.info.getReadLock();
+      spin=info.get("STOPPING").equals(Boolean.FALSE);
+      this.database.releaseReadLock();
+      this.info.releaseReadLock();
+    }
+    this.database.getWriteLock();
+    this.info.getWriteLock();
+    info.add("RUNNING",Boolean.FALSE);
+    this.info.releaseWriteLock();
+    this.database.releaseWriteLock();
+    while (tg.activeCount() + tg.activeGroupCount() != 0) {
+      try {
+        Thread.sleep(1000);
+      }
+ catch (      InterruptedException ex) {
+      }
+    }
+    tg.destroy();
+    tg=null;
   }
-  if (info.exists("INPORT")) {
-    TCPlistener conn=new TCPlistener(socketManager,info,_log);
-    Thread q=new Thread(tg,conn,"BOBTCPlistener" + N);
-    q.start();
-  }
-  while (info.get("STOPPING").equals(Boolean.FALSE)) {
-    try {
-      Thread.sleep(1000);
-    }
- catch (    InterruptedException e) {
-    }
-  }
-  info.add("RUNNING",Boolean.FALSE);
-  while (tg.activeCount() + tg.activeGroupCount() != 0) {
-    try {
-      Thread.sleep(1000);
-    }
- catch (    InterruptedException ex) {
-    }
+ catch (  Exception e) {
   }
   socketManager.destroySocketManager();
-  tg.destroy();
-  tg=null;
-  info.add("STOPPING",Boolean.FALSE);
+  this.database.getWriteLock();
+  this.info.getWriteLock();
   info.add("STARTING",Boolean.FALSE);
+  info.add("STOPPING",Boolean.FALSE);
+  info.add("RUNNING",Boolean.FALSE);
+  this.info.releaseWriteLock();
+  this.database.releaseWriteLock();
 }
