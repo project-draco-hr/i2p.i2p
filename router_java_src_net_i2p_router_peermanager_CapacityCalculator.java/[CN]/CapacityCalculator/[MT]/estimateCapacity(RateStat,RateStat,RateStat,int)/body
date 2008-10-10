@@ -4,6 +4,10 @@
   Rate curFailed=failedStat.getRate(period);
   long eventCount=0;
   if (curAccepted != null)   eventCount=curAccepted.getCurrentEventCount() + curAccepted.getLastEventCount();
+  if (eventCount > 0) {
+    long rejected=curRejected.getCurrentEventCount() + curRejected.getLastEventCount();
+    eventCount=eventCount * eventCount / (eventCount + rejected);
+  }
   double stretch=((double)ESTIMATE_PERIOD) / period;
   double val=eventCount * stretch;
   long failed=0;
@@ -11,7 +15,6 @@
   if (failed > 0) {
     val-=failed * stretch;
   }
-  val-=stretch * (curRejected.getCurrentEventCount() + curRejected.getLastEventCount());
   val+=GROWTH_FACTOR;
   if (val >= 0) {
     return val;
