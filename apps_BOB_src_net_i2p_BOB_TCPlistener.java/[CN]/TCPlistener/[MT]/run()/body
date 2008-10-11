@@ -1,5 +1,6 @@
 {
   boolean g=false;
+  boolean spin=true;
   database.getReadLock();
   info.getReadLock();
   if (info.exists("OUTPORT")) {
@@ -11,7 +12,6 @@
     listener.setSoTimeout(1000);
     info.releaseReadLock();
     database.releaseReadLock();
-    boolean spin=true;
     while (spin) {
       database.getReadLock();
       info.getReadLock();
@@ -35,6 +35,19 @@
     listener.close();
   }
  catch (  IOException ioe) {
+    database.getReadLock();
+    info.getReadLock();
+    spin=info.get("RUNNING").equals(Boolean.TRUE);
+    info.releaseReadLock();
+    database.releaseReadLock();
+    if (spin) {
+      database.getWriteLock();
+      info.getWriteLock();
+      info.add("STOPPING",new Boolean(true));
+      info.add("RUNNING",new Boolean(false));
+      info.releaseWriteLock();
+      database.releaseWriteLock();
+    }
   }
   while (Thread.activeCount() > tgwatch) {
     try {
