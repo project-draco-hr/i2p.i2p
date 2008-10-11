@@ -6,17 +6,21 @@
   String configLocation=System.getProperty(PROP_CONFIG_LOCATION,"bob.config");
   SimpleTimer Y=RetransmissionTimer.getInstance();
   i=Y.hashCode();
-  try {
-    props.load(new FileInputStream(configLocation));
-  }
- catch (  FileNotFoundException fnfe) {
-    warn("Unable to load up the BOB config file " + configLocation + ", Using defaults.");
-    warn(fnfe.toString());
-    save=true;
-  }
-catch (  IOException ioe) {
-    warn("IOException on BOB config file " + configLocation + ", using defaults.");
-    warn(ioe.toString());
+{
+    try {
+      FileInputStream fi=new FileInputStream(configLocation);
+      props.load(fi);
+      fi.close();
+    }
+ catch (    FileNotFoundException fnfe) {
+      warn("Unable to load up the BOB config file " + configLocation + ", Using defaults.");
+      warn(fnfe.toString());
+      save=true;
+    }
+catch (    IOException ioe) {
+      warn("IOException on BOB config file " + configLocation + ", using defaults.");
+      warn(ioe.toString());
+    }
   }
   if (!props.containsKey(I2PClient.PROP_TCP_HOST)) {
     props.setProperty(I2PClient.PROP_TCP_HOST,"localhost");
@@ -48,7 +52,9 @@ catch (  IOException ioe) {
   if (save) {
     try {
       warn("Writing new defaults file " + configLocation);
-      props.store(new FileOutputStream(configLocation),configLocation);
+      FileOutputStream fo=new FileOutputStream(configLocation);
+      props.store(fo,configLocation);
+      fo.close();
     }
  catch (    IOException ioe) {
       warn("IOException on BOB config file " + configLocation + ", "+ ioe);
