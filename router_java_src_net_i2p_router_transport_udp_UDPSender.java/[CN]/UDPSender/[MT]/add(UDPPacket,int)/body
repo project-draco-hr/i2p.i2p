@@ -1,43 +1,25 @@
 {
-  long expiration=_context.clock().now() + blockTime;
   int remaining=-1;
   long lifetime=-1;
   boolean added=false;
   int removed=0;
   while ((_keepRunning) && (remaining < 0)) {
-    try {
 synchronized (_outboundQueue) {
-        UDPPacket head=null;
-        if (_outboundQueue.size() > 0) {
-          head=(UDPPacket)_outboundQueue.get(0);
-          while (head.getLifetime() > MAX_HEAD_LIFETIME) {
-            _outboundQueue.remove(0);
-            removed++;
-            if (_outboundQueue.size() > 0)             head=(UDPPacket)_outboundQueue.get(0);
- else             break;
-          }
-        }
-        if (true || (_outboundQueue.size() < MAX_QUEUED)) {
-          lifetime=packet.getLifetime();
-          _outboundQueue.add(packet);
-          added=true;
-          remaining=_outboundQueue.size();
-          _outboundQueue.notifyAll();
-        }
- else {
-          long remainingTime=expiration - _context.clock().now();
-          if (remainingTime > 0) {
-            _outboundQueue.wait(remainingTime);
-          }
- else {
-            remaining=_outboundQueue.size();
-            _outboundQueue.notifyAll();
-          }
-          lifetime=packet.getLifetime();
+      UDPPacket head=null;
+      if (_outboundQueue.size() > 0) {
+        head=(UDPPacket)_outboundQueue.get(0);
+        while (head.getLifetime() > MAX_HEAD_LIFETIME) {
+          _outboundQueue.remove(0);
+          removed++;
+          if (_outboundQueue.size() > 0)           head=(UDPPacket)_outboundQueue.get(0);
+ else           break;
         }
       }
-    }
- catch (    InterruptedException ie) {
+      lifetime=packet.getLifetime();
+      _outboundQueue.add(packet);
+      added=true;
+      remaining=_outboundQueue.size();
+      _outboundQueue.notifyAll();
     }
   }
   _context.statManager().addRateData("udp.sendQueueSize",remaining,lifetime);
