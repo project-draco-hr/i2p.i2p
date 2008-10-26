@@ -7,6 +7,9 @@ synchronized (lock) {
       }
       return;
     }
+    int pass=0;
+    int fail=0;
+    long totalTime=0;
     int cnt=countPing ? CPING_COUNT : PING_COUNT;
     StringBuffer pingResults=new StringBuffer(2 * cnt + destination.length() + 3);
     for (int i=0; i < cnt; i++) {
@@ -22,8 +25,27 @@ synchronized (lock) {
         }
       }
  else {
-        pingResults.append(sent ? "+ " : "- ");
+        if (reportTimes) {
+          if (sent) {
+            pass++;
+            long rtt=System.currentTimeMillis() - lastPingTime;
+            totalTime+=rtt;
+            l.log((i + 1) + ": + " + rtt+ " ms");
+          }
+ else {
+            fail++;
+            l.log((i + 1) + ": -");
+          }
+        }
+ else {
+          pingResults.append(sent ? "+ " : "- ");
+        }
       }
+    }
+    if (reportTimes) {
+      pingResults.append("  ").append(pass).append(" received ");
+      if (pass > 0)       pingResults.append("(average time ").append(totalTime / pass).append(" ms) ");
+      pingResults.append("and ").append(fail).append(" lost for destination: ");
     }
     pingResults.append("  ").append(destination);
 synchronized (lock) {
