@@ -1,9 +1,14 @@
 {
+  long delay=getContext().clock().now() - _sendTime;
   if (_message instanceof DatabaseStoreMessage) {
-    getContext().statManager().addRateData("netDb.floodfillVerifyOK",getContext().clock().now() - _sendTime,0);
+    getContext().profileManager().dbLookupSuccessful(_target,delay);
+    getContext().statManager().addRateData("netDb.floodfillVerifyOK",delay,0);
   }
  else {
-    getContext().statManager().addRateData("netDb.floodfillVerifyFail",getContext().clock().now() - _sendTime,0);
+    if (_message instanceof DatabaseSearchReplyMessage) {
+      getContext().profileManager().dbLookupReply(_target,0,((DatabaseSearchReplyMessage)_message).getNumReplies(),0,0,delay);
+    }
+    getContext().statManager().addRateData("netDb.floodfillVerifyFail",delay,0);
     resend();
   }
 }

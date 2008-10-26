@@ -13,6 +13,9 @@ synchronized (_out) {
   }
   int timeRemaining=(int)(_origExpiration - getContext().clock().now());
   if (_log.shouldLog(Log.INFO))   _log.info(getJobId() + ": Floodfill search for " + _key.toBase64()+ " failed with "+ timeRemaining+ " remaining after "+ (System.currentTimeMillis() - _created));
+synchronized (_unheardFrom) {
+    for (Iterator iter=_unheardFrom.iterator(); iter.hasNext(); )     getContext().profileManager().dbLookupFailed((Hash)iter.next());
+  }
   _facade.complete(_key);
   getContext().statManager().addRateData("netDb.failedTime",System.currentTimeMillis() - _created,System.currentTimeMillis() - _created);
 synchronized (_onFailed) {
