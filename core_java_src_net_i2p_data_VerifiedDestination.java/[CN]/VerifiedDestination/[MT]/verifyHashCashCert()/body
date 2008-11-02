@@ -1,0 +1,22 @@
+{
+  String hcs=new String(_certificate.getPayload());
+  int end1=0;
+  for (int i=0; i < 3; i++) {
+    end1=1 + hcs.indexOf(':',end1);
+    if (end1 < 0)     return false;
+  }
+  int start2=hcs.indexOf(':',end1);
+  if (start2 < 0)   return false;
+  hcs=hcs.substring(0,end1) + _publicKey.toBase64() + _signingKey.toBase64()+ hcs.substring(start2);
+  HashCash hc;
+  try {
+    hc=new HashCash(hcs);
+  }
+ catch (  IllegalArgumentException iae) {
+    return false;
+  }
+catch (  NoSuchAlgorithmException nsae) {
+    return false;
+  }
+  return hc.getValue() >= MIN_HASHCASH_EFFORT;
+}
