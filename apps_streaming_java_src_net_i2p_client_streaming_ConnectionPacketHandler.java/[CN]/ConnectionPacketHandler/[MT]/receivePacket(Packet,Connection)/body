@@ -26,10 +26,14 @@
     return;
   }
   if (packet.isFlagSet(Packet.FLAG_MAX_PACKET_SIZE_INCLUDED)) {
-    if (packet.getOptionalMaxSize() < con.getOptions().getMaxMessageSize()) {
-      if (_log.shouldLog(Log.INFO))       _log.info("Reducing our max message size to " + packet.getOptionalMaxSize() + " from "+ con.getOptions().getMaxMessageSize());
-      con.getOptions().setMaxMessageSize(packet.getOptionalMaxSize());
-      con.getOutputStream().setBufferSize(packet.getOptionalMaxSize());
+    int size=packet.getOptionalMaxSize();
+    if (size < ConnectionOptions.MIN_MESSAGE_SIZE) {
+      size=ConnectionOptions.MIN_MESSAGE_SIZE;
+    }
+    if (size < con.getOptions().getMaxMessageSize()) {
+      if (_log.shouldLog(Log.INFO))       _log.info("Reducing our max message size to " + size + " from "+ con.getOptions().getMaxMessageSize());
+      con.getOptions().setMaxMessageSize(size);
+      con.getOutputStream().setBufferSize(size);
     }
   }
   con.packetReceived();
