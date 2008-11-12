@@ -6,18 +6,24 @@
   buf.append('/');
   if (_sendStreamId > 0)   buf.append(Packet.toId(_sendStreamId));
  else   buf.append("unknown");
+  if (_isInbound)   buf.append(" from ");
+ else   buf.append(" to ");
+  if (_remotePeerSet)   buf.append(_remotePeer.calculateHash().toBase64().substring(0,4));
+ else   buf.append("unknown");
+  buf.append(" up ").append(DataHelper.formatDuration(_context.clock().now() - _createdOn));
   buf.append(" wsize: ").append(_options.getWindowSize());
   buf.append(" cwin: ").append(_congestionWindowEnd - _highestAckedThrough);
   buf.append(" rtt: ").append(_options.getRTT());
   buf.append(" rto: ").append(_options.getRTO());
   buf.append(" unacked out: ").append(_outboundPackets.size()).append(" ");
   buf.append("unacked in: ").append(getUnackedPacketsReceived());
+  int missing=0;
   if (_inputStream != null) {
-    buf.append(" [high ");
-    buf.append(_inputStream.getHighestBlockId());
     long nacks[]=_inputStream.getNacks();
-    if (nacks != null)     for (int i=0; i < nacks.length; i++)     buf.append(" ").append(nacks[i]);
-    buf.append("]");
+    if (nacks != null) {
+      missing=nacks.length;
+      buf.append(" [").append(missing).append(" missing]");
+    }
   }
   if (getResetSent())   buf.append(" reset sent");
   if (getResetReceived())   buf.append(" reset received");
@@ -28,7 +34,8 @@
     buf.append(" ago");
   }
   if (getCloseReceivedOn() > 0)   buf.append(" close received");
-  buf.append(" acked: ").append(getAckedPackets());
+  buf.append(" sent: ").append(1 + _lastSendId);
+  if (_inputStream != null)   buf.append(" rcvd: ").append(1 + _inputStream.getHighestBlockId() - missing);
   buf.append(" maxWin ").append(getOptions().getMaxWindowSize());
   buf.append(" MTU ").append(getOptions().getMaxMessageSize());
   buf.append("]");

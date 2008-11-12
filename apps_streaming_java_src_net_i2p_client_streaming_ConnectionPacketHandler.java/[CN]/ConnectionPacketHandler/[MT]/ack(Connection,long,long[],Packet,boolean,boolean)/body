@@ -1,5 +1,6 @@
 {
   if (ackThrough < 0)   return false;
+  boolean firstAck=isNew && con.getHighestAckedThrough() < 0;
   int numResends=0;
   List acked=null;
   if ((packet != null) && (packet.getSendStreamId() > 0) && (packet.getReceiveStreamId() > 0)&& (con != null)&& (con.getSendStreamId() > 0)&& (con.getReceiveStreamId() > 0)&& (!DataHelper.eq(packet.getSendStreamId(),Packet.STREAM_ID_UNKNOWN))&& (!DataHelper.eq(packet.getReceiveStreamId(),Packet.STREAM_ID_UNKNOWN))&& (!DataHelper.eq(con.getSendStreamId(),Packet.STREAM_ID_UNKNOWN))&& (!DataHelper.eq(con.getReceiveStreamId(),Packet.STREAM_ID_UNKNOWN)))   acked=con.ackPackets(ackThrough,nacks);
@@ -21,6 +22,10 @@
     }
     if (highestRTT > 0) {
       con.getOptions().updateRTT(highestRTT);
+      if (firstAck) {
+        if (con.isInbound())         _context.statManager().addRateData("stream.con.initialRTT.in",highestRTT,0);
+ else         _context.statManager().addRateData("stream.con.initialRTT.out",highestRTT,0);
+      }
     }
     _context.statManager().addRateData("stream.con.packetsAckedPerMessageReceived",acked.size(),highestRTT);
   }
