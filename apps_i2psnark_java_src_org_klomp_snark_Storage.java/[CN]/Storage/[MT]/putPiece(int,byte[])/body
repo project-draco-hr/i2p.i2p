@@ -4,14 +4,8 @@
   boolean correctHash=metainfo.checkPiece(piece,bs,0,length);
   if (listener != null)   listener.storageChecked(this,piece,correctHash);
   if (!correctHash)   return false;
-  boolean complete;
 synchronized (bitfield) {
     if (bitfield.get(piece))     return true;
- else {
-      bitfield.set(piece);
-      needed--;
-      complete=needed == 0;
-    }
   }
   long start=(long)piece * (long)metainfo.getPieceLength(0);
   int i=0;
@@ -26,7 +20,8 @@ synchronized (bitfield) {
   while (written < length) {
     int need=length - written;
     int len=(start + need < raflen) ? need : (int)(raflen - start);
-synchronized (rafs[i]) {
+synchronized (RAFlock[i]) {
+      checkRAF(i);
       rafs[i].seek(start);
       rafs[i].write(bs,off + written,len);
     }
@@ -38,16 +33,24 @@ synchronized (rafs[i]) {
     }
   }
   changed=true;
+  boolean complete=false;
+synchronized (bitfield) {
+    if (!bitfield.get(piece)) {
+      bitfield.set(piece);
+      needed--;
+      complete=needed == 0;
+    }
+  }
   if (complete) {
     needed=metainfo.getPieces();
     bitfield=new BitField(needed);
     checkCreateFiles();
     if (needed > 0) {
-      listener.setWantedPieces(this);
+      if (listener != null)       listener.setWantedPieces(this);
       Snark.debug("WARNING: Not really done, missing " + needed + " pieces",Snark.WARNING);
     }
  else {
-      SnarkManager.instance().saveTorrentStatus(metainfo,bitfield);
+      if (listener != null)       listener.storageCompleted(this);
     }
   }
   return true;
