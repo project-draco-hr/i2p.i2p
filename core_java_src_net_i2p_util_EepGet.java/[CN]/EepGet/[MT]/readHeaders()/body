@@ -6,7 +6,6 @@
   int responseCode=handleStatus(buf.toString());
   boolean redirect=false;
   if (_log.shouldLog(Log.DEBUG))   _log.debug("rc: " + responseCode + " for "+ _actualURL);
-  if (_transferFailed)   _log.error("Already failed for " + _actualURL);
   boolean rcOk=false;
 switch (responseCode) {
 case 200:
@@ -33,7 +32,10 @@ _bytesRemaining=0;
 _keepFetching=false;
 _notModified=true;
 return;
+case 403:
 case 404:
+case 409:
+case 503:
 _keepFetching=false;
 _transferFailed=true;
 return;
@@ -41,8 +43,11 @@ case 416:
 _bytesRemaining=0;
 _keepFetching=false;
 return;
+case 504:
+throw new IOException("HTTP Proxy timeout");
 default :
 rcOk=false;
+_keepFetching=false;
 _transferFailed=true;
 }
 _etag=null;
