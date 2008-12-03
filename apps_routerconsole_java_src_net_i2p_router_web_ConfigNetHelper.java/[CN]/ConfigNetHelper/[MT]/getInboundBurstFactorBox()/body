@@ -1,19 +1,7 @@
 {
-  String rate=_context.getProperty(PROP_INBOUND_BURST_KBPS);
-  String burst=_context.getProperty(PROP_INBOUND_BURST);
   int numSeconds=1;
-  if ((burst != null) && (rate != null)) {
-    int rateKBps=0;
-    int burstKB=0;
-    try {
-      rateKBps=Integer.parseInt(rate);
-      burstKB=Integer.parseInt(burst);
-    }
- catch (    NumberFormatException nfe) {
-    }
-    if ((rateKBps > 0) && (burstKB > 0)) {
-      numSeconds=burstKB / rateKBps;
-    }
-  }
+  int rateKBps=_context.bandwidthLimiter().getInboundBurstKBytesPerSecond();
+  int burstKB=_context.bandwidthLimiter().getInboundBurstBytes() * 1024;
+  if ((rateKBps > 0) && (burstKB > 0))   numSeconds=burstKB / rateKBps;
   return getBurstFactor(numSeconds,"inboundburstfactor");
 }
