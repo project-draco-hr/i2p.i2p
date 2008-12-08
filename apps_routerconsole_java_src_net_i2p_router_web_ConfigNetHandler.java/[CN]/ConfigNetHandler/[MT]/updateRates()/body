@@ -1,22 +1,22 @@
 {
   boolean updated=false;
   if ((_inboundRate != null) && (_inboundRate.length() > 0)) {
-    _context.router().setConfigSetting(ConfigNetHelper.PROP_INBOUND_KBPS,_inboundRate);
+    _context.router().setConfigSetting(FIFOBandwidthRefiller.PROP_INBOUND_BANDWIDTH,_inboundRate);
     updated=true;
   }
   if ((_outboundRate != null) && (_outboundRate.length() > 0)) {
-    _context.router().setConfigSetting(ConfigNetHelper.PROP_OUTBOUND_KBPS,_outboundRate);
+    _context.router().setConfigSetting(FIFOBandwidthRefiller.PROP_OUTBOUND_BANDWIDTH,_outboundRate);
     updated=true;
   }
   if ((_inboundBurstRate != null) && (_inboundBurstRate.length() > 0)) {
-    _context.router().setConfigSetting(ConfigNetHelper.PROP_INBOUND_BURST_KBPS,_inboundBurstRate);
+    _context.router().setConfigSetting(FIFOBandwidthRefiller.PROP_INBOUND_BURST_BANDWIDTH,_inboundBurstRate);
     updated=true;
   }
   if ((_outboundBurstRate != null) && (_outboundBurstRate.length() > 0)) {
-    _context.router().setConfigSetting(ConfigNetHelper.PROP_OUTBOUND_BURST_KBPS,_outboundBurstRate);
+    _context.router().setConfigSetting(FIFOBandwidthRefiller.PROP_OUTBOUND_BURST_BANDWIDTH,_outboundBurstRate);
     updated=true;
   }
-  String inBurstRate=_context.router().getConfigSetting(ConfigNetHelper.PROP_INBOUND_BURST_KBPS);
+  String inBurstRate=_context.router().getConfigSetting(FIFOBandwidthRefiller.PROP_INBOUND_BURST_BANDWIDTH);
   if (_inboundBurst != null) {
     int rateKBps=0;
     int burstSeconds=0;
@@ -28,11 +28,11 @@
     }
     if ((rateKBps > 0) && (burstSeconds > 0)) {
       int kb=rateKBps * burstSeconds;
-      _context.router().setConfigSetting(ConfigNetHelper.PROP_INBOUND_BURST,"" + kb);
+      _context.router().setConfigSetting(FIFOBandwidthRefiller.PROP_INBOUND_BANDWIDTH_PEAK,"" + kb);
       updated=true;
     }
   }
-  String outBurstRate=_context.router().getConfigSetting(ConfigNetHelper.PROP_OUTBOUND_BURST_KBPS);
+  String outBurstRate=_context.router().getConfigSetting(FIFOBandwidthRefiller.PROP_OUTBOUND_BURST_BANDWIDTH);
   if (_outboundBurst != null) {
     int rateKBps=0;
     int burstSeconds=0;
@@ -44,9 +44,10 @@
     }
     if ((rateKBps > 0) && (burstSeconds > 0)) {
       int kb=rateKBps * burstSeconds;
-      _context.router().setConfigSetting(ConfigNetHelper.PROP_OUTBOUND_BURST,"" + kb);
+      _context.router().setConfigSetting(FIFOBandwidthRefiller.PROP_OUTBOUND_BANDWIDTH_PEAK,"" + kb);
       updated=true;
     }
   }
-  if (updated && !_ratesOnly)   addFormNotice("Updated bandwidth limits");
+  if (updated && !_ratesOnly)   _context.bandwidthLimiter().reinitialize();
+  addFormNotice("Updated bandwidth limits");
 }
