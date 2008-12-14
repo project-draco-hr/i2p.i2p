@@ -1,10 +1,17 @@
 {
-  long inactivityCutoff=_context.clock().now() - EXPIRE_TIMEOUT;
+  if (haveCapacity())   _expireTimeout=Math.min(_expireTimeout + 15 * 1000,EXPIRE_TIMEOUT);
+ else   _expireTimeout=Math.max(_expireTimeout - 45 * 1000,MIN_EXPIRE_TIMEOUT);
+  long shortInactivityCutoff=_context.clock().now() - _expireTimeout;
+  long longInactivityCutoff=_context.clock().now() - EXPIRE_TIMEOUT;
+  long pingCutoff=_context.clock().now() - (2 * 60 * 60* 1000);
   _expireBuffer.clear();
 synchronized (_expirePeers) {
     int sz=_expirePeers.size();
     for (int i=0; i < sz; i++) {
       PeerState peer=(PeerState)_expirePeers.get(i);
+      long inactivityCutoff;
+      if (peer.getWeRelayToThemAs() > 0 || peer.getIntroducerTime() > pingCutoff)       inactivityCutoff=longInactivityCutoff;
+ else       inactivityCutoff=shortInactivityCutoff;
       if ((peer.getLastReceiveTime() < inactivityCutoff) && (peer.getLastSendTime() < inactivityCutoff)) {
         _expireBuffer.add(peer);
         _expirePeers.remove(i);

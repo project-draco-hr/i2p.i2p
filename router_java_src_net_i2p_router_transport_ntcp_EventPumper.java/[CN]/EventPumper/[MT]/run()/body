@@ -29,7 +29,8 @@
           int failsafeWrites=0;
           int failsafeCloses=0;
           int failsafeInvalid=0;
-          long expireIdleWriteTime=10 * 60 * 1000l;
+          if (_transport.haveCapacity())           _expireIdleWriteTime=Math.min(_expireIdleWriteTime + 1000,MAX_EXPIRE_IDLE_TIME);
+ else           _expireIdleWriteTime=Math.max(_expireIdleWriteTime - 3000,MIN_EXPIRE_IDLE_TIME);
           for (Iterator iter=all.iterator(); iter.hasNext(); ) {
             try {
               SelectionKey key=(SelectionKey)iter.next();
@@ -46,7 +47,7 @@
                 key.interestOps(SelectionKey.OP_WRITE | key.interestOps());
                 failsafeWrites++;
               }
-              if (con.getTimeSinceSend() > expireIdleWriteTime && con.getTimeSinceReceive() > expireIdleWriteTime) {
+              if (con.getTimeSinceSend() > _expireIdleWriteTime && con.getTimeSinceReceive() > _expireIdleWriteTime) {
                 con.close();
                 failsafeCloses++;
               }
