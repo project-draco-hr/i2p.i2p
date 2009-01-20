@@ -1,0 +1,21 @@
+{
+  Destination dest=con.getRemotePeer();
+  if (dest == null)   return;
+  if (con.getAckedPackets() <= 0)   return;
+  ConnectionOptions opts=con.getOptions();
+  if (opts == null)   return;
+  int old=-1;
+  int oldw=-1;
+  Entry e=_cache.get(dest);
+  if (e == null || e.isExpired()) {
+    e=new Entry(opts.getRTT(),opts.getWindowSize());
+    _cache.put(dest,e);
+  }
+ else {
+    old=e.getRTT();
+    oldw=e.getWindowSize();
+    e.setRTT(opts.getRTT());
+    e.setWindowSize(opts.getWindowSize());
+  }
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("To cache: " + con.getSession().getMyDestination().calculateHash().toBase64().substring(0,4) + '-'+ dest.calculateHash().toBase64().substring(0,4)+ " old: "+ old+ " con: "+ opts.getRTT()+ " new: "+ e.getRTT()+ " oldw: "+ oldw+ " conw: "+ opts.getWindowSize()+ " neww: "+ e.getWindowSize());
+}
