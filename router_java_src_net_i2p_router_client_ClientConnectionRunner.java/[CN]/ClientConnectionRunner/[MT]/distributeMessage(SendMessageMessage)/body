@@ -3,6 +3,8 @@
   Destination dest=message.getDestination();
   MessageId id=new MessageId();
   id.setMessageId(getNextMessageId());
+  long expiration=0;
+  if (message instanceof SendMessageExpiresMessage)   expiration=((SendMessageExpiresMessage)message).getExpiration().getTime();
   long beforeLock=_context.clock().now();
   long inLock=0;
 synchronized (_acceptedPending) {
@@ -16,7 +18,7 @@ synchronized (_acceptedPending) {
   if (_log.shouldLog(Log.DEBUG))   _log.debug("** Receiving message [" + id.getMessageId() + "] with payload of size ["+ payload.getSize()+ "]"+ " for session ["+ _sessionId.getSessionId()+ "]");
   long beforeDistribute=_context.clock().now();
   SessionConfig cfg=_config;
-  if (cfg != null)   _manager.distributeMessage(cfg.getDestination(),dest,payload,id);
+  if (cfg != null)   _manager.distributeMessage(cfg.getDestination(),dest,payload,id,expiration);
   long timeToDistribute=_context.clock().now() - beforeDistribute;
   if (_log.shouldLog(Log.DEBUG))   _log.warn("Time to distribute in the manager to " + dest.calculateHash().toBase64() + ": "+ timeToDistribute);
   return id;

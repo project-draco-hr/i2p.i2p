@@ -5,40 +5,6 @@
   Set sentTags=null;
   int oldTags=0;
   long begin=_context.clock().now();
-  if (I2CPMessageProducer.END_TO_END_CRYPTO) {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("begin sendBestEffort");
-    key=_context.sessionKeyManager().getCurrentKey(dest.getPublicKey());
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("key fetched");
-    if (key == null)     key=_context.sessionKeyManager().createSession(dest.getPublicKey());
-    tag=_context.sessionKeyManager().consumeNextAvailableTag(dest.getPublicKey(),key);
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("tag consumed");
-    sentTags=null;
-    oldTags=_context.sessionKeyManager().getAvailableTags(dest.getPublicKey(),key);
-    long availTimeLeft=_context.sessionKeyManager().getAvailableTimeLeft(dest.getPublicKey(),key);
-    if ((tagsSent == null) || (tagsSent.size() <= 0)) {
-      if (oldTags < NUM_TAGS) {
-        sentTags=createNewTags(NUM_TAGS);
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("** sendBestEffort only had " + oldTags + " with "+ availTimeLeft+ ", adding "+ NUM_TAGS+ ": "+ sentTags);
-      }
- else       if (availTimeLeft < 2 * 60 * 1000) {
-        sentTags=createNewTags(NUM_TAGS);
-        if (_log.shouldLog(Log.DEBUG))         _log.debug(getPrefix() + "Tags expiring in " + availTimeLeft+ ", adding "+ NUM_TAGS+ " new ones: "+ sentTags);
-      }
- else {
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("sendBestEffort old tags: " + oldTags + " available time left: "+ availTimeLeft);
-      }
-    }
- else {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("sendBestEffort is sending " + tagsSent.size() + " with "+ availTimeLeft+ "ms left, "+ oldTags+ " tags known and "+ (tag == null ? "no tag" : " a valid tag"));
-    }
-    if (false)     newKey=_context.keyGenerator().generateSessionKey();
-    if ((tagsSent != null) && (tagsSent.size() > 0)) {
-      if (sentTags == null)       sentTags=new HashSet();
-      sentTags.addAll(tagsSent);
-    }
-  }
- else {
-  }
   if (_log.shouldLog(Log.DEBUG))   _log.debug("before creating nonce");
   long nonce=_context.random().nextInt(Integer.MAX_VALUE);
   if (_log.shouldLog(Log.DEBUG))   _log.debug("before sync state");
@@ -49,13 +15,7 @@
   state.setTo(dest);
   if (_log.shouldLog(Log.DEBUG))   _log.debug(getPrefix() + "Setting key = " + key);
   if (keyUsed != null) {
-    if (I2CPMessageProducer.END_TO_END_CRYPTO) {
-      if (newKey != null)       keyUsed.setData(newKey.getData());
- else       keyUsed.setData(key.getData());
-    }
- else {
-      keyUsed.setData(SessionKey.INVALID_KEY.getData());
-    }
+    keyUsed.setData(SessionKey.INVALID_KEY.getData());
   }
   if (tagsSent != null) {
     if (sentTags != null) {
@@ -71,7 +31,7 @@ synchronized (_sendingStates) {
   }
   long afterSendingSync=_context.clock().now();
   if (_log.shouldLog(Log.DEBUG))   _log.debug(getPrefix() + "Adding sending state " + state.getMessageId()+ " / "+ state.getNonce()+ " for best effort "+ " sync took "+ (inSendingSync - beforeSendingSync)+ " add took "+ (afterSendingSync - inSendingSync));
-  _producer.sendMessage(this,dest,nonce,payload,tag,key,sentTags,newKey);
+  _producer.sendMessage(this,dest,nonce,payload,tag,key,sentTags,newKey,expires);
   boolean actuallyWait=false;
   long beforeWaitFor=_context.clock().now();
   if (actuallyWait)   state.waitFor(MessageStatusMessage.STATUS_SEND_ACCEPTED,_context.clock().now() + getTimeout());
