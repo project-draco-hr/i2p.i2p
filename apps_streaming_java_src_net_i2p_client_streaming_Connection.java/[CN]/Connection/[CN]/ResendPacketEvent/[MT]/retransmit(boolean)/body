@@ -48,18 +48,6 @@ synchronized (_outboundPackets) {
       if (_log.shouldLog(Log.WARN))       _log.warn("Optimistically failing tags at resend " + numSends);
       _context.sessionKeyManager().failTags(_remotePeer.getPublicKey());
     }
-    if (numSends - 1 <= _options.getMaxResends()) {
-      if (_log.shouldLog(Log.INFO))       _log.info("Resend packet " + _packet + " time "+ numSends+ " activeResends: "+ _activeResends+ " (wsize "+ newWindowSize+ " lifetime "+ (_context.clock().now() - _packet.getCreatedOn())+ "ms)");
-      _outboundQueue.enqueue(_packet);
-      _lastSendTime=_context.clock().now();
-    }
-    if ((_packet.getAckTime() > 0) && (_packet.getNumSends() > 1)) {
-      _activeResends--;
-synchronized (_outboundPackets) {
-        _outboundPackets.notifyAll();
-      }
-      return true;
-    }
     if (numSends - 1 > _options.getMaxResends()) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Too many resends");
       _packet.cancelled();
@@ -70,9 +58,19 @@ synchronized (_outboundPackets) {
       if (rto < MIN_RESEND_DELAY)       rto=MIN_RESEND_DELAY;
       long timeout=rto << (numSends - 1);
       if ((timeout > MAX_RESEND_DELAY) || (timeout <= 0))       timeout=MAX_RESEND_DELAY;
+      _nextSendTime=timeout + _context.clock().now();
+      if (_log.shouldLog(Log.INFO))       _log.info("Resend packet " + _packet + " time "+ numSends+ " activeResends: "+ _activeResends+ " (wsize "+ newWindowSize+ " lifetime "+ (_context.clock().now() - _packet.getCreatedOn())+ "ms)");
+      _outboundQueue.enqueue(_packet);
+      _lastSendTime=_context.clock().now();
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Scheduling resend in " + timeout + "ms for "+ _packet);
       RetransmissionTimer.getInstance().addEvent(ResendPacketEvent.this,timeout);
-      _nextSendTime=timeout + _context.clock().now();
+    }
+    if ((_packet.getAckTime() > 0) && (_packet.getNumSends() > 1)) {
+      _activeResends--;
+synchronized (_outboundPackets) {
+        _outboundPackets.notifyAll();
+      }
+      return true;
     }
     return true;
   }
