@@ -31,8 +31,9 @@
     response=TunnelHistory.TUNNEL_REJECT_BANDWIDTH;
   }
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Responding to " + state.msg.getUniqueId() + "/"+ ourId+ " after "+ recvDelay+ "/"+ proactiveDrops+ " with "+ response+ " from "+ (state.fromHash != null ? state.fromHash.toBase64() : state.from != null ? state.from.calculateHash().toBase64() : "tunnel"));
+  HopConfig cfg=null;
   if (response == 0) {
-    HopConfig cfg=new HopConfig();
+    cfg=new HopConfig();
     cfg.setCreation(_context.clock().now());
     cfg.setExpiration(_context.clock().now() + 10 * 60 * 1000);
     cfg.setIVKey(req.readIVKey());
@@ -87,6 +88,7 @@
     msg.setExpiration(state.msg.getMessageExpiration());
     msg.setPriority(300);
     msg.setTarget(nextPeerInfo);
+    if (response == 0)     msg.setOnFailedSendJob(new TunnelBuildNextHopFailJob(_context,cfg));
     _context.outNetMessagePool().add(msg);
   }
  else {
@@ -108,6 +110,7 @@
       outMsg.setMessage(m);
       outMsg.setPriority(300);
       outMsg.setTarget(nextPeerInfo);
+      if (response == 0)       outMsg.setOnFailedSendJob(new TunnelBuildNextHopFailJob(_context,cfg));
       _context.outNetMessagePool().add(outMsg);
     }
   }

@@ -1,0 +1,16 @@
+{
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Running: " + _timedEvent);
+  long before=System.currentTimeMillis();
+  if (_log.shouldLog(Log.WARN) && before < _scheduled - 100)   _log.warn(_name + " wtf, early execution " + (_scheduled - before)+ ": "+ _timedEvent);
+ else   if (_log.shouldLog(Log.WARN) && before > _scheduled + 1000)   _log.warn(" wtf, late execution " + (before - _scheduled) + ": "+ _timedEvent+ debug());
+  try {
+    _timedEvent.timeReached();
+  }
+ catch (  Throwable t) {
+    _log.log(Log.CRIT,_name + " wtf, event borked: " + _timedEvent,t);
+  }
+  long time=System.currentTimeMillis() - before;
+  if (time > 1000 && _log.shouldLog(Log.WARN))   _log.warn(_name + " wtf, event execution took " + time+ ": "+ _timedEvent);
+  long completed=_executor.getCompletedTaskCount();
+  if (_log.shouldLog(Log.INFO) && completed % 250 == 0)   _log.info(debug());
+}
