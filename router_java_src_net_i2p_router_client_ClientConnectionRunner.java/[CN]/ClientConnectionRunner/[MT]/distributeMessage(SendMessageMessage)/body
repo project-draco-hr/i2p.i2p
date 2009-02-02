@@ -5,16 +5,7 @@
   id.setMessageId(getNextMessageId());
   long expiration=0;
   if (message instanceof SendMessageExpiresMessage)   expiration=((SendMessageExpiresMessage)message).getExpiration().getTime();
-  long beforeLock=_context.clock().now();
-  long inLock=0;
-synchronized (_acceptedPending) {
-    inLock=_context.clock().now();
-    _acceptedPending.add(id);
-  }
-  long afterLock=_context.clock().now();
-  if (_log.shouldLog(Log.DEBUG)) {
-    _log.warn("distributeMessage.locking took: " + (afterLock - beforeLock) + " overall, synchronized took "+ (inLock - beforeLock));
-  }
+  _acceptedPending.add(id);
   if (_log.shouldLog(Log.DEBUG))   _log.debug("** Receiving message [" + id.getMessageId() + "] with payload of size ["+ payload.getSize()+ "]"+ " for session ["+ _sessionId.getSessionId()+ "]");
   long beforeDistribute=_context.clock().now();
   SessionConfig cfg=_config;
