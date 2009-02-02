@@ -1,4 +1,17 @@
 {
-  if (_log.shouldLog(Log.INFO))   _log.info("Updating options - session " + _runner.getSessionId());
+  if (_log.shouldLog(Log.INFO))   _log.info("Updating options - old: " + _runner.getConfig() + " new: "+ message.getSessionConfig());
+  if (!message.getSessionConfig().getDestination().equals(_runner.getConfig().getDestination())) {
+    _log.error("Dest mismatch");
+    sendStatusMessage(SessionStatusMessage.STATUS_INVALID);
+    _runner.stopRunning();
+    return;
+  }
   _runner.getConfig().getOptions().putAll(message.getSessionConfig().getOptions());
+  ClientTunnelSettings settings=new ClientTunnelSettings();
+  Properties props=new Properties();
+  props.putAll(_runner.getConfig().getOptions());
+  settings.readFromProperties(props);
+  _context.tunnelManager().setInboundSettings(_runner.getConfig().getDestination().calculateHash(),settings.getInboundSettings());
+  _context.tunnelManager().setOutboundSettings(_runner.getConfig().getDestination().calculateHash(),settings.getOutboundSettings());
+  sendStatusMessage(SessionStatusMessage.STATUS_UPDATED);
 }
