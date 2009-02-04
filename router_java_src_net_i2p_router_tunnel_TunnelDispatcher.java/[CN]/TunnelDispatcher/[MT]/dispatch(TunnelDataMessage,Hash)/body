@@ -1,9 +1,6 @@
 {
   long before=System.currentTimeMillis();
-  TunnelParticipant participant=null;
-synchronized (_participants) {
-    participant=(TunnelParticipant)_participants.get(msg.getTunnelIdObj());
-  }
+  TunnelParticipant participant=_participants.get(msg.getTunnelIdObj());
   if (participant != null) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("dispatch to participant " + participant + ": "+ msg.getUniqueId()+ " from "+ recvFrom.toBase64().substring(0,4));
     _context.messageHistory().tunnelDispatched(msg.getUniqueId(),msg.getTunnelId(),"participant");
@@ -11,10 +8,7 @@ synchronized (_participants) {
     _context.statManager().addRateData("tunnel.dispatchParticipant",1,0);
   }
  else {
-    OutboundTunnelEndpoint endpoint=null;
-synchronized (_outboundEndpoints) {
-      endpoint=(OutboundTunnelEndpoint)_outboundEndpoints.get(msg.getTunnelIdObj());
-    }
+    OutboundTunnelEndpoint endpoint=_outboundEndpoints.get(msg.getTunnelIdObj());
     if (endpoint != null) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("dispatch where we are the outbound endpoint: " + endpoint + ": "+ msg+ " from "+ recvFrom.toBase64().substring(0,4));
       _context.messageHistory().tunnelDispatched(msg.getUniqueId(),msg.getTunnelId(),"outbound endpoint");
