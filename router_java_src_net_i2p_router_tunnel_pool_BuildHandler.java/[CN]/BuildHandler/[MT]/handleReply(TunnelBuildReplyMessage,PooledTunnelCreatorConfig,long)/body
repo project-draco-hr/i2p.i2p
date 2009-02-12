@@ -12,6 +12,7 @@
       int record=order.indexOf(Integer.valueOf(i));
       if (record < 0) {
         _log.error("Bad status index " + i);
+        _exec.buildComplete(cfg,cfg.getTunnelPool());
         return;
       }
       int howBad=statuses[record];
@@ -51,8 +52,8 @@ _context.profileManager().tunnelRejected(peer,rtt,howBad);
 _context.messageHistory().tunnelParticipantRejected(peer,"peer rejected after " + rtt + " with "+ howBad+ ": "+ cfg.toString());
 }
 }
-if (allAgree) {
 _exec.buildComplete(cfg,cfg.getTunnelPool());
+if (allAgree) {
 if (cfg.isInbound()) _context.tunnelDispatcher().joinInbound(cfg);
  else _context.tunnelDispatcher().joinOutbound(cfg);
 cfg.getTunnelPool().addTunnel(cfg);
@@ -64,12 +65,12 @@ if (cfg.getDestination() == null) _context.statManager().addRateData("tunnel.bui
  else _context.statManager().addRateData("tunnel.buildClientSuccess",rtt,rtt);
 }
  else {
-_exec.buildComplete(cfg,cfg.getTunnelPool());
 if (cfg.getDestination() == null) _context.statManager().addRateData("tunnel.buildExploratoryReject",rtt,rtt);
  else _context.statManager().addRateData("tunnel.buildClientReject",rtt,rtt);
 }
 }
  else {
 if (_log.shouldLog(Log.WARN)) _log.warn(msg.getUniqueId() + ": Tunnel reply could not be decrypted for tunnel " + cfg);
+_exec.buildComplete(cfg,cfg.getTunnelPool());
 }
 }
