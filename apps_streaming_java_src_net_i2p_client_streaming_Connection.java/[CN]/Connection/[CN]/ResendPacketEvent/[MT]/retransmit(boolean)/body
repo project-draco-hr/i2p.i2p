@@ -14,7 +14,7 @@ synchronized (_outboundPackets) {
     boolean fastRetransmit=((_packet.getNACKs() >= FAST_RETRANSMIT_THRESHOLD) && (_packet.getNumSends() == 1));
     if ((!isLowest) && (!fastRetransmit)) {
       if (_log.shouldLog(Log.INFO))       _log.info("Delaying resend of " + _packet + " as there are "+ _activeResends+ " active resends already in play");
-      RetransmissionTimer.getInstance().addEvent(ResendPacketEvent.this,1000);
+      forceReschedule(1000);
       _nextSendTime=1000 + _context.clock().now();
       return false;
     }
@@ -63,7 +63,7 @@ synchronized (_outboundPackets) {
       _outboundQueue.enqueue(_packet);
       _lastSendTime=_context.clock().now();
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Scheduling resend in " + timeout + "ms for "+ _packet);
-      RetransmissionTimer.getInstance().addEvent(ResendPacketEvent.this,timeout);
+      forceReschedule(timeout);
     }
     if ((_packet.getAckTime() > 0) && (_packet.getNumSends() > 1)) {
       _activeResends--;
