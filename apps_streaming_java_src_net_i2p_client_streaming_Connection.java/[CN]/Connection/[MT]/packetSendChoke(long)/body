@@ -1,5 +1,4 @@
 {
-  if (false)   return true;
   long start=_context.clock().now();
   long writeExpire=start + timeoutMs;
   boolean started=false;
@@ -8,6 +7,7 @@
 synchronized (_outboundPackets) {
       if (!started)       _context.statManager().addRateData("stream.chokeSizeBegin",_outboundPackets.size(),timeoutMs);
       if (start + 5 * 60 * 1000 < _context.clock().now())       return false;
+      if (!_connected)       return false;
       started=true;
       if ((_outboundPackets.size() >= _options.getWindowSize()) || (_activeResends > 0) || (_lastSendId - _highestAckedThrough > _options.getWindowSize())) {
         if (timeoutMs > 0) {
@@ -17,7 +17,7 @@ synchronized (_outboundPackets) {
           }
           if (_log.shouldLog(Log.DEBUG))           _log.debug("Outbound window is full (" + _outboundPackets.size() + "/"+ _options.getWindowSize()+ "/"+ _activeResends+ "), waiting "+ timeLeft);
           try {
-            _outboundPackets.wait(timeLeft);
+            _outboundPackets.wait(Math.min(timeLeft,250l));
           }
  catch (          InterruptedException ie) {
           }
@@ -25,7 +25,7 @@ synchronized (_outboundPackets) {
  else {
           if (_log.shouldLog(Log.DEBUG))           _log.debug("Outbound window is full (" + _outboundPackets.size() + "/"+ _activeResends+ "), waiting indefinitely");
           try {
-            _outboundPackets.wait(10 * 1000);
+            _outboundPackets.wait(250);
           }
  catch (          InterruptedException ie) {
           }
