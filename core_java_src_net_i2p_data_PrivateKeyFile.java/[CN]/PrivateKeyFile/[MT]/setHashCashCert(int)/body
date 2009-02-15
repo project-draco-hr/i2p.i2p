@@ -1,0 +1,33 @@
+{
+  Certificate c=setCertType(Certificate.CERTIFICATE_TYPE_HASHCASH);
+  long begin=System.currentTimeMillis();
+  System.out.println("Starting hashcash generation now...");
+  String resource=this.dest.getPublicKey().toBase64() + this.dest.getSigningPublicKey().toBase64();
+  HashCash hc;
+  try {
+    hc=HashCash.mintCash(resource,effort);
+  }
+ catch (  Exception e) {
+    return null;
+  }
+  System.out.println("Generation took: " + DataHelper.formatDuration(System.currentTimeMillis() - begin));
+  System.out.println("Full Hashcash is: " + hc);
+  String hcs=hc.toString();
+  int end1=0;
+  for (int i=0; i < 3; i++) {
+    end1=1 + hcs.indexOf(':',end1);
+    if (end1 < 0) {
+      System.out.println("Bad hashcash");
+      return null;
+    }
+  }
+  int start2=hcs.indexOf(':',end1);
+  if (start2 < 0) {
+    System.out.println("Bad hashcash");
+    return null;
+  }
+  hcs=hcs.substring(0,end1) + hcs.substring(start2);
+  System.out.println("Short Hashcash is: " + hcs);
+  c.setPayload(hcs.getBytes());
+  return c;
+}
