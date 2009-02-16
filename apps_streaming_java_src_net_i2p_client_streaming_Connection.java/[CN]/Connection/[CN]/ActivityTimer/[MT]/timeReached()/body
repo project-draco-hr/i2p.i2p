@@ -1,4 +1,5 @@
 {
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Fire inactivity timer on " + Connection.this.toString());
   if (!_connected) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Inactivity timeout reached, but we are already closed");
     return;
@@ -19,13 +20,15 @@
   }
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Inactivity timeout reached, with action=" + _options.getInactivityAction());
 switch (_options.getInactivityAction()) {
-case ConnectionOptions.INACTIVITY_ACTION_SEND:
-    if (_log.shouldLog(Log.WARN))     _log.warn("Sending some data due to inactivity");
-  _receiver.send(null,0,0,true);
-break;
 case ConnectionOptions.INACTIVITY_ACTION_NOOP:
-if (_log.shouldLog(Log.WARN)) _log.warn("Inactivity timer expired, but we aint doin' shit");
-break;
+    if (_log.shouldLog(Log.WARN))     _log.warn("Inactivity timer expired, but we aint doin' shit");
+  break;
+case ConnectionOptions.INACTIVITY_ACTION_SEND:
+if (_closeSentOn <= 0 && _closeReceivedOn <= 0) {
+  if (_log.shouldLog(Log.WARN))   _log.warn("Sending some data due to inactivity");
+  _receiver.send(null,0,0,true);
+  break;
+}
 case ConnectionOptions.INACTIVITY_ACTION_DISCONNECT:
 default :
 if (_log.shouldLog(Log.WARN)) _log.warn("Closing connection due to inactivity");
@@ -38,7 +41,7 @@ _log.debug(buf.toString());
 }
 _inputStream.streamErrorOccurred(new IOException("Inactivity timeout"));
 _outputStream.streamErrorOccurred(new IOException("Inactivity timeout"));
-disconnect(false);
+disconnect(_disconnectScheduledOn >= 0);
 break;
 }
 }
