@@ -1,0 +1,41 @@
+{
+  httpRes.setDate(Calendar.getInstance());
+  OutputStream out=getOutputStream();
+  try {
+    httpRes.setContentLength(contentLength);
+    out.write(httpRes.getHeader().getBytes());
+    out.write(HTTP.CRLF.getBytes());
+    if (isOnlyHeader == true) {
+      out.flush();
+      return true;
+    }
+    boolean isChunkedResponse=httpRes.isChunked();
+    if (0 < contentOffset)     in.skip(contentOffset);
+    int chunkSize=HTTP.getChunkSize();
+    byte readBuf[]=new byte[chunkSize];
+    long readCnt=0;
+    long readSize=(chunkSize < contentLength) ? chunkSize : contentLength;
+    int readLen=in.read(readBuf,0,(int)readSize);
+    while (0 < readLen && readCnt < contentLength) {
+      if (isChunkedResponse == true) {
+        String chunSizeBuf=Long.toString(readLen);
+        out.write(chunSizeBuf.getBytes());
+        out.write(HTTP.CRLF.getBytes());
+      }
+      out.write(readBuf,0,readLen);
+      if (isChunkedResponse == true)       out.write(HTTP.CRLF.getBytes());
+      readCnt+=readLen;
+      readSize=(chunkSize < (contentLength - readCnt)) ? chunkSize : (contentLength - readCnt);
+      readLen=in.read(readBuf,0,(int)readSize);
+    }
+    if (isChunkedResponse == true) {
+      out.write("0".getBytes());
+      out.write(HTTP.CRLF.getBytes());
+    }
+    out.flush();
+  }
+ catch (  Exception e) {
+    return false;
+  }
+  return true;
+}

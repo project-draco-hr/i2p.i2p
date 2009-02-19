@@ -1,0 +1,16 @@
+{
+  HTTPSocket httpSock=getSocket();
+  long offset=0;
+  long length=httpRes.getContentLength();
+  if (hasContentRange() == true) {
+    long firstPos=getContentRangeFirstPosition();
+    long lastPos=getContentRangeLastPosition();
+    if (lastPos <= 0)     lastPos=length - 1;
+    if ((firstPos > length) || (lastPos > length))     return returnResponse(HTTPStatus.INVALID_RANGE);
+    httpRes.setContentRange(firstPos,lastPos,length);
+    httpRes.setStatusCode(HTTPStatus.PARTIAL_CONTENT);
+    offset=firstPos;
+    length=lastPos - firstPos + 1;
+  }
+  return httpSock.post(httpRes,offset,length,isHeadRequest());
+}

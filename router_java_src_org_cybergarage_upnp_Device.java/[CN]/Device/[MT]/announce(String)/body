@@ -1,0 +1,34 @@
+{
+  String devLocation=getLocationURL(bindAddr);
+  SSDPNotifySocket ssdpSock=new SSDPNotifySocket(bindAddr);
+  SSDPNotifyRequest ssdpReq=new SSDPNotifyRequest();
+  ssdpReq.setServer(UPnP.getServerName());
+  ssdpReq.setLeaseTime(getLeaseTime());
+  ssdpReq.setLocation(devLocation);
+  ssdpReq.setNTS(NTS.ALIVE);
+  if (isRootDevice() == true) {
+    String devNT=getNotifyDeviceNT();
+    String devUSN=getNotifyDeviceUSN();
+    ssdpReq.setNT(devNT);
+    ssdpReq.setUSN(devUSN);
+    ssdpSock.post(ssdpReq);
+  }
+  String devNT=getNotifyDeviceTypeNT();
+  String devUSN=getNotifyDeviceTypeUSN();
+  ssdpReq.setNT(devNT);
+  ssdpReq.setUSN(devUSN);
+  ssdpSock.post(ssdpReq);
+  ssdpSock.close();
+  ServiceList serviceList=getServiceList();
+  int serviceCnt=serviceList.size();
+  for (int n=0; n < serviceCnt; n++) {
+    Service service=serviceList.getService(n);
+    service.announce(bindAddr);
+  }
+  DeviceList childDeviceList=getDeviceList();
+  int childDeviceCnt=childDeviceList.size();
+  for (int n=0; n < childDeviceCnt; n++) {
+    Device childDevice=childDeviceList.getDevice(n);
+    childDevice.announce(bindAddr);
+  }
+}
