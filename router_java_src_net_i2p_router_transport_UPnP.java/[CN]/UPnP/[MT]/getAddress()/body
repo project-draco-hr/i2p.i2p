@@ -10,10 +10,15 @@
   }
   DetectedIP result=null;
   final String natAddress=getNATAddress();
+  if (natAddress == null || natAddress.length() <= 0) {
+    _log.warn("No external address returned");
+    return null;
+  }
   try {
     InetAddress detectedIP=InetAddress.getByName(natAddress);
     short status=DetectedIP.NOT_SUPPORTED;
     thinksWeAreDoubleNatted=!TransportImpl.isPubliclyRoutable(detectedIP.getAddress());
+    _log.warn("NATAddress: \"" + natAddress + "\" detectedIP: "+ detectedIP+ " double? "+ thinksWeAreDoubleNatted);
     if ((portsForwarded.size() > 1) && (!thinksWeAreDoubleNatted))     status=DetectedIP.FULL_INTERNET;
     result=new DetectedIP(detectedIP,status);
     _log.warn("Successful UP&P discovery :" + result);
