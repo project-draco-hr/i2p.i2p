@@ -1,0 +1,20 @@
+{
+  SOCKSHeader h;
+  try {
+    h=new SOCKSHeader(data);
+  }
+ catch (  IllegalArgumentException iae) {
+    _log.error(iae.toString());
+    return;
+  }
+  Destination dest=h.getDestination();
+  if (dest == null) {
+    _log.error("Destination not found: " + h.getHost());
+    return;
+  }
+  cache.put(dest,h);
+  int headerlen=h.getBytes().length;
+  byte unwrapped[]=new byte[data.length - headerlen];
+  System.arraycopy(unwrapped,0,data,headerlen,unwrapped.length);
+  this.sink.send(dest,unwrapped);
+}
