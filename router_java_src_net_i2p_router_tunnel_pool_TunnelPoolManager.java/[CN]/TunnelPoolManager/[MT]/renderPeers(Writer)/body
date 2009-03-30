@@ -1,0 +1,28 @@
+{
+  HashCounter lc=new HashCounter();
+  int tunnelCount=countTunnelsPerPeer(lc);
+  HashCounter pc=new HashCounter();
+  int partCount=countParticipatingPerPeer(pc);
+  Set<Hash> peers=new HashSet(lc.hashes());
+  peers.addAll(pc.hashes());
+  List<Hash> peerList=new ArrayList(peers);
+  Collections.sort(peerList,new HashComparator());
+  out.write("<h2><a name=\"peers\">Tunnel Counts By Peer</a>:</h2>\n");
+  out.write("<table border=\"1\"><tr><td><b>Peer</b></td><td><b>Expl. + Client</b></td><td><b>% of total</b></td><td><b>Part. from + to</b></td><td><b>% of total</b></td></tr>\n");
+  for (  Hash h : peerList) {
+    out.write("<tr><td>");
+    out.write(netDbLink(h));
+    out.write("<td align=\"right\">" + lc.count(h));
+    out.write("<td align=\"right\">");
+    if (tunnelCount > 0)     out.write("" + (lc.count(h) * 100 / tunnelCount));
+ else     out.write('0');
+    out.write("<td align=\"right\">" + pc.count(h));
+    out.write("<td align=\"right\">");
+    if (partCount > 0)     out.write("" + (pc.count(h) * 100 / partCount));
+ else     out.write('0');
+    out.write('\n');
+  }
+  out.write("<tr><td>Tunnels<td align=\"right\">" + tunnelCount);
+  out.write("<td>&nbsp;<td align=\"right\">" + partCount);
+  out.write("<td>&nbsp;</table>\n");
+}
