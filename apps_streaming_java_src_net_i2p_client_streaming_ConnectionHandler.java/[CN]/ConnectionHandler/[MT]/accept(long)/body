@@ -2,7 +2,6 @@
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Accept(" + timeoutMs + ") called");
   long expiration=timeoutMs + _context.clock().now();
   while (true) {
-    if ((timeoutMs > 0) && (expiration < _context.clock().now()))     return null;
     if (!_active) {
 synchronized (_synQueue) {
         for (int i=0; i < _synQueue.size(); i++) {
@@ -17,7 +16,7 @@ synchronized (_synQueue) {
 synchronized (_synQueue) {
       while (_active && (_synQueue.size() <= 0)) {
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Accept(" + timeoutMs + "): active="+ _active+ " queue: "+ _synQueue.size());
-        if (timeoutMs <= 0) {
+        if (timeoutMs < 0) {
           try {
             _synQueue.wait();
           }
@@ -47,5 +46,6 @@ synchronized (_synQueue) {
         reReceivePacket(syn);
       }
     }
+    if ((timeoutMs >= 0) && (expiration < _context.clock().now()))     return null;
   }
 }
