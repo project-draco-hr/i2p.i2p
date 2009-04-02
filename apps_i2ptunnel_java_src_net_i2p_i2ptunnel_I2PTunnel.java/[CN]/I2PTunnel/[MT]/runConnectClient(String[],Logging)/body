@@ -1,0 +1,50 @@
+{
+  if (args.length >= 1 && args.length <= 3) {
+    int port=-1;
+    try {
+      port=Integer.parseInt(args[0]);
+    }
+ catch (    NumberFormatException nfe) {
+      _log.error(getPrefix() + "Port specified is not valid: " + args[0],nfe);
+      return;
+    }
+    String proxy="";
+    boolean isShared=true;
+    if (args.length > 1) {
+      if ("true".equalsIgnoreCase(args[1].trim())) {
+        isShared=true;
+        if (args.length == 3)         proxy=args[2];
+      }
+ else       if ("false".equalsIgnoreCase(args[1].trim())) {
+        _log.warn("args[1] == [" + args[1] + "] and rejected explicitly");
+        isShared=false;
+        if (args.length == 3)         proxy=args[2];
+      }
+ else       if (args.length == 3) {
+        isShared=false;
+        proxy=args[2];
+        _log.warn("args[1] == [" + args[1] + "] but rejected");
+      }
+ else {
+        isShared=true;
+        proxy=args[1];
+      }
+    }
+    I2PTunnelTask task;
+    ownDest=!isShared;
+    try {
+      task=new I2PTunnelConnectClient(port,l,ownDest,proxy,(EventDispatcher)this,this);
+      addtask(task);
+    }
+ catch (    IllegalArgumentException iae) {
+      _log.error(getPrefix() + "Invalid I2PTunnel config to create an httpclient [" + host+ ":"+ port+ "]",iae);
+    }
+  }
+ else {
+    l.log("connectclient <port> [<sharedClient>] [<proxy>]");
+    l.log("  creates a client that for SSL/HTTPS requests.");
+    l.log("  <sharedClient> (optional) indicates if this client shares tunnels with other clients (true of false)");
+    l.log("  <proxy> (optional) indicates a proxy server to be used");
+    l.log("  when trying to access an address out of the .i2p domain");
+  }
+}

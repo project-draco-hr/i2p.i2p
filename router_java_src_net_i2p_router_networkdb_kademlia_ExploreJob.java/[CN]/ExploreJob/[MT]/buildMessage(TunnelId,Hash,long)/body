@@ -1,0 +1,21 @@
+{
+  DatabaseLookupMessage msg=new DatabaseLookupMessage(getContext(),true);
+  msg.setSearchKey(getState().getTarget());
+  msg.setFrom(replyGateway);
+  msg.setDontIncludePeers(getState().getClosestAttempted(MAX_CLOSEST));
+  msg.setMessageExpiration(expiration);
+  msg.setReplyTunnel(replyTunnelId);
+  int available=MAX_CLOSEST - msg.getDontIncludePeers().size();
+  if (available > 0) {
+    List peers=((FloodfillNetworkDatabaseFacade)_facade).getFloodfillPeers();
+    int len=peers.size();
+    if (len > 0)     msg.getDontIncludePeers().addAll(peers.subList(0,Math.min(available,len)));
+  }
+  available=MAX_CLOSEST - msg.getDontIncludePeers().size();
+  if (available > 0) {
+    List peers=_peerSelector.selectNearestExplicit(getState().getTarget(),available,msg.getDontIncludePeers(),getFacade().getKBuckets());
+    msg.getDontIncludePeers().addAll(peers);
+  }
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Peers we don't want to hear about: " + msg.getDontIncludePeers());
+  return msg;
+}

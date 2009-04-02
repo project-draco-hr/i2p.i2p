@@ -3,41 +3,36 @@
   long expiration=timeoutMs + _context.clock().now();
   while (true) {
     if (!_active) {
-synchronized (_synQueue) {
-        for (int i=0; i < _synQueue.size(); i++) {
-          Packet packet=(Packet)_synQueue.get(i);
-          sendReset(packet);
-        }
-        _synQueue.clear();
+      while (true) {
+        Packet packet=_synQueue.poll();
+        if (packet == null || packet.getOptionalDelay() == PoisonPacket.MAX_DELAY_REQUEST)         break;
+        sendReset(packet);
       }
       return null;
     }
     Packet syn=null;
-synchronized (_synQueue) {
-      while (_active && (_synQueue.size() <= 0)) {
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("Accept(" + timeoutMs + "): active="+ _active+ " queue: "+ _synQueue.size());
-        if (timeoutMs < 0) {
-          try {
-            _synQueue.wait();
-          }
- catch (          InterruptedException ie) {
-          }
+    while (_active && syn == null) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Accept(" + timeoutMs + "): active="+ _active+ " queue: "+ _synQueue.size());
+      if (timeoutMs <= 0) {
+        try {
+          syn=_synQueue.take();
         }
- else {
-          long remaining=expiration - _context.clock().now();
-          if (remaining < 1)           break;
-          try {
-            _synQueue.wait(remaining);
-          }
- catch (          InterruptedException ie) {
-          }
+ catch (        InterruptedException ie) {
         }
       }
-      if (_active && _synQueue.size() > 0) {
-        syn=(Packet)_synQueue.remove(0);
+ else {
+        long remaining=expiration - _context.clock().now();
+        if (remaining < 1)         break;
+        try {
+          syn=_synQueue.poll(remaining,TimeUnit.MILLISECONDS);
+        }
+ catch (        InterruptedException ie) {
+        }
+        break;
       }
     }
     if (syn != null) {
+      if (syn.getOptionalDelay() == PoisonPacket.MAX_DELAY_REQUEST)       return null;
       if (syn.isFlagSet(Packet.FLAG_SYNCHRONIZE)) {
         Connection con=_manager.receiveConnection(syn);
         if (con != null)         return con;

@@ -1,0 +1,20 @@
+{
+  TunnelController tun=getController(_tunnel);
+  Properties config=getConfig();
+  if (config == null)   return "Invalid params";
+  if (tun == null) {
+    tun=new TunnelController(config,"",true);
+    _group.addController(tun);
+    saveChanges();
+  }
+ else   if (tun.getIsRunning() || tun.getIsStarting()) {
+    return "Tunnel must be stopped before modifying leaseset encryption key";
+  }
+  byte[] data=new byte[SessionKey.KEYSIZE_BYTES];
+  _context.random().nextBytes(data);
+  SessionKey sk=new SessionKey(data);
+  setEncryptKey(sk.toBase64());
+  setEncrypt("");
+  saveChanges();
+  return "New Leaseset Encryption Key: " + sk.toBase64();
+}

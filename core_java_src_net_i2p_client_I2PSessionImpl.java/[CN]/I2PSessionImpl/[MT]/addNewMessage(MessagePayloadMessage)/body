@@ -1,11 +1,6 @@
 {
   Long mid=new Long(msg.getMessageId());
-  int avail=0;
-synchronized (_availableMessages) {
-    _availableMessages.put(mid,msg);
-    avail=_availableMessages.size();
-  }
-  _context.statManager().addRateData("client.availableMessages",avail,0);
+  _availableMessages.put(mid,msg);
   long id=msg.getMessageId();
   byte data[]=msg.getPayload().getUnencryptedData();
   if ((data == null) || (data.length <= 0)) {
@@ -16,5 +11,5 @@ synchronized (_availableMessages) {
     _availabilityNotifier.available(id,size);
     if (_log.shouldLog(Log.INFO))     _log.info(getPrefix() + "Notified availability for session " + _sessionId+ ", message "+ id);
   }
-  SimpleTimer.getInstance().addEvent(new VerifyUsage(mid),30 * 1000);
+  SimpleScheduler.getInstance().addEvent(new VerifyUsage(mid),30 * 1000);
 }

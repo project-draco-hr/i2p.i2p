@@ -1,4 +1,5 @@
 {
+  InputStream in=null;
   OutputStream out=null;
   String targetRequest=null;
   boolean usingWWWProxy=false;
@@ -6,17 +7,17 @@
   long requestId=++__requestId;
   try {
     out=s.getOutputStream();
-    BufferedReader br=new BufferedReader(new InputStreamReader(s.getInputStream(),"ISO-8859-1"));
+    InputReader reader=new InputReader(s.getInputStream());
     String line, method=null, protocol=null, host=null, destination=null;
     StringBuffer newRequest=new StringBuffer();
     int ahelper=0;
-    while ((line=br.readLine()) != null) {
+    while ((line=reader.readLine(method)) != null) {
+      line=line.trim();
       if (_log.shouldLog(Log.DEBUG))       _log.debug(getPrefix(requestId) + "Line=[" + line+ "]");
       String lowercaseLine=line.toLowerCase();
       if (lowercaseLine.startsWith("connection: ") || lowercaseLine.startsWith("keep-alive: ") || lowercaseLine.startsWith("proxy-connection: "))       continue;
       if (method == null) {
         if (_log.shouldLog(Log.DEBUG))         _log.debug(getPrefix(requestId) + "Method is null for [" + line+ "]");
-        line=line.trim();
         int pos=line.indexOf(" ");
         if (pos == -1)         break;
         method=line.substring(0,pos);
@@ -194,7 +195,7 @@
           line="Host: " + host;
           if (_log.shouldLog(Log.INFO))           _log.info(getPrefix(requestId) + "Setting host = " + host);
         }
- else         if (lowercaseLine.startsWith("user-agent: ") && !Boolean.valueOf(getTunnel().getContext().getProperty(PROP_USER_AGENT)).booleanValue()) {
+ else         if (lowercaseLine.startsWith("user-agent: ") && !Boolean.valueOf(getTunnel().getClientOptions().getProperty(PROP_USER_AGENT)).booleanValue()) {
           line=null;
           continue;
         }
@@ -202,11 +203,11 @@
           line=null;
           continue;
         }
- else         if (lowercaseLine.startsWith("referer: ") && !Boolean.valueOf(getTunnel().getContext().getProperty(PROP_REFERER)).booleanValue()) {
+ else         if (lowercaseLine.startsWith("referer: ") && !Boolean.valueOf(getTunnel().getClientOptions().getProperty(PROP_REFERER)).booleanValue()) {
           line=null;
           continue;
         }
- else         if (lowercaseLine.startsWith("via: ") && !Boolean.valueOf(getTunnel().getContext().getProperty(PROP_VIA)).booleanValue()) {
+ else         if (lowercaseLine.startsWith("via: ") && !Boolean.valueOf(getTunnel().getClientOptions().getProperty(PROP_VIA)).booleanValue()) {
           line=null;
           continue;
         }
@@ -216,40 +217,22 @@
         }
       }
       if (line.length() == 0) {
-        String ok=getTunnel().getContext().getProperty("i2ptunnel.gzip");
+        String ok=getTunnel().getClientOptions().getProperty("i2ptunnel.gzip");
         boolean gzip=DEFAULT_GZIP;
         if (ok != null)         gzip=Boolean.valueOf(ok).booleanValue();
         if (gzip) {
           newRequest.append("Accept-Encoding: \r\n");
           newRequest.append("X-Accept-Encoding: x-i2p-gzip;q=1.0, identity;q=0.5, deflate;q=0, gzip;q=0, *;q=0\r\n");
         }
-        if (!Boolean.valueOf(getTunnel().getContext().getProperty(PROP_USER_AGENT)).booleanValue())         newRequest.append("User-Agent: MYOB/6.66 (AN/ON)\r\n");
+        if (!Boolean.valueOf(getTunnel().getClientOptions().getProperty(PROP_USER_AGENT)).booleanValue())         newRequest.append("User-Agent: MYOB/6.66 (AN/ON)\r\n");
         newRequest.append("Connection: close\r\n\r\n");
         break;
       }
  else {
-        newRequest.append(line.trim()).append("\r\n");
+        newRequest.append(line).append("\r\n");
       }
     }
     if (_log.shouldLog(Log.DEBUG))     _log.debug(getPrefix(requestId) + "NewRequest header: [" + newRequest.toString()+ "]");
-    int postbytes=0;
-    while (br.ready()) {
-      int i=br.read();
-      if (i != -1) {
-        newRequest.append((char)i);
-        if (++postbytes > MAX_POSTBYTES) {
-          if (out != null) {
-            out.write(ERR_MAXPOST);
-            out.write("<p /><i>Generated on: ".getBytes());
-            out.write(new Date().toString().getBytes());
-            out.write("</i></body></html>\n".getBytes());
-            out.flush();
-          }
-          s.close();
-          return;
-        }
-      }
-    }
     if (method == null || destination == null) {
       l.log("No HTTP method found in the request.");
       if (out != null) {
@@ -266,13 +249,13 @@
     if (_log.shouldLog(Log.DEBUG))     _log.debug(getPrefix(requestId) + "Destination: " + destination);
     Destination dest=I2PTunnel.destFromName(destination);
     if (dest == null) {
-      l.log("Could not resolve " + destination + ".");
       if (_log.shouldLog(Log.WARN))       _log.warn("Unable to resolve " + destination + " (proxy? "+ usingWWWProxy+ ", request: "+ targetRequest);
       String str;
       byte[] header;
       boolean showAddrHelper=false;
       if (usingWWWProxy)       str=FileUtil.readTextFile("docs/dnfp-header.ht",100,true);
  else       if (ahelper != 0)       str=FileUtil.readTextFile("docs/dnfb-header.ht",100,true);
+ else       if (destination.length() == 60 && destination.endsWith(".b32.i2p"))       str=FileUtil.readTextFile("docs/dnf-header.ht",100,true);
  else {
         str=FileUtil.readTextFile("docs/dnfh-header.ht",100,true);
         showAddrHelper=true;
@@ -309,7 +292,7 @@ catch (  I2PException ex) {
     closeSocket(s);
   }
 catch (  OutOfMemoryError oom) {
-    IOException ex=new IOException("OOM (in POST?)");
+    IOException ex=new IOException("OOM");
     _log.info("getPrefix(requestId) + Error trying to connect",ex);
     l.log(ex.getMessage());
     handleHTTPClientException(ex,out,targetRequest,usingWWWProxy,currentProxy,requestId);

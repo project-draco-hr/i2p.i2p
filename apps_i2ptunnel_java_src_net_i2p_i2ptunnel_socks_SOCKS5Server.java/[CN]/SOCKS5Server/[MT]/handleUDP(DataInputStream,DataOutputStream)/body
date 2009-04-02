@@ -1,0 +1,37 @@
+{
+  List<Integer> ports=new ArrayList(1);
+synchronized (_startLock) {
+    if (_tunnel == null) {
+      _tunnel=new SOCKSUDPTunnel(new I2PTunnel());
+      _tunnel.startRunning();
+    }
+  }
+  while (true) {
+    InetAddress ia=null;
+    try {
+      ia=InetAddress.getByAddress(connHostName,dummyIP);
+    }
+ catch (    UnknownHostException uhe) {
+    }
+    int myPort=_tunnel.add(ia,connPort);
+    ports.add(Integer.valueOf(myPort));
+    try {
+      sendRequestReply(Reply.SUCCEEDED,AddressType.IPV4,InetAddress.getByName("127.0.0.1"),null,myPort,out);
+    }
+ catch (    IOException ioe) {
+      break;
+    }
+    try {
+      int command=manageRequest(in,out);
+      if (command != Command.UDP_ASSOCIATE)       break;
+    }
+ catch (    IOException ioe) {
+      break;
+    }
+catch (    SOCKSException ioe) {
+      break;
+    }
+  }
+  for (  Integer i : ports)   _tunnel.remove(i);
+  throw new SOCKSException("End of UDP Processing");
+}

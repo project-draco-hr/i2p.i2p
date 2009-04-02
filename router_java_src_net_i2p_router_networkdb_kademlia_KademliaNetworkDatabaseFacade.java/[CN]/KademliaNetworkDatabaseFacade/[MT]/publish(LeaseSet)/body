@@ -9,9 +9,6 @@
     return;
   }
   if (!_context.clientManager().shouldPublishLeaseSet(h))   return;
-synchronized (_explicitSendKeys) {
-    _explicitSendKeys.add(h);
-  }
   RepublishLeaseSetJob j=null;
 synchronized (_publishingLeaseSets) {
     j=(RepublishLeaseSetJob)_publishingLeaseSets.get(h);
@@ -20,6 +17,7 @@ synchronized (_publishingLeaseSets) {
       _publishingLeaseSets.put(h,j);
     }
   }
-  j.getTiming().setStartAfter(_context.clock().now());
+  long nextTime=Math.max(j.lastPublished() + j.REPUBLISH_LEASESET_TIMEOUT,_context.clock().now() + PUBLISH_DELAY);
+  j.getTiming().setStartAfter(nextTime);
   _context.jobQueue().addJob(j);
 }

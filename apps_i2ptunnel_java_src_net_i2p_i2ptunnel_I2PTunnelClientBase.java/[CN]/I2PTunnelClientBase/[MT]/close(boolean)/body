@@ -1,20 +1,23 @@
 {
   if (!open)   return true;
 synchronized (sockLock) {
-    mySockets.retainAll(sockMgr.listSockets());
-    if (!forced && mySockets.size() != 0) {
-      l.log("There are still active connections!");
-      _log.debug("can't close: there are still active connections!");
-      for (Iterator it=mySockets.iterator(); it.hasNext(); ) {
-        l.log("->" + it.next());
+    if (sockMgr != null) {
+      mySockets.retainAll(sockMgr.listSockets());
+      if (!forced && mySockets.size() != 0) {
+        l.log("There are still active connections!");
+        _log.debug("can't close: there are still active connections!");
+        for (Iterator it=mySockets.iterator(); it.hasNext(); ) {
+          l.log("->" + it.next());
+        }
+        return false;
       }
-      return false;
-    }
-    I2PSession session=sockMgr.getSession();
-    if (session != null) {
-      getTunnel().removeSession(session);
+      I2PSession session=sockMgr.getSession();
+      if (session != null) {
+        getTunnel().removeSession(session);
+      }
     }
     l.log("Closing client " + toString());
+    open=false;
     try {
       if (ss != null)       ss.close();
     }
@@ -23,7 +26,6 @@ synchronized (sockLock) {
       return false;
     }
     l.log("Client closed.");
-    open=false;
   }
 synchronized (_waitingSockets) {
     _waitingSockets.notifyAll();

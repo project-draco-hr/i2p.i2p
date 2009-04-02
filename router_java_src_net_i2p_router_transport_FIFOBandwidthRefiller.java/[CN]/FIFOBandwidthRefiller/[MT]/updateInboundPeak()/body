@@ -1,24 +1,13 @@
 {
-  String inBwStr=_context.getProperty(PROP_INBOUND_BANDWIDTH_PEAK);
-  if ((inBwStr != null) && (inBwStr.trim().length() > 0) && (!(inBwStr.equals(String.valueOf(_limiter.getInboundBurstBytes()))))) {
-    try {
-      int in=Integer.parseInt(inBwStr);
-      if (in >= MIN_INBOUND_BANDWIDTH_PEAK) {
-        if (in < _inboundBurstKBytesPerSecond)         _limiter.setInboundBurstBytes(_inboundBurstKBytesPerSecond * 1024);
- else         _limiter.setInboundBurstBytes(in * 1024);
-      }
- else {
-        if (MIN_INBOUND_BANDWIDTH_PEAK < _inboundBurstKBytesPerSecond)         _limiter.setInboundBurstBytes(_inboundBurstKBytesPerSecond * 1024);
- else         _limiter.setInboundBurstBytes(MIN_INBOUND_BANDWIDTH_PEAK * 1024);
-      }
+  int in=_context.getProperty(PROP_INBOUND_BANDWIDTH_PEAK,DEFAULT_BURST_SECONDS * _inboundBurstKBytesPerSecond);
+  if (in != _limiter.getInboundBurstBytes()) {
+    if (in >= MIN_INBOUND_BANDWIDTH_PEAK) {
+      if (in < _inboundBurstKBytesPerSecond)       _limiter.setInboundBurstBytes(_inboundBurstKBytesPerSecond * 1024);
+ else       _limiter.setInboundBurstBytes(in * 1024);
     }
- catch (    NumberFormatException nfe) {
-      if (_log.shouldLog(Log.WARN))       _log.warn("Invalid inbound bandwidth burst limit [" + inBwStr + "]");
-      _limiter.setInboundBurstBytes(DEFAULT_BURST_SECONDS * _inboundBurstKBytesPerSecond * 1024);
-    }
-  }
  else {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Inbound bandwidth burst limits not specified in the config via " + PROP_INBOUND_BANDWIDTH_PEAK);
-    _limiter.setInboundBurstBytes(DEFAULT_BURST_SECONDS * _inboundBurstKBytesPerSecond * 1024);
+      if (MIN_INBOUND_BANDWIDTH_PEAK < _inboundBurstKBytesPerSecond)       _limiter.setInboundBurstBytes(_inboundBurstKBytesPerSecond * 1024);
+ else       _limiter.setInboundBurstBytes(MIN_INBOUND_BANDWIDTH_PEAK * 1024);
+    }
   }
 }

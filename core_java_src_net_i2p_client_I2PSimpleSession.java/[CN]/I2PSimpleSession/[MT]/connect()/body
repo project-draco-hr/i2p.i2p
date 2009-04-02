@@ -1,0 +1,26 @@
+{
+  _closed=false;
+  _availabilityNotifier.stopNotifying();
+  I2PThread notifier=new I2PThread(_availabilityNotifier);
+  notifier.setName("Simple Notifier");
+  notifier.setDaemon(true);
+  notifier.start();
+  try {
+    _socket=new Socket(_hostname,_portNum);
+    _out=_socket.getOutputStream();
+synchronized (_out) {
+      _out.write(I2PClient.PROTOCOL_BYTE);
+    }
+    InputStream in=_socket.getInputStream();
+    _reader=new I2CPMessageReader(in,this);
+    _reader.startReading();
+  }
+ catch (  UnknownHostException uhe) {
+    _closed=true;
+    throw new I2PSessionException(getPrefix() + "Bad host ",uhe);
+  }
+catch (  IOException ioe) {
+    _closed=true;
+    throw new I2PSessionException(getPrefix() + "Problem connecting to " + _hostname+ " on port "+ _portNum,ioe);
+  }
+}

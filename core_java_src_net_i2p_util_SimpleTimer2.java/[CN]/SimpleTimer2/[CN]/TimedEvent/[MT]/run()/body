@@ -1,0 +1,19 @@
+{
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Running: " + this);
+  long before=System.currentTimeMillis();
+  long delay=0;
+  if (_future != null)   delay=_future.getDelay(TimeUnit.MILLISECONDS);
+ else   if (_log.shouldLog(Log.WARN))   _log.warn(_pool + " wtf, no _future " + this);
+  if (_log.shouldLog(Log.WARN) && delay > 100)   _log.warn(_pool + " wtf, early execution " + delay+ ": "+ this);
+ else   if (_log.shouldLog(Log.WARN) && delay < -1000)   _log.warn(" wtf, late execution " + delay + ": "+ this+ _pool.debug());
+  try {
+    timeReached();
+  }
+ catch (  Throwable t) {
+    _log.log(Log.CRIT,_pool + " wtf, event borked: " + this,t);
+  }
+  long time=System.currentTimeMillis() - before;
+  if (time > 500 && _log.shouldLog(Log.WARN))   _log.warn(_pool + " wtf, event execution took " + time+ ": "+ this);
+  long completed=_pool.getCompletedTaskCount();
+  if (_log.shouldLog(Log.INFO) && completed % 250 == 0)   _log.info(_pool.debug());
+}

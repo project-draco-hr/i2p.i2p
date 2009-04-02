@@ -1,33 +1,13 @@
 {
-  List messages=new ArrayList(64);
-  List messageTimes=new ArrayList(64);
-  List switchList=null;
+  I2CPMessage msg;
   while (!_runner.getIsDead()) {
-synchronized (_dataLock) {
-      if (_messagesToWrite.size() <= 0)       try {
-        _dataLock.wait();
-      }
- catch (      InterruptedException ie) {
-      }
-      if (_messagesToWrite.size() > 0) {
-        switchList=_messagesToWrite;
-        _messagesToWrite=messages;
-        messages=switchList;
-        switchList=_messagesToWriteTimes;
-        _messagesToWriteTimes=messageTimes;
-        messageTimes=switchList;
-      }
+    try {
+      msg=_messagesToWrite.take();
     }
-    if (messages.size() > 0) {
-      for (int i=0; i < messages.size(); i++) {
-        I2CPMessage msg=(I2CPMessage)messages.get(i);
-        Long when=(Long)messageTimes.get(i);
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("[" + _id + "] writeMessage before writing "+ msg.getClass().getName());
-        _runner.writeMessage(msg);
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("[" + _id + "] writeMessage time since addMessage(): "+ (_context.clock().now() - when.longValue())+ " for "+ msg.getClass().getName());
-      }
+ catch (    InterruptedException ie) {
+      continue;
     }
-    messages.clear();
-    messageTimes.clear();
+    if (msg.getType() == PoisonMessage.MESSAGE_TYPE)     break;
+    _runner.writeMessage(msg);
   }
 }

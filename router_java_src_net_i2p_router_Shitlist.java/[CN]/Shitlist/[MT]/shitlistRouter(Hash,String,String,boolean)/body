@@ -29,27 +29,25 @@
   e.cause=reason;
   e.transports=null;
   if (transport != null) {
-    e.transports=new HashSet(1);
+    e.transports=new ConcurrentHashSet(1);
     e.transports.add(transport);
   }
-synchronized (_entries) {
-    Entry old=(Entry)_entries.get(peer);
-    if (old != null) {
-      wasAlready=true;
-      if (old.expireOn > e.expireOn) {
-        e.expireOn=old.expireOn;
-        e.cause=old.cause;
-      }
-      if (e.transports != null) {
-        if (old.transports != null)         e.transports.addAll(old.transports);
+  Entry old=_entries.get(peer);
+  if (old != null) {
+    wasAlready=true;
+    if (old.expireOn > e.expireOn) {
+      e.expireOn=old.expireOn;
+      e.cause=old.cause;
+    }
+    if (e.transports != null) {
+      if (old.transports != null)       e.transports.addAll(old.transports);
  else {
-          e.transports=null;
-          e.cause=reason;
-        }
+        e.transports=null;
+        e.cause=reason;
       }
     }
-    _entries.put(peer,e);
   }
+  _entries.put(peer,e);
   if (transport == null) {
     _context.netDb().fail(peer);
   }

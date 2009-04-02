@@ -13,11 +13,10 @@ case Command.BIND:
 sendRequestReply(Reply.COMMAND_NOT_SUPPORTED,AddressType.DOMAINNAME,null,"0.0.0.0",0,out);
 throw new SOCKSException("BIND command not supported");
 case Command.UDP_ASSOCIATE:
-_log.debug("UDP ASSOCIATE command is not supported!");
-sendRequestReply(Reply.COMMAND_NOT_SUPPORTED,AddressType.DOMAINNAME,null,"0.0.0.0",0,out);
-throw new SOCKSException("UDP ASSOCIATE command not supported");
+break;
 default :
 _log.debug("unknown command in request (" + Integer.toHexString(command) + ")");
+sendRequestReply(Reply.COMMAND_NOT_SUPPORTED,AddressType.DOMAINNAME,null,"0.0.0.0",0,out);
 throw new SOCKSException("Invalid command in request");
 }
 {
@@ -34,7 +33,7 @@ if (i != 3) {
 connHostName+=".";
 }
 }
-_log.warn("IPV4 address type in request: " + connHostName + ". Is your client secure?");
+if (command != Command.UDP_ASSOCIATE) _log.warn("IPV4 address type in request: " + connHostName + ". Is your client secure?");
 break;
 case AddressType.DOMAINNAME:
 {
@@ -50,16 +49,22 @@ connHostName=new String(addr);
 _log.debug("DOMAINNAME address type in request: " + connHostName);
 break;
 case AddressType.IPV6:
+if (command != Command.UDP_ASSOCIATE) {
 _log.warn("IP V6 address type in request! Is your client secure?" + " (IPv6 is not supported, anyway :-)");
 sendRequestReply(Reply.ADDRESS_TYPE_NOT_SUPPORTED,AddressType.DOMAINNAME,null,"0.0.0.0",0,out);
 throw new SOCKSException("IPV6 addresses not supported");
+}
+break;
 default :
 _log.debug("unknown address type in request (" + Integer.toHexString(command) + ")");
+sendRequestReply(Reply.ADDRESS_TYPE_NOT_SUPPORTED,AddressType.DOMAINNAME,null,"0.0.0.0",0,out);
 throw new SOCKSException("Invalid addresses type in request");
 }
 connPort=in.readUnsignedShort();
 if (connPort == 0) {
 _log.debug("trying to connect to TCP port 0?  Dropping!");
+sendRequestReply(Reply.CONNECTION_NOT_ALLOWED_BY_RULESET,AddressType.DOMAINNAME,null,"0.0.0.0",0,out);
 throw new SOCKSException("Invalid port number in request");
 }
+return command;
 }

@@ -1,0 +1,44 @@
+{
+  _context=context;
+  _session=session;
+  _reduceEnabled=reduce;
+  _shutdownEnabled=shutdown;
+  if (!(reduce || shutdown))   throw new IllegalArgumentException("At least one must be enabled");
+  Properties props=session.getOptions();
+  _minimumTime=Long.MAX_VALUE;
+  _lastActive=0;
+  if (reduce) {
+    _reduceQuantity=1;
+    String p=props.getProperty("i2cp.reduceQuantity");
+    if (p != null) {
+      try {
+        _reduceQuantity=Math.max(Integer.parseInt(p),1);
+      }
+ catch (      NumberFormatException nfe) {
+      }
+    }
+    _reduceTime=DEFAULT_REDUCE_TIME;
+    p=props.getProperty("i2cp.reduceIdleTime");
+    if (p != null) {
+      try {
+        _reduceTime=Math.max(Long.parseLong(p),MINIMUM_TIME);
+      }
+ catch (      NumberFormatException nfe) {
+      }
+    }
+    _minimumTime=_reduceTime;
+  }
+  if (shutdown) {
+    _shutdownTime=DEFAULT_CLOSE_TIME;
+    String p=props.getProperty("i2cp.closeIdleTime");
+    if (p != null) {
+      try {
+        _shutdownTime=Math.max(Long.parseLong(p),MINIMUM_TIME);
+      }
+ catch (      NumberFormatException nfe) {
+      }
+    }
+    _minimumTime=Math.min(_minimumTime,_shutdownTime);
+    if (reduce && _shutdownTime <= _reduceTime)     reduce=false;
+  }
+}

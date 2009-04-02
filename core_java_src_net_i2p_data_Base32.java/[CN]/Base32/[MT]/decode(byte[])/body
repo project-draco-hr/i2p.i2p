@@ -1,0 +1,44 @@
+{
+  int len58;
+  if (source.length <= 1)   len58=source.length;
+ else   len58=source.length * 5 / 8;
+  byte[] outBuff=new byte[len58];
+  int outBuffPosn=0;
+  int usedbits=0;
+  for (int i=0; i < source.length; i++) {
+    int fivebits;
+    if ((source[i] & 0x80) != 0 || source[i] < '2' || source[i] > 'z')     fivebits=BAD_ENCODING;
+ else     fivebits=DECODABET[source[i] - '2'];
+    if (fivebits >= 0) {
+      if (usedbits == 0) {
+        outBuff[outBuffPosn]=(byte)((fivebits << 3) & 0xf8);
+        usedbits=5;
+      }
+ else       if (usedbits < 3) {
+        outBuff[outBuffPosn]|=(fivebits << (3 - usedbits)) & dmask[usedbits];
+        usedbits+=5;
+      }
+ else       if (usedbits == 3) {
+        outBuff[outBuffPosn++]|=fivebits;
+        usedbits=0;
+      }
+ else {
+        outBuff[outBuffPosn++]|=(fivebits >> (usedbits - 3)) & dmask[usedbits];
+        byte next=(byte)(fivebits << (11 - usedbits));
+        if (outBuffPosn < len58) {
+          outBuff[outBuffPosn]=next;
+          usedbits-=3;
+        }
+ else         if (next != 0) {
+          _log.warn("Extra data at the end: " + next + "(decimal)");
+          return null;
+        }
+      }
+    }
+ else {
+      _log.warn("Bad Base32 input character at " + i + ": "+ source[i]+ "(decimal)");
+      return null;
+    }
+  }
+  return outBuff;
+}
