@@ -12,37 +12,16 @@
           break;
         }
       }
-      if (false && _log.shouldLog(Log.WARN)) {
-        StringBuffer buf=new StringBuffer(128);
-        buf.append("Updating throughput after ").append(tot).append(" to ");
-        for (int i=0; i < THROUGHPUT_COUNT; i++)         buf.append(_peakThroughput[i]).append(',');
-        buf.append(" for ").append(_peer.toBase64());
-        _log.warn(buf.toString());
-      }
     }
  else {
-      if (_context.random().nextLong(DROP_PERIOD_MINUTES * 2) <= 0) {
-        for (int i=0; i < THROUGHPUT_COUNT; i++)         _peakThroughput[i]/=2;
-        if (false && _log.shouldLog(Log.WARN)) {
-          StringBuffer buf=new StringBuffer(128);
-          buf.append("Degrading the throughput measurements to ");
-          for (int i=0; i < THROUGHPUT_COUNT; i++)           buf.append(_peakThroughput[i]).append(',');
-          buf.append(" for ").append(_peer.toBase64());
-          _log.warn(buf.toString());
-        }
+      if (_context.random().nextInt(DROP_PERIOD_MINUTES * 2) <= 0) {
+        for (int i=0; i < THROUGHPUT_COUNT; i++)         _peakThroughput[i]*=DEGRADE_FACTOR;
       }
     }
-    if (_context.random().nextLong(DROP_PERIOD_MINUTES * 2) <= 0) {
+    if (_context.random().nextInt(DROP_PERIOD_MINUTES * 2) <= 0) {
       for (int i=0; i < THROUGHPUT_COUNT; i++) {
-        _peakTunnelThroughput[i]/=2;
-        _peakTunnel1mThroughput[i]/=2;
-      }
-      if (_log.shouldLog(Log.WARN)) {
-        StringBuffer buf=new StringBuffer(128);
-        buf.append("Degrading the tunnel throughput measurements to ");
-        for (int i=0; i < THROUGHPUT_COUNT; i++)         buf.append(_peakTunnel1mThroughput[i]).append(',');
-        buf.append(" for ").append(_peer.toBase64());
-        _log.warn(buf.toString());
+        _peakTunnelThroughput[i]*=DEGRADE_FACTOR;
+        _peakTunnel1mThroughput[i]*=DEGRADE_FACTOR;
       }
     }
     _peakThroughputCurrentTotal=0;
