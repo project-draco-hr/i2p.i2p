@@ -2,6 +2,7 @@
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Accept(" + timeoutMs + ") called");
   long expiration=timeoutMs + _context.clock().now();
   while (true) {
+    if ((timeoutMs > 0) && (expiration < _context.clock().now()))     return null;
     if (!_active) {
       while (true) {
         Packet packet=_synQueue.poll();
@@ -10,7 +11,6 @@
       }
       return null;
     }
-    if ((timeoutMs > 0) && (expiration < _context.clock().now()))     return null;
     Packet syn=null;
     while (_active && syn == null) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Accept(" + timeoutMs + "): active="+ _active+ " queue: "+ _synQueue.size());
