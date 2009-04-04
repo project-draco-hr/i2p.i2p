@@ -1,18 +1,14 @@
 {
   if (_log.shouldLog(Log.DEBUG))   _log.debug("waitIncoming() called, pending: " + pendingSockets.size());
-  boolean isTimed=(timeoutMs >= 0);
+  boolean isTimed=(timeoutMs > 0);
   if (isTimed) {
     Clock clock=I2PAppContext.getGlobalContext().clock();
     long now=clock.now();
     long end=now + timeoutMs;
     while (pendingSockets.size() <= 0 && now < end) {
       if (closing)       throw new ConnectException("I2PServerSocket closed");
-      try {
 synchronized (socketAddedLock) {
-          socketAddedLock.wait(end - now);
-        }
-      }
- catch (      InterruptedException ie) {
+        socketAddedLock.wait(end - now);
       }
       now=clock.now();
     }
@@ -29,5 +25,4 @@ synchronized (socketAddedLock) {
       }
     }
   }
-  return (pendingSockets.size() > 0);
 }
