@@ -27,16 +27,11 @@
  else {
         _log.debug("Custom destination specified [" + dest + "]");
       }
-      boolean good_key=false;
       try {
-        good_key=(new VerifiedDestination(dest)).verifyCert(true);
+        SAMUtils.checkPrivateDestination(dest);
       }
- catch (      DataFormatException e) {
-        good_key=false;
-      }
-      if (!good_key) {
-        _log.debug("Bad destination key");
-        return writeString("SESSION STATUS RESULT=I2P_ERROR MESSAGE=\"bad destination key\"\n");
+ catch (      SAMUtils.InvalidDestination e) {
+        return writeString("SESSION STATUS RESULT=INVALID_KEY\n");
       }
       nick=props.getProperty("ID");
       if (nick == null) {
@@ -53,10 +48,15 @@
       Properties allProps=new Properties();
       allProps.putAll(i2cpProps);
       allProps.putAll(props);
-      if (!sSessionsHash.put(nick,new SessionRecord(dest,allProps,this))) {
+      try {
+        sSessionsHash.put(nick,new SessionRecord(dest,allProps,this));
+      }
+ catch (      SessionsDB.ExistingId e) {
         _log.debug("SESSION ID parameter already in use");
-        String n=nick;
-        return writeString("SESSION STATUS RESULT=I2P_ERROR MESSAGE=\"ID " + n + " already in use\"\n");
+        return writeString("SESSION STATUS RESULT=DUPLICATED_ID\n");
+      }
+catch (      SessionsDB.ExistingDest e) {
+        return writeString("SESSION STATUS RESULT=DUPLICATED_DEST\n");
       }
       if (style.equals("RAW")) {
         DatagramServer.getInstance(i2cpProps);
