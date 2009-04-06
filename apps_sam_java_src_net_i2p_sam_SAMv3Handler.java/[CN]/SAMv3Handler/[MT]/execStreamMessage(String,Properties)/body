@@ -1,0 +1,62 @@
+{
+  String nick=null;
+  SessionRecord rec=null;
+  if (session != null) {
+    _log.error("STREAM message received, but this session is a master session");
+    try {
+      notifyStreamResult(true,"I2P_ERROR","master session cannot be used for streams");
+    }
+ catch (    IOException e) {
+    }
+    return false;
+  }
+  nick=props.getProperty("ID");
+  if (nick == null) {
+    _log.debug("SESSION ID parameter not specified");
+    try {
+      notifyStreamResult(true,"I2P_ERROR","ID not specified");
+    }
+ catch (    IOException e) {
+    }
+    return false;
+  }
+  props.remove("ID");
+  rec=sSessionsHash.get(nick);
+  if (rec == null) {
+    _log.debug("STREAM SESSION ID does not exist");
+    try {
+      notifyStreamResult(true,"INVALID_ID","STREAM SESSION ID does not exist");
+    }
+ catch (    IOException e) {
+    }
+    return false;
+  }
+  streamSession=rec.getHandler().streamSession;
+  if (streamSession == null) {
+    _log.debug("specified ID is not a stream session");
+    try {
+      notifyStreamResult(true,"I2P_ERROR","specified ID is not a STREAM session");
+    }
+ catch (    IOException e) {
+    }
+    return false;
+  }
+  if (opcode.equals("CONNECT")) {
+    return execStreamConnect(props);
+  }
+ else   if (opcode.equals("ACCEPT")) {
+    return execStreamAccept(props);
+  }
+ else   if (opcode.equals("FORWARD")) {
+    return execStreamForwardIncoming(props);
+  }
+ else {
+    _log.debug("Unrecognized RAW message opcode: \"" + opcode + "\"");
+    try {
+      notifyStreamResult(true,"I2P_ERROR","Unrecognized RAW message opcode: " + opcode);
+    }
+ catch (    IOException e) {
+    }
+    return false;
+  }
+}
