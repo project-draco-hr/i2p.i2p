@@ -1,0 +1,23 @@
+{
+  I2PSocket ret=null;
+  if (timeout <= 0) {
+    ret=accept();
+  }
+ else {
+    long now=I2PAppContext.getGlobalContext().clock().now();
+    long expiration=timeout + now;
+synchronized (pendingSockets) {
+      while (pendingSockets.size() == 0 && expiration > now) {
+        pendingSockets.wait(expiration - now);
+        now=I2PAppContext.getGlobalContext().clock().now();
+      }
+      ret=(I2PSocket)pendingSockets.remove(0);
+    }
+    if (ret != null) {
+synchronized (socketAcceptedLock) {
+        socketAcceptedLock.notifyAll();
+      }
+    }
+  }
+  return ret;
+}
