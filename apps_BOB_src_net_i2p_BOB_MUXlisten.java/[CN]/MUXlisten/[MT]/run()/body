@@ -1,4 +1,5 @@
 {
+  I2PServerSocket SS=null;
   try {
     wlock();
     try {
@@ -24,7 +25,8 @@
       tg=new ThreadGroup(N);
       die: {
         if (go_out) {
-          I2Plistener conn=new I2Plistener(socketManager,info,database,_log);
+          SS=socketManager.getServerSocket();
+          I2Plistener conn=new I2Plistener(SS,socketManager,info,database,_log);
           Thread t=new Thread(tg,conn,"BOBI2Plistener " + N);
           t.start();
         }
@@ -80,14 +82,9 @@
           break die;
         }
       }
-      try {
-        Thread.sleep(500);
-      }
- catch (      InterruptedException ex) {
-      }
       if (tg.activeCount() + tg.activeGroupCount() != 0) {
-        tg.interrupt();
         while (tg.activeCount() + tg.activeGroupCount() != 0) {
+          tg.interrupt();
           try {
             Thread.sleep(100);
           }
@@ -109,6 +106,34 @@
     System.out.println("BOB: MUXlisten: Something fucked up REALLY bad!");
     System.out.println("BOB: MUXlisten: Please email the above dump to sponge@mail.i2p");
   }
+  if (tg != null) {
+    if (tg.activeCount() + tg.activeGroupCount() != 0) {
+      tg.interrupt();
+      while (tg.activeCount() + tg.activeGroupCount() != 0) {
+        try {
+          Thread.sleep(100);
+        }
+ catch (        InterruptedException ex) {
+        }
+      }
+    }
+    tg.destroy();
+    tg=null;
+  }
+  if (SS != null) {
+    try {
+      SS.close();
+    }
+ catch (    I2PException ex) {
+    }
+  }
+  if (this.come_in) {
+    try {
+      listener.close();
+    }
+ catch (    IOException e) {
+    }
+  }
   try {
     socketManager.destroySocketManager();
   }
@@ -126,32 +151,6 @@
       return;
     }
     wunlock();
-  }
- catch (  Exception e) {
-  }
-  if (tg != null) {
-    if (tg.activeCount() + tg.activeGroupCount() != 0) {
-      tg.interrupt();
-      while (tg.activeCount() + tg.activeGroupCount() != 0) {
-        try {
-          Thread.sleep(100);
-        }
- catch (        InterruptedException ex) {
-        }
-      }
-    }
-    tg.destroy();
-    tg=null;
-  }
-  if (this.come_in) {
-    try {
-      listener.close();
-    }
- catch (    IOException e) {
-    }
-  }
-  try {
-    socketManager.destroySocketManager();
   }
  catch (  Exception e) {
   }
