@@ -4,11 +4,6 @@
   boolean spin=true;
   try {
     while (spin) {
-      database.getReadLock();
-      info.getReadLock();
-      spin=info.get("RUNNING").equals(Boolean.TRUE);
-      info.releaseReadLock();
-      database.releaseReadLock();
       b=Ain.read(a,0,1);
       if (b > 0) {
         Aout.write(a,0,b);
@@ -16,19 +11,27 @@
  else       if (b == 0) {
         Thread.yield();
         if (Ain.available() == 0) {
-          try {
-            Thread.sleep(10);
-          }
- catch (          InterruptedException ex) {
-          }
+          Thread.sleep(10);
         }
       }
  else {
+        Ain.close();
+        Aout.close();
         return;
       }
     }
   }
  catch (  Exception e) {
+    try {
+      Ain.close();
+    }
+ catch (    IOException ex) {
+    }
+    try {
+      Aout.close();
+    }
+ catch (    IOException ex) {
+    }
     return;
   }
 }

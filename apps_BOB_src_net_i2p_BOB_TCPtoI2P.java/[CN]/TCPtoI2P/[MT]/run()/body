@@ -1,8 +1,12 @@
 {
   String line, input;
+  InputStream Iin=null;
+  OutputStream Iout=null;
+  InputStream in=null;
+  OutputStream out=null;
   try {
-    InputStream in=sock.getInputStream();
-    OutputStream out=sock.getOutputStream();
+    in=sock.getInputStream();
+    out=sock.getOutputStream();
     try {
       line=lnRead(in);
       input=line.toLowerCase();
@@ -16,20 +20,16 @@
       try {
         I2P=socketManager.connect(dest);
         I2P.setReadTimeout(0);
-        InputStream Iin=I2P.getInputStream();
-        OutputStream Iout=I2P.getOutputStream();
-        TCPio conn_c=new TCPio(in,Iout,info,database);
-        TCPio conn_a=new TCPio(Iin,out,info,database);
+        Iin=I2P.getInputStream();
+        Iout=I2P.getOutputStream();
+        TCPio conn_c=new TCPio(in,Iout);
+        TCPio conn_a=new TCPio(Iin,out);
         Thread t=new Thread(conn_c,"TCPioA");
         Thread q=new Thread(conn_a,"TCPioB");
         t.start();
         q.start();
         while (t.isAlive() && q.isAlive()) {
-          try {
-            Thread.sleep(10);
-          }
- catch (          InterruptedException e) {
-          }
+          Thread.sleep(10);
         }
       }
  catch (      I2PException e) {
@@ -49,7 +49,27 @@ catch (      InterruptedIOException e) {
       Emsg("ERROR " + e.toString(),out);
     }
   }
- catch (  IOException ioe) {
+ catch (  Exception e) {
+  }
+  try {
+    in.close();
+  }
+ catch (  Exception e) {
+  }
+  try {
+    out.close();
+  }
+ catch (  Exception e) {
+  }
+  try {
+    Iin.close();
+  }
+ catch (  Exception e) {
+  }
+  try {
+    Iout.close();
+  }
+ catch (  Exception e) {
   }
   try {
     I2P.close();
