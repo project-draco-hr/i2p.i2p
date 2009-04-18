@@ -1,9 +1,10 @@
 {
+  I2PServerSocket SS=null;
+  int ticks=1200;
   try {
     wlock();
     try {
-      info.add("RUNNING",Boolean.TRUE);
-      info.add("STARTING",Boolean.FALSE);
+      info.add("RUNNING",new Boolean(true));
     }
  catch (    Exception e) {
       wunlock();
@@ -24,7 +25,8 @@
       tg=new ThreadGroup(N);
       die: {
         if (go_out) {
-          I2Plistener conn=new I2Plistener(socketManager,info,database,_log);
+          SS=socketManager.getServerSocket();
+          I2Plistener conn=new I2Plistener(SS,socketManager,info,database,_log);
           Thread t=new Thread(tg,conn,"BOBI2Plistener " + N);
           t.start();
         }
@@ -33,12 +35,32 @@
           Thread q=new Thread(tg,conn,"BOBTCPlistener" + N);
           q.start();
         }
+        try {
+          wlock();
+          try {
+            info.add("STARTING",new Boolean(false));
+          }
+ catch (          Exception e) {
+            wunlock();
+            break die;
+          }
+        }
+ catch (        Exception e) {
+          break die;
+        }
+        try {
+          wunlock();
+        }
+ catch (        Exception e) {
+          break die;
+        }
         boolean spin=true;
         while (spin) {
           try {
             Thread.sleep(1000);
           }
  catch (          InterruptedException e) {
+            break die;
           }
           try {
             rlock();
@@ -63,7 +85,7 @@
         try {
           wlock();
           try {
-            info.add("RUNNING",Boolean.FALSE);
+            info.add("RUNNING",new Boolean(false));
           }
  catch (          Exception e) {
             wunlock();
@@ -80,12 +102,46 @@
           break die;
         }
       }
-      while (tg.activeCount() + tg.activeGroupCount() != 0) {
-        tg.interrupt();
+      if (SS != null) {
         try {
-          Thread.sleep(100);
+          SS.close();
         }
- catch (        InterruptedException ex) {
+ catch (        I2PException ex) {
+        }
+      }
+      if (this.come_in) {
+        try {
+          listener.close();
+        }
+ catch (        IOException e) {
+        }
+      }
+      I2PSession session=socketManager.getSession();
+      if (session != null) {
+        try {
+          session.destroySession();
+        }
+ catch (        I2PSessionException ex) {
+        }
+      }
+      try {
+        socketManager.destroySocketManager();
+      }
+ catch (      Exception e) {
+      }
+      if (tg.activeCount() + tg.activeGroupCount() != 0) {
+        while ((tg.activeCount() + tg.activeGroupCount() != 0) && ticks != 0) {
+          tg.interrupt();
+          ticks--;
+          try {
+            Thread.sleep(100);
+          }
+ catch (          InterruptedException ex) {
+            break quit;
+          }
+        }
+        if (tg.activeCount() + tg.activeGroupCount() != 0) {
+          break quit;
         }
       }
       tg.destroy();
@@ -96,23 +152,54 @@
     }
   }
   if (tg != null) {
-    System.out.println("BOB: MUXlisten: Something fucked up REALLY bad!");
-    System.out.println("BOB: MUXlisten: Please email the following dump to sponge@mail.i2p");
-    WrapperManager.requestThreadDump();
-    System.out.println("BOB: MUXlisten: Something fucked up REALLY bad!");
-    System.out.println("BOB: MUXlisten: Please email the above dump to sponge@mail.i2p");
-  }
-  try {
-    socketManager.destroySocketManager();
-  }
- catch (  Exception e) {
+    if (SS != null) {
+      try {
+        SS.close();
+      }
+ catch (      I2PException ex) {
+      }
+    }
+    if (this.come_in) {
+      try {
+        listener.close();
+      }
+ catch (      IOException e) {
+      }
+    }
+    try {
+      socketManager.destroySocketManager();
+    }
+ catch (    Exception e) {
+    }
+    ticks=600;
+    if (tg.activeCount() + tg.activeGroupCount() != 0) {
+      while ((tg.activeCount() + tg.activeGroupCount() != 0) && ticks != 0) {
+        tg.interrupt();
+        ticks--;
+        try {
+          Thread.sleep(100);
+        }
+ catch (        InterruptedException ex) {
+        }
+      }
+    }
+    if (tg.activeCount() + tg.activeGroupCount() == 0) {
+      tg.destroy();
+      tg=null;
+    }
+ else {
+      System.out.println("BOB: MUXlisten: Can't kill threads. Please send the following dump to sponge@mail.i2p");
+      System.out.println("\n\nBOB: MUXlisten: ThreadGroup dump BEGIN");
+      visit(tg,0);
+      System.out.println("BOB: MUXlisten: ThreadGroup dump END\n\n");
+    }
   }
   try {
     wlock();
     try {
-      info.add("STARTING",Boolean.FALSE);
-      info.add("STOPPING",Boolean.FALSE);
-      info.add("RUNNING",Boolean.FALSE);
+      info.add("STARTING",new Boolean(false));
+      info.add("STOPPING",new Boolean(false));
+      info.add("RUNNING",new Boolean(false));
     }
  catch (    Exception e) {
       wunlock();
@@ -121,17 +208,5 @@
     wunlock();
   }
  catch (  Exception e) {
-  }
-  if (tg != null) {
-    while (tg.activeCount() + tg.activeGroupCount() != 0) {
-      tg.interrupt();
-      try {
-        Thread.sleep(100);
-      }
- catch (      InterruptedException ex) {
-      }
-    }
-    tg.destroy();
-    tg=null;
   }
 }

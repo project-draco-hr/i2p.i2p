@@ -12,7 +12,23 @@
     rewrite=true;
   }
   try {
-    _server.addListener(_listenHost + ':' + _listenPort);
+    StringTokenizer tok=new StringTokenizer(_listenHost," ,");
+    int boundAddresses=0;
+    while (tok.hasMoreTokens()) {
+      String host=tok.nextToken().trim();
+      try {
+        if (host.indexOf(":") >= 0)         _server.addListener('[' + host + "]:"+ _listenPort);
+ else         _server.addListener(host + ':' + _listenPort);
+        boundAddresses++;
+      }
+ catch (      IOException ioe) {
+        System.err.println("Unable to bind routerconsole to " + host + " port "+ _listenPort+ ' '+ ioe);
+      }
+    }
+    if (boundAddresses <= 0) {
+      System.err.println("Unable to bind routerconsole to any address on port " + _listenPort);
+      return;
+    }
     _server.setRootWebApp(ROUTERCONSOLE);
     WebApplicationContext wac=_server.addWebApplication("/",_webAppsDir + ROUTERCONSOLE + ".war");
     initialize(wac);
@@ -47,7 +63,7 @@
     _server.start();
   }
  catch (  Exception me) {
-    me.printStackTrace();
+    System.err.println("WARNING: Error starting one or more listeners of the Router Console server.\n" + "If your console is still accessible at http://127.0.0.1:7657/,\n" + "this may be a problem only with binding to the IPV6 address ::1.\n"+ "If so, you may ignore this error, or remove the\n"+ "\"::1,\" in the \"clientApp.0.args\" line of the clients.config file.\n"+ "Exception: "+ me);
   }
   try {
     SysTray tray=SysTray.getInstance();

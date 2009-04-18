@@ -1,14 +1,11 @@
 {
-  Set clients=_context.clientManager().listClients();
+  List clients=new ArrayList(_context.clientManager().listClients());
+  Collections.sort(clients,new AlphaComparator());
   StringBuffer buf=new StringBuffer(512);
   buf.append("<u><b>Local destinations</b></u><br />");
   for (Iterator iter=clients.iterator(); iter.hasNext(); ) {
     Destination client=(Destination)iter.next();
-    TunnelPoolSettings in=_context.tunnelManager().getInboundSettings(client.calculateHash());
-    TunnelPoolSettings out=_context.tunnelManager().getOutboundSettings(client.calculateHash());
-    String name=(in != null ? in.getDestinationNickname() : null);
-    if (name == null)     name=(out != null ? out.getDestinationNickname() : null);
-    if (name == null)     name=client.calculateHash().toBase64().substring(0,6);
+    String name=getName(client);
     buf.append("<b>*</b> ").append(name).append("<br />\n");
     LeaseSet ls=_context.netDb().lookupLeaseSetLocally(client.calculateHash());
     if (ls != null) {
@@ -22,9 +19,9 @@
       buf.append("<i>No leases</i><br />\n");
     }
     buf.append("<a href=\"tunnels.jsp#").append(client.calculateHash().toBase64().substring(0,4));
-    buf.append("\">Details</a> ");
+    buf.append("\" target=\"_top\">Details</a> ");
     buf.append("<a href=\"configtunnels.jsp#").append(client.calculateHash().toBase64().substring(0,4));
-    buf.append("\">Config</a><br />\n");
+    buf.append("\" target=\"_top\">Config</a><br />\n");
   }
   buf.append("<hr />\n");
   return buf.toString();

@@ -1,0 +1,24 @@
+{
+synchronized (activePeerListeners) {
+    activePeerListeners.add(listener);
+    if (activePeerTimer == null) {
+      activePeerTimer=new Timer();
+      TimerTask t=new TimerTask(){
+        private int activePeers=0;
+        @Override public void run(){
+          int newActivePeers=getActivePeers();
+          if (!(activePeers == newActivePeers)) {
+synchronized (activePeerListeners) {
+              for (int i=0; i < activePeerListeners.size(); i++) {
+                activePeerListeners.get(i).actionPerformed(new ActionEvent(this,0,""));
+              }
+            }
+            activePeers=newActivePeers;
+          }
+        }
+      }
+;
+      activePeerTimer.schedule(t,0,60 * 1000);
+    }
+  }
+}
