@@ -8,6 +8,9 @@
   boolean success=_synQueue.offer(packet);
   if (success) {
     SimpleScheduler.getInstance().addEvent(new TimeoutSyn(packet),_acceptTimeout);
+    if (packet.isFlagSet(Packet.FLAG_SYNCHRONIZE)) synchronized (this._synSignal) {
+      this._synSignal.notifyAll();
+    }
   }
  else {
     if (_log.shouldLog(Log.WARN))     _log.warn("Dropping new SYN request, as the queue is full");

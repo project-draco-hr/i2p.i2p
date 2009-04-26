@@ -1,16 +1,18 @@
 {
   _log.debug("run() called for socket reader " + id);
   int read=-1;
-  byte[] data=new byte[SOCKET_HANDLER_BUF_SIZE];
+  ByteBuffer data=ByteBuffer.allocateDirect(SOCKET_HANDLER_BUF_SIZE);
   try {
     InputStream in=i2pSocket.getInputStream();
     while (stillRunning) {
-      read=in.read(data);
+      data.clear();
+      read=Channels.newChannel(in).read(data);
       if (read == -1) {
         _log.debug("Handler " + id + ": connection closed");
         break;
       }
-      recv.receiveStreamBytes(id,data,read);
+      data.flip();
+      recv.receiveStreamBytes(id,data);
     }
   }
  catch (  IOException e) {
