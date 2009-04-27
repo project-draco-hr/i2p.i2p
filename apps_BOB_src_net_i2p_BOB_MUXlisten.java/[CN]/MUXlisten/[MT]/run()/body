@@ -130,6 +130,7 @@
  catch (      Exception e) {
       }
       if (tg.activeCount() + tg.activeGroupCount() != 0) {
+        tg.interrupt();
         while ((tg.activeCount() + tg.activeGroupCount() != 0) && ticks != 0) {
           ticks--;
           try {
@@ -150,52 +151,6 @@
       break quit;
     }
   }
-  if (tg != null) {
-    if (SS != null) {
-      try {
-        SS.close();
-      }
- catch (      I2PException ex) {
-      }
-    }
-    if (this.come_in) {
-      try {
-        listener.close();
-      }
- catch (      IOException e) {
-      }
-    }
-    try {
-      socketManager.destroySocketManager();
-    }
- catch (    Exception e) {
-    }
-    ticks=100;
-    if (tg.activeCount() + tg.activeGroupCount() != 0) {
-      while ((tg.activeCount() + tg.activeGroupCount() != 0) && ticks != 0) {
-        tg.interrupt();
-        ticks--;
-        try {
-          Thread.sleep(100);
-        }
- catch (        InterruptedException ex) {
-        }
-      }
-    }
-    if (tg.activeCount() + tg.activeGroupCount() == 0) {
-      tg.destroy();
-      tg=null;
-    }
- else {
-      System.out.println("BOB: MUXlisten: Forcibly killing threads.");
-      System.out.println("\n\nBOB: MUXlisten: ThreadGroup dump BEGIN");
-      visit(tg,0);
-      System.out.println("BOB: MUXlisten: ThreadGroup dump END\n\n");
-      nuke(tg,0);
-      tg.destroy();
-      tg=null;
-    }
-  }
   try {
     wlock();
     try {
@@ -210,5 +165,78 @@
     wunlock();
   }
  catch (  Exception e) {
+  }
+  if (tg != null) {
+    tg.interrupt();
+    if (SS != null) {
+      try {
+        SS.close();
+      }
+ catch (      I2PException ex) {
+      }
+    }
+    if (this.come_in) {
+      try {
+        listener.close();
+      }
+ catch (      IOException e) {
+      }
+    }
+    I2PSession session=socketManager.getSession();
+    if (session != null) {
+      try {
+        session.destroySession();
+      }
+ catch (      I2PSessionException ex) {
+      }
+    }
+    try {
+      socketManager.destroySocketManager();
+    }
+ catch (    Exception e) {
+    }
+    if (tg.activeCount() + tg.activeGroupCount() != 0) {
+      int foo=tg.activeCount() + tg.activeGroupCount();
+      int bar=foo;
+      String boner=tg.getName();
+      System.out.println("BOB: MUXlisten: Waiting on threads for " + boner);
+      System.out.println("\n\nBOB: MUXlisten: ThreadGroup dump BEGIN " + boner);
+      visit(tg,0,boner);
+      System.out.println("BOB: MUXlisten: ThreadGroup dump END " + boner + "\n\n");
+      while ((tg.activeCount() + tg.activeGroupCount() != 0)) {
+        foo=tg.activeCount() + tg.activeGroupCount();
+        if (foo != bar) {
+          System.out.println("\n\nBOB: MUXlisten: ThreadGroup dump BEGIN " + boner);
+          visit(tg,0,boner);
+          System.out.println("BOB: MUXlisten: ThreadGroup dump END " + boner + "\n\n");
+        }
+        bar=foo;
+        try {
+          session=socketManager.getSession();
+          if (session != null) {
+            try {
+              session.destroySession();
+            }
+ catch (            I2PSessionException ex) {
+            }
+          }
+          try {
+            socketManager.destroySocketManager();
+          }
+ catch (          Exception e) {
+          }
+        }
+ catch (        Exception e) {
+        }
+        try {
+          Thread.sleep(100);
+        }
+ catch (        InterruptedException ex) {
+        }
+      }
+      System.out.println("BOB: MUXlisten: Threads went away. Success: " + boner);
+    }
+    tg.destroy();
+    tg=null;
   }
 }
