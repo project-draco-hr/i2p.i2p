@@ -9,8 +9,12 @@
     String sAutoPort=_context.router().getConfigSetting(ConfigNetHelper.PROP_I2NP_NTCP_AUTO_PORT);
     boolean oldAutoHost="true".equalsIgnoreCase(sAutoHost);
     boolean oldAutoPort="true".equalsIgnoreCase(sAutoPort);
-    if (_ntcpHostname == null)     _ntcpHostname="";
-    if (_ntcpPort == null)     _ntcpPort="";
+    if (_ntcpHostname == null || _ntcpInboundDisabled)     _ntcpHostname="";
+    if (_ntcpPort == null || _ntcpInboundDisabled)     _ntcpPort="";
+    if (_ntcpInboundDisabled) {
+      _ntcpAutoIP=false;
+      _ntcpAutoPort=false;
+    }
     if (oldAutoHost != _ntcpAutoIP || !oldNHost.equalsIgnoreCase(_ntcpHostname)) {
       if (_ntcpAutoIP) {
         _context.router().setConfigSetting(ConfigNetHelper.PROP_I2NP_NTCP_AUTO_IP,"true");
@@ -51,6 +55,7 @@
       String oldPort="" + _context.getProperty(UDPTransport.PROP_INTERNAL_PORT,UDPTransport.DEFAULT_INTERNAL_PORT);
       if (!oldPort.equals(_udpPort)) {
         _context.router().setConfigSetting(UDPTransport.PROP_INTERNAL_PORT,_udpPort);
+        _context.router().setConfigSetting(UDPTransport.PROP_EXTERNAL_PORT,_udpPort);
         addFormNotice("Updating UDP port from " + oldPort + " to "+ _udpPort);
         restartRequired=true;
       }
