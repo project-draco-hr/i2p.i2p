@@ -1,0 +1,31 @@
+{
+  String uri=httpReq.getURI();
+  Debug.message("httpGetRequestRecieved = " + uri);
+  if (uri == null) {
+    httpReq.returnBadRequest();
+    return;
+  }
+  Device embDev;
+  Service embService;
+  byte fileByte[]=new byte[0];
+  if (isDescriptionURI(uri) == true) {
+    String localAddr=httpReq.getLocalAddress();
+    fileByte=getDescriptionData(localAddr);
+  }
+ else   if ((embDev=getDeviceByDescriptionURI(uri)) != null) {
+    String localAddr=httpReq.getLocalAddress();
+    fileByte=embDev.getDescriptionData(localAddr);
+  }
+ else   if ((embService=getServiceBySCPDURL(uri)) != null) {
+    fileByte=embService.getSCPDData();
+  }
+ else {
+    httpReq.returnBadRequest();
+    return;
+  }
+  HTTPResponse httpRes=new HTTPResponse();
+  if (FileUtil.isXMLFileName(uri) == true)   httpRes.setContentType(XML.CONTENT_TYPE);
+  httpRes.setStatusCode(HTTPStatus.OK);
+  httpRes.setContent(fileByte);
+  httpReq.post(httpRes);
+}

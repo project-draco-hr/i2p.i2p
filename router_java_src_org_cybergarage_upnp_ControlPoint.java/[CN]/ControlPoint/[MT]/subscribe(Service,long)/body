@@ -1,0 +1,19 @@
+{
+  if (service.isSubscribed() == true) {
+    String sid=service.getSID();
+    return subscribe(service,sid,timeout);
+  }
+  Device rootDev=service.getRootDevice();
+  if (rootDev == null)   return false;
+  String ifAddress=rootDev.getInterfaceAddress();
+  SubscriptionRequest subReq=new SubscriptionRequest();
+  subReq.setSubscribeRequest(service,getEventSubCallbackURL(ifAddress),timeout);
+  SubscriptionResponse subRes=subReq.post();
+  if (subRes.isSuccessful() == true) {
+    service.setSID(subRes.getSID());
+    service.setTimeout(subRes.getTimeout());
+    return true;
+  }
+  service.clearSID();
+  return false;
+}

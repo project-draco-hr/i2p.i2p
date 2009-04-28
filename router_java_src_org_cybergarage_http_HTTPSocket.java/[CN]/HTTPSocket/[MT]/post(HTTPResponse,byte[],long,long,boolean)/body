@@ -1,0 +1,30 @@
+{
+  httpRes.setDate(Calendar.getInstance());
+  OutputStream out=getOutputStream();
+  try {
+    httpRes.setContentLength(contentLength);
+    out.write(httpRes.getHeader().getBytes());
+    out.write(HTTP.CRLF.getBytes());
+    if (isOnlyHeader == true) {
+      out.flush();
+      return true;
+    }
+    boolean isChunkedResponse=httpRes.isChunked();
+    if (isChunkedResponse == true) {
+      String chunSizeBuf=Long.toString(contentLength);
+      out.write(chunSizeBuf.getBytes());
+      out.write(HTTP.CRLF.getBytes());
+    }
+    out.write(content,(int)contentOffset,(int)contentLength);
+    if (isChunkedResponse == true) {
+      out.write(HTTP.CRLF.getBytes());
+      out.write("0".getBytes());
+      out.write(HTTP.CRLF.getBytes());
+    }
+    out.flush();
+  }
+ catch (  Exception e) {
+    return false;
+  }
+  return true;
+}

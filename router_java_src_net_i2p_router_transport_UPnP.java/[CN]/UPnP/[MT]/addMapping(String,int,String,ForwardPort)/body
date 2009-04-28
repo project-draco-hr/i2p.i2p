@@ -1,0 +1,27 @@
+{
+  if (isDisabled || !isNATPresent() || _router == null) {
+    _log.error("Can't addMapping: " + isDisabled + " "+ isNATPresent()+ " "+ _router);
+    return false;
+  }
+  removeMapping(protocol,port,fp,true);
+  Action add=_service.getAction("AddPortMapping");
+  if (add == null) {
+    _log.error("Couldn't find AddPortMapping action!");
+    return false;
+  }
+  add.setArgumentValue("NewRemoteHost","");
+  add.setArgumentValue("NewExternalPort",port);
+  add.setArgumentValue("NewInternalClient",_router.getInterfaceAddress());
+  add.setArgumentValue("NewInternalPort",port);
+  add.setArgumentValue("NewProtocol",protocol);
+  add.setArgumentValue("NewPortMappingDescription",description);
+  add.setArgumentValue("NewEnabled","1");
+  add.setArgumentValue("NewLeaseDuration",0);
+  if (add.postControlAction()) {
+synchronized (lock) {
+      portsForwarded.add(fp);
+    }
+    return true;
+  }
+ else   return false;
+}
