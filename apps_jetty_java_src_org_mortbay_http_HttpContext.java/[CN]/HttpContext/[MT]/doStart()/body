@@ -1,0 +1,28 @@
+{
+  if (isStarted())   return;
+  if (_httpServer.getServerClasses() != null)   _serverClasses=_httpServer.getServerClasses();
+  if (_httpServer.getSystemClasses() != null)   _systemClasses=_httpServer.getSystemClasses();
+  _resources.start();
+  statsReset();
+  if (_httpServer == null)   throw new IllegalStateException("No server for " + this);
+  _resources.getMimeMap();
+  _resources.getEncodingMap();
+  if (_userRealm == null && _authenticator != null) {
+    _userRealm=_httpServer.getRealm(_realmName);
+    if (_userRealm == null)     log.warn("No Realm: " + _realmName);
+  }
+  initClassLoader(false);
+  String attr=getInitParameter(__fileClassPathAttr);
+  if (attr != null && attr.length() > 0)   setAttribute(attr,getFileClassPath());
+  Thread thread=Thread.currentThread();
+  ClassLoader lastContextLoader=thread.getContextClassLoader();
+  try {
+    if (_loader != null)     thread.setContextClassLoader(_loader);
+    if (_requestLog != null)     _requestLog.start();
+    startHandlers();
+  }
+  finally {
+    thread.setContextClassLoader(lastContextLoader);
+    getHandlers();
+  }
+}
