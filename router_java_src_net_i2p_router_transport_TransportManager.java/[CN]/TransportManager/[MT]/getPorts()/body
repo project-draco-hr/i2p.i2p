@@ -1,0 +1,25 @@
+{
+  Map<String,Integer> rv=new HashMap(_transports.size());
+  for (  Transport t : _transports) {
+    int port=t.getRequestedPort();
+    if (t.getCurrentAddress() != null) {
+      Properties opts=t.getCurrentAddress().getOptions();
+      if (opts != null) {
+        String s=opts.getProperty("port");
+        if (s != null) {
+          try {
+            port=Integer.parseInt(s);
+          }
+ catch (          NumberFormatException nfe) {
+          }
+        }
+      }
+    }
+    if (t.getStyle().equals(NTCPTransport.STYLE) && port <= 0 && Boolean.valueOf(_context.getProperty(CommSystemFacadeImpl.PROP_I2NP_NTCP_AUTO_PORT)).booleanValue()) {
+      Transport udp=getTransport(UDPTransport.STYLE);
+      if (udp != null)       port=t.getRequestedPort();
+    }
+    if (port > 0)     rv.put(t.getStyle(),Integer.valueOf(port));
+  }
+  return rv;
+}
