@@ -1,0 +1,45 @@
+{
+  boolean fixedPort=getIsPortFixed();
+  boolean updated=false;
+  boolean fireTest=false;
+synchronized (this) {
+    if ((_externalListenHost == null) || (!eq(_externalListenHost.getAddress(),_externalListenPort,ourIP,ourPort))) {
+      if ((_reachabilityStatus == CommSystemFacade.STATUS_UNKNOWN) || (_externalListenHost == null) || (_externalListenPort <= 0)|| (_context.clock().now() - _reachabilityStatusLastUpdated > 2 * TEST_FREQUENCY)) {
+        if (_log.shouldLog(Log.INFO))         _log.info("Trying to change our external address...");
+        try {
+          _externalListenHost=InetAddress.getByAddress(ourIP);
+          if (ourPort >= MIN_EXTERNAL_PORT && !fixedPort)           _externalListenPort=ourPort;
+          if (_externalListenPort >= MIN_EXTERNAL_PORT) {
+            rebuildExternalAddress();
+            replaceAddress(_externalAddress);
+            updated=true;
+          }
+        }
+ catch (        UnknownHostException uhe) {
+          _externalListenHost=null;
+          if (_log.shouldLog(Log.INFO))           _log.info("Error trying to change our external address",uhe);
+        }
+      }
+ else {
+        fireTest=true;
+        if (_log.shouldLog(Log.INFO))         _log.info("Different address, but we're fine.. (" + _reachabilityStatus + ")");
+      }
+    }
+ else {
+      if (_log.shouldLog(Log.INFO))       _log.info("Same address as the current one");
+    }
+  }
+  if (fireTest) {
+    _context.statManager().addRateData("udp.addressTestInsteadOfUpdate",1,0);
+    _testEvent.forceRun();
+    SimpleTimer.getInstance().addEvent(_testEvent,5 * 1000);
+  }
+ else   if (updated) {
+    _context.statManager().addRateData("udp.addressUpdated",1,0);
+    if (!fixedPort)     _context.router().setConfigSetting(PROP_EXTERNAL_PORT,ourPort + "");
+    _context.router().saveConfig();
+    _context.router().rebuildRouterInfo();
+    _testEvent.forceRun();
+    SimpleTimer.getInstance().addEvent(_testEvent,5 * 1000);
+  }
+}
