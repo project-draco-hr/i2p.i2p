@@ -1,10 +1,12 @@
 {
   I2PSocket i2ps;
   if (sockMgr == null) {
-    sockMgr=getSocketManager();
+synchronized (sockLock) {
+      sockMgr=getSocketManager();
+    }
   }
- else   if (Boolean.valueOf(getTunnel().getClientOptions().getProperty("i2cp.newDestOnResume")).booleanValue()) {
-synchronized (sockMgr) {
+ else   if (Boolean.valueOf(getTunnel().getClientOptions().getProperty("i2cp.closeOnIdle")).booleanValue() && Boolean.valueOf(getTunnel().getClientOptions().getProperty("i2cp.newDestOnResume")).booleanValue()) {
+synchronized (sockLock) {
       I2PSocketManager oldSockMgr=sockMgr;
       sockMgr=getSocketManager();
       if (oldSockMgr != sockMgr) {
