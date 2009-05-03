@@ -5,7 +5,12 @@
   OutputStream out=null;
   InputStream in=null;
   try {
-    if (postSocket == null)     postSocket=new Socket(host,port);
+    if (postSocket == null) {
+      postSocket=new Socket();
+      postSocket.setSoTimeout(1000);
+      SocketAddress sa=new InetSocketAddress(host,port);
+      postSocket.connect(sa,2000);
+    }
     out=postSocket.getOutputStream();
     PrintStream pout=new PrintStream(out);
     pout.print(getHeader());
@@ -33,6 +38,7 @@
   }
  catch (  Exception e) {
     httpRes.setStatusCode(HTTPStatus.INTERNAL_SERVER_ERROR);
+    Debug.warning(e);
   }
  finally {
     if (isKeepAlive == false) {
