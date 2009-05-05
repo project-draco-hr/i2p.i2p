@@ -1,0 +1,25 @@
+{
+  SAMv3Handler.SessionRecord rec=SAMv3Handler.sSessionsHash.get(nick);
+  boolean verbose=props.getProperty("SILENT","false").equals("false");
+  if (rec == null)   throw new InterruptedIOException();
+  String portStr=props.getProperty("PORT");
+  if (portStr == null) {
+    _log.debug("receiver port not specified");
+    throw new SAMException("receiver port not specified");
+  }
+  int port=Integer.parseInt(portStr);
+  String host=props.getProperty("HOST");
+  if (host == null) {
+    host=rec.getHandler().getClientIP();
+    _log.debug("no host specified. Taken from the client socket : " + host + ':'+ port);
+  }
+synchronized (this.socketServerLock) {
+    if (this.socketServer != null) {
+      _log.debug("a socket server is already defined for this destination");
+      throw new SAMException("a socket server is already defined for this destination");
+    }
+    this.socketServer=this.socketMgr.getServerSocket();
+  }
+  SocketForwarder forwarder=new SocketForwarder(host,port,this,verbose);
+  (new Thread(rec.getThreadGroup(),new I2PAppThread(forwarder,"SAMStreamForwarder"),"SAMStreamForwarder")).start();
+}
