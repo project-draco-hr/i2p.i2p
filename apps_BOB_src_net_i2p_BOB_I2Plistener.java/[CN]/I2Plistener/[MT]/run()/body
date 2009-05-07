@@ -1,48 +1,59 @@
 {
   boolean g=false;
   I2PSocket sessSocket=null;
-  die: {
-    serverSocket.setSoTimeout(50);
-    boolean spin=true;
-    while (spin) {
-      try {
-        rlock();
-      }
- catch (      Exception e) {
-        break die;
-      }
-      try {
-        spin=info.get("RUNNING").equals(Boolean.TRUE);
-      }
- catch (      Exception e) {
+  int conn=0;
+  try {
+    die: {
+      serverSocket.setSoTimeout(50);
+      boolean spin=true;
+      while (spin) {
         try {
-          runlock();
+          rlock();
         }
- catch (        Exception e2) {
+ catch (        Exception e) {
           break die;
         }
-        break die;
-      }
-      try {
         try {
-          sessSocket=serverSocket.accept();
-          g=true;
+          spin=info.get("RUNNING").equals(Boolean.TRUE);
         }
- catch (        ConnectException ce) {
-          g=false;
+ catch (        Exception e) {
+          try {
+            runlock();
+          }
+ catch (          Exception e2) {
+            break die;
+          }
+          break die;
         }
-catch (        SocketTimeoutException ste) {
-          g=false;
+        try {
+          try {
+            sessSocket=serverSocket.accept();
+            g=true;
+          }
+ catch (          ConnectException ce) {
+            g=false;
+          }
+catch (          SocketTimeoutException ste) {
+            g=false;
+          }
+          if (g) {
+            g=false;
+            conn++;
+            I2PtoTCP conn_c=new I2PtoTCP(sessSocket,info,database);
+            Thread t=new Thread(conn_c,Thread.currentThread().getName() + " I2PtoTCP " + conn);
+            t.start();
+          }
         }
-        if (g) {
-          g=false;
-          I2PtoTCP conn_c=new I2PtoTCP(sessSocket,info,database);
-          Thread t=new Thread(conn_c,"BOBI2PtoTCP");
-          t.start();
+ catch (        Exception e) {
         }
       }
- catch (      I2PException e) {
-      }
+    }
+  }
+  finally {
+    try {
+      serverSocket.close();
+    }
+ catch (    I2PException ex) {
     }
   }
 }
