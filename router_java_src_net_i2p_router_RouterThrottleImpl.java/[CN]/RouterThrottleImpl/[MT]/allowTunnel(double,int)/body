@@ -7,8 +7,7 @@
   int used=Math.max(usedIn,usedOut);
   int used1mIn=_context.router().get1mRateIn();
   int used1mOut=_context.router().get1mRate(true);
-  int availBps=(maxKBpsIn * 1024) - usedIn;
-  availBps=Math.min(availBps,(maxKBpsOut * 1024) - usedOut);
+  int availBps=Math.min((maxKBpsIn * 1024 * 9 / 10) - usedIn,(maxKBpsOut * 1024 * 9 / 10) - usedOut);
   if (availBps < MIN_AVAILABLE_BPS) {
     if (_log.shouldLog(Log.WARN))     _log.warn("Reject, avail (" + availBps + ") less than min");
     setTunnelStatus(LIMIT_STR);
@@ -19,14 +18,13 @@
   availBps=Math.min(availBps,(int)(((maxKBps * 1024) * share) - used));
   _context.statManager().addRateData("router.throttleTunnelBytesUsed",used,maxKBps);
   _context.statManager().addRateData("router.throttleTunnelBytesAllowed",availBps,(long)bytesAllocated);
-  long overage=used1mIn - (maxKBpsIn * 1024);
-  overage=Math.max(overage,used1mOut - (maxKBpsOut * 1024));
+  long overage=Math.max(used1mIn - (maxKBpsIn * 1024),used1mOut - (maxKBpsOut * 1024));
   if ((overage > 0) && ((overage / (float)(maxKBps * 1024f)) > _context.random().nextFloat())) {
     if (_log.shouldLog(Log.WARN))     _log.warn("Reject tunnel, 1m rate (" + overage + " over) indicates overload.");
     setTunnelStatus(LIMIT_STR);
     return false;
   }
-  float maxBps=maxKBps * 1024f;
+  float maxBps=(maxKBps * 1024f * 0.9f) - MIN_AVAILABLE_BPS;
   float pctFull=(maxBps - availBps) / (maxBps);
   double probReject=Math.pow(pctFull,16);
   double rand=_context.random().nextFloat();

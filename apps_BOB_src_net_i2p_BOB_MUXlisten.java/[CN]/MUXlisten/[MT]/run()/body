@@ -1,74 +1,49 @@
 {
   I2PServerSocket SS=null;
-  int ticks=100;
+  Thread t=null;
+  Thread q=null;
   try {
-    wlock();
     try {
-      info.add("RUNNING",new Boolean(true));
+      wlock();
+      try {
+        info.add("RUNNING",new Boolean(true));
+      }
+ catch (      Exception e) {
+        wunlock();
+        return;
+      }
     }
  catch (    Exception e) {
-      wunlock();
       return;
     }
-  }
- catch (  Exception e) {
-    return;
-  }
-  try {
-    wunlock();
-  }
- catch (  Exception e) {
-    return;
-  }
-  quit: {
     try {
-      tg=new ThreadGroup(N);
-      die: {
-        if (go_out) {
-          SS=socketManager.getServerSocket();
-          I2Plistener conn=new I2Plistener(SS,socketManager,info,database,_log);
-          Thread t=new Thread(tg,conn,"BOBI2Plistener " + N);
-          t.start();
-        }
-        if (come_in) {
-          TCPlistener conn=new TCPlistener(listener,socketManager,info,database,_log);
-          Thread q=new Thread(tg,conn,"BOBTCPlistener" + N);
-          q.start();
-        }
-        try {
-          wlock();
-          try {
-            info.add("STARTING",new Boolean(false));
+      wunlock();
+    }
+ catch (    Exception e) {
+      return;
+    }
+    quit: {
+      try {
+        tg=new ThreadGroup(N);
+        die: {
+          if (go_out) {
+            SS=socketManager.getServerSocket();
+            I2Plistener conn=new I2Plistener(SS,socketManager,info,database,_log);
+            t=new Thread(tg,conn,"BOBI2Plistener " + N);
+            t.start();
           }
- catch (          Exception e) {
-            wunlock();
-            break die;
-          }
-        }
- catch (        Exception e) {
-          break die;
-        }
-        try {
-          wunlock();
-        }
- catch (        Exception e) {
-          break die;
-        }
-        boolean spin=true;
-        while (spin) {
-          try {
-            Thread.sleep(1000);
-          }
- catch (          InterruptedException e) {
-            break die;
+          if (come_in) {
+            TCPlistener conn=new TCPlistener(listener,socketManager,info,database,_log);
+            q=new Thread(tg,conn,"BOBTCPlistener " + N);
+            q.start();
           }
           try {
-            rlock();
+            wlock();
             try {
-              spin=info.get("STOPPING").equals(Boolean.FALSE);
+              info.add("STARTING",new Boolean(false));
             }
  catch (            Exception e) {
-              runlock();
+              wunlock();
               break die;
             }
           }
@@ -76,80 +51,86 @@
             break die;
           }
           try {
-            runlock();
-          }
- catch (          Exception e) {
-            break die;
-          }
-        }
-        try {
-          wlock();
-          try {
-            info.add("RUNNING",new Boolean(false));
-          }
- catch (          Exception e) {
             wunlock();
+          }
+ catch (          Exception e) {
+            break die;
+          }
+          boolean spin=true;
+          while (spin) {
+            try {
+              Thread.sleep(1000);
+            }
+ catch (            InterruptedException e) {
+              break die;
+            }
+            try {
+              rlock();
+              try {
+                spin=info.get("STOPPING").equals(Boolean.FALSE);
+              }
+ catch (              Exception e) {
+                runlock();
+                break die;
+              }
+            }
+ catch (            Exception e) {
+              break die;
+            }
+            try {
+              runlock();
+            }
+ catch (            Exception e) {
+              break die;
+            }
+          }
+          try {
+            wlock();
+            try {
+              info.add("RUNNING",new Boolean(false));
+            }
+ catch (            Exception e) {
+              wunlock();
+              break die;
+            }
+          }
+ catch (          Exception e) {
+            break die;
+          }
+          try {
+            wunlock();
+          }
+ catch (          Exception e) {
             break die;
           }
         }
- catch (        Exception e) {
-          break die;
-        }
-        try {
-          wunlock();
-        }
- catch (        Exception e) {
-          break die;
-        }
-      }
-      if (SS != null) {
-        try {
-          SS.close();
-        }
- catch (        I2PException ex) {
-        }
-      }
-      if (this.come_in) {
-        try {
-          listener.close();
-        }
- catch (        IOException e) {
-        }
-      }
-      I2PSession session=socketManager.getSession();
-      if (session != null) {
-        try {
-          session.destroySession();
-        }
- catch (        I2PSessionException ex) {
-        }
-      }
-      try {
-        socketManager.destroySocketManager();
       }
  catch (      Exception e) {
+        break quit;
       }
     }
- catch (    Exception e) {
-      break quit;
-    }
   }
-  try {
-    wlock();
+  finally {
     try {
-      info.add("STARTING",new Boolean(false));
-      info.add("STOPPING",new Boolean(false));
-      info.add("RUNNING",new Boolean(false));
+      Thread.sleep(250);
+    }
+ catch (    InterruptedException ex) {
+    }
+    try {
+      wlock();
+      try {
+        info.add("STARTING",new Boolean(false));
+        info.add("STOPPING",new Boolean(false));
+        info.add("RUNNING",new Boolean(false));
+      }
+ catch (      Exception e) {
+        wunlock();
+        return;
+      }
+      wunlock();
     }
  catch (    Exception e) {
-      wunlock();
-      return;
     }
-    wunlock();
-  }
- catch (  Exception e) {
-  }
-  if (tg != null) {
     if (SS != null) {
       try {
         SS.close();
@@ -157,7 +138,7 @@
  catch (      I2PException ex) {
       }
     }
-    if (this.come_in) {
+    if (listener != null) {
       try {
         listener.close();
       }
@@ -169,40 +150,24 @@
     }
  catch (    Exception e) {
     }
-    if (tg.activeCount() + tg.activeGroupCount() != 0) {
-      int foo=tg.activeCount() + tg.activeGroupCount();
-      int bar=foo;
+    if (tg != null) {
       String boner=tg.getName();
-      System.out.println("BOB: MUXlisten: Waiting on threads for " + boner);
-      System.out.println("\n\nBOB: MUXlisten: ThreadGroup dump BEGIN " + boner);
-      visit(tg,0,boner);
-      System.out.println("BOB: MUXlisten: ThreadGroup dump END " + boner + "\n\n");
-      while ((tg.activeCount() + tg.activeGroupCount() != 0)) {
-        foo=tg.activeCount() + tg.activeGroupCount();
-        if (foo != bar) {
-          System.out.println("\n\nBOB: MUXlisten: ThreadGroup dump BEGIN " + boner);
-          visit(tg,0,boner);
-          System.out.println("BOB: MUXlisten: ThreadGroup dump END " + boner + "\n\n");
-        }
-        bar=foo;
-        try {
+      if (tg.activeCount() + tg.activeGroupCount() != 0) {
+        int foo=tg.activeCount() + tg.activeGroupCount();
+        int bar=foo;
+        while ((tg.activeCount() + tg.activeGroupCount() != 0)) {
+          foo=tg.activeCount() + tg.activeGroupCount();
+          bar=foo;
           try {
-            socketManager.destroySocketManager();
+            Thread.sleep(100);
           }
- catch (          Exception e) {
+ catch (          InterruptedException ex) {
           }
-        }
- catch (        Exception e) {
-        }
-        try {
-          Thread.sleep(100);
-        }
- catch (        InterruptedException ex) {
         }
       }
       System.out.println("BOB: MUXlisten: Threads went away. Success: " + boner);
+      tg.destroy();
+      tg=null;
     }
-    tg.destroy();
-    tg=null;
   }
 }
