@@ -1,4 +1,16 @@
 {
   super.succeed();
-  if (_state != null)   getContext().jobQueue().addJob(new FloodfillVerifyStoreJob(getContext(),_state.getTarget(),_facade));
+  if (_state != null) {
+    long published=0;
+    boolean isRouterInfo=false;
+    DataStructure data=_state.getData();
+    if (data instanceof RouterInfo) {
+      published=((RouterInfo)data).getPublished();
+      isRouterInfo=true;
+    }
+ else     if (data instanceof LeaseSet) {
+      published=((LeaseSet)data).getEarliestLeaseDate();
+    }
+    getContext().jobQueue().addJob(new FloodfillVerifyStoreJob(getContext(),_state.getTarget(),published,isRouterInfo,_facade));
+  }
 }
