@@ -1,0 +1,51 @@
+{
+  while (session.getSocketServer() != null) {
+    I2PSocket i2ps=null;
+    try {
+      i2ps=session.getSocketServer().accept();
+    }
+ catch (    Exception e) {
+    }
+    if (i2ps == null) {
+      continue;
+    }
+    java.net.InetSocketAddress addr=new java.net.InetSocketAddress(host,port);
+    SocketChannel clientServerSock=null;
+    try {
+      clientServerSock=SocketChannel.open(addr);
+    }
+ catch (    IOException e) {
+      continue;
+    }
+    if (clientServerSock == null) {
+      try {
+        i2ps.close();
+      }
+ catch (      IOException ee) {
+      }
+      continue;
+    }
+    try {
+      if (this.verbose)       SAMv3Handler.notifyStreamIncomingConnection(clientServerSock,i2ps.getPeerDestination());
+      ReadableByteChannel fromClient=clientServerSock;
+      ReadableByteChannel fromI2P=Channels.newChannel(i2ps.getInputStream());
+      WritableByteChannel toClient=clientServerSock;
+      WritableByteChannel toI2P=Channels.newChannel(i2ps.getOutputStream());
+      (new I2PAppThread(new Pipe(fromClient,toI2P,"SAMPipeClientToI2P"),"SAMPipeClientToI2P")).start();
+      (new I2PAppThread(new Pipe(fromI2P,toClient,"SAMPipeI2PToClient"),"SAMPipeI2PToClient")).start();
+    }
+ catch (    IOException e) {
+      try {
+        clientServerSock.close();
+      }
+ catch (      IOException ee) {
+      }
+      try {
+        i2ps.close();
+      }
+ catch (      IOException ee) {
+      }
+      continue;
+    }
+  }
+}

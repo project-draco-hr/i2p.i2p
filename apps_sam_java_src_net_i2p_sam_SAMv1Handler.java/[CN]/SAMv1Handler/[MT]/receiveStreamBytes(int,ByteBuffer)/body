@@ -1,0 +1,15 @@
+{
+  if (getStreamSession() == null) {
+    _log.error("Received stream bytes, but session is null!");
+    throw new NullPointerException("BUG! STREAM session is null!");
+  }
+  String msgText="STREAM RECEIVED ID=" + id + " SIZE="+ data.remaining()+ "\n";
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("sending to client: " + msgText);
+  ByteBuffer prefix=ByteBuffer.wrap(msgText.getBytes("ISO-8859-1"));
+  Object writeLock=getWriteLock();
+synchronized (writeLock) {
+    while (prefix.hasRemaining())     socket.write(prefix);
+    while (data.hasRemaining())     socket.write(data);
+    socket.socket().getOutputStream().flush();
+  }
+}
