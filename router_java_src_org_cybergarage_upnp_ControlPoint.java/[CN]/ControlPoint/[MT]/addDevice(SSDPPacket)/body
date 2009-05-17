@@ -1,0 +1,29 @@
+{
+  if (ssdpPacket.isRootDevice() == false)   return;
+  String usn=ssdpPacket.getUSN();
+  String udn=USN.getUDN(usn);
+  Device dev=getDevice(udn);
+  if (dev != null) {
+    dev.setSSDPPacket(ssdpPacket);
+    return;
+  }
+  String location=ssdpPacket.getLocation();
+  try {
+    URL locationUrl=new URL(location);
+    Parser parser=UPnP.getXMLParser();
+    Node rootNode=parser.parse(locationUrl);
+    Device rootDev=getDevice(rootNode);
+    if (rootDev == null)     return;
+    rootDev.setSSDPPacket(ssdpPacket);
+    addDevice(rootNode);
+    performAddDeviceListener(rootDev);
+  }
+ catch (  MalformedURLException me) {
+    Debug.warning(ssdpPacket.toString());
+    Debug.warning(me);
+  }
+catch (  ParserException pe) {
+    Debug.warning(ssdpPacket.toString());
+    Debug.warning(pe);
+  }
+}

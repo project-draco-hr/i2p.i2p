@@ -1,0 +1,38 @@
+{
+  String ssdpST=ssdpPacket.getST();
+  if (ssdpST == null)   return;
+  boolean isRootDevice=isRootDevice();
+  String devUSN=getUDN();
+  if (isRootDevice == true)   devUSN+="::" + USN.ROOTDEVICE;
+  if (ST.isAllDevice(ssdpST) == true) {
+    String devNT=getNotifyDeviceNT();
+    int repeatCnt=(isRootDevice == true) ? 3 : 2;
+    for (int n=0; n < repeatCnt; n++)     postSearchResponse(ssdpPacket,devNT,devUSN);
+  }
+ else   if (ST.isRootDevice(ssdpST) == true) {
+    if (isRootDevice == true)     postSearchResponse(ssdpPacket,ST.ROOT_DEVICE,devUSN);
+  }
+ else   if (ST.isUUIDDevice(ssdpST) == true) {
+    String devUDN=getUDN();
+    if (ssdpST.equals(devUDN) == true)     postSearchResponse(ssdpPacket,devUDN,devUSN);
+  }
+ else   if (ST.isURNDevice(ssdpST) == true) {
+    String devType=getDeviceType();
+    if (ssdpST.equals(devType) == true) {
+      devUSN=getUDN() + "::" + devType;
+      postSearchResponse(ssdpPacket,devType,devUSN);
+    }
+  }
+  ServiceList serviceList=getServiceList();
+  int serviceCnt=serviceList.size();
+  for (int n=0; n < serviceCnt; n++) {
+    Service service=serviceList.getService(n);
+    service.serviceSearchResponse(ssdpPacket);
+  }
+  DeviceList childDeviceList=getDeviceList();
+  int childDeviceCnt=childDeviceList.size();
+  for (int n=0; n < childDeviceCnt; n++) {
+    Device childDevice=childDeviceList.getDevice(n);
+    childDevice.deviceSearchResponse(ssdpPacket);
+  }
+}

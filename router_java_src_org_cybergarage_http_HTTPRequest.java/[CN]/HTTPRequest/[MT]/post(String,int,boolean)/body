@@ -1,0 +1,67 @@
+{
+  HTTPResponse httpRes=new HTTPResponse();
+  setConnection((isKeepAlive == true) ? HTTP.KEEP_ALIVE : HTTP.CLOSE);
+  boolean isHeaderRequest=isHeadRequest();
+  OutputStream out=null;
+  InputStream in=null;
+  try {
+    if (postSocket == null) {
+      postSocket=new Socket();
+      postSocket.setSoTimeout(1000);
+      SocketAddress sa=new InetSocketAddress(host,port);
+      postSocket.connect(sa,2000);
+    }
+    out=postSocket.getOutputStream();
+    PrintStream pout=new PrintStream(out);
+    pout.print(getHeader());
+    pout.print(HTTP.CRLF);
+    boolean isChunkedRequest=isChunked();
+    String content=getContentString();
+    int contentLength=0;
+    if (content != null)     contentLength=content.length();
+    if (0 < contentLength) {
+      if (isChunkedRequest == true) {
+        String chunSizeBuf=Long.toString(contentLength);
+        pout.print(chunSizeBuf);
+        pout.print(HTTP.CRLF);
+      }
+      pout.print(content);
+      if (isChunkedRequest == true)       pout.print(HTTP.CRLF);
+    }
+    if (isChunkedRequest == true) {
+      pout.print("0");
+      pout.print(HTTP.CRLF);
+    }
+    pout.flush();
+    in=postSocket.getInputStream();
+    httpRes.set(in,isHeaderRequest);
+  }
+ catch (  Exception e) {
+    httpRes.setStatusCode(HTTPStatus.INTERNAL_SERVER_ERROR);
+    Debug.warning(e);
+  }
+ finally {
+    if (isKeepAlive == false) {
+      try {
+        in.close();
+      }
+ catch (      Exception e) {
+      }
+      ;
+      if (in != null)       try {
+        out.close();
+      }
+ catch (      Exception e) {
+      }
+      ;
+      if (out != null)       try {
+        postSocket.close();
+      }
+ catch (      Exception e) {
+      }
+      ;
+      postSocket=null;
+    }
+  }
+  return httpRes;
+}

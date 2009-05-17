@@ -1,0 +1,23 @@
+{
+  for (  ForwardPort port : portsToForwardNow) {
+    String proto=protoToString(port.protocol);
+    if (proto.length() <= 1) {
+      HashMap<ForwardPort,ForwardPortStatus> map=new HashMap<ForwardPort,ForwardPortStatus>();
+      map.put(port,new ForwardPortStatus(ForwardPortStatus.DEFINITE_FAILURE,"Protocol not supported",port.portNumber));
+      forwardCallback.portForwardStatus(map);
+      continue;
+    }
+    if (tryAddMapping(proto,port.portNumber,port.name,port)) {
+      HashMap<ForwardPort,ForwardPortStatus> map=new HashMap<ForwardPort,ForwardPortStatus>();
+      map.put(port,new ForwardPortStatus(ForwardPortStatus.MAYBE_SUCCESS,"Port apparently forwarded by UPnP",port.portNumber));
+      forwardCallback.portForwardStatus(map);
+      continue;
+    }
+ else {
+      HashMap<ForwardPort,ForwardPortStatus> map=new HashMap<ForwardPort,ForwardPortStatus>();
+      map.put(port,new ForwardPortStatus(ForwardPortStatus.PROBABLE_FAILURE,"UPnP port forwarding apparently failed",port.portNumber));
+      forwardCallback.portForwardStatus(map);
+      continue;
+    }
+  }
+}

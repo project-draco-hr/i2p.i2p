@@ -1,0 +1,23 @@
+{
+  stop(true);
+  int retryCnt=0;
+  int bindPort=getHTTPPort();
+  HTTPServerList httpServerList=getHTTPServerList();
+  while (httpServerList.open(bindPort) == false) {
+    retryCnt++;
+    if (UPnP.SERVER_RETRY_COUNT < retryCnt)     return false;
+    setHTTPPort(bindPort + 1);
+    bindPort=getHTTPPort();
+  }
+  httpServerList.addRequestListener(this);
+  httpServerList.start();
+  SSDPSearchSocketList ssdpSearchSockList=getSSDPSearchSocketList();
+  if (ssdpSearchSockList.open() == false)   return false;
+  ssdpSearchSockList.addSearchListener(this);
+  ssdpSearchSockList.start();
+  announce();
+  Advertiser adv=new Advertiser(this);
+  setAdvertiser(adv);
+  adv.start();
+  return true;
+}

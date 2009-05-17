@@ -1,0 +1,39 @@
+{
+  stop();
+  int retryCnt=0;
+  int bindPort=getHTTPPort();
+  HTTPServerList httpServerList=getHTTPServerList();
+  while (httpServerList.open(bindPort) == false) {
+    retryCnt++;
+    if (UPnP.SERVER_RETRY_COUNT < retryCnt)     return false;
+    setHTTPPort(bindPort + 1);
+    bindPort=getHTTPPort();
+  }
+  httpServerList.addRequestListener(this);
+  httpServerList.start();
+  SSDPNotifySocketList ssdpNotifySocketList=getSSDPNotifySocketList();
+  if (ssdpNotifySocketList.open() == false)   return false;
+  ssdpNotifySocketList.setControlPoint(this);
+  ssdpNotifySocketList.start();
+  int ssdpPort=getSSDPPort();
+  retryCnt=0;
+  SSDPSearchResponseSocketList ssdpSearchResponseSocketList=getSSDPSearchResponseSocketList();
+  while (ssdpSearchResponseSocketList.open(ssdpPort) == false) {
+    retryCnt++;
+    if (UPnP.SERVER_RETRY_COUNT < retryCnt)     return false;
+    setSSDPPort(ssdpPort + 1);
+    ssdpPort=getSSDPPort();
+  }
+  ssdpSearchResponseSocketList.setControlPoint(this);
+  ssdpSearchResponseSocketList.start();
+  search(target,mx);
+  Disposer disposer=new Disposer(this);
+  setDeviceDisposer(disposer);
+  disposer.start();
+  if (isNMPRMode() == true) {
+    RenewSubscriber renewSub=new RenewSubscriber(this);
+    setRenewSubscriber(renewSub);
+    renewSub.start();
+  }
+  return true;
+}

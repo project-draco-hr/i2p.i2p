@@ -1,0 +1,25 @@
+{
+  String callback=subReq.getCallback();
+  try {
+    new URL(callback);
+  }
+ catch (  Exception e) {
+    upnpBadSubscriptionRecieved(subReq,HTTPStatus.PRECONDITION_FAILED);
+    return;
+  }
+  long timeOut=subReq.getTimeout();
+  String sid=Subscription.createSID();
+  Subscriber sub=new Subscriber();
+  sub.setDeliveryURL(callback);
+  sub.setTimeOut(timeOut);
+  sub.setSID(sid);
+  service.addSubscriber(sub);
+  SubscriptionResponse subRes=new SubscriptionResponse();
+  subRes.setStatusCode(HTTPStatus.OK);
+  subRes.setSID(sid);
+  subRes.setTimeout(timeOut);
+  if (Debug.isOn() == true)   subRes.print();
+  subReq.post(subRes);
+  if (Debug.isOn() == true)   subRes.print();
+  service.notifyAllStateVariables();
+}

@@ -1,0 +1,43 @@
+{
+  Set<ForwardPort> portsToDumpNow=null;
+  Set<ForwardPort> portsToForwardNow=null;
+  _log.warn("UP&P Forwarding " + ports.size() + " ports...");
+synchronized (lock) {
+    if (forwardCallback != null && forwardCallback != cb && cb != null) {
+      _log.error("ForwardPortCallback changed from " + forwardCallback + " to "+ cb+ " - using new value, but this is very strange!");
+    }
+    forwardCallback=cb;
+    if (portsToForward == null || portsToForward.isEmpty()) {
+      portsToForward=ports;
+      portsToForwardNow=ports;
+      portsToDumpNow=null;
+    }
+ else     if (ports == null || ports.isEmpty()) {
+      portsToDumpNow=portsToForward;
+      portsToForward=ports;
+      portsToForwardNow=null;
+    }
+ else {
+      for (      ForwardPort port : ports) {
+        if (portsToForward.contains(port)) {
+        }
+ else {
+          if (portsToForwardNow == null)           portsToForwardNow=new HashSet<ForwardPort>();
+          portsToForwardNow.add(port);
+        }
+      }
+      for (      ForwardPort port : portsToForward) {
+        if (ports.contains(port)) {
+        }
+ else {
+          if (portsToDumpNow == null)           portsToDumpNow=new HashSet<ForwardPort>();
+          portsToDumpNow.add(port);
+        }
+      }
+      portsToForward=ports;
+    }
+    if (_router == null)     return;
+  }
+  if (portsToDumpNow != null)   unregisterPorts(portsToDumpNow);
+  if (portsToForwardNow != null)   registerPorts(portsToForwardNow);
+}

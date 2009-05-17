@@ -1,0 +1,31 @@
+{
+synchronized (lock) {
+    if (isDisabled) {
+      _log.warn("Plugin has been disabled previously, ignoring new device.");
+      return;
+    }
+  }
+  if (!ROUTER_DEVICE.equals(dev.getDeviceType()) || !dev.isRootDevice()) {
+    _log.warn("UP&P non-IGD device found, ignoring : " + dev.getFriendlyName());
+    return;
+  }
+ else   if (isNATPresent()) {
+    _log.warn("UP&P ignoring additional IGD device found: " + dev.getFriendlyName() + " UDN: "+ dev.getUDN());
+    return;
+  }
+  _log.warn("UP&P IGD found : " + dev.getFriendlyName() + " UDN: "+ dev.getUDN()+ " lease time: "+ dev.getLeaseTime());
+synchronized (lock) {
+    _router=dev;
+  }
+  discoverService();
+synchronized (lock) {
+    if (_service == null) {
+      _log.error("The IGD device we got isn't suiting our needs, let's disable the plugin");
+      isDisabled=true;
+      _router=null;
+      return;
+    }
+    subscribe(_service);
+  }
+  registerPortMappings();
+}
