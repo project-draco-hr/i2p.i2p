@@ -27,14 +27,38 @@
       }
       list.addLast(new AddressBean(name,destination));
     }
-    if (filter != null && filter.length() > 0)     message="Filtered l";
- else     message="L";
-    message+="ist contains " + list.size() + " entries";
-    if (list.size() > 300)     message+=", displaying the first 300.";
- else     message+=".";
     Object array[]=list.toArray();
     Arrays.sort(array,sorter);
     entries=array;
+    String filterArg="";
+    if (search != null && search.length() > 0) {
+      message="Search ";
+    }
+    if (filter != null && filter.length() > 0) {
+      if (search != null && search.length() > 0)       message+="within ";
+      message+="Filtered list ";
+      filterArg="&filter=" + filter;
+    }
+    if (entries.length == 0) {
+      message+="- no matches";
+    }
+ else     if (getBeginInt() == 0 && getEndInt() == entries.length - 1) {
+      if (message.length() == 0)       message="Addressbook ";
+      message+="contains " + entries.length + " entries";
+    }
+ else {
+      if (getBeginInt() > 0) {
+        int newBegin=Math.max(0,getBeginInt() - DISPLAY_SIZE);
+        int newEnd=Math.max(0,getBeginInt() - 1);
+        message+="<a href=\"addressbook.jsp?book=" + getBook() + filterArg+ "&begin="+ newBegin+ "&end="+ newEnd+ "\">"+ newBegin+ '-'+ newEnd+ "</a> | ";
+      }
+      message+="Showing " + getBegin() + '-'+ getEnd()+ " of "+ entries.length;
+      if (getEndInt() < entries.length - 1) {
+        int newBegin=Math.min(entries.length - 1,getEndInt() + 1);
+        int newEnd=Math.min(entries.length,getEndInt() + DISPLAY_SIZE);
+        message+=" | <a href=\"addressbook.jsp?book=" + getBook() + filterArg+ "&begin="+ newBegin+ "&end="+ newEnd+ "\">"+ newBegin+ '-'+ newEnd+ "</a>";
+      }
+    }
   }
  catch (  Exception e) {
     Debug.debug(e.getClass().getName() + ": " + e.getMessage());
