@@ -5,14 +5,20 @@
   HTTPServerList httpServerList=getHTTPServerList();
   while (httpServerList.open(bindPort) == false) {
     retryCnt++;
-    if (UPnP.SERVER_RETRY_COUNT < retryCnt)     return false;
-    setHTTPPort(bindPort + 1);
+    if (UPnP.SERVER_RETRY_COUNT < retryCnt) {
+      Debug.warning("Failed to open HTTP event listener port " + bindPort);
+      return false;
+    }
+    setHTTPPort(bindPort - 1);
     bindPort=getHTTPPort();
   }
   httpServerList.addRequestListener(this);
   httpServerList.start();
   SSDPNotifySocketList ssdpNotifySocketList=getSSDPNotifySocketList();
-  if (ssdpNotifySocketList.open() == false)   return false;
+  if (ssdpNotifySocketList.open() == false) {
+    Debug.warning("Failed to open SSDP notify port 1900");
+    return false;
+  }
   ssdpNotifySocketList.setControlPoint(this);
   ssdpNotifySocketList.start();
   int ssdpPort=getSSDPPort();
@@ -20,8 +26,11 @@
   SSDPSearchResponseSocketList ssdpSearchResponseSocketList=getSSDPSearchResponseSocketList();
   while (ssdpSearchResponseSocketList.open(ssdpPort) == false) {
     retryCnt++;
-    if (UPnP.SERVER_RETRY_COUNT < retryCnt)     return false;
-    setSSDPPort(ssdpPort + 1);
+    if (UPnP.SERVER_RETRY_COUNT < retryCnt) {
+      Debug.warning("Failed to open SSDP search response port " + ssdpPort);
+      return false;
+    }
+    setSSDPPort(ssdpPort - 1);
     ssdpPort=getSSDPPort();
   }
   ssdpSearchResponseSocketList.setControlPoint(this);
