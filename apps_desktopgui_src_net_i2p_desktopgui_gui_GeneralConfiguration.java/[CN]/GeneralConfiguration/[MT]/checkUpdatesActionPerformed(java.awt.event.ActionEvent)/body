@@ -1,0 +1,23 @@
+{
+  long current=new Date().getTime();
+  if (current < newsLastFetched + 5 * 60 * 1000) {
+    return;
+  }
+  checkUpdates.setText("Checking for updates");
+  checkUpdates.setEnabled(false);
+  newsLastFetched=current;
+  SwingWorker sw=new SwingWorker(){
+    @Override protected Object doInBackground() throws Exception {
+      NewsFetcher.getInstance(RouterHelper.getContext()).fetchNews();
+      return null;
+    }
+    @Override protected void done(){
+      checkUpdates.setText("Check for updates now");
+      checkUpdates.setEnabled(true);
+      if (NewsFetcher.getInstance(RouterHelper.getContext()).updateAvailable()) {
+        updateNow.setVisible(true);
+      }
+    }
+  }
+;
+}
