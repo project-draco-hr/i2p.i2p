@@ -16,7 +16,7 @@ synchronized (_peersByIdent) {
   long dupRecvTotal=0;
   int numPeers=0;
   StringBuffer buf=new StringBuffer(512);
-  buf.append("<b id=\"udpcon\">UDP connections: ").append(peers.size());
+  buf.append("<p><b id=\"udpcon\">UDP connections: ").append(peers.size());
   buf.append(" limit: ").append(getMaxConnections());
   buf.append(" timeout: ").append(DataHelper.formatDuration(_expireTimeout));
   buf.append("</b><br />\n");
@@ -195,18 +195,15 @@ synchronized (_peersByIdent) {
   buf.append(sendTotal).append("</td><td align=\"right\">").append(recvTotal).append("</td>\n");
   buf.append("     <td align=\"right\">").append(resentTotal);
   buf.append("</td><td align=\"right\">").append(dupRecvTotal).append("</td>\n");
-  buf.append(" </tr>\n");
-  buf.append("<tr><td colspan=\"15\" valign=\"top\" align=\"left\">");
+  buf.append(" </tr></table></p><p>\n");
   long bytesTransmitted=_context.bandwidthLimiter().getTotalAllocatedOutboundBytes();
   double averagePacketSize=_context.statManager().getRate("udp.sendPacketSize").getLifetimeAverageValue();
   resentTotal=(long)_context.statManager().getRate("udp.packetsRetransmitted").getLifetimeEventCount();
   double nondupSent=((double)bytesTransmitted - ((double)resentTotal) * averagePacketSize);
   double bwResent=(nondupSent <= 0 ? 0d : ((((double)resentTotal) * averagePacketSize) / nondupSent));
   buf.append("Percentage of bytes retransmitted (lifetime): ").append(formatPct(bwResent));
-  buf.append(" <i>(includes retransmission required by packet loss)</i><br />\n");
-  buf.append("</td></tr>\n");
+  buf.append(" <i>(includes retransmission required by packet loss)</i><br /></p>\n");
   out.write(buf.toString());
   buf.setLength(0);
   out.write(KEY);
-  out.write("</table>\n");
 }
