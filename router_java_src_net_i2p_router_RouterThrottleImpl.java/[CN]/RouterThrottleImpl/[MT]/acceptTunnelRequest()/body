@@ -8,24 +8,11 @@
   long lag=_context.jobQueue().getMaxLag();
   RateStat rs=_context.statManager().getRate("transport.sendProcessingTime");
   Rate r=null;
-  if (rs != null)   r=rs.getRate(60 * 1000);
-  double processTime=(r != null ? r.getAverageValue() : 0);
-  if (processTime > 5000) {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Refusing tunnel request with the job lag of " + lag + "since the 1 minute message processing time is too slow ("+ processTime+ ")");
-    _context.statManager().addRateData("router.throttleTunnelProcessingTime1m",(long)processTime,(long)processTime);
-    setTunnelStatus("Rejecting tunnels: High message delay");
-    return TunnelHistory.TUNNEL_REJECT_TRANSIENT_OVERLOAD;
-  }
-  Rate r2=_context.statManager().getRate("tunnel.testSuccessTime").getRate(60 * 1000);
-  if (r != null && r2 != null) {
+  if (r != null) {
     double totalSendProcessingTimeEvents=r.getCurrentEventCount() + r.getLastEventCount();
     double avgSendProcessingTime=0;
     double currentSendProcessingTime=0;
     double lastSendProcessingTime=0;
-    double totalTestSuccessTimeEvents=r2.getCurrentEventCount() + r2.getLastEventCount();
-    double avgTestSuccessTime=0;
-    double currentTestSuccessTime=0;
-    double lastTestSuccessTime=0;
     if (r.getCurrentEventCount() > 0) {
       currentSendProcessingTime=r.getCurrentTotalValue() / r.getCurrentEventCount();
     }
@@ -41,22 +28,8 @@
         _log.warn("No events occurred. Using 1 minute average to look at message delay.");
       }
     }
-    if (r2.getCurrentEventCount() > 0) {
-      currentTestSuccessTime=r2.getCurrentTotalValue() / r.getCurrentEventCount();
-    }
-    if (r2.getLastEventCount() > 0) {
-      lastTestSuccessTime=r2.getLastTotalValue() / r2.getLastEventCount();
-    }
-    if (totalTestSuccessTimeEvents > 0) {
-      avgTestSuccessTime=(r2.getCurrentTotalValue() + r.getLastTotalValue()) / totalTestSuccessTimeEvents;
-    }
- else {
-      avgTestSuccessTime=r2.getAverageValue();
-      if (_log.shouldLog(Log.WARN)) {
-        _log.warn("No events occurred. Using 1 minute average to look at message delay.");
-      }
-    }
-    if ((avgSendProcessingTime > 800 || currentSendProcessingTime > 1000 || lastSendProcessingTime > 1000) && (currentTestSuccessTime > 3000 || lastTestSuccessTime > 3000)) {
+    int maxProcessingTime=_context.getProperty(PROP_MAX_PROCESSINGTIME,DEFAULT_MAX_PROCESSINGTIME);
+    if ((avgSendProcessingTime > maxProcessingTime * 0.9 || currentSendProcessingTime > maxProcessingTime || lastSendProcessingTime > maxProcessingTime)) {
       if (_log.shouldLog(Log.WARN)) {
         _log.warn("Refusing tunnel request due to sendProcessingTime of " + avgSendProcessingTime + " ms over the last two minutes, which is too much.");
       }
