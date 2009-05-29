@@ -1,0 +1,24 @@
+{
+  if (_log.shouldLog(Log.INFO))   _log.info("Loading " + inboundTagSets.size() + " inbound tag sets, and "+ outboundSessions.size()+ " outbound sessions");
+  Map<SessionTag,TagSet> tagSets=new HashMap(inboundTagSets.size());
+  for (Iterator<TagSet> iter=inboundTagSets.iterator(); iter.hasNext(); ) {
+    TagSet ts=iter.next();
+    for (Iterator<SessionTag> tsIter=ts.getTags().iterator(); tsIter.hasNext(); ) {
+      SessionTag tag=tsIter.next();
+      tagSets.put(tag,ts);
+    }
+  }
+synchronized (_inboundTagSets) {
+    _inboundTagSets.clear();
+    _inboundTagSets.putAll(tagSets);
+  }
+  Map<PublicKey,OutboundSession> sessions=new HashMap(outboundSessions.size());
+  for (Iterator<OutboundSession> iter=outboundSessions.iterator(); iter.hasNext(); ) {
+    OutboundSession sess=iter.next();
+    sessions.put(sess.getTarget(),sess);
+  }
+synchronized (_outboundSessions) {
+    _outboundSessions.clear();
+    _outboundSessions.putAll(sessions);
+  }
+}
