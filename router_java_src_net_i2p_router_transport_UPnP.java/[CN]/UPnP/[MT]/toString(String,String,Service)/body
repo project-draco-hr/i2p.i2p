@@ -1,6 +1,15 @@
 {
-  Action getIP=serv.getAction(action);
-  if (getIP == null || !getIP.postControlAction())   return null;
-  Argument ret=getIP.getOutputArgumentList().getArgument(Argument);
-  return ret.getValue();
+synchronized (toStringLock) {
+    if ((!action.equals(_lastAction)) || (!serv.equals(_lastService)) || _lastArgumentList == null) {
+      Action getIP=serv.getAction(action);
+      if (getIP == null || !getIP.postControlAction()) {
+        _lastAction=null;
+        return null;
+      }
+      _lastAction=action;
+      _lastService=serv;
+      _lastArgumentList=getIP.getOutputArgumentList();
+    }
+    return _lastArgumentList.getArgument(arg).getValue();
+  }
 }
