@@ -22,6 +22,7 @@
  catch (    Exception e) {
       return;
     }
+    lock.set(false);
     quit: {
       try {
         tg=new ThreadGroup(N);
@@ -84,25 +85,6 @@
               break die;
             }
           }
-          try {
-            wlock();
-            try {
-              info.add("RUNNING",new Boolean(false));
-            }
- catch (            Exception e) {
-              wunlock();
-              break die;
-            }
-          }
- catch (          Exception e) {
-            break die;
-          }
-          try {
-            wunlock();
-          }
- catch (          Exception e) {
-            break die;
-          }
         }
       }
  catch (      Exception e) {
@@ -111,10 +93,7 @@
     }
   }
   finally {
-    try {
-      Thread.sleep(250);
-    }
- catch (    InterruptedException ex) {
+    while (!lock.compareAndSet(false,true)) {
     }
     try {
       wlock();
@@ -150,6 +129,12 @@
     }
  catch (    Exception e) {
     }
+    try {
+      Thread.sleep(250);
+    }
+ catch (    InterruptedException ex) {
+    }
+    lock.set(false);
     if (tg != null) {
       String boner=tg.getName();
       _log.warn("BOB: MUXlisten: Starting thread collection for: " + boner);

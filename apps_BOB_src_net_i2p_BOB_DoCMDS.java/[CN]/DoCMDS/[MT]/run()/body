@@ -113,6 +113,10 @@
  else             if (Command.equals(C_quit)) {
               break quit;
             }
+ else             if (Command.equals(C_zap)) {
+              LIVE.set(false);
+              break quit;
+            }
  else             if (Command.equals(C_newkeys)) {
               if (ns) {
                 try {
@@ -918,15 +922,19 @@
  else {
                     MUXlisten tunnel;
                     try {
-                      tunnel=new MUXlisten(database,nickinfo,_log);
+                      while (!lock.compareAndSet(false,true)) {
+                      }
+                      tunnel=new MUXlisten(lock,database,nickinfo,_log);
                       Thread t=new Thread(tunnel);
                       t.start();
                       out.println("OK tunnel starting");
                     }
  catch (                    I2PException e) {
+                      lock.set(false);
                       out.println("ERROR starting tunnel: " + e);
                     }
 catch (                    IOException e) {
+                      lock.set(false);
                       out.println("ERROR starting tunnel: " + e);
                     }
                   }
