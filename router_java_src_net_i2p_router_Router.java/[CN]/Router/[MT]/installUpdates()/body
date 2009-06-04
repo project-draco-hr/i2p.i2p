@@ -1,8 +1,20 @@
 {
-  File updateFile=new File(UPDATE_FILE);
-  if (updateFile.exists()) {
+  File updateFile=new File(_context.getRouterDir(),UPDATE_FILE);
+  boolean exists=updateFile.exists();
+  if (!exists) {
+    updateFile=new File(_context.getBaseDir(),UPDATE_FILE);
+    exists=updateFile.exists();
+  }
+  if (exists) {
+    File test=new File(_context.getBaseDir(),"history.txt");
+    if ((!test.canWrite()) || (!_context.getBaseDir().canWrite())) {
+      String msg="ERROR: No write permissions on " + _context.getBaseDir() + " to extract software update file";
+      System.out.println(msg);
+      _log.log(Log.CRIT,msg);
+      return;
+    }
     System.out.println("INFO: Update file exists [" + UPDATE_FILE + "] - installing");
-    boolean ok=FileUtil.extractZip(updateFile,new File("."));
+    boolean ok=FileUtil.extractZip(updateFile,_context.getBaseDir());
     if (ok)     System.out.println("INFO: Update installed");
  else     System.out.println("ERROR: Update failed!");
     boolean deleted=updateFile.delete();
