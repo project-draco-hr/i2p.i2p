@@ -5,6 +5,7 @@
   this.l=l;
   this.handlerName=handlerName + _clientId;
   this.privKeyFile=pkf;
+  _ownDest=ownDest;
   _context=tunnel.getContext();
   _context.statManager().createRateStat("i2ptunnel.client.closeBacklog","How many pending sockets remain when we close one due to backlog?","I2PTunnel",new long[]{60 * 1000,10 * 60 * 1000,60 * 60 * 1000});
   _context.statManager().createRateStat("i2ptunnel.client.closeNoBacklog","How many pending sockets remain when it was removed prior to backlog timeout?","I2PTunnel",new long[]{60 * 1000,10 * 60 * 1000,60 * 60 * 1000});
@@ -14,14 +15,7 @@
   boolean openNow=!Boolean.valueOf(tunnel.getClientOptions().getProperty("i2cp.delayOpen")).booleanValue();
   if (openNow) {
     while (sockMgr == null) {
-synchronized (sockLock) {
-        if (ownDest) {
-          sockMgr=buildSocketManager();
-        }
- else {
-          sockMgr=getSocketManager();
-        }
-      }
+      verifySocketManager();
       if (sockMgr == null) {
         _log.log(Log.CRIT,"Unable to create socket manager (our own? " + ownDest + ")");
         try {
