@@ -6,6 +6,8 @@
   OutputStream out=null;
   InputStream Iin=null;
   OutputStream Iout=null;
+  Thread t=null;
+  Thread q=null;
   try {
     die: {
       try {
@@ -43,15 +45,34 @@
         }
         TCPio conn_c=new TCPio(in,Iout);
         TCPio conn_a=new TCPio(Iin,out);
-        Thread t=new Thread(conn_c,Thread.currentThread().getName() + " TCPioA");
-        Thread q=new Thread(conn_a,Thread.currentThread().getName() + " TCPioB");
+        t=new Thread(conn_c,Thread.currentThread().getName() + " TCPioA");
+        q=new Thread(conn_a,Thread.currentThread().getName() + " TCPioB");
         t.start();
         q.start();
-        while (t.isAlive() && q.isAlive()) {
+        boolean spin=true;
+        while (t.isAlive() && q.isAlive() && spin) {
           try {
             Thread.sleep(10);
           }
  catch (          InterruptedException e) {
+            break die;
+          }
+          try {
+            rlock();
+          }
+ catch (          Exception e) {
+            break die;
+          }
+          try {
+            spin=info.get("RUNNING").equals(Boolean.TRUE);
+          }
+ catch (          Exception e) {
+            try {
+              runlock();
+            }
+ catch (            Exception e2) {
+              break die;
+            }
             break die;
           }
         }
@@ -62,6 +83,16 @@
     }
   }
   finally {
+    try {
+      t.interrupt();
+    }
+ catch (    Exception e) {
+    }
+    try {
+      q.interrupt();
+    }
+ catch (    Exception e) {
+    }
     try {
       in.close();
     }
