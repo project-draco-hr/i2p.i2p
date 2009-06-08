@@ -10,52 +10,61 @@
     try {
       in=sock.getInputStream();
       out=sock.getOutputStream();
+      line=lnRead(in);
+      input=line.toLowerCase();
+      Destination dest=null;
+      if (input.endsWith(".i2p")) {
+        dest=I2PTunnel.destFromName(input);
+        line=dest.toBase64();
+      }
+      dest=new Destination();
+      dest.fromBase64(line);
       try {
-        line=lnRead(in);
-        input=line.toLowerCase();
-        Destination dest=null;
-        if (input.endsWith(".i2p")) {
-          dest=I2PTunnel.destFromName(input);
-          line=dest.toBase64();
-        }
-        dest=new Destination();
-        dest.fromBase64(line);
-        try {
-          I2P=socketManager.connect(dest);
-          I2P.setReadTimeout(0);
-          Iin=I2P.getInputStream();
-          Iout=I2P.getOutputStream();
-          TCPio conn_c=new TCPio(in,Iout);
-          TCPio conn_a=new TCPio(Iin,out);
-          t=new Thread(conn_c,Thread.currentThread().getName() + " TCPioA");
-          q=new Thread(conn_a,Thread.currentThread().getName() + " TCPioB");
-          t.start();
-          q.start();
-          boolean spin=true;
-          while (t.isAlive() && q.isAlive()) {
-            Thread.sleep(10);
-            rlock();
-            spin=info.get("RUNNING").equals(Boolean.TRUE);
-            runlock();
-          }
-        }
- catch (        I2PException e) {
-          Emsg("ERROR " + e.toString(),out);
-        }
-catch (        ConnectException e) {
-          Emsg("ERROR " + e.toString(),out);
-        }
-catch (        NoRouteToHostException e) {
-          Emsg("ERROR " + e.toString(),out);
-        }
-catch (        InterruptedIOException e) {
+        I2P=socketManager.connect(dest);
+        I2P.setReadTimeout(0);
+        Iin=I2P.getInputStream();
+        Iout=I2P.getOutputStream();
+        TCPio conn_c=new TCPio(in,Iout);
+        TCPio conn_a=new TCPio(Iin,out);
+        t=new Thread(conn_c,Thread.currentThread().getName() + " TCPioA");
+        q=new Thread(conn_a,Thread.currentThread().getName() + " TCPioB");
+        t.start();
+        q.start();
+        boolean spin=true;
+        while (t.isAlive() && q.isAlive()) {
+          Thread.sleep(10);
+          rlock();
+          spin=info.get("RUNNING").equals(Boolean.TRUE);
+          runlock();
         }
       }
- catch (      Exception e) {
-        Emsg("ERROR " + e.toString(),out);
+ catch (      I2PException e) {
+        Emsg(e.toString(),out);
+      }
+catch (      ConnectException e) {
+        Emsg(e.toString(),out);
+      }
+catch (      NoRouteToHostException e) {
+        Emsg(e.toString(),out);
       }
     }
- catch (    Exception e) {
+ catch (    InterruptedIOException e) {
+    }
+catch (    InterruptedException e) {
+    }
+catch (    IOException e) {
+      try {
+        Emsg(e.toString(),out);
+      }
+ catch (      IOException ex) {
+      }
+    }
+catch (    DataFormatException e) {
+      try {
+        Emsg(e.toString(),out);
+      }
+ catch (      IOException ex) {
+      }
     }
   }
   finally {
