@@ -18,6 +18,12 @@
   }
   String cwd=System.getProperty(PROP_BASE_DIR);
   if (cwd == null)   cwd=System.getProperty("user.dir");
+  File oldDirf=new File(cwd);
+  File test=new File(oldDirf,"hosts.txt");
+  if (!test.exists()) {
+    System.err.println("ERROR - Cannot find I2P installation in " + cwd + " - Will probably be just a router with no apps or console at all!");
+    return cwd;
+  }
   String rv=dirf.getAbsolutePath();
   if (dirf.exists()) {
     if (dirf.isDirectory())     return rv;
@@ -28,15 +34,14 @@
     System.err.println("Wanted to use " + rv + " for a working directory but could not create it");
     return cwd;
   }
-  File oldDirf=new File(cwd);
-  File test=new File(oldDirf,"hosts.txt");
-  if (!test.exists()) {
-    System.err.println("ERROR - Cannot find I2P installation in " + cwd);
-    return cwd;
-  }
   test=new File(oldDirf,"router.keys");
   boolean oldInstall=test.exists();
-  migrateOldData&=oldInstall;
+  if (!oldInstall) {
+    test=new File(oldDirf,"logs");
+    oldInstall=test.exists();
+  }
+  if (oldInstall && !migrateOldConfig)   return cwd;
+  boolean migrateOldData=false;
   if (migrateOldData)   System.err.println("Migrating data files to new user directory " + rv);
  else   System.err.println("Setting up new user directory " + rv);
   boolean success=migrate(MIGRATE_BASE,oldDirf,dirf);
