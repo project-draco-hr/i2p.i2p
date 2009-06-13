@@ -1,0 +1,45 @@
+{
+  File oldFile=new File(olddir,"wrapper.config");
+  File newFile=new File(todir,"wrapper.config");
+  FileInputStream in=null;
+  PrintWriter out=null;
+  try {
+    in=new FileInputStream(oldFile);
+    out=new PrintWriter(new BufferedWriter(new FileWriter(newFile)));
+    out.println("# Modified by I2P User dir migration script");
+    String s=null;
+    while ((s=DataHelper.readLine(in)) != null) {
+      if (s.startsWith("wrapper.java.classpath.")) {
+        s=s.replace("=lib/",'=' + olddir.getAbsolutePath() + File.separatorChar+ "lib"+ File.separatorChar);
+      }
+ else       if (s.startsWith("wrapper.java.library.path.")) {
+        if (s.contains("=."))         s=s.replace("=.",'=' + olddir.getAbsolutePath());
+ else         if (s.contains("=lib"))         s=s.replace("=lib",'=' + olddir.getAbsolutePath() + File.separatorChar+ "lib");
+      }
+ else       if (s.startsWith("wrapper.logfile=wrapper.log")) {
+        s=s.replace("=",'=' + todir.getAbsolutePath() + File.separatorChar);
+      }
+ else       if (s.startsWith("wrapper.pidfile=i2p.pid")) {
+        s=s.replace("=",'=' + todir.getAbsolutePath() + File.separatorChar);
+      }
+      out.println(s);
+    }
+    System.err.println("Copied wrapper.config with modifications");
+    return true;
+  }
+ catch (  IOException ioe) {
+    if (in != null) {
+      System.err.println("FAILED copy wrapper.config");
+      return false;
+    }
+    return false;
+  }
+ finally {
+    if (in != null)     try {
+      in.close();
+    }
+ catch (    IOException ioe) {
+    }
+    if (out != null)     out.close();
+  }
+}
