@@ -1,0 +1,43 @@
+{
+  if (method.equals("GET") || method.equals("HEAD")) {
+    int space=targetRequest.indexOf(' ');
+    String filename=null;
+    try {
+      filename=targetRequest.substring(10,space);
+    }
+ catch (    IndexOutOfBoundsException ioobe) {
+    }
+    if (filename == null || filename.length() <= 0) {
+      try {
+        out.write(("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nCache-Control: max-age=86400\r\n\r\nI2P HTTP proxy OK").getBytes());
+        out.flush();
+      }
+ catch (      IOException ioe) {
+      }
+      return;
+    }
+    File file=new File(_errorDir,filename);
+    if (file.exists() && !file.isDirectory()) {
+      String type;
+      if (filename.endsWith(".css"))       type="text/css";
+ else       if (filename.endsWith(".png"))       type="image/png";
+ else       if (filename.endsWith(".jpg"))       type="image/jpeg";
+ else       type="text/html";
+      try {
+        out.write("HTTP/1.1 200 OK\r\nContent-Type: ".getBytes());
+        out.write(type.getBytes());
+        out.write("\r\nCache-Control: max-age=86400\r\n\r\n".getBytes());
+        FileUtil.readFile(filename,_errorDir.getAbsolutePath(),out);
+        return;
+      }
+ catch (      IOException ioe) {
+      }
+    }
+  }
+  try {
+    out.write(ERR_404);
+    out.flush();
+  }
+ catch (  IOException ioe) {
+  }
+}
