@@ -8,11 +8,12 @@
   }
   File outFile=null;
   FileOutputStream fos=null;
+  String filename=libPrefix + "jcpuid" + libSuffix;
   try {
     InputStream libStream=resource.openStream();
-    outFile=new File(libPrefix + "jcpuid" + libSuffix);
+    outFile=new File(I2PAppContext.getGlobalContext().getTempDir(),filename);
     fos=new FileOutputStream(outFile);
-    byte buf[]=new byte[4096 * 1024];
+    byte buf[]=new byte[4096];
     while (true) {
       int read=libStream.read(buf);
       if (read < 0)       break;
@@ -21,7 +22,6 @@
     fos.close();
     fos=null;
     System.load(outFile.getAbsolutePath());
-    return true;
   }
  catch (  UnsatisfiedLinkError ule) {
     if (_doLog) {
@@ -46,4 +46,7 @@ catch (  IOException ioe) {
       }
     }
   }
+  File newFile=new File(I2PAppContext.getGlobalContext().getBaseDir(),filename);
+  FileUtil.copy(outFile.getAbsolutePath(),newFile.getAbsolutePath(),false,true);
+  return true;
 }

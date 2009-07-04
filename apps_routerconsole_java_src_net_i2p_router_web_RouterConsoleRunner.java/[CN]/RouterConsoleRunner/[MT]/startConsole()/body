@@ -1,5 +1,5 @@
 {
-  File workDir=new File("work");
+  File workDir=new File(I2PAppContext.getGlobalContext().getTempDir(),"jetty-work");
   boolean workDirRemoved=FileUtil.rmdir(workDir,false);
   if (!workDirRemoved)   System.err.println("ERROR: Unable to remove Jetty temporary work directory");
   boolean workDirCreated=workDir.mkdirs();
@@ -11,6 +11,16 @@
     props.setProperty(PREFIX + ROUTERCONSOLE + ENABLED,"true");
     rewrite=true;
   }
+  File app=new File(_webAppsDir);
+  if (!app.isAbsolute()) {
+    app=new File(I2PAppContext.getGlobalContext().getBaseDir(),_webAppsDir);
+    try {
+      _webAppsDir=app.getCanonicalPath();
+    }
+ catch (    IOException ioe) {
+    }
+  }
+  if (!_webAppsDir.endsWith("/"))   _webAppsDir+='/';
   try {
     StringTokenizer tok=new StringTokenizer(_listenHost," ,");
     int boundAddresses=0;
@@ -31,6 +41,9 @@
     }
     _server.setRootWebApp(ROUTERCONSOLE);
     WebApplicationContext wac=_server.addWebApplication("/",_webAppsDir + ROUTERCONSOLE + ".war");
+    File tmpdir=new File(workDir,ROUTERCONSOLE + "-" + _listenPort);
+    tmpdir.mkdir();
+    wac.setTempDirectory(tmpdir);
     initialize(wac);
     File dir=new File(_webAppsDir);
     String fileNames[]=dir.list(WarFilenameFilter.instance());
@@ -42,6 +55,9 @@
           if (!"false".equals(enabled)) {
             String path=new File(dir,fileNames[i]).getCanonicalPath();
             wac=_server.addWebApplication("/" + appName,path);
+            tmpdir=new File(workDir,appName + "-" + _listenPort);
+            tmpdir.mkdir();
+            wac.setTempDirectory(tmpdir);
             initialize(wac);
             if (enabled == null) {
               props.setProperty(PREFIX + appName + ENABLED,"true");
@@ -62,7 +78,7 @@
   try {
     _server.start();
   }
- catch (  Exception me) {
+ catch (  Throwable me) {
     System.err.println("WARNING: Error starting one or more listeners of the Router Console server.\n" + "If your console is still accessible at http://127.0.0.1:7657/,\n" + "this may be a problem only with binding to the IPV6 address ::1.\n"+ "If so, you may ignore this error, or remove the\n"+ "\"::1,\" in the \"clientApp.0.args\" line of the clients.config file.\n"+ "Exception: "+ me);
   }
   try {
@@ -70,18 +86,6 @@
   }
  catch (  Throwable t) {
     t.printStackTrace();
-  }
-  File noReseedFile=new File(new File(System.getProperty("user.home")),".i2pnoreseed");
-  File noReseedFileAlt1=new File(new File(System.getProperty("user.home")),"noreseed.i2p");
-  File noReseedFileAlt2=new File(".i2pnoreseed");
-  File noReseedFileAlt3=new File("noreseed.i2p");
-  if (!noReseedFile.exists() && !noReseedFileAlt1.exists() && !noReseedFileAlt2.exists()&& !noReseedFileAlt3.exists()) {
-    File netDb=new File("netDb");
-    String names[]=(netDb.exists() ? netDb.list() : null);
-    if ((names == null) || (names.length < 15)) {
-      ReseedHandler reseedHandler=new ReseedHandler();
-      reseedHandler.requestReseed();
-    }
   }
   NewsFetcher fetcher=NewsFetcher.getInstance(I2PAppContext.getGlobalContext());
   I2PThread t=new I2PThread(fetcher,"NewsFetcher");
