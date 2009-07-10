@@ -70,6 +70,10 @@
     _context.statManager().addRateData("tunnel.reject." + response,1,1);
     _context.messageHistory().tunnelRejected(state.fromHash,new TunnelId(ourId),req.readNextIdentity(),"rejecting for " + response + ": "+ state.msg.getUniqueId()+ "/"+ ourId+ "/"+ req.readNextTunnelId()+ " delay "+ recvDelay+ " as "+ (isOutEnd ? "outbound endpoint" : isInGW ? "inbound gw" : "participant"));
   }
+  if (response != 0 && (!_context.routerHash().equals(nextPeer)) && (!_context.commSystem().haveOutboundCapacity()) && (!_context.commSystem().isEstablished(nextPeer))) {
+    _context.statManager().addRateData("tunnel.dropConnLimits",1,0);
+    return;
+  }
   BuildResponseRecord resp=new BuildResponseRecord();
   byte reply[]=resp.create(_context,response,req.readReplyKey(),req.readReplyIV(),state.msg.getUniqueId());
   for (int j=0; j < TunnelBuildMessage.RECORD_COUNT; j++) {
