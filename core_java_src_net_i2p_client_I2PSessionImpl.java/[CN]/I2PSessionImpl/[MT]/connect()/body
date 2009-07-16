@@ -1,4 +1,5 @@
 {
+  setOpening(true);
   _closed=false;
   _availabilityNotifier.stopNotifying();
   I2PThread notifier=new I2PThread(_availabilityNotifier);
@@ -48,13 +49,16 @@ synchronized (_leaseSetWait) {
     long connected=_context.clock().now();
     if (_log.shouldLog(Log.INFO))     _log.info(getPrefix() + "Lease set created with inbound tunnels after " + (connected - startConnect)+ "ms - ready to participate in the network!");
     startIdleMonitor();
+    setOpening(false);
   }
  catch (  UnknownHostException uhe) {
     _closed=true;
+    setOpening(false);
     throw new I2PSessionException(getPrefix() + "Invalid session configuration",uhe);
   }
 catch (  IOException ioe) {
     _closed=true;
+    setOpening(false);
     throw new I2PSessionException(getPrefix() + "Problem connecting to " + _hostname+ " on port "+ _portNum,ioe);
   }
 }

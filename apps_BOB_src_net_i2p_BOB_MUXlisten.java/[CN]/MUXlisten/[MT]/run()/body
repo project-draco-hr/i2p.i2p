@@ -9,19 +9,23 @@
         info.add("RUNNING",new Boolean(true));
       }
  catch (      Exception e) {
+        lock.set(false);
         wunlock();
         return;
       }
     }
  catch (    Exception e) {
+      lock.set(false);
       return;
     }
     try {
       wunlock();
     }
  catch (    Exception e) {
+      lock.set(false);
       return;
     }
+    lives.set(true);
     lock.set(false);
     quit: {
       try {
@@ -29,12 +33,12 @@
 {
           if (go_out) {
             SS=socketManager.getServerSocket();
-            I2Plistener conn=new I2Plistener(SS,socketManager,info,database,_log);
+            I2Plistener conn=new I2Plistener(SS,socketManager,info,database,_log,lives);
             t=new Thread(tg,conn,"BOBI2Plistener " + N);
             t.start();
           }
           if (come_in) {
-            TCPlistener conn=new TCPlistener(listener,socketManager,info,database,_log);
+            TCPlistener conn=new TCPlistener(listener,socketManager,info,database,_log,lives);
             q=new Thread(tg,conn,"BOBTCPlistener " + N);
             q.start();
           }
@@ -58,7 +62,7 @@
             break quit;
           }
           boolean spin=true;
-          while (spin) {
+          while (spin && lives.get()) {
             try {
               Thread.sleep(1000);
             }
@@ -93,22 +97,29 @@
     }
   }
   finally {
-    while (!lock.compareAndSet(false,true)) {
+    lives.set(false);
+    try {
+      Thread.sleep(100);
+    }
+ catch (    InterruptedException ex) {
     }
     try {
       wlock();
       try {
         info.add("STARTING",new Boolean(false));
-        info.add("STOPPING",new Boolean(false));
+        info.add("STOPPING",new Boolean(true));
         info.add("RUNNING",new Boolean(false));
       }
  catch (      Exception e) {
+        lock.set(false);
         wunlock();
         return;
       }
       wunlock();
     }
  catch (    Exception e) {
+    }
+    while (!lock.compareAndSet(false,true)) {
     }
     if (SS != null) {
       try {
@@ -125,9 +136,25 @@
       }
     }
     try {
-      Thread.sleep(250);
+      Thread.sleep(100);
     }
  catch (    InterruptedException ex) {
+    }
+    try {
+      wlock();
+      try {
+        info.add("STARTING",new Boolean(false));
+        info.add("STOPPING",new Boolean(false));
+        info.add("RUNNING",new Boolean(false));
+      }
+ catch (      Exception e) {
+        lock.set(false);
+        wunlock();
+        return;
+      }
+      wunlock();
+    }
+ catch (    Exception e) {
     }
     lock.set(false);
     if (tg != null) {

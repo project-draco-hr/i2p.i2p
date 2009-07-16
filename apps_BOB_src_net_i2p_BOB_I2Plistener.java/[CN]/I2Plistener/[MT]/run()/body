@@ -4,28 +4,9 @@
   int conn=0;
   try {
     die: {
-      serverSocket.setSoTimeout(50);
-      boolean spin=true;
-      while (spin) {
-        try {
-          rlock();
-        }
- catch (        Exception e) {
-          break die;
-        }
-        try {
-          spin=info.get("RUNNING").equals(Boolean.TRUE);
-        }
- catch (        Exception e) {
-          try {
-            runlock();
-          }
- catch (          Exception e2) {
-            break die;
-          }
-          break die;
-        }
-        try {
+      try {
+        serverSocket.setSoTimeout(50);
+        while (lives.get()) {
           try {
             sessSocket=serverSocket.accept();
             g=true;
@@ -39,13 +20,14 @@ catch (          SocketTimeoutException ste) {
           if (g) {
             g=false;
             conn++;
-            I2PtoTCP conn_c=new I2PtoTCP(sessSocket,info,database);
+            I2PtoTCP conn_c=new I2PtoTCP(sessSocket,info,database,lives);
             Thread t=new Thread(conn_c,Thread.currentThread().getName() + " I2PtoTCP " + conn);
             t.start();
           }
         }
- catch (        Exception e) {
-        }
+      }
+ catch (      I2PException e) {
+        System.out.println("Exception " + e);
       }
     }
   }

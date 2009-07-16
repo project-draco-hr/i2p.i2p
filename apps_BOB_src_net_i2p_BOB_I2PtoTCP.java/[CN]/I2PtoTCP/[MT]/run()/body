@@ -43,36 +43,17 @@
           out.write(10);
           out.flush();
         }
-        TCPio conn_c=new TCPio(in,Iout);
-        TCPio conn_a=new TCPio(Iin,out);
+        TCPio conn_c=new TCPio(in,Iout,lives);
+        TCPio conn_a=new TCPio(Iin,out,lives);
         t=new Thread(conn_c,Thread.currentThread().getName() + " TCPioA");
         q=new Thread(conn_a,Thread.currentThread().getName() + " TCPioB");
         t.start();
         q.start();
-        boolean spin=true;
-        while (t.isAlive() && q.isAlive() && spin) {
+        while (t.isAlive() && q.isAlive() && lives.get()) {
           try {
             Thread.sleep(10);
           }
  catch (          InterruptedException e) {
-            break die;
-          }
-          try {
-            rlock();
-          }
- catch (          Exception e) {
-            break die;
-          }
-          try {
-            spin=info.get("RUNNING").equals(Boolean.TRUE);
-          }
- catch (          Exception e) {
-            try {
-              runlock();
-            }
- catch (            Exception e2) {
-              break die;
-            }
             break die;
           }
         }
@@ -83,16 +64,6 @@
     }
   }
   finally {
-    try {
-      t.interrupt();
-    }
- catch (    Exception e) {
-    }
-    try {
-      q.interrupt();
-    }
- catch (    Exception e) {
-    }
     try {
       in.close();
     }
@@ -112,6 +83,16 @@
       Iout.close();
     }
  catch (    Exception ex) {
+    }
+    try {
+      t.interrupt();
+    }
+ catch (    Exception e) {
+    }
+    try {
+      q.interrupt();
+    }
+ catch (    Exception e) {
     }
     try {
       I2P.close();
