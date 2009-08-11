@@ -1,0 +1,32 @@
+{
+  _status="<b>Update downloaded</b>";
+  String to=(new File(_context.getBaseDir(),Router.UPDATE_FILE)).getAbsolutePath();
+  boolean copied=FileUtil.copy(_updateFile,to,true);
+  if (copied) {
+    (new File(_updateFile)).delete();
+    String policy=_context.getProperty(ConfigUpdateHandler.PROP_UPDATE_POLICY);
+    this.done=true;
+    String lastmod=_get.getLastModified();
+    long modtime=0;
+    if (lastmod != null)     modtime=NewsFetcher.parse822Date(lastmod);
+    if (modtime <= 0)     modtime=_context.clock().now();
+    _context.router().setConfigSetting(PROP_LAST_UPDATE_TIME,"" + modtime);
+    _context.router().saveConfig();
+    if ("install".equals(policy)) {
+      _log.log(Log.CRIT,"Update was downloaded, restarting to install it");
+      _status="<b>Update downloaded</b><br />Restarting";
+      restart();
+    }
+ else {
+      _log.log(Log.CRIT,"Update was downloaded, will be installed at next restart");
+      _status="<b>Update downloaded</b><br />";
+      if (System.getProperty("wrapper.version") != null)       _status+="Click Restart to install";
+ else       _status+="Click Shutdown and restart to install";
+      _status+=" Version " + _zipVersion;
+    }
+  }
+ else {
+    _log.log(Log.CRIT,"Failed copy to " + to);
+    _status="<b>Failed copy to " + to + "</b>";
+  }
+}
