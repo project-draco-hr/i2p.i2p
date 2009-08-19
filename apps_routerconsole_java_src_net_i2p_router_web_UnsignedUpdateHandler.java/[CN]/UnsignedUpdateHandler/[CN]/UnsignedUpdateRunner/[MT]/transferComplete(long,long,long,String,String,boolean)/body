@@ -1,9 +1,18 @@
 {
-  _status="<b>Update downloaded</b>";
-  String to=(new File(_context.getBaseDir(),Router.UPDATE_FILE)).getAbsolutePath();
+  File updFile=new File(_updateFile);
+  if (FileUtil.verifyZip(updFile)) {
+    _status="<b>Update downloaded</b>";
+  }
+ else {
+    updFile.delete();
+    _status="<b>Unsigned update file is corrupt</b> from " + url;
+    _log.log(Log.CRIT,"Corrupt zip file from " + url);
+    return;
+  }
+  String to=(new File(_context.getRouterDir(),Router.UPDATE_FILE)).getAbsolutePath();
   boolean copied=FileUtil.copy(_updateFile,to,true);
   if (copied) {
-    (new File(_updateFile)).delete();
+    updFile.delete();
     String policy=_context.getProperty(ConfigUpdateHandler.PROP_UPDATE_POLICY);
     this.done=true;
     String lastmod=_get.getLastModified();
