@@ -1,9 +1,16 @@
 {
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("DestinationEstablished called for destination " + runner.getConfig().getDestination().calculateHash().toBase64());
+  Destination dest=runner.getConfig().getDestination();
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("DestinationEstablished called for destination " + dest.calculateHash().toBase64());
 synchronized (_pendingRunners) {
     _pendingRunners.remove(runner);
   }
+  boolean fail=false;
 synchronized (_runners) {
-    _runners.put(runner.getConfig().getDestination(),runner);
+    fail=_runners.containsKey(dest);
+    if (!fail)     _runners.put(dest,runner);
+  }
+  if (fail) {
+    _log.log(Log.CRIT,"Client attempted to register duplicate destination " + dest.calculateHash().toBase64());
+    runner.disconnectClient("Duplicate destination");
   }
 }
