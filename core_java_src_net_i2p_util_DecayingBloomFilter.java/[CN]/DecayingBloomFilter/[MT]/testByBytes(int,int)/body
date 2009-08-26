@@ -5,17 +5,20 @@
   DecayingBloomFilter filter=new DecayingBloomFilter(I2PAppContext.getGlobalContext(),600 * 1000,16);
   int falsePositives=0;
   long totalTime=0;
+  double fpr=0d;
   for (int j=0; j < numRuns; j++) {
     long start=System.currentTimeMillis();
     for (int i=0; i < iv.length; i++) {
       if (filter.add(iv[i])) {
         falsePositives++;
-        System.out.println("False positive " + falsePositives + " (testByLong j="+ j+ " i="+ i+ ")");
+        System.out.println("False positive " + falsePositives + " (testByBytes j="+ j+ " i="+ i+ ")");
       }
     }
     totalTime+=System.currentTimeMillis() - start;
+    fpr=filter.getFalsePositiveRate();
     filter.clear();
   }
   filter.stopDecaying();
+  System.out.println("False postive rate should be " + fpr);
   System.out.println("After " + numRuns + " runs pushing "+ iv.length+ " entries in "+ DataHelper.formatDuration(totalTime / numRuns)+ " per run, there were "+ falsePositives+ " false positives");
 }
