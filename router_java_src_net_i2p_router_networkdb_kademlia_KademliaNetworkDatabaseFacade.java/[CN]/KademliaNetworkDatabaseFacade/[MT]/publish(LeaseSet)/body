@@ -9,7 +9,10 @@
     return;
   }
   if (!_context.clientManager().shouldPublishLeaseSet(h))   return;
-  if (_context.router().gracefulShutdownInProgress())   return;
+  if (_context.router().gracefulShutdownInProgress()) {
+    int code=_context.router().scheduledGracefulExitCode();
+    if (code == Router.EXIT_GRACEFUL || code == Router.EXIT_HARD)     return;
+  }
   RepublishLeaseSetJob j=null;
 synchronized (_publishingLeaseSets) {
     j=(RepublishLeaseSetJob)_publishingLeaseSets.get(h);
