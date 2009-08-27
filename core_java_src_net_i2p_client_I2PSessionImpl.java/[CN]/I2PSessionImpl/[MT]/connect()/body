@@ -24,7 +24,9 @@ synchronized (_out) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug(getPrefix() + "Before getDate");
     sendMessage(new GetDateMessage());
     if (_log.shouldLog(Log.DEBUG))     _log.debug(getPrefix() + "After getDate / begin waiting for a response");
+    int waitcount=0;
     while (!_dateReceived) {
+      if (waitcount++ > 30)       throw new IOException("no date handshake");
       try {
 synchronized (_dateReceivedLock) {
           _dateReceivedLock.wait(1000);
@@ -37,7 +39,9 @@ synchronized (_dateReceivedLock) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug(getPrefix() + "Before producer.connect()");
     _producer.connect(this);
     if (_log.shouldLog(Log.DEBUG))     _log.debug(getPrefix() + "After  producer.connect()");
+    waitcount=0;
     while (_leaseSet == null) {
+      if (waitcount++ > 5 * 60)       throw new IOException("no leaseset");
 synchronized (_leaseSetWait) {
         try {
           _leaseSetWait.wait(1000);
