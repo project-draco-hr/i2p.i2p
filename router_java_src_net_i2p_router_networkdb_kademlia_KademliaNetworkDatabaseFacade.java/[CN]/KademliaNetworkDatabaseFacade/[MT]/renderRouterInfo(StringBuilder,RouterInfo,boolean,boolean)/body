@@ -1,17 +1,18 @@
 {
   String hash=info.getIdentity().getHash().toBase64();
-  buf.append("<a name=\"").append(hash.substring(0,6)).append("\" ></a>");
+  buf.append("<table><tr><th><a name=\"").append(hash.substring(0,6)).append("\" ></a>");
   if (isUs) {
-    buf.append("<a name=\"our-info\" ></a><b>Our info: ").append(hash).append("</b><br>\n");
+    buf.append("<a name=\"our-info\" ></a><b>Our info: ").append(hash).append("</b></th></tr><tr><td>\n");
   }
  else {
-    buf.append("<b>Peer info for:</b> ").append(hash).append("<br>\n");
+    buf.append("<b>Peer info for:</b> ").append(hash).append("\n");
+    buf.append("[<a href=\"netdb.jsp?r=").append(hash.substring(0,6)).append("\" >Full entry</a>]</th></tr><td>\n");
   }
   long age=_context.clock().now() - info.getPublished();
-  if (isUs && _context.router().isHidden())   buf.append("Hidden, Updated: <i>").append(DataHelper.formatDuration(age)).append(" ago</i><br>\n");
- else   if (age > 0)   buf.append("Published: <i>").append(DataHelper.formatDuration(age)).append(" ago</i><br>\n");
- else   buf.append("Published: <i>in ").append(DataHelper.formatDuration(0 - age)).append("???</i><br>\n");
-  buf.append("Address(es): <i>");
+  if (isUs && _context.router().isHidden())   buf.append("<b>Hidden, Updated:</b> ").append(DataHelper.formatDuration(age)).append(" ago<br>\n");
+ else   if (age > 0)   buf.append("<b>Published:</b> ").append(DataHelper.formatDuration(age)).append(" ago<br>\n");
+ else   buf.append("<b>Published:</b> in ").append(DataHelper.formatDuration(0 - age)).append("???<br>\n");
+  buf.append("<b>Address(es):</b> ");
   String country=_context.commSystem().getCountry(info.getIdentity().getHash());
   if (country != null) {
     buf.append("<img height=\"11\" width=\"16\" alt=\"").append(country.toUpperCase()).append("\"");
@@ -26,18 +27,17 @@
       buf.append('[').append(DataHelper.stripHTML(name)).append('=').append(DataHelper.stripHTML(val)).append("] ");
     }
   }
-  buf.append("</i><br>\n");
+  buf.append("</td></tr>\n");
   if (full) {
-    buf.append("Stats: <br><i><code>\n");
+    buf.append("<tr><td>Stats: <br><code>\n");
     for (Iterator iter=info.getOptions().keySet().iterator(); iter.hasNext(); ) {
       String key=(String)iter.next();
       String val=info.getOption(key);
       buf.append(DataHelper.stripHTML(key)).append(" = ").append(DataHelper.stripHTML(val)).append("<br>\n");
     }
-    buf.append("</code></i>\n");
+    buf.append("</code></td></tr>\n");
   }
  else {
-    buf.append("<a href=\"netdb.jsp?r=").append(hash.substring(0,6)).append("\" >Full entry</a>\n");
   }
-  buf.append("<hr>\n");
+  buf.append("</td></tr>\n");
 }
