@@ -10,16 +10,16 @@
   payload.setRequestAck(false);
   payload.setExpiration(m.getMessageExpiration());
   SessionKey encryptKey=getContext().keyGenerator().generateSessionKey();
-  SessionTag encryptTag=new SessionTag(true);
+  _encryptTag=new SessionTag(true);
   SessionKey sentKey=new SessionKey();
   Set sentTags=null;
-  GarlicMessage msg=GarlicMessageBuilder.buildMessage(getContext(),payload,sentKey,sentTags,getContext().keyManager().getPublicKey(),encryptKey,encryptTag);
+  GarlicMessage msg=GarlicMessageBuilder.buildMessage(getContext(),payload,sentKey,sentTags,getContext().keyManager().getPublicKey(),encryptKey,_encryptTag);
   if (msg == null) {
     scheduleRetest();
     return;
   }
   Set encryptTags=new HashSet(1);
-  encryptTags.add(encryptTag);
+  encryptTags.add(_encryptTag);
   getContext().sessionKeyManager().tagsReceived(encryptKey,encryptTags);
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Sending garlic test of " + _outTunnel + " / "+ _replyTunnel);
   getContext().tunnelDispatcher().dispatchOutbound(msg,_outTunnel.getSendTunnelId(0),_replyTunnel.getReceiveTunnelId(0),_replyTunnel.getPeer(0));
