@@ -5,7 +5,7 @@
     dieFatal();
     return;
   }
-  int existingTags=GarlicMessageBuilder.estimateAvailableTags(getContext(),_leaseSet.getEncryptionKey(),_from);
+  int existingTags=GarlicMessageBuilder.estimateAvailableTags(getContext(),_leaseSet.getEncryptionKey(),_from.calculateHash());
   _outTunnel=selectOutboundTunnel(_to);
   boolean wantACK;
 synchronized (_lastReplyRequestCache) {
@@ -15,7 +15,7 @@ synchronized (_lastReplyRequestCache) {
   }
   PublicKey key=_leaseSet.getEncryptionKey();
   SessionKey sessKey=new SessionKey();
-  Set tags=new HashSet();
+  Set<SessionTag> tags=new HashSet();
   LeaseSet replyLeaseSet=getReplyLeaseSet(wantACK);
   if (replyLeaseSet != null)   wantACK=true;
   long token=(wantACK ? getContext().random().nextLong(I2NPMessage.MAX_ID_VALUE) : -1);
@@ -39,16 +39,22 @@ synchronized (_lastReplyRequestCache) {
   SendTimeoutJob onFail=null;
   ReplySelector selector=null;
   if (wantACK) {
-    onReply=new SendSuccessJob(getContext(),sessKey,tags);
-    onFail=new SendTimeoutJob(getContext());
+    TagSetHandle tsh=null;
+    if ((sessKey != null) && (tags != null) && (tags.size() > 0)) {
+      if (_leaseSet != null) {
+        SessionKeyManager skm=getContext().clientManager().getClientSessionKeyManager(_from.calculateHash());
+        if (skm != null)         tsh=skm.tagsDelivered(_leaseSet.getEncryptionKey(),sessKey,tags);
+      }
+    }
+    onReply=new SendSuccessJob(getContext(),sessKey,tsh);
+    onFail=new SendTimeoutJob(getContext(),sessKey,tsh);
     selector=new ReplySelector(token);
   }
   if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": Placing GarlicMessage into the new tunnel message bound for " + _toString+ " at "+ _lease.getTunnelId()+ " on "+ _lease.getGateway().toBase64());
   if (_outTunnel != null) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug(getJobId() + ": Sending tunnel message out " + _outTunnel.getSendTunnelId(0)+ " to "+ _toString+ " at "+ _lease.getTunnelId()+ " on "+ _lease.getGateway().toBase64());
     DispatchJob dispatchJob=new DispatchJob(getContext(),msg,selector,onReply,onFail,(int)(_overallExpiration - getContext().clock().now()));
-    if (false)     getContext().jobQueue().addJob(dispatchJob);
- else     dispatchJob.runJob();
+    dispatchJob.runJob();
   }
  else {
     if (_log.shouldLog(Log.WARN))     _log.warn(getJobId() + ": Could not find any outbound tunnels to send the payload through... this might take a while");
