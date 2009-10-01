@@ -1,0 +1,37 @@
+{
+  Log log=ctx.logManager().getLog(GarlicMessageBuilder.class);
+  PublicKey key=config.getRecipientPublicKey();
+  if (key == null) {
+    if (config.getRecipient() == null) {
+      throw new IllegalArgumentException("Null recipient specified");
+    }
+ else     if (config.getRecipient().getIdentity() == null) {
+      throw new IllegalArgumentException("Null recipient.identity specified");
+    }
+ else     if (config.getRecipient().getIdentity().getPublicKey() == null) {
+      throw new IllegalArgumentException("Null recipient.identity.publicKey specified");
+    }
+ else     key=config.getRecipient().getIdentity().getPublicKey();
+  }
+  if (log.shouldLog(Log.INFO))   log.info("Encrypted with public key " + key + " to expire on "+ new Date(config.getExpiration()));
+  SessionKey curKey=skm.getCurrentKey(key);
+  SessionTag curTag=null;
+  if (curKey == null)   curKey=skm.createSession(key);
+  if (!forceElGamal) {
+    curTag=skm.consumeNextAvailableTag(key,curKey);
+    int availTags=skm.getAvailableTags(key,curKey);
+    if (log.shouldLog(Log.DEBUG))     log.debug("Available tags for encryption to " + key + ": "+ availTags);
+    if (availTags < LOW_THRESHOLD) {
+      for (int i=0; i < numTagsToDeliver; i++)       wrappedTags.add(new SessionTag(true));
+      if (log.shouldLog(Log.INFO))       log.info("Too few are available (" + availTags + "), so we're including more");
+    }
+ else     if (skm.getAvailableTimeLeft(key,curKey) < 60 * 1000) {
+      for (int i=0; i < numTagsToDeliver; i++)       wrappedTags.add(new SessionTag(true));
+      if (log.shouldLog(Log.INFO))       log.info("Tags are almost expired, adding new ones");
+    }
+ else {
+    }
+  }
+  wrappedKey.setData(curKey.getData());
+  return buildMessage(ctx,config,wrappedKey,wrappedTags,key,curKey,curTag);
+}
