@@ -11,6 +11,10 @@
  else     if (msg.getMessageExpiration() < before) {
       if (_log.shouldLog(Log.WARN))       _log.warn("why are you sending a tunnel message that expired " + (before - msg.getMessageExpiration()) + "ms ago? "+ msg,new Exception("cause"));
     }
+ else     if (msg.getMessageExpiration() > before + MAX_FUTURE_EXPIRATION) {
+      if (_log.shouldLog(Log.ERROR))       _log.error("why are you sending a tunnel message that expires " + (msg.getMessageExpiration() - before) + "ms from now? "+ msg,new Exception("cause"));
+      return;
+    }
     long tid1=outboundTunnel.getTunnelId();
     long tid2=(targetTunnel != null ? targetTunnel.getTunnelId() : -1);
     _context.messageHistory().tunnelDispatched(msg.getUniqueId(),tid1,tid2,targetPeer,"outbound gateway");
