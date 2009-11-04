@@ -11,35 +11,31 @@
   _introKey=new SessionKey(new byte[SessionKey.KEYSIZE_BYTES]);
   System.arraycopy(_context.routerHash().getData(),0,_introKey.getData(),0,SessionKey.KEYSIZE_BYTES);
   rebuildExternalAddress();
-  int port=-1;
+  String bindTo=_context.getProperty(PROP_BIND_INTERFACE);
+  InetAddress bindToAddr=null;
+  if (bindTo != null) {
+    try {
+      bindToAddr=InetAddress.getByName(bindTo);
+    }
+ catch (    UnknownHostException uhe) {
+      _log.log(Log.CRIT,"Invalid SSU bind interface specified [" + bindTo + "]",uhe);
+      setReachabilityStatus(CommSystemFacade.STATUS_HOSED);
+      return;
+    }
+  }
+  int port;
+  int oldIPort=_context.getProperty(PROP_INTERNAL_PORT,-1);
+  int oldEPort=_context.getProperty(PROP_EXTERNAL_PORT,-1);
   if (_externalListenPort <= 0) {
-    port=_context.getProperty(PROP_INTERNAL_PORT,DEFAULT_INTERNAL_PORT);
-    _context.router().setConfigSetting(PROP_EXTERNAL_PORT,port + "");
-    _context.router().saveConfig();
+    if (oldIPort > 0)     port=oldIPort;
+ else     port=oldEPort;
   }
  else {
     port=_externalListenPort;
-    if (_log.shouldLog(Log.INFO))     _log.info("Binding to the explicitly specified external port: " + port);
   }
+  if (_log.shouldLog(Log.INFO))   _log.info("Binding to the port: " + port);
   if (_endpoint == null) {
-    String bindTo=_context.getProperty(PROP_BIND_INTERFACE);
-    InetAddress bindToAddr=null;
-    if (bindTo != null) {
-      try {
-        bindToAddr=InetAddress.getByName(bindTo);
-      }
- catch (      UnknownHostException uhe) {
-        if (_log.shouldLog(Log.ERROR))         _log.error("Invalid SSU bind interface specified [" + bindTo + "]",uhe);
-        bindToAddr=null;
-      }
-    }
-    try {
-      _endpoint=new UDPEndpoint(_context,this,port,bindToAddr);
-    }
- catch (    SocketException se) {
-      if (_log.shouldLog(Log.CRIT))       _log.log(Log.CRIT,"Unable to listen on the UDP port (" + port + ")",se);
-      return;
-    }
+    _endpoint=new UDPEndpoint(_context,this,port,bindToAddr);
   }
  else {
     _endpoint.setListenPort(port);
@@ -50,6 +46,18 @@
   if (_refiller == null)   _refiller=new OutboundRefiller(_context,_fragments,_outboundMessages);
   if (_flooder == null)   _flooder=new UDPFlooder(_context,this);
   _endpoint.startup();
+  int newPort=_endpoint.getListenPort();
+  _externalListenPort=newPort;
+  if (newPort <= 0) {
+    _log.log(Log.CRIT,"Unable to open UDP port");
+    setReachabilityStatus(CommSystemFacade.STATUS_HOSED);
+    return;
+  }
+  if (newPort != port || newPort != oldIPort || newPort != oldEPort) {
+    _context.router().setConfigSetting(PROP_INTERNAL_PORT,newPort + "");
+    _context.router().setConfigSetting(PROP_EXTERNAL_PORT,newPort + "");
+    _context.router().saveConfig();
+  }
   _establisher.startup();
   _handler.startup();
   _fragments.startup();
