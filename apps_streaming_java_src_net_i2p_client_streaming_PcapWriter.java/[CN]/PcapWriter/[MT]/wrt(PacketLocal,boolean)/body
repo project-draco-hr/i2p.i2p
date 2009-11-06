@@ -3,15 +3,29 @@
   if (fos == null)   throw new IOException("Not open or already closed");
   Connection con=pkt.getConnection();
   int includeLen=Math.min(MAX_PAYLOAD_BYTES,pkt.getPayloadSize());
+  Options opts=new Options();
+  if (pkt.isFlagSet(Packet.FLAG_MAX_PACKET_SIZE_INCLUDED))   opts.add(OPTION_MSS,2,pkt.getOptionalMaxSize());
+  if (pkt.isFlagSet(Packet.FLAG_DELAY_REQUESTED))   opts.add(OPTION_ODELAY,2,pkt.getOptionalDelay());
+  if (pkt.getResendDelay() > 0)   opts.add(OPTION_RDELAY,1,pkt.getResendDelay());
+  if (pkt.isFlagSet(Packet.FLAG_SIGNATURE_REQUESTED))   opts.add(OPTION_SIGREQ);
+  if (pkt.isFlagSet(Packet.FLAG_SIGNATURE_INCLUDED))   opts.add(OPTION_SIG);
+  if (pkt.isFlagSet(Packet.FLAG_FROM_INCLUDED))   opts.add(OPTION_FROM);
+  if (pkt.isFlagSet(Packet.FLAG_ECHO)) {
+    if (pkt.getSendStreamId() > 0)     opts.add(OPTION_PING);
+ else     opts.add(OPTION_PONG);
+  }
+  if (pkt.getNacks() != null)   opts.add(OPTION_NACK,1,pkt.getNacks().length);
+  int optLen=opts.size();
+  byte options[]=opts.getData();
   long now;
   if (isInbound)   now=pkt.getCreatedOn();
  else   now=pkt.getLastSend();
   DataHelper.writeLong(fos,4,now / 1000);
   DataHelper.writeLong(fos,4,1000 * (now % 1000));
-  DataHelper.writeLong(fos,4,54 + includeLen);
-  DataHelper.writeLong(fos,4,58 + pkt.getPayloadSize());
+  DataHelper.writeLong(fos,4,54 + optLen + includeLen);
+  DataHelper.writeLong(fos,4,58 + optLen + pkt.getPayloadSize());
   fos.write(MAC_HEADER);
-  int length=20 + 20 + pkt.getPayloadSize();
+  int length=20 + 20 + optLen+ pkt.getPayloadSize();
   fos.write(IP_HEADER_1);
   DataHelper.writeLong(fos,2,length);
   fos.write(IP_HEADER_2);
@@ -64,8 +78,8 @@
   if (pkt.isFlagSet(Packet.FLAG_SYNCHRONIZE))   flags|=0x02;
   if (pkt.isFlagSet(Packet.FLAG_RESET))   flags|=0x04;
   if (!pkt.isFlagSet(Packet.FLAG_NO_ACK))   flags|=0x10;
-  if (pkt.isFlagSet(Packet.FLAG_DELAY_REQUESTED))   flags|=0x40;
-  DataHelper.writeLong(fos,1,0x50);
+  int osb=(5 + (optLen / 4)) << 4;
+  DataHelper.writeLong(fos,1,osb);
   DataHelper.writeLong(fos,1,flags);
   long window=ConnectionOptions.INITIAL_WINDOW_SIZE;
   long msgSize=ConnectionOptions.DEFAULT_MAX_MESSAGE_SIZE;
@@ -86,5 +100,6 @@
   if (window > 65535)   window=65535;
   DataHelper.writeLong(fos,2,window);
   DataHelper.writeLong(fos,4,0);
+  if (optLen > 0)   fos.write(options,0,optLen);
   if (includeLen > 0)   fos.write(pkt.getPayload().getData(),0,includeLen);
 }
