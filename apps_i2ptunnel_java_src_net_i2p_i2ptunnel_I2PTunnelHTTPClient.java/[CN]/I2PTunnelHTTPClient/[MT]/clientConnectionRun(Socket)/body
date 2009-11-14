@@ -105,21 +105,14 @@
             }
             request=uriPath + urlEncoding + " "+ protocolVersion;
             if (ahelperConflict) {
-              String str;
-              byte[] header;
-              str=FileUtil.readTextFile((new File(_errorDir,"ahelper-conflict-header.ht")).getAbsolutePath(),100,true);
-              if (str != null)               header=str.getBytes();
- else               header=ERR_AHELPER_CONFLICT;
               if (out != null) {
                 long alias=I2PAppContext.getGlobalContext().random().nextLong();
                 String trustedURL=protocol + uriPath + urlEncoding;
                 String conflictURL=protocol + alias + ".i2p/?"+ initialFragments;
+                byte[] header=getErrorPage("ahelper-conflict",ERR_AHELPER_CONFLICT);
                 out.write(header);
-                out.write(("To visit the destination in your host database, click <a href=\"" + trustedURL + "\">here</a>. To visit the conflicting addresshelper link by temporarily giving it a random alias, click <a href=\""+ conflictURL+ "\">here</a>.<P/>").getBytes());
-                out.write("</div><div class=\"proxyfooter\"><p><i>I2P HTTP Proxy Server<br />Generated on: ".getBytes());
-                out.write(new Date().toString().getBytes());
-                out.write("</i></div></body></html>\n".getBytes());
-                out.flush();
+                out.write(("To visit the destination in your host database, click <a href=\"" + trustedURL + "\">here</a>. To visit the conflicting addresshelper link by temporarily giving it a random alias, click <a href=\""+ conflictURL+ "\">here</a>.<p></div>").getBytes());
+                writeFooter(out);
               }
               s.close();
               return;
@@ -135,11 +128,8 @@
         }
  else         if (host.toLowerCase().equals("localhost") || host.equals("127.0.0.1")) {
           if (out != null) {
-            out.write(ERR_LOCALHOST);
-            out.write("<p /><i>Generated on: ".getBytes());
-            out.write(new Date().toString().getBytes());
-            out.write("</i></body></html>\n".getBytes());
-            out.flush();
+            out.write(getErrorPage("localhost",ERR_LOCALHOST));
+            writeFooter(out);
           }
           s.close();
           return;
@@ -153,11 +143,8 @@
             if (_log.shouldLog(Log.WARN))             _log.warn(getPrefix(requestId) + "Host wants to be outproxied, but we dont have any!");
             l.log("No HTTP outproxy found for the request.");
             if (out != null) {
-              out.write(ERR_NO_OUTPROXY);
-              out.write("<p /><i>Generated on: ".getBytes());
-              out.write(new Date().toString().getBytes());
-              out.write("</i></body></html>\n".getBytes());
-              out.flush();
+              out.write(getErrorPage("noproxy",ERR_NO_OUTPROXY));
+              writeFooter(out);
             }
             s.close();
             return;
@@ -172,11 +159,8 @@
           if (pos < 0) {
             l.log("Invalid request url [" + request + "]");
             if (out != null) {
-              out.write(ERR_REQUEST_DENIED);
-              out.write("<p /><i>Generated on: ".getBytes());
-              out.write(new Date().toString().getBytes());
-              out.write("</i></body></html>\n".getBytes());
-              out.flush();
+              out.write(getErrorPage("denied",ERR_REQUEST_DENIED));
+              writeFooter(out);
             }
             s.close();
             return;
@@ -248,12 +232,9 @@
     if (method == null || destination == null) {
       l.log("No HTTP method found in the request.");
       if (out != null) {
-        if ("http://".equalsIgnoreCase(protocol))         out.write(ERR_REQUEST_DENIED);
- else         out.write(ERR_BAD_PROTOCOL);
-        out.write("<p /><i>Generated on: ".getBytes());
-        out.write(new Date().toString().getBytes());
-        out.write("</i></body></html>\n".getBytes());
-        out.flush();
+        if ("http://".equalsIgnoreCase(protocol))         out.write(getErrorPage("denied",ERR_REQUEST_DENIED));
+ else         out.write(getErrorPage("protocol",ERR_BAD_PROTOCOL));
+        writeFooter(out);
       }
       s.close();
       return;
@@ -267,18 +248,15 @@
     Destination clientDest=I2PTunnel.destFromName(destination);
     if (clientDest == null) {
       if (_log.shouldLog(Log.WARN))       _log.warn("Unable to resolve " + destination + " (proxy? "+ usingWWWProxy+ ", request: "+ targetRequest);
-      String str;
       byte[] header;
       boolean showAddrHelper=false;
-      if (usingWWWProxy)       str=FileUtil.readTextFile((new File(_errorDir,"dnfp-header.ht")).getAbsolutePath(),100,true);
- else       if (ahelper != 0)       str=FileUtil.readTextFile((new File(_errorDir,"dnfb-header.ht")).getAbsolutePath(),100,true);
- else       if (destination.length() == 60 && destination.endsWith(".b32.i2p"))       str=FileUtil.readTextFile((new File(_errorDir,"dnf-header.ht")).getAbsolutePath(),100,true);
+      if (usingWWWProxy)       header=getErrorPage("dnfp",ERR_DESTINATION_UNKNOWN);
+ else       if (ahelper != 0)       header=getErrorPage("dnfb",ERR_DESTINATION_UNKNOWN);
+ else       if (destination.length() == 60 && destination.endsWith(".b32.i2p"))       header=getErrorPage("dnf",ERR_DESTINATION_UNKNOWN);
  else {
-        str=FileUtil.readTextFile((new File(_errorDir,"dnfh-header.ht")).getAbsolutePath(),100,true);
+        header=getErrorPage("dnfh",ERR_DESTINATION_UNKNOWN);
         showAddrHelper=true;
       }
-      if (str != null)       header=str.getBytes();
- else       header=ERR_DESTINATION_UNKNOWN;
       writeErrorMessage(header,out,targetRequest,usingWWWProxy,destination,showAddrHelper);
       s.close();
       return;
