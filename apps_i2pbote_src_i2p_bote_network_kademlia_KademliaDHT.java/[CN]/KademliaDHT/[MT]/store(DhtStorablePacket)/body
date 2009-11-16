@@ -1,0 +1,17 @@
+{
+  Hash key=packet.getDhtKey();
+  Collection<Destination> closeNodes=getClosestNodes(key);
+  log.debug("Storing a " + packet.getClass().getSimpleName() + " with key "+ key+ " on "+ closeNodes.size()+ " nodes");
+  HashCash hashCash=HashCash.mintCash("",1);
+  StoreRequest storageRequest=new StoreRequest(hashCash,packet);
+  PacketBatch batch=new PacketBatch();
+  for (  Destination node : closeNodes)   batch.putPacket(storageRequest,node);
+  sendQueue.send(batch);
+  try {
+    batch.awaitSendCompletion();
+  }
+ catch (  InterruptedException e) {
+    log.warn("Interrupted while waiting for responses to Storage Requests to be sent.",e);
+  }
+  sendQueue.remove(batch);
+}

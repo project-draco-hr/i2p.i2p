@@ -1,0 +1,12 @@
+{
+  if (packet instanceof ResponsePacket) {
+    log.debug("Response Packet received: Packet Id = " + packet.getPacketId() + " Sender = "+ sender);
+    UniqueId packetId=packet.getPacketId();
+    for (    PacketBatch batch : runningBatches)     if (batch.contains(packetId))     batch.addResponsePacket(packet);
+    ScheduledPacket requestPacket=outstandingRequests.remove(packetId);
+    if (requestPacket != null) {
+      requestPacket.setResponse(packet);
+      requestPacket.decrementResponseLatch();
+    }
+  }
+}

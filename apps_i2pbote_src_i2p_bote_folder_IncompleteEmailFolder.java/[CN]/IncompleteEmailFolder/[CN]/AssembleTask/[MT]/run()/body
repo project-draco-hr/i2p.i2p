@@ -1,0 +1,20 @@
+{
+  EmailPacket[] packets=getEmailPackets(packetFiles).toArray(new EmailPacket[0]);
+  Arrays.sort(packets,new Comparator<EmailPacket>(){
+    @Override public int compare(    EmailPacket packet1,    EmailPacket packet2){
+      return new Integer(packet1.getFragmentIndex()).compareTo(packet2.getFragmentIndex());
+    }
+  }
+);
+  ByteArrayOutputStream outputStream=new ByteArrayOutputStream();
+  try {
+    for (    EmailPacket packet : packets)     outputStream.write(packet.getContent());
+    Email email=new Email(outputStream.toByteArray());
+    inbox.add(email);
+    for (    File file : packetFiles)     if (!file.delete())     log.warn("Email packet file not deleted: <" + file.getAbsolutePath() + ">");
+  }
+ catch (  Exception e) {
+    log.error("Error assembling/storing email, or deleting email packets. ",e);
+    return;
+  }
+}

@@ -1,0 +1,39 @@
+{
+  log.info("Reading peers from file: '" + peerFile.getAbsolutePath() + "'");
+  Collection<KademliaPeer> peers=new ArrayList<KademliaPeer>();
+  FileInputStream fileInput=null;
+  try {
+    fileInput=new FileInputStream(peerFile);
+  }
+ catch (  FileNotFoundException notFoundExc) {
+    log.error("Peer file not found, creating a new one: '" + peerFile.getAbsolutePath() + "'");
+    log.error("Please provide a peer file with at least one active peer and restart the application.");
+    try {
+      createPeerFile(peerFile);
+    }
+ catch (    IOException ioExc) {
+      log.error("Can't create peer file.",ioExc);
+      return peers;
+    }
+  }
+  BufferedReader inputBuffer=new BufferedReader(new InputStreamReader(fileInput));
+  while (true) {
+    String line=null;
+    try {
+      line=inputBuffer.readLine();
+    }
+ catch (    IOException e) {
+      log.error("Error reading peer file.",e);
+    }
+    if (line == null)     break;
+    if (!line.startsWith("#"))     try {
+      Destination destination=new Destination(line);
+      KademliaPeer peer=new KademliaPeer(destination,0);
+      if (!peer.getDestinationHash().equals(localDestinationHash))       peers.add(peer);
+    }
+ catch (    DataFormatException e) {
+      log.error("Invalid destination key in '" + peerFile + "': "+ line,e);
+    }
+  }
+  return peers;
+}
