@@ -1,0 +1,35 @@
+{
+  final Collection<Destination> closeNodes=getClosestNodes(key);
+  log.debug("Querying " + closeNodes.size() + " nodes with Kademlia key "+ key);
+  final Collection<I2PBotePacket> receivedPackets=new ConcurrentHashSet<I2PBotePacket>();
+  PacketListener packetListener=new PacketListener(){
+    @Override public void packetReceived(    CommunicationPacket packet,    Destination sender,    long receiveTime){
+      if (packet instanceof RetrieveRequest && closeNodes.contains(sender))       receivedPackets.add(packet);
+    }
+  }
+;
+  i2pReceiver.addPacketListener(packetListener);
+  PacketBatch batch=new PacketBatch();
+  for (  Destination node : closeNodes)   batch.putPacket(new RetrieveRequest(key,dataType),node);
+  sendQueue.send(batch);
+  try {
+    batch.awaitSendCompletion();
+  }
+ catch (  InterruptedException e) {
+    log.warn("Interrupted while waiting for Retrieve Requests to be sent.",e);
+  }
+  try {
+    if (exhaustive)     TimeUnit.SECONDS.sleep(60);
+ else     batch.awaitFirstReply(30,TimeUnit.SECONDS);
+  }
+ catch (  InterruptedException e) {
+    log.warn("Interrupted while waiting for responses to Retrieve Requests.",e);
+  }
+  log.debug(batch.getResponsePackets().size() + " response packets received for hash " + key+ " and data type "+ dataType);
+  sendQueue.remove(batch);
+  i2pReceiver.removePacketListener(packetListener);
+  ConcurrentHashSet<DhtStorablePacket> storablePackets=getStorablePackets(batch);
+  DhtStorablePacket localResult=findLocally(key,dataType);
+  if (localResult != null)   storablePackets.add(localResult);
+  return storablePackets;
+}

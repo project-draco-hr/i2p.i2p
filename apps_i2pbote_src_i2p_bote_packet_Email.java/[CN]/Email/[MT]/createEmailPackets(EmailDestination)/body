@@ -1,0 +1,25 @@
+{
+  ArrayList<EmailPacket> packets=new ArrayList<EmailPacket>();
+  ByteArrayOutputStream outputStream=new ByteArrayOutputStream();
+  writeTo(outputStream);
+  byte[] emailArray=outputStream.toByteArray();
+  int fragmentIndex=0;
+  int blockStart=0;
+  while (true) {
+    int blockSize=Math.min(emailArray.length - blockStart,MAX_BYTES_PER_PACKET);
+    if (blockSize <= 0)     break;
+ else {
+      byte[] block=new byte[blockSize];
+      System.arraycopy(emailArray,blockStart,block,0,blockSize);
+      UniqueId deletionKeyPlain=new UniqueId();
+      UniqueId deletionKeyEncrypted=new UniqueId(deletionKeyPlain);
+      EmailPacket packet=new EmailPacket(block,deletionKeyPlain,deletionKeyEncrypted,messageId,fragmentIndex,0,destination);
+      packets.add(packet);
+      fragmentIndex++;
+      blockStart+=blockSize;
+    }
+  }
+  int numFragments=fragmentIndex;
+  for (  EmailPacket packet : packets)   packet.setNumFragments(numFragments);
+  return packets;
+}

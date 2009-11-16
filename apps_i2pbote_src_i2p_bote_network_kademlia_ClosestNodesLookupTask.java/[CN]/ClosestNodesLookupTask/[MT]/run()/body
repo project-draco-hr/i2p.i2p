@@ -1,0 +1,30 @@
+{
+  log.debug("Looking up nodes closest to " + key);
+  PacketListener packetListener=new IncomingPacketHandler();
+  i2pReceiver.addPacketListener(packetListener);
+  notQueriedYet.addAll(bucketManager.getClosestPeers(key,KademliaConstants.S));
+  long startTime=getTime();
+  while (true) {
+    while (pendingRequests.size() < KademliaConstants.ALPHA && !notQueriedYet.isEmpty()) {
+      KademliaPeer peer=selectRandom(notQueriedYet);
+      notQueriedYet.remove(peer);
+      FindClosePeersPacket packet=new FindClosePeersPacket(key);
+      pendingRequests.add(packet);
+      try {
+        CommunicationPacket response=sendQueue.sendAndWait(packet,peer.getDestination(),REQUEST_TIMEOUT);
+        if (response == null)         peer.incrementStaleCounter();
+ else         peer.resetStaleCounter();
+      }
+ catch (      InterruptedException e) {
+        log.warn("Interrupted while waiting on a lookup request.",e);
+      }
+    }
+    if (responseReceived.size() >= KademliaConstants.S)     break;
+    if (hasTimedOut(startTime,CLOSEST_NODES_LOOKUP_TIMEOUT)) {
+      log.error("Lookup for closest nodes timed out.");
+      break;
+    }
+  }
+  log.debug(responseReceived.size() + " nodes found.");
+  i2pReceiver.removePacketListener(packetListener);
+}

@@ -1,0 +1,30 @@
+{
+  byte[] msg=new byte[0];
+  try {
+    msg=session.receiveMessage(msgId);
+  }
+ catch (  I2PSessionException e) {
+    log.error("Can't get new message from I2PSession.",e);
+  }
+  I2PDatagramDissector datagramDissector=new I2PDatagramDissector();
+  try {
+    datagramDissector.loadI2PDatagram(msg);
+    datagramDissector.verifySignature();
+    byte[] payload=datagramDissector.extractPayload();
+    Destination sender=datagramDissector.getSender();
+    CommunicationPacket packet=CommunicationPacket.createPacket(payload);
+    if (packet == null)     log.debug("Ignoring unparseable packet.");
+ else {
+      logPacket(packet,sender);
+      firePacketReceivedEvent(packet,sender);
+    }
+  }
+ catch (  DataFormatException e) {
+    log.error("Invalid datagram received.",e);
+    e.printStackTrace();
+  }
+catch (  I2PInvalidDatagramException e) {
+    log.error("Datagram failed verification.",e);
+    e.printStackTrace();
+  }
+}

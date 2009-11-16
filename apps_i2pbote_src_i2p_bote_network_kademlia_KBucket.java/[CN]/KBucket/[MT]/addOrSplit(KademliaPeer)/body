@@ -1,0 +1,20 @@
+{
+  if (!rangeContains(peer))   log.error("Attempt to add a node whose hash is outside the bucket's range! Bucket start=" + startId + " Bucket end="+ endId+ " peer hash="+ new BigInteger(peer.getDestinationHash().getData()));
+  if (isFull() && !contains(peer)) {
+    if (canSplit(peer)) {
+      KBucket newBucket=split(peer.getDestinationHash());
+      if (rangeContains(peer))       add(peer);
+ else       if (newBucket.rangeContains(peer))       newBucket.add(peer);
+ else       log.error("After splitting a bucket, node is outside of both buckets' ranges.");
+      return newBucket;
+    }
+ else {
+      replacementCache.add(peer);
+      return null;
+    }
+  }
+ else {
+    addOrUpdate(peer);
+    return null;
+  }
+}
