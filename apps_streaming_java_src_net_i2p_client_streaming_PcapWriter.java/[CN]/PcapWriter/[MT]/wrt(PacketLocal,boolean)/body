@@ -1,0 +1,105 @@
+{
+  FileOutputStream fos=_fos;
+  if (fos == null)   throw new IOException("Not open or already closed");
+  Connection con=pkt.getConnection();
+  int includeLen=Math.min(MAX_PAYLOAD_BYTES,pkt.getPayloadSize());
+  Options opts=new Options();
+  if (pkt.isFlagSet(Packet.FLAG_MAX_PACKET_SIZE_INCLUDED))   opts.add(OPTION_MSS,2,pkt.getOptionalMaxSize());
+  if (pkt.isFlagSet(Packet.FLAG_DELAY_REQUESTED))   opts.add(OPTION_ODELAY,2,pkt.getOptionalDelay());
+  if (pkt.getResendDelay() > 0)   opts.add(OPTION_RDELAY,1,pkt.getResendDelay());
+  if (pkt.isFlagSet(Packet.FLAG_SIGNATURE_REQUESTED))   opts.add(OPTION_SIGREQ);
+  if (pkt.isFlagSet(Packet.FLAG_SIGNATURE_INCLUDED))   opts.add(OPTION_SIG);
+  if (pkt.isFlagSet(Packet.FLAG_FROM_INCLUDED))   opts.add(OPTION_FROM);
+  if (pkt.isFlagSet(Packet.FLAG_ECHO)) {
+    if (pkt.getSendStreamId() > 0)     opts.add(OPTION_PING);
+ else     opts.add(OPTION_PONG);
+  }
+  if (pkt.getNacks() != null)   opts.add(OPTION_NACK,1,pkt.getNacks().length);
+  int optLen=opts.size();
+  byte options[]=opts.getData();
+  long now;
+  if (isInbound)   now=pkt.getCreatedOn();
+ else   now=pkt.getLastSend();
+  DataHelper.writeLong(fos,4,now / 1000);
+  DataHelper.writeLong(fos,4,1000 * (now % 1000));
+  DataHelper.writeLong(fos,4,54 + optLen + includeLen);
+  DataHelper.writeLong(fos,4,58 + optLen + pkt.getPayloadSize());
+  fos.write(MAC_HEADER);
+  int length=20 + 20 + optLen+ pkt.getPayloadSize();
+  fos.write(IP_HEADER_1);
+  DataHelper.writeLong(fos,2,length);
+  fos.write(IP_HEADER_2);
+  byte[] srcAddr, dstAddr;
+  if (isInbound) {
+    if (con != null) {
+      dstAddr=new byte[4];
+      dstAddr[0]=127;
+      dstAddr[1]=0;
+      System.arraycopy(con.getSession().getMyDestination().calculateHash().getData(),0,dstAddr,2,2);
+    }
+ else     dstAddr=MY_UNK_IP;
+    if (con != null && con.getRemotePeer() != null)     srcAddr=con.getRemotePeer().calculateHash().getData();
+ else     if (pkt.getOptionalFrom() != null)     srcAddr=pkt.getOptionalFrom().calculateHash().getData();
+ else     srcAddr=UNK_IP;
+  }
+ else {
+    if (con != null) {
+      srcAddr=new byte[4];
+      srcAddr[0]=127;
+      srcAddr[1]=0;
+      System.arraycopy(con.getSession().getMyDestination().calculateHash().getData(),0,srcAddr,2,2);
+    }
+ else     srcAddr=MY_UNK_IP;
+    if (con != null && con.getRemotePeer() != null)     dstAddr=con.getRemotePeer().calculateHash().getData();
+ else     dstAddr=UNK_IP;
+  }
+  int checksum=length;
+  checksum=update(checksum,IP_HEADER_1);
+  checksum=update(checksum,IP_HEADER_2);
+  checksum=update(checksum,srcAddr,4);
+  checksum=update(checksum,dstAddr,4);
+  DataHelper.writeLong(fos,2,checksum ^ 0xffff);
+  fos.write(srcAddr,0,4);
+  fos.write(dstAddr,0,4);
+  DataHelper.writeLong(fos,2,pkt.getReceiveStreamId() & 0xffff);
+  DataHelper.writeLong(fos,2,pkt.getSendStreamId() & 0xffff);
+  long seq;
+  if (pkt.isFlagSet(Packet.FLAG_SYNCHRONIZE))   seq=0xffffffff;
+ else   seq=pkt.getSequenceNum();
+  long acked=0;
+  if (con != null) {
+    if (isInbound)     acked=getLowestAckedThrough(pkt,con);
+ else     acked=getLowestAckedThrough(pkt,con);
+  }
+  DataHelper.writeLong(fos,4,pkt.getSequenceNum());
+  DataHelper.writeLong(fos,4,acked);
+  int flags=0;
+  if (pkt.isFlagSet(Packet.FLAG_CLOSE))   flags|=0x01;
+  if (pkt.isFlagSet(Packet.FLAG_SYNCHRONIZE))   flags|=0x02;
+  if (pkt.isFlagSet(Packet.FLAG_RESET))   flags|=0x04;
+  if (!pkt.isFlagSet(Packet.FLAG_NO_ACK))   flags|=0x10;
+  int osb=(5 + (optLen / 4)) << 4;
+  DataHelper.writeLong(fos,1,osb);
+  DataHelper.writeLong(fos,1,flags);
+  long window=ConnectionOptions.INITIAL_WINDOW_SIZE;
+  long msgSize=ConnectionOptions.DEFAULT_MAX_MESSAGE_SIZE;
+  if (con != null) {
+    if (isInbound) {
+      window=acked + con.getOptions().getWindowSize() - con.getLastSendId();
+    }
+ else {
+      long ready=con.getInputStream().getHighestReadyBockId();
+      int available=con.getOptions().getInboundBufferSize() - con.getInputStream().getTotalReadySize();
+      int allowedBlocks=available / con.getOptions().getMaxMessageSize();
+      window=(ready + allowedBlocks) - pkt.getSequenceNum();
+    }
+    if (window < 0)     window=0;
+    msgSize=con.getOptions().getMaxMessageSize();
+  }
+  window*=msgSize;
+  if (window > 65535)   window=65535;
+  DataHelper.writeLong(fos,2,window);
+  DataHelper.writeLong(fos,4,0);
+  if (optLen > 0)   fos.write(options,0,optLen);
+  if (includeLen > 0)   fos.write(pkt.getPayload().getData(),0,includeLen);
+}
