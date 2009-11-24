@@ -4,6 +4,8 @@
   long hideBefore=now - 90 * 60 * 1000;
   TreeSet order=new TreeSet(_comparator);
   TreeSet integratedPeers=new TreeSet(_comparator);
+  int older=0;
+  int standard=0;
   for (Iterator iter=peers.iterator(); iter.hasNext(); ) {
     Hash peer=(Hash)iter.next();
     if (_organizer.getUs().equals(peer))     continue;
@@ -15,7 +17,14 @@
       RouterInfo info=_context.netDb().lookupRouterInfoLocally(peer);
       if (info != null && info.getCapabilities().indexOf("f") >= 0)       integratedPeers.add(prof);
     }
-    if (prof.getLastSendSuccessful() <= hideBefore)     continue;
+    if (prof.getLastSendSuccessful() <= hideBefore) {
+      older++;
+      continue;
+    }
+    if ((!full) && !_organizer.isHighCapacity(peer)) {
+      standard++;
+      continue;
+    }
     order.add(prof);
   }
   int fast=0;
@@ -25,7 +34,8 @@
   StringBuilder buf=new StringBuilder(16 * 1024);
   buf.append("<h2>").append(_("Peer Profiles")).append("</h2>\n<p>");
   buf.append(_("Showing {0} recent profiles.",order.size())).append('\n');
-  buf.append(_("Hiding {0} older profiles.",peers.size() - order.size()));
+  if (older > 0)   buf.append(_("Hiding {0} older profiles.",older)).append('\n');
+  if (standard > 0)   buf.append("<a href=\"/profiles.jsp?f=1\">").append(_("Hiding {0} standard profiles.",standard)).append("</a>\n");
   buf.append("</p>");
   buf.append("<table>");
   buf.append("<tr>");
@@ -123,7 +133,7 @@ out.write(buf.toString());
 buf.setLength(0);
 }
 buf.append("</table>");
-buf.append("<h2>").append(_("Floodfill and Integrated Peers")).append("</h2>\n");
+buf.append("<h2><a name=\"flood\"></a>").append(_("Floodfill and Integrated Peers")).append("</h2>\n");
 buf.append("<table>");
 buf.append("<tr>");
 buf.append("<th class=\"smallhead\">").append(_("Peer")).append("</th>");
@@ -182,6 +192,7 @@ buf.append("<td align=\"right\">").append(davg(dbh,24 * 60 * 60* 1000l)).append(
  else {
 for (int i=0; i < 6; i++) buf.append("<td align=\"right\">").append(_(NA));
 }
+buf.append("</tr>\n");
 }
 buf.append("</table>");
 buf.append("<h3>").append(_("Thresholds")).append("</h3>");
