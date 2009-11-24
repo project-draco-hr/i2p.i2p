@@ -66,9 +66,7 @@
     con.getInputStream().notifyActivity();
     isNew=false;
   }
-  if ((packet.getSequenceNum() == 0) && (packet.getPayloadSize() > 0)) {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("seq=0 && size=" + packet.getPayloadSize() + ": isNew? "+ isNew+ " packet: "+ packet+ " con: "+ con);
-  }
+  if (_log.shouldLog(Log.DEBUG))   _log.debug((isNew ? "New" : "Dup or ack-only") + " inbound packet on " + con+ ": "+ packet);
   if (packet.isFlagSet(Packet.FLAG_CLOSE) && packet.isFlagSet(Packet.FLAG_SIGNATURE_INCLUDED))   con.closeReceived();
   boolean fastAck=false;
   boolean ackOnly=false;
@@ -77,7 +75,7 @@
     con.incrementBytesReceived(packet.getPayloadSize());
     if (packet.isFlagSet(Packet.FLAG_DELAY_REQUESTED) && (packet.getOptionalDelay() <= 0)) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Scheduling immediate ack for " + packet);
-      con.setNextSendTime(_context.clock().now() + con.getOptions().getSendAckDelay());
+      con.setNextSendTime(_context.clock().now() + 250);
     }
  else {
       int delay=con.getOptions().getSendAckDelay();
