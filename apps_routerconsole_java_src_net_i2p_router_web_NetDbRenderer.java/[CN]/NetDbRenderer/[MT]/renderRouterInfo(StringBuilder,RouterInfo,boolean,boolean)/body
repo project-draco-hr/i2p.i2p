@@ -2,30 +2,37 @@
   String hash=info.getIdentity().getHash().toBase64();
   buf.append("<table><tr><th><a name=\"").append(hash.substring(0,6)).append("\" ></a>");
   if (isUs) {
-    buf.append("<a name=\"our-info\" ></a><b>Our info: ").append(hash).append("</b></th></tr><tr><td>\n");
+    buf.append("<a name=\"our-info\" ></a><b>" + _("Our info") + ": ").append(hash).append("</b></th></tr><tr><td>\n");
   }
  else {
-    buf.append("<b>Peer info for:</b> ").append(hash).append("\n");
+    buf.append("<b>" + _("Peer info for") + ":</b> ").append(hash).append("\n");
     if (full) {
       buf.append("[<a href=\"netdb.jsp\" >Back</a>]</th></tr><td>\n");
     }
  else {
-      buf.append("[<a href=\"netdb.jsp?r=").append(hash.substring(0,6)).append("\" >Full entry</a>]</th></tr><td>\n");
+      buf.append("[<a href=\"netdb.jsp?r=").append(hash.substring(0,6)).append("\" >").append(_("Full entry")).append("</a>]</th></tr><td>\n");
     }
   }
   long age=_context.clock().now() - info.getPublished();
-  if (isUs && _context.router().isHidden())   buf.append("<b>Hidden, Updated:</b> ").append(DataHelper.formatDuration(age)).append(" ago<br>\n");
- else   if (age > 0)   buf.append("<b>Published:</b> ").append(DataHelper.formatDuration(age)).append(" ago<br>\n");
- else   buf.append("<b>Published:</b> in ").append(DataHelper.formatDuration(0 - age)).append("???<br>\n");
-  buf.append("<b>Address(es):</b> ");
+  if (isUs && _context.router().isHidden()) {
+    buf.append("<b>").append(_("Hidden")).append(", ").append(_("Updated")).append(":</b> ").append(_("{0} ago",DataHelper.formatDuration(age))).append("<br>\n");
+  }
+ else   if (age > 0) {
+    buf.append("<b>").append(_("Published")).append(":</b> ").append(_("{0} ago",DataHelper.formatDuration(age))).append("<br>\n");
+  }
+ else {
+    buf.append("<b>" + _("Published") + ":</b> in ").append(DataHelper.formatDuration(0 - age)).append("???<br>\n");
+  }
+  buf.append("<b>" + _("Address(es)") + ":</b> ");
   String country=_context.commSystem().getCountry(info.getIdentity().getHash());
   if (country != null) {
-    buf.append("<img height=\"11\" width=\"16\" alt=\"").append(country.toUpperCase()).append("\"");
+    buf.append("<img height=\"11\" width=\"16\" alt=\"").append(country.toUpperCase()).append('\"');
+    buf.append(" title=\"").append(_(_context.commSystem().getCountryName(country))).append('\"');
     buf.append(" src=\"/flags.jsp?c=").append(country).append("\"> ");
   }
   for (Iterator iter=info.getAddresses().iterator(); iter.hasNext(); ) {
     RouterAddress addr=(RouterAddress)iter.next();
-    buf.append(DataHelper.stripHTML(addr.getTransportStyle())).append(": ");
+    buf.append("<b>").append(DataHelper.stripHTML(addr.getTransportStyle())).append(":</b> ");
     for (Iterator optIter=addr.getOptions().keySet().iterator(); optIter.hasNext(); ) {
       String name=(String)optIter.next();
       String val=addr.getOptions().getProperty(name);
@@ -34,7 +41,7 @@
   }
   buf.append("</td></tr>\n");
   if (full) {
-    buf.append("<tr><td>Stats: <br><code>\n");
+    buf.append("<tr><td>" + _("Stats") + ": <br><code>\n");
     for (Iterator iter=info.getOptions().keySet().iterator(); iter.hasNext(); ) {
       String key=(String)iter.next();
       String val=info.getOption(key);

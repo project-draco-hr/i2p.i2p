@@ -7,8 +7,7 @@
   }
   if (toCheck > getParallelization())   toCheck=getParallelization();
   List<Hash> closestHashes;
-  if (_state.getData() instanceof RouterInfo)   closestHashes=getMostReliableRouters(_state.getTarget(),toCheck,_state.getAttempted());
- else   closestHashes=getClosestRouters(_state.getTarget(),toCheck,_state.getAttempted());
+  closestHashes=getClosestFloodfillRouters(_state.getTarget(),toCheck,_state.getAttempted());
   if ((closestHashes == null) || (closestHashes.size() <= 0)) {
     if (_state.getPending().size() <= 0) {
       if (_log.shouldLog(Log.INFO))       _log.info(getJobId() + ": No more peers left and none pending");
@@ -30,11 +29,6 @@
       }
  else {
         int peerTimeout=_facade.getPeerTimeout(peer);
-        PeerProfile prof=getContext().profileOrganizer().getProfile(peer);
-        if (prof != null) {
-          RateStat failing=prof.getDBHistory().getFailedLookupRate();
-          Rate failed=failing.getRate(60 * 60 * 1000);
-        }
         _state.addPending(peer);
         sendStore((RouterInfo)ds,peerTimeout);
       }

@@ -1,7 +1,7 @@
 {
   if (_context.getProperty(Router.PROP_SHUTDOWN_IN_PROGRESS) != null) {
     if (_log.shouldLog(Log.WARN))     _log.warn("Refusing tunnel request since we are shutting down ASAP");
-    setTunnelStatus("Rejecting tunnels: Shutting down");
+    setTunnelStatus(_x("Rejecting tunnels: Shutting down"));
     return TunnelHistory.TUNNEL_REJECT_BANDWIDTH;
   }
   if (_context.router().getUptime() < 20 * 60 * 1000)   return TunnelHistory.TUNNEL_REJECT_BANDWIDTH;
@@ -33,7 +33,7 @@
       if (_log.shouldLog(Log.WARN)) {
         _log.warn("Refusing tunnel request due to sendProcessingTime of " + avgSendProcessingTime + " ms over the last two minutes, which is too much.");
       }
-      setTunnelStatus("Rejecting tunnels: congestion");
+      setTunnelStatus(_x("Rejecting tunnels: High message delay"));
       return TunnelHistory.TUNNEL_REJECT_BANDWIDTH;
     }
   }
@@ -57,7 +57,7 @@
  else {
           if (_log.shouldLog(Log.WARN))           _log.warn("Probabalistically refusing tunnel request (avg=" + avg + " current="+ numTunnels+ ")");
           _context.statManager().addRateData("router.throttleTunnelProbTooFast",(long)(numTunnels - avg),0);
-          setTunnelStatus("Rejecting " + (100 - (int)probAccept * 100) + "% of tunnels: High number of requests");
+          setTunnelStatus(_x("Rejecting most tunnels: High number of requests"));
           return TunnelHistory.TUNNEL_REJECT_PROBABALISTIC_REJECT;
         }
       }
@@ -82,12 +82,6 @@
       if (v < probAccept * 100) {
         if (_log.shouldLog(Log.INFO))         _log.info("Probabalistically accept tunnel request (p=" + probAccept + " v="+ v+ " test time avg 1m="+ avg1m+ " 10m="+ avg10m+ ")");
       }
- else       if (false) {
-        if (_log.shouldLog(Log.WARN))         _log.warn("Probabalistically refusing tunnel request (test time avg 1m=" + avg1m + " 10m="+ avg10m+ ")");
-        _context.statManager().addRateData("router.throttleTunnelProbTestSlow",(long)(avg1m - avg10m),0);
-        setTunnelStatus("Rejecting " + ((int)probAccept * 100) + "% of tunnels: High test time");
-        return TunnelHistory.TUNNEL_REJECT_PROBABALISTIC_REJECT;
-      }
     }
  else {
     }
@@ -96,7 +90,7 @@
   if (numTunnels >= max) {
     if (_log.shouldLog(Log.WARN))     _log.warn("Refusing tunnel request since we are already participating in " + numTunnels + " (our max is "+ max+ ")");
     _context.statManager().addRateData("router.throttleTunnelMaxExceeded",numTunnels,0);
-    setTunnelStatus("Rejecting tunnels: Limit reached");
+    setTunnelStatus(_x("Rejecting tunnels: Limit reached"));
     return TunnelHistory.TUNNEL_REJECT_BANDWIDTH;
   }
   rs=_context.statManager().getRate("tunnel.participatingMessageCount");

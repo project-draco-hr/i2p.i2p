@@ -7,14 +7,18 @@
  else     if ((!_isRouterInfo) && dsm.getValueType() == DatabaseStoreMessage.KEY_TYPE_LEASESET)     success=dsm.getLeaseSet().getEarliestLeaseDate() >= _published;
     if (success) {
       getContext().profileManager().dbLookupSuccessful(_target,delay);
+      if (_sentTo != null)       getContext().profileManager().dbStoreSuccessful(_sentTo);
       getContext().statManager().addRateData("netDb.floodfillVerifyOK",delay,0);
+      if (_log.shouldLog(Log.INFO))       _log.info("Verify success");
       return;
     }
     if (_log.shouldLog(Log.WARN))     _log.warn("Verify failed - older");
   }
  else   if (_message instanceof DatabaseSearchReplyMessage) {
     getContext().profileManager().dbLookupReply(_target,0,((DatabaseSearchReplyMessage)_message).getNumReplies(),0,0,delay);
+    if (_log.shouldLog(Log.WARN))     _log.warn("Verify failed - DSRM");
   }
+  if (_sentTo != null)   getContext().profileManager().dbStoreFailed(_sentTo);
   getContext().statManager().addRateData("netDb.floodfillVerifyFail",delay,0);
   resend();
 }
