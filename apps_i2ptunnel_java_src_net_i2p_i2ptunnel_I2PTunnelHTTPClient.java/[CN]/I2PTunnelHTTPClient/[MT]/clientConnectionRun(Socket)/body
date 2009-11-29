@@ -3,6 +3,7 @@
   OutputStream out=null;
   String targetRequest=null;
   boolean usingWWWProxy=false;
+  boolean usingInternalServer=false;
   String currentProxy=null;
   long requestId=++__requestId;
   try {
@@ -59,7 +60,11 @@
  catch (          Exception exc) {
           }
         }
-        if (host.toLowerCase().endsWith(".i2p")) {
+        if (host.toLowerCase().equals("proxy.i2p")) {
+          destination="proxy.i2p";
+          usingInternalServer=true;
+        }
+ else         if (host.toLowerCase().endsWith(".i2p")) {
           destination=host;
           host=getHostName(destination);
           int pos2;
@@ -168,14 +173,14 @@
           destination=request.substring(0,pos);
           line=method + " " + request.substring(pos);
         }
-        boolean isValid=usingWWWProxy || isSupportedAddress(host,protocol);
+        boolean isValid=usingWWWProxy || usingInternalServer || isSupportedAddress(host,protocol);
         if (!isValid) {
           if (_log.shouldLog(Log.INFO))           _log.info(getPrefix(requestId) + "notValid(" + host+ ")");
           method=null;
           destination=null;
           break;
         }
- else         if (!usingWWWProxy) {
+ else         if ((!usingWWWProxy) && (!usingInternalServer)) {
           if (_log.shouldLog(Log.INFO))           _log.info(getPrefix(requestId) + "host=getHostName(" + destination+ ")");
           host=getHostName(destination);
         }
@@ -216,7 +221,7 @@
         String ok=getTunnel().getClientOptions().getProperty("i2ptunnel.gzip");
         boolean gzip=DEFAULT_GZIP;
         if (ok != null)         gzip=Boolean.valueOf(ok).booleanValue();
-        if (gzip) {
+        if (gzip && !usingInternalServer) {
           newRequest.append("Accept-Encoding: \r\n");
           newRequest.append("X-Accept-Encoding: x-i2p-gzip;q=1.0, identity;q=0.5, deflate;q=0, gzip;q=0, *;q=0\r\n");
         }
@@ -240,7 +245,7 @@
       return;
     }
     if (_log.shouldLog(Log.DEBUG))     _log.debug(getPrefix(requestId) + "Destination: " + destination);
-    if (destination.equals("proxy.i2p")) {
+    if (usingInternalServer) {
       serveLocalFile(out,method,targetRequest);
       s.close();
       return;
