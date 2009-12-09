@@ -14,12 +14,18 @@
     peerString="?p=" + peerParam;
   }
   PrintWriter out=resp.getWriter();
-  out.write(HEADER_BEGIN);
+  out.write("<html>\n" + "<head>\n" + "<title>");
+  out.write(_("I2PSnark - Anonymous BitTorrent Client"));
+  out.write("</title>\n");
   out.write("<meta http-equiv=\"refresh\" content=\"60;" + req.getRequestURI() + peerString+ "\">\n");
   out.write(HEADER);
   out.write("</head><body>");
   out.write("<center>");
-  out.write("<div class=\"snarknavbar\"><a href=\"" + req.getRequestURI() + peerString+ "\" title=\"Refresh page\" class=\"snarkRefresh\">I2PSnark</a> <a href=\"http://forum.i2p/viewforum.php?f=21\" class=\"snarkRefresh\" target=\"_blank\">Forum</a>\n");
+  out.write("<div class=\"snarknavbar\"><a href=\"" + req.getRequestURI() + peerString+ "\" title=\"");
+  out.write(_("Refresh page"));
+  out.write("\" class=\"snarkRefresh\">");
+  out.write(_("I2PSnark"));
+  out.write("</a> <a href=\"http://forum.i2p/viewforum.php?f=21\" class=\"snarkRefresh\" target=\"_blank\">Forum</a>\n");
   Map trackers=_manager.getTrackers();
   for (Iterator iter=trackers.entrySet().iterator(); iter.hasNext(); ) {
     Map.Entry entry=(Map.Entry)iter.next();
@@ -41,15 +47,47 @@
   List snarks=getSortedSnarks(req);
   String uri=req.getRequestURI();
   out.write(TABLE_HEADER);
+  out.write(_("Status"));
+  out.write("</th>\n");
   if (_manager.util().connected() && snarks.size() > 0) {
-    if (peerParam != null)     out.write("(<a href=\"" + req.getRequestURI() + "\">Hide Peers</a>)<br>\n");
- else     out.write("(<a href=\"" + req.getRequestURI() + "?p=1"+ "\">Show Peers</a>)<br>\n");
+    out.write("(<a href=\"");
+    out.write(req.getRequestURI());
+    out.write("\">");
+    if (peerParam != null)     out.write(_("Hide Peers"));
+ else     out.write(_("Show Peers"));
+    out.write("</a>)<br>\n");
   }
-  out.write(TABLE_HEADER2);
+  out.write("<th align=\"left\">");
+  out.write(_("Torrent"));
+  out.write("</th>\n<th align=\"center\">");
+  out.write(_("ETA"));
+  out.write("</th>\n<th align=\"right\">");
+  out.write(_("Downloaded"));
+  out.write("</th>\n<th align=\"right\">");
+  out.write(_("Uploaded"));
+  out.write("</th>\n<th align=\"right\">");
+  out.write(_("Down Rate"));
+  out.write("</th>\n<th align=\"right\">");
+  out.write(_("Up Rate"));
+  out.write("</th>\n");
   out.write("<th align=\"center\">");
-  if (_manager.util().connected())   out.write("<a href=\"" + uri + "?action=StopAll&nonce="+ _nonce+ "\" title=\"Stop all torrents and the I2P tunnel\">Stop All</a>");
- else   if (snarks.size() > 0)   out.write("<a href=\"" + uri + "?action=StartAll&nonce="+ _nonce+ "\" title=\"Start all torrents and the I2P tunnel\">Start All</a>");
- else   out.write("&nbsp;");
+  if (_manager.util().connected()) {
+    out.write("<a href=\"" + uri + "?action=StopAll&nonce="+ _nonce+ "\" title=\"");
+    out.write(_("Stop all torrents and the I2P tunnel"));
+    out.write("\">");
+    out.write(_("Stop All"));
+    out.write("</a>");
+  }
+ else   if (snarks.size() > 0) {
+    out.write("<a href=\"" + uri + "?action=StartAll&nonce="+ _nonce+ "\" title=\"");
+    out.write(_("Start all torrents and the I2P tunnel"));
+    out.write("\">");
+    out.write(_("Start All"));
+    out.write("</a>");
+  }
+ else {
+    out.write("&nbsp;");
+  }
   out.write("</th></tr></thead>\n");
   for (int i=0; i < snarks.size(); i++) {
     Snark snark=(Snark)snarks.get(i);
@@ -58,7 +96,9 @@
     displaySnark(out,snark,uri,i,stats,showPeers,showDebug);
   }
   if (snarks.size() <= 0) {
-    out.write(TABLE_EMPTY);
+    out.write("<tr class=\"snarkTorrentEven\">" + "<td class=\"snarkTorrentEven\" align=\"center\"" + " colspan=\"8\"><i>");
+    out.write(_("No torrents loaded."));
+    out.write("</i></td></tr>\n");
   }
  else   if (snarks.size() > 1) {
     out.write("<tfoot><tr>\n" + "    <th align=\"left\" colspan=\"2\">Totals (" + snarks.size() + " torrents, "+ DataHelper.formatSize(stats[5])+ "B, "+ stats[4]+ " connected peers)</th>\n"+ "    <th>&nbsp;</th>\n"+ "    <th align=\"right\">"+ formatSize(stats[0])+ "</th>\n"+ "    <th align=\"right\">"+ formatSize(stats[1])+ "</th>\n"+ "    <th align=\"right\">"+ formatSize(stats[2])+ "ps</th>\n"+ "    <th align=\"right\">"+ formatSize(stats[3])+ "ps</th>\n"+ "    <th>&nbsp;</th></tr>\n"+ "</tfoot>\n");
