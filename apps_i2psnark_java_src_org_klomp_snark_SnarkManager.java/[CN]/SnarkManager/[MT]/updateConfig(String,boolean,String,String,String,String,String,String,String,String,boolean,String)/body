@@ -28,10 +28,10 @@
         _util.setMaxUploaders(limit);
         changed=true;
         _config.setProperty(PROP_UPLOADERS_TOTAL,"" + limit);
-        addMessage("Total uploaders limit changed to " + limit);
+        addMessage(_("Total uploaders limit changed to {0}",limit));
       }
  else {
-        addMessage("Minimum total uploaders limit is " + Snark.MIN_TOTAL_UPLOADERS);
+        addMessage(_("Minimum total uploaders limit is {0}",Snark.MIN_TOTAL_UPLOADERS));
       }
     }
   }
@@ -47,10 +47,10 @@
         _util.setMaxUpBW(limit);
         changed=true;
         _config.setProperty(PROP_UPBW_MAX,"" + limit);
-        addMessage("Up BW limit changed to " + limit + "KBps");
+        addMessage(_("Up BW limit changed to {0}KBps",limit));
       }
  else {
-        addMessage("Minimum Up BW limit is " + MIN_UP_BW + "KBps");
+        addMessage(_("Minimum up bandwidth limit is {0}KBps",MIN_UP_BW));
       }
     }
   }
@@ -92,27 +92,27 @@
         }
       }
       if (snarksActive) {
-        addMessage("Cannot change the I2CP settings while torrents are active");
+        addMessage(_("Cannot change the I2CP settings while torrents are active"));
         _log.debug("i2cp host [" + i2cpHost + "] i2cp port "+ port+ " opts ["+ opts+ "] oldOpts ["+ oldOpts+ "]");
       }
  else {
         if (_util.connected()) {
           _util.disconnect();
-          addMessage("Disconnecting old I2CP destination");
+          addMessage(_("Disconnecting old I2CP destination"));
         }
         Properties p=new Properties();
         p.putAll(opts);
-        addMessage("I2CP settings changed to " + i2cpHost + ":"+ port+ " ("+ i2cpOpts.trim()+ ")");
+        addMessage(_("I2CP settings changed to {0}",i2cpHost + ":" + port+ " ("+ i2cpOpts.trim()+ ")"));
         _util.setI2CPConfig(i2cpHost,port,p);
         boolean ok=_util.connect();
         if (!ok) {
-          addMessage("Unable to connect with the new settings, reverting to the old I2CP settings");
+          addMessage(_("Unable to connect with the new settings, reverting to the old I2CP settings"));
           _util.setI2CPConfig(oldI2CPHost,oldI2CPPort,oldOpts);
           ok=_util.connect();
-          if (!ok)           addMessage("Unable to reconnect with the old settings!");
+          if (!ok)           addMessage(_("Unable to reconnect with the old settings!"));
         }
  else {
-          addMessage("Reconnected on the new I2CP destination");
+          addMessage(_("Reconnected on the new I2CP destination"));
           _config.setProperty(PROP_I2CP_HOST,i2cpHost.trim());
           _config.setProperty(PROP_I2CP_PORT,"" + port);
           _config.setProperty(PROP_I2CP_OPTS,i2cpOpts.trim());
@@ -122,7 +122,7 @@
             Snark snark=getTorrent(name);
             if ((snark != null) && (snark.acceptor != null)) {
               snark.acceptor.restart();
-              addMessage("I2CP listener restarted for " + snark.meta.getName());
+              addMessage(_("I2CP listener restarted for \"{0}\"",snark.meta.getName()));
             }
           }
         }
@@ -132,19 +132,21 @@
   }
   if (shouldAutoStart() != autoStart) {
     _config.setProperty(PROP_AUTO_START,autoStart + "");
-    addMessage("Adjusted autostart to " + autoStart);
+    if (autoStart)     addMessage(_("Enabled autostart"));
+ else     addMessage(_("Disabled autostart"));
     changed=true;
   }
   if (_util.shouldUseOpenTrackers() != useOpenTrackers) {
     _config.setProperty(I2PSnarkUtil.PROP_USE_OPENTRACKERS,useOpenTrackers + "");
-    addMessage((useOpenTrackers ? "En" : "Dis") + "abled open trackers - torrent restart required to take effect.");
+    if (useOpenTrackers)     addMessage(_("Enabled open trackers - torrent restart required to take effect."));
+ else     addMessage(_("Disabled open trackers - torrent restart required to take effect."));
     changed=true;
   }
   if (openTrackers != null) {
     if (openTrackers.trim().length() > 0 && !openTrackers.trim().equals(_util.getOpenTrackerString())) {
       _config.setProperty(I2PSnarkUtil.PROP_OPENTRACKERS,openTrackers.trim());
       _util.setOpenTrackerString(openTrackers);
-      addMessage("Open Tracker list changed - torrent restart required to take effect.");
+      addMessage(_("Open Tracker list changed - torrent restart required to take effect."));
       changed=true;
     }
   }
@@ -152,6 +154,6 @@
     saveConfig();
   }
  else {
-    addMessage("Configuration unchanged.");
+    addMessage(_("Configuration unchanged."));
   }
 }
