@@ -12,10 +12,13 @@
       out.write(uri.getBytes());
       out.write("</a>".getBytes());
       if (usingWWWProxy)       out.write(("<br>WWW proxy: " + wwwProxy).getBytes());
-      if (showAddrHelper) {
+      if (jumpServers != null && jumpServers.length() > 0) {
         out.write("<br><br>Click a link below to look for an address helper by using a \"jump\" service:<br>".getBytes());
-        for (int i=0; i < jumpServers.length; i++) {
-          String jumphost=jumpServers[i].substring(7);
+        StringTokenizer tok=new StringTokenizer(jumpServers,", ");
+        while (tok.hasMoreTokens()) {
+          String jurl=tok.nextToken();
+          if (!jurl.startsWith("http://"))           continue;
+          String jumphost=jurl.substring(7);
           jumphost=jumphost.substring(0,jumphost.indexOf('/'));
           try {
             Destination dest=I2PTunnel.destFromName(jumphost);
@@ -25,10 +28,10 @@
             continue;
           }
           out.write("<br><a href=\"".getBytes());
-          out.write(jumpServers[i].getBytes());
+          out.write(jurl.getBytes());
           out.write(uri.getBytes());
           out.write("\">".getBytes());
-          out.write(jumpServers[i].getBytes());
+          out.write(jurl.getBytes());
           out.write(uri.getBytes());
           out.write("</a>".getBytes());
         }

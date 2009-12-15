@@ -254,15 +254,16 @@
     if (clientDest == null) {
       if (_log.shouldLog(Log.WARN))       _log.warn("Unable to resolve " + destination + " (proxy? "+ usingWWWProxy+ ", request: "+ targetRequest);
       byte[] header;
-      boolean showAddrHelper=false;
+      String jumpServers=null;
       if (usingWWWProxy)       header=getErrorPage("dnfp",ERR_DESTINATION_UNKNOWN);
  else       if (ahelper != 0)       header=getErrorPage("dnfb",ERR_DESTINATION_UNKNOWN);
  else       if (destination.length() == 60 && destination.endsWith(".b32.i2p"))       header=getErrorPage("dnf",ERR_DESTINATION_UNKNOWN);
  else {
         header=getErrorPage("dnfh",ERR_DESTINATION_UNKNOWN);
-        showAddrHelper=true;
+        jumpServers=getTunnel().getClientOptions().getProperty(PROP_JUMP_SERVERS);
+        if (jumpServers == null)         jumpServers=DEFAULT_JUMP_SERVERS;
       }
-      writeErrorMessage(header,out,targetRequest,usingWWWProxy,destination,showAddrHelper);
+      writeErrorMessage(header,out,targetRequest,usingWWWProxy,destination,jumpServers);
       s.close();
       return;
     }
