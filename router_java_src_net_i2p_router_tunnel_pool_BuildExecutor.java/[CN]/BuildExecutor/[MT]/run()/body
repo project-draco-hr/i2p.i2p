@@ -1,7 +1,7 @@
 {
   _isRunning=true;
-  List wanted=new ArrayList(8);
-  List pools=new ArrayList(8);
+  List<TunnelPool> wanted=new ArrayList(MAX_CONCURRENT_BUILDS);
+  List<TunnelPool> pools=new ArrayList(8);
   int pendingRemaining=0;
   long afterBuildReal=0;
   long afterHandleInbound=0;
@@ -10,7 +10,7 @@
       _repoll=pendingRemaining > 0;
       _manager.listPools(pools);
       for (int i=0; i < pools.size(); i++) {
-        TunnelPool pool=(TunnelPool)pools.get(i);
+        TunnelPool pool=pools.get(i);
         if (!pool.isAlive())         continue;
         int howMany=pool.countHowManyToBuild();
         for (int j=0; j < howMany; j++)         wanted.add(pool);
@@ -31,9 +31,10 @@ synchronized (_currentlyBuilding) {
  else {
         if ((allowed > 0) && (wanted.size() > 0)) {
           Collections.shuffle(wanted,_context.random());
+          Collections.sort(wanted,new TunnelPoolComparator());
           if (allowed > 2)           allowed=2;
           for (int i=0; (i < allowed) && (wanted.size() > 0); i++) {
-            TunnelPool pool=(TunnelPool)wanted.remove(0);
+            TunnelPool pool=wanted.remove(0);
             PooledTunnelCreatorConfig cfg=pool.configureNewTunnel();
             if (cfg != null) {
               if (cfg.getLength() <= 1 && !pool.needFallback()) {
