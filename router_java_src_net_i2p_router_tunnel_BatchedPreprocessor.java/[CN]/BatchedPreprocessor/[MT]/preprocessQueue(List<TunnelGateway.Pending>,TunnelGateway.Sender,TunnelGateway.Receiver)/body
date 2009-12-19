@@ -13,7 +13,7 @@
     long beforePendingLoop=System.currentTimeMillis();
     for (int i=0; i < pending.size(); i++) {
       long pendingStart=System.currentTimeMillis();
-      TunnelGateway.Pending msg=(TunnelGateway.Pending)pending.get(i);
+      TunnelGateway.Pending msg=pending.get(i);
       int instructionsSize=getInstructionsSize(msg);
       instructionsSize+=getInstructionAugmentationSize(msg,allocated,instructionsSize);
       int curWanted=msg.getData().length - msg.getOffset() + instructionsSize;
@@ -22,7 +22,7 @@
       if (allocated >= FULL_SIZE) {
         if (allocated - curWanted + instructionsSize >= FULL_SIZE) {
           i--;
-          msg=(TunnelGateway.Pending)pending.get(i);
+          msg=pending.get(i);
           allocated-=curWanted;
           if (_log.shouldLog(Log.DEBUG))           _log.debug("Pushback of " + curWanted + " (message "+ (i + 1)+ " in "+ pending+ ")");
         }
@@ -37,7 +37,7 @@
         long afterSend=System.currentTimeMillis();
         if (_log.shouldLog(Log.INFO))         _log.info("Allocated=" + allocated + " so we sent "+ (i + 1)+ " (last complete? "+ (msg.getOffset() >= msg.getData().length)+ ", off="+ msg.getOffset()+ ", count="+ pending.size()+ ")");
         for (int j=0; j < i; j++) {
-          TunnelGateway.Pending cur=(TunnelGateway.Pending)pending.remove(0);
+          TunnelGateway.Pending cur=pending.remove(0);
           if (cur.getOffset() < cur.getData().length)           throw new IllegalArgumentException("i=" + i + " j="+ j+ " off="+ cur.getOffset()+ " len="+ cur.getData().length+ " alloc="+ allocated);
           if (timingBuf != null)           timingBuf.append(" sent " + cur);
           notePreprocessing(cur.getMessageId(),cur.getFragmentNumber(),cur.getData().length,cur.getMessageIds(),"flushed allocated");
@@ -45,7 +45,7 @@
           _context.statManager().addRateData("tunnel.writeDelay",cur.getLifetime(),cur.getData().length);
         }
         if (msg.getOffset() >= msg.getData().length) {
-          TunnelGateway.Pending cur=(TunnelGateway.Pending)pending.remove(0);
+          TunnelGateway.Pending cur=pending.remove(0);
           if (timingBuf != null)           timingBuf.append(" sent perfect fit " + cur).append(".");
           notePreprocessing(cur.getMessageId(),cur.getFragmentNumber(),msg.getData().length,msg.getMessageIds(),"flushed tail, remaining: " + pending);
           _context.statManager().addRateData("tunnel.batchFragmentation",cur.getFragmentNumber() + 1,0);
@@ -71,7 +71,7 @@
         _context.statManager().addRateData("tunnel.batchSmallFragments",FULL_SIZE - allocated,0);
         int beforeSize=pending.size();
         for (int i=0; i < pending.size(); i++) {
-          TunnelGateway.Pending cur=(TunnelGateway.Pending)pending.get(i);
+          TunnelGateway.Pending cur=pending.get(i);
           if (cur.getOffset() >= cur.getData().length) {
             pending.remove(i);
             notePreprocessing(cur.getMessageId(),cur.getFragmentNumber(),cur.getData().length,cur.getMessageIds(),"flushed remaining");
