@@ -34,40 +34,45 @@
   if (offset + 2 >= preprocessed.length)   return -1;
   int size=(int)DataHelper.fromLong(preprocessed,offset,2);
   offset+=2;
-  boolean isNew=false;
   FragmentedMessage msg=null;
   if (fragmented) {
 synchronized (_fragmentedMessages) {
-      msg=(FragmentedMessage)_fragmentedMessages.get(new Long(messageId));
+      msg=_fragmentedMessages.get(new Long(messageId));
       if (msg == null) {
         msg=new FragmentedMessage(_context);
         _fragmentedMessages.put(new Long(messageId),msg);
-        isNew=true;
       }
     }
   }
  else {
     msg=new FragmentedMessage(_context);
   }
-  boolean ok=msg.receive(messageId,preprocessed,offset,size,!fragmented,router,tunnelId);
-  if (!ok)   return -1;
-  if (msg.isComplete()) {
-    if (fragmented) {
+  if (fragmented) {
+synchronized (msg) {
+      boolean ok=msg.receive(messageId,preprocessed,offset,size,false,router,tunnelId);
+      if (!ok)       return -1;
+      if (msg.isComplete()) {
 synchronized (_fragmentedMessages) {
-        _fragmentedMessages.remove(new Long(messageId));
+          _fragmentedMessages.remove(new Long(messageId));
+        }
+        if (msg.getExpireEvent() != null)         SimpleTimer.getInstance().removeEvent(msg.getExpireEvent());
+        receiveComplete(msg);
+      }
+ else {
+        noteReception(msg.getMessageId(),0,msg);
+        if (msg.getExpireEvent() == null) {
+          RemoveFailed evt=new RemoveFailed(msg);
+          msg.setExpireEvent(evt);
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("In " + MAX_DEFRAGMENT_TIME + " dropping "+ messageId);
+          SimpleTimer.getInstance().addEvent(evt,MAX_DEFRAGMENT_TIME);
+        }
       }
     }
-    if (msg.getExpireEvent() != null)     SimpleTimer.getInstance().removeEvent(msg.getExpireEvent());
-    receiveComplete(msg);
   }
  else {
-    noteReception(msg.getMessageId(),0,msg);
-  }
-  if (isNew && fragmented && !msg.isComplete()) {
-    RemoveFailed evt=new RemoveFailed(msg);
-    msg.setExpireEvent(evt);
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("In " + MAX_DEFRAGMENT_TIME + " dropping "+ messageId);
-    SimpleTimer.getInstance().addEvent(evt,MAX_DEFRAGMENT_TIME);
+    boolean ok=msg.receive(messageId,preprocessed,offset,size,true,router,tunnelId);
+    if (!ok)     return -1;
+    receiveComplete(msg);
   }
   offset+=size;
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Handling finished message " + msg.getMessageId() + " at offset "+ offset);

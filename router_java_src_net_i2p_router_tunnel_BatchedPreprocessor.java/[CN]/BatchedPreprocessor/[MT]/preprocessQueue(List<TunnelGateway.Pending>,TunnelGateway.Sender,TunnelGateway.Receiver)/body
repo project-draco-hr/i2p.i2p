@@ -1,4 +1,5 @@
 {
+  if (_log.shouldLog(Log.INFO))   display(0,pending,"Starting");
   StringBuilder timingBuf=null;
   if (_log.shouldLog(Log.DEBUG)) {
     _log.debug("Preprocess queue with " + pending.size() + " to send");
@@ -35,7 +36,7 @@
         send(pending,0,i,sender,rec);
         _context.statManager().addRateData("tunnel.batchFullFragments",1,0);
         long afterSend=System.currentTimeMillis();
-        if (_log.shouldLog(Log.INFO))         _log.info("Allocated=" + allocated + " so we sent "+ (i + 1)+ " (last complete? "+ (msg.getOffset() >= msg.getData().length)+ ", off="+ msg.getOffset()+ ", count="+ pending.size()+ ")");
+        if (_log.shouldLog(Log.INFO))         display(allocated,pending,"Sent the message with " + (i + 1));
         for (int j=0; j < i; j++) {
           TunnelGateway.Pending cur=pending.remove(0);
           if (cur.getOffset() < cur.getData().length)           throw new IllegalArgumentException("i=" + i + " j="+ j+ " off="+ cur.getOffset()+ " len="+ cur.getData().length+ " alloc="+ allocated);
@@ -60,30 +61,27 @@
       }
       if (timingBuf != null)       timingBuf.append(" After pending loop " + (System.currentTimeMillis() - beforePendingLoop)).append(".");
     }
-    long afterCleared=System.currentTimeMillis();
     if (_log.shouldLog(Log.INFO))     display(allocated,pending,"after looping to clear " + (beforeLooping - pending.size()));
     long afterDisplayed=System.currentTimeMillis();
     if (allocated > 0) {
-      if ((pending.size() > FORCE_BATCH_FLUSH) || ((_pendingSince > 0) && (getDelayAmount() <= 0))) {
+      if ((pending.size() > FORCE_BATCH_FLUSH) || ((_pendingSince > 0) && (getDelayAmount() <= 0)) || (allocated >= FULL_ENOUGH_SIZE)) {
         if (pending.size() > 1)         _context.statManager().addRateData("tunnel.batchMultipleCount",pending.size(),0);
         _context.statManager().addRateData("tunnel.batchDelaySent",pending.size(),0);
         send(pending,0,pending.size() - 1,sender,rec);
         _context.statManager().addRateData("tunnel.batchSmallFragments",FULL_SIZE - allocated,0);
         int beforeSize=pending.size();
-        for (int i=0; i < pending.size(); i++) {
-          TunnelGateway.Pending cur=pending.get(i);
-          if (cur.getOffset() >= cur.getData().length) {
-            pending.remove(i);
-            notePreprocessing(cur.getMessageId(),cur.getFragmentNumber(),cur.getData().length,cur.getMessageIds(),"flushed remaining");
-            _context.statManager().addRateData("tunnel.batchFragmentation",cur.getFragmentNumber() + 1,0);
-            _context.statManager().addRateData("tunnel.writeDelay",cur.getLifetime(),cur.getData().length);
-            i--;
-          }
+        for (int i=0; i < beforeSize; i++) {
+          TunnelGateway.Pending cur=pending.get(0);
+          if (cur.getOffset() < cur.getData().length)           break;
+          pending.remove(0);
+          notePreprocessing(cur.getMessageId(),cur.getFragmentNumber(),cur.getData().length,cur.getMessageIds(),"flushed remaining");
+          _context.statManager().addRateData("tunnel.batchFragmentation",cur.getFragmentNumber() + 1,0);
+          _context.statManager().addRateData("tunnel.writeDelay",cur.getLifetime(),cur.getData().length);
         }
         if (pending.size() > 0) {
           _pendingSince=_context.clock().now();
           _context.statManager().addRateData("tunnel.batchFlushRemaining",pending.size(),beforeSize);
-          display(allocated,pending,"flushed, some remain");
+          if (_log.shouldLog(Log.INFO))           display(allocated,pending,"flushed, some remain");
           if (timingBuf != null) {
             timingBuf.append(" flushed, some remain (displayed to now: " + (System.currentTimeMillis() - afterDisplayed) + ")");
             timingBuf.append(" total time: " + (System.currentTimeMillis() - start));
@@ -92,10 +90,13 @@
           return true;
         }
  else {
-          long delayAmount=_context.clock().now() - _pendingSince;
-          _pendingSince=0;
+          long delayAmount=0;
+          if (_pendingSince > 0) {
+            delayAmount=_context.clock().now() - _pendingSince;
+            _pendingSince=0;
+          }
           if (batchCount > 1)           _context.statManager().addRateData("tunnel.batchCount",batchCount,0);
-          if (_log.shouldLog(Log.INFO))           display(allocated,pending,"flushed " + (beforeSize) + ", no remaining after "+ delayAmount);
+          if (_log.shouldLog(Log.INFO))           display(allocated,pending,"flushed " + (beforeSize) + ", no remaining after "+ delayAmount+ "ms");
           if (timingBuf != null) {
             timingBuf.append(" flushed, none remain (displayed to now: " + (System.currentTimeMillis() - afterDisplayed) + ")");
             timingBuf.append(" total time: " + (System.currentTimeMillis() - start));
@@ -108,7 +109,7 @@
         _context.statManager().addRateData("tunnel.batchDelay",pending.size(),0);
         if (_pendingSince <= 0)         _pendingSince=_context.clock().now();
         if (batchCount > 1)         _context.statManager().addRateData("tunnel.batchCount",batchCount,0);
-        display(allocated,pending,"dont flush");
+        if (_log.shouldLog(Log.INFO))         display(allocated,pending,"dont flush");
         if (timingBuf != null) {
           timingBuf.append(" dont flush (displayed to now: " + (System.currentTimeMillis() - afterDisplayed) + ")");
           timingBuf.append(" total time: " + (System.currentTimeMillis() - start));
