@@ -2,14 +2,14 @@
   int maxKBps=_context.bandwidthLimiter().getOutboundKBytesPerSecond();
   int allowed=maxKBps / 6;
   if (allowed < 2)   allowed=2;
-  if (allowed > 10)   allowed=10;
+  if (allowed > MAX_CONCURRENT_BUILDS)   allowed=MAX_CONCURRENT_BUILDS;
   allowed=_context.getProperty("router.tunnelConcurrentBuilds",allowed);
-  List expired=null;
+  List<PooledTunnelCreatorConfig> expired=null;
   int concurrent=0;
   long expireBefore=_context.clock().now() + 10 * 60 * 1000 - BuildRequestor.REQUEST_TIMEOUT;
 synchronized (_currentlyBuilding) {
     for (int i=0; i < _currentlyBuilding.size(); i++) {
-      TunnelCreatorConfig cfg=(TunnelCreatorConfig)_currentlyBuilding.get(i);
+      PooledTunnelCreatorConfig cfg=_currentlyBuilding.get(i);
       if (cfg.getExpiration() <= expireBefore) {
         _currentlyBuilding.remove(i);
         i--;
@@ -22,7 +22,7 @@ synchronized (_currentlyBuilding) {
   }
   if (expired != null) {
     for (int i=0; i < expired.size(); i++) {
-      PooledTunnelCreatorConfig cfg=(PooledTunnelCreatorConfig)expired.get(i);
+      PooledTunnelCreatorConfig cfg=expired.get(i);
       if (_log.shouldLog(Log.INFO))       _log.info("Timed out waiting for reply asking for " + cfg);
       for (int iPeer=0; iPeer < cfg.getLength(); iPeer++) {
         Hash peer=cfg.getPeer(iPeer);

@@ -21,6 +21,8 @@
     }
   }
   if (!_webAppsDir.endsWith("/"))   _webAppsDir+='/';
+  List<String> notStarted=new ArrayList();
+  WebApplicationHandler baseHandler=null;
   try {
     StringTokenizer tok=new StringTokenizer(_listenHost," ,");
     int boundAddresses=0;
@@ -44,7 +46,8 @@
     File tmpdir=new File(workDir,ROUTERCONSOLE + "-" + _listenPort);
     tmpdir.mkdir();
     wac.setTempDirectory(tmpdir);
-    wac.addHandler(0,new LocaleWebAppHandler(I2PAppContext.getGlobalContext()));
+    baseHandler=new LocaleWebAppHandler(I2PAppContext.getGlobalContext());
+    wac.addHandler(0,baseHandler);
     initialize(wac);
     File dir=new File(_webAppsDir);
     String fileNames[]=dir.list(WarFilenameFilter.instance());
@@ -65,6 +68,9 @@
               rewrite=true;
             }
           }
+ else {
+            notStarted.add(appName);
+          }
         }
  catch (        IOException ioe) {
           System.err.println("Error resolving '" + fileNames[i] + "' in '"+ dir);
@@ -81,6 +87,16 @@
   }
  catch (  Throwable me) {
     System.err.println("WARNING: Error starting one or more listeners of the Router Console server.\n" + "If your console is still accessible at http://127.0.0.1:7657/,\n" + "this may be a problem only with binding to the IPV6 address ::1.\n"+ "If so, you may ignore this error, or remove the\n"+ "\"::1,\" in the \"clientApp.0.args\" line of the clients.config file.\n"+ "Exception: "+ me);
+  }
+  if (baseHandler != null) {
+    for (int i=0; i < notStarted.size(); i++) {
+      try {
+        baseHandler.mapPathToServlet('/' + notStarted.get(i) + "/*","net.i2p.router.web.jsp.nowebapp_jsp");
+      }
+ catch (      Throwable me) {
+        System.err.println(me);
+      }
+    }
   }
   try {
     SysTray tray=SysTray.getInstance();

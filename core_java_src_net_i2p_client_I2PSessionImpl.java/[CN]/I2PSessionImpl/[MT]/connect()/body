@@ -11,12 +11,13 @@
   }
   long startConnect=_context.clock().now();
   try {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug(getPrefix() + "connect begin to " + _hostname+ ":"+ _portNum);
-    _socket=new Socket(_hostname,_portNum);
+    _socket=InternalSocket.getSocket(_hostname,_portNum);
     _out=_socket.getOutputStream();
 synchronized (_out) {
       _out.write(I2PClient.PROTOCOL_BYTE);
+      _out.flush();
     }
+    _writer=new ClientWriterRunner(_out,this);
     InputStream in=_socket.getInputStream();
     _reader=new I2CPMessageReader(in,this);
     if (_log.shouldLog(Log.DEBUG))     _log.debug(getPrefix() + "before startReading");
