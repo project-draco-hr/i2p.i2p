@@ -8,27 +8,22 @@ synchronized (_inboundBuildMessages) {
     if (toHandle > 0) {
       if (toHandle > MAX_HANDLE_AT_ONCE)       toHandle=MAX_HANDLE_AT_ONCE;
       handled=new ArrayList(toHandle);
-      if (false) {
-        for (int i=0; i < toHandle; i++)         handled.add(_inboundBuildMessages.remove(_inboundBuildMessages.size() - 1));
-      }
- else {
-        long dropBefore=System.currentTimeMillis() - (BuildRequestor.REQUEST_TIMEOUT / 4);
-        do {
-          BuildMessageState state=(BuildMessageState)_inboundBuildMessages.get(0);
-          if (state.recvTime <= dropBefore) {
-            _inboundBuildMessages.remove(0);
-            dropExpired++;
-            if (_log.shouldLog(Log.WARN))             _log.warn("Not even trying to handle/decrypt the request " + state.msg.getUniqueId() + ", since we received it a long time ago: "+ (System.currentTimeMillis() - state.recvTime));
-            _context.statManager().addRateData("tunnel.dropLoadDelay",System.currentTimeMillis() - state.recvTime,0);
-          }
- else {
-            break;
-          }
+      long dropBefore=System.currentTimeMillis() - (BuildRequestor.REQUEST_TIMEOUT / 4);
+      do {
+        BuildMessageState state=(BuildMessageState)_inboundBuildMessages.get(0);
+        if (state.recvTime <= dropBefore) {
+          _inboundBuildMessages.remove(0);
+          dropExpired++;
+          if (_log.shouldLog(Log.WARN))           _log.warn("Not even trying to handle/decrypt the request " + state.msg.getUniqueId() + ", since we received it a long time ago: "+ (System.currentTimeMillis() - state.recvTime));
+          _context.statManager().addRateData("tunnel.dropLoadDelay",System.currentTimeMillis() - state.recvTime,0);
         }
- while (_inboundBuildMessages.size() > 0);
-        if (dropExpired > 0)         _context.throttle().setTunnelStatus(_x("Dropping tunnel requests: Too slow"));
-        for (int i=0; i < toHandle && _inboundBuildMessages.size() > 0; i++)         handled.add(_inboundBuildMessages.remove(0));
+ else {
+          break;
+        }
       }
+ while (_inboundBuildMessages.size() > 0);
+      if (dropExpired > 0)       _context.throttle().setTunnelStatus(_x("Dropping tunnel requests: Too slow"));
+      for (int i=0; i < toHandle && _inboundBuildMessages.size() > 0; i++)       handled.add(_inboundBuildMessages.remove(0));
     }
     remaining=_inboundBuildMessages.size();
   }
