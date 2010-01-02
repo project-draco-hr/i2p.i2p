@@ -39,9 +39,24 @@ synchronized (this) {
     _context.commSystem().queueLookup(ourIP);
     String oldIP=_context.getProperty(PROP_IP);
     if (!_externalListenHost.getHostAddress().equals(oldIP)) {
+      long lastChanged=0;
+      long now=_context.clock().now();
+      String lcs=_context.getProperty(PROP_IP_CHANGE);
+      if (lcs != null) {
+        try {
+          lastChanged=Long.parseLong(lcs);
+        }
+ catch (        NumberFormatException nfe) {
+        }
+      }
       _context.router().setConfigSetting(PROP_IP,_externalListenHost.getHostAddress());
-      _context.router().setConfigSetting(PROP_IP_CHANGE,"" + _context.clock().now());
+      _context.router().setConfigSetting(PROP_IP_CHANGE,"" + now);
       _context.router().saveConfig();
+      if (oldIP != null && System.getProperty("wrapper.version") != null && Boolean.valueOf(_context.getProperty(PROP_LAPTOP_MODE)).booleanValue() && now - lastChanged > 10 * 60 * 1000 && _context.router().getUptime() < 10 * 60 * 1000) {
+        _log.log(Log.CRIT,"IP changed, restarting with a new identity and port");
+        _context.router().killKeys();
+        _context.router().shutdown(Router.EXIT_HARD_RESTART);
+      }
     }
     _context.router().rebuildRouterInfo();
   }
