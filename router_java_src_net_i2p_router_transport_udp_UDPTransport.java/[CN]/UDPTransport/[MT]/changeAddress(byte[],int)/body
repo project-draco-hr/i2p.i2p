@@ -2,9 +2,9 @@
   boolean fixedPort=getIsPortFixed();
   boolean updated=false;
   boolean fireTest=false;
+  if (_log.shouldLog(Log.WARN))   _log.warn("Change address? status = " + _reachabilityStatus + " diff = "+ (_context.clock().now() - _reachabilityStatusLastUpdated)+ " old = "+ _externalListenHost+ ':'+ _externalListenPort+ " new = "+ DataHelper.toString(ourIP)+ ':'+ ourPort);
 synchronized (this) {
     if ((_externalListenHost == null) || (!eq(_externalListenHost.getAddress(),_externalListenPort,ourIP,ourPort))) {
-      if (_log.shouldLog(Log.WARN))       _log.warn("Change address? status = " + _reachabilityStatus + " diff = "+ (_context.clock().now() - _reachabilityStatusLastUpdated)+ " old = "+ _externalListenHost+ ':'+ _externalListenPort);
       if ((_reachabilityStatus != CommSystemFacade.STATUS_OK) || (_externalListenHost == null) || (_externalListenPort <= 0)|| (_context.clock().now() - _reachabilityStatusLastUpdated > 2 * TEST_FREQUENCY)) {
         if (_log.shouldLog(Log.WARN))         _log.warn("Trying to change our external address...");
         try {
@@ -39,9 +39,24 @@ synchronized (this) {
     _context.commSystem().queueLookup(ourIP);
     String oldIP=_context.getProperty(PROP_IP);
     if (!_externalListenHost.getHostAddress().equals(oldIP)) {
+      long lastChanged=0;
+      long now=_context.clock().now();
+      String lcs=_context.getProperty(PROP_IP_CHANGE);
+      if (lcs != null) {
+        try {
+          lastChanged=Long.parseLong(lcs);
+        }
+ catch (        NumberFormatException nfe) {
+        }
+      }
       _context.router().setConfigSetting(PROP_IP,_externalListenHost.getHostAddress());
-      _context.router().setConfigSetting(PROP_IP_CHANGE,"" + _context.clock().now());
+      _context.router().setConfigSetting(PROP_IP_CHANGE,"" + now);
       _context.router().saveConfig();
+      if (oldIP != null && System.getProperty("wrapper.version") != null && Boolean.valueOf(_context.getProperty(PROP_LAPTOP_MODE)).booleanValue() && now - lastChanged > 10 * 60 * 1000 && _context.router().getUptime() < 10 * 60 * 1000) {
+        _log.log(Log.CRIT,"IP changed, restarting with a new identity and port");
+        _context.router().killKeys();
+        _context.router().shutdown(Router.EXIT_HARD_RESTART);
+      }
     }
     _context.router().rebuildRouterInfo();
   }

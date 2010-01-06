@@ -7,6 +7,14 @@
   List<Hash> badff=new ArrayList(ffs.size());
   int found=0;
   long now=_context.clock().now();
+  double maxFailRate;
+  if (_context.router().getUptime() > 60 * 60 * 1000) {
+    double currentFailRate=_context.statManager().getRate("peer.failedLookupRate").getRate(60 * 60 * 1000).getAverageValue();
+    maxFailRate=Math.max(0.20d,1.5d * currentFailRate);
+  }
+ else {
+    maxFailRate=100d;
+  }
   for (int i=0; found < howMany && i < ffs.size(); i++) {
     Hash entry=sorted.first();
     sorted.remove(entry);
@@ -21,7 +29,7 @@
       double maxGoodRespTime=MAX_GOOD_RESP_TIME;
       Rate tunnelTestTime=_context.statManager().getRate("tunnel.testSuccessTime").getRate(10 * 60 * 1000);
       if (tunnelTestTime != null && tunnelTestTime.getAverageValue() > 500)       maxGoodRespTime=2 * tunnelTestTime.getAverageValue();
-      if (prof != null && prof.getDBHistory() != null && prof.getDbResponseTime().getRate(10 * 60 * 1000).getAverageValue() < maxGoodRespTime && prof.getDBHistory().getLastStoreFailed() < now - NO_FAIL_STORE_GOOD && prof.getDBHistory().getLastLookupFailed() < now - NO_FAIL_LOOKUP_GOOD) {
+      if (prof != null && prof.getDBHistory() != null && prof.getDbResponseTime().getRate(10 * 60 * 1000).getAverageValue() < maxGoodRespTime && prof.getDBHistory().getLastStoreFailed() < now - NO_FAIL_STORE_GOOD && prof.getDBHistory().getLastLookupFailed() < now - NO_FAIL_LOOKUP_GOOD && prof.getDBHistory().getFailedLookupRate().getRate(60 * 60 * 1000).getAverageValue() < maxFailRate) {
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Good: " + entry);
         rv.add(entry);
         found++;
