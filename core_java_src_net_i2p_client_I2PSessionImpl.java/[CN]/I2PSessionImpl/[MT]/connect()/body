@@ -27,7 +27,10 @@ synchronized (_out) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug(getPrefix() + "After getDate / begin waiting for a response");
     int waitcount=0;
     while (!_dateReceived) {
-      if (waitcount++ > 30)       throw new IOException("no date handshake");
+      if (waitcount++ > 30) {
+        closeSocket();
+        throw new IOException("no date handshake");
+      }
       try {
 synchronized (_dateReceivedLock) {
           _dateReceivedLock.wait(1000);
@@ -42,7 +45,15 @@ synchronized (_dateReceivedLock) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug(getPrefix() + "After  producer.connect()");
     waitcount=0;
     while (_leaseSet == null) {
-      if (waitcount++ > 5 * 60)       throw new IOException("no leaseset");
+      if (waitcount++ > 5 * 60) {
+        try {
+          _producer.disconnect(this);
+        }
+ catch (        I2PSessionException ipe) {
+        }
+        closeSocket();
+        throw new IOException("no leaseset");
+      }
 synchronized (_leaseSetWait) {
         try {
           _leaseSetWait.wait(1000);
