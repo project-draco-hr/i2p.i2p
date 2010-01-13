@@ -1,0 +1,35 @@
+{
+  String url=null;
+  try {
+    for (int i=0; i < args.length; i++) {
+      if (args[i].startsWith("-")) {
+        usage();
+        return;
+      }
+ else {
+        url=args[i];
+      }
+    }
+  }
+ catch (  Exception e) {
+    e.printStackTrace();
+    usage();
+    return;
+  }
+  if (url == null) {
+    usage();
+    return;
+  }
+  String saveAs=suggestName(url);
+  OutputStream out;
+  try {
+    out=new FileOutputStream(saveAs);
+  }
+ catch (  IOException ioe) {
+    System.err.println("Failed to create output file " + saveAs);
+    return;
+  }
+  EepGet get=new SSLEepGet(I2PAppContext.getGlobalContext(),out,url);
+  get.addStatusListener(get.new CLIStatusListener(1024,40));
+  get.fetch(45 * 1000,-1,60 * 1000);
+}

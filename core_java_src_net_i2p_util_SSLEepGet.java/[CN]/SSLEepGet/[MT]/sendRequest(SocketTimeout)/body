@@ -1,0 +1,29 @@
+{
+  if (_outputStream != null) {
+  }
+ else {
+    File outFile=new File(_outputFile);
+    if (outFile.exists())     _alreadyTransferred=outFile.length();
+  }
+  String req=getRequest();
+  try {
+    URL url=new URL(_actualURL);
+    if ("https".equals(url.getProtocol())) {
+      String host=url.getHost();
+      int port=url.getPort();
+      if (port == -1)       port=443;
+      _proxy=SSLSocketFactory.getDefault().createSocket(host,port);
+    }
+ else {
+      throw new IOException("Only https supported: " + _actualURL);
+    }
+  }
+ catch (  MalformedURLException mue) {
+    throw new IOException("Request URL is invalid");
+  }
+  _proxyIn=_proxy.getInputStream();
+  _proxyOut=_proxy.getOutputStream();
+  _proxyOut.write(DataHelper.getUTF8(req));
+  _proxyOut.flush();
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Request flushed");
+}
