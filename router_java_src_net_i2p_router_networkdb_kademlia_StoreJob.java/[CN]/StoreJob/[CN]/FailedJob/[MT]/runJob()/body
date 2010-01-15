@@ -1,7 +1,10 @@
 {
-  if (_log.shouldLog(Log.INFO))   _log.info(StoreJob.this.getJobId() + ": Peer " + _peer.getIdentity().getHash().toBase64()+ " timed out sending "+ _state.getTarget());
-  _state.replyTimeout(_peer.getIdentity().getHash());
-  getContext().profileManager().dbStoreFailed(_peer.getIdentity().getHash());
+  Hash hash=_peer.getIdentity().getHash();
+  if (_log.shouldLog(Log.INFO))   _log.info(StoreJob.this.getJobId() + ": Peer " + hash.toBase64()+ " timed out sending "+ _state.getTarget());
+  MessageWrapper.WrappedMessage wm=_state.getPendingMessage(hash);
+  if (wm != null)   wm.fail();
+  _state.replyTimeout(hash);
+  getContext().profileManager().dbStoreFailed(hash);
   getContext().statManager().addRateData("netDb.replyTimeout",getContext().clock().now() - _sendOn,0);
   sendNext();
 }

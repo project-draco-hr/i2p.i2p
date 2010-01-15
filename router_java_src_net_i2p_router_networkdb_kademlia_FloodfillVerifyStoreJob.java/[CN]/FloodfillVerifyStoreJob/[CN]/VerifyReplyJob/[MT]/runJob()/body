@@ -1,5 +1,7 @@
 {
   long delay=getContext().clock().now() - _sendTime;
+  if (_wrappedMessage != null)   _wrappedMessage.acked();
+  _facade.verifyFinished(_key);
   if (_message instanceof DatabaseStoreMessage) {
     boolean success=false;
     DatabaseStoreMessage dsm=(DatabaseStoreMessage)_message;
@@ -9,14 +11,14 @@
       getContext().profileManager().dbLookupSuccessful(_target,delay);
       if (_sentTo != null)       getContext().profileManager().dbStoreSuccessful(_sentTo);
       getContext().statManager().addRateData("netDb.floodfillVerifyOK",delay,0);
-      if (_log.shouldLog(Log.INFO))       _log.info("Verify success");
+      if (_log.shouldLog(Log.INFO))       _log.info("Verify success for " + _key);
       return;
     }
-    if (_log.shouldLog(Log.WARN))     _log.warn("Verify failed - older");
+    if (_log.shouldLog(Log.WARN))     _log.warn("Verify failed (older) for " + _key);
   }
  else   if (_message instanceof DatabaseSearchReplyMessage) {
     getContext().profileManager().dbLookupReply(_target,0,((DatabaseSearchReplyMessage)_message).getNumReplies(),0,0,delay);
-    if (_log.shouldLog(Log.WARN))     _log.warn("Verify failed - DSRM");
+    if (_log.shouldLog(Log.WARN))     _log.warn("Verify failed (DSRM) for " + _key);
   }
   if (_sentTo != null)   getContext().profileManager().dbStoreFailed(_sentTo);
   getContext().statManager().addRateData("netDb.floodfillVerifyFail",delay,0);
