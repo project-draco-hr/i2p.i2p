@@ -1,6 +1,13 @@
 {
   ByteArrayOutputStream baos=new ByteArrayOutputStream(4 * 1024);
-  EepGet get=new EepGet(I2PAppContext.getGlobalContext(),false,null,-1,0,0,MAX_RESEED_RESPONSE_SIZE,null,baos,url.toString(),false,null,null);
+  EepGet get;
+  if (url.toString().startsWith("https")) {
+    get=new SSLEepGet(I2PAppContext.getGlobalContext(),baos,url.toString());
+  }
+ else {
+    boolean shouldProxy=_proxyHost != null && _proxyHost.length() > 0 && _proxyPort > 0;
+    get=new EepGet(I2PAppContext.getGlobalContext(),shouldProxy,_proxyHost,_proxyPort,0,0,MAX_RESEED_RESPONSE_SIZE,null,baos,url.toString(),false,null,null);
+  }
   get.addStatusListener(ReseedRunner.this);
   if (get.fetch())   return baos.toByteArray();
  else   return null;
