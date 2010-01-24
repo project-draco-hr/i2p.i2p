@@ -2,6 +2,11 @@
   Hash key;
   if (ds instanceof LeaseSet)   key=((LeaseSet)ds).getDestination().calculateHash();
  else   key=((RouterInfo)ds).getIdentity().calculateHash();
+  if (_floodThrottler != null && _floodThrottler.shouldThrottle(key)) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Too many recent stores, not flooding key: " + key);
+    _context.statManager().addRateData("netDb.floodThrottled",1,0);
+    return;
+  }
   Hash rkey=_context.routingKeyGenerator().getRoutingKey(key);
   FloodfillPeerSelector sel=(FloodfillPeerSelector)getPeerSelector();
   List peers=sel.selectFloodfillParticipants(rkey,MAX_TO_FLOOD,getKBuckets());
