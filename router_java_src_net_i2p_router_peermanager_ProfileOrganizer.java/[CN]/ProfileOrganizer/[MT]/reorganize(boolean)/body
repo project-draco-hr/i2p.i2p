@@ -14,11 +14,11 @@
   if (!getWriteLock())   return;
   long start=System.currentTimeMillis();
   try {
-    Set allPeers=_strictCapacityOrder;
-    Set reordered=new TreeSet(_comp);
+    Set<PeerProfile> allPeers=_strictCapacityOrder;
+    Set<PeerProfile> reordered=new TreeSet(_comp);
     long sortStart=System.currentTimeMillis();
-    for (Iterator iter=_strictCapacityOrder.iterator(); iter.hasNext(); ) {
-      PeerProfile prof=(PeerProfile)iter.next();
+    for (Iterator<PeerProfile> iter=_strictCapacityOrder.iterator(); iter.hasNext(); ) {
+      PeerProfile prof=iter.next();
       if ((expireOlderThan > 0) && (prof.getLastSendSuccessful() <= expireOlderThan))       continue;
       if (shouldCoalesce) {
         long coalesceStart=System.currentTimeMillis();
@@ -40,11 +40,12 @@
     _notFailingPeersList.clear();
     _wellIntegratedPeers.clear();
     long placeStart=System.currentTimeMillis();
-    for (Iterator iter=allPeers.iterator(); iter.hasNext(); ) {
-      PeerProfile profile=(PeerProfile)iter.next();
+    for (Iterator<PeerProfile> iter=allPeers.iterator(); iter.hasNext(); ) {
+      PeerProfile profile=iter.next();
       locked_placeProfile(profile);
     }
     locked_unfailAsNecessary();
+    locked_demoteHighCapAsNecessary();
     locked_promoteFastAsNecessary();
     locked_demoteFastAsNecessary();
     Collections.shuffle(_notFailingPeersList,_context.random());
