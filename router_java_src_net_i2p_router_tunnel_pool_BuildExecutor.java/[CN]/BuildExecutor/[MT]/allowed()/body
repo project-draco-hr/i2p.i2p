@@ -7,19 +7,16 @@
   List<PooledTunnelCreatorConfig> expired=null;
   int concurrent=0;
   long expireBefore=_context.clock().now() + 10 * 60 * 1000 - BuildRequestor.REQUEST_TIMEOUT;
-synchronized (_currentlyBuilding) {
-    for (int i=0; i < _currentlyBuilding.size(); i++) {
-      PooledTunnelCreatorConfig cfg=_currentlyBuilding.get(i);
-      if (cfg.getExpiration() <= expireBefore) {
-        _currentlyBuilding.remove(i);
-        i--;
-        if (expired == null)         expired=new ArrayList();
-        expired.add(cfg);
-      }
+  for (Iterator<PooledTunnelCreatorConfig> iter=_currentlyBuildingMap.values().iterator(); iter.hasNext(); ) {
+    PooledTunnelCreatorConfig cfg=iter.next();
+    if (cfg.getExpiration() <= expireBefore) {
+      iter.remove();
+      if (expired == null)       expired=new ArrayList();
+      expired.add(cfg);
     }
-    concurrent=_currentlyBuilding.size();
-    allowed-=concurrent;
   }
+  concurrent=_currentlyBuildingMap.size();
+  allowed-=concurrent;
   if (expired != null) {
     for (int i=0; i < expired.size(); i++) {
       PooledTunnelCreatorConfig cfg=expired.get(i);
