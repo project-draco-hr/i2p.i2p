@@ -1,13 +1,16 @@
 {
   if (val == null)   return;
-  if (_currentOut == null)   rotateFile();
+  if (_currentOut == null) {
+    rotateFile();
+    if (_currentOut == null)     return;
+  }
   try {
     _currentOut.write(val);
     _numBytesInCurrentFile+=val.length();
   }
  catch (  Throwable t) {
-    System.err.println("Error writing record, disk full?");
-    t.printStackTrace();
+    if (!_write)     return;
+    System.err.println("Error writing log, disk full? " + t);
   }
   if (_numBytesInCurrentFile >= _manager.getFileSize()) {
     rotateFile();

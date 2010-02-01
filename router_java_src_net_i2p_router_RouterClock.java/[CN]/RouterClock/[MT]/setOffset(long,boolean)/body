@@ -1,5 +1,4 @@
 {
-  if (false)   return;
   long delta=offsetMs - _offset;
   if (!force) {
     if ((offsetMs > MAX_OFFSET) || (offsetMs < 0 - MAX_OFFSET)) {
@@ -17,7 +16,7 @@
       _alreadyChanged=true;
       return;
     }
-    if (Boolean.valueOf(_contextRC.getProperty("router.clockOffsetSanityCheck","true")).booleanValue() == true) {
+    if (Boolean.valueOf(_contextRC.getProperty("router.clockOffsetSanityCheck","true")).booleanValue() && _alreadyChanged) {
       Long peerClockSkew=_contextRC.commSystem().getFramedAveragePeerClockSkew(50);
       if (peerClockSkew != null) {
         long currentPeerClockSkew=peerClockSkew.longValue();
@@ -35,8 +34,10 @@
   if (_alreadyChanged) {
     if (delta > 15 * 1000)     getLog().error("Warning - Updating clock offset to " + offsetMs + "ms from "+ _offset+ "ms");
  else     if (getLog().shouldLog(Log.INFO))     getLog().info("Updating clock offset to " + offsetMs + "ms from "+ _offset+ "ms");
-    if (!_statCreated)     _contextRC.statManager().createRateStat("clock.skew","How far is the already adjusted clock being skewed?","Clock",new long[]{10 * 60 * 1000,3 * 60 * 60* 1000,24 * 60 * 60* 60});
-    _statCreated=true;
+    if (!_statCreated) {
+      _contextRC.statManager().createRateStat("clock.skew","How far is the already adjusted clock being skewed?","Clock",new long[]{10 * 60 * 1000,3 * 60 * 60* 1000,24 * 60 * 60* 60});
+      _statCreated=true;
+    }
     _contextRC.statManager().addRateData("clock.skew",delta,0);
   }
  else {
