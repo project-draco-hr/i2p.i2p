@@ -8,6 +8,7 @@
     boolean allAgree=true;
     for (int i=0; i < cfg.getLength(); i++) {
       Hash peer=cfg.getPeer(i);
+      if (peer.equals(_context.routerHash()))       continue;
       int record=order.indexOf(Integer.valueOf(i));
       if (record < 0) {
         _log.error("Bad status index " + i);
@@ -15,19 +16,17 @@
         return;
       }
       int howBad=statuses[record];
-      if (!peer.toBase64().equals(_context.routerHash().toBase64())) {
-        RouterInfo ri=_context.netDb().lookupRouterInfoLocally(peer);
-        String bwTier="Unknown";
-        if (ri != null)         bwTier=ri.getBandwidthTier();
- else         if (_log.shouldLog(Log.WARN))         _log.warn("Failed detecting bwTier, null routerInfo for: " + peer);
-        if (howBad == 0) {
-          _context.statManager().addRateData("tunnel.tierAgree" + bwTier,1,0);
-        }
- else {
-          _context.statManager().addRateData("tunnel.tierReject" + bwTier,1,0);
-        }
-        if (_log.shouldLog(Log.INFO))         _log.info(msg.getUniqueId() + ": Peer " + peer.toBase64()+ " replied with status "+ howBad);
+      RouterInfo ri=_context.netDb().lookupRouterInfoLocally(peer);
+      String bwTier="Unknown";
+      if (ri != null)       bwTier=ri.getBandwidthTier();
+ else       if (_log.shouldLog(Log.WARN))       _log.warn("Failed detecting bwTier, null routerInfo for: " + peer);
+      if (howBad == 0) {
+        _context.statManager().addRateData("tunnel.tierAgree" + bwTier,1,0);
       }
+ else {
+        _context.statManager().addRateData("tunnel.tierReject" + bwTier,1,0);
+      }
+      if (_log.shouldLog(Log.INFO))       _log.info(msg.getUniqueId() + ": Peer " + peer.toBase64()+ " replied with status "+ howBad);
       if (howBad == 0) {
         _context.profileManager().tunnelJoined(peer,rtt);
       }

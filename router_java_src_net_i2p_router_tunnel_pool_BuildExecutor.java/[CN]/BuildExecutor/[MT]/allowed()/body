@@ -4,12 +4,20 @@
   if (allowed < 2)   allowed=2;
   if (allowed > MAX_CONCURRENT_BUILDS)   allowed=MAX_CONCURRENT_BUILDS;
   allowed=_context.getProperty("router.tunnelConcurrentBuilds",allowed);
+  long expireBefore=_context.clock().now() + 10 * 60 * 1000 - BuildRequestor.REQUEST_TIMEOUT - GRACE_PERIOD;
+  for (Iterator<PooledTunnelCreatorConfig> iter=_recentlyBuildingMap.values().iterator(); iter.hasNext(); ) {
+    PooledTunnelCreatorConfig cfg=iter.next();
+    if (cfg.getExpiration() <= expireBefore) {
+      iter.remove();
+    }
+  }
   List<PooledTunnelCreatorConfig> expired=null;
   int concurrent=0;
-  long expireBefore=_context.clock().now() + 10 * 60 * 1000 - BuildRequestor.REQUEST_TIMEOUT;
+  expireBefore=_context.clock().now() + 10 * 60 * 1000 - BuildRequestor.REQUEST_TIMEOUT;
   for (Iterator<PooledTunnelCreatorConfig> iter=_currentlyBuildingMap.values().iterator(); iter.hasNext(); ) {
     PooledTunnelCreatorConfig cfg=iter.next();
     if (cfg.getExpiration() <= expireBefore) {
+      _recentlyBuildingMap.putIfAbsent(Long.valueOf(cfg.getReplyMessageId()),cfg);
       iter.remove();
       if (expired == null)       expired=new ArrayList();
       expired.add(cfg);
@@ -23,7 +31,7 @@
       if (_log.shouldLog(Log.INFO))       _log.info("Timed out waiting for reply asking for " + cfg);
       for (int iPeer=0; iPeer < cfg.getLength(); iPeer++) {
         Hash peer=cfg.getPeer(iPeer);
-        if (peer.toBase64().equals(_context.routerHash().toBase64()))         continue;
+        if (peer.equals(_context.routerHash()))         continue;
         RouterInfo ri=_context.netDb().lookupRouterInfoLocally(peer);
         String bwTier="Unknown";
         if (ri != null)         bwTier=ri.getBandwidthTier();
