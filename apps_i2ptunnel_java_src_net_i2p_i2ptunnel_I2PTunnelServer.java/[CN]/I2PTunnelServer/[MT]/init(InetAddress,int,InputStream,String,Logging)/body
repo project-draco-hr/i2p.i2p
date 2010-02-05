@@ -13,9 +13,17 @@
       _log.log(Log.CRIT,"Invalid port specified [" + getTunnel().port + "], reverting to "+ portNum);
     }
   }
+  ByteArrayInputStream privDataCopy;
+  try {
+    privDataCopy=copyOfInputStream(privData);
+  }
+ catch (  IOException ioe) {
+    _log.log(Log.CRIT,"Cannot read private key data for " + privkeyname,ioe);
+    return;
+  }
   while (sockMgr == null) {
 synchronized (slock) {
-      sockMgr=I2PSocketManagerFactory.createManager(privData,getTunnel().host,portNum,props);
+      sockMgr=I2PSocketManagerFactory.createManager(privDataCopy,getTunnel().host,portNum,props);
     }
     if (sockMgr == null) {
       _log.log(Log.CRIT,"Unable to create socket manager");
@@ -24,6 +32,7 @@ synchronized (slock) {
       }
  catch (      InterruptedException ie) {
       }
+      privDataCopy.reset();
     }
   }
   sockMgr.setName("Server");

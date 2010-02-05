@@ -1,13 +1,14 @@
 {
-  Vector peers=new Vector();
-  Vector skews=new Vector();
+  Vector<NTCPConnection> peers=new Vector();
+  Vector<Long> skews=new Vector();
 synchronized (_conLock) {
     peers.addAll(_conByIdent.values());
   }
-  for (Iterator iter=peers.iterator(); iter.hasNext(); ) {
-    NTCPConnection con=(NTCPConnection)iter.next();
-    skews.addElement(new Long(con.getClockSkew()));
+  for (Iterator<NTCPConnection> iter=peers.iterator(); iter.hasNext(); ) {
+    NTCPConnection con=iter.next();
+    if (con.isEstablished())     skews.addElement(Long.valueOf(con.getClockSkew()));
   }
+  if (skews.size() < 5 && _lastBadSkew != 0)   skews.addElement(Long.valueOf(_lastBadSkew));
   if (_log.shouldLog(Log.DEBUG))   _log.debug("NTCP transport returning " + skews.size() + " peer clock skews.");
   return skews;
 }

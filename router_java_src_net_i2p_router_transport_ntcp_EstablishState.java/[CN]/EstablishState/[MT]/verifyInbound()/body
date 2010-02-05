@@ -39,10 +39,16 @@
       if (ip != null)       _transport.setIP(alice.calculateHash(),ip);
       if (_log.shouldLog(Log.DEBUG))       _log.debug(prefix() + "verification successful for " + _con);
       long diff=1000 * Math.abs(tsA - _tsB);
-      if (diff >= Router.CLOCK_FUDGE_FACTOR) {
+      if (!_context.clock().getUpdatedSuccessfully()) {
+        _context.clock().setOffset(1000 * (_tsB - tsA),true);
+        tsA=_tsB;
+        if (diff != 0)         _log.error("NTP failure, NTCP adjusting clock by " + DataHelper.formatDuration(diff));
+      }
+ else       if (diff >= Router.CLOCK_FUDGE_FACTOR) {
         _context.statManager().addRateData("ntcp.invalidInboundSkew",diff,0);
         _transport.markReachable(alice.calculateHash(),true);
         _context.shitlist().shitlistRouter(DataHelper.formatDuration(diff),alice.calculateHash(),_x("Excessive clock skew: {0}"));
+        _transport.setLastBadSkew(tsA - _tsB);
         fail("Clocks too skewed (" + diff + " ms)",null,true);
         return;
       }
