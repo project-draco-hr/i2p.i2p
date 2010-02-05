@@ -1,5 +1,5 @@
 {
-  _status="<b>Update downloaded</b>";
+  updateStatus("<b>" + _("Update downloaded") + "</b>");
   TrustedUpdate up=new TrustedUpdate(_context);
   File f=new File(_updateFile);
   File to=new File(_context.getRouterDir(),Router.UPDATE_FILE);
@@ -16,20 +16,21 @@
     _context.router().saveConfig();
     if ("install".equals(policy)) {
       _log.log(Log.CRIT,"Update was VERIFIED, restarting to install it");
-      _status="<b>Update verified</b><br>Restarting";
+      updateStatus("<b>" + _("Update verified") + "</b><br>"+ _("Restarting"));
       restart();
     }
  else {
       _log.log(Log.CRIT,"Update was VERIFIED, will be installed at next restart");
-      _status="<b>Update downloaded</b><br>";
-      if (System.getProperty("wrapper.version") != null)       _status+="Click Restart to install";
- else       _status+="Click Shutdown and restart to install";
-      if (up.newVersion() != null)       _status+=" Version " + up.newVersion();
+      StringBuilder buf=new StringBuilder(64);
+      buf.append("<b>").append(_("Update downloaded")).append("</b><br>");
+      if (System.getProperty("wrapper.version") != null)       buf.append(_("Click Restart to install"));
+ else       buf.append(_("Click Shutdown and restart to install"));
+      if (up.newVersion() != null)       buf.append(' ').append(_("Version {0}",up.newVersion()));
+      updateStatus(buf.toString());
     }
   }
  else {
-    err=err + " from " + url;
-    _log.log(Log.CRIT,err);
-    _status="<b>" + err + "</b>";
+    _log.log(Log.CRIT,err + " from " + url);
+    updateStatus("<b>" + err + ' '+ _("from {0}",url)+ " </b>");
   }
 }
