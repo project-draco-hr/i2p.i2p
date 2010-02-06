@@ -4,6 +4,7 @@
   if (!workDirRemoved)   System.err.println("ERROR: Unable to remove Jetty temporary work directory");
   boolean workDirCreated=workDir.mkdirs();
   if (!workDirCreated)   System.err.println("ERROR: Unable to create Jetty temporary work directory");
+  System.setProperty("jetty.class.path",I2PAppContext.getGlobalContext().getBaseDir() + "/lib/routerconsole.jar");
   _server=new Server();
   boolean rewrite=false;
   Properties props=webAppProperties();
@@ -58,11 +59,8 @@
           String enabled=props.getProperty(PREFIX + appName + ENABLED);
           if (!"false".equals(enabled)) {
             String path=new File(dir,fileNames[i]).getCanonicalPath();
-            wac=_server.addWebApplication("/" + appName,path);
             tmpdir=new File(workDir,appName + "-" + _listenPort);
-            tmpdir.mkdir();
-            wac.setTempDirectory(tmpdir);
-            initialize(wac);
+            WebAppStarter.addWebApp(I2PAppContext.getGlobalContext(),_server,appName,path,tmpdir);
             if (enabled == null) {
               props.setProperty(PREFIX + appName + ENABLED,"true");
               rewrite=true;
