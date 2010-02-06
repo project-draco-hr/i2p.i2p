@@ -1,0 +1,155 @@
+{
+  updateStatus("<b>" + _("Plugin downloaded") + "</b>");
+  File f=new File(_updateFile);
+  File appDir=new File(_context.getAppDir(),PLUGIN_DIR);
+  if ((!appDir.exists()) && (!appDir.mkdir())) {
+    f.delete();
+    updateStatus("<b>" + _("Cannot create plugin directory {0}",appDir.getAbsolutePath()) + "</b>");
+    return;
+  }
+  TrustedUpdate up=new TrustedUpdate(_context);
+  File to=new File(_context.getTempDir(),"tmp" + _context.random().nextInt() + ZIP);
+  String err=up.migrateFile(f,to);
+  if (err != null) {
+    updateStatus("<b>" + err + ' '+ _("from {0}",url)+ " </b>");
+    f.delete();
+    to.delete();
+    return;
+  }
+  File tempDir=new File(_context.getTempDir(),"tmp" + _context.random().nextInt() + "-unzip");
+  if (!FileUtil.extractZip(to,tempDir)) {
+    f.delete();
+    to.delete();
+    FileUtil.rmdir(tempDir,false);
+    updateStatus("<b>" + _("Plugin from {0} is corrupt",url) + "</b>");
+    return;
+  }
+  File installProps=new File(tempDir,"install.properties");
+  Properties props=new OrderedProperties();
+  try {
+    DataHelper.loadProps(props,installProps);
+  }
+ catch (  IOException ioe) {
+    f.delete();
+    to.delete();
+    FileUtil.rmdir(tempDir,false);
+    updateStatus("<b>" + _("Plugin from {0} does not contain the required configuration file",url) + "</b>");
+    return;
+  }
+  FileUtil.rmdir(tempDir,false);
+  String pubkey=props.getProperty("key");
+  String keyName=props.getProperty("keyName");
+  if (pubkey == null || keyName == null || pubkey.length() != 172 || keyName.length() <= 0) {
+    f.delete();
+    to.delete();
+    updateStatus("<b>" + _("Plugin from {0} contains an invalid key",url) + "</b>");
+    return;
+  }
+  if (up.haveKey(pubkey)) {
+    if (!up.verify(f)) {
+      f.delete();
+      to.delete();
+      updateStatus("<b>" + _("Plugin signature verification of {0} failed",url) + "</b>");
+      return;
+    }
+  }
+ else {
+    if (!up.addKey(pubkey,keyName)) {
+      f.delete();
+      to.delete();
+      updateStatus("<b>" + _("Plugin signature verification of {0} failed",url) + "</b>");
+      return;
+    }
+    if (!up.verify(f)) {
+      f.delete();
+      to.delete();
+      updateStatus("<b>" + _("Plugin signature verification of {0} failed",url) + "</b>");
+      return;
+    }
+  }
+  f.delete();
+  String appName=props.getProperty("name");
+  String version=props.getProperty("version");
+  if (appName == null || version == null || appName.length() <= 0 || version.length() <= 0 || appName.startsWith(".") || appName.indexOf("/") > 0 || appName.indexOf("\\") > 0) {
+    to.delete();
+    updateStatus("<b>" + _("Plugin from {0} has invalid name or version",url) + "</b>");
+    return;
+  }
+  String minVersion=props.getProperty("min-i2p-version");
+  if (minVersion != null && (new VersionComparator()).compare(CoreVersion.VERSION,minVersion) < 0) {
+    to.delete();
+    updateStatus("<b>" + _("This plugin requires I2P version {0} or higher",minVersion) + "</b>");
+    return;
+  }
+  minVersion=props.getProperty("min-java-version");
+  if (minVersion != null && (new VersionComparator()).compare(System.getProperty("java.version"),minVersion) < 0) {
+    to.delete();
+    updateStatus("<b>" + _("This plugin requires Java version {0} or higher",minVersion) + "</b>");
+    return;
+  }
+  boolean isUpdate=Boolean.valueOf(props.getProperty("update")).booleanValue();
+  File destDir=new File(appDir,appName);
+  if (destDir.exists()) {
+    if (!isUpdate) {
+      to.delete();
+      updateStatus("<b>" + _("Downloaded plugin is not for upgrading but the plugin is already installed",url) + "</b>");
+      return;
+    }
+    File oldPropFile=new File(destDir,"install.properties");
+    Properties oldProps=new OrderedProperties();
+    try {
+      DataHelper.loadProps(oldProps,oldPropFile);
+    }
+ catch (    IOException ioe) {
+      to.delete();
+      FileUtil.rmdir(tempDir,false);
+      updateStatus("<b>" + _("Installed plugin does not contain the required configuration file",url) + "</b>");
+      return;
+    }
+    String oldPubkey=oldProps.getProperty("key");
+    String oldKeyName=oldProps.getProperty("keyName");
+    String oldAppName=props.getProperty("name");
+    if ((!pubkey.equals(oldPubkey)) || (!keyName.equals(oldKeyName)) || (!appName.equals(oldAppName))) {
+      to.delete();
+      updateStatus("<b>" + _("Signature of downloaded plugin does not match installed plugin") + "</b>");
+      return;
+    }
+    String oldVersion=oldProps.getProperty("version");
+    if (oldVersion == null || (new VersionComparator()).compare(oldVersion,version) >= 0) {
+      to.delete();
+      updateStatus("<b>" + _("New plugin version {0} is not newer than installed plugin",version) + "</b>");
+      return;
+    }
+    minVersion=props.getProperty("min-installed-version");
+    if (minVersion != null && (new VersionComparator()).compare(minVersion,oldVersion) > 0) {
+      to.delete();
+      updateStatus("<b>" + _("Plugin update requires installed version {0} or higher",minVersion) + "</b>");
+      return;
+    }
+    String maxVersion=props.getProperty("max-installed-version");
+    if (maxVersion != null && (new VersionComparator()).compare(maxVersion,oldVersion) < 0) {
+      to.delete();
+      updateStatus("<b>" + _("Plugin update requires installed version {0} or lower",maxVersion) + "</b>");
+      return;
+    }
+  }
+ else {
+    if (isUpdate) {
+      to.delete();
+      updateStatus("<b>" + _("Plugin is for upgrades only, but the plugin is not installed",url) + "</b>");
+      return;
+    }
+    if (!destDir.mkdir()) {
+      to.delete();
+      updateStatus("<b>" + _("Cannot create plugin directory {0}",destDir.getAbsolutePath()) + "</b>");
+      return;
+    }
+  }
+  if (!FileUtil.extractZip(to,destDir)) {
+    to.delete();
+    updateStatus("<b>" + _("Unzip of plugin in plugin directory {0} failed",destDir.getAbsolutePath()) + "</b>");
+    return;
+  }
+  to.delete();
+  updateStatus("<b>" + _("Plugin successfully installed in {0}",destDir.getAbsolutePath()) + "</b>");
+}
