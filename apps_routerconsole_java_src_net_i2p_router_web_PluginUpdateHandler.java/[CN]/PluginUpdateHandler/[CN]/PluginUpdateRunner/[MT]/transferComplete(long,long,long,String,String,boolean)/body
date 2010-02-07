@@ -24,7 +24,7 @@
     updateStatus("<b>" + _("Plugin from {0} is corrupt",url) + "</b>");
     return;
   }
-  File installProps=new File(tempDir,"install.properties");
+  File installProps=new File(tempDir,"plugin.config");
   Properties props=new OrderedProperties();
   try {
     DataHelper.loadProps(props,installProps);
@@ -87,15 +87,14 @@
     updateStatus("<b>" + _("This plugin requires Java version {0} or higher",minVersion) + "</b>");
     return;
   }
-  boolean isUpdate=Boolean.valueOf(props.getProperty("update")).booleanValue();
   File destDir=new File(appDir,appName);
   if (destDir.exists()) {
-    if (!isUpdate) {
+    if (Boolean.valueOf(props.getProperty("install-only")).booleanValue()) {
       to.delete();
       updateStatus("<b>" + _("Downloaded plugin is not for upgrading but the plugin is already installed",url) + "</b>");
       return;
     }
-    File oldPropFile=new File(destDir,"install.properties");
+    File oldPropFile=new File(destDir,"plugin.config");
     Properties oldProps=new OrderedProperties();
     try {
       DataHelper.loadProps(oldProps,oldPropFile);
@@ -134,7 +133,7 @@
     }
   }
  else {
-    if (isUpdate) {
+    if (Boolean.valueOf(props.getProperty("update-only")).booleanValue()) {
       to.delete();
       updateStatus("<b>" + _("Plugin is for upgrades only, but the plugin is not installed",url) + "</b>");
       return;
@@ -151,5 +150,17 @@
     return;
   }
   to.delete();
-  updateStatus("<b>" + _("Plugin successfully installed in {0}",destDir.getAbsolutePath()) + "</b>");
+  if (Boolean.valueOf(props.getProperty("dont-start-at-install")).booleanValue()) {
+    if (Boolean.valueOf(props.getProperty("router-restart-required")).booleanValue())     updateStatus("<b>" + _("Plugin {0} successfully installed, router restart required",appName) + "</b>");
+ else     updateStatus("<b>" + _("Plugin {0} successfully installed",appName) + "</b>");
+  }
+ else {
+    try {
+      if (PluginStarter.startPlugin(_context,appName))       updateStatus("<b>" + _("Plugin {0} started",appName) + "</b>");
+ else       updateStatus("<b>" + _("Failed to start plugin {0}, check logs",appName) + "</b>");
+    }
+ catch (    Exception e) {
+      updateStatus("<b>" + _("Failed to start plugin {0}:",appName) + ' '+ e+ "</b>");
+    }
+  }
 }

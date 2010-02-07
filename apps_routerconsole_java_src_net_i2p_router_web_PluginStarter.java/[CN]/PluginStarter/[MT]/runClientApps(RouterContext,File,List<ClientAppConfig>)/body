@@ -1,0 +1,20 @@
+{
+  Log log=ctx.logManager().getLog(PluginStarter.class);
+  for (  ClientAppConfig app : apps) {
+    if (app.disabled)     continue;
+    String argVal[]=LoadClientAppsJob.parseArgs(app.args);
+    for (int i=0; i < argVal.length; i++) {
+      if (argVal[i].indexOf("$") >= 0) {
+        argVal[i]=argVal[i].replace("$I2P",ctx.getBaseDir().getAbsolutePath());
+        argVal[i]=argVal[i].replace("$CONFIG",ctx.getConfigDir().getAbsolutePath());
+        argVal[i]=argVal[i].replace("$PLUGIN",pluginDir.getAbsolutePath());
+      }
+    }
+    if (app.delay == 0) {
+      LoadClientAppsJob.runClient(app.className,app.clientName,argVal,log);
+    }
+ else {
+      ctx.jobQueue().addJob(new LoadClientAppsJob.DelayedRunClient(ctx,app.className,app.clientName,argVal,app.delay));
+    }
+  }
+}
