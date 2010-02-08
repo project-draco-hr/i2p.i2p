@@ -1,0 +1,20 @@
+{
+  Log log=ctx.logManager().getLog(PluginStarter.class);
+  File pluginDir=new File(ctx.getAppDir(),PluginUpdateHandler.PLUGIN_DIR + '/' + appName);
+  if ((!pluginDir.exists()) || (!pluginDir.isDirectory())) {
+    log.error("Cannot stop nonexistent plugin: " + appName);
+    return false;
+  }
+  File clientConfig=new File(pluginDir,"clients.config");
+  if (clientConfig.exists()) {
+    Properties props=new Properties();
+    DataHelper.loadProps(props,clientConfig);
+    List<ClientAppConfig> clients=ClientAppConfig.getClientApps(clientConfig);
+    runClientApps(ctx,pluginDir,clients,false);
+  }
+  Properties props=pluginProperties(ctx,appName);
+  String name=props.getProperty("consoleLinkName_" + Messages.getLanguage(ctx));
+  if (name == null)   name=props.getProperty("consoleLinkName");
+  if (name != null && name.length() > 0)   NavHelper.unregisterApp(name);
+  return true;
+}
