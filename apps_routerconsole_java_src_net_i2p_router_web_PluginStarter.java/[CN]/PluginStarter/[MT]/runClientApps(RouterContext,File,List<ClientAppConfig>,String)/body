@@ -1,14 +1,18 @@
 {
   Log log=ctx.logManager().getLog(PluginStarter.class);
   for (  ClientAppConfig app : apps) {
-    if (start && app.disabled)     continue;
+    if (action.equals("start") && app.disabled)     continue;
     String argVal[];
-    if (start) {
+    if (action.equals("start")) {
       argVal=LoadClientAppsJob.parseArgs(app.args);
     }
  else {
-      if (app.stopargs == null || app.stopargs.length() <= 0)       continue;
-      argVal=LoadClientAppsJob.parseArgs(app.stopargs);
+      String args;
+      if (action.equals("stop"))       args=app.stopargs;
+ else       if (action.equals("uninstall"))       args=app.uninstallargs;
+ else       throw new IllegalArgumentException("bad action");
+      if (args == null || args.length() <= 0)       continue;
+      argVal=LoadClientAppsJob.parseArgs(args);
     }
     for (int i=0; i < argVal.length; i++) {
       if (argVal[i].indexOf("$") >= 0) {
@@ -26,7 +30,7 @@
       }
       addToClasspath(cp,app.clientName,log);
     }
-    if (app.delay == 0 || !start) {
+    if (app.delay == 0 || !action.equals("start")) {
       LoadClientAppsJob.runClient(app.className,app.clientName,argVal,log);
     }
  else {
