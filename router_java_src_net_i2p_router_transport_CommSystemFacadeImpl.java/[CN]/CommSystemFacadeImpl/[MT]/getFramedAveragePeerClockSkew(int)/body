@@ -1,10 +1,10 @@
 {
   if (_manager == null) {
-    return Long.valueOf(_context.clock().getOffset() / 1000);
+    return _context.clock().getOffset();
   }
   Vector skews=_manager.getClockSkews();
   if (skews == null || skews.size() <= 0 || (skews.size() < 5 && _context.clock().getUpdatedSuccessfully())) {
-    return Long.valueOf(_context.clock().getOffset() / 1000);
+    return _context.clock().getOffset();
   }
   Collections.sort(skews);
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Clock skews: " + skews);
@@ -14,8 +14,7 @@
   long sum=0;
   for (int i=first; i <= last; i++) {
     long value=((Long)(skews.get(i))).longValue();
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Adding clock skew " + i + " valued "+ value+ " s.");
     sum=sum + value;
   }
-  return Long.valueOf(sum / frameSize);
+  return sum * 1000 / frameSize;
 }
