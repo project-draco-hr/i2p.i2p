@@ -1,0 +1,23 @@
+{
+  Log log=ctx.logManager().getLog(PluginStarter.class);
+  File pluginDir=new File(ctx.getAppDir(),PluginUpdateHandler.PLUGIN_DIR + '/' + appName);
+  if ((!pluginDir.exists()) || (!pluginDir.isDirectory())) {
+    log.error("Cannot stop nonexistent plugin: " + appName);
+    return false;
+  }
+  File clientConfig=new File(pluginDir,"clients.config");
+  if (clientConfig.exists()) {
+    Properties props=new Properties();
+    DataHelper.loadProps(props,clientConfig);
+    List<ClientAppConfig> clients=ClientAppConfig.getClientApps(clientConfig);
+    runClientApps(ctx,pluginDir,clients,"uninstall");
+  }
+  FileUtil.rmdir(pluginDir,false);
+  Properties props=pluginProperties();
+  for (Iterator iter=props.keySet().iterator(); iter.hasNext(); ) {
+    String name=(String)iter.next();
+    if (name.startsWith(PREFIX + appName))     iter.remove();
+  }
+  storePluginProperties(props);
+  return true;
+}

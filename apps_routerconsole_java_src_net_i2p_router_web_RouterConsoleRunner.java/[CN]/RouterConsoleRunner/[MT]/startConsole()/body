@@ -4,6 +4,7 @@
   if (!workDirRemoved)   System.err.println("ERROR: Unable to remove Jetty temporary work directory");
   boolean workDirCreated=workDir.mkdirs();
   if (!workDirCreated)   System.err.println("ERROR: Unable to create Jetty temporary work directory");
+  System.setProperty("jetty.class.path",I2PAppContext.getGlobalContext().getBaseDir() + "/lib/routerconsole.jar");
   _server=new Server();
   boolean rewrite=false;
   Properties props=webAppProperties();
@@ -58,11 +59,8 @@
           String enabled=props.getProperty(PREFIX + appName + ENABLED);
           if (!"false".equals(enabled)) {
             String path=new File(dir,fileNames[i]).getCanonicalPath();
-            wac=_server.addWebApplication("/" + appName,path);
             tmpdir=new File(workDir,appName + "-" + _listenPort);
-            tmpdir.mkdir();
-            wac.setTempDirectory(tmpdir);
-            initialize(wac);
+            WebAppStarter.addWebApp(I2PAppContext.getGlobalContext(),_server,appName,path,tmpdir);
             if (enabled == null) {
               props.setProperty(PREFIX + appName + ENABLED,"true");
               rewrite=true;
@@ -105,10 +103,15 @@
     t.printStackTrace();
   }
   NewsFetcher fetcher=NewsFetcher.getInstance(I2PAppContext.getGlobalContext());
-  Thread t=new I2PAppThread(fetcher,"NewsFetcher");
-  t.setDaemon(true);
+  Thread t=new I2PAppThread(fetcher,"NewsFetcher",true);
   t.start();
-  Thread st=new I2PAppThread(new StatSummarizer(),"StatSummarizer");
-  st.setDaemon(true);
-  st.start();
+  t=new I2PAppThread(new StatSummarizer(),"StatSummarizer",true);
+  t.start();
+  List<RouterContext> contexts=RouterContext.listContexts();
+  if (contexts != null) {
+    if (PluginStarter.pluginsEnabled(contexts.get(0))) {
+      t=new I2PAppThread(new PluginStarter(contexts.get(0)),"PluginStarter",true);
+      t.start();
+    }
+  }
 }

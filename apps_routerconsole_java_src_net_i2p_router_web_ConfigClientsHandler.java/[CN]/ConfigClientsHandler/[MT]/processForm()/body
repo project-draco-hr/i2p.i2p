@@ -7,6 +7,14 @@
     saveWebAppChanges();
     return;
   }
+  if (_action.equals(_("Save Plugin Configuration"))) {
+    savePluginChanges();
+    return;
+  }
+  if (_action.equals(_("Install Plugin"))) {
+    installPlugin();
+    return;
+  }
   if (_action.startsWith("Start ")) {
     String app=_action.substring(6);
     int appnum=-1;
@@ -27,7 +35,42 @@
     }
  catch (    NumberFormatException nfe) {
     }
-    if (appnum >= 0)     deleteClient(appnum);
+    if (appnum >= 0) {
+      deleteClient(appnum);
+    }
+ else {
+      try {
+        PluginStarter.stopPlugin(_context,app);
+        PluginStarter.deletePlugin(_context,app);
+        addFormNotice(_("Deleted plugin {0}",app));
+      }
+ catch (      Throwable e) {
+        addFormError(_("Error deleting plugin {0}",app) + ": " + e);
+        _log.error("Error deleting plugin " + app,e);
+      }
+    }
+    return;
+  }
+  if (_action.startsWith("Stop ")) {
+    String app=_action.substring(5);
+    try {
+      PluginStarter.stopPlugin(_context,app);
+      addFormNotice(_("Stopped plugin {0}",app));
+    }
+ catch (    Throwable e) {
+      addFormError(_("Error stopping plugin {0}",app) + ": " + e);
+      _log.error("Error stopping plugin " + app,e);
+    }
+    return;
+  }
+  if (_action.startsWith("Update ")) {
+    String app=_action.substring(7);
+    updatePlugin(app);
+    return;
+  }
+  if (_action.startsWith("Check ")) {
+    String app=_action.substring(6);
+    checkPlugin(app);
     return;
   }
   String xStart=_("Start");
