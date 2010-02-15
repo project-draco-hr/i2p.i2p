@@ -2,7 +2,9 @@
   _context=ctx;
   _log=ctx.logManager().getLog(getClass());
   _manager=mgr;
-  _currentlyBuilding=new ArrayList(MAX_CONCURRENT_BUILDS);
+  _currentlyBuilding=new Object();
+  _currentlyBuildingMap=new ConcurrentHashMap(MAX_CONCURRENT_BUILDS);
+  _recentlyBuildingMap=new ConcurrentHashMap(4 * MAX_CONCURRENT_BUILDS);
   _context.statManager().createRateStat("tunnel.concurrentBuilds","How many builds are going at once","Tunnels",new long[]{60 * 1000,5 * 60 * 1000,60 * 60 * 1000});
   _context.statManager().createRateStat("tunnel.concurrentBuildsLagged","How many builds are going at once when we reject further builds, due to job lag (period is lag)","Tunnels",new long[]{60 * 1000,5 * 60 * 1000,60 * 60 * 1000});
   _context.statManager().createRateStat("tunnel.buildExploratoryExpire","How often an exploratory tunnel times out during creation","Tunnels",new long[]{10 * 60 * 1000,60 * 60 * 1000});
@@ -15,6 +17,7 @@
   _context.statManager().createRateStat("tunnel.buildRequestZeroHopTime","How long it takes to build a zero hop tunnel","Tunnels",new long[]{60 * 1000,10 * 60 * 1000});
   _context.statManager().createRateStat("tunnel.pendingRemaining","How many inbound requests are pending after a pass (period is how long the pass takes)?","Tunnels",new long[]{60 * 1000,10 * 60 * 1000});
   _context.statManager().createRateStat("tunnel.buildFailFirstHop","How often we fail to build a OB tunnel because we can't contact the first hop","Tunnels",new long[]{60 * 1000,10 * 60 * 1000});
+  _context.statManager().createRateStat("tunnel.buildReplySlow","Build reply late, but not too late","Tunnels",new long[]{10 * 60 * 1000});
   StatManager statMgr=_context.statManager();
   String bwTiers=RouterInfo.BW_CAPABILITY_CHARS;
   for (int i=0; i < bwTiers.length(); i++) {

@@ -76,7 +76,8 @@
     return;
   }
   byte reply[]=BuildResponseRecord.create(_context,response,req.readReplyKey(),req.readReplyIV(),state.msg.getUniqueId());
-  for (int j=0; j < TunnelBuildMessage.RECORD_COUNT; j++) {
+  int records=state.msg.getRecordCount();
+  for (int j=0; j < records; j++) {
     if (state.msg.getRecord(j) == null) {
       ourSlot=j;
       state.msg.setRecord(j,new ByteArray(reply));
@@ -96,8 +97,10 @@
     _context.outNetMessagePool().add(msg);
   }
  else {
-    TunnelBuildReplyMessage replyMsg=new TunnelBuildReplyMessage(_context);
-    for (int i=0; i < state.msg.RECORD_COUNT; i++)     replyMsg.setRecord(i,state.msg.getRecord(i));
+    TunnelBuildReplyMessage replyMsg;
+    if (records == TunnelBuildMessage.MAX_RECORD_COUNT)     replyMsg=new TunnelBuildReplyMessage(_context);
+ else     replyMsg=new VariableTunnelBuildReplyMessage(_context,records);
+    for (int i=0; i < records; i++)     replyMsg.setRecord(i,state.msg.getRecord(i));
     replyMsg.setUniqueId(req.readReplyMessageId());
     replyMsg.setMessageExpiration(_context.clock().now() + 10 * 1000);
     TunnelGatewayMessage m=new TunnelGatewayMessage(_context);

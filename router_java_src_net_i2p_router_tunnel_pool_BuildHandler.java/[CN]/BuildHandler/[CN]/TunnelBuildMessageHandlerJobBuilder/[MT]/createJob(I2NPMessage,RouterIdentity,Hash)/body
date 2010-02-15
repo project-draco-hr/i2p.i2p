@@ -1,24 +1,11 @@
 {
   long reqId=receivedMessage.getUniqueId();
-  PooledTunnelCreatorConfig cfg=null;
-  List building=_exec.locked_getCurrentlyBuilding();
-  List ids=new ArrayList();
-synchronized (building) {
-    for (int i=0; i < building.size(); i++) {
-      PooledTunnelCreatorConfig cur=(PooledTunnelCreatorConfig)building.get(i);
-      ids.add(new Long(cur.getReplyMessageId()));
-      if ((cur.isInbound()) && (cur.getReplyMessageId() == reqId)) {
-        building.remove(i);
-        cfg=cur;
-        break;
-      }
- else       if (cur.getReplyMessageId() == reqId) {
-        _log.error("received it, but its not inbound? " + cur);
-      }
-    }
-  }
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Receive tunnel build message " + reqId + " from "+ (from != null ? from.calculateHash().toBase64() : fromHash != null ? fromHash.toBase64() : "tunnels")+ ", waiting ids: "+ ids+ ", found matching tunnel? "+ (cfg != null),null);
+  PooledTunnelCreatorConfig cfg=_exec.removeFromBuilding(reqId);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Receive tunnel build message " + reqId + " from "+ (from != null ? from.calculateHash().toBase64() : fromHash != null ? fromHash.toBase64() : "tunnels")+ ", found matching tunnel? "+ (cfg != null));
   if (cfg != null) {
+    if (!cfg.isInbound()) {
+      _log.error("received it, but its not inbound? " + cfg);
+    }
     BuildEndMessageState state=new BuildEndMessageState(cfg,receivedMessage);
     if (HANDLE_REPLIES_INLINE) {
       handleRequestAsInboundEndpoint(state);
