@@ -3,12 +3,18 @@
   String peerID=urlencode(coordinator.getID());
   _log.debug("Announce: [" + meta.getAnnounce() + "] infoHash: "+ infoHash);
   trackers=new ArrayList(2);
-  trackers.add(new Tracker(meta.getAnnounce(),true));
+  String primary=meta.getAnnounce();
+  if (isValidAnnounce(primary)) {
+    trackers.add(new Tracker(meta.getAnnounce(),true));
+  }
+ else {
+    _log.warn("Skipping invalid or non-i2p announce: " + primary);
+  }
   List tlist=_util.getOpenTrackers();
   if (tlist != null) {
     for (int i=0; i < tlist.size(); i++) {
       String url=(String)tlist.get(i);
-      if (!url.startsWith("http://")) {
+      if (!isValidAnnounce(url)) {
         _log.error("Bad announce URL: [" + url + "]");
         continue;
       }
@@ -17,17 +23,22 @@
         _log.error("Bad announce URL: [" + url + "]");
         continue;
       }
-      if (meta.getAnnounce().startsWith(url.substring(0,slash)))       continue;
+      if (primary.startsWith(url.substring(0,slash)))       continue;
       String dest=_util.lookup(url.substring(7,slash));
       if (dest == null) {
         _log.error("Announce host unknown: [" + url + "]");
         continue;
       }
-      if (meta.getAnnounce().startsWith("http://" + dest))       continue;
-      if (meta.getAnnounce().startsWith("http://i2p/" + dest))       continue;
+      if (primary.startsWith("http://" + dest))       continue;
+      if (primary.startsWith("http://i2p/" + dest))       continue;
       trackers.add(new Tracker(url,false));
       _log.debug("Additional announce: [" + url + "] for infoHash: "+ infoHash);
     }
+  }
+  if (tlist.size() <= 0) {
+    stop=true;
+    _log.error("No valid trackers for infoHash: " + infoHash);
+    return;
   }
   long uploaded=coordinator.getUploaded();
   long downloaded=coordinator.getDownloaded();
