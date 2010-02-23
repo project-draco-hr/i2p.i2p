@@ -34,14 +34,23 @@
  else {
         try {
           InputStream in=zip.getInputStream(entry);
-          FileOutputStream fos=new FileOutputStream(target);
-          int read=0;
-          while ((read=in.read(buf)) != -1) {
-            fos.write(buf,0,read);
+          if (entry.getName().endsWith(".jar.pack") || entry.getName().endsWith(".war.pack")) {
+            target=new File(targetDir,entry.getName().substring(0,entry.getName().length() - ".pack".length()));
+            JarOutputStream fos=new JarOutputStream(new FileOutputStream(target));
+            Pack200.newUnpacker().unpack(in,fos);
+            fos.close();
+            System.err.println("INFO: File [" + entry.getName() + "] extracted and unpacked");
           }
-          fos.close();
+ else {
+            FileOutputStream fos=new FileOutputStream(target);
+            int read=0;
+            while ((read=in.read(buf)) != -1) {
+              fos.write(buf,0,read);
+            }
+            fos.close();
+            System.err.println("INFO: File [" + entry.getName() + "] extracted");
+          }
           in.close();
-          System.err.println("INFO: File [" + entry.getName() + "] extracted");
         }
  catch (        IOException ioe) {
           System.err.println("ERROR: Error extracting the zip entry (" + entry.getName() + "]");
