@@ -21,17 +21,23 @@ synchronized (_outbound) {
       return;
     }
     if (queueTime() > 3 * 1000) {
-      msg=(OutNetMessage)_outbound.remove(0);
+      msg=_outbound.poll();
+      if (msg == null)       return;
     }
  else {
-      Iterator it=_outbound.iterator();
+      int slot=0;
+      Iterator<OutNetMessage> it=_outbound.iterator();
       for (int i=0; it.hasNext() && i < 75; i++) {
-        OutNetMessage mmsg=(OutNetMessage)it.next();
-        if (msg == null || mmsg.getPriority() > msg.getPriority())         msg=mmsg;
+        OutNetMessage mmsg=it.next();
+        if (msg == null || mmsg.getPriority() > msg.getPriority()) {
+          msg=mmsg;
+          slot=i;
+        }
       }
       if (msg == null)       return;
-      if (_log.shouldLog(Log.INFO))       _log.info("Type " + msg.getMessage().getType() + " pri "+ msg.getPriority()+ " slot "+ _outbound.indexOf(msg));
-      _outbound.remove(msg);
+      if (_log.shouldLog(Log.INFO))       _log.info("Type " + msg.getMessage().getType() + " pri "+ msg.getPriority()+ " slot "+ slot);
+      boolean removed=_outbound.remove(msg);
+      if ((!removed) && _log.shouldLog(Log.ERROR))       _log.info("Already removed??? " + msg.getMessage().getType());
     }
     _currentOutbound=msg;
   }
