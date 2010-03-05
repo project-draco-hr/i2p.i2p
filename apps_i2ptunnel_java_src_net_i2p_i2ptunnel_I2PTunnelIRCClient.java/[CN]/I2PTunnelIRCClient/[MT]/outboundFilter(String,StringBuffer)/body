@@ -1,11 +1,11 @@
 {
   String field[]=s.split(" ",3);
   String command;
-  final String[] allowedCommands={"MODE","JOIN","NICK","WHO","WHOIS","LIST","NAMES","NICK","SILENCE","MAP","PART","OPER","KICK","HELPME","RULES","TOPIC"};
+  final String[] allowedCommands={"MODE","JOIN","NICK","WHO","WHOIS","LIST","NAMES","NICK","SILENCE","MAP","PART","OPER","KICK","HELPME","RULES","TOPIC","ISON"};
   if (field[0].length() == 0)   return null;
   if (field[0].charAt(0) == ':')   return null;
   command=field[0].toUpperCase();
-  if ("PING".equalsIgnoreCase(command)) {
+  if ("PING".equals(command)) {
     String rv=null;
     expectedPong.setLength(0);
     if (field.length == 1) {
@@ -25,15 +25,15 @@
     if (_log.shouldLog(Log.WARN))     _log.warn("sending ping [" + rv + "], waiting for ["+ expectedPong+ "] orig was ["+ s+ "]");
     return rv;
   }
-  if ("PONG".equalsIgnoreCase(command))   return "PONG 127.0.0.1";
+  if ("PONG".equals(command))   return "PONG 127.0.0.1";
   for (int i=0; i < allowedCommands.length; i++) {
-    if (allowedCommands[i].equalsIgnoreCase(command))     return s;
+    if (allowedCommands[i].equals(command))     return s;
   }
-  if ("NOTICE".equalsIgnoreCase(command)) {
+  if ("NOTICE".equals(command)) {
     String msg=field[2];
     if (msg.startsWith(":DCC "))     return null;
   }
-  if ("PRIVMSG".equalsIgnoreCase(command) || "NOTICE".equalsIgnoreCase(command)) {
+  if ("PRIVMSG".equals(command) || "NOTICE".equals(command)) {
     String msg;
     msg=field[2];
     if (msg.indexOf(0x01) >= 0) {
@@ -45,14 +45,14 @@
     }
     return s;
   }
-  if ("USER".equalsIgnoreCase(command)) {
+  if ("USER".equals(command)) {
     int idx=field[2].lastIndexOf(":");
     if (idx < 0)     return "USER user hostname localhost :realname";
     String realname=field[2].substring(idx + 1);
     String ret="USER " + field[1] + " hostname localhost :"+ realname;
     return ret;
   }
- else   if ("QUIT".equalsIgnoreCase(command)) {
+  if ("QUIT".equals(command)) {
     return "QUIT :leaving";
   }
   return null;
