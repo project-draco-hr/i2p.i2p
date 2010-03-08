@@ -14,7 +14,17 @@
  else   if (inboundRecent && _externalListenPort > 0 && _externalListenHost != null) {
     if (_log.shouldLog(Log.INFO))     _log.info("Ignoring IP address suggestion, since we have received an inbound con recently");
   }
+ else   if (from.equals(_lastFrom) || !eq(_lastOurIP,_lastOurPort,ourIP,ourPort)) {
+    _lastFrom=from;
+    _lastOurIP=ourIP;
+    _lastOurPort=ourPort;
+    if (_log.shouldLog(Log.WARN))     _log.warn("The router " + from.toBase64() + " told us we have a new IP - "+ RemoteHostId.toString(ourIP)+ " port "+ ourPort+ ".  Wait until somebody else tells us the same thing.");
+  }
  else {
+    if (_log.shouldLog(Log.WARN))     _log.warn(from.toBase64() + " and " + _lastFrom.toBase64()+ " agree we have a new IP - "+ RemoteHostId.toString(ourIP)+ " port "+ ourPort+ ".  Changing address.");
+    _lastFrom=from;
+    _lastOurIP=ourIP;
+    _lastOurPort=ourPort;
     changeAddress(ourIP,ourPort);
   }
 }

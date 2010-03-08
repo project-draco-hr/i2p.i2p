@@ -1,12 +1,6 @@
 {
-synchronized (_wantsRead) {
-    if (_wantsRead.size() > 0) {
-      buf.addAll(_wantsRead);
-      _wantsRead.clear();
-    }
-  }
-  while (buf.size() > 0) {
-    NTCPConnection con=(NTCPConnection)buf.remove(0);
+  NTCPConnection con;
+  while ((con=_wantsRead.poll()) != null) {
     SelectionKey key=con.getKey();
     try {
       key.interestOps(key.interestOps() | SelectionKey.OP_READ);
@@ -14,14 +8,7 @@ synchronized (_wantsRead) {
  catch (    CancelledKeyException cke) {
     }
   }
-synchronized (_wantsWrite) {
-    if (_wantsWrite.size() > 0) {
-      buf.addAll(_wantsWrite);
-      _wantsWrite.clear();
-    }
-  }
-  while (buf.size() > 0) {
-    NTCPConnection con=(NTCPConnection)buf.remove(0);
+  while ((con=_wantsWrite.poll()) != null) {
     SelectionKey key=con.getKey();
     try {
       key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
@@ -29,14 +16,8 @@ synchronized (_wantsWrite) {
  catch (    CancelledKeyException cke) {
     }
   }
-synchronized (_wantsRegister) {
-    if (_wantsRegister.size() > 0) {
-      buf.addAll(_wantsRegister);
-      _wantsRegister.clear();
-    }
-  }
-  while (buf.size() > 0) {
-    ServerSocketChannel chan=(ServerSocketChannel)buf.remove(0);
+  ServerSocketChannel chan;
+  while ((chan=_wantsRegister.poll()) != null) {
     try {
       SelectionKey key=chan.register(_selector,SelectionKey.OP_ACCEPT);
       key.attach(chan);
@@ -45,14 +26,7 @@ synchronized (_wantsRegister) {
       if (_log.shouldLog(Log.WARN))       _log.warn("Error registering",cce);
     }
   }
-synchronized (_wantsConRegister) {
-    if (_wantsConRegister.size() > 0) {
-      buf.addAll(_wantsConRegister);
-      _wantsConRegister.clear();
-    }
-  }
-  while (buf.size() > 0) {
-    NTCPConnection con=(NTCPConnection)buf.remove(0);
+  while ((con=_wantsConRegister.poll()) != null) {
     try {
       SelectionKey key=con.getChannel().register(_selector,SelectionKey.OP_CONNECT);
       key.attach(con);

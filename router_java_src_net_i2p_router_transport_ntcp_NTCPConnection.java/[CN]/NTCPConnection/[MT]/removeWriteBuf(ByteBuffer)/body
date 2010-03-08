@@ -3,16 +3,14 @@
   OutNetMessage msg=null;
   boolean bufsRemain=false;
   boolean clearMessage=false;
-synchronized (_writeBufs) {
-    if (_sendingMeta && (buf.capacity() == _meta.length)) {
-      _sendingMeta=false;
-    }
- else {
-      clearMessage=true;
-    }
-    _writeBufs.remove(buf);
-    bufsRemain=_writeBufs.size() > 0;
+  if (_sendingMeta && (buf.capacity() == _meta.length)) {
+    _sendingMeta=false;
   }
+ else {
+    clearMessage=true;
+  }
+  _writeBufs.remove(buf);
+  bufsRemain=!_writeBufs.isEmpty();
   if (clearMessage) {
 synchronized (_outbound) {
       if (_currentOutbound != null)       msg=_currentOutbound;
@@ -33,10 +31,7 @@ synchronized (_outbound) {
  else {
     if (_log.shouldLog(Log.INFO))     _log.info("I2NP meta message sent completely");
   }
-  boolean msgs=false;
-synchronized (_outbound) {
-    msgs=((_outbound.size() > 0) || (_currentOutbound != null));
-  }
+  boolean msgs=((!_outbound.isEmpty()) || (_currentOutbound != null));
   if (msgs)   _transport.getWriter().wantsWrite(this,"write completed");
   if (bufsRemain)   _transport.getPumper().wantsWrite(this);
   updateStats();

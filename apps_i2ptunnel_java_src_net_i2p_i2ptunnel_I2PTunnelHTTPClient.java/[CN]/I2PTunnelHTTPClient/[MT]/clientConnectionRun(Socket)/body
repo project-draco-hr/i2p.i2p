@@ -18,7 +18,7 @@
       String lowercaseLine=line.toLowerCase();
       if (lowercaseLine.startsWith("connection: ") || lowercaseLine.startsWith("keep-alive: ") || lowercaseLine.startsWith("proxy-connection: "))       continue;
       if (method == null) {
-        if (_log.shouldLog(Log.DEBUG))         _log.debug(getPrefix(requestId) + "Method is null for [" + line+ "]");
+        if (_log.shouldLog(Log.DEBUG))         _log.debug(getPrefix(requestId) + "First line [" + line+ "]");
         int pos=line.indexOf(" ");
         if (pos == -1)         break;
         method=line.substring(0,pos);
@@ -28,6 +28,15 @@
         }
  else         if (request.startsWith("/eepproxy/")) {
           String subRequest=request.substring("/eepproxy/".length());
+          int protopos=subRequest.indexOf(" ");
+          String uri=subRequest.substring(0,protopos);
+          if (uri.indexOf("/") == -1) {
+            uri=uri + "/";
+          }
+          request="http://" + uri + subRequest.substring(protopos);
+        }
+ else         if (request.toLowerCase().startsWith("http://i2p/")) {
+          String subRequest=request.substring("http://i2p/".length());
           int protopos=subRequest.indexOf(" ");
           String uri=subRequest.substring(0,protopos);
           if (uri.indexOf("/") == -1) {
@@ -60,8 +69,13 @@
  catch (          Exception exc) {
           }
         }
-        if (host.toLowerCase().equals("proxy.i2p")) {
-          destination="proxy.i2p";
+        if (host.length() >= 516 && host.indexOf(".") < 0) {
+          destination=host;
+          host=getHostName(destination);
+          line=method + ' ' + request.substring(pos);
+        }
+ else         if (host.toLowerCase().equals("proxy.i2p")) {
+          destination=host;
           usingInternalServer=true;
         }
  else         if (host.toLowerCase().endsWith(".i2p")) {
@@ -92,9 +106,16 @@
                     addressHelpers.put(destination,ahelperKey);
                   }
  else {
-                    if (!host.equals(ahelperKey)) {
+                    String destB64=null;
+                    try {
+                      Destination dest=I2PTunnel.destFromName(host);
+                      if (dest != null)                       destB64=dest.toBase64();
+                    }
+ catch (                    DataFormatException dfe) {
+                    }
+                    if (destB64 != null && !destB64.equals(ahelperKey)) {
                       ahelperConflict=true;
-                      if (_log.shouldLog(Log.WARN))                       _log.warn(getPrefix(requestId) + "Addresshelper key conflict for site [" + destination+ "], trusted key ["+ host+ "], specified key ["+ ahelperKey+ "].");
+                      if (_log.shouldLog(Log.WARN))                       _log.warn(getPrefix(requestId) + "Addresshelper key conflict for site [" + destination+ "], trusted key ["+ destB64+ "], specified key ["+ ahelperKey+ "].");
                     }
                   }
                 }
@@ -111,14 +132,20 @@
             request=uriPath + urlEncoding + " "+ protocolVersion;
             if (ahelperConflict) {
               if (out != null) {
-                long alias=I2PAppContext.getGlobalContext().random().nextLong();
-                String trustedURL=protocol + uriPath + urlEncoding;
-                String conflictURL=protocol + alias + ".i2p/?"+ initialFragments;
-                byte[] header=getErrorPage("ahelper-conflict",ERR_AHELPER_CONFLICT);
-                out.write(header);
-                out.write(_("To visit the destination in your host database, click <a href=\"{0}\">here</a>. To visit the conflicting addresshelper link by temporarily giving it a random alias, click <a href=\"{1}\">here</a>.",trustedURL,conflictURL).getBytes("UTF-8"));
-                out.write(("<p></div>").getBytes());
-                writeFooter(out);
+                String alias=getHostName(ahelperKey);
+                if (alias.equals("i2p")) {
+                  byte[] header=getErrorPage("dnfb",ERR_DESTINATION_UNKNOWN);
+                  writeErrorMessage(header,out,targetRequest,false,destination,null);
+                }
+ else {
+                  String trustedURL=protocol + uriPath + urlEncoding;
+                  String conflictURL=protocol + alias + '/'+ urlEncoding;
+                  byte[] header=getErrorPage("ahelper-conflict",ERR_AHELPER_CONFLICT);
+                  out.write(header);
+                  out.write(_("To visit the destination in your host database, click <a href=\"{0}\">here</a>. To visit the conflicting addresshelper destination, click <a href=\"{1}\">here</a>.",trustedURL,conflictURL).getBytes("UTF-8"));
+                  out.write(("<p></div>").getBytes());
+                  writeFooter(out);
+                }
               }
               s.close();
               return;
@@ -172,7 +199,16 @@
             return;
           }
           destination=request.substring(0,pos);
+          host=getHostName(destination);
           line=method + " " + request.substring(pos);
+        }
+        if (port != 80 && !usingWWWProxy) {
+          if (out != null) {
+            out.write(getErrorPage("denied",ERR_REQUEST_DENIED));
+            writeFooter(out);
+          }
+          s.close();
+          return;
         }
         boolean isValid=usingWWWProxy || usingInternalServer || isSupportedAddress(host,protocol);
         if (!isValid) {
@@ -181,15 +217,11 @@
           destination=null;
           break;
         }
- else         if ((!usingWWWProxy) && (!usingInternalServer)) {
-          if (_log.shouldLog(Log.INFO))           _log.info(getPrefix(requestId) + "host=getHostName(" + destination+ ")");
-          host=getHostName(destination);
-        }
         if (_log.shouldLog(Log.DEBUG)) {
-          _log.debug(getPrefix(requestId) + "METHOD:" + method+ ":");
-          _log.debug(getPrefix(requestId) + "PROTOC:" + protocol+ ":");
-          _log.debug(getPrefix(requestId) + "HOST  :" + host+ ":");
-          _log.debug(getPrefix(requestId) + "DEST  :" + destination+ ":");
+          _log.debug(getPrefix(requestId) + "METHOD: \"" + method+ "\"");
+          _log.debug(getPrefix(requestId) + "PROTOC: \"" + protocol+ "\"");
+          _log.debug(getPrefix(requestId) + "HOST  : \"" + host+ "\"");
+          _log.debug(getPrefix(requestId) + "DEST  : \"" + destination+ "\"");
         }
       }
  else {
@@ -236,7 +268,6 @@
     }
     if (_log.shouldLog(Log.DEBUG))     _log.debug(getPrefix(requestId) + "NewRequest header: [" + newRequest.toString()+ "]");
     if (method == null || destination == null) {
-      l.log("No HTTP method found in the request.");
       if (out != null) {
         if ("http://".equalsIgnoreCase(protocol))         out.write(getErrorPage("denied",ERR_REQUEST_DENIED));
  else         out.write(getErrorPage("protocol",ERR_BAD_PROTOCOL));
@@ -251,7 +282,9 @@
       s.close();
       return;
     }
-    Destination clientDest=I2PTunnel.destFromName(destination);
+    Destination clientDest;
+    if ("i2p".equals(host))     clientDest=null;
+ else     clientDest=I2PTunnel.destFromName(destination);
     if (clientDest == null) {
       if (_log.shouldLog(Log.WARN))       _log.warn("Unable to resolve " + destination + " (proxy? "+ usingWWWProxy+ ", request: "+ targetRequest);
       byte[] header;

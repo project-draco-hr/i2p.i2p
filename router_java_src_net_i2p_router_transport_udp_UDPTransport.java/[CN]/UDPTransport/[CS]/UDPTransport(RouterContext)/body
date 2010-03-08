@@ -6,16 +6,23 @@
   _peersByRemoteHost=new HashMap(128);
   _dropList=new ArrayList(256);
   _endpoint=null;
-  TimedWeightedPriorityMessageQueue mq=new TimedWeightedPriorityMessageQueue(ctx,PRIORITY_LIMITS,PRIORITY_WEIGHT,this);
-  _outboundMessages=mq;
-  _activeThrottle=mq;
+  if (USE_PRIORITY) {
+    TimedWeightedPriorityMessageQueue mq=new TimedWeightedPriorityMessageQueue(ctx,PRIORITY_LIMITS,PRIORITY_WEIGHT,this);
+    _outboundMessages=mq;
+    _activeThrottle=mq;
+  }
+ else {
+    DummyThrottle mq=new DummyThrottle();
+    _outboundMessages=null;
+    _activeThrottle=mq;
+  }
   _cachedBid=new SharedBid[BID_VALUES.length];
   for (int i=0; i < BID_VALUES.length; i++) {
     _cachedBid[i]=new SharedBid(BID_VALUES[i]);
   }
   _fragments=new OutboundMessageFragments(_context,this,_activeThrottle);
   _inboundFragments=new InboundMessageFragments(_context,_fragments,this);
-  _flooder=new UDPFlooder(_context,this);
+  if (SHOULD_FLOOD_PEERS)   _flooder=new UDPFlooder(_context,this);
   _expireTimeout=EXPIRE_TIMEOUT;
   _expireEvent=new ExpirePeerEvent();
   _testEvent=new PeerTestEvent();
