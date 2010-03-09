@@ -1,5 +1,5 @@
 {
-  if (job == null)   return;
+  if (job == null || !_alive)   return;
   if (job instanceof JobImpl)   ((JobImpl)job).addedToQueue();
   long numReady=0;
   boolean alreadyExists=false;
@@ -19,7 +19,7 @@ synchronized (_jobLock) {
         if (job.getTiming().getStartAfter() <= _context.clock().now()) {
           job.getTiming().setStartAfter(_context.clock().now());
           if (job instanceof JobImpl)           ((JobImpl)job).madeReady();
-          _readyJobs.add(job);
+          _readyJobs.offer(job);
         }
  else {
           _timedJobs.add(job);
@@ -31,7 +31,6 @@ synchronized (_jobLock) {
   _context.statManager().addRateData("jobQueue.readyJobs",numReady,0);
   if (dropped) {
     _context.statManager().addRateData("jobQueue.droppedJobs",1,1);
-    if (_log.shouldLog(Log.WARN))     _log.warn("Dropping job due to overload!  # ready jobs: " + numReady + ": job = "+ job);
+    if (_log.shouldLog(Log.ERROR))     _log.error("Dropping job due to overload!  # ready jobs: " + numReady + ": job = "+ job);
   }
-  return;
 }
