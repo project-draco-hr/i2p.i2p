@@ -2,39 +2,37 @@
   long now=_context.clock().now();
   long nextSendTime=-1;
   InboundEstablishState inboundState=null;
-synchronized (_inboundStates) {
-    for (Iterator iter=_inboundStates.values().iterator(); iter.hasNext(); ) {
-      InboundEstablishState cur=(InboundEstablishState)iter.next();
-      if (cur.getState() == InboundEstablishState.STATE_CONFIRMED_COMPLETELY) {
-        iter.remove();
+  for (Iterator<InboundEstablishState> iter=_inboundStates.values().iterator(); iter.hasNext(); ) {
+    InboundEstablishState cur=iter.next();
+    if (cur.getState() == InboundEstablishState.STATE_CONFIRMED_COMPLETELY) {
+      iter.remove();
+      inboundState=cur;
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Removing completely confirmed inbound state");
+      break;
+    }
+ else     if (cur.getLifetime() > MAX_ESTABLISH_TIME) {
+      iter.remove();
+      _context.statManager().addRateData("udp.inboundEstablishFailedState",cur.getState(),cur.getLifetime());
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Removing expired inbound state");
+    }
+ else     if (cur.getState() == InboundEstablishState.STATE_FAILED) {
+      iter.remove();
+      _context.statManager().addRateData("udp.inboundEstablishFailedState",cur.getState(),cur.getLifetime());
+    }
+ else {
+      if (cur.getNextSendTime() <= now) {
         inboundState=cur;
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("Removing completely confirmed inbound state");
         break;
       }
- else       if (cur.getLifetime() > MAX_ESTABLISH_TIME) {
-        iter.remove();
-        _context.statManager().addRateData("udp.inboundEstablishFailedState",cur.getState(),cur.getLifetime());
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("Removing expired inbound state");
-      }
- else       if (cur.getState() == InboundEstablishState.STATE_FAILED) {
-        iter.remove();
-        _context.statManager().addRateData("udp.inboundEstablishFailedState",cur.getState(),cur.getLifetime());
-      }
  else {
-        if (cur.getNextSendTime() <= now) {
-          inboundState=cur;
-          break;
+        long when=-1;
+        if (cur.getNextSendTime() <= 0) {
+          when=cur.getEstablishBeginTime() + MAX_ESTABLISH_TIME;
         }
  else {
-          long when=-1;
-          if (cur.getNextSendTime() <= 0) {
-            when=cur.getEstablishBeginTime() + MAX_ESTABLISH_TIME;
-          }
- else {
-            when=cur.getNextSendTime();
-          }
-          if (when < nextSendTime)           nextSendTime=when;
+          when=cur.getNextSendTime();
         }
+        if (when < nextSendTime)         nextSendTime=when;
       }
     }
   }

@@ -1,21 +1,12 @@
 {
   UDPPacket rv=null;
-  int remaining=0;
-  while (_keepRunning) {
-synchronized (_inboundQueue) {
-      if (_inboundQueue.size() <= 0)       try {
-        _inboundQueue.wait();
-      }
- catch (      InterruptedException ie) {
-      }
-      if (_inboundQueue.size() > 0) {
-        rv=(UDPPacket)_inboundQueue.remove(0);
-        remaining=_inboundQueue.size();
-        if (remaining > 0)         _inboundQueue.notifyAll();
-        break;
-      }
+  while (_keepRunning && rv == null) {
+    try {
+      rv=_inboundQueue.take();
     }
+ catch (    InterruptedException ie) {
+    }
+    if (rv != null && rv.getMessageType() == TYPE_POISON)     return null;
   }
-  _context.statManager().addRateData("udp.receiveRemaining",remaining,0);
   return rv;
 }

@@ -18,14 +18,14 @@
   DataHelper.toLong(data,off,4,now);
   off+=4;
   data[off]|=UDPPacket.DATA_FLAG_WANT_REPLY;
-  if ((ackIdsRemaining != null) && (ackIdsRemaining.size() > 0))   data[off]|=UDPPacket.DATA_FLAG_EXPLICIT_ACK;
-  if ((partialACKsRemaining != null) && (partialACKsRemaining.size() > 0))   data[off]|=UDPPacket.DATA_FLAG_ACK_BITFIELDS;
+  if ((ackIdsRemaining != null) && (!ackIdsRemaining.isEmpty()))   data[off]|=UDPPacket.DATA_FLAG_EXPLICIT_ACK;
+  if ((partialACKsRemaining != null) && (!partialACKsRemaining.isEmpty()))   data[off]|=UDPPacket.DATA_FLAG_ACK_BITFIELDS;
   off++;
-  if ((ackIdsRemaining != null) && (ackIdsRemaining.size() > 0)) {
+  if ((ackIdsRemaining != null) && (!ackIdsRemaining.isEmpty())) {
     DataHelper.toLong(data,off,1,ackIdsRemaining.size());
     off++;
     for (int i=0; i < ackIdsRemaining.size(); i++) {
-      Long ackId=(Long)ackIdsRemaining.get(i);
+      Long ackId=ackIdsRemaining.get(i);
       DataHelper.toLong(data,off,4,ackId.longValue());
       off+=4;
       if (msg != null)       msg.append(" full ack: ").append(ackId.longValue());
@@ -37,7 +37,7 @@
     int numPartialOffset=off;
     off++;
     for (int i=0; i < partialACKsRemaining.size(); i++) {
-      ACKBitfield bitfield=(ACKBitfield)partialACKsRemaining.get(i);
+      ACKBitfield bitfield=partialACKsRemaining.get(i);
       if (bitfield.receivedComplete())       continue;
       DataHelper.toLong(data,off,4,bitfield.getMessageId());
       off+=4;
