@@ -1,52 +1,54 @@
 {
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Refilling the queues with " + bytesInbound + "/"+ bytesOutbound+ ": "+ getStatus().toString());
-  _availableInbound+=bytesInbound;
-  _availableOutbound+=bytesOutbound;
-  if (_availableInbound > _maxInbound) {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("available inbound (" + _availableInbound + ") exceeds our inbound burst ("+ _maxInbound+ "), so no supplement");
-    _unavailableInboundBurst+=_availableInbound - _maxInbound;
-    _availableInbound=_maxInbound;
-    if (_unavailableInboundBurst > _maxInboundBurst) {
-      _totalWastedInboundBytes+=_unavailableInboundBurst - _maxInboundBurst;
-      _unavailableInboundBurst=_maxInboundBurst;
+  int avi=_availableInbound.addAndGet((int)bytesInbound);
+  if (avi > _maxInbound) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("available inbound (" + avi + ") exceeds our inbound burst ("+ _maxInbound+ "), so no supplement");
+    int uib=_unavailableInboundBurst.addAndGet(avi - _maxInbound);
+    _availableInbound.set(_maxInbound);
+    if (uib > _maxInboundBurst) {
+      _totalWastedInboundBytes.addAndGet(uib - _maxInboundBurst);
+      _unavailableInboundBurst.set(_maxInboundBurst);
     }
   }
  else {
     int want=(int)maxBurstIn;
-    if (want > (_maxInbound - _availableInbound))     want=_maxInbound - _availableInbound;
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("want to pull " + want + " from the inbound burst ("+ _unavailableInboundBurst+ ") to supplement "+ _availableInbound+ " (max: "+ _maxInbound+ ")");
+    if (want > (_maxInbound - avi))     want=_maxInbound - avi;
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("want to pull " + want + " from the inbound burst ("+ _unavailableInboundBurst+ ") to supplement "+ avi+ " (max: "+ _maxInbound+ ")");
     if (want > 0) {
-      if (want <= _unavailableInboundBurst) {
-        _availableInbound+=want;
-        _unavailableInboundBurst-=want;
+      int uib=_unavailableInboundBurst.get();
+      if (want <= uib) {
+        _availableInbound.addAndGet(want);
+        _unavailableInboundBurst.addAndGet(0 - want);
       }
  else {
-        _availableInbound+=_unavailableInboundBurst;
-        _unavailableInboundBurst=0;
+        _availableInbound.addAndGet(uib);
+        _unavailableInboundBurst.set(0);
       }
     }
   }
-  if (_availableOutbound > _maxOutbound) {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("available outbound (" + _availableOutbound + ") exceeds our outbound burst ("+ _maxOutbound+ "), so no supplement");
-    _unavailableOutboundBurst+=_availableOutbound - _maxOutbound;
-    _availableOutbound=_maxOutbound;
-    if (_unavailableOutboundBurst > _maxOutboundBurst) {
-      _totalWastedOutboundBytes+=_unavailableOutboundBurst - _maxOutboundBurst;
-      _unavailableOutboundBurst=_maxOutboundBurst;
+  int avo=_availableOutbound.addAndGet((int)bytesOutbound);
+  if (avo > _maxOutbound) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("available outbound (" + avo + ") exceeds our outbound burst ("+ _maxOutbound+ "), so no supplement");
+    int uob=_unavailableOutboundBurst.getAndAdd(avo - _maxOutbound);
+    _availableOutbound.set(_maxOutbound);
+    if (uob > _maxOutboundBurst) {
+      _totalWastedOutboundBytes.getAndAdd(uob - _maxOutboundBurst);
+      _unavailableOutboundBurst.set(_maxOutboundBurst);
     }
   }
  else {
     int want=(int)maxBurstOut;
-    if (want > (_maxOutbound - _availableOutbound))     want=_maxOutbound - _availableOutbound;
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("want to pull " + want + " from the outbound burst ("+ _unavailableOutboundBurst+ ") to supplement "+ _availableOutbound+ " (max: "+ _maxOutbound+ ")");
+    if (want > (_maxOutbound - avo))     want=_maxOutbound - avo;
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("want to pull " + want + " from the outbound burst ("+ _unavailableOutboundBurst+ ") to supplement "+ avo+ " (max: "+ _maxOutbound+ ")");
     if (want > 0) {
-      if (want <= _unavailableOutboundBurst) {
-        _availableOutbound+=want;
-        _unavailableOutboundBurst-=want;
+      int uob=_unavailableOutboundBurst.get();
+      if (want <= uob) {
+        _availableOutbound.addAndGet(want);
+        _unavailableOutboundBurst.addAndGet(0 - want);
       }
  else {
-        _availableOutbound+=_unavailableOutboundBurst;
-        _unavailableOutboundBurst=0;
+        _availableOutbound.addAndGet(uob);
+        _unavailableOutboundBurst.set(0);
       }
     }
   }

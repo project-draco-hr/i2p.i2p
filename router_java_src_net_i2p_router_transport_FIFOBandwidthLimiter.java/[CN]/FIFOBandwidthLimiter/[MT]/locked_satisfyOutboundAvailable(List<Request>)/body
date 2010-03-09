@@ -1,6 +1,6 @@
 {
   for (int i=0; i < _pendingOutboundRequests.size(); i++) {
-    if (_availableOutbound <= 0)     break;
+    if (_availableOutbound.get() <= 0)     break;
     SimpleRequest req=(SimpleRequest)_pendingOutboundRequests.get(i);
     long waited=now() - req.getRequestTime();
     if (req.getAborted()) {
@@ -14,11 +14,12 @@
       continue;
     }
     int requested=req.getPendingOutboundRequested();
-    int allocated=0;
-    if (_availableOutbound > requested)     allocated=requested;
- else     allocated=_availableOutbound;
-    _availableOutbound-=allocated;
-    _totalAllocatedOutboundBytes+=allocated;
+    int avo=_availableOutbound.get();
+    int allocated;
+    if (avo >= requested)     allocated=requested;
+ else     allocated=avo;
+    _availableOutbound.addAndGet(0 - allocated);
+    _totalAllocatedOutboundBytes.addAndGet(allocated);
     req.allocateBytes(0,allocated);
     satisfied.add(req);
     if (req.getPendingOutboundRequested() > 0) {
