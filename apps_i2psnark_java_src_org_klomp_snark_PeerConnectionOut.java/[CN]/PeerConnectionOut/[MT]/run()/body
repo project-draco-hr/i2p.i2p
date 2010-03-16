@@ -49,8 +49,18 @@ synchronized (sendQueue) {
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Send " + peer + ": "+ m+ " on "+ peer.metainfo.getName());
         lastSent=System.currentTimeMillis();
         if (m.type == Message.CHOKE)         removeMessage(Message.PIECE);
-        if (m.type == Message.PIECE)         state.uploaded(m.len);
+        int remainder=0;
+        if (m.type == Message.PIECE) {
+          if (m.len <= PeerState.PARTSIZE) {
+            state.uploaded(m.len);
+          }
+ else {
+            state.uploaded(PeerState.PARTSIZE);
+            remainder=m.len - PeerState.PARTSIZE;
+          }
+        }
         m.sendMessage(dout);
+        if (remainder > 0)         state.uploaded(remainder);
         m=null;
       }
     }
