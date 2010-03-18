@@ -3,14 +3,12 @@
   List<TunnelGateway.Pending> queueBuf=new ArrayList(32);
   while (!_stop) {
     try {
-synchronized (_wantsPumping) {
-        if (_wantsPumping.size() > 0)         gw=_wantsPumping.remove(0);
- else         _wantsPumping.wait();
-      }
+      gw=_wantsPumping.take();
     }
  catch (    InterruptedException ie) {
     }
     if (gw != null) {
+      if (gw.getMessagesSent() == POISON_PTG)       break;
       gw.pump(queueBuf);
       gw=null;
     }

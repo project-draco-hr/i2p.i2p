@@ -31,35 +31,33 @@
   int deferred=0;
   boolean rejected=false;
   int queueCount=0;
-synchronized (_outboundStates) {
-    state=(OutboundEstablishState)_outboundStates.get(to);
-    if (state == null) {
-      if (_outboundStates.size() >= getMaxConcurrentEstablish()) {
-        List queued=(List)_queuedOutbound.get(to);
-        if (queued == null) {
-          queued=new ArrayList(1);
-          if (_queuedOutbound.size() > MAX_QUEUED_OUTBOUND) {
-            rejected=true;
-          }
+  state=_outboundStates.get(to);
+  if (state == null) {
+    if (_outboundStates.size() >= getMaxConcurrentEstablish()) {
+      if (_queuedOutbound.size() > MAX_QUEUED_OUTBOUND) {
+        rejected=true;
+      }
  else {
-            _queuedOutbound.put(to,queued);
-          }
-        }
+        List<OutNetMessage> newQueued=new ArrayList(1);
+        List<OutNetMessage> queued=_queuedOutbound.putIfAbsent(to,newQueued);
+        if (queued == null)         queued=newQueued;
         queueCount=queued.size();
-        if ((queueCount < MAX_QUEUED_PER_PEER) && (!rejected))         queued.add(msg);
-        deferred=_queuedOutbound.size();
+        if (queueCount < MAX_QUEUED_PER_PEER)         queued.add(msg);
       }
+      deferred=_queuedOutbound.size();
+    }
  else {
-        state=new OutboundEstablishState(_context,remAddr,port,msg.getTarget().getIdentity(),new SessionKey(addr.getIntroKey()),addr);
-        _outboundStates.put(to,state);
-        SimpleScheduler.getInstance().addEvent(new Expire(to,state),10 * 1000);
-      }
+      state=new OutboundEstablishState(_context,remAddr,port,msg.getTarget().getIdentity(),new SessionKey(addr.getIntroKey()),addr);
+      OutboundEstablishState oldState=_outboundStates.putIfAbsent(to,state);
+      boolean isNew=oldState == null;
+      if (!isNew)       state=oldState;
+ else       SimpleScheduler.getInstance().addEvent(new Expire(to,state),10 * 1000);
     }
-    if (state != null) {
-      state.addMessage(msg);
-      List queued=(List)_queuedOutbound.remove(to);
-      if (queued != null)       for (int i=0; i < queued.size(); i++)       state.addMessage((OutNetMessage)queued.get(i));
-    }
+  }
+  if (state != null) {
+    state.addMessage(msg);
+    List<OutNetMessage> queued=_queuedOutbound.remove(to);
+    if (queued != null)     for (int i=0; i < queued.size(); i++)     state.addMessage(queued.get(i));
   }
   if (rejected) {
     _transport.failed(msg,"Too many pending outbound connections");

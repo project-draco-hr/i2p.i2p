@@ -6,16 +6,16 @@
     long expiredLifetime=0;
     int remaining=0;
     try {
-synchronized (_completeMessages) {
-        while (message == null) {
-          if (_completeMessages.size() > 0)           message=(InboundMessageState)_completeMessages.remove(_completeMessages.size() - 1);
- else           _completeMessages.wait(5000);
-          if ((message != null) && (message.isExpired())) {
-            expiredLifetime+=message.getLifetime();
-            message=null;
-            expired++;
-          }
-          remaining=_completeMessages.size();
+      while (message == null) {
+        message=_completeMessages.take();
+        if ((message != null) && (message.getMessageId() == POISON_IMS)) {
+          message=null;
+          break;
+        }
+        if ((message != null) && (message.isExpired())) {
+          expiredLifetime+=message.getLifetime();
+          message=null;
+          expired++;
         }
       }
     }

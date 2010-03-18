@@ -13,17 +13,17 @@
       if (lowest - 1 > _highestAckedThrough)       _highestAckedThrough=lowest - 1;
     }
   }
-  List acked=null;
+  List<PacketLocal> acked=null;
 synchronized (_outboundPackets) {
-    for (Iterator iter=_outboundPackets.keySet().iterator(); iter.hasNext(); ) {
-      Long id=(Long)iter.next();
+    for (Iterator<Long> iter=_outboundPackets.keySet().iterator(); iter.hasNext(); ) {
+      Long id=iter.next();
       if (id.longValue() <= ackThrough) {
         boolean nacked=false;
         if (nacks != null) {
           for (int i=0; i < nacks.length; i++) {
             if (nacks[i] == id.longValue()) {
               nacked=true;
-              PacketLocal nackedPacket=(PacketLocal)_outboundPackets.get(id);
+              PacketLocal nackedPacket=_outboundPackets.get(id);
               nackedPacket.incrementNACKs();
               break;
             }
@@ -31,7 +31,7 @@ synchronized (_outboundPackets) {
         }
         if (!nacked) {
           if (acked == null)           acked=new ArrayList(1);
-          PacketLocal ackedPacket=(PacketLocal)_outboundPackets.get(id);
+          PacketLocal ackedPacket=_outboundPackets.get(id);
           ackedPacket.ackReceived();
           acked.add(ackedPacket);
         }
@@ -42,7 +42,7 @@ synchronized (_outboundPackets) {
     }
     if (acked != null) {
       for (int i=0; i < acked.size(); i++) {
-        PacketLocal p=(PacketLocal)acked.get(i);
+        PacketLocal p=acked.get(i);
         _outboundPackets.remove(new Long(p.getSequenceNum()));
         _ackedPackets++;
         if (p.getNumSends() > 1) {
@@ -51,7 +51,7 @@ synchronized (_outboundPackets) {
         }
       }
     }
-    if ((_outboundPackets.size() <= 0) && (_activeResends != 0)) {
+    if ((_outboundPackets.isEmpty()) && (_activeResends != 0)) {
       if (_log.shouldLog(Log.INFO))       _log.info("All outbound packets acked, clearing " + _activeResends);
       _activeResends=0;
     }

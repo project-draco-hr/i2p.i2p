@@ -1,14 +1,12 @@
 {
   long nonce=_context.random().nextLong(MAX_NONCE);
   while (true) {
-synchronized (_liveIntroductions) {
-      OutboundEstablishState old=(OutboundEstablishState)_liveIntroductions.put(new Long(nonce),state);
-      if (old != null) {
-        nonce=_context.random().nextLong(MAX_NONCE);
-      }
+    OutboundEstablishState old=_liveIntroductions.putIfAbsent(new Long(nonce),state);
+    if (old != null) {
+      nonce=_context.random().nextLong(MAX_NONCE);
+    }
  else {
-        break;
-      }
+      break;
     }
   }
   SimpleScheduler.getInstance().addEvent(new FailIntroduction(state,nonce),INTRO_ATTEMPT_TIMEOUT);

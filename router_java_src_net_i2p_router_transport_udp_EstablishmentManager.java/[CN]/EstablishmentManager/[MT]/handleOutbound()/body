@@ -2,38 +2,36 @@
   long now=_context.clock().now();
   long nextSendTime=-1;
   OutboundEstablishState outboundState=null;
-synchronized (_outboundStates) {
-    for (Iterator iter=_outboundStates.values().iterator(); iter.hasNext(); ) {
-      OutboundEstablishState cur=(OutboundEstablishState)iter.next();
-      if (cur == null)       continue;
-      if (cur.getState() == OutboundEstablishState.STATE_CONFIRMED_COMPLETELY) {
-        iter.remove();
+  for (Iterator<OutboundEstablishState> iter=_outboundStates.values().iterator(); iter.hasNext(); ) {
+    OutboundEstablishState cur=iter.next();
+    if (cur == null)     continue;
+    if (cur.getState() == OutboundEstablishState.STATE_CONFIRMED_COMPLETELY) {
+      iter.remove();
+      outboundState=cur;
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Removing confirmed outbound: " + cur);
+      break;
+    }
+ else     if (cur.getLifetime() > MAX_ESTABLISH_TIME) {
+      iter.remove();
+      outboundState=cur;
+      _context.statManager().addRateData("udp.outboundEstablishFailedState",cur.getState(),cur.getLifetime());
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Removing expired outbound: " + cur);
+      break;
+    }
+ else {
+      if (cur.getNextSendTime() <= now) {
         outboundState=cur;
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("Removing confirmed outbound: " + cur);
         break;
       }
- else       if (cur.getLifetime() > MAX_ESTABLISH_TIME) {
-        iter.remove();
-        outboundState=cur;
-        _context.statManager().addRateData("udp.outboundEstablishFailedState",cur.getState(),cur.getLifetime());
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("Removing expired outbound: " + cur);
-        break;
-      }
  else {
-        if (cur.getNextSendTime() <= now) {
-          outboundState=cur;
-          break;
+        long when=-1;
+        if (cur.getNextSendTime() <= 0) {
+          when=cur.getEstablishBeginTime() + MAX_ESTABLISH_TIME;
         }
  else {
-          long when=-1;
-          if (cur.getNextSendTime() <= 0) {
-            when=cur.getEstablishBeginTime() + MAX_ESTABLISH_TIME;
-          }
- else {
-            when=cur.getNextSendTime();
-          }
-          if ((nextSendTime <= 0) || (when < nextSendTime))           nextSendTime=when;
+          when=cur.getNextSendTime();
         }
+        if ((nextSendTime <= 0) || (when < nextSendTime))         nextSendTime=when;
       }
     }
   }

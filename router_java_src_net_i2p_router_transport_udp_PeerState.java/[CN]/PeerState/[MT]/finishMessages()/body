@@ -1,16 +1,16 @@
 {
   int rv=0;
-  List msgs=_outboundMessages;
+  List<OutboundMessageState> msgs=_outboundMessages;
   if (_dead) {
     dropOutbound();
     return 0;
   }
-  List succeeded=null;
-  List failed=null;
+  List<OutboundMessageState> succeeded=null;
+  List<OutboundMessageState> failed=null;
 synchronized (msgs) {
     int size=msgs.size();
     for (int i=0; i < size; i++) {
-      OutboundMessageState state=(OutboundMessageState)msgs.get(i);
+      OutboundMessageState state=msgs.get(i);
       if (state.isComplete()) {
         msgs.remove(i);
         i--;
@@ -41,14 +41,14 @@ synchronized (msgs) {
     rv=msgs.size();
   }
   for (int i=0; succeeded != null && i < succeeded.size(); i++) {
-    OutboundMessageState state=(OutboundMessageState)succeeded.get(i);
+    OutboundMessageState state=succeeded.get(i);
     _transport.succeeded(state);
     state.releaseResources();
     OutNetMessage msg=state.getMessage();
     if (msg != null)     msg.timestamp("sending complete");
   }
   for (int i=0; failed != null && i < failed.size(); i++) {
-    OutboundMessageState state=(OutboundMessageState)failed.get(i);
+    OutboundMessageState state=failed.get(i);
     OutNetMessage msg=state.getMessage();
     if (msg != null) {
       msg.timestamp("expired in the active pool");

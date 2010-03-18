@@ -1,9 +1,6 @@
 {
   long nonce=reader.getRelayResponseReader().readNonce();
-  OutboundEstablishState state=null;
-synchronized (_liveIntroductions) {
-    state=(OutboundEstablishState)_liveIntroductions.remove(new Long(nonce));
-  }
+  OutboundEstablishState state=_liveIntroductions.remove(new Long(nonce));
   if (state == null)   return;
   int sz=reader.getRelayResponseReader().readCharlieIPSize();
   byte ip[]=new byte[sz];
@@ -23,9 +20,7 @@ synchronized (_liveIntroductions) {
   if (_log.shouldLog(Log.INFO))   _log.info("Received relay intro for " + state.getRemoteIdentity().calculateHash().toBase64() + " - they are on "+ addr.toString()+ ":"+ port+ " (according to "+ bob.toString(true)+ ")");
   RemoteHostId oldId=state.getRemoteHostId();
   state.introduced(addr,ip,port);
-synchronized (_outboundStates) {
-    _outboundStates.remove(oldId);
-    _outboundStates.put(state.getRemoteHostId(),state);
-  }
+  _outboundStates.remove(oldId);
+  _outboundStates.put(state.getRemoteHostId(),state);
   notifyActivity();
 }
