@@ -6,24 +6,17 @@
   boolean reject=false;
   int active=0;
   int total=0;
-synchronized (_connectionLock) {
-    total=_connectionByInboundId.size();
-    for (Iterator iter=_connectionByInboundId.values().iterator(); iter.hasNext(); ) {
-      if (((Connection)iter.next()).getIsConnected())       active++;
-    }
-    if (locked_tooManyStreams()) {
-      reject=true;
-    }
+  if (locked_tooManyStreams()) {
+    reject=true;
+  }
  else {
-      while (true) {
-        Connection oldCon=(Connection)_connectionByInboundId.put(new Long(receiveId),con);
-        if (oldCon == null) {
-          break;
-        }
+    while (true) {
+      Connection oldCon=_connectionByInboundId.putIfAbsent(Long.valueOf(receiveId),con);
+      if (oldCon == null) {
+        break;
+      }
  else {
-          _connectionByInboundId.put(new Long(receiveId),oldCon);
-          receiveId=_context.random().nextLong(Packet.MAX_STREAM_ID - 1) + 1;
-        }
+        receiveId=_context.random().nextLong(Packet.MAX_STREAM_ID - 1) + 1;
       }
     }
   }
@@ -45,9 +38,7 @@ synchronized (_connectionLock) {
     con.getPacketHandler().receivePacket(synPacket,con);
   }
  catch (  I2PException ie) {
-synchronized (_connectionLock) {
-      _connectionByInboundId.remove(new Long(receiveId));
-    }
+    _connectionByInboundId.remove(Long.valueOf(receiveId));
     return null;
   }
   _context.statManager().addRateData("stream.connectionReceived",1,0);
