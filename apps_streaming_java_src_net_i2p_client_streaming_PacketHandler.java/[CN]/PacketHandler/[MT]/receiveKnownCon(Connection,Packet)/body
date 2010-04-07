@@ -32,7 +32,7 @@
       }
     }
  else {
-      if ((con.getSendStreamId() <= 0) || (DataHelper.eq(con.getSendStreamId(),packet.getReceiveStreamId())) || (packet.getSequenceNum() <= ConnectionOptions.MIN_WINDOW_SIZE)) {
+      if ((con.getSendStreamId() <= 0) || (con.getSendStreamId() == packet.getReceiveStreamId()) || (packet.getSequenceNum() <= ConnectionOptions.MIN_WINDOW_SIZE)) {
         long oldId=con.getSendStreamId();
         if (packet.isFlagSet(Packet.FLAG_SYNCHRONIZE)) {
           if (oldId <= 0) {
@@ -42,6 +42,7 @@
           }
  else {
             if (_log.shouldLog(Log.ERROR))             _log.error("Received a syn with the wrong IDs, con=" + con + " packet="+ packet);
+            sendReset(packet);
             packet.releasePayload();
             return;
           }
@@ -66,11 +67,12 @@
             StringBuilder buf=new StringBuilder(512);
             buf.append("Received a packet on the wrong stream: ");
             buf.append(packet);
-            buf.append(" connection: ");
+            buf.append("\nthis connection:\n");
             buf.append(con);
+            buf.append("\nall connections:");
             for (Iterator iter=cons.iterator(); iter.hasNext(); ) {
               Connection cur=(Connection)iter.next();
-              buf.append(" ").append(cur);
+              buf.append('\n').append(cur);
             }
             _log.error(buf.toString(),new Exception("Wrong stream"));
           }
