@@ -10,11 +10,12 @@
   FileInputStream fis1=null;
   FileInputStream fis2=null;
   try {
-    if (_infoExists) {
+    if (_infoExists && _keysExist) {
       fis1=new FileInputStream(rif);
       info=new RouterInfo();
       info.readBytes(fis1);
       _log.debug("Reading in routerInfo from " + rif.getAbsolutePath() + " and it has "+ info.getAddresses().size()+ " addresses");
+      _us=info;
     }
     if (_keysExist) {
       fis2=new FileInputStream(rkf);
@@ -31,10 +32,9 @@
       getContext().keyManager().setPublicKey(pubkey);
       getContext().keyManager().setSigningPublicKey(signingPubKey);
     }
-    _us=info;
   }
  catch (  IOException ioe) {
-    _log.error("Error reading the router info from " + rif.getAbsolutePath() + " and the keys from "+ rkf.getAbsolutePath(),ioe);
+    _log.log(Log.CRIT,"Error reading the router info from " + rif.getAbsolutePath() + " and the keys from "+ rkf.getAbsolutePath(),ioe);
     _us=null;
     rif.delete();
     rkf.delete();
@@ -42,7 +42,7 @@
     _keysExist=false;
   }
 catch (  DataFormatException dfe) {
-    _log.error("Corrupt router info or keys at " + rif.getAbsolutePath() + " / "+ rkf.getAbsolutePath(),dfe);
+    _log.log(Log.CRIT,"Corrupt router info or keys at " + rif.getAbsolutePath() + " / "+ rkf.getAbsolutePath(),dfe);
     _us=null;
     rif.delete();
     rkf.delete();
