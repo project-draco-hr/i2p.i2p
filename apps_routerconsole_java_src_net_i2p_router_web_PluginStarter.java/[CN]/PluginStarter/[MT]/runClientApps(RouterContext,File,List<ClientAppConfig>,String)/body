@@ -1,5 +1,9 @@
 {
   Log log=ctx.logManager().getLog(PluginStarter.class);
+  String pluginName=pluginDir.getName();
+  if (!pluginThreadGroups.containsKey(pluginName))   pluginThreadGroups.put(pluginName,new ThreadGroup(pluginName));
+  ThreadGroup pluginThreadGroup=pluginThreadGroups.get(pluginName);
+  if (action.equals("start"))   pluginJobs.put(pluginName,new ConcurrentHashSet<Job>());
   for (  ClientAppConfig app : apps) {
     if (action.equals("start") && app.disabled)     continue;
     String argVal[];
@@ -35,11 +39,13 @@
     }
  else     if (app.delay == 0 || !action.equals("start")) {
       LoadClientAppsJob.testClient(app.className);
-      LoadClientAppsJob.runClient(app.className,app.clientName,argVal,log);
+      LoadClientAppsJob.runClient(app.className,app.clientName,argVal,log,pluginThreadGroup);
     }
  else {
       LoadClientAppsJob.testClient(app.className);
-      ctx.jobQueue().addJob(new LoadClientAppsJob.DelayedRunClient(ctx,app.className,app.clientName,argVal,app.delay));
+      Job job=new LoadClientAppsJob.DelayedRunClient(ctx,app.className,app.clientName,argVal,app.delay,pluginThreadGroup);
+      ctx.jobQueue().addJob(job);
+      pluginJobs.get(pluginName).add(job);
     }
   }
 }
