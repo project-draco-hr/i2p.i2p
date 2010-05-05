@@ -25,6 +25,7 @@
         argVal[i]=argVal[i].replace("$PLUGIN",pluginDir.getAbsolutePath());
       }
     }
+    ClassLoader cl=null;
     if (app.classpath != null) {
       String cp=new String(app.classpath);
       if (cp.indexOf("$") >= 0) {
@@ -32,18 +33,26 @@
         cp=cp.replace("$CONFIG",ctx.getConfigDir().getAbsolutePath());
         cp=cp.replace("$PLUGIN",pluginDir.getAbsolutePath());
       }
-      addToClasspath(cp,app.clientName,log);
+      String clCacheKey=pluginName + app.className + app.args;
+      if (!action.equals("start"))       cl=_clCache.get(clCacheKey);
+      if (cl == null) {
+        URL[] urls=classpathToURLArray(cp,app.clientName,log);
+        if (urls != null) {
+          cl=new URLClassLoader(urls,ClassLoader.getSystemClassLoader());
+          if (action.equals("start"))           _clCache.put(clCacheKey,cl);
+        }
+      }
     }
     if (app.delay < 0 && action.equals("start")) {
-      LoadClientAppsJob.runClientInline(app.className,app.clientName,argVal,log);
+      LoadClientAppsJob.runClientInline(app.className,app.clientName,argVal,log,cl);
     }
  else     if (app.delay == 0 || !action.equals("start")) {
-      LoadClientAppsJob.testClient(app.className);
-      LoadClientAppsJob.runClient(app.className,app.clientName,argVal,log,pluginThreadGroup);
+      LoadClientAppsJob.testClient(app.className,cl);
+      LoadClientAppsJob.runClient(app.className,app.clientName,argVal,log,pluginThreadGroup,cl);
     }
  else {
-      LoadClientAppsJob.testClient(app.className);
-      Job job=new LoadClientAppsJob.DelayedRunClient(ctx,app.className,app.clientName,argVal,app.delay,pluginThreadGroup);
+      LoadClientAppsJob.testClient(app.className,cl);
+      Job job=new LoadClientAppsJob.DelayedRunClient(ctx,app.className,app.clientName,argVal,app.delay,pluginThreadGroup,cl);
       ctx.jobQueue().addJob(job);
       pluginJobs.get(pluginName).add(job);
     }
