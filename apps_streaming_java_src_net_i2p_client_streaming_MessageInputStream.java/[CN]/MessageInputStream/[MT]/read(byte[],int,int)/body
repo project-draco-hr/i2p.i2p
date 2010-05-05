@@ -5,10 +5,10 @@
   if (_readTimeout > 0)   expiration=_readTimeout + System.currentTimeMillis();
 synchronized (_dataLock) {
     for (int i=0; i < length; i++) {
-      if ((_readyDataBlocks.size() <= 0) && (i == 0)) {
-        while (_readyDataBlocks.size() <= 0) {
+      if ((_readyDataBlocks.isEmpty()) && (i == 0)) {
+        while (_readyDataBlocks.isEmpty()) {
           if (_locallyClosed)           throw new IOException("Already closed, you wanker");
-          if ((_notYetReadyBlocks.size() <= 0) && (_closeReceived)) {
+          if ((_notYetReadyBlocks.isEmpty()) && (_closeReceived)) {
             if (_log.shouldLog(Log.INFO))             _log.info("read(...," + offset + ", "+ length+ ")["+ i+ "] got EOF after "+ _readTotal+ " "+ toString());
             return -1;
           }
@@ -37,7 +37,7 @@ synchronized (_dataLock) {
               if (_log.shouldLog(Log.DEBUG))               _log.debug("read(...," + offset + ", "+ length+ ")["+ i+ ") with nonblocking setup: "+ toString());
               return i;
             }
-            if (_readyDataBlocks.size() <= 0) {
+            if (_readyDataBlocks.isEmpty()) {
               if ((_readTimeout > 0) && (expiration < System.currentTimeMillis())) {
                 if (_log.shouldLog(Log.INFO))                 _log.info("read(...," + offset + ", "+ length+ ")["+ i+ ") expired: "+ toString());
                 return i;
@@ -47,7 +47,7 @@ synchronized (_dataLock) {
         }
         i--;
       }
- else       if (_readyDataBlocks.size() <= 0) {
+ else       if (_readyDataBlocks.isEmpty()) {
         if (_log.shouldLog(Log.DEBUG))         _log.debug("read(...," + offset + ", "+ length+ ")["+ i+ "] no more ready blocks, returning");
         return i;
       }
