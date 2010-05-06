@@ -9,22 +9,26 @@
   try {
     _identity.writeBytes(out);
     DataHelper.writeDate(out,new Date(_published));
-    if (isHidden()) {
+    int sz=_addresses.size();
+    if (sz <= 0 || isHidden()) {
       DataHelper.writeLong(out,1,0);
     }
  else {
-      DataHelper.writeLong(out,1,_addresses.size());
-      List addresses=DataHelper.sortStructures(_addresses);
-      for (Iterator iter=addresses.iterator(); iter.hasNext(); ) {
-        RouterAddress addr=(RouterAddress)iter.next();
+      DataHelper.writeLong(out,1,sz);
+      Collection<RouterAddress> addresses=_addresses;
+      if (sz > 1)       addresses=(Collection<RouterAddress>)DataHelper.sortStructures(addresses);
+      for (      RouterAddress addr : addresses) {
         addr.writeBytes(out);
       }
     }
-    DataHelper.writeLong(out,1,_peers.size());
-    List peers=DataHelper.sortStructures(_peers);
-    for (Iterator iter=peers.iterator(); iter.hasNext(); ) {
-      Hash peerHash=(Hash)iter.next();
-      peerHash.writeBytes(out);
+    int psz=_peers.size();
+    DataHelper.writeLong(out,1,psz);
+    if (psz > 0) {
+      Collection<Hash> peers=_peers;
+      if (psz > 1)       peers=(Collection<Hash>)DataHelper.sortStructures(peers);
+      for (      Hash peerHash : peers) {
+        peerHash.writeBytes(out);
+      }
     }
     DataHelper.writeProperties(out,_options);
   }
