@@ -1,7 +1,22 @@
 {
   Destination from=syn.getOptionalFrom();
   if (from == null)   return true;
-  if (_defaultOptions.isAccessListEnabled())   return !_defaultOptions.getAccessList().contains(from.calculateHash());
-  if (_defaultOptions.isBlacklistEnabled())   return _defaultOptions.getBlacklist().contains(from.calculateHash());
+  Hash h=from.calculateHash();
+  boolean throttled=false;
+  if (_minuteThrottler != null && _minuteThrottler.shouldThrottle(h)) {
+    _context.statManager().addRateData("stream.con.throttledMinute",1,0);
+    throttled=true;
+  }
+  if (_hourThrottler != null && _hourThrottler.shouldThrottle(h)) {
+    _context.statManager().addRateData("stream.con.throttledHour",1,0);
+    throttled=true;
+  }
+  if (_dayThrottler != null && _dayThrottler.shouldThrottle(h)) {
+    _context.statManager().addRateData("stream.con.throttledDay",1,0);
+    throttled=true;
+  }
+  if (throttled)   return true;
+  if (_defaultOptions.isAccessListEnabled())   return !_defaultOptions.getAccessList().contains(h);
+  if (_defaultOptions.isBlacklistEnabled())   return _defaultOptions.getBlacklist().contains(h);
   return false;
 }
