@@ -1,7 +1,25 @@
 {
   String path=req.getServletPath();
   if (!(path == null || path.equals("/") || path.equals("/index.jsp") || path.equals("/index.html"))) {
-    super.service(req,resp);
+    if (path.endsWith("/")) {
+      String pathInfo=req.getPathInfo();
+      String pathInContext=URI.addPaths(path,pathInfo);
+      resp.setCharacterEncoding("UTF-8");
+      resp.setContentType("text/html; charset=UTF-8");
+      Resource resource=getResource(pathInContext);
+      if (resource == null || (!resource.exists()) || !resource.isDirectory()) {
+        resp.sendError(HttpResponse.__404_Not_Found);
+      }
+ else {
+        String base=URI.addPaths(req.getRequestURI(),"/");
+        String listing=getListHTML(resource,base,true);
+        if (listing != null)         resp.getWriter().write(listing);
+ else         resp.sendError(HttpResponse.__404_Not_Found);
+      }
+    }
+ else {
+      super.service(req,resp);
+    }
     return;
   }
   req.setCharacterEncoding("UTF-8");

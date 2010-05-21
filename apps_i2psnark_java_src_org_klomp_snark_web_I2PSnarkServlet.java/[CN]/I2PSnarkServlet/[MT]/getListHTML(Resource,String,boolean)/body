@@ -1,0 +1,43 @@
+{
+  if (!r.isDirectory())   return null;
+  String[] ls=r.list();
+  if (ls == null)   return null;
+  Arrays.sort(ls,Collator.getInstance());
+  StringBuilder buf=new StringBuilder(4096);
+  buf.append("<HTML><HEAD><TITLE>");
+  String title=URI.decodePath(base);
+  if (title.startsWith("/i2psnark/"))   title=title.substring("/i2psnark/".length());
+  if (title.endsWith("/"))   title=title.substring(0,title.length() - 1);
+  title=_("Completed Torrent") + ": " + title;
+  buf.append(title);
+  buf.append("</TITLE>").append(HEADER).append("</HEAD><BODY>\n<div class=\"snarknavbar\">");
+  buf.append(title);
+  if (parent) {
+    buf.append("\n<br><A HREF=\"");
+    buf.append(URI.addPaths(base,"../"));
+    buf.append("\"><img border=\"0\" src=\"/themes/console/images/outbound.png\"> ").append(_("Up to higher level directory")).append("</A>\n");
+  }
+  buf.append("</div><div class=\"page\"><div class=\"mainsection\">" + "<TABLE BORDER=0 class=\"snarkTorrents\" cellpadding=\"5px 10px\">" + "<thead><tr><th>").append(_("File")).append("</th><th>").append(_("Size")).append("</th><th>").append(_("Status")).append("</th></tr></thead>");
+  for (int i=0; i < ls.length; i++) {
+    String encoded=URI.encodePath(ls[i]);
+    Resource item=r.addPath(ls[i]);
+    String rowClass=(i % 2 == 0 ? "snarkTorrentEven" : "snarkTorrentOdd");
+    buf.append("<TR class=\"").append(rowClass).append("\"><TD class=\"snarkFileName ").append(rowClass).append("\">");
+    String path=URI.addPaths(base,encoded);
+    if (item.isDirectory() && !path.endsWith("/"))     path=URI.addPaths(path,"/");
+    String plc=path.toLowerCase();
+    if (plc.endsWith(".jpg") || plc.endsWith(".png") || plc.endsWith(".gif"))     buf.append("<a href=\"").append(path).append("\"><img alt=\"\" border=\"0\" class=\"thumb\" src=\"").append(path).append("\"></a> ");
+    buf.append("<A HREF=\"");
+    buf.append(path);
+    buf.append("\">");
+    buf.append(ls[i]);
+    buf.append("</TD><TD ALIGN=right class=\"").append(rowClass).append("\">");
+    if (!item.isDirectory())     buf.append(DataHelper.formatSize(item.length())).append(' ').append(_("Bytes"));
+    buf.append("</TD><TD>");
+    if (!item.isDirectory())     buf.append(_("Complete"));
+    buf.append("</TD></TR>\n");
+  }
+  buf.append("</TABLE>\n");
+  buf.append("</div></div></BODY></HTML>\n");
+  return buf.toString();
+}
