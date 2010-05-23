@@ -1,10 +1,22 @@
 {
   if (_myAddress != null) {
+    InetAddress bindToAddr=null;
+    String bindTo=_context.getProperty(PROP_BIND_INTERFACE);
+    if (bindTo != null) {
+      try {
+        bindToAddr=InetAddress.getByName(bindTo);
+      }
+ catch (      UnknownHostException uhe) {
+        _log.log(Log.CRIT,"Invalid SSU bind interface specified [" + bindTo + "]",uhe);
+        return null;
+      }
+    }
     try {
       ServerSocketChannel chan=ServerSocketChannel.open();
       chan.configureBlocking(false);
       InetSocketAddress addr=null;
-      addr=new InetSocketAddress(_myAddress.getPort());
+      if (bindToAddr == null)       addr=new InetSocketAddress(_myAddress.getPort());
+ else       addr=new InetSocketAddress(bindToAddr,_myAddress.getPort());
       chan.socket().bind(addr);
       if (_log.shouldLog(Log.INFO))       _log.info("Listening on " + addr);
       _pumper.register(chan);
