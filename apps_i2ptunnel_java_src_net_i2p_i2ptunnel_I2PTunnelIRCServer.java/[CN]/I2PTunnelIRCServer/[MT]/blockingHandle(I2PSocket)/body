@@ -1,9 +1,22 @@
 {
   try {
-    socket.setReadTimeout(15 * 1000);
-    InputStream in=socket.getInputStream();
-    String modifiedRegistration=filterRegistration(in,cloakDest(socket.getPeerDestination()));
-    socket.setReadTimeout(readTimeout);
+    String modifiedRegistration;
+    if (!this.method.equals("webirc")) {
+      socket.setReadTimeout(15 * 1000);
+      InputStream in=socket.getInputStream();
+      modifiedRegistration=filterRegistration(in,cloakDest(socket.getPeerDestination()));
+      socket.setReadTimeout(readTimeout);
+    }
+ else {
+      StringBuffer buf=new StringBuffer("WEBIRC ");
+      buf.append(this.webircPassword);
+      buf.append(" cgiirc ");
+      buf.append(cloakDest(socket.getPeerDestination()));
+      buf.append(' ');
+      buf.append(this.webircSpoofIP);
+      buf.append("\r\n");
+      modifiedRegistration=buf.toString();
+    }
     Socket s=new Socket(remoteHost,remotePort);
     new I2PTunnelRunner(s,socket,slock,null,modifiedRegistration.getBytes(),null);
   }
