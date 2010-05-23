@@ -6,10 +6,18 @@
   if (_tempFile.exists())   _tempFile.delete();
   try {
     EepGet get=null;
-    if (shouldProxy)     get=new EepGet(_context,true,proxyHost,proxyPort,2,_tempFile.getAbsolutePath(),newsURL,true,null,_lastModified);
+    if (shouldProxy)     get=new EepGet(_context,true,proxyHost,proxyPort,0,_tempFile.getAbsolutePath(),newsURL,true,null,_lastModified);
  else     get=new EepGet(_context,false,null,0,0,_tempFile.getAbsolutePath(),newsURL,true,null,_lastModified);
     get.addStatusListener(this);
-    if (get.fetch())     _lastModified=get.getLastModified();
+    if (get.fetch()) {
+      _lastModified=get.getLastModified();
+    }
+ else {
+      _tempFile.delete();
+      get=new EepGet(_context,true,proxyHost,proxyPort,0,_tempFile.getAbsolutePath(),BACKUP_NEWS_URL,true,null,_lastModified);
+      get.addStatusListener(this);
+      if (get.fetch())       _lastModified=get.getLastModified();
+    }
   }
  catch (  Throwable t) {
     _log.error("Error fetching the news",t);
