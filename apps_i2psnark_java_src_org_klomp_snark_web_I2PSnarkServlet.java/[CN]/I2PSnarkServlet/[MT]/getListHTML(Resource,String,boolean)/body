@@ -40,12 +40,12 @@
     long length=item.length();
     if (item.isDirectory()) {
       complete=true;
-      status="<img height=\"16\" width=\"16\" src=\"/i2psnark/_icons/tick.png\"> " + _("Directory");
+      status=toImg("tick") + _("Directory");
     }
  else {
       if (snark == null) {
         complete=true;
-        status="<img height=\"16\" width=\"16\" src=\"/i2psnark/_icons/cancel.png\"> " + _("Torrent not found?");
+        status=toImg("cancel") + _("Torrent not found?");
       }
  else {
         try {
@@ -54,14 +54,14 @@
             long remaining=snark.storage.remaining(f.getCanonicalPath());
             if (remaining < 0) {
               complete=true;
-              status="<img height=\"16\" width=\"16\" src=\"/i2psnark/_icons/cancel.png\"> " + _("File not found in torrent?");
+              status=toImg("cancel") + _("File not found in torrent?");
             }
  else             if (remaining == 0 || length <= 0) {
               complete=true;
-              status="<img height=\"16\" width=\"16\" src=\"/i2psnark/_icons/tick.png\"> " + _("Complete");
+              status=toImg("tick") + _("Complete");
             }
  else {
-              status="<img height=\"16\" width=\"16\" src=\"/i2psnark/_icons/clock.png\"> " + (100 - (100 * remaining / length)) + "% "+ _("complete")+ " ("+ DataHelper.formatSize(remaining)+ " "+ _("bytes remaining")+ ")";
+              status=toImg("clock") + (100 * (length - remaining) / length) + "% "+ _("complete")+ " ("+ DataHelper.formatSize2(remaining)+ _("bytes remaining")+ ")";
             }
           }
  else {
@@ -75,45 +75,27 @@
     }
     String path=URI.addPaths(base,encoded);
     if (item.isDirectory() && !path.endsWith("/"))     path=URI.addPaths(path,"/");
-    String plc=path.toLowerCase();
-    String icon;
-    if (item.isDirectory()) {
-      icon="folder";
-    }
- else {
-      String mime=getServletContext().getMimeType(path);
-      if (mime == null)       mime="";
-      if (mime.equals("text/html"))       icon="html";
- else       if (mime.equals("text/plain") || plc.endsWith(".nfo"))       icon="page";
- else       if (mime.equals("application/java-archive") || plc.endsWith(".war"))       icon="package";
- else       if (plc.endsWith(".xpi2p"))       icon="plugin";
- else       if (mime.equals("application/pdf"))       icon="page_white_acrobat";
- else       if (mime.startsWith("image/") || plc.endsWith(".ico"))       icon="photo";
- else       if (mime.startsWith("audio/") || mime.equals("application/ogg") || plc.endsWith(".flac")|| plc.endsWith(".m4a")|| plc.endsWith(".wma")|| plc.endsWith(".ape"))       icon="music";
- else       if (mime.startsWith("video/") || plc.endsWith(".mkv") || plc.endsWith(".m4v")|| plc.endsWith(".mp4"))       icon="film";
- else       if (mime.equals("application/zip") || mime.equals("application/x-gtar") || mime.equals("application/compress")|| mime.equals("application/gzip")|| mime.equals("application/x-tar")|| plc.endsWith(".rar")|| plc.endsWith(".bz2")|| plc.endsWith(".7z"))       icon="compress";
- else       if (plc.endsWith(".exe"))       icon="application";
- else       icon="bug";
-    }
+    String icon=toIcon(item);
     if (complete) {
-      buf.append("<a href=\"").append(path).append("\"><img alt=\"\" border=\"0\" ");
+      buf.append("<a href=\"").append(path).append("\">");
+      String plc=item.toString().toLowerCase();
       if (plc.endsWith(".jpg") || plc.endsWith(".jpeg") || plc.endsWith(".png")|| plc.endsWith(".gif")|| plc.endsWith(".ico")) {
-        buf.append("class=\"thumb\" src=\"").append(path).append("\"></a> ");
+        buf.append("<img alt=\"\" border=\"0\" class=\"thumb\" src=\"").append(path).append("\"></a> ");
       }
  else {
-        buf.append("height=\"16\" width=\"16\" src=\"/i2psnark/_icons/").append(icon).append(".png\"></a> ");
+        buf.append(toImg(icon));
       }
       buf.append("<A HREF=\"");
       buf.append(path);
       buf.append("\">");
     }
  else {
-      buf.append("<img height=\"16\" width=\"16\" src=\"/i2psnark/_icons/").append(icon).append(".png\"> ");
+      buf.append(toImg(icon));
     }
     buf.append(ls[i]);
     if (complete)     buf.append("</a>");
     buf.append("</TD><TD ALIGN=right class=\"").append(rowClass).append(" snarkFileSize\">");
-    if (!item.isDirectory())     buf.append(DataHelper.formatSize(length)).append(' ').append(_("Bytes"));
+    if (!item.isDirectory())     buf.append(DataHelper.formatSize2(length)).append('B');
     buf.append("</TD><TD class=\"").append(rowClass).append(" snarkFileStatus\">");
     buf.append(status);
     buf.append("</TD></TR>\n");
