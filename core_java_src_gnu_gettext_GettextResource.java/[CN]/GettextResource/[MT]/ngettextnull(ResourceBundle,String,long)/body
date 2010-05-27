@@ -1,0 +1,102 @@
+{
+  ResourceBundle origCatalog=catalog;
+  do {
+    if (verbose)     System.out.println("ngettext on " + catalog);
+    Method handleGetObjectMethod=null;
+    Method getParentMethod=null;
+    try {
+      handleGetObjectMethod=catalog.getClass().getMethod("handleGetObject",new Class[]{java.lang.String.class});
+      getParentMethod=catalog.getClass().getMethod("getParent",new Class[0]);
+    }
+ catch (    NoSuchMethodException e) {
+    }
+catch (    SecurityException e) {
+    }
+    if (verbose)     System.out.println("handleGetObject = " + (handleGetObjectMethod != null) + ", getParent = "+ (getParentMethod != null));
+    if (handleGetObjectMethod != null && Modifier.isPublic(handleGetObjectMethod.getModifiers()) && getParentMethod != null) {
+      Method lookupMethod=null;
+      Method pluralEvalMethod=null;
+      try {
+        lookupMethod=catalog.getClass().getMethod("lookup",new Class[]{java.lang.String.class});
+        pluralEvalMethod=catalog.getClass().getMethod("pluralEval",new Class[]{Long.TYPE});
+      }
+ catch (      NoSuchMethodException e) {
+      }
+catch (      SecurityException e) {
+      }
+      if (verbose)       System.out.println("lookup = " + (lookupMethod != null) + ", pluralEval = "+ (pluralEvalMethod != null));
+      if (lookupMethod != null && pluralEvalMethod != null) {
+        Object localValue=null;
+        try {
+          localValue=lookupMethod.invoke(catalog,new Object[]{msgid});
+        }
+ catch (        IllegalAccessException e) {
+          e.printStackTrace();
+        }
+catch (        InvocationTargetException e) {
+          e.getTargetException().printStackTrace();
+        }
+        if (localValue != null) {
+          if (verbose)           System.out.println("localValue = " + localValue);
+          if (localValue instanceof String)           return (String)localValue;
+ else {
+            String[] pluralforms=(String[])localValue;
+            long i=0;
+            try {
+              i=((Long)pluralEvalMethod.invoke(catalog,new Object[]{new Long(n)})).longValue();
+              if (!(i >= 0 && i < pluralforms.length))               i=0;
+            }
+ catch (            IllegalAccessException e) {
+              e.printStackTrace();
+            }
+catch (            InvocationTargetException e) {
+              e.getTargetException().printStackTrace();
+            }
+            return pluralforms[(int)i];
+          }
+        }
+      }
+ else {
+        Object localValue=null;
+        try {
+          localValue=handleGetObjectMethod.invoke(catalog,new Object[]{msgid});
+        }
+ catch (        IllegalAccessException e) {
+          e.printStackTrace();
+        }
+catch (        InvocationTargetException e) {
+          e.getTargetException().printStackTrace();
+        }
+        if (localValue != null) {
+          if (verbose)           System.out.println("localValue = " + localValue);
+          return (String)localValue;
+        }
+      }
+      Object parentCatalog=catalog;
+      try {
+        parentCatalog=getParentMethod.invoke(catalog,new Object[0]);
+      }
+ catch (      IllegalAccessException e) {
+        e.printStackTrace();
+      }
+catch (      InvocationTargetException e) {
+        e.getTargetException().printStackTrace();
+      }
+      if (parentCatalog != catalog)       catalog=(ResourceBundle)parentCatalog;
+ else       break;
+    }
+ else     break;
+  }
+ while (catalog != null);
+  if (catalog != null) {
+    Object value;
+    try {
+      value=catalog.getObject(msgid);
+    }
+ catch (    MissingResourceException e) {
+      value=null;
+    }
+    if (value != null)     return (String)value;
+  }
+  return null;
+}
