@@ -1,9 +1,8 @@
 {
   long lastFailsafeIteration=System.currentTimeMillis();
-  List bufList=new ArrayList(16);
   while (_alive && _selector.isOpen()) {
     try {
-      runDelayedEvents(bufList);
+      runDelayedEvents();
       int count=0;
       try {
         count=_selector.select(200);
@@ -13,7 +12,7 @@
       }
       if (count <= 0)       continue;
       if (_log.shouldLog(Log.DEBUG))       _log.debug("select returned " + count);
-      Set selected=null;
+      Set<SelectionKey> selected=null;
       try {
         selected=_selector.selectedKeys();
       }
@@ -25,15 +24,14 @@
       if (lastFailsafeIteration + FAILSAFE_ITERATION_FREQ < System.currentTimeMillis()) {
         lastFailsafeIteration=System.currentTimeMillis();
         try {
-          Set all=_selector.keys();
+          Set<SelectionKey> all=_selector.keys();
           int failsafeWrites=0;
           int failsafeCloses=0;
           int failsafeInvalid=0;
           if (_transport.haveCapacity())           _expireIdleWriteTime=Math.min(_expireIdleWriteTime + 1000,MAX_EXPIRE_IDLE_TIME);
  else           _expireIdleWriteTime=Math.max(_expireIdleWriteTime - 3000,MIN_EXPIRE_IDLE_TIME);
-          for (Iterator iter=all.iterator(); iter.hasNext(); ) {
+          for (          SelectionKey key : all) {
             try {
-              SelectionKey key=(SelectionKey)iter.next();
               Object att=key.attachment();
               if (!(att instanceof NTCPConnection))               continue;
               NTCPConnection con=(NTCPConnection)att;
@@ -71,9 +69,8 @@
   try {
     if (_selector.isOpen()) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Closing down the event pumper with selection keys remaining");
-      Set keys=_selector.keys();
-      for (Iterator iter=keys.iterator(); iter.hasNext(); ) {
-        SelectionKey key=(SelectionKey)iter.next();
+      Set<SelectionKey> keys=_selector.keys();
+      for (      SelectionKey key : keys) {
         try {
           Object att=key.attachment();
           if (att instanceof ServerSocketChannel) {
