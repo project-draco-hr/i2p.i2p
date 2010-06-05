@@ -11,8 +11,9 @@ case DeliveryInstructions.DELIVERY_MODE_LOCAL:
       DatabaseStoreMessage dsm=(DatabaseStoreMessage)data;
       try {
         if (dsm.getValueType() == DatabaseStoreMessage.KEY_TYPE_LEASESET) {
-          if (_client != null)           dsm.getLeaseSet().setReceivedAsPublished(false);
-          _context.netDb().store(dsm.getKey(),dsm.getLeaseSet());
+          LeaseSet old=_context.netDb().store(dsm.getKey(),dsm.getLeaseSet());
+          if (old != null && old.getReceivedAsPublished())           dsm.getLeaseSet().setReceivedAsPublished(true);
+          if (_log.shouldLog(Log.INFO))           _log.info("Storing LS for: " + dsm.getKey() + " sent to: "+ _client);
         }
  else {
           if (_client != null) {
