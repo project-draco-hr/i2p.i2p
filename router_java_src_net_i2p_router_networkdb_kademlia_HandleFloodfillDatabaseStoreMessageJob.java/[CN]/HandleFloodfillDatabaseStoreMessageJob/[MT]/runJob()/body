@@ -13,14 +13,17 @@
         throw new IllegalArgumentException("Peer attempted to store local leaseSet: " + key.toBase64().substring(0,4));
       }
       LeaseSet ls=_message.getLeaseSet();
-      ls.setReceivedAsPublished(true);
+      if (!ls.getReceivedAsReply())       ls.setReceivedAsPublished(true);
       LeaseSet match=getContext().netDb().store(key,_message.getLeaseSet());
-      if ((match == null) || (match.getEarliestLeaseDate() < _message.getLeaseSet().getEarliestLeaseDate())) {
+      if (match == null) {
         wasNew=true;
+      }
+ else       if (match.getEarliestLeaseDate() < _message.getLeaseSet().getEarliestLeaseDate()) {
+        wasNew=true;
+        if (match.getReceivedAsPublished())         ls.setReceivedAsPublished(true);
       }
  else {
         wasNew=false;
-        match.setReceivedAsPublished(true);
       }
     }
  catch (    IllegalArgumentException iae) {
