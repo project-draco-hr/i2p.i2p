@@ -1,0 +1,75 @@
+{
+  final long stats[]={0,0,0,0,0,0};
+  String peerParam=req.getParameter("p");
+  List snarks=getSortedSnarks(req);
+  String uri=req.getRequestURI();
+  out.write(TABLE_HEADER);
+  out.write(_("Status"));
+  if (_manager.util().connected() && !snarks.isEmpty()) {
+    out.write(" (<a href=\"");
+    out.write(req.getRequestURI());
+    if (peerParam != null) {
+      out.write("\">");
+      out.write(_("Hide Peers"));
+    }
+ else {
+      out.write("?p=1\">");
+      out.write(_("Show Peers"));
+    }
+    out.write("</a>)<br>\n");
+  }
+  out.write("</th>\n<th align=\"left\">");
+  out.write(_("Torrent"));
+  out.write("</th>\n<th align=\"center\">");
+  out.write(_("ETA"));
+  out.write("</th>\n<th align=\"right\">");
+  out.write(_("Downloaded"));
+  out.write("</th>\n<th align=\"right\">");
+  out.write(_("Uploaded"));
+  out.write("</th>\n<th align=\"right\">");
+  out.write(_("Down Rate"));
+  out.write("</th>\n<th align=\"right\">");
+  out.write(_("Up Rate"));
+  out.write("</th>\n");
+  out.write("<th align=\"center\">");
+  if (_manager.util().connected()) {
+    out.write("<a href=\"" + uri + "?action=StopAll&nonce="+ _nonce+ "\" title=\"");
+    out.write(_("Stop all torrents and the I2P tunnel"));
+    out.write("\">");
+    out.write(_("Stop All"));
+    out.write("</a>");
+  }
+ else   if (!snarks.isEmpty()) {
+    out.write("<a href=\"" + uri + "?action=StartAll&nonce="+ _nonce+ "\" title=\"");
+    out.write(_("Start all torrents and the I2P tunnel"));
+    out.write("\">");
+    out.write(_("Start All"));
+    out.write("</a>");
+  }
+ else {
+    out.write("&nbsp;");
+  }
+  out.write("</th></tr></thead>\n");
+  for (int i=0; i < snarks.size(); i++) {
+    Snark snark=(Snark)snarks.get(i);
+    boolean showDebug="2".equals(peerParam);
+    boolean showPeers=showDebug || "1".equals(peerParam) || Base64.encode(snark.meta.getInfoHash()).equals(peerParam);
+    displaySnark(out,snark,uri,i,stats,showPeers,showDebug);
+  }
+  if (snarks.isEmpty()) {
+    out.write("<tr class=\"snarkTorrentEven\">" + "<td class=\"snarkTorrentEven\" align=\"center\"" + " colspan=\"8\"><i>");
+    out.write(_("No torrents loaded."));
+    out.write("</i></td></tr>\n");
+  }
+ else   if (snarks.size() > 1) {
+    out.write("<tfoot><tr>\n" + "    <th align=\"left\" colspan=\"2\">");
+    out.write(_("Totals"));
+    out.write(" (");
+    out.write(ngettext("1 torrent","{0} torrents",snarks.size()));
+    out.write(", ");
+    out.write(DataHelper.formatSize2(stats[5]) + "B, ");
+    out.write(ngettext("1 connected peer","{0} connected peers",(int)stats[4]));
+    out.write(")</th>\n" + "    <th>&nbsp;</th>\n" + "    <th align=\"right\">" + formatSize(stats[0]) + "</th>\n"+ "    <th align=\"right\">"+ formatSize(stats[1])+ "</th>\n"+ "    <th align=\"right\">"+ formatSize(stats[2])+ "ps</th>\n"+ "    <th align=\"right\">"+ formatSize(stats[3])+ "ps</th>\n"+ "    <th>&nbsp;</th></tr>\n"+ "</tfoot>\n");
+  }
+  out.write("</table>");
+}
