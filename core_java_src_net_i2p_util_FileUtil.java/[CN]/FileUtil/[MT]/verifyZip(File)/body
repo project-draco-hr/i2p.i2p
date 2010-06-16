@@ -4,6 +4,7 @@
     byte buf[]=new byte[16 * 1024];
     zip=new ZipFile(zipfile);
     Enumeration entries=zip.entries();
+    boolean p200TestRequired=true;
     while (entries.hasMoreElements()) {
       ZipEntry entry=(ZipEntry)entries.nextElement();
       if (entry.getName().indexOf("..") != -1) {
@@ -12,6 +13,16 @@
       if (entry.isDirectory()) {
       }
  else {
+        if (p200TestRequired && (entry.getName().endsWith(".jar.pack") || entry.getName().endsWith(".war.pack"))) {
+          try {
+            Class.forName("java.util.jar.Pack200",false,ClassLoader.getSystemClassLoader());
+          }
+ catch (          Exception e) {
+            System.err.println("ERROR: Zip verify failed, your JVM does not support unpack200");
+            return false;
+          }
+          p200TestRequired=false;
+        }
         try {
           InputStream in=zip.getInputStream(entry);
           int read=0;
