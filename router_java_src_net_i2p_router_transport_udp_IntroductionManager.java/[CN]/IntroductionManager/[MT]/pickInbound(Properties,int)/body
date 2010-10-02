@@ -7,6 +7,7 @@
   start=start % sz;
   int found=0;
   long inactivityCutoff=_context.clock().now() - (UDPTransport.EXPIRE_TIMEOUT / 2);
+  if (sz <= howMany + 2)   inactivityCutoff-=UDPTransport.EXPIRE_TIMEOUT / 4;
   for (int i=0; i < sz && found < howMany; i++) {
     PeerState cur=peers.get((start + i) % sz);
     RouterInfo ri=_context.netDb().lookupRouterInfoLocally(cur.getRemotePeer());
@@ -23,7 +24,7 @@
       if (_log.shouldLog(Log.INFO))       _log.info("Peer is failing, shistlisted or was unreachable: " + cur);
       continue;
     }
-    if (cur.getLastReceiveTime() < inactivityCutoff || cur.getLastSendTime() < inactivityCutoff) {
+    if (cur.getLastReceiveTime() < inactivityCutoff && cur.getLastSendTime() < inactivityCutoff) {
       if (_log.shouldLog(Log.INFO))       _log.info("Peer is idle too long: " + cur);
       continue;
     }
