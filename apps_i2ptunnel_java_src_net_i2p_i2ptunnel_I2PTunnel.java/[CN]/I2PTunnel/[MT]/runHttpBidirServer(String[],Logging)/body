@@ -11,7 +11,7 @@
       l.log("unknown host");
       _log.error(getPrefix() + "Error resolving " + args[0],uhe);
       notifyEvent("serverTaskId",Integer.valueOf(-1));
-      return;
+      throw new IllegalArgumentException(getPrefix() + "Error resolving " + args[0]+ uhe.getMessage());
     }
     try {
       portNum=Integer.parseInt(args[1]);
@@ -20,7 +20,6 @@
       l.log("invalid port");
       _log.error(getPrefix() + "Port specified is not valid: " + args[1],nfe);
       notifyEvent("serverTaskId",Integer.valueOf(-1));
-      return;
     }
     try {
       port2Num=Integer.parseInt(args[2]);
@@ -29,16 +28,17 @@
       l.log("invalid port");
       _log.error(getPrefix() + "Port specified is not valid: " + args[2],nfe);
       notifyEvent("serverTaskId",Integer.valueOf(-1));
-      return;
     }
+    if (portNum <= 0)     throw new IllegalArgumentException(getPrefix() + "Bad port " + args[1]);
+    if (port2Num <= 0)     throw new IllegalArgumentException(getPrefix() + "Bad port " + args[2]);
     String spoofedHost=args[3];
     privKeyFile=new File(args[4]);
     if (!privKeyFile.isAbsolute())     privKeyFile=new File(_context.getConfigDir(),args[4]);
     if (!privKeyFile.canRead()) {
-      l.log("private key file does not exist");
+      l.log(getPrefix() + "Private key file does not exist or is not readable: " + args[4]);
       _log.error(getPrefix() + "Private key file does not exist or is not readable: " + args[4]);
       notifyEvent("serverTaskId",Integer.valueOf(-1));
-      return;
+      throw new IllegalArgumentException(getPrefix() + "Cannot open private key file " + args[4]);
     }
     I2PTunnelHTTPBidirServer serv=new I2PTunnelHTTPBidirServer(serverHost,portNum,port2Num,privKeyFile,args[3],spoofedHost,l,(EventDispatcher)this,this);
     serv.setReadTimeout(readTimeout);
