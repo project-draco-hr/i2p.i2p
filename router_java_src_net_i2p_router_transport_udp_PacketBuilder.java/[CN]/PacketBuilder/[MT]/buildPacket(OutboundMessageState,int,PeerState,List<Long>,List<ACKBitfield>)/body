@@ -1,5 +1,7 @@
 {
-  UDPPacket packet=UDPPacket.acquire(_context,false);
+  UDPPacket packet=buildPacketHeader((byte)(UDPPacket.PAYLOAD_TYPE_DATA << 4));
+  byte data[]=packet.getPacket().getData();
+  int off=HEADER_SIZE;
   StringBuilder msg=null;
   boolean acksIncluded=false;
   if (_log.shouldLog(Log.INFO)) {
@@ -8,15 +10,6 @@
     msg.append(" msg ").append(state.getMessageId()).append(":").append(fragment);
     if (fragment == state.getFragmentCount() - 1)     msg.append("*");
   }
-  byte data[]=packet.getPacket().getData();
-  Arrays.fill(data,0,data.length,(byte)0x0);
-  int start=UDPPacket.MAC_SIZE + UDPPacket.IV_SIZE;
-  int off=start;
-  data[off]|=(UDPPacket.PAYLOAD_TYPE_DATA << 4);
-  off++;
-  long now=_context.clock().now() / 1000;
-  DataHelper.toLong(data,off,4,now);
-  off+=4;
   data[off]|=UDPPacket.DATA_FLAG_WANT_REPLY;
   if ((ackIdsRemaining != null) && (!ackIdsRemaining.isEmpty()))   data[off]|=UDPPacket.DATA_FLAG_EXPLICIT_ACK;
   if ((partialACKsRemaining != null) && (!partialACKsRemaining.isEmpty()))   data[off]|=UDPPacket.DATA_FLAG_ACK_BITFIELDS;

@@ -1,26 +1,19 @@
 {
   while (true) {
     int curSize=0;
-    long start=Clock.getInstance().now();
     int startSize=getSize();
+    if (startSize <= (_minSize / 2) && CHECK_DELAY > 1000)     CHECK_DELAY-=1000;
+ else     if (startSize > (_minSize * 2) && CHECK_DELAY < 60000)     CHECK_DELAY+=1000;
     curSize=startSize;
-    while (curSize < _minSize) {
-      while (curSize < _maxSize) {
-        long begin=Clock.getInstance().now();
-        curSize=addValues(generateYK());
-        long end=Clock.getInstance().now();
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("Precalculated YK value in " + (end - begin) + "ms");
+    if (curSize < _minSize) {
+      for (int i=curSize; i < _maxSize; i++) {
+        if (!addValues(generateYK()))         break;
         try {
           Thread.sleep(CALC_DELAY);
         }
  catch (        InterruptedException ie) {
         }
       }
-    }
-    long end=Clock.getInstance().now();
-    int numCalc=curSize - startSize;
-    if (numCalc > 0) {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Precalced " + numCalc + " to "+ curSize+ " in "+ (end - start - CALC_DELAY * numCalc)+ "ms (not counting "+ (CALC_DELAY * numCalc)+ "ms relief).  now sleeping");
     }
     try {
       Thread.sleep(CHECK_DELAY);
