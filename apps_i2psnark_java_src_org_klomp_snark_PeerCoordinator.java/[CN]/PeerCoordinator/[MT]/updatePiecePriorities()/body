@@ -1,0 +1,35 @@
+{
+  int[] pri=storage.getPiecePriorities();
+  if (pri == null)   return;
+synchronized (wantedPieces) {
+    BitField want=new BitField(pri.length);
+    for (    Piece p : wantedPieces) {
+      want.set(p.getId());
+    }
+    BitField bitfield=storage.getBitField();
+    for (int i=0; i < pri.length; i++) {
+      if (pri[i] >= 0 && !bitfield.get(i)) {
+        if (!want.get(i)) {
+          Piece piece=new Piece(i);
+          wantedPieces.add(piece);
+synchronized (peers) {
+            for (            Peer p : peers) {
+              PeerState s=p.state;
+              if (s != null) {
+                BitField bf=s.bitfield;
+                if (bf != null && bf.get(i))                 piece.addPeer(p);
+              }
+            }
+          }
+        }
+      }
+    }
+    for (Iterator<Piece> iter=wantedPieces.iterator(); iter.hasNext(); ) {
+      Piece p=iter.next();
+      int id=pri[p.getId()];
+      if (id >= 0)       p.setPriority(pri[p.getId()]);
+ else       iter.remove();
+    }
+    Collections.shuffle(wantedPieces,_random);
+  }
+}

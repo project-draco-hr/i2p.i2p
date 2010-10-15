@@ -10,6 +10,7 @@ synchronized (wantedPieces) {
     Iterator<Piece> it=wantedPieces.iterator();
     while (piece == null && it.hasNext()) {
       Piece p=it.next();
+      if (p.isDisabled())       break;
       if (havePieces.get(p.getId()) && !p.isRequested()) {
         piece=p;
       }
@@ -19,7 +20,7 @@ synchronized (wantedPieces) {
     }
     if (piece == null) {
       if (wantedPieces.size() > END_GAME_THRESHOLD)       return -1;
-      Collections.shuffle(requested);
+      Collections.shuffle(requested,_random);
       Iterator<Piece> it2=requested.iterator();
       while (piece == null && it2.hasNext()) {
         Piece p=it2.next();
@@ -35,6 +36,7 @@ synchronized (wantedPieces) {
         if (_log.shouldLog(Log.DEBUG))         _log.debug("parallel request (end game?) for " + peer + ": piece = "+ piece);
       }
     }
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Now requesting: piece " + piece + " priority "+ piece.getPriority());
     piece.setRequested(true);
     return piece.getId();
   }
