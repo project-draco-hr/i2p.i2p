@@ -1,6 +1,9 @@
 {
   int[] pri=storage.getPiecePriorities();
-  if (pri == null)   return;
+  if (pri == null) {
+    _log.debug("Updated piece priorities called but no priorities to set?");
+    return;
+  }
 synchronized (wantedPieces) {
     BitField want=new BitField(pri.length);
     for (    Piece p : wantedPieces) {
@@ -26,10 +29,25 @@ synchronized (peers) {
     }
     for (Iterator<Piece> iter=wantedPieces.iterator(); iter.hasNext(); ) {
       Piece p=iter.next();
-      int id=pri[p.getId()];
-      if (id >= 0)       p.setPriority(pri[p.getId()]);
- else       iter.remove();
+      int priority=pri[p.getId()];
+      if (priority >= 0) {
+        p.setPriority(priority);
+      }
+ else {
+        iter.remove();
+synchronized (peers) {
+          for (          Peer peer : peers) {
+            peer.cancel(p.getId());
+          }
+        }
+      }
     }
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Updated piece priorities, now wanted: " + wantedPieces);
     Collections.shuffle(wantedPieces,_random);
+synchronized (peers) {
+      for (      Peer peer : peers) {
+        peer.request();
+      }
+    }
   }
 }
