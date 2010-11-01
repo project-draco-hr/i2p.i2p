@@ -25,6 +25,19 @@ synchronized (wantedPieces) {
       while (piece == null && it2.hasNext()) {
         Piece p=it2.next();
         if (havePieces.get(p.getId())) {
+          int requestedCount=0;
+synchronized (peers) {
+            for (            Peer pr : peers) {
+              if (pr.isRequesting(p.getId())) {
+                if (pr.equals(peer)) {
+                  requestedCount=MAX_PARALLEL_REQUESTS;
+                  break;
+                }
+                if (++requestedCount >= MAX_PARALLEL_REQUESTS)                 break;
+              }
+            }
+          }
+          if (requestedCount >= MAX_PARALLEL_REQUESTS)           continue;
           piece=p;
         }
       }
