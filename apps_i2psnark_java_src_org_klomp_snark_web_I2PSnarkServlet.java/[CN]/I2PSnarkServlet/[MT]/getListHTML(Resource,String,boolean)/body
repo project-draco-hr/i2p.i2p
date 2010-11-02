@@ -12,7 +12,6 @@
   if (slash > 0)   torrentName=title.substring(0,slash);
  else   torrentName=title;
   Snark snark=_manager.getTorrentByBaseName(torrentName);
-  if (snark != null && postParams != null)   savePriorities(snark,postParams);
   if (title.endsWith("/"))   title=title.substring(0,title.length() - 1);
   title=_("Torrent") + ": " + title;
   buf.append(title);
@@ -23,13 +22,7 @@
     buf.append(URI.addPaths(base,"../"));
     buf.append("\"><img border=\"0\" src=\"/themes/console/images/outbound.png\"> ").append(_("Up to higher level directory")).append("</A>\n");
   }
-  buf.append("</div><div class=\"page\"><div class=\"mainsection\">");
-  boolean showPriority=snark != null && !snark.storage.complete();
-  if (showPriority)   buf.append("<form action=\"").append(base).append("\" method=\"POST\">\n");
-  buf.append("<TABLE BORDER=0 class=\"snarkTorrents\" cellpadding=\"5px 10px\">" + "<thead><tr><th>").append(_("File")).append("</th><th>").append(_("Size")).append("</th><th>").append(_("Status")).append("</th>");
-  if (showPriority)   buf.append("<th>").append(_("Priority")).append("</th>");
-  buf.append("</tr></thead>\n");
-  boolean showSaveButton=false;
+  buf.append("</div><div class=\"page\"><div class=\"mainsection\">" + "<TABLE BORDER=0 class=\"snarkTorrents\" cellpadding=\"5px 10px\">" + "<thead><tr><th>").append(_("File")).append("</th><th>").append(_("Size")).append("</th><th>").append(_("Status")).append("</th></tr></thead>");
   for (int i=0; i < ls.length; i++) {
     String encoded=URI.encodePath(ls[i]);
     Resource item=r.addPath(ls[i]);
@@ -61,7 +54,7 @@
               status=toImg("tick") + _("Complete");
             }
  else {
-              status=(snark.storage.getPriority(f.getCanonicalPath()) < 0 ? toImg("cancel") : toImg("clock")) + (100 * (length - remaining) / length) + "% "+ _("complete")+ " ("+ DataHelper.formatSize2(remaining)+ _("bytes remaining")+ ")";
+              status=toImg("clock") + (100 * (length - remaining) / length) + "% "+ _("complete")+ " ("+ DataHelper.formatSize2(remaining)+ _("bytes remaining")+ ")";
             }
           }
  else {
@@ -98,34 +91,9 @@
     if (!item.isDirectory())     buf.append(DataHelper.formatSize2(length)).append('B');
     buf.append("</TD><TD class=\"").append(rowClass).append(" snarkFileStatus\">");
     buf.append(status);
-    buf.append("</TD>");
-    if (showPriority) {
-      buf.append("<td>");
-      File f=item.getFile();
-      if ((!complete) && (!item.isDirectory()) && f != null) {
-        int pri=snark.storage.getPriority(f.getCanonicalPath());
-        buf.append("<input type=\"radio\" value=\"5\" name=\"pri.").append(f.getCanonicalPath()).append("\" ");
-        if (pri > 0)         buf.append("checked=\"true\"");
-        buf.append('>').append(_("High"));
-        buf.append("<input type=\"radio\" value=\"0\" name=\"pri.").append(f.getCanonicalPath()).append("\" ");
-        if (pri == 0)         buf.append("checked=\"true\"");
-        buf.append('>').append(_("Normal"));
-        buf.append("<input type=\"radio\" value=\"-9\" name=\"pri.").append(f.getCanonicalPath()).append("\" ");
-        if (pri < 0)         buf.append("checked=\"true\"");
-        buf.append('>').append(_("Do not download"));
-        showSaveButton=true;
-      }
-      buf.append("</td>");
-    }
-    buf.append("</TR>\n");
-  }
-  if (showSaveButton) {
-    buf.append("<thead><tr><th colspan=\"3\">&nbsp;</th><th align=\"center\"><input type=\"submit\" value=\"");
-    buf.append(_("Save priorities"));
-    buf.append("\" name=\"foo\" ></th></tr></thead>\n");
+    buf.append("</TD></TR>\n");
   }
   buf.append("</TABLE>\n");
-  if (showPriority)   buf.append("</form>");
   buf.append("</div></div></BODY></HTML>\n");
   return buf.toString();
 }
