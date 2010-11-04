@@ -10,6 +10,7 @@
     if (path.endsWith("/")) {
       String pathInfo=req.getPathInfo();
       String pathInContext=URI.addPaths(path,pathInfo);
+      req.setCharacterEncoding("UTF-8");
       resp.setCharacterEncoding("UTF-8");
       resp.setContentType("text/html; charset=UTF-8");
       Resource resource=getResource(pathInContext);
@@ -18,7 +19,7 @@
       }
  else {
         String base=URI.addPaths(req.getRequestURI(),"/");
-        String listing=getListHTML(resource,base,true);
+        String listing=getListHTML(resource,base,true,method.equals("POST") ? req.getParameterMap() : null);
         if (listing != null)         resp.getWriter().write(listing);
  else         resp.sendError(HttpResponse.__404_Not_Found);
       }
@@ -42,7 +43,7 @@
     peerString="?p=" + peerParam;
   }
   PrintWriter out=resp.getWriter();
-  out.write("<html>\n" + "<head>\n" + "<title>");
+  out.write("<html>\n" + "<head><link rel=\"shortcut icon\" href=\"/themes/snark/ubergine/favicon.ico\">\n" + "<title>");
   out.write(_("I2PSnark - Anonymous BitTorrent Client"));
   out.write("</title>\n");
   if (!isConfigure)   out.write("<meta http-equiv=\"refresh\" content=\"60;" + req.getRequestURI() + peerString+ "\">\n");
@@ -60,6 +61,7 @@
     out.write("<div class=\"snarknavbar\"><a href=\"" + req.getRequestURI() + peerString+ "\" title=\"");
     out.write(_("Refresh page"));
     out.write("\" class=\"snarkRefresh\">");
+    out.write("<img border=\"0\" src=\"/themes/snark/ubergine/images/arrow_refresh.png\"> ");
     out.write(_("I2PSnark"));
     out.write("</a> <a href=\"http://forum.i2p/viewforum.php?f=21\" class=\"snarkRefresh\" target=\"_blank\">");
     out.write(_("Forum"));
@@ -84,7 +86,7 @@
   }
   out.write("</pre></td></tr></table></div>");
   if (isConfigure) {
-    out.write("</div>\n");
+    out.write("<div class=\"logshim\"></div></div>\n");
     writeConfigForm(out,req);
   }
  else {
