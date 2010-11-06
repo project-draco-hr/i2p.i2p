@@ -3,30 +3,36 @@
   buf.append("<i>");
   buf.append(freq.getDescription());
   buf.append("</i><br>");
+  if (freq.getEventCount() <= 0) {
+    buf.append(_("No lifetime events")).append("<br>\n");
+    return;
+  }
   long uptime=_context.router().getUptime();
   long periods[]=freq.getPeriods();
   Arrays.sort(periods);
+  buf.append("<ul>");
   for (int i=0; i < periods.length; i++) {
     if (periods[i] > uptime)     break;
+    buf.append("<li>");
     renderPeriod(buf,periods[i],_("frequency"));
     Frequency curFreq=freq.getFrequency(periods[i]);
-    buf.append(" <i>avg per period:</i> (");
+    buf.append(DataHelper.formatDuration2(Math.round(curFreq.getAverageInterval())));
+    buf.append("; ");
+    buf.append(_("Rolling average events per period"));
+    buf.append(": ");
     buf.append(num(curFreq.getAverageEventsPerPeriod()));
-    buf.append(", max ");
+    buf.append("; ");
+    buf.append(_("Highest events per period"));
+    buf.append(": ");
     buf.append(num(curFreq.getMaxAverageEventsPerPeriod()));
-    if ((curFreq.getMaxAverageEventsPerPeriod() > 0) && (curFreq.getAverageEventsPerPeriod() > 0)) {
-      buf.append(", current is ");
-      buf.append(pct(curFreq.getAverageEventsPerPeriod() / curFreq.getMaxAverageEventsPerPeriod()));
-      buf.append(" of max");
-    }
-    buf.append(")");
-    buf.append(" <i>strict average per period:</i> ");
+    buf.append("; ");
+    buf.append(_("Lifetime average events per period")).append(": ");
     buf.append(num(curFreq.getStrictAverageEventsPerPeriod()));
-    buf.append(" events (averaged ");
-    buf.append(" using the lifetime of ");
-    buf.append(curFreq.getEventCount());
-    buf.append(" events)");
-    buf.append("<br>\n");
+    buf.append("</li>\n");
   }
-  buf.append("<br>\n");
+  buf.append("<li><b>").append(_("Lifetime average frequency")).append(":</b> ");
+  buf.append(DataHelper.formatDuration2(freq.getFrequency()));
+  buf.append(" (");
+  buf.append(ngettext((int)freq.getEventCount(),"1 event","{0} events"));
+  buf.append(")</li></ul><br>\n");
 }
