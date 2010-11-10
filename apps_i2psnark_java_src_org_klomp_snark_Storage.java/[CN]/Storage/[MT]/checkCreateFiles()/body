@@ -12,6 +12,11 @@
       changed=true;
 synchronized (RAFlock[i]) {
         allocateFile(i);
+        try {
+          closeRAF(i);
+        }
+ catch (        IOException ioe) {
+        }
       }
     }
  else {
@@ -21,15 +26,35 @@ synchronized (RAFlock[i]) {
 synchronized (RAFlock[i]) {
         checkRAF(i);
         rafs[i].setLength(lengths[i]);
+        try {
+          closeRAF(i);
+        }
+ catch (        IOException ioe) {
+        }
       }
     }
   }
   if (resume) {
     pieces=metainfo.getPieces();
     byte[] piece=new byte[metainfo.getPieceLength(0)];
+    int file=0;
+    long fileEnd=lengths[0];
+    long pieceEnd=0;
     for (int i=0; i < pieces; i++) {
       int length=getUncheckedPiece(i,piece);
       boolean correctHash=metainfo.checkPiece(i,piece,0,length);
+      pieceEnd+=length;
+      while (fileEnd <= pieceEnd) {
+synchronized (RAFlock[file]) {
+          try {
+            closeRAF(file);
+          }
+ catch (          IOException ioe) {
+          }
+        }
+        if (++file >= rafs.length)         break;
+        fileEnd+=lengths[file];
+      }
       if (correctHash) {
         bitfield.set(i);
         needed--;
@@ -38,15 +63,6 @@ synchronized (RAFlock[i]) {
     }
   }
   _probablyComplete=complete();
-  for (int i=0; i < rafs.length; i++) {
-synchronized (RAFlock[i]) {
-      try {
-        closeRAF(i);
-      }
- catch (      IOException ioe) {
-      }
-    }
-  }
   if (listener != null) {
     listener.storageAllChecked(this);
     if (needed <= 0)     listener.storageCompleted(this);
