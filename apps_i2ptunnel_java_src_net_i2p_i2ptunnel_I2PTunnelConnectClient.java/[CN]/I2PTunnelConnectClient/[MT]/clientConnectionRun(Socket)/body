@@ -11,6 +11,7 @@
     String line, method=null, host=null, destination=null, restofline=null;
     StringBuilder newRequest=new StringBuilder();
     int ahelper=0;
+    String authorization=null;
     while (true) {
       line=DataHelper.readLine(in);
       line=line.trim();
@@ -43,7 +44,7 @@
           }
           destination=currentProxy;
           usingWWWProxy=true;
-          newRequest.append("CONNECT ").append(host).append(restofline).append("\r\n\r\n");
+          newRequest.append("CONNECT ").append(host).append(restofline).append("\r\n");
         }
  else         if (host.toLowerCase().equals("localhost")) {
           writeErrorMessage(ERR_LOCALHOST,out);
@@ -61,15 +62,40 @@
           _log.debug(getPrefix(requestId) + "DEST  :" + destination+ ":");
         }
       }
+ else       if (line.toLowerCase().startsWith("proxy-authorization: basic ")) {
+        authorization=line.substring(27);
+        line=null;
+      }
  else       if (line.length() > 0) {
         line=null;
       }
  else {
+        if (usingWWWProxy && Boolean.valueOf(getTunnel().getClientOptions().getProperty(PROP_OUTPROXY_AUTH)).booleanValue()) {
+          String user=getTunnel().getClientOptions().getProperty(PROP_OUTPROXY_USER_PREFIX + currentProxy);
+          String pw=getTunnel().getClientOptions().getProperty(PROP_OUTPROXY_PW_PREFIX + currentProxy);
+          if (user == null || pw == null) {
+            user=getTunnel().getClientOptions().getProperty(PROP_OUTPROXY_USER);
+            pw=getTunnel().getClientOptions().getProperty(PROP_OUTPROXY_PW);
+          }
+          if (user != null && pw != null) {
+            newRequest.append("Proxy-Authorization: Basic ").append(Base64.encode((user + ':' + pw).getBytes(),true)).append("\r\n");
+          }
+        }
+        newRequest.append("\r\n");
         break;
       }
     }
     if (destination == null || !"CONNECT".equalsIgnoreCase(method)) {
       writeErrorMessage(ERR_BAD_PROTOCOL,out);
+      s.close();
+      return;
+    }
+    if (!authorize(s,requestId,authorization)) {
+      if (_log.shouldLog(Log.WARN)) {
+        if (authorization != null)         _log.warn(getPrefix(requestId) + "Auth failed, sending 407 again");
+ else         _log.warn(getPrefix(requestId) + "Auth required, sending 407");
+      }
+      writeErrorMessage(ERR_AUTH,out);
       s.close();
       return;
     }
