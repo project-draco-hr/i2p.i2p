@@ -1,10 +1,10 @@
 {
-  int socksVer=in.readByte() & 0xff;
+  int socksVer=in.readUnsignedByte();
   if (socksVer != SOCKS_VERSION_5) {
     _log.debug("error in SOCKS5 request (protocol != 5? wtf?)");
     throw new SOCKSException("Invalid protocol version in request: " + socksVer);
   }
-  int command=in.readByte() & 0xff;
+  int command=in.readUnsignedByte();
 switch (command) {
 case Command.CONNECT:
     break;
@@ -19,15 +19,13 @@ _log.debug("unknown command in request (" + Integer.toHexString(command) + ")");
 sendRequestReply(Reply.COMMAND_NOT_SUPPORTED,AddressType.DOMAINNAME,null,"0.0.0.0",0,out);
 throw new SOCKSException("Invalid command in request");
 }
-{
-byte rsv=in.readByte();
-}
-int addressType=in.readByte() & 0xff;
+in.readByte();
+addressType=in.readUnsignedByte();
 switch (addressType) {
 case AddressType.IPV4:
 connHostName=new String("");
 for (int i=0; i < 4; ++i) {
-int octet=in.readByte() & 0xff;
+int octet=in.readUnsignedByte();
 connHostName+=Integer.toString(octet);
 if (i != 3) {
 connHostName+=".";
@@ -37,7 +35,7 @@ if (command != Command.UDP_ASSOCIATE) _log.warn("IPV4 address type in request: "
 break;
 case AddressType.DOMAINNAME:
 {
-int addrLen=in.readByte() & 0xff;
+int addrLen=in.readUnsignedByte();
 if (addrLen == 0) {
 _log.debug("0-sized address length? wtf?");
 throw new SOCKSException("Illegal DOMAINNAME length");
