@@ -13,10 +13,18 @@
     boolean isShared=false;
     if (args.length > 1)     isShared="true".equalsIgnoreCase(args[1].trim());
     ownDest=!isShared;
-    I2PTunnelTask task;
-    task=new I2PSOCKSTunnel(_port,l,ownDest,(EventDispatcher)this,this,null);
-    addtask(task);
-    notifyEvent("sockstunnelTaskId",Integer.valueOf(task.getId()));
+    try {
+      I2PTunnelTask task=new I2PSOCKSTunnel(_port,l,ownDest,(EventDispatcher)this,this,null);
+      addtask(task);
+      notifyEvent("sockstunnelTaskId",Integer.valueOf(task.getId()));
+    }
+ catch (    IllegalArgumentException iae) {
+      String msg="Invalid I2PTunnel configuration to create a SOCKS Proxy connecting to the router at " + host + ':'+ port+ " and listening on "+ listenHost+ ':'+ port;
+      _log.error(getPrefix() + msg,iae);
+      l.log(msg);
+      notifyEvent("sockstunnelTaskId",Integer.valueOf(-1));
+      throw iae;
+    }
   }
  else {
     l.log("sockstunnel <port>");

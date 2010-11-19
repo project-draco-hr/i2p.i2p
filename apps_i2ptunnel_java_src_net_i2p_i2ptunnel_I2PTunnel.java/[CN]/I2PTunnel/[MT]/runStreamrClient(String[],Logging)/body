@@ -20,10 +20,19 @@
       notifyEvent("streamrtunnelTaskId",Integer.valueOf(-1));
     }
     if (_port <= 0)     throw new IllegalArgumentException(getPrefix() + "Bad port " + args[0]);
-    StreamrConsumer task=new StreamrConsumer(_host,_port,args[2],l,(EventDispatcher)this,this);
-    task.startRunning();
-    addtask(task);
-    notifyEvent("streamrtunnelTaskId",Integer.valueOf(task.getId()));
+    try {
+      StreamrConsumer task=new StreamrConsumer(_host,_port,args[2],l,(EventDispatcher)this,this);
+      task.startRunning();
+      addtask(task);
+      notifyEvent("streamrtunnelTaskId",Integer.valueOf(task.getId()));
+    }
+ catch (    IllegalArgumentException iae) {
+      String msg="Invalid I2PTunnel configuration to create a Streamr Client connecting to the router at " + host + ':'+ port+ " and sending to "+ _host+ ':'+ port;
+      _log.error(getPrefix() + msg,iae);
+      l.log(msg);
+      notifyEvent("streamrtunnnelTaskId",Integer.valueOf(-1));
+      throw iae;
+    }
   }
  else {
     l.log("streamrclient <host> <port> <destination>");
