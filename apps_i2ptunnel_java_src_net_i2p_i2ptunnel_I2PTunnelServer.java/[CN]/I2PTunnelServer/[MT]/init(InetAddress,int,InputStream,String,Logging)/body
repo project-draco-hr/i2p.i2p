@@ -10,7 +10,7 @@
       portNum=Integer.parseInt(getTunnel().port);
     }
  catch (    NumberFormatException nfe) {
-      _log.log(Log.CRIT,"Invalid port specified [" + getTunnel().port + "], reverting to "+ portNum);
+      _log.error("Invalid port specified [" + getTunnel().port + "], reverting to "+ portNum);
     }
   }
   ByteArrayInputStream privDataCopy;
@@ -21,14 +21,24 @@
     _log.log(Log.CRIT,"Cannot read private key data for " + privkeyname,ioe);
     return;
   }
+  int retries=0;
   while (sockMgr == null) {
 synchronized (slock) {
       sockMgr=I2PSocketManagerFactory.createManager(privDataCopy,getTunnel().host,portNum,props);
     }
     if (sockMgr == null) {
-      _log.log(Log.CRIT,"Unable to create socket manager");
+      String msg="Unable to connect to the router at " + getTunnel().host + ':'+ portNum+ " and build tunnels for the server at "+ getTunnel().listenHost+ ':'+ port;
+      if (++retries < MAX_RETRIES) {
+        this.l.log(msg + ", retrying in " + (RETRY_DELAY / 1000)+ " seconds");
+        _log.error(msg + ", retrying in " + (RETRY_DELAY / 1000)+ " seconds");
+      }
+ else {
+        this.l.log(msg + ", giving up");
+        _log.log(Log.CRIT,msg + ", giving up");
+        throw new IllegalArgumentException(msg);
+      }
       try {
-        Thread.sleep(10 * 1000);
+        Thread.sleep(RETRY_DELAY);
       }
  catch (      InterruptedException ie) {
       }
@@ -37,7 +47,7 @@ synchronized (slock) {
   }
   sockMgr.setName("Server");
   getTunnel().addSession(sockMgr.getSession());
-  l.log("Ready!");
+  l.log("Tunnels ready for server at " + getTunnel().listenHost + ':'+ port);
   notifyEvent("openServerResult","ok");
   open=true;
 }

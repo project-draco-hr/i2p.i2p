@@ -7,11 +7,20 @@
   File logFile=new File(home,(String)settings.get("log"));
   File etagsFile=new File(home,(String)settings.get("etags"));
   File lastModifiedFile=new File(home,(String)settings.get("last_modified"));
+  File lastFetchedFile=new File(home,(String)settings.get("last_fetched"));
+  long delay;
+  try {
+    delay=Long.parseLong((String)settings.get("update_delay"));
+  }
+ catch (  NumberFormatException nfe) {
+    delay=12;
+  }
+  delay*=60 * 60 * 1000;
   AddressBook master=new AddressBook(masterFile);
   AddressBook router=new AddressBook(routerFile);
   List defaultSubs=new LinkedList();
   defaultSubs.add("http://www.i2p2.i2p/hosts.txt");
-  SubscriptionList subscriptions=new SubscriptionList(subscriptionFile,etagsFile,lastModifiedFile,defaultSubs,(String)settings.get("proxy_host"),Integer.parseInt((String)settings.get("proxy_port")));
+  SubscriptionList subscriptions=new SubscriptionList(subscriptionFile,etagsFile,lastModifiedFile,lastFetchedFile,delay,defaultSubs,(String)settings.get("proxy_host"),Integer.parseInt((String)settings.get("proxy_port")));
   Log log=new Log(logFile);
   update(master,router,published,subscriptions,log);
 }
