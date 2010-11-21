@@ -1,10 +1,27 @@
 {
   _isRunning=true;
-  _proxyHost=_context.getProperty(PROP_PROXY_HOST);
-  _proxyPort=_context.getProperty(PROP_PROXY_PORT,-1);
+  _sslState=null;
+  if (_context.getBooleanProperty(PROP_PROXY_ENABLE)) {
+    _proxyHost=_context.getProperty(PROP_PROXY_HOST);
+    _proxyPort=_context.getProperty(PROP_PROXY_PORT,-1);
+  }
   System.out.println("Reseed start");
-  reseed(false);
-  System.out.println("Reseed complete");
+  int total=reseed(false);
+  if (total >= 50) {
+    System.out.println("Reseed complete, " + total + " received");
+    System.clearProperty(PROP_ERROR);
+  }
+ else   if (total > 0) {
+    System.out.println("Reseed complete, only " + total + " received");
+    System.setProperty(PROP_ERROR,ngettext("Reseed fetched only 1 router.","Reseed fetched only {0} routers.",total));
+  }
+ else {
+    System.out.println("Reseed failed, check network connection");
+    System.out.println("Ensure that nothing blocks outbound HTTP, check the logs, " + "and if nothing helps, read the FAQ about reseeding manually.");
+    System.setProperty(PROP_ERROR,_("Reseed failed.") + ' ' + _(RESEED_TIPS));
+  }
   System.setProperty(PROP_INPROGRESS,"false");
+  System.clearProperty(PROP_STATUS);
+  _sslState=null;
   _isRunning=false;
 }
