@@ -3,8 +3,7 @@
   dout=new DataOutputStream(out);
   dout.write(19);
   dout.write("BitTorrent protocol".getBytes("UTF-8"));
-  byte[] zeros=new byte[8];
-  dout.write(zeros);
+  dout.writeLong(OPTION_EXTENSION);
   byte[] shared_hash=metainfo.getInfoHash();
   dout.write(shared_hash);
   dout.write(my_id);
@@ -16,11 +15,14 @@
   din.readFully(bs);
   String bittorrentProtocol=new String(bs,"UTF-8");
   if (!"BitTorrent protocol".equals(bittorrentProtocol))   throw new IOException("Handshake failure, expected " + "'Bittorrent protocol', got '" + bittorrentProtocol + "'");
-  din.readFully(zeros);
+  options=din.readLong();
   bs=new byte[20];
   din.readFully(bs);
   if (!Arrays.equals(shared_hash,bs))   throw new IOException("Unexpected MetaInfo hash");
   din.readFully(bs);
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Read the remote side's hash and peerID fully from " + toString());
+  if (options != 0) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Peer supports options 0x" + Long.toString(options,16) + ", what should we say? "+ toString());
+  }
   return bs;
 }

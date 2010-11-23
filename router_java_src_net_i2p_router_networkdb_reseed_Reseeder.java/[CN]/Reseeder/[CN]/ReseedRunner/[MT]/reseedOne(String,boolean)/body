@@ -1,14 +1,13 @@
 {
   try {
-    System.setProperty(PROP_ERROR,"");
     System.setProperty(PROP_STATUS,_("Reseeding: fetching seed URL."));
-    System.err.println("Reseed from " + seedURL);
+    System.err.println("Reseeding from " + seedURL);
     URL dir=new URL(seedURL);
     byte contentRaw[]=readURL(dir);
     if (contentRaw == null) {
-      System.setProperty(PROP_ERROR,_("Last reseed failed fully (failed reading seed URL).") + ' ' + _(RESEED_TIPS));
-      _log.debug("Failed reading seed URL: " + seedURL);
-      return;
+      _log.warn("Failed reading seed URL: " + seedURL);
+      System.err.println("Reseed got no router infos from " + seedURL);
+      return 0;
     }
     String content=new String(contentRaw);
     Set<String> urls=new HashSet(1024);
@@ -26,9 +25,9 @@
       cur=end + 1;
     }
     if (total <= 0) {
-      _log.error("Read " + contentRaw.length + " bytes from seed "+ seedURL+ ", but found no routerInfo URLs.");
-      System.setProperty(PROP_ERROR,_("Last reseed failed fully (no routerInfo URLs at seed URL).") + ' ' + _(RESEED_TIPS));
-      return;
+      _log.warn("Read " + contentRaw.length + " bytes from seed "+ seedURL+ ", but found no routerInfo URLs.");
+      System.err.println("Reseed got no router infos from " + seedURL);
+      return 0;
     }
     List<String> urlList=new ArrayList(urls);
     Collections.shuffle(urlList);
@@ -48,19 +47,14 @@
         errors++;
       }
     }
-    System.err.println("Reseed got " + fetched + " router infos from "+ seedURL);
-    int failPercent=100 * errors / total;
-    if ((failPercent >= 10) && (failPercent < 90)) {
-      System.setProperty(PROP_ERROR,_("Last reseed failed partly ({0}% of {1}).",failPercent,total) + ' ' + _(RESEED_TIPS));
-    }
-    if (failPercent >= 90) {
-      System.setProperty(PROP_ERROR,_("Last reseed failed ({0}% of {1}).",failPercent,total) + ' ' + _(RESEED_TIPS));
-    }
+    System.err.println("Reseed got " + fetched + " router infos from "+ seedURL+ " with "+ errors+ " errors");
     if (fetched > 0)     _context.netDb().rescan();
     if (fetched >= 100)     _isRunning=false;
+    return fetched;
   }
  catch (  Throwable t) {
-    System.setProperty(PROP_ERROR,_("Last reseed failed fully (exception caught).") + ' ' + _(RESEED_TIPS));
-    _log.error("Error reseeding",t);
+    _log.warn("Error reseeding",t);
+    System.err.println("Reseed got no router infos from " + seedURL);
+    return 0;
   }
 }

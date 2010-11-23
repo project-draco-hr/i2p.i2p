@@ -3,6 +3,13 @@
   String peerParam=req.getParameter("p");
   List snarks=getSortedSnarks(req);
   String uri=req.getRequestURI();
+  boolean isForm=_manager.util().connected() || !snarks.isEmpty();
+  if (isForm) {
+    out.write("<form action=\"");
+    out.write(uri);
+    out.write("\" method=\"POST\">\n");
+    out.write("<input type=\"hidden\" name=\"nonce\" value=\"" + _nonce + "\" >\n");
+  }
   out.write(TABLE_HEADER);
   out.write("<img border=\"0\" src=\"/themes/snark/ubergine/images/status.png\"");
   out.write(" title=\"");
@@ -63,24 +70,18 @@
   out.write("</th>\n");
   out.write("<th align=\"center\">");
   if (_manager.util().connected()) {
-    out.write("<a href=\"" + uri + "?action=StopAll&nonce="+ _nonce+ "\" title=\"");
+    out.write("<input type=\"image\" name=\"action\" value=\"StopAll\" title=\"");
     out.write(_("Stop all torrents and the I2P tunnel"));
-    out.write("\">");
-    out.write("<img src=\"/themes/snark/ubergine/images/stop_all.png\" title=\"");
-    out.write(_("Stop all torrents and the I2P tunnel"));
-    out.write("\" alt=\"");
+    out.write("\" src=\"/themes/snark/ubergine/images/stop_all.png\" alt=\"");
     out.write(_("Stop All"));
     out.write("\">");
-    out.write("</a>");
   }
  else   if (!snarks.isEmpty()) {
-    out.write("<a href=\"" + uri + "?action=StartAll&nonce="+ _nonce+ "\" title=\"");
+    out.write("<input type=\"image\" name=\"action\" value=\"StartAll\" title=\"");
     out.write(_("Start all torrents and the I2P tunnel"));
+    out.write("\" src=\"/themes/snark/ubergine/images/start_all.png\" alt=\"");
+    out.write(_("Start All"));
     out.write("\">");
-    out.write("<img src=\"/themes/snark/ubergine/images/start_all.png\" title=\"");
-    out.write(_("Start all torrents and the I2P tunnel"));
-    out.write("\" alt=\"Start All\">");
-    out.write("</a>");
   }
  else {
     out.write("&nbsp;");
@@ -108,4 +109,5 @@
     out.write("</th>\n" + "    <th>&nbsp;</th>\n" + "    <th align=\"right\">" + formatSize(stats[0]) + "</th>\n"+ "    <th align=\"right\">"+ formatSize(stats[1])+ "</th>\n"+ "    <th align=\"right\">"+ formatSize(stats[2])+ "ps</th>\n"+ "    <th align=\"right\">"+ formatSize(stats[3])+ "ps</th>\n"+ "    <th>&nbsp;</th></tr>\n"+ "</tfoot>\n");
   }
   out.write("</table>");
+  if (isForm)   out.write("</form>\n");
 }
