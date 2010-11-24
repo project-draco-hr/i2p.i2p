@@ -1,6 +1,6 @@
 {
   _gracefulExitCode=-1;
-  _config=new Properties();
+  _config=new ConcurrentHashMap();
   if (configFilename == null) {
     if (envProps != null) {
       _configFilename=envProps.getProperty(PROP_CONFIG_FILE);
@@ -19,16 +19,8 @@
     _configFilename=cf.getAbsolutePath();
   }
   readConfig();
-  if (envProps == null) {
-    envProps=_config;
-  }
- else {
-    for (Iterator iter=_config.keySet().iterator(); iter.hasNext(); ) {
-      String k=(String)iter.next();
-      String v=_config.getProperty(k);
-      envProps.setProperty(k,v);
-    }
-  }
+  if (envProps == null)   envProps=new Properties();
+  envProps.putAll(_config);
   if (envProps.getProperty("i2p.dir.config") == null)   envProps.setProperty("i2p.dir.config",userDir);
   _context=new RouterContext(this,envProps);
   if (!beginMarkingLiveliness()) {
@@ -38,11 +30,11 @@
     System.err.println("       please delete the file " + getPingFile().getAbsolutePath());
     System.exit(-1);
   }
-  if (_config.getProperty("router.firstVersion") == null) {
-    _config.setProperty("router.firstVersion",RouterVersion.VERSION);
+  if (_config.get("router.firstVersion") == null) {
+    _config.put("router.firstVersion",RouterVersion.VERSION);
     String now=Long.toString(System.currentTimeMillis());
-    _config.setProperty("router.firstInstalled",now);
-    _config.setProperty("router.updateLastInstalled",now);
+    _config.put("router.firstInstalled",now);
+    _config.put("router.updateLastInstalled",now);
     saveConfig();
   }
   installUpdates();
