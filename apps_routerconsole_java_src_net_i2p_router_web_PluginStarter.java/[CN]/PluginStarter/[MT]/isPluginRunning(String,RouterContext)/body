@@ -5,6 +5,16 @@
     isJobRunning=true;
     break;
   }
-  if (log.shouldLog(Log.DEBUG))   log.debug("plugin name = <" + pluginName + ">; threads running? "+ isClientThreadRunning(pluginName)+ "; webapp runing? "+ WebAppStarter.isWebAppRunning(pluginName)+ "; jobs running? "+ isJobRunning);
-  return isClientThreadRunning(pluginName) || WebAppStarter.isWebAppRunning(pluginName) || isJobRunning;
+  boolean isWarRunning=false;
+  if (pluginWars.containsKey(pluginName)) {
+    Iterator<String> it=pluginWars.get(pluginName).iterator();
+    while (it.hasNext() && !isWarRunning) {
+      String warName=it.next();
+      if (WebAppStarter.isWebAppRunning(warName)) {
+        isWarRunning=true;
+      }
+    }
+  }
+  if (log.shouldLog(Log.DEBUG))   log.debug("plugin name = <" + pluginName + ">; threads running? "+ isClientThreadRunning(pluginName)+ "; webapp runing? "+ isWarRunning+ "; jobs running? "+ isJobRunning);
+  return isClientThreadRunning(pluginName) || isWarRunning || isJobRunning;
 }
