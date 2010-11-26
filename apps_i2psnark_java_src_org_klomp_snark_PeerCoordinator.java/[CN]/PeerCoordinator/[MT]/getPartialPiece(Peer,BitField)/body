@@ -1,0 +1,34 @@
+{
+synchronized (partialPieces) {
+synchronized (wantedPieces) {
+      Collections.sort(partialPieces);
+      for (Iterator<PartialPiece> iter=partialPieces.iterator(); iter.hasNext(); ) {
+        PartialPiece pp=iter.next();
+        int savedPiece=pp.getPiece();
+        if (havePieces.get(savedPiece)) {
+          for (          Piece piece : wantedPieces) {
+            if (piece.getId() == savedPiece) {
+              piece.setRequested(true);
+              iter.remove();
+              if (_log.shouldLog(Log.INFO)) {
+                _log.info("Restoring orphaned partial piece " + pp + " Partial list size now: "+ partialPieces.size());
+              }
+              return pp;
+            }
+          }
+        }
+      }
+    }
+  }
+  int piece=wantPiece(peer,havePieces);
+  if (piece >= 0) {
+    try {
+      return new PartialPiece(piece,metainfo.getPieceLength(piece));
+    }
+ catch (    OutOfMemoryError oom) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("OOM creating new partial piece");
+    }
+  }
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("We have no partial piece to return");
+  return null;
+}
