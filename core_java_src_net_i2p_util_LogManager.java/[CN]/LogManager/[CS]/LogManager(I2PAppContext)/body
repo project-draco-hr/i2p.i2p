@@ -5,17 +5,12 @@
   _limits=new ConcurrentHashSet();
   _logs=new ConcurrentHashMap(128);
   _defaultLimit=Log.ERROR;
-  _configLastRead=0;
   _context=context;
   _log=getLog(LogManager.class);
   String location=context.getProperty(CONFIG_LOCATION_PROP,CONFIG_LOCATION_DEFAULT);
   setConfig(location);
   _consoleBuffer=new LogConsoleBuffer(context);
-  _writer=new LogWriter(this);
-  Thread t=new I2PThread(_writer);
-  t.setName("LogWriter");
-  t.setDaemon(true);
-  t.start();
+  if (context.isRouterContext())   startLogWriter();
   try {
     Runtime.getRuntime().addShutdownHook(new ShutdownHook());
   }
