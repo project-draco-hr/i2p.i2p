@@ -13,31 +13,37 @@
     }
     System.out.println("INFO: Update file exists [" + UPDATE_FILE + "] - installing");
     boolean ok=FileUtil.verifyZip(updateFile);
-    if (ok)     ok=FileUtil.extractZip(updateFile,_context.getBaseDir());
-    if (ok)     System.out.println("INFO: Update installed");
- else     System.out.println("ERROR: Update failed!");
-    if (!ok) {
-      File bad=new File(_context.getRouterDir(),"BAD-" + UPDATE_FILE);
-      boolean renamed=updateFile.renameTo(bad);
-      if (renamed) {
-        System.out.println("Moved update file to " + bad.getAbsolutePath());
-      }
- else {
-        System.out.println("Deleting file " + updateFile.getAbsolutePath());
-        ok=true;
-      }
-    }
     if (ok) {
       _config.put("router.updateLastInstalled","" + System.currentTimeMillis());
       saveConfig();
-      boolean deleted=updateFile.delete();
-      if (!deleted) {
-        System.out.println("ERROR: Unable to delete the update file!");
-        updateFile.deleteOnExit();
-      }
+      ok=FileUtil.extractZip(updateFile,_context.getBaseDir());
     }
-    if (System.getProperty("wrapper.version") != null)     System.out.println("INFO: Restarting after update");
- else     System.out.println("WARNING: Exiting after update, restart I2P");
+    try {
+      if (ok)       System.out.println("INFO: Update installed");
+ else       System.out.println("ERROR: Update failed!");
+      if (!ok) {
+        File bad=new File(_context.getRouterDir(),"BAD-" + UPDATE_FILE);
+        boolean renamed=updateFile.renameTo(bad);
+        if (renamed) {
+          System.out.println("Moved update file to " + bad.getAbsolutePath());
+        }
+ else {
+          System.out.println("Deleting file " + updateFile.getAbsolutePath());
+          ok=true;
+        }
+      }
+      if (ok) {
+        boolean deleted=updateFile.delete();
+        if (!deleted) {
+          System.out.println("ERROR: Unable to delete the update file!");
+          updateFile.deleteOnExit();
+        }
+      }
+      if (System.getProperty("wrapper.version") != null)       System.out.println("INFO: Restarting after update");
+ else       System.out.println("WARNING: Exiting after update, restart I2P");
+    }
+ catch (    Throwable t) {
+    }
     System.exit(EXIT_HARD_RESTART);
   }
 }
