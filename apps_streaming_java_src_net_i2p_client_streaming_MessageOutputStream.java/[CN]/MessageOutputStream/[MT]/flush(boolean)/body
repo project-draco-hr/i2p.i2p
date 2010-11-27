@@ -2,18 +2,19 @@
   long begin=_context.clock().now();
   WriteStatus ws=null;
   if (_log.shouldLog(Log.INFO) && _valid > 0)   _log.info("flush() valid = " + _valid);
+  DataReceiver rcvr=_dataReceiver;
 synchronized (_dataLock) {
     if (_buf == null) {
       _dataLock.notifyAll();
       throw new IOException("closed (buffer went away)");
     }
-    if (_dataReceiver == null) {
+    if (rcvr == null) {
       _dataLock.notifyAll();
       throwAnyError();
       return;
     }
     if (!wait_for_accept_only) {
-      ws=_dataReceiver.writeData(_buf,0,_valid);
+      ws=rcvr.writeData(_buf,0,_valid);
       _written+=_valid;
       _valid=0;
       locked_updateBufferSize();
@@ -22,7 +23,7 @@ synchronized (_dataLock) {
     }
   }
   if (wait_for_accept_only) {
-    flushAvailable(_dataReceiver,true);
+    flushAvailable(rcvr,true);
     return;
   }
   if (_log.shouldLog(Log.DEBUG))   _log.debug("before waiting " + _writeTimeout + "ms for completion of "+ ws);

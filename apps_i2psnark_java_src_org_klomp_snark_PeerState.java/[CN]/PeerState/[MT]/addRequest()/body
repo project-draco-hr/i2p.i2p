@@ -2,7 +2,23 @@
   boolean more_pieces=true;
   while (more_pieces) {
     more_pieces=outstandingRequests.size() < MAX_PIPELINE;
-    if (more_pieces && lastRequest == null)     more_pieces=requestNextPiece();
+    if (more_pieces && lastRequest == null) {
+      if (!interesting) {
+        if (listener.needPiece(this.peer,bitfield)) {
+          setInteresting(true);
+          if (_log.shouldLog(Log.DEBUG))           _log.debug(peer + " addRequest() we need something, setting interesting, delaying requestNextPiece()");
+        }
+ else {
+          if (_log.shouldLog(Log.DEBUG))           _log.debug(peer + " addRequest() needs nothing");
+        }
+        return;
+      }
+      if (choked) {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug(peer + " addRequest() we are choked, delaying requestNextPiece()");
+        return;
+      }
+      more_pieces=requestNextPiece();
+    }
  else     if (more_pieces) {
       int pieceLength;
       boolean isLastChunk;
@@ -22,5 +38,6 @@
       }
     }
   }
+  if (interesting && lastRequest == null && outstandingRequests.isEmpty())   setInteresting(false);
   if (_log.shouldLog(Log.DEBUG))   _log.debug(peer + " requests " + outstandingRequests);
 }

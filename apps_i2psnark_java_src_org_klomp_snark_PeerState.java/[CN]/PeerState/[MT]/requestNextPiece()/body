@@ -10,33 +10,6 @@
         return true;
       }
     }
-    int nextPiece=listener.wantPiece(peer,bitfield);
-    if (nextPiece != -1 && (lastRequest == null || lastRequest.piece != nextPiece)) {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug(peer + " want piece " + nextPiece);
-      if (!interesting) {
-        if (_log.shouldLog(Log.DEBUG))         _log.debug(peer + " transition to end game, setting interesting");
-        interesting=true;
-        out.sendInterest(true);
-      }
-      int piece_length=metainfo.getPieceLength(nextPiece);
-      byte[] bs;
-      try {
-        bs=new byte[piece_length];
-      }
- catch (      OutOfMemoryError oom) {
-        _log.warn("Out of memory, can't request piece " + nextPiece,oom);
-        return false;
-      }
-      int length=Math.min(piece_length,PARTSIZE);
-      Request req=new Request(nextPiece,bs,0,length);
-      outstandingRequests.add(req);
-      if (!choked)       out.sendRequest(req);
-      lastRequest=req;
-      return true;
-    }
- else {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug(peer + " no more pieces to request");
-    }
   }
   if (outstandingRequests.isEmpty())   lastRequest=null;
   if (interesting && lastRequest == null) {
