@@ -5,18 +5,20 @@ synchronized (wantedPieces) {
       PartialPiece pp=iter.next();
       int savedPiece=pp.getPiece();
       if (havePieces.get(savedPiece)) {
+        iter.remove();
         for (        Piece piece : wantedPieces) {
           if (piece.getId() == savedPiece) {
             piece.setRequested(true);
-            iter.remove();
             if (_log.shouldLog(Log.INFO)) {
               _log.info("Restoring orphaned partial piece " + pp + " Partial list size now: "+ partialPieces.size());
             }
             return pp;
           }
         }
+        if (_log.shouldLog(Log.WARN))         _log.warn("Partial piece " + pp + " NOT in wantedPieces??");
       }
     }
+    if (_log.shouldLog(Log.WARN) && !partialPieces.isEmpty())     _log.warn("Peer " + peer + " has none of our partials "+ partialPieces);
   }
   int piece=wantPiece(peer,havePieces);
   if (piece >= 0) {
