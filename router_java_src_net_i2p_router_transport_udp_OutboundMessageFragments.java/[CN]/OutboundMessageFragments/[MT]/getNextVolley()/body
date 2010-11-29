@@ -12,8 +12,9 @@ synchronized (_activePeers) {
           if (cur == 0) {
             long ts=System.currentTimeMillis();
             long cycleTime=ts - _lastCycleTime;
+            _lastCycleTime=ts;
             _context.statManager().addRateData("udp.sendCycleTime",cycleTime,_activePeers.size());
-            if (cycleTime > 1000)             _context.statManager().addRateData("udp.sendCycleTimeSlow",cycleTime,_activePeers.size());
+            if (cycleTime > 1100)             _context.statManager().addRateData("udp.sendCycleTimeSlow",cycleTime,_activePeers.size());
           }
           peer=_activePeers.get(i);
           state=peer.allocateSend();
@@ -31,7 +32,7 @@ synchronized (_activePeers) {
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Done looping, next peer we are sending for: " + (peer != null ? peer.getRemotePeer().toBase64() : "none"));
         if (state == null) {
           if (_log.shouldLog(Log.DEBUG))           _log.debug("wait for " + nextSendDelay);
-          if (nextSendDelay > 0)           _activePeers.wait(nextSendDelay);
+          if (nextSendDelay > 0)           _activePeers.wait(Math.min(Math.max(nextSendDelay,10),3000));
  else           _activePeers.wait(1000);
         }
  else {
