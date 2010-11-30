@@ -1,16 +1,17 @@
 {
   try {
-    List<LogRecord> records=_manager._removeAll();
+    Queue<LogRecord> records=_manager.getQueue();
     if (records == null)     return;
     if (!records.isEmpty()) {
-      for (      LogRecord rec : records) {
+      LogRecord rec;
+      while ((rec=records.poll()) != null) {
         writeRecord(rec);
       }
       try {
         _currentOut.flush();
       }
  catch (      IOException ioe) {
-        System.err.println("Error writing the router log");
+        if (++_diskFullMessageCount < MAX_DISKFULL_MESSAGES)         System.err.println("Error writing the router log - disk full? " + ioe);
       }
     }
   }

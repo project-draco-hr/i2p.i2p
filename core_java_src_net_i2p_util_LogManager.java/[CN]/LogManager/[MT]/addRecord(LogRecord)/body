@@ -1,4 +1,14 @@
 {
   if ((!_context.isRouterContext()) && _writer == null)   startLogWriter();
-  _records.offer(record);
+  boolean success=_records.offer(record);
+  if (!success) {
+synchronized (_writer) {
+      _writer.notifyAll();
+    }
+    try {
+      _records.put(record);
+    }
+ catch (    InterruptedException ie) {
+    }
+  }
 }
