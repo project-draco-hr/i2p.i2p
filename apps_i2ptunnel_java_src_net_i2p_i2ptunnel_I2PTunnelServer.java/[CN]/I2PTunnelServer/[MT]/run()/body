@@ -1,33 +1,43 @@
 {
   I2PServerSocket i2pS_S=sockMgr.getServerSocket();
-  if (shouldUsePool()) {
-    int handlers=getHandlerCount();
-    for (int i=0; i < handlers; i++) {
-      I2PAppThread handler=new I2PAppThread(new Handler(i2pS_S),"Handle Server " + i);
-      handler.start();
-    }
+  ThreadPoolExecutor executor=null;
+  if (_log.shouldLog(Log.WARN)) {
+    if (_usePool)     _log.warn("Starting executor with " + getHandlerCount() + " threads max");
+ else     _log.warn("Threads disabled, running blockingHandles inline");
   }
- else {
-    while (true) {
-      try {
-        final I2PSocket i2ps=i2pS_S.accept();
-        if (i2ps == null)         throw new I2PException("I2PServerSocket closed");
-        new I2PAppThread(new Runnable(){
-          public void run(){
-            blockingHandle(i2ps);
-          }
+  if (_usePool) {
+    executor=new CustomThreadPoolExecutor(getHandlerCount(),"ServerHandler pool " + remoteHost + ':'+ remotePort);
+  }
+  while (open) {
+    try {
+      final I2PSocket i2ps=i2pS_S.accept();
+      if (i2ps == null)       throw new I2PException("I2PServerSocket closed");
+      if (_usePool) {
+        try {
+          executor.execute(new Handler(i2ps));
         }
-).start();
+ catch (        RejectedExecutionException ree) {
+          if (open && _log.shouldLog(Log.ERROR))           _log.error("ServerHandler queue full for " + remoteHost + ':'+ remotePort+ "; increase "+ PROP_HANDLER_COUNT+ '?',ree);
+        }
       }
- catch (      I2PException ipe) {
-        if (_log.shouldLog(Log.ERROR))         _log.error("Error accepting - KILLING THE TUNNEL SERVER",ipe);
-        return;
-      }
-catch (      ConnectException ce) {
-        if (_log.shouldLog(Log.ERROR))         _log.error("Error accepting",ce);
-      }
-catch (      SocketTimeoutException ste) {
+ else {
+        blockingHandle(i2ps);
       }
     }
+ catch (    I2PException ipe) {
+      if (_log.shouldLog(Log.ERROR))       _log.error("Error accepting - KILLING THE TUNNEL SERVER",ipe);
+      return;
+    }
+catch (    ConnectException ce) {
+      if (_log.shouldLog(Log.ERROR))       _log.error("Error accepting",ce);
+      try {
+        Thread.currentThread().sleep(500);
+      }
+ catch (      InterruptedException ie) {
+      }
+    }
+catch (    SocketTimeoutException ste) {
+    }
   }
+  if (executor != null)   executor.shutdownNow();
 }
