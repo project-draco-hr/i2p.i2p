@@ -25,21 +25,57 @@
   List<String> notStarted=new ArrayList();
   WebApplicationHandler baseHandler=null;
   try {
-    StringTokenizer tok=new StringTokenizer(_listenHost," ,");
     int boundAddresses=0;
-    while (tok.hasMoreTokens()) {
-      String host=tok.nextToken().trim();
-      try {
-        if (host.indexOf(":") >= 0)         _server.addListener('[' + host + "]:"+ _listenPort);
- else         _server.addListener(host + ':' + _listenPort);
-        boundAddresses++;
+    if (_listenPort != null) {
+      StringTokenizer tok=new StringTokenizer(_listenHost," ,");
+      while (tok.hasMoreTokens()) {
+        String host=tok.nextToken().trim();
+        try {
+          if (host.indexOf(":") >= 0)           _server.addListener('[' + host + "]:"+ _listenPort);
+ else           _server.addListener(host + ':' + _listenPort);
+          boundAddresses++;
+        }
+ catch (        IOException ioe) {
+          System.err.println("Unable to bind routerconsole to " + host + " port "+ _listenPort+ ' '+ ioe);
+        }
       }
- catch (      IOException ioe) {
-        System.err.println("Unable to bind routerconsole to " + host + " port "+ _listenPort+ ' '+ ioe);
+    }
+    int sslPort=0;
+    if (_sslListenPort != null) {
+      try {
+        sslPort=Integer.parseInt(_sslListenPort);
+      }
+ catch (      NumberFormatException nfe) {
+      }
+      if (sslPort <= 0)       System.err.println("Bad routerconsole SSL port " + _sslListenPort);
+    }
+    if (sslPort > 0) {
+      I2PAppContext ctx=I2PAppContext.getGlobalContext();
+      File keyStore=new File(ctx.getConfigDir(),"keystore/console.ks");
+      if (verifyKeyStore(keyStore)) {
+        StringTokenizer tok=new StringTokenizer(_sslListenHost," ,");
+        while (tok.hasMoreTokens()) {
+          String host=tok.nextToken().trim();
+          InetAddrPort iap=new InetAddrPort(host,sslPort);
+          try {
+            SslListener ssll=new SslListener(iap);
+            ssll.setKeystore(keyStore.getAbsolutePath());
+            ssll.setPassword(ctx.getProperty(PROP_KEYSTORE_PASSWORD,DEFAULT_KEYSTORE_PASSWORD));
+            ssll.setKeyPassword(ctx.getProperty(PROP_KEY_PASSWORD,"thisWontWork"));
+            _server.addListener(ssll);
+            boundAddresses++;
+          }
+ catch (          Exception e) {
+            System.err.println("Unable to bind routerconsole to " + host + " port "+ _listenPort+ " for SSL: "+ e);
+          }
+        }
+      }
+ else {
+        System.err.println("Unable to create or access keystore for SSL: " + keyStore.getAbsolutePath());
       }
     }
     if (boundAddresses <= 0) {
-      System.err.println("Unable to bind routerconsole to any address on port " + _listenPort);
+      System.err.println("Unable to bind routerconsole to any address on port " + _listenPort + (sslPort > 0 ? (" or SSL port " + sslPort) : ""));
       return;
     }
     _server.setRootWebApp(ROUTERCONSOLE);
