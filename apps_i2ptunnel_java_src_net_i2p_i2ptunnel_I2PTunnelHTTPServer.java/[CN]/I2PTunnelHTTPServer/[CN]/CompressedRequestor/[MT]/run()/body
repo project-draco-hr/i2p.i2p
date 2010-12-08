@@ -19,6 +19,11 @@
       throw new IOException("getInputStream NPE");
     }
     CompressedResponseOutputStream compressedOut=new CompressedResponseOutputStream(browserout);
+    StringBuilder command=new StringBuilder(128);
+    Properties headers=readHeaders(serverin,command);
+    headers.setProperty("Server","I2PServer");
+    String modifiedHeaders=formatHeaders(headers,command);
+    compressedOut.write(modifiedHeaders.getBytes());
     Sender s=new Sender(compressedOut,serverin,"server: server to browser");
     if (_log.shouldLog(Log.INFO))     _log.info("Before pumping the compressed response");
     s.run();
