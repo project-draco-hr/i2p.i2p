@@ -14,6 +14,7 @@
       }
     }
   }
+  if (trimmed > 0)   ctx.statManager().addRateData("i2ptunnel.httpNullWorkaround",trimmed,0);
   int i=0;
   while (true) {
     if (++i > MAX_HEADERS)     throw new IOException("Too many header lines - max " + MAX_HEADERS);
@@ -32,9 +33,16 @@
  else       value="";
       if ("Accept-encoding".equalsIgnoreCase(name))       name="Accept-encoding";
  else       if ("X-Accept-encoding".equalsIgnoreCase(name))       name="X-Accept-encoding";
- else       if (HASH_HEADER.equalsIgnoreCase(name))       continue;
- else       if (DEST64_HEADER.equalsIgnoreCase(name))       continue;
- else       if (DEST32_HEADER.equalsIgnoreCase(name))       continue;
+      boolean skip=false;
+      for (      String skipHeader : skipHeaders) {
+        if (skipHeader.equalsIgnoreCase(name)) {
+          skip=true;
+          break;
+        }
+      }
+      if (skip) {
+        continue;
+      }
       headers.setProperty(name,value);
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Read the header [" + name + "] = ["+ value+ "]");
     }
