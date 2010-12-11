@@ -5,7 +5,7 @@
     socket.setReadTimeout(5 * 1000);
     InputStream in=socket.getInputStream();
     StringBuilder command=new StringBuilder(128);
-    Properties headers=readHeaders(in,command);
+    Properties headers=readHeaders(in,command,CLIENT_SKIPHEADERS,getTunnel().getContext());
     headers.setProperty(HASH_HEADER,socket.getPeerDestination().calculateHash().toBase64());
     headers.setProperty(DEST32_HEADER,Base32.encode(socket.getPeerDestination().calculateHash().getData()) + ".b32.i2p");
     headers.setProperty(DEST64_HEADER,socket.getPeerDestination().toBase64());
@@ -29,7 +29,7 @@
     boolean useGZIP=((enc != null) && (enc.indexOf("x-i2p-gzip") >= 0));
     if ((!useGZIP) && (altEnc != null) && (altEnc.indexOf("x-i2p-gzip") >= 0))     useGZIP=true;
     if (allowGZIP && useGZIP) {
-      I2PAppThread req=new I2PAppThread(new CompressedRequestor(s,socket,modifiedHeader),Thread.currentThread().getName() + ".hc");
+      I2PAppThread req=new I2PAppThread(new CompressedRequestor(s,socket,modifiedHeader,getTunnel().getContext()),Thread.currentThread().getName() + ".hc");
       req.start();
     }
  else {
