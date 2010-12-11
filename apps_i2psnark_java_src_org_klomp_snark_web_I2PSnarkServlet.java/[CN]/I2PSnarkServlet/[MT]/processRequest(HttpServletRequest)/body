@@ -1,42 +1,13 @@
 {
   String action=req.getParameter("action");
   if (action == null) {
+    _manager.addMessage("No action specified");
     return;
   }
-  if (!"POST".equals(req.getMethod()))   return;
   if ("Add".equals(action)) {
     String newFile=req.getParameter("newFile");
     String newURL=req.getParameter("newURL");
-    File f=null;
-    if ((newFile != null) && (newFile.trim().length() > 0))     f=new File(newFile.trim());
-    if ((f != null) && (!f.exists())) {
-      _manager.addMessage(_("Torrent file {0} does not exist",newFile));
-    }
-    if ((f != null) && (f.exists())) {
-      File local=new File(_manager.getDataDir(),f.getName());
-      String canonical=null;
-      try {
-        canonical=local.getCanonicalPath();
-        if (local.exists()) {
-          if (_manager.getTorrent(canonical) != null)           _manager.addMessage(_("Torrent already running: {0}",newFile));
- else           _manager.addMessage(_("Torrent already in the queue: {0}",newFile));
-        }
- else {
-          boolean ok=FileUtil.copy(f.getAbsolutePath(),local.getAbsolutePath(),true);
-          if (ok) {
-            _manager.addMessage(_("Copying torrent to {0}",local.getAbsolutePath()));
-            _manager.addTorrent(canonical);
-          }
- else {
-            _manager.addMessage(_("Unable to copy the torrent to {0}",local.getAbsolutePath()) + ' ' + _("from {0}",f.getAbsolutePath()));
-          }
-        }
-      }
- catch (      IOException ioe) {
-        _log.warn("hrm: " + local,ioe);
-      }
-    }
- else     if (newURL != null) {
+    if (newURL != null) {
       if (newURL.startsWith("http://")) {
         _manager.addMessage(_("Fetching {0}",urlify(newURL)));
         I2PAppThread fetch=new I2PAppThread(new FetchAndAdd(_manager,newURL),"Fetch and add");
@@ -216,5 +187,8 @@
       Snark snark=(Snark)snarks.get(i);
       if (snark.stopped)       snark.startTorrent();
     }
+  }
+ else {
+    _manager.addMessage("Unknown POST action: \"" + action + '\"');
   }
 }

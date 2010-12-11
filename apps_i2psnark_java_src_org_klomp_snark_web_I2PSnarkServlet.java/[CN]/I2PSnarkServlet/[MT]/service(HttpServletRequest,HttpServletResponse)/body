@@ -4,9 +4,11 @@
     resp.sendError(HttpResponse.__405_Method_Not_Allowed);
     return;
   }
+  _themePath="/themes/snark/" + _manager.getTheme() + '/';
+  _imgPath=_themePath + "images/";
   String path=req.getServletPath();
   boolean isConfigure="/configure".equals(path);
-  if (!(path == null || path.equals("/") || path.equals("/index.jsp") || path.equals("/index.html") || isConfigure)) {
+  if (!(path == null || path.equals("/") || path.equals("/index.jsp") || path.equals("/index.html") || path.equals("/_post") || isConfigure)) {
     if (path.endsWith("/")) {
       String pathInfo=req.getPathInfo();
       String pathInContext=URI.addPaths(path,pathInfo);
@@ -33,7 +35,10 @@
   resp.setCharacterEncoding("UTF-8");
   resp.setContentType("text/html; charset=UTF-8");
   String nonce=req.getParameter("nonce");
-  if ((nonce != null) && (nonce.equals(String.valueOf(_nonce))))   processRequest(req);
+  if (nonce != null) {
+    if (nonce.equals(String.valueOf(_nonce)))     processRequest(req);
+ else     _manager.addMessage("Please retry form submission (bad nonce)");
+  }
   String peerParam=req.getParameter("p");
   String peerString;
   if (peerParam == null || !_manager.util().connected()) {
@@ -43,27 +48,27 @@
     peerString="?p=" + peerParam;
   }
   PrintWriter out=resp.getWriter();
-  out.write("<html>\n" + "<head><link rel=\"shortcut icon\" href=\"/themes/snark/" + _manager.getTheme() + "/favicon.ico\">\n"+ "<title>");
+  out.write(DOCTYPE + "<html>\n" + "<head><link rel=\"shortcut icon\" href=\""+ _themePath+ "favicon.ico\">\n"+ "<title>");
   out.write(_("I2PSnark - Anonymous BitTorrent Client"));
   if ("2".equals(peerParam))   out.write(" | Debug Mode");
   out.write("</title>\n");
-  if (!isConfigure)   out.write("<meta http-equiv=\"refresh\" content=\"60;" + req.getRequestURI() + peerString+ "\">\n");
-  out.write(HEADER_A + _manager.getTheme() + HEADER_B);
+  if (!isConfigure)   out.write("<meta http-equiv=\"refresh\" content=\"60;/i2psnark/" + peerString + "\">\n");
+  out.write(HEADER_A + _themePath + HEADER_B);
   out.write("</head><body>");
   out.write("<center>");
   if (isConfigure) {
     out.write("<div class=\"snarknavbar\"><a href=\"/i2psnark/\" title=\"");
     out.write(_("Torrents"));
     out.write("\" class=\"snarkRefresh\">");
-    out.write("<img border=\"0\" src=\"/themes/snark/" + _manager.getTheme() + "/images/arrow_refresh.png\"> ");
+    out.write("<img alt=\"\" border=\"0\" src=\"" + _imgPath + "arrow_refresh.png\">&nbsp;&nbsp;");
     out.write(_("I2PSnark"));
     out.write("</a>");
   }
  else {
-    out.write("<div class=\"snarknavbar\"><a href=\"" + req.getRequestURI() + peerString+ "\" title=\"");
+    out.write("<div class=\"snarknavbar\"><a href=\"/i2psnark/" + peerString + "\" title=\"");
     out.write(_("Refresh page"));
     out.write("\" class=\"snarkRefresh\">");
-    out.write("<img border=\"0\" src=\"/themes/snark/" + _manager.getTheme() + "/images/arrow_refresh.png\"> ");
+    out.write("<img alt=\"\" border=\"0\" src=\"" + _imgPath + "arrow_refresh.png\">&nbsp;&nbsp;");
     out.write(_("I2PSnark"));
     out.write("</a> <a href=\"http://forum.i2p/viewforum.php?f=21\" class=\"snarkRefresh\" target=\"_blank\">");
     out.write(_("Forum"));

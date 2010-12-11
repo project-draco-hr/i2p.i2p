@@ -5,77 +5,93 @@
   String uri=req.getRequestURI();
   boolean isForm=_manager.util().connected() || !snarks.isEmpty();
   if (isForm) {
-    out.write("<form action=\"");
-    out.write(uri);
-    out.write("\" method=\"POST\">\n");
+    out.write("<form action=\"_post\" method=\"POST\">\n");
     out.write("<input type=\"hidden\" name=\"nonce\" value=\"" + _nonce + "\" >\n");
     if (peerParam != null)     out.write("<input type=\"hidden\" name=\"p\" value=\"" + peerParam + "\" >\n");
   }
   out.write(TABLE_HEADER);
-  out.write("<img border=\"0\" src=\"/themes/snark/" + _manager.getTheme() + "/images/status.png\"");
-  out.write(" title=\"");
+  out.write("<img alt=\"\" border=\"0\" src=\"" + _imgPath + "status.png\" > ");
   out.write(_("Status"));
-  out.write("\"> ");
   if (_manager.util().connected() && !snarks.isEmpty()) {
-    out.write(" <a href=\"");
-    out.write(req.getRequestURI());
+    out.write(" <a href=\"/i2psnark/");
     if (peerParam != null) {
       out.write("\">");
-      out.write("<img border=\"0\" src=\"/themes/snark/" + _manager.getTheme() + "/images/showpeers.png\" title=\"");
-      out.write(_("Hide All Attached Peers [connected/total in swarm]"));
+      out.write("<img border=\"0\" src=\"" + _imgPath + "hidepeers.png\" title=\"");
+      out.write(_("Hide Peers"));
       out.write("\" alt=\"");
       out.write(_("Hide Peers"));
       out.write("\">");
     }
  else {
       out.write("?p=1\">");
-      out.write("<img border=\"0\" src=\"/themes/snark/" + _manager.getTheme() + "/images/hidepeers.png\" title=\"");
-      out.write(_("Show All Attached Peers [connected/total in swarm]"));
+      out.write("<img border=\"0\" src=\"" + _imgPath + "showpeers.png\" title=\"");
+      out.write(_("Show Peers"));
       out.write("\" alt=\"");
       out.write(_("Show Peers"));
       out.write("\">");
     }
     out.write("</a><br>\n");
   }
-  out.write("</th>\n<th align=\"left\">");
-  out.write("<img border=\"0\" src=\"/themes/snark/" + _manager.getTheme() + "/images/head_torrent.png\" title=\"");
-  out.write(_("Loaded Torrents"));
-  out.write("\">");
-  out.write("</th>\n<th align=\"center\">");
-  out.write("<img border=\"0\" src=\"/themes/snark/" + _manager.getTheme() + "/images/head_eta.png\" title=\"");
-  out.write(_("Estimated Download Time"));
-  out.write("\">");
-  out.write("</th>\n<th align=\"center\">");
-  out.write("<img border=\"0\" src=\"/themes/snark/" + _manager.getTheme() + "/images/head_rx.png\" title=\"");
+  out.write("</th>\n<th colspan=\"3\" align=\"left\">");
+  out.write("<img border=\"0\" src=\"" + _imgPath + "torrent.png\" alt=\"\">");
+  out.write(_("Torrent"));
+  out.write("</th>\n<th align=\"right\">");
+  if (_manager.util().connected() && !snarks.isEmpty()) {
+    out.write("<img border=\"0\" src=\"" + _imgPath + "eta.png\" alt=\"\" title=\"");
+    out.write(_("Estimated time remaining"));
+    out.write("\">");
+    out.write(_("ETA"));
+  }
+  out.write("</th>\n<th align=\"right\">");
+  out.write("<img border=\"0\" src=\"" + _imgPath + "head_rx.png\" alt=\"\" title=\"");
   out.write(_("Downloaded"));
   out.write("\">");
+  out.write(_("RX"));
+  out.write("</th>\n<th align=\"right\">");
+  if (_manager.util().connected() && !snarks.isEmpty()) {
+    out.write("<img border=\"0\" src=\"" + _imgPath + "head_tx.png\" alt=\"\" title=\"");
+    out.write(_("Uploaded"));
+    out.write("\">");
+    out.write(_("TX"));
+  }
+  out.write("</th>\n<th align=\"right\">");
+  if (_manager.util().connected() && !snarks.isEmpty()) {
+    out.write("<img border=\"0\" src=\"" + _imgPath + "head_rxspeed.png\" title=\"");
+    out.write(_("Down Rate"));
+    out.write("\" alt=\"");
+    out.write(_("RX"));
+    out.write(" \">");
+    out.write(_("Rate"));
+  }
+  out.write("</th>\n<th align=\"right\">");
+  if (_manager.util().connected() && !snarks.isEmpty()) {
+    out.write("<img border=\"0\" src=\"" + _imgPath + "head_txspeed.png\" title=\"");
+    out.write(_("Up Rate"));
+    out.write("\" alt=\"");
+    out.write(_("TX"));
+    out.write(" \">");
+    out.write(_("Rate"));
+  }
   out.write("</th>\n<th align=\"center\">");
-  out.write("<img border=\"0\" src=\"/themes/snark/" + _manager.getTheme() + "/images/head_tx.png\" title=\"");
-  out.write(_("Uploaded"));
-  out.write("\">");
-  out.write("</th>\n<th align=\"center\">");
-  out.write("<img border=\"0\" src=\"/themes/snark/" + _manager.getTheme() + "/images/head_rxspeed.png\" title=\"");
-  out.write(_("Down Rate"));
-  out.write("\">");
-  out.write("</th>\n<th align=\"center\">");
-  out.write("<img border=\"0\" src=\"/themes/snark/" + _manager.getTheme() + "/images/head_txspeed.png\" title=\"");
-  out.write(_("Up Rate"));
-  out.write("\">");
-  out.write("</th>\n");
-  out.write("<th align=\"center\">");
+  String ua=req.getHeader("User-Agent");
+  boolean isDegraded=ua != null && (ua.startsWith("Opera") || ua.startsWith("Lynx") || ua.startsWith("ELinks")|| ua.startsWith("Dillo"));
   if (_manager.util().connected()) {
-    out.write("<input type=\"image\" name=\"action\" value=\"StopAll\" title=\"");
+    if (isDegraded)     out.write("<a href=\"/i2psnark/?action=StopAll&amp;nonce=" + _nonce + "\"><img title=\"");
+ else     out.write("<input type=\"image\" name=\"action\" value=\"StopAll\" title=\"");
     out.write(_("Stop all torrents and the I2P tunnel"));
-    out.write("\" src=\"/themes/snark/" + _manager.getTheme() + "/images/stop_all.png\" alt=\"");
+    out.write("\" src=\"" + _imgPath + "stop_all.png\" alt=\"");
     out.write(_("Stop All"));
     out.write("\">");
+    if (isDegraded)     out.write("</a>");
   }
  else   if (!snarks.isEmpty()) {
-    out.write("<input type=\"image\" name=\"action\" value=\"StartAll\" title=\"");
+    if (isDegraded)     out.write("<a href=\"/i2psnark/?action=StartAll&amp;nonce=" + _nonce + "\"><img title=\"");
+ else     out.write("<input type=\"image\" name=\"action\" value=\"StartAll\" title=\"");
     out.write(_("Start all torrents and the I2P tunnel"));
-    out.write("\" src=\"/themes/snark/" + _manager.getTheme() + "/images/start_all.png\" alt=\"");
+    out.write("\" src=\"" + _imgPath + "start_all.png\" alt=\"");
     out.write(_("Start All"));
     out.write("\">");
+    if (isDegraded)     out.write("</a>");
   }
  else {
     out.write("&nbsp;");
@@ -85,39 +101,29 @@
     Snark snark=(Snark)snarks.get(i);
     boolean showDebug="2".equals(peerParam);
     boolean showPeers=showDebug || "1".equals(peerParam) || Base64.encode(snark.meta.getInfoHash()).equals(peerParam);
-    displaySnark(out,snark,uri,i,stats,showPeers,showDebug);
+    displaySnark(out,snark,uri,i,stats,showPeers,isDegraded,showDebug);
   }
   if (snarks.isEmpty()) {
-    out.write("<tr class=\"snarkTorrentNoneLoaded\">" + "<td class=\"snarkTorrentNoneLoaded\"" + " colspan=\"8\"><i>");
+    out.write("<tr class=\"snarkTorrentNoneLoaded\">" + "<td class=\"snarkTorrentNoneLoaded\"" + " colspan=\"11\"><i>");
     out.write(_("No torrents loaded."));
     out.write("</i></td></tr>\n");
   }
  else   if (snarks.size() > 1) {
-    out.write("<tfoot><tr>\n" + "    <th align=\"left\">");
-    out.write("<img border=\"0\" src=\"/themes/snark/" + _manager.getTheme() + "/images/status.png\"");
-    out.write(" title=\"");
+    out.write("<tfoot><tr>\n" + "    <th align=\"left\" colspan=\"6\">");
     out.write(_("Totals"));
-    out.write("\">");
-    out.write("&thinsp;");
-    out.write("<img border=\"0\" src=\"/themes/snark/" + _manager.getTheme() + "/images/head_peers.png\"");
-    out.write(" title=\"");
+    out.write(":&nbsp;");
+    out.write(ngettext("1 torrent","{0} torrents",snarks.size()));
+    out.write(", ");
+    out.write(DataHelper.formatSize2(stats[5]) + "B, ");
     out.write(ngettext("1 connected peer","{0} connected peers",(int)stats[4]));
-    out.write("\">");
-    out.write(ngettext("1","{0}",(int)stats[4]));
-    out.write("</th>");
-    out.write("<th><img border=\"0\" src=\"/themes/snark/" + _manager.getTheme() + "/images/head_snarks.png\"");
-    out.write(" title=\"");
-    out.write(ngettext("1 torrent loaded","{0} torrents loaded",snarks.size()));
-    out.write("\">");
-    out.write(ngettext("1","{0}",snarks.size()));
-    out.write("&nbsp;&nbsp;");
-    out.write("<img border=\"0\" src=\"/themes/snark/" + _manager.getTheme() + "/images/head_loaded.png\"");
-    out.write(" title=\"");
-    out.write(_("Total download size (pre-allocated): "));
-    out.write(DataHelper.formatSize2(stats[5]) + "B");
-    out.write("\">");
-    out.write(DataHelper.formatSize2(stats[5]) + "B");
-    out.write("</th>\n" + "    <th>&nbsp;</th>\n" + "    <th align=\"right\">" + formatSize(stats[0]) + "</th>\n"+ "    <th align=\"right\">"+ formatSize(stats[1])+ "</th>\n"+ "    <th align=\"right\">"+ formatSize(stats[2])+ "ps</th>\n"+ "    <th align=\"right\">"+ formatSize(stats[3])+ "ps</th>\n"+ "    <th>&nbsp;</th></tr>\n"+ "</tfoot>\n");
+    out.write("</th>\n");
+    if (_manager.util().connected()) {
+      out.write("    <th align=\"right\">" + formatSize(stats[0]) + "</th>\n"+ "    <th align=\"right\">"+ formatSize(stats[1])+ "</th>\n"+ "    <th align=\"right\">"+ formatSize(stats[2])+ "ps</th>\n"+ "    <th align=\"right\">"+ formatSize(stats[3])+ "ps</th>\n"+ "    <th></th>");
+    }
+ else {
+      out.write("<th colspan=\"5\"></th>");
+    }
+    out.write("</tr></tfoot>\n");
   }
   out.write("</table>");
   if (isForm)   out.write("</form>\n");
