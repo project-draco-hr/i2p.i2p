@@ -1,3 +1,35 @@
 {
-  Pack200.newUnpacker().unpack(in,out);
+  if (!_failedOracle) {
+    try {
+      Class p200=Class.forName("java.util.jar.Pack200",true,ClassLoader.getSystemClassLoader());
+      Method newUnpacker=p200.getMethod("newUnpacker",(Class[])null);
+      Object unpacker=newUnpacker.invoke(null,(Object[])null);
+      Method unpack=unpacker.getClass().getMethod("unpack",new Class[]{InputStream.class,JarOutputStream.class});
+      unpack.invoke(unpacker,new Object[]{in,out});
+      return;
+    }
+ catch (    ClassNotFoundException e) {
+      _failedOracle=true;
+    }
+catch (    NoSuchMethodException e) {
+      _failedOracle=true;
+    }
+  }
+  if (!_failedApache) {
+    try {
+      Class p200=Class.forName("org.apache.harmony.unpack200.Archive",true,ClassLoader.getSystemClassLoader());
+      Constructor newUnpacker=p200.getConstructor(new Class[]{InputStream.class,JarOutputStream.class});
+      Object unpacker=newUnpacker.newInstance(new Object[]{in,out});
+      Method unpack=unpacker.getClass().getMethod("unpack",(Class[])null);
+      unpack.invoke(unpacker,(Object[])null);
+      return;
+    }
+ catch (    ClassNotFoundException e) {
+      _failedApache=true;
+    }
+catch (    NoSuchMethodException e) {
+      _failedApache=true;
+    }
+  }
+  throw new IOException("Unpack200 not supported");
 }
