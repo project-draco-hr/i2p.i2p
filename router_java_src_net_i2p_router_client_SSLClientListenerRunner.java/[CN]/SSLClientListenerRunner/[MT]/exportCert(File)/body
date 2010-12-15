@@ -1,0 +1,29 @@
+{
+  File sdir=new SecureDirectory(_context.getConfigDir(),"certificates");
+  if (sdir.exists() || sdir.mkdir()) {
+    try {
+      KeyStore keyStore=KeyStore.getInstance(KeyStore.getDefaultType());
+      InputStream fis=new FileInputStream(ks);
+      String ksPass=_context.getProperty(PROP_KEYSTORE_PASSWORD,DEFAULT_KEYSTORE_PASSWORD);
+      keyStore.load(fis,ksPass.toCharArray());
+      fis.close();
+      Certificate cert=keyStore.getCertificate(KEY_ALIAS);
+      if (cert != null) {
+        File certFile=new File(sdir,ASCII_KEYFILE);
+        saveCert(cert,certFile);
+      }
+ else {
+        _log.error("Error getting SSL cert to save as ASCII");
+      }
+    }
+ catch (    GeneralSecurityException gse) {
+      _log.error("Error saving ASCII SSL keys",gse);
+    }
+catch (    IOException ioe) {
+      _log.error("Error saving ASCII SSL keys",ioe);
+    }
+  }
+ else {
+    _log.error("Error saving ASCII SSL keys");
+  }
+}

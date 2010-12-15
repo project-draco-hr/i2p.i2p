@@ -3,8 +3,11 @@
   _log=ctx.logManager().getLog(MessageReceiver.class);
   _transport=transport;
   _completeMessages=new LinkedBlockingQueue();
+  long maxMemory=Runtime.getRuntime().maxMemory();
+  if (maxMemory < 32 * 1024 * 1024)   _threadCount=1;
+ else   if (maxMemory < 64 * 1024 * 1024)   _threadCount=2;
+ else   _threadCount=Math.max(MIN_THREADS,Math.min(MAX_THREADS,ctx.bandwidthLimiter().getInboundKBytesPerSecond() / 20));
   _context.statManager().createRateStat("udp.inboundExpired","How many messages were expired before reception?","udp",UDPTransport.RATES);
-  _context.statManager().createRateStat("udp.inboundRemaining","How many messages were remaining when a message is pulled off the complete queue?","udp",UDPTransport.RATES);
   _context.statManager().createRateStat("udp.inboundReady","How many messages were ready when a message is added to the complete queue?","udp",UDPTransport.RATES);
   _context.statManager().createRateStat("udp.inboundReadTime","How long it takes to parse in the completed fragments into a message?","udp",UDPTransport.RATES);
   _context.statManager().createRateStat("udp.inboundReceiveProcessTime","How long it takes to add the message to the transport?","udp",UDPTransport.RATES);

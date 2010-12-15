@@ -2,24 +2,31 @@
   setOpening(true);
   _closed=false;
   _availabilityNotifier.stopNotifying();
-  I2PThread notifier=new I2PThread(_availabilityNotifier);
-  notifier.setName("Notifier " + _myDestination.calculateHash().toBase64().substring(0,4));
-  notifier.setDaemon(true);
-  notifier.start();
   if ((_options != null) && (I2PClient.PROP_RELIABILITY_GUARANTEED.equals(_options.getProperty(I2PClient.PROP_RELIABILITY,I2PClient.PROP_RELIABILITY_BEST_EFFORT)))) {
     if (_log.shouldLog(Log.ERROR))     _log.error("I2CP guaranteed delivery mode has been removed, using best effort.");
   }
   long startConnect=_context.clock().now();
   try {
-    _socket=InternalSocket.getSocket(_hostname,_portNum);
-    _out=_socket.getOutputStream();
-synchronized (_out) {
-      _out.write(I2PClient.PROTOCOL_BYTE);
-      _out.flush();
+    if (_context.isRouterContext()) {
+      InternalClientManager mgr=_context.internalClientManager();
+      if (mgr == null)       throw new I2PSessionException("Router is not ready for connections");
+      _queue=mgr.connect();
+      _reader=new QueuedI2CPMessageReader(_queue,this);
     }
-    _writer=new ClientWriterRunner(_out,this);
-    InputStream in=_socket.getInputStream();
-    _reader=new I2CPMessageReader(in,this);
+ else {
+      if (Boolean.valueOf(_options.getProperty(PROP_ENABLE_SSL)).booleanValue())       _socket=I2CPSSLSocketFactory.createSocket(_context,_hostname,_portNum);
+ else       _socket=new Socket(_hostname,_portNum);
+      _out=_socket.getOutputStream();
+synchronized (_out) {
+        _out.write(I2PClient.PROTOCOL_BYTE);
+        _out.flush();
+      }
+      _writer=new ClientWriterRunner(_out,this);
+      InputStream in=_socket.getInputStream();
+      _reader=new I2CPMessageReader(in,this);
+    }
+    Thread notifier=new I2PAppThread(_availabilityNotifier,"ClientNotifier " + getPrefix(),true);
+    notifier.start();
     if (_log.shouldLog(Log.DEBUG))     _log.debug(getPrefix() + "before startReading");
     _reader.startReading();
     if (_log.shouldLog(Log.DEBUG))     _log.debug(getPrefix() + "Before getDate");
