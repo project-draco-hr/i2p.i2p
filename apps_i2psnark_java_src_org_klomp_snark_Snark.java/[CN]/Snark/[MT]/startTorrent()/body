@@ -22,13 +22,13 @@
  else {
       acceptor=new ConnectionAcceptor(_util,serversocket,new PeerAcceptor(coordinator));
     }
-    trackerclient=new TrackerClient(_util,meta,coordinator);
+    trackerclient=new TrackerClient(_util,meta,coordinator,this);
   }
   stopped=false;
   boolean coordinatorChanged=false;
   if (coordinator.halted()) {
     if (_peerCoordinatorSet != null)     _peerCoordinatorSet.remove(coordinator);
-    PeerCoordinator newCoord=new PeerCoordinator(_util,coordinator.getID(),coordinator.getMetaInfo(),coordinator.getStorage(),coordinator.getListener(),this);
+    PeerCoordinator newCoord=new PeerCoordinator(_util,id,meta,storage,this,this);
     if (_peerCoordinatorSet != null)     _peerCoordinatorSet.add(newCoord);
     coordinator=newCoord;
     coordinatorChanged=true;
@@ -49,7 +49,7 @@
       }
       fatal("Could not reopen storage",ioe);
     }
-    TrackerClient newClient=new TrackerClient(_util,coordinator.getMetaInfo(),coordinator);
+    TrackerClient newClient=new TrackerClient(_util,coordinator.getMetaInfo(),coordinator,this);
     if (!trackerclient.halted())     trackerclient.halt();
     trackerclient=newClient;
     trackerclient.start();

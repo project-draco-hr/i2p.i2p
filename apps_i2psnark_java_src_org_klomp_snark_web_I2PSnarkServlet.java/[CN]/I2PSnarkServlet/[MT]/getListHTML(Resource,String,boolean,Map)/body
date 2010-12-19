@@ -19,7 +19,7 @@
   buf.append("</TITLE>").append(HEADER_A).append(_themePath).append(HEADER_B).append("<link rel=\"shortcut icon\" href=\"" + _themePath + "favicon.ico\">"+ "</HEAD><BODY>\n<center><div class=\"snarknavbar\"><a href=\"/i2psnark/\" title=\"Torrents\"");
   buf.append(" class=\"snarkRefresh\"><img alt=\"\" border=\"0\" src=\"" + _imgPath + "arrow_refresh.png\">&nbsp;&nbsp;I2PSnark</a></div></center>\n");
   if (parent)   buf.append("<div class=\"page\"><div class=\"mainsection\">");
-  boolean showPriority=snark != null && !snark.storage.complete();
+  boolean showPriority=snark != null && snark.getStorage() != null && !snark.getStorage().complete();
   if (showPriority)   buf.append("<form action=\"").append(base).append("\" method=\"POST\">\n");
   buf.append("<TABLE BORDER=0 class=\"snarkTorrents\" >" + "<thead><tr><th>").append("<img alt=\"\" border=\"0\" src=\"" + _imgPath + "file.png\" >&nbsp;").append(title).append("</th><th align=\"right\">").append("<img alt=\"\" border=\"0\" src=\"" + _imgPath + "size.png\" >&nbsp;").append(_("Size"));
   buf.append("</th><th class=\"headerstatus\">").append("<img alt=\"\" border=\"0\" src=\"" + _imgPath + "status.png\" >&nbsp;").append(_("Status")).append("</th>");
@@ -42,15 +42,16 @@
       status=toImg("tick") + ' ' + _("Directory");
     }
  else {
-      if (snark == null) {
+      if (snark == null || snark.getStorage() == null) {
         complete=true;
         status=toImg("cancel") + ' ' + _("Torrent not found?");
       }
  else {
+        Storage storage=snark.getStorage();
         try {
           File f=item.getFile();
           if (f != null) {
-            long remaining=snark.storage.remaining(f.getCanonicalPath());
+            long remaining=storage.remaining(f.getCanonicalPath());
             if (remaining < 0) {
               complete=true;
               status=toImg("cancel") + ' ' + _("File not found in torrent?");
@@ -60,7 +61,7 @@
               status=toImg("tick") + ' ' + _("Complete");
             }
  else {
-              int priority=snark.storage.getPriority(f.getCanonicalPath());
+              int priority=storage.getPriority(f.getCanonicalPath());
               if (priority < 0)               status=toImg("cancel");
  else               if (priority == 0)               status=toImg("clock");
  else               status=toImg("clock_red");
@@ -106,7 +107,7 @@
       buf.append("<td class=\"priority\">");
       File f=item.getFile();
       if ((!complete) && (!item.isDirectory()) && f != null) {
-        int pri=snark.storage.getPriority(f.getCanonicalPath());
+        int pri=snark.getStorage().getPriority(f.getCanonicalPath());
         buf.append("<input type=\"radio\" value=\"5\" name=\"pri.").append(f.getCanonicalPath()).append("\" ");
         if (pri > 0)         buf.append("checked=\"true\"");
         buf.append('>').append(_("High"));

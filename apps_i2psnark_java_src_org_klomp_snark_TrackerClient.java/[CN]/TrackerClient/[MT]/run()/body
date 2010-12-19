@@ -1,6 +1,6 @@
 {
   String infoHash=urlencode(meta.getInfoHash());
-  String peerID=urlencode(coordinator.getID());
+  String peerID=urlencode(snark.getID());
   _log.debug("Announce: [" + meta.getAnnounce() + "] infoHash: "+ infoHash);
   trackers=new ArrayList(2);
   String primary=meta.getAnnounce();
@@ -60,7 +60,7 @@
           firstTime=false;
         }
  else         if (completed && runStarted)         delay=3 * SLEEP * 60* 1000 + random;
- else         if (coordinator.trackerProblems != null && ++consecutiveFails < MAX_CONSEC_FAILS)         delay=INITIAL_SLEEP;
+ else         if (snark.getTrackerProblems() != null && ++consecutiveFails < MAX_CONSEC_FAILS)         delay=INITIAL_SLEEP;
  else         delay=SLEEP * 60 * 1000 + random;
         if (delay > 0)         Thread.sleep(delay);
       }
@@ -85,7 +85,7 @@
           try {
             if (!tr.started)             event=STARTED_EVENT;
             TrackerInfo info=doRequest(tr,infoHash,peerID,uploaded,downloaded,left,event);
-            coordinator.trackerProblems=null;
+            snark.setTrackerProblems(null);
             tr.trackerProblems=null;
             tr.registerFails=0;
             tr.consecutiveFails=0;
@@ -94,7 +94,7 @@
             tr.started=true;
             Set peers=info.getPeers();
             tr.seenPeers=info.getPeerCount();
-            if (coordinator.trackerSeenPeers < tr.seenPeers)             coordinator.trackerSeenPeers=tr.seenPeers;
+            if (snark.getTrackerSeenPeers() < tr.seenPeers)             snark.setTrackerSeenPeers(tr.seenPeers);
             if ((left > 0) && (!completed)) {
               List ordered=new ArrayList(peers);
               Collections.shuffle(ordered,r);
@@ -118,11 +118,11 @@
  catch (          IOException ioe) {
             _util.debug("WARNING: Could not contact tracker at '" + tr.announce + "': "+ ioe,Snark.WARNING);
             tr.trackerProblems=ioe.getMessage();
-            if (tr.isPrimary)             coordinator.trackerProblems=tr.trackerProblems;
+            if (tr.isPrimary)             snark.setTrackerProblems(tr.trackerProblems);
             if (tr.trackerProblems.toLowerCase().startsWith(NOT_REGISTERED)) {
               if (trackers.size() == 1) {
                 stop=true;
-                coordinator.snark.stopTorrent();
+                snark.stopTorrent();
               }
  else {
                 if (tr.registerFails++ > MAX_REGISTER_FAILS)                 tr.stop=true;
@@ -136,7 +136,7 @@
         }
         if ((!tr.stop) && maxSeenPeers < tr.seenPeers)         maxSeenPeers=tr.seenPeers;
       }
-      coordinator.trackerSeenPeers=maxSeenPeers;
+      snark.setTrackerSeenPeers(maxSeenPeers);
       if (!runStarted)       _util.debug("         Retrying in one minute...",Snark.DEBUG);
     }
   }
