@@ -1,0 +1,39 @@
+{
+  String ihash;
+  String name;
+  if (url.startsWith(MAGNET)) {
+    ihash=url.substring(MAGNET.length()).trim();
+    int amp=ihash.indexOf('&');
+    if (amp >= 0)     ihash=url.substring(0,amp);
+    name="Magnet " + ihash;
+  }
+ else   if (url.startsWith(MAGGOT)) {
+    ihash=url.substring(MAGGOT.length()).trim();
+    int col=ihash.indexOf(':');
+    if (col >= 0)     ihash=url.substring(0,col);
+    name="Maggot " + ihash;
+  }
+ else {
+    return;
+  }
+  byte[] ih=null;
+  if (ihash.length() == 32) {
+    ih=Base32.decode(ihash);
+  }
+ else   if (ihash.length() == 40) {
+    ih=new byte[20];
+    try {
+      for (int i=0; i < 20; i++) {
+        ih[i]=(byte)(Integer.parseInt(ihash.substring(i * 2,(i * 2) + 2),16) & 0xff);
+      }
+    }
+ catch (    NumberFormatException nfe) {
+      ih=null;
+    }
+  }
+  if (ih == null || ih.length != 20) {
+    _manager.addMessage(_("Invalid info hash in magnet URL {0}",url));
+    return;
+  }
+  _manager.addMagnet(ihash,ih);
+}

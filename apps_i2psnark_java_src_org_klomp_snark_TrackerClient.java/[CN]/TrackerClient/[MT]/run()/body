@@ -52,6 +52,7 @@
     int consecutiveFails=0;
     Random r=I2PAppContext.getGlobalContext().random();
     while (!stop) {
+      if (_util.getDHT() != null)       _util.getDHT().announce(snark.getInfoHash());
       try {
         int delay;
         int random=r.nextInt(120 * 1000);
@@ -136,6 +137,39 @@
         }
         if ((!tr.stop) && maxSeenPeers < tr.seenPeers)         maxSeenPeers=tr.seenPeers;
       }
+      if (_util.getDHT() != null && !stop) {
+        int numwant;
+        if (left <= 0 || event.equals(STOPPED_EVENT) || !coordinator.needPeers())         numwant=1;
+ else         numwant=_util.getMaxConnections();
+        List<Hash> hashes=_util.getDHT().getPeers(snark.getInfoHash(),numwant,2 * 60 * 1000);
+        _util.debug("Got " + hashes + " from DHT",Snark.INFO);
+        if (!stop) {
+          int good=_util.getDHT().announce(snark.getInfoHash(),8,5 * 60 * 1000);
+          _util.debug("Sent " + good + " good announces to DHT",Snark.INFO);
+        }
+        if ((!stop) && !hashes.isEmpty()) {
+          List<Peer> peers=new ArrayList(hashes.size());
+          for (          Hash h : hashes) {
+            PeerID pID=new PeerID(h.getData());
+            peers.add(new Peer(pID,snark.getID(),snark.getInfoHash(),meta));
+          }
+          Collections.shuffle(peers,r);
+          Iterator<Peer> it=peers.iterator();
+          while ((!stop) && it.hasNext()) {
+            Peer cur=it.next();
+            if (coordinator.addPeer(cur)) {
+              int delay=DELAY_MUL;
+              delay*=((int)cur.getPeerID().getAddress().calculateHash().toBase64().charAt(0)) % 10;
+              delay+=DELAY_MIN;
+              try {
+                Thread.sleep(delay);
+              }
+ catch (              InterruptedException ie) {
+              }
+            }
+          }
+        }
+      }
       snark.setTrackerSeenPeers(maxSeenPeers);
       if (!runStarted)       _util.debug("         Retrying in one minute...",Snark.DEBUG);
     }
@@ -145,6 +179,7 @@
     if (t instanceof OutOfMemoryError)     throw (OutOfMemoryError)t;
   }
  finally {
+    if (_util.getDHT() != null)     _util.getDHT().unannounce(snark.getInfoHash());
     try {
       for (Iterator iter=trackers.iterator(); iter.hasNext(); ) {
         if (!_util.connected())         return;

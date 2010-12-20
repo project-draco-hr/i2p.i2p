@@ -12,9 +12,16 @@ synchronized (peers) {
     need_more=need_more && ((old == null) || (old.getInactiveTime() > 8 * 60 * 1000));
   }
   if (need_more) {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Adding a peer " + peer.getPeerID().toString() + " for "+ metainfo.getName(),new Exception("add/run"));
+    if (_log.shouldLog(Log.DEBUG)) {
+      String name;
+      if (metainfo == null)       name="Magnet";
+ else       name=metainfo.getName();
+      _log.debug("Adding a peer " + peer.getPeerID().toString() + " for "+ name,new Exception("add/run"));
+    }
     final PeerListener listener=this;
-    final BitField bitfield=storage.getBitField();
+    final BitField bitfield;
+    if (storage != null)     bitfield=storage.getBitField();
+ else     bitfield=null;
     Runnable r=new Runnable(){
       public void run(){
         peer.runConnection(_util,listener,bitfield);
