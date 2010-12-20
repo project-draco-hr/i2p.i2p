@@ -17,7 +17,7 @@
         addMagnet(newURL);
       }
  else {
-        _manager.addMessage(_("Invalid URL - must start with http://, {0} or {1}",MAGNET,MAGGOT));
+        _manager.addMessage(_("Invalid URL: Must start with \"http://\", \"{0}\", or \"{1}\"",MAGNET,MAGGOT));
       }
     }
  else {
@@ -32,7 +32,7 @@
           String name=(String)iter.next();
           Snark snark=_manager.getTorrent(name);
           if ((snark != null) && (DataHelper.eq(infoHash,snark.getInfoHash()))) {
-            _manager.stopTorrent(name,false);
+            _manager.stopTorrent(snark,false);
             break;
           }
         }
@@ -64,12 +64,13 @@
           String name=(String)iter.next();
           Snark snark=_manager.getTorrent(name);
           if ((snark != null) && (DataHelper.eq(infoHash,snark.getInfoHash()))) {
-            _manager.stopTorrent(name,true);
             MetaInfo meta=snark.getMetaInfo();
             if (meta == null) {
-              _manager.deleteMagnet(snark.getInfoHash());
+              _manager.deleteMagnet(snark);
+              _manager.addMessage(_("Magnet deleted: {0}",name));
               return;
             }
+            _manager.stopTorrent(snark,true);
             File f=new File(name);
             f.delete();
             _manager.addMessage(_("Torrent file deleted: {0}",f.getAbsolutePath()));
@@ -88,12 +89,13 @@
           String name=(String)iter.next();
           Snark snark=_manager.getTorrent(name);
           if ((snark != null) && (DataHelper.eq(infoHash,snark.getInfoHash()))) {
-            _manager.stopTorrent(name,true);
             MetaInfo meta=snark.getMetaInfo();
             if (meta == null) {
-              _manager.deleteMagnet(snark.getInfoHash());
+              _manager.deleteMagnet(snark);
+              _manager.addMessage(_("Magnet deleted: {0}",name));
               return;
             }
+            _manager.stopTorrent(snark,true);
             File f=new File(name);
             f.delete();
             _manager.addMessage(_("Torrent file deleted: {0}",f.getAbsolutePath()));
@@ -180,7 +182,7 @@
     List snarks=getSortedSnarks(req);
     for (int i=0; i < snarks.size(); i++) {
       Snark snark=(Snark)snarks.get(i);
-      if (!snark.isStopped())       _manager.stopTorrent(snark.getName(),false);
+      if (!snark.isStopped())       _manager.stopTorrent(snark,false);
     }
     if (_manager.util().connected()) {
       try {

@@ -28,7 +28,7 @@
   stats[5]+=total;
   MetaInfo meta=snark.getMetaInfo();
   boolean isValid=meta != null;
-  boolean singleFile=(!isValid) || meta.getFiles() == null;
+  boolean isMultiFile=isValid && meta.getFiles() != null;
   String err=snark.getTrackerProblems();
   int curPeers=snark.getPeerCount();
   stats[4]+=curPeers;
@@ -43,7 +43,7 @@
       statusString="<img alt=\"\" border=\"0\" src=\"" + _imgPath + "trackererror.png\" title=\""+ err+ "\"></td><td class=\"snarkTorrentStatus "+ rowClass+ "\">"+ _("Tracker Error")+ "<br>"+ err;
     }
   }
- else   if (remaining <= 0) {
+ else   if (remaining == 0) {
     if (isRunning && curPeers > 0 && !showPeers)     statusString="<img alt=\"\" border=\"0\" src=\"" + _imgPath + "seeding.png\" ></td><td class=\"snarkTorrentStatus "+ rowClass+ "\">"+ _("Seeding")+ ": <a href=\""+ uri+ "?p="+ Base64.encode(snark.getInfoHash())+ "\">"+ curPeers+ thinsp(isDegraded)+ ngettext("1 peer","{0} peers",knownPeers)+ "</a>";
  else     if (isRunning)     statusString="<img alt=\"\" border=\"0\" src=\"" + _imgPath + "seeding.png\" ></td><td class=\"snarkTorrentStatus "+ rowClass+ "\">"+ _("Seeding")+ ": "+ curPeers+ thinsp(isDegraded)+ ngettext("1 peer","{0} peers",knownPeers);
  else     statusString="<img alt=\"\" border=\"0\" src=\"" + _imgPath + "complete.png\" ></td><td class=\"snarkTorrentStatus "+ rowClass+ "\">"+ _("Complete");
@@ -61,8 +61,9 @@
   out.write("<td class=\"center " + rowClass + "\">");
   out.write(statusString + "</td>\n\t");
   out.write("<td class=\"" + rowClass + "\">");
-  String announce=meta.getAnnounce();
-  if (announce.startsWith("http://YRgrgTLG") || announce.startsWith("http://8EoJZIKr") || announce.startsWith("http://lnQ6yoBT")|| announce.startsWith("http://tracker2.postman.i2p/")|| announce.startsWith("http://ahsplxkbhemefwvvml7qovzl5a2b5xo5i7lyai7ntdunvcyfdtna.b32.i2p/")) {
+  String announce=null;
+  if (isValid)   announce=meta.getAnnounce();
+  if (announce != null && (announce.startsWith("http://YRgrgTLG") || announce.startsWith("http://8EoJZIKr") || announce.startsWith("http://lnQ6yoBT")|| announce.startsWith("http://tracker2.postman.i2p/")|| announce.startsWith("http://ahsplxkbhemefwvvml7qovzl5a2b5xo5i7lyai7ntdunvcyfdtna.b32.i2p/"))) {
     Map trackers=_manager.getTrackers();
     for (Iterator iter=trackers.entrySet().iterator(); iter.hasNext(); ) {
       Map.Entry entry=(Map.Entry)iter.next();
@@ -82,20 +83,21 @@
   }
   out.write("</td>\n<td class=\"" + rowClass + "\">");
   StringBuilder buf=null;
-  if (remaining == 0 || meta.getFiles() != null) {
+  if (remaining == 0 || isMultiFile) {
     buf=new StringBuilder(128);
     buf.append("<a href=\"").append(snark.getBaseName());
-    if (meta.getFiles() != null)     buf.append('/');
+    if (isMultiFile)     buf.append('/');
     buf.append("\" title=\"");
-    if (meta.getFiles() != null)     buf.append(_("View files"));
+    if (isMultiFile)     buf.append(_("View files"));
  else     buf.append(_("Open file"));
     buf.append("\">");
     out.write(buf.toString());
   }
   String icon;
-  if (meta.getFiles() != null)   icon="folder";
- else   icon=toIcon(meta.getName());
-  if (remaining == 0 || meta.getFiles() != null) {
+  if (isMultiFile)   icon="folder";
+ else   if (isValid)   icon=toIcon(meta.getName());
+ else   icon="page_white";
+  if (remaining == 0 || isMultiFile) {
     out.write(toImg(icon,_("Open")));
     out.write("</a>");
   }
@@ -103,24 +105,25 @@
     out.write(toImg(icon));
   }
   out.write("</td><td class=\"snarkTorrentName " + rowClass + "\">");
-  if (remaining == 0 || meta.getFiles() != null)   out.write(buf.toString());
+  if (remaining == 0 || isMultiFile)   out.write(buf.toString());
   out.write(filename);
-  if (remaining == 0 || meta.getFiles() != null)   out.write("</a>");
+  if (remaining == 0 || isMultiFile)   out.write("</a>");
   out.write("<td align=\"right\" class=\"snarkTorrentETA " + rowClass + "\">");
   if (isRunning && remainingSeconds > 0)   out.write(DataHelper.formatDuration2(remainingSeconds * 1000));
   out.write("</td>\n\t");
   out.write("<td align=\"right\" class=\"snarkTorrentDownloaded " + rowClass + "\">");
   if (remaining > 0)   out.write(formatSize(total - remaining) + thinsp(isDegraded) + formatSize(total));
- else   out.write(formatSize(total));
+ else   if (remaining == 0)   out.write(formatSize(total));
+ else   out.write("??");
   out.write("</td>\n\t");
   out.write("<td align=\"right\" class=\"snarkTorrentUploaded " + rowClass + "\">");
-  if (isRunning)   out.write(formatSize(uploaded));
+  if (isRunning && isValid)   out.write(formatSize(uploaded));
   out.write("</td>\n\t");
   out.write("<td align=\"right\" class=\"snarkTorrentRateDown\">");
-  if (isRunning && remaining > 0)   out.write(formatSize(downBps) + "ps");
+  if (isRunning && remaining != 0)   out.write(formatSize(downBps) + "ps");
   out.write("</td>\n\t");
   out.write("<td align=\"right\" class=\"snarkTorrentRateUp\">");
-  if (isRunning)   out.write(formatSize(upBps) + "ps");
+  if (isRunning && isValid)   out.write(formatSize(upBps) + "ps");
   out.write("</td>\n\t");
   out.write("<td align=\"center\" class=\"snarkTorrentAction " + rowClass + "\">");
   String parameters="&nonce=" + _nonce + "&torrent="+ Base64.encode(snark.getInfoHash());
@@ -136,25 +139,25 @@
     if (isDegraded)     out.write("</a>");
   }
  else {
+    if (isDegraded)     out.write("<a href=\"/i2psnark/?action=Start_" + b64 + "&amp;nonce="+ _nonce+ "\"><img title=\"");
+ else     out.write("<input type=\"image\" name=\"action\" value=\"Start_" + b64 + "\" title=\"");
+    out.write(_("Start the torrent"));
+    out.write("\" src=\"" + _imgPath + "start.png\" alt=\"");
+    out.write(_("Start"));
+    out.write("\">");
+    if (isDegraded)     out.write("</a>");
     if (isValid) {
-      if (isDegraded)       out.write("<a href=\"/i2psnark/?action=Start_" + b64 + "&amp;nonce="+ _nonce+ "\"><img title=\"");
- else       out.write("<input type=\"image\" name=\"action\" value=\"Start_" + b64 + "\" title=\"");
-      out.write(_("Start the torrent"));
-      out.write("\" src=\"" + _imgPath + "start.png\" alt=\"");
-      out.write(_("Start"));
+      if (isDegraded)       out.write("<a href=\"/i2psnark/?action=Remove_" + b64 + "&amp;nonce="+ _nonce+ "\"><img title=\"");
+ else       out.write("<input type=\"image\" name=\"action\" value=\"Remove_" + b64 + "\" title=\"");
+      out.write(_("Remove the torrent from the active list, deleting the .torrent file"));
+      out.write("\" onclick=\"if (!confirm('");
+      out.write(_("Are you sure you want to delete the file \\''{0}.torrent\\'' (downloaded data will not be deleted) ?",fullFilename));
+      out.write("')) { return false; }\"");
+      out.write(" src=\"" + _imgPath + "remove.png\" alt=\"");
+      out.write(_("Remove"));
       out.write("\">");
       if (isDegraded)       out.write("</a>");
     }
-    if (isDegraded)     out.write("<a href=\"/i2psnark/?action=Remove_" + b64 + "&amp;nonce="+ _nonce+ "\"><img title=\"");
- else     out.write("<input type=\"image\" name=\"action\" value=\"Remove_" + b64 + "\" title=\"");
-    out.write(_("Remove the torrent from the active list, deleting the .torrent file"));
-    out.write("\" onclick=\"if (!confirm('");
-    out.write(_("Are you sure you want to delete the file \\''{0}.torrent\\'' (downloaded data will not be deleted) ?",fullFilename));
-    out.write("')) { return false; }\"");
-    out.write(" src=\"" + _imgPath + "remove.png\" alt=\"");
-    out.write(_("Remove"));
-    out.write("\">");
-    if (isDegraded)     out.write("</a>");
     if (isDegraded)     out.write("<a href=\"/i2psnark/?action=Delete_" + b64 + "&amp;nonce="+ _nonce+ "\"><img title=\"");
  else     out.write("<input type=\"image\" name=\"action\" value=\"Delete_" + b64 + "\" title=\"");
     out.write(_("Delete the .torrent file and the associated data file(s)"));
@@ -190,12 +193,19 @@
       out.write("<td class=\"snarkTorrentStatus " + rowClass + "\">");
       out.write("</td>\n\t");
       out.write("<td align=\"right\" class=\"snarkTorrentStatus " + rowClass + "\">");
-      float pct=(float)(100.0 * (float)peer.completed() / meta.getPieces());
-      if (pct == 100.0)       out.write(_("Seed"));
+      float pct;
+      if (isValid) {
+        pct=(float)(100.0 * (float)peer.completed() / meta.getPieces());
+        if (pct == 100.0)         out.write(_("Seed"));
  else {
-        String ps=String.valueOf(pct);
-        if (ps.length() > 5)         ps=ps.substring(0,5);
-        out.write(ps + "%");
+          String ps=String.valueOf(pct);
+          if (ps.length() > 5)           ps=ps.substring(0,5);
+          out.write(ps + "%");
+        }
+      }
+ else {
+        pct=(float)101.0;
+        out.write("??");
       }
       out.write("</td>\n\t");
       out.write("<td class=\"snarkTorrentStatus " + rowClass + "\">");
@@ -216,7 +226,7 @@
       }
       out.write("</td>\n\t");
       out.write("<td align=\"right\" class=\"snarkTorrentStatus " + rowClass + "\">");
-      if (pct != 100.0) {
+      if (isValid && pct < 100.0) {
         if (peer.isInterested() && !peer.isChoking()) {
           out.write("<span class=\"unchoked\">");
           out.write(formatSize(peer.getUploadRate()) + "ps</span>");
