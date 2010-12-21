@@ -1,0 +1,63 @@
+{
+  if (state != null)   throw new IllegalStateException("Peer already started");
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Running connection to " + peerID.getAddress().calculateHash().toBase64(),new Exception("connecting"));
+  try {
+    if (din == null) {
+      sock=util.connect(peerID);
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Connected to " + peerID + ": "+ sock);
+      if ((sock == null) || (sock.isClosed())) {
+        throw new IOException("Unable to reach " + peerID);
+      }
+      InputStream in=sock.getInputStream();
+      OutputStream out=sock.getOutputStream();
+      if (true) {
+        in=new BufferedInputStream(sock.getInputStream());
+      }
+      byte[] id=handshake(in,out);
+      byte[] expected_id=peerID.getID();
+      if (expected_id == null) {
+        peerID.setID(id);
+      }
+ else       if (Arrays.equals(expected_id,id)) {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Handshake got matching IDs with " + toString());
+      }
+ else {
+        throw new IOException("Unexpected peerID '" + PeerID.idencode(id) + "' expected '"+ PeerID.idencode(expected_id)+ "'");
+      }
+    }
+ else {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Already have din [" + sock + "] with "+ toString());
+    }
+    PeerConnectionIn in=new PeerConnectionIn(this,din);
+    PeerConnectionOut out=new PeerConnectionOut(this,dout);
+    PeerState s=new PeerState(this,listener,metainfo,in,out);
+    if ((options & OPTION_EXTENSION) != 0) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Peer supports extensions, sending test message");
+      out.sendExtension(0,ExtensionHandler.getHandshake());
+    }
+    if ((options & OPTION_DHT) != 0 && util.getDHT() != null) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Peer supports DHT, sending PORT message");
+      int port=util.getDHT().getPort();
+      out.sendPort(port);
+    }
+    if (bitfield != null)     s.out.sendBitfield(bitfield);
+    state=s;
+    magnetState=mState;
+    listener.connected(this);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Start running the reader with " + toString());
+    out.startup();
+    Thread.currentThread().setName("Snark reader from " + peerID);
+    s.in.run();
+  }
+ catch (  IOException eofe) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug(this.toString(),eofe);
+  }
+catch (  Throwable t) {
+    _log.error(this + ": " + t.getMessage(),t);
+    if (t instanceof OutOfMemoryError)     throw (OutOfMemoryError)t;
+  }
+ finally {
+    if (deregister)     listener.disconnected(this);
+    disconnect();
+  }
+}

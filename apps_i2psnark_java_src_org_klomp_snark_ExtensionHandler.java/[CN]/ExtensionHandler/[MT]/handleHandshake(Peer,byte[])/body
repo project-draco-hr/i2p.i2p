@@ -1,0 +1,45 @@
+{
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Got handshake msg from " + peer);
+  try {
+    InputStream is=new ByteArrayInputStream(bs);
+    BDecoder dec=new BDecoder(is);
+    BEValue bev=dec.bdecodeMap();
+    Map<String,BEValue> map=bev.getMap();
+    Map<String,BEValue> msgmap=map.get("m").getMap();
+    peer.setHandshakeMap(map);
+    int hisMsgCode=peer.getHandshakeMap().get("m").getMap().get(TYPE_METADATA).getInt();
+    int metaSize=map.get("metadata_size").getInt();
+    MagnetState state=peer.getMagnetState();
+    int remaining;
+synchronized (state) {
+      if (state.isComplete())       return;
+      if (state.isInitialized()) {
+        if (state.getSize() != metaSize) {
+          peer.disconnect();
+          return;
+        }
+      }
+ else {
+        if (metaSize > MAX_METADATA_SIZE) {
+          peer.disconnect(false);
+          return;
+        }
+        if (_log.shouldLog(Log.INFO))         _log.info("Initialized state, metadata size = " + metaSize + " from "+ peer);
+        state.initialize(metaSize);
+      }
+      remaining=state.chunksRemaining();
+    }
+    int count=Math.min(remaining,PARALLEL_REQUESTS);
+    for (int i=0; i < count; i++) {
+      int chk;
+synchronized (state) {
+        chk=state.getNextRequest();
+      }
+      if (_log.shouldLog(Log.INFO))       _log.info("Request chunk " + chk + " from "+ peer);
+      sendRequest(peer,chk);
+    }
+  }
+ catch (  Exception e) {
+    if (_log.shouldLog(Log.WARN))     _log.info("Handshake exception from " + peer,e);
+  }
+}
