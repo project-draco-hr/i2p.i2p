@@ -1,0 +1,23 @@
+{
+  MetaInfo meta=snark.getMetaInfo();
+  Storage storage=snark.getStorage();
+  if (meta != null && storage != null) {
+    String rejectMessage=validateTorrent(meta);
+    if (rejectMessage != null) {
+      addMessage(rejectMessage);
+      snark.stopTorrent();
+      return;
+    }
+    saveTorrentStatus(meta,storage.getBitField(),null);
+    String name=(new File(getDataDir(),storage.getBaseName() + ".torrent")).getAbsolutePath();
+    try {
+synchronized (_snarks) {
+        locked_writeMetaInfo(meta,name);
+      }
+    }
+ catch (    IOException ioe) {
+      addMessage(_("Failed to copy torrent file to {0}",name));
+      _log.error("Failed to write torrent file",ioe);
+    }
+  }
+}

@@ -150,20 +150,17 @@
       if ((announceURLOther != null) && (announceURLOther.trim().length() > "http://.i2p/announce".length()))       announceURL=announceURLOther;
       if (announceURL == null || announceURL.length() <= 0)       _manager.addMessage(_("Error creating torrent - you must select a tracker"));
  else       if (baseFile.exists()) {
+        _lastAnnounceURL=announceURL;
+        if (announceURL.equals("none"))         announceURL=null;
         try {
           Storage s=new Storage(_manager.util(),baseFile,announceURL,null);
           s.create();
           s.close();
           MetaInfo info=s.getMetaInfo();
-          File torrentFile=new File(baseFile.getParent(),baseFile.getName() + ".torrent");
-          if (torrentFile.exists())           throw new IOException("Cannot overwrite an existing .torrent file: " + torrentFile.getPath());
-          _manager.saveTorrentStatus(info,s.getBitField(),null);
-          FileOutputStream out=new FileOutputStream(torrentFile);
-          out.write(info.getTorrentData());
-          out.close();
+          File torrentFile=new File(_manager.getDataDir(),s.getBaseName() + ".torrent");
+          _manager.addTorrent(info,s.getBitField(),torrentFile.getAbsolutePath(),true);
           _manager.addMessage(_("Torrent created for \"{0}\"",baseFile.getName()) + ": " + torrentFile.getAbsolutePath());
-          _manager.addTorrent(torrentFile.getCanonicalPath(),true);
-          _manager.addMessage(_("Many I2P trackers require you to register new torrents before seeding - please do so before starting \"{0}\"",baseFile.getName()));
+          if (announceURL != null)           _manager.addMessage(_("Many I2P trackers require you to register new torrents before seeding - please do so before starting \"{0}\"",baseFile.getName()));
         }
  catch (        IOException ioe) {
           _manager.addMessage(_("Error creating a torrent for \"{0}\"",baseFile.getAbsolutePath()) + ": " + ioe.getMessage());
