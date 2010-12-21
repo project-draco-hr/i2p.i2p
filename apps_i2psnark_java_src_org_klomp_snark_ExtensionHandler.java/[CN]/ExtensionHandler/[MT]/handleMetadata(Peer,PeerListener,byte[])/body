@@ -14,6 +14,8 @@ synchronized (state) {
         pc=state.getChunk(piece);
       }
       sendPiece(peer,piece,pc);
+      peer.uploaded(pc.length);
+      listener.uploaded(peer,pc.length);
     }
  else     if (type == TYPE_DATA) {
       int size=map.get("total_size").getInt();
@@ -22,6 +24,8 @@ synchronized (state) {
 synchronized (state) {
         if (state.isComplete())         return;
         int len=is.available();
+        peer.downloaded(len);
+        listener.downloaded(peer,len);
         done=state.saveChunk(piece,bs,bs.length - len,len);
         if (_log.shouldLog(Log.INFO))         _log.info("Got chunk " + piece + " from "+ peer);
         if (!done)         chk=state.getNextRequest();
