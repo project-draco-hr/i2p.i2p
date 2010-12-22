@@ -10,7 +10,7 @@
   val=(BEValue)m.get("info");
   if (val == null)   throw new InvalidBEncodingException("Missing info map");
   Map info=val.getMap();
-  infoMap=info;
+  infoMap=Collections.unmodifiableMap(info);
   val=(BEValue)info.get("name");
   if (val == null)   throw new InvalidBEncodingException("Missing name string");
   name=val.getString();
@@ -33,29 +33,29 @@
  else {
     val=(BEValue)info.get("files");
     if (val == null)     throw new InvalidBEncodingException("Missing length number and/or files list");
-    List list=val.getList();
+    List<BEValue> list=val.getList();
     int size=list.size();
     if (size == 0)     throw new InvalidBEncodingException("zero size files list");
-    files=new ArrayList(size);
-    files_utf8=new ArrayList(size);
-    lengths=new ArrayList(size);
+    List<List<String>> m_files=new ArrayList(size);
+    List<List<String>> m_files_utf8=new ArrayList(size);
+    List<Long> m_lengths=new ArrayList(size);
     long l=0;
     for (int i=0; i < list.size(); i++) {
-      Map desc=((BEValue)list.get(i)).getMap();
-      val=(BEValue)desc.get("length");
+      Map<String,BEValue> desc=list.get(i).getMap();
+      val=desc.get("length");
       if (val == null)       throw new InvalidBEncodingException("Missing length number");
       long len=val.getLong();
-      lengths.add(new Long(len));
+      m_lengths.add(new Long(len));
       l+=len;
       val=(BEValue)desc.get("path");
       if (val == null)       throw new InvalidBEncodingException("Missing path list");
-      List path_list=val.getList();
+      List<BEValue> path_list=val.getList();
       int path_length=path_list.size();
       if (path_length == 0)       throw new InvalidBEncodingException("zero size file path list");
-      List file=new ArrayList(path_length);
-      Iterator it=path_list.iterator();
-      while (it.hasNext())       file.add(((BEValue)it.next()).getString());
-      files.add(file);
+      List<String> file=new ArrayList(path_length);
+      Iterator<BEValue> it=path_list.iterator();
+      while (it.hasNext())       file.add(it.next().getString());
+      m_files.add(Collections.unmodifiableList(file));
       val=(BEValue)desc.get("path.utf-8");
       if (val != null) {
         path_list=val.getList();
@@ -63,11 +63,14 @@
         if (path_length > 0) {
           file=new ArrayList(path_length);
           it=path_list.iterator();
-          while (it.hasNext())           file.add(((BEValue)it.next()).getString());
-          files_utf8.add(file);
+          while (it.hasNext())           file.add(it.next().getString());
+          m_files_utf8.add(Collections.unmodifiableList(file));
         }
       }
     }
+    files=Collections.unmodifiableList(m_files);
+    files_utf8=Collections.unmodifiableList(m_files_utf8);
+    lengths=Collections.unmodifiableList(m_lengths);
     length=l;
   }
   info_hash=calculateInfoHash();

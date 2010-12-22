@@ -99,15 +99,20 @@
             if (tr.isPrimary)             consecutiveFails=0;
             runStarted=true;
             tr.started=true;
-            Set peers=info.getPeers();
+            Set<Peer> peers=info.getPeers();
             tr.seenPeers=info.getPeerCount();
             if (snark.getTrackerSeenPeers() < tr.seenPeers)             snark.setTrackerSeenPeers(tr.seenPeers);
+            if (_util.getDHT() != null) {
+              for (              Peer peer : peers) {
+                _util.getDHT().announce(snark.getInfoHash(),peer.getPeerID().getDestHash());
+              }
+            }
             if ((left > 0) && (!completed)) {
-              List ordered=new ArrayList(peers);
+              List<Peer> ordered=new ArrayList(peers);
               Collections.shuffle(ordered,r);
-              Iterator it=ordered.iterator();
+              Iterator<Peer> it=ordered.iterator();
               while ((!stop) && it.hasNext()) {
-                Peer cur=(Peer)it.next();
+                Peer cur=it.next();
                 if (coordinator.addPeer(cur)) {
                   int delay=DELAY_MUL;
                   delay*=((int)cur.getPeerID().getAddress().calculateHash().toBase64().charAt(0)) % 10;
