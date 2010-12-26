@@ -1,17 +1,41 @@
 {
-  updateStatus("<b>" + _("Updating") + "</b>");
-  String updateURL=selectUpdateURL();
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Selected update URL: " + updateURL);
   boolean shouldProxy=Boolean.valueOf(_context.getProperty(ConfigUpdateHandler.PROP_SHOULD_PROXY,ConfigUpdateHandler.DEFAULT_SHOULD_PROXY)).booleanValue();
   String proxyHost=_context.getProperty(ConfigUpdateHandler.PROP_PROXY_HOST,ConfigUpdateHandler.DEFAULT_PROXY_HOST);
   int proxyPort=_context.getProperty(ConfigUpdateHandler.PROP_PROXY_PORT,ConfigUpdateHandler.DEFAULT_PROXY_PORT_INT);
-  try {
-    if (shouldProxy)     _get=new EepGet(_context,proxyHost,proxyPort,40,_updateFile,updateURL,false);
- else     _get=new EepGet(_context,1,_updateFile,updateURL,false);
-    _get.addStatusListener(UpdateRunner.this);
-    _get.fetch();
+  List<String> urls=getUpdateURLs();
+  if (urls.isEmpty()) {
+    updateStatus("<b>Update source list is empty, cannot download update</b>");
+    _log.log(Log.CRIT,"Update source list is empty - cannot download update");
+    return;
   }
- catch (  Throwable t) {
-    _log.error("Error updating",t);
+  if (shouldProxy)   _baos=new ByteArrayOutputStream(TrustedUpdate.HEADER_BYTES);
+  for (  String updateURL : urls) {
+    updateStatus("<b>" + _("Updating from {0}",linkify(updateURL)) + "</b>");
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Selected update URL: " + updateURL);
+    if (shouldProxy) {
+      _isPartial=true;
+      _isNewer=false;
+      _baos.reset();
+      try {
+        _get=new PartialEepGet(_context,proxyHost,proxyPort,_baos,updateURL,TrustedUpdate.HEADER_BYTES);
+        _get.addStatusListener(UpdateRunner.this);
+        _get.fetch();
+      }
+ catch (      Throwable t) {
+        _isNewer=false;
+      }
+      _isPartial=false;
+      if (!_isNewer)       continue;
+    }
+    try {
+      if (shouldProxy)       _get=new EepGet(_context,proxyHost,proxyPort,40,_updateFile,updateURL,false);
+ else       _get=new EepGet(_context,1,_updateFile,updateURL,false);
+      _get.addStatusListener(UpdateRunner.this);
+      _get.fetch();
+    }
+ catch (    Throwable t) {
+      _log.error("Error updating",t);
+    }
+    if (this.done)     break;
   }
 }
