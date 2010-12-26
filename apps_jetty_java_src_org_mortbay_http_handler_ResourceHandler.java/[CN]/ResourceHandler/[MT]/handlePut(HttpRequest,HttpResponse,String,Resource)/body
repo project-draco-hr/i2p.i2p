@@ -1,0 +1,37 @@
+{
+  if (log.isDebugEnabled())   log.debug("PUT " + pathInContext + " in "+ resource);
+  boolean exists=resource != null && resource.exists();
+  if (exists && !passConditionalHeaders(request,response,resource))   return;
+  if (pathInContext.endsWith("/")) {
+    if (!exists) {
+      if (!resource.getFile().mkdirs())       response.sendError(HttpResponse.__403_Forbidden,"Directories could not be created");
+ else {
+        request.setHandled(true);
+        response.setStatus(HttpResponse.__201_Created);
+        response.commit();
+      }
+    }
+ else {
+      request.setHandled(true);
+      response.setStatus(HttpResponse.__200_OK);
+      response.commit();
+    }
+  }
+ else {
+    try {
+      int toRead=request.getContentLength();
+      InputStream in=request.getInputStream();
+      OutputStream out=resource.getOutputStream();
+      if (toRead >= 0)       IO.copy(in,out,toRead);
+ else       IO.copy(in,out);
+      out.close();
+      request.setHandled(true);
+      response.setStatus(exists ? HttpResponse.__200_OK : HttpResponse.__201_Created);
+      response.commit();
+    }
+ catch (    Exception ex) {
+      log.warn(LogSupport.EXCEPTION,ex);
+      response.sendError(HttpResponse.__403_Forbidden,ex.getMessage());
+    }
+  }
+}
