@@ -2,14 +2,18 @@
   if (_closed)   return null;
   LookupWaiter waiter=new LookupWaiter(h);
   _pendingLookups.offer(waiter);
-  sendMessage(new DestLookupMessage(h));
   try {
+    sendMessage(new DestLookupMessage(h));
+    try {
 synchronized (waiter) {
-      waiter.wait(maxWait);
+        waiter.wait(maxWait);
+      }
+    }
+ catch (    InterruptedException ie) {
     }
   }
- catch (  InterruptedException ie) {
+  finally {
+    _pendingLookups.remove(waiter);
   }
-  _pendingLookups.remove(waiter);
   return waiter.destination;
 }
