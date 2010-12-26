@@ -1,4 +1,14 @@
 {
+  if (_isPartial) {
+    String newVersion=TrustedUpdate.getVersionString(new ByteArrayInputStream(_baos.toByteArray()));
+    boolean newer=(new VersionComparator()).compare(newVersion,RouterVersion.VERSION) > 0;
+    if (!newer) {
+      updateStatus("<b>" + _("No new version found at {0}",linkify(url)) + "</b>");
+      if (_log.shouldLog(Log.WARN))       _log.warn("Found old version \"" + newVersion + "\" at "+ url);
+    }
+    _isNewer=newer;
+    return;
+  }
   updateStatus("<b>" + _("Update downloaded") + "</b>");
   TrustedUpdate up=new TrustedUpdate(_context);
   File f=new File(_updateFile);
@@ -32,6 +42,6 @@
   }
  else {
     _log.log(Log.CRIT,err + " from " + url);
-    updateStatus("<b>" + err + ' '+ _("from {0}",url)+ " </b>");
+    updateStatus("<b>" + err + ' '+ _("from {0}",linkify(url))+ " </b>");
   }
 }
