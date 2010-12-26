@@ -1,0 +1,15 @@
+{
+  if (_closed)   return null;
+  LookupWaiter waiter=new LookupWaiter(h);
+  _pendingLookups.offer(waiter);
+  sendMessage(new DestLookupMessage(h));
+  try {
+synchronized (waiter) {
+      waiter.wait(maxWait);
+    }
+  }
+ catch (  InterruptedException ie) {
+  }
+  _pendingLookups.remove(waiter);
+  return waiter.destination;
+}
