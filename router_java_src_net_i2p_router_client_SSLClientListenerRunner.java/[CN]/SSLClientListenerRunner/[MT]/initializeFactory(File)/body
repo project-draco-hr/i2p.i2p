@@ -1,0 +1,27 @@
+{
+  String ksPass=_context.getProperty(PROP_KEYSTORE_PASSWORD,DEFAULT_KEYSTORE_PASSWORD);
+  String keyPass=_context.getProperty(PROP_KEY_PASSWORD);
+  if (keyPass == null) {
+    _log.error("No key password, set " + PROP_KEY_PASSWORD + " in "+ (new File(_context.getConfigDir(),"router.config")).getAbsolutePath());
+    return false;
+  }
+  try {
+    SSLContext sslc=SSLContext.getInstance("TLS");
+    KeyStore keyStore=KeyStore.getInstance(KeyStore.getDefaultType());
+    InputStream fis=new FileInputStream(ks);
+    keyStore.load(fis,ksPass.toCharArray());
+    fis.close();
+    KeyManagerFactory kmf=KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+    kmf.init(keyStore,keyPass.toCharArray());
+    sslc.init(kmf.getKeyManagers(),null,_context.random());
+    _factory=sslc.getServerSocketFactory();
+    return true;
+  }
+ catch (  GeneralSecurityException gse) {
+    _log.error("Error loading SSL keys",gse);
+  }
+catch (  IOException ioe) {
+    _log.error("Error loading SSL keys",ioe);
+  }
+  return false;
+}

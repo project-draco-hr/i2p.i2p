@@ -1,12 +1,13 @@
 {
   if (s == null)   return;
-  if (_numConnectionBuilders <= 0) {
-    new I2PAppThread(new BlockingRunner(s),"Clinet run").start();
-    return;
+  try {
+    _executor.execute(new BlockingRunner(s));
   }
-  if (_maxWaitTime > 0)   SimpleScheduler.getInstance().addEvent(new CloseEvent(s),_maxWaitTime);
-synchronized (_waitingSockets) {
-    _waitingSockets.add(s);
-    _waitingSockets.notifyAll();
+ catch (  RejectedExecutionException ree) {
+    try {
+      s.close();
+    }
+ catch (    IOException ioe) {
+    }
   }
 }

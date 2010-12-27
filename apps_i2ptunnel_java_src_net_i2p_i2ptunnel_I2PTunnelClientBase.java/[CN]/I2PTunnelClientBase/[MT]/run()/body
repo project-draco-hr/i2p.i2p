@@ -6,9 +6,6 @@
 synchronized (this) {
         notifyAll();
       }
-synchronized (_waitingSockets) {
-        _waitingSockets.notifyAll();
-      }
       return;
     }
     ss=new ServerSocket(localPort,0,addr);
@@ -29,12 +26,9 @@ synchronized (startLock) {
         }
       }
     }
-    while (true) {
+    while (open) {
       Socket s=ss.accept();
-      long before=System.currentTimeMillis();
       manageConnection(s);
-      long total=System.currentTimeMillis() - before;
-      _context.statManager().addRateData("i2ptunnel.client.manageTime",total,total);
     }
   }
  catch (  IOException ex) {
@@ -49,8 +43,5 @@ synchronized (sockLock) {
 synchronized (this) {
       notifyAll();
     }
-  }
-synchronized (_waitingSockets) {
-    _waitingSockets.notifyAll();
   }
 }

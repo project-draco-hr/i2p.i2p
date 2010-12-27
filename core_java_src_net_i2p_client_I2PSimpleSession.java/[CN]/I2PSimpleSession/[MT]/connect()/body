@@ -1,20 +1,24 @@
 {
   _closed=false;
-  _availabilityNotifier.stopNotifying();
-  I2PThread notifier=new I2PThread(_availabilityNotifier);
-  notifier.setName("Simple Notifier");
-  notifier.setDaemon(true);
-  notifier.start();
   try {
-    _socket=InternalSocket.getSocket(_hostname,_portNum);
-    _out=_socket.getOutputStream();
-synchronized (_out) {
-      _out.write(I2PClient.PROTOCOL_BYTE);
-      _out.flush();
+    if (_context.isRouterContext()) {
+      InternalClientManager mgr=_context.internalClientManager();
+      if (mgr == null)       throw new I2PSessionException("Router is not ready for connections");
+      _queue=mgr.connect();
+      _reader=new QueuedI2CPMessageReader(_queue,this);
     }
-    _writer=new ClientWriterRunner(_out,this);
-    InputStream in=_socket.getInputStream();
-    _reader=new I2CPMessageReader(in,this);
+ else {
+      if (Boolean.valueOf(getOptions().getProperty(PROP_ENABLE_SSL)).booleanValue())       _socket=I2CPSSLSocketFactory.createSocket(_context,_hostname,_portNum);
+ else       _socket=new Socket(_hostname,_portNum);
+      _out=_socket.getOutputStream();
+synchronized (_out) {
+        _out.write(I2PClient.PROTOCOL_BYTE);
+        _out.flush();
+      }
+      _writer=new ClientWriterRunner(_out,this);
+      InputStream in=_socket.getInputStream();
+      _reader=new I2CPMessageReader(in,this);
+    }
     _reader.startReading();
   }
  catch (  UnknownHostException uhe) {

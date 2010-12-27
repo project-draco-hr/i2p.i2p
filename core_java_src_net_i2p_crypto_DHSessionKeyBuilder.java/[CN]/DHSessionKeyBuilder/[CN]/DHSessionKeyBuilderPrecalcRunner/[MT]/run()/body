@@ -1,28 +1,30 @@
 {
   while (true) {
     int curSize=0;
-    long start=Clock.getInstance().now();
+    long start=System.currentTimeMillis();
     int startSize=getSize();
+    if (startSize <= (_minSize * 2 / 3) && _checkDelay > 1000)     _checkDelay-=1000;
+ else     if (startSize > (_minSize * 3 / 2) && _checkDelay < 60 * 1000)     _checkDelay+=1000;
     curSize=startSize;
-    while (curSize < _minSize) {
-      while (curSize < _maxSize) {
+    if (curSize < _minSize) {
+      for (int i=curSize; i < _maxSize; i++) {
         long curStart=System.currentTimeMillis();
-        curSize=addBuilder(precalc(curSize));
+        if (!addBuilder(precalc()))         break;
         long curCalc=System.currentTimeMillis() - curStart;
         try {
-          Thread.sleep(CALC_DELAY + curCalc * 10);
+          Thread.sleep(CALC_DELAY + (curCalc * 3));
         }
  catch (        InterruptedException ie) {
         }
       }
     }
-    long end=Clock.getInstance().now();
+    long end=System.currentTimeMillis();
     int numCalc=curSize - startSize;
     if (numCalc > 0) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Precalced " + numCalc + " to "+ curSize+ " in "+ (end - start - CALC_DELAY * numCalc)+ "ms (not counting "+ (CALC_DELAY * numCalc)+ "ms relief).  now sleeping");
     }
     try {
-      Thread.sleep(30 * 1000);
+      Thread.sleep(_checkDelay);
     }
  catch (    InterruptedException ie) {
     }

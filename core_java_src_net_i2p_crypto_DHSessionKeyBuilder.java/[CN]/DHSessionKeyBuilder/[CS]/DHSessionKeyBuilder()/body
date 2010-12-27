@@ -1,27 +1,15 @@
 {
-  this(false);
-  DHSessionKeyBuilder builder=null;
-synchronized (_builders) {
-    if (!_builders.isEmpty()) {
-      builder=(DHSessionKeyBuilder)_builders.remove(0);
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Removing a builder.  # left = " + _builders.size());
-    }
- else {
-      if (_log.shouldLog(Log.WARN))       _log.warn("NO MORE BUILDERS!  creating one now");
-    }
-  }
+  _context.statManager().addRateData("crypto.DHUsed",1,0);
+  DHSessionKeyBuilder builder=_builders.poll();
   if (builder != null) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Removing a builder.  # left = " + _builders.size());
     _myPrivateValue=builder._myPrivateValue;
     _myPublicValue=builder._myPublicValue;
-    _peerValue=builder._peerValue;
-    _sessionKey=builder._sessionKey;
     _extraExchangedBytes=builder._extraExchangedBytes;
   }
  else {
-    _myPrivateValue=null;
-    _myPublicValue=null;
-    _peerValue=null;
-    _sessionKey=null;
+    if (_log.shouldLog(Log.INFO))     _log.info("No more builders, creating one now");
+    _context.statManager().addRateData("crypto.DHEmpty",1,0);
     _myPublicValue=generateMyValue();
     _extraExchangedBytes=new ByteArray();
   }
