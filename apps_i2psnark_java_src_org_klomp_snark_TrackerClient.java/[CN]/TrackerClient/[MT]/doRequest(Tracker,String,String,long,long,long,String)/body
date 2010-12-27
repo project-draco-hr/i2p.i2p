@@ -1,6 +1,7 @@
 {
-  String s=tr.announce + "?info_hash=" + infoHash+ "&peer_id="+ peerID+ "&port="+ port+ "&ip="+ _util.getOurIPString()+ ".i2p"+ "&uploaded="+ uploaded+ "&downloaded="+ downloaded+ "&left="+ left+ "&compact=1"+ ((!event.equals(NO_EVENT)) ? ("&event=" + event) : "");
-  if (left <= 0 || event.equals(STOPPED_EVENT) || !coordinator.needPeers())   s+="&numwant=0";
+  long tleft=left >= 0 ? left : 1;
+  String s=tr.announce + "?info_hash=" + infoHash+ "&peer_id="+ peerID+ "&port="+ port+ "&ip="+ _util.getOurIPString()+ ".i2p"+ "&uploaded="+ uploaded+ "&downloaded="+ downloaded+ "&left="+ tleft+ "&compact=1"+ ((!event.equals(NO_EVENT)) ? ("&event=" + event) : "");
+  if (left == 0 || event.equals(STOPPED_EVENT) || !coordinator.needPeers())   s+="&numwant=0";
  else   s+="&numwant=" + _util.getMaxConnections();
   _util.debug("Sending TrackerClient request: " + s,Snark.INFO);
   tr.lastRequestTime=System.currentTimeMillis();
@@ -11,7 +12,7 @@
   InputStream in=null;
   try {
     in=new FileInputStream(fetched);
-    TrackerInfo info=new TrackerInfo(in,snark.getID(),snark.getMetaInfo());
+    TrackerInfo info=new TrackerInfo(in,snark.getID(),snark.getInfoHash(),snark.getMetaInfo());
     _util.debug("TrackerClient response: " + info,Snark.INFO);
     String failure=info.getFailureReason();
     if (failure != null)     throw new IOException(failure);

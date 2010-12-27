@@ -7,20 +7,31 @@
     Map<String,BEValue> map=bev.getMap();
     peer.setHandshakeMap(map);
     Map<String,BEValue> msgmap=map.get("m").getMap();
-    msgmap.get(TYPE_METADATA).getInt();
-    int metaSize=map.get("metadata_size").getInt();
+    if (msgmap.get(TYPE_METADATA) == null) {
+      if (_log.shouldLog(Log.WARN))       _log.debug("Peer does not support metadata extension: " + peer);
+      return;
+    }
+    BEValue msize=map.get("metadata_size");
+    if (msize == null) {
+      if (_log.shouldLog(Log.WARN))       _log.debug("Peer does not have the metainfo size yet: " + peer);
+      return;
+    }
+    int metaSize=msize.getInt();
+    if (_log.shouldLog(Log.WARN))     _log.debug("Got the metainfo size: " + metaSize);
     MagnetState state=peer.getMagnetState();
     int remaining;
 synchronized (state) {
       if (state.isComplete())       return;
       if (state.isInitialized()) {
         if (state.getSize() != metaSize) {
+          if (_log.shouldLog(Log.WARN))           _log.debug("Wrong metainfo size " + metaSize + " from: "+ peer);
           peer.disconnect();
           return;
         }
       }
  else {
         if (metaSize > MAX_METADATA_SIZE) {
+          if (_log.shouldLog(Log.WARN))           _log.debug("Huge metainfo size " + metaSize + " from: "+ peer);
           peer.disconnect(false);
           return;
         }
@@ -40,6 +51,6 @@ synchronized (state) {
     }
   }
  catch (  Exception e) {
-    if (_log.shouldLog(Log.WARN))     _log.info("Handshake exception from " + peer,e);
+    if (_log.shouldLog(Log.WARN))     _log.warn("Handshake exception from " + peer,e);
   }
 }

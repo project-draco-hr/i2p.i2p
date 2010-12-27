@@ -37,7 +37,7 @@
       }
       if (primary.startsWith("http://" + dest))       continue;
       if (primary.startsWith("http://i2p/" + dest))       continue;
-      trackers.add(new Tracker(url,false));
+      trackers.add(new Tracker(url,primary.equals("")));
       _log.debug("Additional announce: [" + url + "] for infoHash: "+ infoHash);
     }
   }
@@ -107,7 +107,7 @@
                 _util.getDHT().announce(snark.getInfoHash(),peer.getPeerID().getDestHash());
               }
             }
-            if ((left > 0) && (!completed)) {
+            if ((left != 0) && (!completed)) {
               List<Peer> ordered=new ArrayList(peers);
               Collections.shuffle(ordered,r);
               Iterator<Peer> it=ordered.iterator();
@@ -150,7 +150,7 @@
       }
       if (_util.getDHT() != null && !stop) {
         int numwant;
-        if (left <= 0 || event.equals(STOPPED_EVENT) || !coordinator.needPeers())         numwant=1;
+        if (left == 0 || event.equals(STOPPED_EVENT) || !coordinator.needPeers())         numwant=1;
  else         numwant=_util.getMaxConnections();
         List<Hash> hashes=_util.getDHT().getPeers(snark.getInfoHash(),numwant,2 * 60 * 1000);
         _util.debug("Got " + hashes + " from DHT",Snark.INFO);
@@ -162,7 +162,7 @@
           List<Peer> peers=new ArrayList(hashes.size());
           for (          Hash h : hashes) {
             PeerID pID=new PeerID(h.getData());
-            peers.add(new Peer(pID,snark.getID(),snark.getInfoHash(),meta));
+            peers.add(new Peer(pID,snark.getID(),snark.getInfoHash(),snark.getMetaInfo()));
           }
           Collections.shuffle(peers,r);
           Iterator<Peer> it=peers.iterator();
@@ -170,7 +170,7 @@
             Peer cur=it.next();
             if (coordinator.addPeer(cur)) {
               int delay=DELAY_MUL;
-              delay*=((int)cur.getPeerID().getAddress().calculateHash().toBase64().charAt(0)) % 10;
+              delay*=r.nextInt(10);
               delay+=DELAY_MIN;
               try {
                 Thread.sleep(delay);

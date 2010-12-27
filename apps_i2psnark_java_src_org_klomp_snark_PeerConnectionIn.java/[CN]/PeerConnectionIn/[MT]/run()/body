@@ -8,7 +8,7 @@
       int len;
       int i=din.readInt();
       lastRcvd=System.currentTimeMillis();
-      if (i < 0 || i > PeerState.PARTSIZE + 9)       throw new IOException("Unexpected length prefix: " + i);
+      if (i < 0 || i > MAX_MSG_SIZE)       throw new IOException("Unexpected length prefix: " + i);
       if (i == 0) {
         ps.keepAliveMessage();
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Received keepalive from " + peer);
@@ -81,12 +81,13 @@ case 9:
 int port=din.readUnsignedShort();
 ps.portMessage(port);
 if (_log.shouldLog(Log.DEBUG)) _log.debug("Received port message from " + peer);
+break;
 case 20:
 int id=din.readUnsignedByte();
 byte[] payload=new byte[i - 2];
 din.readFully(payload);
-ps.extensionMessage(id,payload);
 if (_log.shouldLog(Log.DEBUG)) _log.debug("Received extension message from " + peer);
+ps.extensionMessage(id,payload);
 break;
 default :
 byte[] bs=new byte[i - 1];

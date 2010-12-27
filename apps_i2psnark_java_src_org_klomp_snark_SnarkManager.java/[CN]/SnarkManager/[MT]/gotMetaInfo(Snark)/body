@@ -6,18 +6,26 @@
     if (rejectMessage != null) {
       addMessage(rejectMessage);
       snark.stopTorrent();
-      return;
+      return null;
     }
     saveTorrentStatus(meta,storage.getBitField(),null);
     String name=(new File(getDataDir(),storage.getBaseName() + ".torrent")).getAbsolutePath();
     try {
 synchronized (_snarks) {
         locked_writeMetaInfo(meta,name);
+        _snarks.remove(snark.getName());
+        _snarks.put(name,snark);
       }
+      _magnets.remove(snark.getName());
+      removeMagnetStatus(snark.getInfoHash());
+      addMessage(_("Metainfo received for {0}",snark.getName()));
+      addMessage(_("Starting up torrent {0}",storage.getBaseName()));
+      return name;
     }
  catch (    IOException ioe) {
       addMessage(_("Failed to copy torrent file to {0}",name));
       _log.error("Failed to write torrent file",ioe);
     }
   }
+  return null;
 }

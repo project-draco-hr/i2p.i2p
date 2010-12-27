@@ -28,12 +28,17 @@
  else {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Already have din [" + sock + "] with "+ toString());
     }
+    if (metainfo == null && (options & OPTION_EXTENSION) == 0) {
+      if (_log.shouldLog(Log.INFO))       _log.info("Peer does not support extensions and we need metainfo, dropping");
+      throw new IOException("Peer does not support extensions and we need metainfo, dropping");
+    }
     PeerConnectionIn in=new PeerConnectionIn(this,din);
     PeerConnectionOut out=new PeerConnectionOut(this,dout);
     PeerState s=new PeerState(this,listener,metainfo,in,out);
     if ((options & OPTION_EXTENSION) != 0) {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Peer supports extensions, sending test message");
-      out.sendExtension(0,ExtensionHandler.getHandshake());
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Peer supports extensions, sending reply message");
+      int metasize=metainfo != null ? metainfo.getInfoBytes().length : -1;
+      out.sendExtension(0,ExtensionHandler.getHandshake(metasize));
     }
     if ((options & OPTION_DHT) != 0 && util.getDHT() != null) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Peer supports DHT, sending PORT message");

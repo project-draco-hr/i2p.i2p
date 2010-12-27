@@ -9,6 +9,7 @@
     int piece=map.get("piece").getInt();
     MagnetState state=peer.getMagnetState();
     if (type == TYPE_REQUEST) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Got request for " + piece + " from: "+ peer);
       byte[] pc;
 synchronized (state) {
         pc=state.getChunk(piece);
@@ -19,11 +20,15 @@ synchronized (state) {
     }
  else     if (type == TYPE_DATA) {
       int size=map.get("total_size").getInt();
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Got data for " + piece + " length "+ size+ " from: "+ peer);
       boolean done;
       int chk=-1;
 synchronized (state) {
         if (state.isComplete())         return;
         int len=is.available();
+        if (len != size) {
+          if (_log.shouldLog(Log.WARN))           _log.warn("total_size " + size + " but avail data "+ len);
+        }
         peer.downloaded(len);
         listener.downloaded(peer,len);
         done=state.saveChunk(piece,bs,bs.length - len,len);
