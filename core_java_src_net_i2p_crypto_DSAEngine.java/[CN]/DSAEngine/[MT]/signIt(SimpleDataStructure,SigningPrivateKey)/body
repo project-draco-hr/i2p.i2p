@@ -1,0 +1,56 @@
+{
+  if ((signingKey == null) || (hash == null))   return null;
+  long start=_context.clock().now();
+  Signature sig=new Signature();
+  BigInteger k;
+  boolean ok=false;
+  do {
+    k=new BigInteger(160,_context.random());
+    ok=k.compareTo(CryptoConstants.dsaq) != 1;
+    ok=ok && !k.equals(BigInteger.ZERO);
+  }
+ while (!ok);
+  BigInteger r=CryptoConstants.dsag.modPow(k,CryptoConstants.dsap).mod(CryptoConstants.dsaq);
+  BigInteger kinv=k.modInverse(CryptoConstants.dsaq);
+  BigInteger M=new NativeBigInteger(1,hash.getData());
+  BigInteger x=new NativeBigInteger(1,signingKey.getData());
+  BigInteger s=(kinv.multiply(M.add(x.multiply(r)))).mod(CryptoConstants.dsaq);
+  byte[] rbytes=r.toByteArray();
+  byte[] sbytes=s.toByteArray();
+  byte[] out=new byte[40];
+  _context.random().harvester().feedEntropy("DSA.sign",rbytes,0,rbytes.length);
+  if (rbytes.length == 20) {
+    for (int i=0; i < 20; i++) {
+      out[i]=rbytes[i];
+    }
+  }
+ else   if (rbytes.length == 21) {
+    for (int i=0; i < 20; i++) {
+      out[i]=rbytes[i + 1];
+    }
+  }
+ else {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Using short rbytes.length [" + rbytes.length + "]");
+    for (int i=0; i < rbytes.length; i++)     out[i + 20 - rbytes.length]=rbytes[i];
+  }
+  if (sbytes.length == 20) {
+    for (int i=0; i < 20; i++) {
+      out[i + 20]=sbytes[i];
+    }
+  }
+ else   if (sbytes.length == 21) {
+    for (int i=0; i < 20; i++) {
+      out[i + 20]=sbytes[i + 1];
+    }
+  }
+ else {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Using short sbytes.length [" + sbytes.length + "]");
+    for (int i=0; i < sbytes.length; i++)     out[i + 20 + 20 - sbytes.length]=sbytes[i];
+  }
+  sig.setData(out);
+  long diff=_context.clock().now() - start;
+  if (diff > 1000) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Took too long to sign (" + diff + "ms)");
+  }
+  return sig;
+}
