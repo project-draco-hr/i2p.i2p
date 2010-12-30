@@ -1,0 +1,28 @@
+{
+  if (!resource.exists() || !passConditionalHeaders(request,response,resource))   return;
+  String newPath=URI.canonicalPath(request.getField("New-uri"));
+  if (newPath == null) {
+    response.sendError(HttpResponse.__405_Method_Not_Allowed,"Bad new uri");
+    return;
+  }
+  String contextPath=getHttpContext().getContextPath();
+  if (contextPath != null && !newPath.startsWith(contextPath)) {
+    response.sendError(HttpResponse.__405_Method_Not_Allowed,"Not in context");
+    return;
+  }
+  try {
+    String newInfo=newPath;
+    if (contextPath != null)     newInfo=newInfo.substring(contextPath.length());
+    Resource newFile=getHttpContext().getBaseResource().addPath(newInfo);
+    if (log.isDebugEnabled())     log.debug("Moving " + resource + " to "+ newFile);
+    resource.renameTo(newFile);
+    response.setStatus(HttpResponse.__204_No_Content);
+    request.setHandled(true);
+  }
+ catch (  Exception ex) {
+    log.warn(LogSupport.EXCEPTION,ex);
+    setAllowHeader(response);
+    response.sendError(HttpResponse.__405_Method_Not_Allowed,"Error:" + ex);
+    return;
+  }
+}
