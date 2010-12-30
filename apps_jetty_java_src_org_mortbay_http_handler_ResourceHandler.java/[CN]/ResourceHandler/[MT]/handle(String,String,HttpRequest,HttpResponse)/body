@@ -1,0 +1,37 @@
+{
+  Resource resource=getResource(pathInContext);
+  if (resource == null)   return;
+  if (!isMethodAllowed(request.getMethod())) {
+    if (log.isDebugEnabled())     log.debug("Method not allowed: " + request.getMethod());
+    if (resource.exists()) {
+      setAllowHeader(response);
+      response.sendError(HttpResponse.__405_Method_Not_Allowed);
+    }
+    return;
+  }
+  try {
+    if (log.isDebugEnabled())     log.debug("PATH=" + pathInContext + " RESOURCE="+ resource);
+    String method=request.getMethod();
+    if (method.equals(HttpRequest.__GET) || method.equals(HttpRequest.__POST) || method.equals(HttpRequest.__HEAD))     handleGet(request,response,pathInContext,pathParams,resource);
+ else     if (method.equals(HttpRequest.__PUT))     handlePut(request,response,pathInContext,resource);
+ else     if (method.equals(HttpRequest.__DELETE))     handleDelete(request,response,pathInContext,resource);
+ else     if (method.equals(HttpRequest.__OPTIONS))     handleOptions(response,pathInContext);
+ else     if (method.equals(HttpRequest.__MOVE))     handleMove(request,response,pathInContext,resource);
+ else     if (method.equals(HttpRequest.__TRACE))     handleTrace(request,response);
+ else {
+      if (log.isDebugEnabled())       log.debug("Unknown action:" + method);
+      try {
+        if (resource.exists())         response.sendError(HttpResponse.__501_Not_Implemented);
+      }
+ catch (      Exception e) {
+        LogSupport.ignore(log,e);
+      }
+    }
+  }
+ catch (  IllegalArgumentException e) {
+    LogSupport.ignore(log,e);
+  }
+ finally {
+    if (resource != null && !(resource instanceof CachedResource))     resource.release();
+  }
+}

@@ -1,0 +1,115 @@
+{
+  try {
+    _uri=uri;
+    _scheme=null;
+    _host=null;
+    _port=0;
+    _path=null;
+    _encodedPath=null;
+    _query=null;
+    if (_parameters != null)     _parameters.clear();
+    int maxi=uri.length() - 1;
+    int mark=0;
+    int state=0;
+    int i=0;
+    if (maxi == 0 || uri.charAt(0) == '/' && uri.charAt(1) != '/') {
+      state=3;
+      _scheme=null;
+      _host=null;
+      _port=0;
+    }
+ else {
+      for (i=0; state < 3 && i <= maxi; i++) {
+        char c=uri.charAt(i);
+switch (state) {
+case 0:
+          if (c == ':' && uri.charAt(i + 1) == '/' && uri.charAt(i + 2) == '/') {
+            _scheme=uri.substring(mark,i);
+            i+=2;
+            mark=i + 1;
+            state=1;
+          }
+ else           if (i == 0 && c == '/') {
+            state=3;
+          }
+ else           if (i == 0 && c == '*') {
+            state=5;
+            _path="*";
+            _encodedPath="*";
+          }
+        continue;
+case 1:
+      if (c == ':') {
+        _host=uri.substring(mark,i);
+        mark=i + 1;
+        state=2;
+      }
+ else       if (c == '/') {
+        _host=uri.substring(mark,i);
+        mark=i;
+        state=3;
+      }
+    continue;
+case 2:
+  if (c == '/') {
+    _port=TypeUtil.parseInt(uri,mark,i - mark,10);
+    mark=i;
+    state=3;
+  }
+continue;
+}
+}
+}
+_query=null;
+for (i++; i <= maxi; i++) {
+char c=uri.charAt(i);
+if (c == '?') {
+_encodedPath=uri.substring(mark,i);
+_path=decodePath(_encodedPath);
+mark=i + 1;
+state=4;
+break;
+}
+}
+switch (state) {
+case 0:
+_dirty=false;
+_encodedPath=_uri;
+_path=decodePath(_encodedPath);
+break;
+case 1:
+_dirty=true;
+_encodedPath="/";
+_path=_encodedPath;
+_host=uri.substring(mark);
+break;
+case 2:
+_dirty=true;
+_encodedPath="/";
+_path=_encodedPath;
+_port=TypeUtil.parseInt(uri,mark,-1,10);
+break;
+case 3:
+_dirty=(mark == maxi);
+_encodedPath=uri.substring(mark);
+_path=decodePath(_encodedPath);
+break;
+case 4:
+_dirty=false;
+if (mark <= maxi) _query=uri.substring(mark);
+break;
+case 5:
+_dirty=false;
+}
+if (_query != null && _query.length() > 0) {
+if (_parameters == null) _parameters=new UrlEncoded();
+ else _parameters.clear();
+_parameters.decode(_query,__CHARSET);
+}
+ else _query=null;
+}
+ catch (Exception e) {
+LogSupport.ignore(log,e);
+throw new IllegalArgumentException("Malformed URI '" + uri + "' : "+ e.toString());
+}
+}
