@@ -1,0 +1,31 @@
+{
+  if (data == null)   throw new NullPointerException("Don't pull null data from the cache");
+  int found;
+  V rv;
+  Integer key=hashCodeOf(data);
+synchronized (_cache) {
+    rv=_cache.get(key);
+    if (rv != null && DataHelper.eq(data,rv.getData())) {
+      SimpleByteCache.release(data);
+      found=1;
+    }
+ else {
+      try {
+        rv=_rvCon.newInstance(new Object[]{data});
+      }
+ catch (      InstantiationException e) {
+        throw new RuntimeException("SDSCache error",e);
+      }
+catch (      IllegalAccessException e) {
+        throw new RuntimeException("SDSCache error",e);
+      }
+catch (      InvocationTargetException e) {
+        throw new RuntimeException("SDSCache error",e);
+      }
+      _cache.put(key,rv);
+      found=0;
+    }
+  }
+  I2PAppContext.getGlobalContext().statManager().addRateData(_statName,found,0);
+  return rv;
+}
