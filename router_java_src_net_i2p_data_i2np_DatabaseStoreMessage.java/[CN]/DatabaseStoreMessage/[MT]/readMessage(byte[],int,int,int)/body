@@ -3,7 +3,7 @@
   int curIndex=offset;
   _key=Hash.create(data,curIndex);
   curIndex+=Hash.HASH_LENGTH;
-  _type=(int)DataHelper.fromLong(data,curIndex,1);
+  type=(int)DataHelper.fromLong(data,curIndex,1);
   curIndex++;
   _replyToken=DataHelper.fromLong(data,curIndex,4);
   curIndex+=4;
@@ -18,22 +18,22 @@
     _replyTunnel=null;
     _replyGateway=null;
   }
-  if (_type == KEY_TYPE_LEASESET) {
-    _leaseSet=new LeaseSet();
+  if (type == DatabaseEntry.KEY_TYPE_LEASESET) {
+    _dbEntry=new LeaseSet();
     try {
-      _leaseSet.readBytes(new ByteArrayInputStream(data,curIndex,data.length - curIndex));
+      _dbEntry.readBytes(new ByteArrayInputStream(data,curIndex,data.length - curIndex));
     }
  catch (    DataFormatException dfe) {
       throw new I2NPMessageException("Error reading the leaseSet",dfe);
     }
   }
- else   if (_type == KEY_TYPE_ROUTERINFO) {
-    _info=new RouterInfo();
+ else   if (type == DatabaseEntry.KEY_TYPE_ROUTERINFO) {
+    _dbEntry=new RouterInfo();
     int compressedSize=(int)DataHelper.fromLong(data,curIndex,2);
     curIndex+=2;
     try {
       byte decompressed[]=DataHelper.decompress(data,curIndex,compressedSize);
-      _info.readBytes(new ByteArrayInputStream(decompressed));
+      _dbEntry.readBytes(new ByteArrayInputStream(decompressed));
     }
  catch (    DataFormatException dfe) {
       throw new I2NPMessageException("Error reading the routerInfo",dfe);
@@ -43,6 +43,6 @@ catch (    IOException ioe) {
     }
   }
  else {
-    throw new I2NPMessageException("Invalid type of key read from the structure - " + _type);
+    throw new I2NPMessageException("Invalid type of key read from the structure - " + type);
   }
 }

@@ -1,0 +1,30 @@
+{
+  Hash key=ds.getHash();
+  Hash rkey=_context.routingKeyGenerator().getRoutingKey(key);
+  FloodfillPeerSelector sel=(FloodfillPeerSelector)getPeerSelector();
+  List peers=sel.selectFloodfillParticipants(rkey,MAX_TO_FLOOD,getKBuckets());
+  int flooded=0;
+  for (int i=0; i < peers.size(); i++) {
+    Hash peer=(Hash)peers.get(i);
+    RouterInfo target=lookupRouterInfoLocally(peer);
+    if ((target == null) || (_context.shitlist().isShitlisted(peer)))     continue;
+    if (peer.equals(_context.routerHash()))     continue;
+    DatabaseStoreMessage msg=new DatabaseStoreMessage(_context);
+    msg.setEntry(ds);
+    msg.setReplyGateway(null);
+    msg.setReplyToken(0);
+    msg.setReplyTunnel(null);
+    OutNetMessage m=new OutNetMessage(_context);
+    m.setMessage(msg);
+    m.setOnFailedReplyJob(null);
+    m.setPriority(FLOOD_PRIORITY);
+    m.setTarget(target);
+    m.setExpiration(_context.clock().now() + FLOOD_TIMEOUT);
+    Job floodFail=new FloodFailedJob(_context,peer);
+    m.setOnFailedSendJob(floodFail);
+    _context.commSystem().processMessage(m);
+    flooded++;
+    if (_log.shouldLog(Log.INFO))     _log.info("Flooding the entry for " + key.toBase64() + " to "+ peer.toBase64());
+  }
+  if (_log.shouldLog(Log.INFO))   _log.info("Flooded the data to " + flooded + " of "+ peers.size()+ " peers");
+}

@@ -7,12 +7,13 @@
   try {
     DatabaseStoreMessage dsm=(DatabaseStoreMessage)message;
     if (_log.shouldLog(Log.INFO))     _log.info(_search.getJobId() + ": got a DSM for " + dsm.getKey().toBase64());
-    if (dsm.getValueType() == DatabaseStoreMessage.KEY_TYPE_LEASESET) {
-      dsm.getLeaseSet().setReceivedAsReply();
-      getContext().netDb().store(dsm.getKey(),dsm.getLeaseSet());
+    if (dsm.getEntry().getType() == DatabaseEntry.KEY_TYPE_LEASESET) {
+      LeaseSet ls=(LeaseSet)dsm.getEntry();
+      ls.setReceivedAsReply();
+      getContext().netDb().store(dsm.getKey(),ls);
     }
  else {
-      getContext().netDb().store(dsm.getKey(),dsm.getRouterInfo());
+      getContext().netDb().store(dsm.getKey(),(RouterInfo)dsm.getEntry());
     }
   }
  catch (  IllegalArgumentException iae) {
