@@ -49,17 +49,19 @@
       _util.setStartupDelay(minutes);
       changed=true;
       _config.setProperty(PROP_STARTUP_DELAY,"" + minutes);
-      addMessage(_("Startup delay limit changed to {0} minutes",minutes));
+      addMessage(_("Startup delay changed to {0}",DataHelper.formatDuration2(minutes * 60 * 1000)));
     }
   }
   if (i2cpHost != null) {
     int oldI2CPPort=_util.getI2CPPort();
     String oldI2CPHost=_util.getI2CPHost();
     int port=oldI2CPPort;
-    try {
-      port=Integer.parseInt(i2cpPort);
-    }
- catch (    NumberFormatException nfe) {
+    if (i2cpPort != null) {
+      try {
+        port=Integer.parseInt(i2cpPort);
+      }
+ catch (      NumberFormatException nfe) {
+      }
     }
     String host=oldI2CPHost;
     Map opts=new HashMap();
@@ -84,7 +86,7 @@
       Set names=listTorrentFiles();
       for (Iterator iter=names.iterator(); iter.hasNext(); ) {
         Snark snark=getTorrent((String)iter.next());
-        if ((snark != null) && (!snark.stopped)) {
+        if ((snark != null) && (!snark.isStopped())) {
           snarksActive=true;
           break;
         }
@@ -121,9 +123,8 @@
           for (Iterator iter=names.iterator(); iter.hasNext(); ) {
             String name=(String)iter.next();
             Snark snark=getTorrent(name);
-            if ((snark != null) && (snark.acceptor != null)) {
-              snark.acceptor.restart();
-              addMessage(_("I2CP listener restarted for \"{0}\"",snark.meta.getName()));
+            if (snark != null && snark.restartAcceptor()) {
+              addMessage(_("I2CP listener restarted for \"{0}\"",snark.getBaseName()));
             }
           }
         }
@@ -141,6 +142,7 @@
     _config.setProperty(I2PSnarkUtil.PROP_USE_OPENTRACKERS,useOpenTrackers + "");
     if (useOpenTrackers)     addMessage(_("Enabled open trackers - torrent restart required to take effect."));
  else     addMessage(_("Disabled open trackers - torrent restart required to take effect."));
+    _util.setUseOpenTrackers(useOpenTrackers);
     changed=true;
   }
   if (openTrackers != null) {

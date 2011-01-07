@@ -8,14 +8,18 @@
       try {
         in=new FileInputStream(file);
         MetaInfo info=new MetaInfo(in);
-        String name=info.getName();
-        name=DataHelper.stripHTML(name);
-        name=name.replace('/','_');
-        name=name.replace('\\','_');
-        name=name.replace('&','+');
-        name=name.replace('\'','_');
-        name=name.replace('"','_');
-        name=name.replace('`','_');
+        try {
+          in.close();
+        }
+ catch (        IOException ioe) {
+        }
+        Snark snark=_manager.getTorrentByInfoHash(info.getInfoHash());
+        if (snark != null) {
+          _manager.addMessage(_("Torrent with this info hash is already running: {0}",snark.getBaseName()));
+          return;
+        }
+        String name=new String(info.getName());
+        name=Storage.filterName(name);
         name=name + ".torrent";
         File torrentFile=new File(_manager.getDataDir(),name);
         String canonical=torrentFile.getCanonicalPath();
@@ -24,22 +28,18 @@
  else           _manager.addMessage(_("Torrent already in the queue: {0}",name));
         }
  else {
-          boolean success=FileUtil.copy(file.getAbsolutePath(),canonical,false);
-          if (success) {
-            SecureFileOutputStream.setPerms(torrentFile);
-            _manager.addTorrent(canonical);
-          }
- else {
-            _manager.addMessage(_("Failed to copy torrent file to {0}",canonical));
-          }
+          _manager.copyAndAddTorrent(file,canonical);
         }
       }
  catch (      IOException ioe) {
         _manager.addMessage(_("Torrent at {0} was not valid",urlify(_url)) + ": " + ioe.getMessage());
       }
+catch (      OutOfMemoryError oom) {
+        _manager.addMessage(_("ERROR - Out of memory, cannot create torrent from {0}",urlify(_url)) + ": " + oom.getMessage());
+      }
  finally {
         try {
-          in.close();
+          if (in != null)           in.close();
         }
  catch (        IOException ioe) {
         }
