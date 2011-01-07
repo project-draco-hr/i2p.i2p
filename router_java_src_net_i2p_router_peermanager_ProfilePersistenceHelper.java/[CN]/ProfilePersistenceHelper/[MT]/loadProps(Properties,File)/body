@@ -1,9 +1,10 @@
 {
+  InputStream fin=null;
   try {
-    FileInputStream fin=new FileInputStream(file);
+    fin=new BufferedInputStream(new FileInputStream(file),1);
+    fin.mark(1);
     int c=fin.read();
-    fin.close();
-    fin=new FileInputStream(file);
+    fin.reset();
     if (c == '#') {
       if (_log.shouldLog(Log.INFO))       _log.info("Loading uncompressed profile data from " + file.getName());
       DataHelper.loadProps(props,fin);
@@ -15,5 +16,12 @@
   }
  catch (  IOException ioe) {
     if (_log.shouldLog(Log.WARN))     _log.warn("Error loading properties from " + file.getName(),ioe);
+  }
+ finally {
+    try {
+      if (fin != null)       fin.close();
+    }
+ catch (    IOException e) {
+    }
   }
 }

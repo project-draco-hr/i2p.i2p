@@ -1,18 +1,10 @@
 {
   if (!_initialized)   return Collections.EMPTY_SET;
-  Set<Hash> keys=_ds.getKeys();
-  Set<Hash> rv=new HashSet(keys.size());
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("getAllRouters(): # keys in the datastore: " + keys.size());
-  for (  Hash key : keys) {
-    DataStructure ds=_ds.get(key);
-    if (ds == null) {
-      if (_log.shouldLog(Log.INFO))       _log.info("Selected hash " + key.toBase64() + " is not stored locally");
-    }
- else     if (!(ds instanceof RouterInfo)) {
-    }
- else {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("getAllRouters(): key is router: " + key.toBase64());
-      rv.add(key);
+  Set<Map.Entry<Hash,DatabaseEntry>> entries=_ds.getMapEntries();
+  Set<Hash> rv=new HashSet(entries.size());
+  for (  Map.Entry<Hash,DatabaseEntry> entry : entries) {
+    if (entry.getValue().getType() == DatabaseEntry.KEY_TYPE_ROUTERINFO) {
+      rv.add(entry.getKey());
     }
   }
   return rv;

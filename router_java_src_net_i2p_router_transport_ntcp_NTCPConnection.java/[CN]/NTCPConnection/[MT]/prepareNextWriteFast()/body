@@ -42,17 +42,12 @@ synchronized (_outbound) {
     _currentOutbound=msg;
   }
   msg.beginTransmission();
-  long begin=System.currentTimeMillis();
   PrepBuffer buf=(PrepBuffer)msg.releasePreparationBuffer();
   if (buf == null)   throw new RuntimeException("buf is null for " + msg);
   _context.aes().encrypt(buf.unencrypted,0,buf.encrypted,0,_sessionKey,_prevWriteEnd,0,buf.unencryptedLength);
   System.arraycopy(buf.encrypted,buf.encrypted.length - 16,_prevWriteEnd,0,_prevWriteEnd.length);
-  long encryptedTime=System.currentTimeMillis();
   _transport.getPumper().wantsWrite(this,buf.encrypted);
-  long wantsTime=System.currentTimeMillis();
   releaseBuf(buf);
-  long releaseTime=System.currentTimeMillis();
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("prepared outbound " + System.identityHashCode(msg) + " encrypted="+ (encryptedTime - begin)+ " wantsWrite="+ (wantsTime - encryptedTime)+ " releaseBuf="+ (releaseTime - wantsTime));
   if (_nextInfoTime <= System.currentTimeMillis()) {
     enqueueInfoMessage();
     _nextInfoTime=System.currentTimeMillis() + (INFO_FREQUENCY / 2) + _context.random().nextInt(INFO_FREQUENCY);

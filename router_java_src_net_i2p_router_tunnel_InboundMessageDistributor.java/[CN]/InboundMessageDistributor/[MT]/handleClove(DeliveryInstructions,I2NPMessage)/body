@@ -10,9 +10,10 @@ case DeliveryInstructions.DELIVERY_MODE_LOCAL:
     if (data instanceof DatabaseStoreMessage) {
       DatabaseStoreMessage dsm=(DatabaseStoreMessage)data;
       try {
-        if (dsm.getValueType() == DatabaseStoreMessage.KEY_TYPE_LEASESET) {
-          LeaseSet old=_context.netDb().store(dsm.getKey(),dsm.getLeaseSet());
-          if (old != null && old.getReceivedAsPublished())           dsm.getLeaseSet().setReceivedAsPublished(true);
+        if (dsm.getEntry().getType() == DatabaseEntry.KEY_TYPE_LEASESET) {
+          LeaseSet ls=(LeaseSet)dsm.getEntry();
+          LeaseSet old=_context.netDb().store(dsm.getKey(),ls);
+          if (old != null && old.getReceivedAsPublished())           ls.setReceivedAsPublished(true);
           if (_log.shouldLog(Log.INFO))           _log.info("Storing LS for: " + dsm.getKey() + " sent to: "+ _client);
         }
  else {
@@ -21,7 +22,7 @@ case DeliveryInstructions.DELIVERY_MODE_LOCAL:
             _log.error("Dropped dangerous message down a tunnel for " + _client.toBase64() + ": "+ dsm,new Exception("cause"));
             return;
           }
-          _context.netDb().store(dsm.getKey(),dsm.getRouterInfo());
+          _context.netDb().store(dsm.getKey(),(RouterInfo)dsm.getEntry());
         }
       }
  catch (      IllegalArgumentException iae) {

@@ -5,8 +5,7 @@
   if (_message instanceof DatabaseStoreMessage) {
     boolean success=false;
     DatabaseStoreMessage dsm=(DatabaseStoreMessage)_message;
-    if (_isRouterInfo && dsm.getValueType() == DatabaseStoreMessage.KEY_TYPE_ROUTERINFO)     success=dsm.getRouterInfo().getPublished() >= _published;
- else     if ((!_isRouterInfo) && dsm.getValueType() == DatabaseStoreMessage.KEY_TYPE_LEASESET)     success=dsm.getLeaseSet().getEarliestLeaseDate() >= _published;
+    success=dsm.getEntry().getDate() >= _published;
     if (success) {
       getContext().profileManager().dbLookupSuccessful(_target,delay);
       if (_sentTo != null)       getContext().profileManager().dbStoreSuccessful(_sentTo);
@@ -15,7 +14,7 @@
       return;
     }
     if (_log.shouldLog(Log.WARN))     _log.warn("Verify failed (older) for " + _key);
-    if (_log.shouldLog(Log.INFO))     _log.info("Rcvd older lease: " + dsm.getLeaseSet());
+    if (_log.shouldLog(Log.INFO))     _log.info("Rcvd older lease: " + dsm.getEntry());
   }
  else   if (_message instanceof DatabaseSearchReplyMessage) {
     getContext().profileManager().dbLookupReply(_target,0,((DatabaseSearchReplyMessage)_message).getNumReplies(),0,0,delay);

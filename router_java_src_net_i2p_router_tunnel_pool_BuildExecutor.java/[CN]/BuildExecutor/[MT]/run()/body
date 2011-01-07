@@ -24,7 +24,11 @@
 synchronized (_currentlyBuilding) {
           if (!_repoll) {
             if (_log.shouldLog(Log.DEBUG))             _log.debug("No tunnel to build with (allowed=" + allowed + ", wanted="+ wanted.size()+ ", pending="+ pendingRemaining+ "), wait for a while");
-            _currentlyBuilding.wait(1 * 1000 + _context.random().nextInt(1 * 1000));
+            try {
+              _currentlyBuilding.wait(1 * 1000 + _context.random().nextInt(1 * 1000));
+            }
+ catch (            InterruptedException ie) {
+            }
           }
         }
       }
@@ -70,7 +74,7 @@ synchronized (_currentlyBuilding) {
       wanted.clear();
       pools.clear();
     }
- catch (    Exception e) {
+ catch (    RuntimeException e) {
       if (_log.shouldLog(Log.CRIT))       _log.log(Log.CRIT,"B0rked in the tunnel builder",e);
     }
   }
