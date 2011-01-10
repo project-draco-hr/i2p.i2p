@@ -1,12 +1,12 @@
 {
   File sdir=new SecureDirectory(_context.getConfigDir(),"certificates");
   if (sdir.exists() || sdir.mkdir()) {
+    InputStream fis=null;
     try {
       KeyStore keyStore=KeyStore.getInstance(KeyStore.getDefaultType());
-      InputStream fis=new FileInputStream(ks);
+      fis=new FileInputStream(ks);
       String ksPass=_context.getProperty(PROP_KEYSTORE_PASSWORD,DEFAULT_KEYSTORE_PASSWORD);
       keyStore.load(fis,ksPass.toCharArray());
-      fis.close();
       Certificate cert=keyStore.getCertificate(KEY_ALIAS);
       if (cert != null) {
         File certFile=new File(sdir,ASCII_KEYFILE);
@@ -21,6 +21,13 @@
     }
 catch (    IOException ioe) {
       _log.error("Error saving ASCII SSL keys",ioe);
+    }
+ finally {
+      if (fis != null)       try {
+        fis.close();
+      }
+ catch (      IOException ioe) {
+      }
     }
   }
  else {
