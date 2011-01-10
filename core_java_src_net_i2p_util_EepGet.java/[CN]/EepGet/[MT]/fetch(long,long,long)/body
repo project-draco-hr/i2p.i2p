@@ -6,27 +6,29 @@
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Fetching (proxied? " + _shouldProxy + ") url="+ _actualURL);
   while (_keepFetching) {
     SocketTimeout timeout=null;
-    if (_fetchHeaderTimeout > 0)     timeout=new SocketTimeout(_fetchHeaderTimeout);
-    final SocketTimeout stimeout=timeout;
-    timeout.setTimeoutCommand(new Runnable(){
-      public void run(){
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("timeout reached on " + _url + ": "+ stimeout);
-        _aborted=true;
+    if (_fetchHeaderTimeout > 0) {
+      timeout=new SocketTimeout(_fetchHeaderTimeout);
+      final SocketTimeout stimeout=timeout;
+      timeout.setTimeoutCommand(new Runnable(){
+        public void run(){
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("timeout reached on " + _url + ": "+ stimeout);
+          _aborted=true;
+        }
       }
-    }
 );
-    timeout.setTotalTimeoutPeriod(_fetchEndTime);
+      timeout.setTotalTimeoutPeriod(_fetchEndTime);
+    }
     try {
       for (int i=0; i < _listeners.size(); i++)       _listeners.get(i).attempting(_url);
       sendRequest(timeout);
-      timeout.resetTimer();
+      if (timeout != null)       timeout.resetTimer();
       doFetch(timeout);
-      timeout.cancel();
+      if (timeout != null)       timeout.cancel();
       if (!_transferFailed)       return true;
       break;
     }
  catch (    IOException ioe) {
-      timeout.cancel();
+      if (timeout != null)       timeout.cancel();
       for (int i=0; i < _listeners.size(); i++)       _listeners.get(i).attemptFailed(_url,_bytesTransferred,_bytesRemaining,_currentAttempt,_numRetries,ioe);
       if (_log.shouldLog(Log.WARN))       _log.warn("ERR: doFetch failed ",ioe);
       if (ioe instanceof MalformedURLException)       _keepFetching=false;
