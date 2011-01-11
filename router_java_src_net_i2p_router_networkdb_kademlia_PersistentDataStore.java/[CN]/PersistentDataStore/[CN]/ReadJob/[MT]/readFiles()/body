@@ -1,21 +1,15 @@
 {
   int routerCount=0;
-  try {
-    File dbDir=getDbDir();
-    File routerInfoFiles[]=dbDir.listFiles(RouterInfoFilter.getInstance());
-    if (routerInfoFiles != null) {
-      routerCount+=routerInfoFiles.length;
-      if (routerInfoFiles.length > 5)       _alreadyWarned=false;
-      for (int i=0; i < routerInfoFiles.length; i++) {
-        Hash key=getRouterInfoHash(routerInfoFiles[i].getName());
-        if ((key != null) && (!isKnown(key))) {
-          (new ReadRouterJob(routerInfoFiles[i],key)).runJob();
-        }
+  File routerInfoFiles[]=_dbDir.listFiles(RouterInfoFilter.getInstance());
+  if (routerInfoFiles != null) {
+    routerCount+=routerInfoFiles.length;
+    if (routerInfoFiles.length > 5)     _alreadyWarned=false;
+    for (int i=0; i < routerInfoFiles.length; i++) {
+      Hash key=getRouterInfoHash(routerInfoFiles[i].getName());
+      if ((key != null) && (!isKnown(key))) {
+        (new ReadRouterJob(routerInfoFiles[i],key)).runJob();
       }
     }
-  }
- catch (  IOException ioe) {
-    _log.error("Error reading files in the db dir",ioe);
   }
   if (!_alreadyWarned) {
     ReseedChecker.checkReseed(_context,routerCount);
