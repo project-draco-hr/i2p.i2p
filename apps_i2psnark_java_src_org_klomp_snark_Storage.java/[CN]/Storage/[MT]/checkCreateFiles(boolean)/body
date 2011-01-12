@@ -1,7 +1,14 @@
 {
   boolean resume=false;
   _probablyComplete=true;
-  needed=metainfo.getPieces();
+  int need=metainfo.getPieces();
+  BitField bfield;
+  if (recheck) {
+    bfield=new BitField(need);
+  }
+ else {
+    bfield=bitfield;
+  }
   for (int i=0; i < rafs.length; i++) {
     long length=RAFfile[i].length();
     if (RAFfile[i].exists() && length == lengths[i]) {
@@ -56,13 +63,19 @@ synchronized (RAFlock[file]) {
         fileEnd+=lengths[file];
       }
       if (correctHash) {
-        bitfield.set(i);
-        needed--;
+        bfield.set(i);
+        need--;
       }
       if (listener != null)       listener.storageChecked(this,i,correctHash);
     }
   }
   _probablyComplete=complete();
+  needed=need;
+  if (recheck && need > 0) {
+synchronized (bitfield) {
+      bitfield=bfield;
+    }
+  }
   if (listener != null) {
     listener.storageAllChecked(this);
     if (needed <= 0)     listener.storageCompleted(this);
