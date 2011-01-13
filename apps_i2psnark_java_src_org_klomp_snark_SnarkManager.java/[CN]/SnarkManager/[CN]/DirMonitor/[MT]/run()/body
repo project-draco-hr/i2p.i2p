@@ -1,21 +1,32 @@
 {
-  try {
-    Thread.sleep(60 * 1000 * getStartupDelayMinutes());
-  }
- catch (  InterruptedException ie) {
-  }
+  long delay=60 * 1000 * getStartupDelayMinutes();
+  if (delay > 0 && shouldAutoStart()) {
+    _messages.add(_("Adding torrents in {0}",DataHelper.formatDuration2(delay)));
+    try {
+      Thread.sleep(delay);
+    }
+ catch (    InterruptedException ie) {
+    }
 synchronized (_messages) {
-    if (_messages.size() == 1)     _messages.remove(0);
+      if (_messages.size() == 1)       _messages.remove(0);
+    }
   }
   getBWLimit();
+  boolean doMagnets=true;
   while (true) {
     File dir=getDataDir();
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Directory Monitor loop over " + dir.getAbsolutePath());
     try {
-      monitorTorrents(dir);
+synchronized (_snarks) {
+        monitorTorrents(dir);
+      }
     }
  catch (    Exception e) {
       _log.error("Error in the DirectoryMonitor",e);
+    }
+    if (doMagnets) {
+      addMagnets();
+      doMagnets=false;
     }
     try {
       Thread.sleep(60 * 1000);

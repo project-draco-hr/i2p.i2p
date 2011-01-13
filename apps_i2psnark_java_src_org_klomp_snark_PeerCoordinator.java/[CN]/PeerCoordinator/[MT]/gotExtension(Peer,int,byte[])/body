@@ -1,0 +1,23 @@
+{
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Got extension message " + id + " from "+ peer);
+  if (metainfo == null && id == ExtensionHandler.ID_METADATA) {
+synchronized (magnetState) {
+      if (magnetState.isComplete()) {
+        if (_log.shouldLog(Log.WARN))         _log.warn("Got completed metainfo via extension");
+        metainfo=magnetState.getMetaInfo();
+        listener.gotMetaInfo(this,metainfo);
+      }
+    }
+  }
+ else   if (id == ExtensionHandler.ID_HANDSHAKE) {
+    try {
+      if (peer.getHandshakeMap().get("m").getMap().get(ExtensionHandler.TYPE_PEX) != null) {
+        List<Peer> pList=peerList();
+        pList.remove(peer);
+        ExtensionHandler.sendPEX(peer,pList);
+      }
+    }
+ catch (    Exception e) {
+    }
+  }
+}

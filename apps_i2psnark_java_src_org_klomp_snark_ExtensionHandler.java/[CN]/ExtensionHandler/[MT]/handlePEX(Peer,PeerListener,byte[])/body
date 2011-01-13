@@ -1,0 +1,24 @@
+{
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Got PEX msg from " + peer);
+  try {
+    InputStream is=new ByteArrayInputStream(bs);
+    BDecoder dec=new BDecoder(is);
+    BEValue bev=dec.bdecodeMap();
+    Map<String,BEValue> map=bev.getMap();
+    byte[] ids=map.get("added").getBytes();
+    if (ids.length < HASH_LENGTH)     return;
+    int len=Math.min(ids.length,(I2PSnarkUtil.MAX_CONNECTIONS - 1) * HASH_LENGTH);
+    List<PeerID> peers=new ArrayList(len / HASH_LENGTH);
+    for (int off=0; off < len; off+=HASH_LENGTH) {
+      byte[] hash=new byte[HASH_LENGTH];
+      System.arraycopy(ids,off,hash,0,HASH_LENGTH);
+      if (DataHelper.eq(hash,peer.getPeerID().getDestHash()))       continue;
+      PeerID pID=new PeerID(hash);
+      peers.add(pID);
+    }
+    listener.gotPeers(peer,peers);
+  }
+ catch (  Exception e) {
+    if (_log.shouldLog(Log.WARN))     _log.info("PEX msg exception from " + peer,e);
+  }
+}
