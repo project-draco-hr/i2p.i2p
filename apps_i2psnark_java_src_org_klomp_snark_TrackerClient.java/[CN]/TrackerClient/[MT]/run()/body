@@ -111,10 +111,8 @@
               Iterator<Peer> it=ordered.iterator();
               while ((!stop) && it.hasNext()) {
                 Peer cur=it.next();
-                if (coordinator.addPeer(cur)) {
-                  int delay=DELAY_MUL;
-                  delay*=r.nextInt(10);
-                  delay+=DELAY_MIN;
+                if (coordinator.addPeer(cur) && it.hasNext()) {
+                  int delay=(DELAY_MUL * r.nextInt(10)) + DELAY_MIN;
                   sleptTime+=delay;
                   try {
                     Thread.sleep(delay);
@@ -146,6 +144,29 @@
         }
         if ((!tr.stop) && maxSeenPeers < tr.seenPeers)         maxSeenPeers=tr.seenPeers;
       }
+      if (left > 0 && coordinator.needPeers() && !stop) {
+        Set<PeerID> pids=coordinator.getPEXPeers();
+        if (!pids.isEmpty()) {
+          _util.debug("Got " + pids.size() + " from PEX",Snark.INFO);
+          List<Peer> peers=new ArrayList(pids.size());
+          for (          PeerID pID : pids) {
+            peers.add(new Peer(pID,snark.getID(),snark.getInfoHash(),snark.getMetaInfo()));
+          }
+          Collections.shuffle(peers,r);
+          Iterator<Peer> it=peers.iterator();
+          while ((!stop) && it.hasNext()) {
+            Peer cur=it.next();
+            if (coordinator.addPeer(cur) && it.hasNext()) {
+              int delay=(DELAY_MUL * r.nextInt(10)) + DELAY_MIN;
+              try {
+                Thread.sleep(delay);
+              }
+ catch (              InterruptedException ie) {
+              }
+            }
+          }
+        }
+      }
       if (_util.getDHT() != null && !stop) {
         int numwant;
         if (left == 0 || event.equals(STOPPED_EVENT) || !coordinator.needPeers())         numwant=1;
@@ -166,10 +187,8 @@
           Iterator<Peer> it=peers.iterator();
           while ((!stop) && it.hasNext()) {
             Peer cur=it.next();
-            if (coordinator.addPeer(cur)) {
-              int delay=DELAY_MUL;
-              delay*=r.nextInt(10);
-              delay+=DELAY_MIN;
+            if (coordinator.addPeer(cur) && it.hasNext()) {
+              int delay=(DELAY_MUL * r.nextInt(10)) + DELAY_MIN;
               try {
                 Thread.sleep(delay);
               }

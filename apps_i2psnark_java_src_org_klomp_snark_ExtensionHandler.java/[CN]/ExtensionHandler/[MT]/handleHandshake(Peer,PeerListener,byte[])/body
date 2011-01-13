@@ -10,18 +10,30 @@
     if (msgmap.get(TYPE_PEX) != null) {
       if (_log.shouldLog(Log.WARN))       _log.debug("Peer supports PEX extension: " + peer);
     }
+    MagnetState state=peer.getMagnetState();
     if (msgmap.get(TYPE_METADATA) == null) {
       if (_log.shouldLog(Log.WARN))       _log.debug("Peer does not support metadata extension: " + peer);
+synchronized (state) {
+        if (!state.isInitialized()) {
+          _log.debug("Dropping peer, we need metadata! " + peer);
+          peer.disconnect();
+        }
+      }
       return;
     }
     BEValue msize=map.get("metadata_size");
     if (msize == null) {
       if (_log.shouldLog(Log.WARN))       _log.debug("Peer does not have the metainfo size yet: " + peer);
+synchronized (state) {
+        if (!state.isInitialized()) {
+          _log.debug("Dropping peer, we need metadata! " + peer);
+          peer.disconnect();
+        }
+      }
       return;
     }
     int metaSize=msize.getInt();
     if (_log.shouldLog(Log.WARN))     _log.debug("Got the metainfo size: " + metaSize);
-    MagnetState state=peer.getMagnetState();
     int remaining;
 synchronized (state) {
       if (state.isComplete())       return;
