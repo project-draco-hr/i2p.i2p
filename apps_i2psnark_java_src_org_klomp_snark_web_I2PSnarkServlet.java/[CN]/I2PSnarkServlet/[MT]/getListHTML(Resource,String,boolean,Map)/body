@@ -1,8 +1,9 @@
 {
-  if (!r.isDirectory())   return null;
-  String[] ls=r.list();
-  if (ls == null)   return null;
-  Arrays.sort(ls,Collator.getInstance());
+  String[] ls=null;
+  if (r.isDirectory()) {
+    ls=r.list();
+    Arrays.sort(ls,Collator.getInstance());
+  }
   StringBuilder buf=new StringBuilder(4096);
   buf.append(DOCTYPE + "<HTML><HEAD><TITLE>");
   String title=URI.decodePath(base);
@@ -14,14 +15,52 @@
   Snark snark=_manager.getTorrentByBaseName(torrentName);
   if (snark != null && postParams != null)   savePriorities(snark,postParams);
   if (title.endsWith("/"))   title=title.substring(0,title.length() - 1);
+  String directory=title;
   title=_("Torrent") + ": " + title;
   buf.append(title);
   buf.append("</TITLE>").append(HEADER_A).append(_themePath).append(HEADER_B).append("<link rel=\"shortcut icon\" href=\"" + _themePath + "favicon.ico\">"+ "</HEAD><BODY>\n<center><div class=\"snarknavbar\"><a href=\"/i2psnark/\" title=\"Torrents\"");
   buf.append(" class=\"snarkRefresh\"><img alt=\"\" border=\"0\" src=\"" + _imgPath + "arrow_refresh.png\">&nbsp;&nbsp;I2PSnark</a></div></center>\n");
   if (parent)   buf.append("<div class=\"page\"><div class=\"mainsection\">");
-  boolean showPriority=snark != null && !snark.storage.complete();
+  boolean showPriority=ls != null && snark != null && snark.getStorage() != null && !snark.getStorage().complete();
   if (showPriority)   buf.append("<form action=\"").append(base).append("\" method=\"POST\">\n");
-  buf.append("<TABLE BORDER=0 class=\"snarkTorrents\" >" + "<thead><tr><th>").append("<img alt=\"\" border=\"0\" src=\"" + _imgPath + "file.png\" >&nbsp;").append(title).append("</th><th align=\"right\">").append("<img alt=\"\" border=\"0\" src=\"" + _imgPath + "size.png\" >&nbsp;").append(_("Size"));
+  buf.append("<TABLE BORDER=0 class=\"snarkTorrents\" ><thead>");
+  if (snark != null) {
+    buf.append("<tr><th colspan=\"" + (showPriority ? '4' : '3') + "\"><div>").append(_("Torrent")).append(": ").append(snark.getBaseName());
+    int pieces=snark.getPieces();
+    double completion=(pieces - snark.getNeeded()) / (double)pieces;
+    if (completion < 1.0)     buf.append("<br>").append(_("Completion")).append(": ").append((new DecimalFormat("0.00%")).format(completion));
+ else     buf.append("<br>").append(_("Complete"));
+    buf.append("<br>").append(_("Size")).append(": ").append(formatSize(snark.getTotalLength()));
+    MetaInfo meta=snark.getMetaInfo();
+    if (meta != null) {
+      List files=meta.getFiles();
+      int fileCount=files != null ? files.size() : 1;
+      buf.append("<br>").append(_("Files")).append(": ").append(fileCount);
+    }
+    buf.append("<br>").append(_("Pieces")).append(": ").append(pieces);
+    buf.append("<br>").append(_("Piece size")).append(": ").append(formatSize(snark.getPieceLength(0)));
+    if (meta != null) {
+      String announce=meta.getAnnounce();
+      if (announce != null) {
+        buf.append("<br>");
+        String trackerLink=getTrackerLink(announce,snark.getInfoHash());
+        if (trackerLink != null)         buf.append(trackerLink).append(' ');
+        buf.append(_("Tracker")).append(": ");
+        if (announce.startsWith("http://"))         announce=announce.substring(7);
+        int slsh=announce.indexOf('/');
+        if (slsh > 0)         announce=announce.substring(0,slsh);
+        buf.append(announce);
+      }
+    }
+    String hex=I2PSnarkUtil.toHex(snark.getInfoHash());
+    buf.append("<br>").append(toImg("magnet",_("Magnet link"))).append(" <a href=\"").append(MAGNET).append(hex).append("\">").append(MAGNET).append(hex).append("</a>");
+    buf.append("</div></th></tr>");
+  }
+  if (ls == null) {
+    buf.append("</thead></table></div></div></BODY></HTML>");
+    return buf.toString();
+  }
+  buf.append("<tr><th>").append("<img alt=\"\" border=\"0\" src=\"" + _imgPath + "file.png\" >&nbsp;").append(_("Directory")).append(": ").append(directory).append("</th><th align=\"right\">").append("<img alt=\"\" border=\"0\" src=\"" + _imgPath + "size.png\" >&nbsp;").append(_("Size"));
   buf.append("</th><th class=\"headerstatus\">").append("<img alt=\"\" border=\"0\" src=\"" + _imgPath + "status.png\" >&nbsp;").append(_("Status")).append("</th>");
   if (showPriority)   buf.append("<th class=\"headerpriority\">").append("<img alt=\"\" border=\"0\" src=\"" + _imgPath + "priority.png\" >&nbsp;").append(_("Priority")).append("</th>");
   buf.append("</tr></thead>\n");
@@ -42,15 +81,16 @@
       status=toImg("tick") + ' ' + _("Directory");
     }
  else {
-      if (snark == null) {
+      if (snark == null || snark.getStorage() == null) {
         complete=true;
         status=toImg("cancel") + ' ' + _("Torrent not found?");
       }
  else {
+        Storage storage=snark.getStorage();
         try {
           File f=item.getFile();
           if (f != null) {
-            long remaining=snark.storage.remaining(f.getCanonicalPath());
+            long remaining=storage.remaining(f.getCanonicalPath());
             if (remaining < 0) {
               complete=true;
               status=toImg("cancel") + ' ' + _("File not found in torrent?");
@@ -60,7 +100,7 @@
               status=toImg("tick") + ' ' + _("Complete");
             }
  else {
-              int priority=snark.storage.getPriority(f.getCanonicalPath());
+              int priority=storage.getPriority(f.getCanonicalPath());
               if (priority < 0)               status=toImg("cancel");
  else               if (priority == 0)               status=toImg("clock");
  else               status=toImg("clock_red");
@@ -106,7 +146,7 @@
       buf.append("<td class=\"priority\">");
       File f=item.getFile();
       if ((!complete) && (!item.isDirectory()) && f != null) {
-        int pri=snark.storage.getPriority(f.getCanonicalPath());
+        int pri=snark.getStorage().getPriority(f.getCanonicalPath());
         buf.append("<input type=\"radio\" value=\"5\" name=\"pri.").append(f.getCanonicalPath()).append("\" ");
         if (pri > 0)         buf.append("checked=\"true\"");
         buf.append('>').append(_("High"));

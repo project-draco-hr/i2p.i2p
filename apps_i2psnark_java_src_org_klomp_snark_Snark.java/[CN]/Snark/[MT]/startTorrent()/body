@@ -10,7 +10,7 @@
     }
     debug("Starting PeerCoordinator, ConnectionAcceptor, and TrackerClient",NOTICE);
     activity="Collecting pieces";
-    coordinator=new PeerCoordinator(_util,id,meta,storage,this,this);
+    coordinator=new PeerCoordinator(_util,id,infoHash,meta,storage,this,this);
     if (_peerCoordinatorSet != null) {
       _peerCoordinatorSet.add(coordinator);
       if (acceptor != null) {
@@ -22,13 +22,13 @@
  else {
       acceptor=new ConnectionAcceptor(_util,serversocket,new PeerAcceptor(coordinator));
     }
-    trackerclient=new TrackerClient(_util,meta,coordinator);
+    trackerclient=new TrackerClient(_util,meta,coordinator,this);
   }
   stopped=false;
   boolean coordinatorChanged=false;
   if (coordinator.halted()) {
     if (_peerCoordinatorSet != null)     _peerCoordinatorSet.remove(coordinator);
-    PeerCoordinator newCoord=new PeerCoordinator(_util,coordinator.getID(),coordinator.getMetaInfo(),coordinator.getStorage(),coordinator.getListener(),this);
+    PeerCoordinator newCoord=new PeerCoordinator(_util,id,infoHash,meta,storage,this,this);
     if (_peerCoordinatorSet != null)     _peerCoordinatorSet.add(newCoord);
     coordinator=newCoord;
     coordinatorChanged=true;
@@ -37,19 +37,21 @@
     trackerclient.start();
   }
  else   if (trackerclient.halted() || coordinatorChanged) {
-    try {
-      storage.reopen(rootDataDir);
-    }
- catch (    IOException ioe) {
+    if (storage != null) {
       try {
-        storage.close();
+        storage.reopen(rootDataDir);
       }
- catch (      IOException ioee) {
-        ioee.printStackTrace();
+ catch (      IOException ioe) {
+        try {
+          storage.close();
+        }
+ catch (        IOException ioee) {
+          ioee.printStackTrace();
+        }
+        fatal("Could not reopen storage",ioe);
       }
-      fatal("Could not reopen storage",ioe);
     }
-    TrackerClient newClient=new TrackerClient(_util,coordinator.getMetaInfo(),coordinator);
+    TrackerClient newClient=new TrackerClient(_util,meta,coordinator,this);
     if (!trackerclient.halted())     trackerclient.halt();
     trackerclient=newClient;
     trackerclient.start();
