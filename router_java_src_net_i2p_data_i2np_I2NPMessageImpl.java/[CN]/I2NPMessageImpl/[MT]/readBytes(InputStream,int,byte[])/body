@@ -19,12 +19,14 @@
       }
       cur+=numRead;
     }
-    Hash calc=_context.sha().calculateHash(buffer,0,size);
-    boolean eq=DataHelper.eq(checksum,0,calc.getData(),0,CHECKSUM_LENGTH);
+    byte[] calc=SimpleByteCache.acquire(Hash.HASH_LENGTH);
+    _context.sha().calculateHash(buffer,0,size,calc,0);
+    boolean eq=DataHelper.eq(checksum,0,calc,0,CHECKSUM_LENGTH);
+    SimpleByteCache.release(calc);
     if (!eq)     throw new I2NPMessageException("Hash does not match for " + getClass().getName());
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Reading bytes: type = " + type + " / uniqueId : "+ _uniqueId+ " / expiration : "+ _expiration);
     readMessage(buffer,0,size,type);
-    return size + Hash.HASH_LENGTH + 1+ 4+ DataHelper.DATE_LENGTH;
+    return CHECKSUM_LENGTH + 1 + 2+ 4+ DataHelper.DATE_LENGTH+ size;
   }
  catch (  DataFormatException dfe) {
     throw new I2NPMessageException("Error reading the message header",dfe);

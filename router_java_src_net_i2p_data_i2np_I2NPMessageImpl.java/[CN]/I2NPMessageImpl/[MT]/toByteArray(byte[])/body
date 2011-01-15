@@ -3,7 +3,8 @@
   try {
     int writtenLen=writeMessageBody(buffer,prefixLen);
     int payloadLen=writtenLen - prefixLen;
-    Hash h=_context.sha().calculateHash(buffer,prefixLen,payloadLen);
+    byte[] h=SimpleByteCache.acquire(Hash.HASH_LENGTH);
+    _context.sha().calculateHash(buffer,prefixLen,payloadLen,h,0);
     int off=0;
     DataHelper.toLong(buffer,off,1,getType());
     off+=1;
@@ -13,7 +14,8 @@
     off+=DataHelper.DATE_LENGTH;
     DataHelper.toLong(buffer,off,2,payloadLen);
     off+=2;
-    System.arraycopy(h.getData(),0,buffer,off,CHECKSUM_LENGTH);
+    System.arraycopy(h,0,buffer,off,CHECKSUM_LENGTH);
+    SimpleByteCache.release(h);
     return writtenLen;
   }
  catch (  I2NPMessageException ime) {
