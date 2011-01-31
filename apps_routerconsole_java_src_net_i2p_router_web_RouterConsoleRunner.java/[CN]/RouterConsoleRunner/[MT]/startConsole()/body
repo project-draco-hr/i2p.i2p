@@ -42,11 +42,20 @@
       while (tok.hasMoreTokens()) {
         String host=tok.nextToken().trim();
         try {
-          if (host.indexOf(":") >= 0)           _server.addListener('[' + host + "]:"+ _listenPort);
- else           _server.addListener(host + ':' + _listenPort);
+          Integer lport=Integer.parseInt(_listenPort);
+          InetAddrPort iap=new InetAddrPort(host,lport);
+          SocketListener lsnr=new SocketListener(iap);
+          lsnr.setMinThreads(1);
+          lsnr.setMaxThreads(24);
+          lsnr.setMaxIdleTimeMs(90 * 1000);
+          lsnr.setName("ConsoleSocket");
+          _server.addListener(lsnr);
           boundAddresses++;
         }
- catch (        IOException ioe) {
+ catch (        NumberFormatException nfe) {
+          System.err.println("Unable to bind routerconsole to " + host + " port "+ _listenPort+ ' '+ nfe);
+        }
+catch (        IOException ioe) {
           System.err.println("Unable to bind routerconsole to " + host + " port "+ _listenPort+ ' '+ ioe);
         }
       }
@@ -73,6 +82,10 @@
             ssll.setKeystore(keyStore.getAbsolutePath());
             ssll.setPassword(ctx.getProperty(PROP_KEYSTORE_PASSWORD,DEFAULT_KEYSTORE_PASSWORD));
             ssll.setKeyPassword(ctx.getProperty(PROP_KEY_PASSWORD,"thisWontWork"));
+            ssll.setMinThreads(1);
+            ssll.setMaxThreads(24);
+            ssll.setMaxIdleTimeMs(90 * 1000);
+            ssll.setName("ConsoleSocket");
             _server.addListener(ssll);
             boundAddresses++;
           }

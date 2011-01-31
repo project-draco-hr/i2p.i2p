@@ -8,9 +8,11 @@
     _headersRead=true;
   }
   if (_aborted)   throw new IOException("Timed out reading the HTTP headers");
-  timeout.resetTimer();
-  if (_fetchInactivityTimeout > 0)   timeout.setInactivityTimeout(_fetchInactivityTimeout);
- else   timeout.setInactivityTimeout(60 * 1000);
+  if (timeout != null) {
+    timeout.resetTimer();
+    if (_fetchInactivityTimeout > 0)     timeout.setInactivityTimeout(_fetchInactivityTimeout);
+ else     timeout.setInactivityTimeout(60 * 1000);
+  }
   if (_redirectLocation != null) {
     throw new IOException("Server redirect to " + _redirectLocation + " not allowed");
   }
@@ -23,7 +25,7 @@
     if (strictSize && toRead > remaining)     toRead=remaining;
     int read=_proxyIn.read(buf,0,toRead);
     if (read == -1)     break;
-    timeout.resetTimer();
+    if (timeout != null)     timeout.resetTimer();
     _out.write(buf,0,read);
     _bytesTransferred+=read;
     remaining-=read;
@@ -49,7 +51,7 @@
         read++;
       }
     }
-    timeout.resetTimer();
+    if (timeout != null)     timeout.resetTimer();
     if (_bytesRemaining >= read)     _bytesRemaining-=read;
     if (read > 0) {
       for (int i=0; i < _listeners.size(); i++)       _listeners.get(i).bytesTransferred(_alreadyTransferred,read,_bytesTransferred,_encodingChunked ? -1 : _bytesRemaining,_url);
@@ -59,7 +61,7 @@
   if (_out != null)   _out.close();
   _out=null;
   if (_aborted)   throw new IOException("Timed out reading the HTTP data");
-  timeout.cancel();
+  if (timeout != null)   timeout.cancel();
   if (_transferFailed) {
     for (int i=0; i < _listeners.size(); i++)     _listeners.get(i).attemptFailed(_url,_bytesTransferred,_bytesRemaining,_currentAttempt,_numRetries,new Exception("Attempt failed"));
   }

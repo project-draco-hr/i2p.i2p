@@ -5,12 +5,12 @@
     _log.error("No key password, set " + PROP_KEY_PASSWORD + " in "+ (new File(_context.getConfigDir(),"router.config")).getAbsolutePath());
     return false;
   }
+  InputStream fis=null;
   try {
     SSLContext sslc=SSLContext.getInstance("TLS");
     KeyStore keyStore=KeyStore.getInstance(KeyStore.getDefaultType());
-    InputStream fis=new FileInputStream(ks);
+    fis=new FileInputStream(ks);
     keyStore.load(fis,ksPass.toCharArray());
-    fis.close();
     KeyManagerFactory kmf=KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
     kmf.init(keyStore,keyPass.toCharArray());
     sslc.init(kmf.getKeyManagers(),null,_context.random());
@@ -22,6 +22,13 @@
   }
 catch (  IOException ioe) {
     _log.error("Error loading SSL keys",ioe);
+  }
+ finally {
+    if (fis != null)     try {
+      fis.close();
+    }
+ catch (    IOException ioe) {
+    }
   }
   return false;
 }
