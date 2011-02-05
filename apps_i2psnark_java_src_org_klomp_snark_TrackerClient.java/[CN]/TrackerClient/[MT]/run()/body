@@ -1,15 +1,19 @@
 {
-  String infoHash=urlencode(meta.getInfoHash());
-  String peerID=urlencode(coordinator.getID());
-  _log.debug("Announce: [" + meta.getAnnounce() + "] infoHash: "+ infoHash);
+  String infoHash=urlencode(snark.getInfoHash());
+  String peerID=urlencode(snark.getID());
   trackers=new ArrayList(2);
-  String primary=meta.getAnnounce();
-  if (isValidAnnounce(primary)) {
-    trackers.add(new Tracker(meta.getAnnounce(),true));
-  }
+  String primary=null;
+  if (meta != null) {
+    primary=meta.getAnnounce();
+    if (isValidAnnounce(primary)) {
+      trackers.add(new Tracker(meta.getAnnounce(),true));
+      _log.debug("Announce: [" + primary + "] infoHash: "+ infoHash);
+    }
  else {
-    _log.warn("Skipping invalid or non-i2p announce: " + primary);
+      _log.warn("Skipping invalid or non-i2p announce: " + primary);
+    }
   }
+  if (primary == null)   primary="";
   List tlist=_util.getOpenTrackers();
   if (tlist != null) {
     for (int i=0; i < tlist.size(); i++) {
@@ -31,11 +35,11 @@
       }
       if (primary.startsWith("http://" + dest))       continue;
       if (primary.startsWith("http://i2p/" + dest))       continue;
-      trackers.add(new Tracker(url,false));
+      trackers.add(new Tracker(url,primary.equals("")));
       _log.debug("Additional announce: [" + url + "] for infoHash: "+ infoHash);
     }
   }
-  if (tlist.isEmpty()) {
+  if (trackers.isEmpty()) {
     stop=true;
     _log.error("No valid trackers for infoHash: " + infoHash);
     return;
@@ -52,6 +56,7 @@
     int consecutiveFails=0;
     Random r=I2PAppContext.getGlobalContext().random();
     while (!stop) {
+      if (_util.getDHT() != null)       _util.getDHT().announce(snark.getInfoHash());
       try {
         int delay;
         int random=r.nextInt(120 * 1000);
@@ -60,7 +65,7 @@
           firstTime=false;
         }
  else         if (completed && runStarted)         delay=3 * SLEEP * 60* 1000 + random;
- else         if (coordinator.trackerProblems != null && ++consecutiveFails < MAX_CONSEC_FAILS)         delay=INITIAL_SLEEP;
+ else         if (snark.getTrackerProblems() != null && ++consecutiveFails < MAX_CONSEC_FAILS)         delay=INITIAL_SLEEP;
  else         delay=SLEEP * 60 * 1000 + random;
         if (delay > 0)         Thread.sleep(delay);
       }
@@ -85,26 +90,29 @@
           try {
             if (!tr.started)             event=STARTED_EVENT;
             TrackerInfo info=doRequest(tr,infoHash,peerID,uploaded,downloaded,left,event);
-            coordinator.trackerProblems=null;
+            snark.setTrackerProblems(null);
             tr.trackerProblems=null;
             tr.registerFails=0;
             tr.consecutiveFails=0;
             if (tr.isPrimary)             consecutiveFails=0;
             runStarted=true;
             tr.started=true;
-            Set peers=info.getPeers();
+            Set<Peer> peers=info.getPeers();
             tr.seenPeers=info.getPeerCount();
-            if (coordinator.trackerSeenPeers < tr.seenPeers)             coordinator.trackerSeenPeers=tr.seenPeers;
-            if ((left > 0) && (!completed)) {
-              List ordered=new ArrayList(peers);
+            if (snark.getTrackerSeenPeers() < tr.seenPeers)             snark.setTrackerSeenPeers(tr.seenPeers);
+            if (_util.getDHT() != null) {
+              for (              Peer peer : peers) {
+                _util.getDHT().announce(snark.getInfoHash(),peer.getPeerID().getDestHash());
+              }
+            }
+            if ((left != 0) && (!completed)) {
+              List<Peer> ordered=new ArrayList(peers);
               Collections.shuffle(ordered,r);
-              Iterator it=ordered.iterator();
+              Iterator<Peer> it=ordered.iterator();
               while ((!stop) && it.hasNext()) {
-                Peer cur=(Peer)it.next();
-                if (coordinator.addPeer(cur)) {
-                  int delay=DELAY_MUL;
-                  delay*=r.nextInt(10);
-                  delay+=DELAY_MIN;
+                Peer cur=it.next();
+                if (coordinator.addPeer(cur) && it.hasNext()) {
+                  int delay=(DELAY_MUL * r.nextInt(10)) + DELAY_MIN;
                   sleptTime+=delay;
                   try {
                     Thread.sleep(delay);
@@ -118,11 +126,11 @@
  catch (          IOException ioe) {
             _util.debug("WARNING: Could not contact tracker at '" + tr.announce + "': "+ ioe,Snark.WARNING);
             tr.trackerProblems=ioe.getMessage();
-            if (tr.isPrimary)             coordinator.trackerProblems=tr.trackerProblems;
+            if (tr.isPrimary)             snark.setTrackerProblems(tr.trackerProblems);
             if (tr.trackerProblems.toLowerCase().startsWith(NOT_REGISTERED)) {
               if (trackers.size() == 1) {
                 stop=true;
-                coordinator.snark.stopTorrent();
+                snark.stopTorrent();
               }
  else {
                 if (tr.registerFails++ > MAX_REGISTER_FAILS)                 tr.stop=true;
@@ -136,7 +144,61 @@
         }
         if ((!tr.stop) && maxSeenPeers < tr.seenPeers)         maxSeenPeers=tr.seenPeers;
       }
-      coordinator.trackerSeenPeers=maxSeenPeers;
+      if (left > 0 && coordinator.needPeers() && !stop) {
+        Set<PeerID> pids=coordinator.getPEXPeers();
+        if (!pids.isEmpty()) {
+          _util.debug("Got " + pids.size() + " from PEX",Snark.INFO);
+          List<Peer> peers=new ArrayList(pids.size());
+          for (          PeerID pID : pids) {
+            peers.add(new Peer(pID,snark.getID(),snark.getInfoHash(),snark.getMetaInfo()));
+          }
+          Collections.shuffle(peers,r);
+          Iterator<Peer> it=peers.iterator();
+          while ((!stop) && it.hasNext()) {
+            Peer cur=it.next();
+            if (coordinator.addPeer(cur) && it.hasNext()) {
+              int delay=(DELAY_MUL * r.nextInt(10)) + DELAY_MIN;
+              try {
+                Thread.sleep(delay);
+              }
+ catch (              InterruptedException ie) {
+              }
+            }
+          }
+        }
+      }
+      if (_util.getDHT() != null && !stop) {
+        int numwant;
+        if (left == 0 || event.equals(STOPPED_EVENT) || !coordinator.needPeers())         numwant=1;
+ else         numwant=_util.getMaxConnections();
+        List<Hash> hashes=_util.getDHT().getPeers(snark.getInfoHash(),numwant,2 * 60 * 1000);
+        _util.debug("Got " + hashes + " from DHT",Snark.INFO);
+        if (!stop) {
+          int good=_util.getDHT().announce(snark.getInfoHash(),8,5 * 60 * 1000);
+          _util.debug("Sent " + good + " good announces to DHT",Snark.INFO);
+        }
+        if ((!stop) && !hashes.isEmpty()) {
+          List<Peer> peers=new ArrayList(hashes.size());
+          for (          Hash h : hashes) {
+            PeerID pID=new PeerID(h.getData());
+            peers.add(new Peer(pID,snark.getID(),snark.getInfoHash(),snark.getMetaInfo()));
+          }
+          Collections.shuffle(peers,r);
+          Iterator<Peer> it=peers.iterator();
+          while ((!stop) && it.hasNext()) {
+            Peer cur=it.next();
+            if (coordinator.addPeer(cur) && it.hasNext()) {
+              int delay=(DELAY_MUL * r.nextInt(10)) + DELAY_MIN;
+              try {
+                Thread.sleep(delay);
+              }
+ catch (              InterruptedException ie) {
+              }
+            }
+          }
+        }
+      }
+      snark.setTrackerSeenPeers(maxSeenPeers);
       if (!runStarted)       _util.debug("         Retrying in one minute...",Snark.DEBUG);
     }
   }
@@ -145,6 +207,7 @@
     if (t instanceof OutOfMemoryError)     throw (OutOfMemoryError)t;
   }
  finally {
+    if (_util.getDHT() != null)     _util.getDHT().unannounce(snark.getInfoHash());
     try {
       for (Iterator iter=trackers.iterator(); iter.hasNext(); ) {
         if (!_util.connected())         return;
