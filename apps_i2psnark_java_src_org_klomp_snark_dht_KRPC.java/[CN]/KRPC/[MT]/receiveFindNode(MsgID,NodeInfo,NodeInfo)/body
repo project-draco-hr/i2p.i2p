@@ -1,0 +1,17 @@
+{
+  if (_log.shouldLog(Log.INFO))   _log.info("Rcvd find_node from: " + nInfo + " for: "+ tID);
+  NodeInfo peer=_knownNodes.get(tID);
+  if (peer != null) {
+    sendNodes(nInfo,msgID,peer.getData());
+  }
+ else {
+    List<NodeInfo> nodes=_knownNodes.findClosest(tID.getNID(),K);
+    nodes.remove(nInfo);
+    nodes.remove(_myNodeInfo);
+    byte[] nodeArray=new byte[nodes.size() * NodeInfo.LENGTH];
+    for (int i=0; i < nodes.size(); i++) {
+      System.arraycopy(nodes.get(i).getData(),0,nodeArray,i * NodeInfo.LENGTH,NodeInfo.LENGTH);
+    }
+    sendNodes(nInfo,msgID,nodeArray);
+  }
+}

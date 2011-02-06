@@ -1,0 +1,35 @@
+{
+  if (_session.isClosed()) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Not sending message, session is closed");
+    return false;
+  }
+  if (dest.calculateHash().equals(_myNodeInfo.getHash()))   throw new IllegalArgumentException("wtf don't send to ourselves");
+  byte[] payload=BEncoder.bencode(map);
+  if (_log.shouldLog(Log.DEBUG)) {
+    ByteArrayInputStream bais=new ByteArrayInputStream(payload);
+    try {
+      _log.debug("Sending to: " + dest.calculateHash() + ' '+ BDecoder.bdecode(bais).toString());
+    }
+ catch (    IOException ioe) {
+    }
+  }
+  int fromPort=_qPort;
+  if (repliable) {
+    I2PDatagramMaker dgMaker=new I2PDatagramMaker(_session);
+    payload=dgMaker.makeI2PDatagram(payload);
+    if (payload == null) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("WTF DGM fail");
+    }
+  }
+  try {
+    boolean success=_session.sendMessage(dest,payload,0,payload.length,null,null,60 * 1000,I2PSession.PROTO_DATAGRAM,fromPort,toPort);
+    if (!success) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("WTF sendMessage fail");
+    }
+    return success;
+  }
+ catch (  I2PSessionException ise) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("sendMessage fail",ise);
+    return false;
+  }
+}
