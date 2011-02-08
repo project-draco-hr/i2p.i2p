@@ -1,0 +1,26 @@
+{
+  int pageCounter=curPageOff[0];
+  int curNextPage=nextPage[0];
+  int curPage=page;
+  int dct=0;
+  int res;
+  while (dct < arr.length) {
+    int len=((int)BlockFile.PAGESIZE) - pageCounter;
+    if (len <= 0) {
+      BlockFile.pageSeek(this.file,curNextPage);
+      curPage=curNextPage;
+      curNextPage=this.file.readInt();
+      pageCounter=4;
+      len=((int)BlockFile.PAGESIZE) - pageCounter;
+    }
+    res=this.file.read(arr,dct,Math.min(len,arr.length - dct));
+    if (res == -1) {
+      throw new IOException();
+    }
+    pageCounter+=Math.min(len,arr.length - dct);
+    dct+=res;
+  }
+  nextPage[0]=curNextPage;
+  curPageOff[0]=pageCounter;
+  return curPage;
+}
