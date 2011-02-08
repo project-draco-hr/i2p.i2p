@@ -1,0 +1,27 @@
+{
+  bss.keys=new Comparable[bss.spanSize];
+  bss.vals=new Object[bss.spanSize];
+  int ksz, vsz;
+  int curPage=spanPage;
+  int[] curNextPage=new int[1];
+  curNextPage[0]=bss.overflowPage;
+  int[] pageCounter=new int[1];
+  pageCounter[0]=16;
+  for (int i=0; i < bss.nKeys; i++) {
+    if ((pageCounter[0] + 4) > BlockFile.PAGESIZE) {
+      BlockFile.pageSeek(bf.file,curNextPage[0]);
+      curPage=curNextPage[0];
+      curNextPage[0]=bf.file.readInt();
+      pageCounter[0]=4;
+    }
+    ksz=bf.file.readShort();
+    vsz=bf.file.readShort();
+    pageCounter[0]+=4;
+    byte[] k=new byte[ksz];
+    byte[] v=new byte[vsz];
+    curPage=bf.readMultiPageData(k,curPage,pageCounter,curNextPage);
+    curPage=bf.readMultiPageData(v,curPage,pageCounter,curNextPage);
+    bss.keys[i]=(Comparable)bss.keySer.construct(k);
+    bss.vals[i]=bss.valSer.construct(v);
+  }
+}
