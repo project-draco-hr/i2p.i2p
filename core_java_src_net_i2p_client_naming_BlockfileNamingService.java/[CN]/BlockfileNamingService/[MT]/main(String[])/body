@@ -1,0 +1,46 @@
+{
+  BlockfileNamingService bns=new BlockfileNamingService(I2PAppContext.getGlobalContext());
+  System.out.println("zzz.i2p: " + bns.lookup("zzz.i2p"));
+  List<String> names=null;
+  try {
+    Properties props=new Properties();
+    DataHelper.loadProps(props,new File("hosts.txt"),true);
+    names=new ArrayList(props.keySet());
+    Collections.shuffle(names);
+  }
+ catch (  IOException ioe) {
+    System.out.println("No hosts.txt to test with");
+    bns.close();
+    return;
+  }
+  System.out.println("Testing with " + names.size() + " hostnames");
+  int found=0;
+  int notfound=0;
+  long start=System.currentTimeMillis();
+  for (  String name : names) {
+    Destination dest=bns.lookup(name);
+    if (dest != null)     found++;
+ else     notfound++;
+  }
+  System.out.println("BFNS took " + DataHelper.formatDuration(System.currentTimeMillis() - start));
+  System.out.println("found " + found + " notfound "+ notfound);
+synchronized (bns) {
+    try {
+      bns.wait();
+    }
+ catch (    InterruptedException ie) {
+    }
+  }
+  bns.close();
+  HostsTxtNamingService htns=new HostsTxtNamingService(I2PAppContext.getGlobalContext());
+  found=0;
+  notfound=0;
+  start=System.currentTimeMillis();
+  for (  String name : names) {
+    Destination dest=htns.lookup(name);
+    if (dest != null)     found++;
+ else     notfound++;
+  }
+  System.out.println("HTNS took " + DataHelper.formatDuration(System.currentTimeMillis() - start));
+  System.out.println("found " + found + " notfound "+ notfound);
+}

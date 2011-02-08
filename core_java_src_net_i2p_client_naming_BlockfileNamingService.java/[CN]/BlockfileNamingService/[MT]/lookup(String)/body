@@ -1,0 +1,34 @@
+{
+  Destination d=getCache(hostname);
+  if (d != null)   return d;
+  if (hostname.length() >= 516) {
+    d=lookupBase64(hostname);
+    putCache(hostname,d);
+    return d;
+  }
+  if (hostname.length() == BASE32_HASH_LENGTH + 8 && hostname.endsWith(".b32.i2p") && Boolean.valueOf(_context.getProperty(PROP_B32,"true")).booleanValue()) {
+    d=LookupDest.lookupBase32Hash(_context,hostname.substring(0,BASE32_HASH_LENGTH));
+    if (d != null) {
+      putCache(hostname,d);
+      return d;
+    }
+  }
+  String key=hostname.toLowerCase();
+synchronized (_bf) {
+    if (_isClosed)     return null;
+    for (    String list : _lists) {
+      try {
+        DestEntry de=getEntry(list,key);
+        if (de != null) {
+          d=de.dest;
+          break;
+        }
+      }
+ catch (      IOException ioe) {
+        break;
+      }
+    }
+  }
+  if (d != null)   putCache(hostname,d);
+  return d;
+}
