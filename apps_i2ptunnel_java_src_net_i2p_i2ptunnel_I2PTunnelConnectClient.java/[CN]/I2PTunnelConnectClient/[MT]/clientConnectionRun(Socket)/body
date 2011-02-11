@@ -1,2 +1,146 @@
 {
+  InputStream in=null;
+  OutputStream out=null;
+  String targetRequest=null;
+  boolean usingWWWProxy=false;
+  String currentProxy=null;
+  long requestId=++__requestId;
+  try {
+    out=s.getOutputStream();
+    in=s.getInputStream();
+    String line, method=null, host=null, destination=null, restofline=null;
+    StringBuilder newRequest=new StringBuilder();
+    int ahelper=0;
+    String authorization=null;
+    while (true) {
+      line=DataHelper.readLine(in);
+      if (line == null) {
+        line="";
+      }
+      line=line.trim();
+      if (_log.shouldLog(Log.DEBUG))       _log.debug(getPrefix(requestId) + "Line=[" + line+ "]");
+      if (method == null) {
+        int pos=line.indexOf(" ");
+        if (pos == -1)         break;
+        method=line.substring(0,pos);
+        String request=line.substring(pos + 1);
+        pos=request.indexOf(":");
+        if (pos == -1)         pos=request.indexOf(" ");
+        if (pos == -1) {
+          host=request;
+          restofline="";
+        }
+ else {
+          host=request.substring(0,pos);
+          restofline=request.substring(pos);
+        }
+        if (host.toLowerCase().endsWith(".i2p")) {
+          destination=host;
+        }
+ else         if (host.indexOf(".") != -1) {
+          currentProxy=selectProxy();
+          if (currentProxy == null) {
+            if (_log.shouldLog(Log.WARN))             _log.warn(getPrefix(requestId) + "Host wants to be outproxied, but we dont have any!");
+            writeErrorMessage(ERR_NO_OUTPROXY,out);
+            s.close();
+            return;
+          }
+          destination=currentProxy;
+          usingWWWProxy=true;
+          newRequest.append("CONNECT ").append(host).append(restofline).append("\r\n");
+        }
+ else         if (host.toLowerCase().equals("localhost")) {
+          writeErrorMessage(ERR_LOCALHOST,out);
+          s.close();
+          return;
+        }
+ else {
+          destination=host;
+        }
+        targetRequest=host;
+        if (_log.shouldLog(Log.DEBUG)) {
+          _log.debug(getPrefix(requestId) + "METHOD:" + method+ ":");
+          _log.debug(getPrefix(requestId) + "HOST  :" + host+ ":");
+          _log.debug(getPrefix(requestId) + "REST  :" + restofline+ ":");
+          _log.debug(getPrefix(requestId) + "DEST  :" + destination+ ":");
+        }
+      }
+ else       if (line.toLowerCase().startsWith("proxy-authorization: basic ")) {
+        authorization=line.substring(27);
+        line=null;
+      }
+ else       if (line.length() > 0) {
+        line=null;
+      }
+ else {
+        if (usingWWWProxy && Boolean.valueOf(getTunnel().getClientOptions().getProperty(PROP_OUTPROXY_AUTH)).booleanValue()) {
+          String user=getTunnel().getClientOptions().getProperty(PROP_OUTPROXY_USER_PREFIX + currentProxy);
+          String pw=getTunnel().getClientOptions().getProperty(PROP_OUTPROXY_PW_PREFIX + currentProxy);
+          if (user == null || pw == null) {
+            user=getTunnel().getClientOptions().getProperty(PROP_OUTPROXY_USER);
+            pw=getTunnel().getClientOptions().getProperty(PROP_OUTPROXY_PW);
+          }
+          if (user != null && pw != null) {
+            newRequest.append("Proxy-Authorization: Basic ").append(Base64.encode((user + ':' + pw).getBytes(),true)).append("\r\n");
+          }
+        }
+        newRequest.append("\r\n");
+        break;
+      }
+    }
+    if (destination == null || !"CONNECT".equalsIgnoreCase(method)) {
+      writeErrorMessage(ERR_BAD_PROTOCOL,out);
+      s.close();
+      return;
+    }
+    if (!authorize(s,requestId,authorization)) {
+      if (_log.shouldLog(Log.WARN)) {
+        if (authorization != null)         _log.warn(getPrefix(requestId) + "Auth failed, sending 407 again");
+ else         _log.warn(getPrefix(requestId) + "Auth required, sending 407");
+      }
+      writeErrorMessage(ERR_AUTH,out);
+      s.close();
+      return;
+    }
+    Destination clientDest=_context.namingService().lookup(destination);
+    if (clientDest == null) {
+      String str;
+      byte[] header;
+      if (usingWWWProxy)       str=FileUtil.readTextFile((new File(_errorDir,"dnfp-header.ht")).getAbsolutePath(),100,true);
+ else       str=FileUtil.readTextFile((new File(_errorDir,"dnfh-header.ht")).getAbsolutePath(),100,true);
+      if (str != null)       header=str.getBytes();
+ else       header=ERR_DESTINATION_UNKNOWN;
+      writeErrorMessage(header,out,targetRequest,usingWWWProxy,destination);
+      s.close();
+      return;
+    }
+    I2PSocket i2ps=createI2PSocket(clientDest,getDefaultOptions());
+    byte[] data=null;
+    byte[] response=null;
+    if (usingWWWProxy)     data=newRequest.toString().getBytes("ISO-8859-1");
+ else     response=SUCCESS_RESPONSE;
+    Runnable onTimeout=new OnTimeout(s,s.getOutputStream(),targetRequest,usingWWWProxy,currentProxy,requestId);
+    I2PTunnelRunner runner=new I2PTunnelRunner(s,i2ps,sockLock,data,response,mySockets,onTimeout);
+  }
+ catch (  SocketException ex) {
+    _log.info(getPrefix(requestId) + "Error trying to connect",ex);
+    handleConnectClientException(ex,out,targetRequest,usingWWWProxy,currentProxy,requestId);
+    closeSocket(s);
+  }
+catch (  IOException ex) {
+    _log.info(getPrefix(requestId) + "Error trying to connect",ex);
+    handleConnectClientException(ex,out,targetRequest,usingWWWProxy,currentProxy,requestId);
+    closeSocket(s);
+  }
+catch (  I2PException ex) {
+    _log.info("getPrefix(requestId) + Error trying to connect",ex);
+    handleConnectClientException(ex,out,targetRequest,usingWWWProxy,currentProxy,requestId);
+    closeSocket(s);
+  }
+catch (  OutOfMemoryError oom) {
+    IOException ex=new IOException("OOM");
+    _log.info("getPrefix(requestId) + Error trying to connect",ex);
+    handleConnectClientException(ex,out,targetRequest,usingWWWProxy,currentProxy,requestId);
+    closeSocket(s);
+  }
 }
