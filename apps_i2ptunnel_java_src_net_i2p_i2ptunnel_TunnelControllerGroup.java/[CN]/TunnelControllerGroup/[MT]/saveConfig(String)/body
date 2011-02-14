@@ -4,32 +4,11 @@
   if (!cfgFile.isAbsolute())   cfgFile=new File(I2PAppContext.getGlobalContext().getConfigDir(),configFile);
   File parent=cfgFile.getParentFile();
   if ((parent != null) && (!parent.exists()))   parent.mkdirs();
-  TreeMap map=new TreeMap();
+  Properties map=new OrderedProperties();
   for (int i=0; i < _controllers.size(); i++) {
     TunnelController controller=_controllers.get(i);
     Properties cur=controller.getConfig("tunnel." + i + ".");
     map.putAll(cur);
   }
-  StringBuilder buf=new StringBuilder(1024);
-  for (Iterator iter=map.keySet().iterator(); iter.hasNext(); ) {
-    String key=(String)iter.next();
-    String val=(String)map.get(key);
-    buf.append(key).append('=').append(val).append('\n');
-  }
-  FileOutputStream fos=null;
-  try {
-    fos=new SecureFileOutputStream(cfgFile);
-    fos.write(buf.toString().getBytes("UTF-8"));
-    if (_log.shouldLog(Log.INFO))     _log.info("Config written to " + cfgFile.getPath());
-  }
- catch (  IOException ioe) {
-    _log.error("Error writing out the config");
-  }
- finally {
-    if (fos != null)     try {
-      fos.close();
-    }
- catch (    IOException ioe) {
-    }
-  }
+  DataHelper.storeProps(map,cfgFile);
 }
