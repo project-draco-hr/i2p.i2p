@@ -64,15 +64,30 @@
   out.write("<td class=\"center " + rowClass + "\">");
   out.write(statusString + "</td>\n\t");
   out.write("<td class=\"" + rowClass + "\">");
-  if (isValid) {
-    StringBuilder buf=new StringBuilder(128);
-    buf.append("<a href=\"").append(snark.getBaseName()).append("/\" title=\"").append(_("Torrent details")).append("\"><img alt=\"").append(_("Info")).append("\" border=\"0\" src=\"").append(_imgPath).append("details.png\"></a>");
-    out.write(buf.toString());
+  if (isValid && meta.getAnnounce() != null) {
+    String trackerLink=getTrackerLink(meta.getAnnounce(),snark.getInfoHash());
+    if (trackerLink != null)     out.write(trackerLink);
   }
   out.write("</td>\n<td class=\"" + rowClass + "\">");
-  StringBuilder buf=null;
+  if (isValid) {
+    StringBuilder buf=new StringBuilder(128);
+    buf.append("<a href=\"").append(snark.getBaseName()).append("/\" title=\"").append(_("Torrent details")).append("\">");
+    out.write(buf.toString());
+  }
+  String icon;
+  if (isMultiFile)   icon="folder";
+ else   if (isValid)   icon=toIcon(meta.getName());
+ else   icon="magnet";
+  if (isValid) {
+    out.write(toImg(icon,_("Info")));
+    out.write("</a>");
+  }
+ else {
+    out.write(toImg(icon));
+  }
+  out.write("</td><td class=\"snarkTorrentName " + rowClass + "\">");
   if (remaining == 0 || isMultiFile) {
-    buf=new StringBuilder(128);
+    StringBuilder buf=new StringBuilder(128);
     buf.append("<a href=\"").append(snark.getBaseName());
     if (isMultiFile)     buf.append('/');
     buf.append("\" title=\"");
@@ -81,19 +96,6 @@
     buf.append("\">");
     out.write(buf.toString());
   }
-  String icon;
-  if (isMultiFile)   icon="folder";
- else   if (isValid)   icon=toIcon(meta.getName());
- else   icon="magnet";
-  if (remaining == 0 || isMultiFile) {
-    out.write(toImg(icon,_("Open")));
-    out.write("</a>");
-  }
- else {
-    out.write(toImg(icon));
-  }
-  out.write("</td><td class=\"snarkTorrentName " + rowClass + "\">");
-  if (remaining == 0 || isMultiFile)   out.write(buf.toString());
   out.write(filename);
   if (remaining == 0 || isMultiFile)   out.write("</a>");
   out.write("<td align=\"right\" class=\"snarkTorrentETA " + rowClass + "\">");
