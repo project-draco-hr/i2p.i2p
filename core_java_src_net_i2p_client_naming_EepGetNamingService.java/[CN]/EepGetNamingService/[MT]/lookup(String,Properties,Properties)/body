@@ -1,0 +1,25 @@
+{
+  Destination d=super.lookup(hostname,null,null);
+  if (d != null)   return d;
+  hostname=hostname.toLowerCase();
+  List URLs=getURLs();
+  if (URLs.isEmpty())   return null;
+  for (int i=0; i < URLs.size(); i++) {
+    String url=(String)URLs.get(i);
+    if (url.startsWith("http://" + hostname + "/")) {
+      _log.error("Lookup loop: " + hostname);
+      return null;
+    }
+  }
+  for (int i=0; i < URLs.size(); i++) {
+    String url=(String)URLs.get(i);
+    String key=fetchAddr(url,hostname);
+    if (key != null) {
+      _log.error("Success: " + url + hostname);
+      d=lookupBase64(key);
+      putCache(hostname,d);
+      return d;
+    }
+  }
+  return null;
+}
