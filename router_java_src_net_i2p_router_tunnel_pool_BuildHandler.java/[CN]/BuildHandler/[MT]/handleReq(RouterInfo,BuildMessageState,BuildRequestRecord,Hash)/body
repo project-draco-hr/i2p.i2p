@@ -31,6 +31,18 @@
     _context.throttle().setTunnelStatus(_x("Rejecting tunnels: Connection limit"));
     response=TunnelHistory.TUNNEL_REJECT_BANDWIDTH;
   }
+  if (response == 0 && !isInGW) {
+    Hash from=state.fromHash;
+    if (from == null)     from=state.from.calculateHash();
+    if (_throttler.shouldThrottle(from)) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Rejecting tunnel (hop throttle), previous hop: " + from);
+      response=TunnelHistory.TUNNEL_REJECT_BANDWIDTH;
+    }
+  }
+  if (response == 0 && (!isOutEnd) && _throttler.shouldThrottle(req.readNextIdentity())) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Rejecting tunnel (hop throttle), next hop: " + req.readNextIdentity());
+    response=TunnelHistory.TUNNEL_REJECT_BANDWIDTH;
+  }
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Responding to " + state.msg.getUniqueId() + "/"+ ourId+ " after "+ recvDelay+ "/"+ proactiveDrops+ " with "+ response+ " from "+ (state.fromHash != null ? state.fromHash.toBase64() : state.from != null ? state.from.calculateHash().toBase64() : "tunnel"));
   HopConfig cfg=null;
   if (response == 0) {
