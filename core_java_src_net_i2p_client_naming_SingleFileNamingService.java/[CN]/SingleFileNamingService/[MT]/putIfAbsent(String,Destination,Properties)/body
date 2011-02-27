@@ -1,0 +1,37 @@
+{
+  if (!getWriteLock())   return false;
+  OutputStream out=null;
+  try {
+    try {
+      if (getKey(hostname) != null)       return false;
+    }
+ catch (    IOException ioe) {
+      if (_file.exists()) {
+        _log.error("Error adding " + hostname,ioe);
+        return false;
+      }
+    }
+    out=new SecureFileOutputStream(_file,true);
+    out.write(hostname.getBytes("UTF-8"));
+    out.write('=');
+    out.write(d.toBase64().getBytes());
+    out.write('\n');
+    out.close();
+    for (    NamingServiceListener nsl : _listeners) {
+      nsl.entryAdded(this,hostname,d,options);
+    }
+    return true;
+  }
+ catch (  IOException ioe) {
+    if (out != null)     try {
+      out.close();
+    }
+ catch (    IOException e) {
+    }
+    _log.error("Error adding " + hostname,ioe);
+    return false;
+  }
+ finally {
+    releaseWriteLock();
+  }
+}

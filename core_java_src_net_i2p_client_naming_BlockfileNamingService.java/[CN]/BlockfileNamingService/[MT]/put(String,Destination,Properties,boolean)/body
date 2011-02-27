@@ -1,0 +1,34 @@
+{
+  String key=hostname.toLowerCase();
+  String listname=FALLBACK_LIST;
+  Properties props=new Properties();
+  if (options != null) {
+    props.putAll(options);
+    String list=options.getProperty("list");
+    if (list != null) {
+      listname=list;
+      props.remove("list");
+    }
+  }
+  props.setProperty(PROP_ADDED,Long.toString(_context.clock().now()));
+synchronized (_bf) {
+    try {
+      SkipList sl=_bf.getIndex(listname,_stringSerializer,_destSerializer);
+      if (sl == null)       sl=_bf.makeIndex(listname,_stringSerializer,_destSerializer);
+      boolean changed=(checkExisting || !_listeners.isEmpty()) && sl.get(key) != null;
+      if (changed && checkExisting)       return false;
+      addEntry(sl,key,d,props);
+      for (      NamingServiceListener nsl : _listeners) {
+        if (changed)         nsl.entryChanged(this,hostname,d,options);
+ else         nsl.entryAdded(this,hostname,d,options);
+      }
+      return true;
+    }
+ catch (    IOException re) {
+      return false;
+    }
+catch (    RuntimeException re) {
+      return false;
+    }
+  }
+}

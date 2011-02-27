@@ -1,0 +1,50 @@
+{
+  if (putIfAbsent(hostname,d,options))   return true;
+  if (!getWriteLock())   return false;
+  BufferedReader in=null;
+  BufferedWriter out=null;
+  try {
+    File tmp=SecureFile.createTempFile("temp-",".tmp",_file.getAbsoluteFile().getParentFile());
+    out=new BufferedWriter(new OutputStreamWriter(new SecureFileOutputStream(tmp),"UTF-8"));
+    if (_file.exists()) {
+      in=new BufferedReader(new InputStreamReader(new FileInputStream(_file),"UTF-8"),16 * 1024);
+      String line=null;
+      String search=hostname + '=';
+      while ((line=in.readLine()) != null) {
+        if (line.startsWith(search))         continue;
+        out.write(line);
+        out.newLine();
+      }
+      in.close();
+    }
+    out.write(hostname);
+    out.write('=');
+    out.write(d.toBase64());
+    out.newLine();
+    out.close();
+    boolean success=rename(tmp,_file);
+    if (success) {
+      for (      NamingServiceListener nsl : _listeners) {
+        nsl.entryChanged(this,hostname,d,options);
+      }
+    }
+    return success;
+  }
+ catch (  IOException ioe) {
+    if (in != null)     try {
+      in.close();
+    }
+ catch (    IOException e) {
+    }
+    if (out != null)     try {
+      out.close();
+    }
+ catch (    IOException e) {
+    }
+    _log.error("Error adding " + hostname,ioe);
+    return false;
+  }
+ finally {
+    releaseWriteLock();
+  }
+}
