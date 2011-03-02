@@ -2,15 +2,8 @@
   _context=ctx;
   _log=ctx.logManager().getLog(getClass());
   _exec=exec;
-  _inboundBuildMessages=new ArrayList(16);
-  if (HANDLE_REPLIES_INLINE) {
-    _inboundBuildEndMessages=null;
-    _inboundBuildReplyMessages=null;
-  }
- else {
-    _inboundBuildEndMessages=new ArrayList(16);
-    _inboundBuildReplyMessages=new ArrayList(16);
-  }
+  int sz=Math.min(MAX_QUEUE,Math.max(MIN_QUEUE,TunnelDispatcher.getShareBandwidth(ctx) * MIN_QUEUE / 48));
+  _inboundBuildMessages=new LinkedBlockingQueue(sz);
   _context.statManager().createRateStat("tunnel.reject.10","How often we reject a tunnel probabalistically","Tunnels",new long[]{60 * 1000,10 * 60 * 1000});
   _context.statManager().createRateStat("tunnel.reject.20","How often we reject a tunnel because of transient overload","Tunnels",new long[]{60 * 1000,10 * 60 * 1000});
   _context.statManager().createRateStat("tunnel.reject.30","How often we reject a tunnel because of bandwidth overload","Tunnels",new long[]{60 * 1000,10 * 60 * 1000});
@@ -34,6 +27,7 @@
   _context.statManager().createRateStat("tunnel.receiveRejectionCritical","How often we are rejected due to critical failure?","Tunnels",new long[]{10 * 60 * 1000l,60 * 60 * 1000l,24 * 60 * 60* 1000l});
   _context.statManager().createRateStat("tunnel.corruptBuildReply","","Tunnels",new long[]{24 * 60 * 60* 1000l});
   _processor=new BuildMessageProcessor(ctx);
+  _throttler=new ParticipatingThrottler(ctx);
   _buildMessageHandlerJob=new TunnelBuildMessageHandlerJob(ctx);
   _buildReplyMessageHandlerJob=new TunnelBuildReplyMessageHandlerJob(ctx);
   TunnelBuildMessageHandlerJobBuilder tbmhjb=new TunnelBuildMessageHandlerJobBuilder();
@@ -42,5 +36,4 @@
   ctx.inNetMessagePool().registerHandlerJobBuilder(TunnelBuildReplyMessage.MESSAGE_TYPE,tbrmhjb);
   ctx.inNetMessagePool().registerHandlerJobBuilder(VariableTunnelBuildMessage.MESSAGE_TYPE,tbmhjb);
   ctx.inNetMessagePool().registerHandlerJobBuilder(VariableTunnelBuildReplyMessage.MESSAGE_TYPE,tbrmhjb);
-  _throttler=new ParticipatingThrottler(ctx);
 }

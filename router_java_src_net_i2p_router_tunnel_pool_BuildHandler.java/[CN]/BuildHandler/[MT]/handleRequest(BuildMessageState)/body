@@ -11,7 +11,7 @@
   BuildRequestRecord req=_processor.decrypt(_context,state.msg,_context.routerHash(),_context.keyManager().getPrivateKey());
   long decryptTime=System.currentTimeMillis() - beforeDecrypt;
   _context.statManager().addRateData("tunnel.decryptRequestTime",decryptTime,decryptTime);
-  if (decryptTime > 500)   _log.warn("Took too long to decrypt the request: " + decryptTime + " for message "+ state.msg.getUniqueId()+ " received "+ (timeSinceReceived + decryptTime)+ " ago");
+  if (decryptTime > 500 && _log.shouldLog(Log.WARN))   _log.warn("Took too long to decrypt the request: " + decryptTime + " for message "+ state.msg.getUniqueId()+ " received "+ (timeSinceReceived + decryptTime)+ " ago");
   if (req == null) {
     if (_log.shouldLog(Log.WARN))     _log.warn("The request " + state.msg.getUniqueId() + " could not be decrypted");
     return -1;
@@ -21,7 +21,7 @@
   long readPeerTime=System.currentTimeMillis() - beforeLookup;
   RouterInfo nextPeerInfo=_context.netDb().lookupRouterInfoLocally(nextPeer);
   long lookupTime=System.currentTimeMillis() - beforeLookup;
-  if (lookupTime > 500)   _log.warn("Took too long to lookup the request: " + lookupTime + "/"+ readPeerTime+ " for message "+ state.msg.getUniqueId()+ " received "+ (timeSinceReceived + decryptTime)+ " ago");
+  if (lookupTime > 500 && _log.shouldLog(Log.WARN))   _log.warn("Took too long to lookup the request: " + lookupTime + "/"+ readPeerTime+ " for message "+ state.msg.getUniqueId()+ " received "+ (timeSinceReceived + decryptTime)+ " ago");
   if (nextPeerInfo == null) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Request " + state.msg.getUniqueId() + "/"+ req.readReceiveTunnelId()+ "/"+ req.readNextTunnelId()+ " handled, looking for the next peer "+ nextPeer.toBase64());
     _context.netDb().lookupRouterInfo(nextPeer,new HandleReq(_context,state,req,nextPeer),new TimeoutReq(_context,state,req,nextPeer),NEXT_HOP_LOOKUP_TIMEOUT);
