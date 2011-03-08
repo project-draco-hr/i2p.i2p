@@ -1,11 +1,18 @@
 {
   String ihash;
   String name;
+  String trackerURL=null;
   if (url.startsWith(MAGNET)) {
-    ihash=url.substring(MAGNET.length()).trim();
-    int amp=ihash.indexOf('&');
-    if (amp >= 0)     ihash=ihash.substring(0,amp);
+    String xt=getParam("xt",url);
+    if (xt == null || !xt.startsWith("urn:btih:")) {
+      _manager.addMessage(_("Invalid magnet URL {0}",url));
+      return;
+    }
+    ihash=xt.substring("urn:btih:".length());
+    trackerURL=getParam("tr",url);
     name="Magnet " + ihash;
+    String dn=getParam("dn",url);
+    if (dn != null)     name+=" (" + Storage.filterName(dn) + ')';
   }
  else   if (url.startsWith(MAGGOT)) {
     ihash=url.substring(MAGGOT.length()).trim();
@@ -35,5 +42,5 @@
     _manager.addMessage(_("Invalid info hash in magnet URL {0}",url));
     return;
   }
-  _manager.addMagnet(name,ih,true);
+  _manager.addMagnet(name,ih,trackerURL,true);
 }

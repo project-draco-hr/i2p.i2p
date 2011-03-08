@@ -8,15 +8,26 @@
   PrintStream systemOut=System.out;
   PrintStream pout=new PrintStream(new PipedOutputStream(pin));
   System.setOut(pout);
-  log.debug("WARN" + ": debug");
-  log.info("WARN" + ": info");
-  log.warn("WARN" + ": warn");
-  log.error("WARN" + ": error");
-  log.log(Log.CRIT,"WARN" + ": crit");
-  _context.logManager().shutdown();
-  String l1=in.readLine();
-  String l2=in.readLine();
-  String l3=in.readLine();
-  assertTrue(l1.matches(".*WARN: warn") && l2.matches(".*WARN: error") && l3.matches(".*WARN: crit"));
-  System.setOut(systemOut);
+  try {
+    log.debug("WARN" + ": debug");
+    log.info("WARN" + ": info");
+    log.warn("WARN" + ": warn");
+    log.error("WARN" + ": error");
+    log.log(Log.CRIT,"WARN" + ": crit");
+    try {
+      Thread.sleep(12 * 1000);
+    }
+ catch (    InterruptedException ie) {
+    }
+    for (int i=0; i < 3; i++)     pout.println("");
+    pout.flush();
+    String l1=in.readLine();
+    String l2=in.readLine();
+    String l3=in.readLine();
+    assertTrue(l1.matches(".*WARN: warn") && l2.matches(".*WARN: error") && l3.matches(".*WARN: crit"));
+  }
+  finally {
+    System.setOut(systemOut);
+    pout.close();
+  }
 }

@@ -1,7 +1,7 @@
 {
   File base=new SecureFile(rootDir,filterName(metainfo.getName()));
   boolean useSavedBitField=savedTime > 0 && savedBitField != null;
-  List files=metainfo.getFiles();
+  List<List<String>> files=metainfo.getFiles();
   if (files == null) {
     _util.debug("Creating/Checking file: " + base,Snark.NOTICE);
     if (!base.createNewFile() && !base.exists())     throw new IOException("Could not create file " + base);
@@ -23,7 +23,7 @@
  else {
     _util.debug("Creating/Checking directory: " + base,Snark.NOTICE);
     if (!base.mkdir() && !base.isDirectory())     throw new IOException("Could not create directory " + base);
-    List ls=metainfo.getLengths();
+    List<Long> ls=metainfo.getLengths();
     int size=files.size();
     long total=0;
     lengths=new long[size];
@@ -33,8 +33,22 @@
     RAFtime=new long[size];
     RAFfile=new File[size];
     for (int i=0; i < size; i++) {
-      File f=createFileFromNames(base,(List)files.get(i));
-      lengths[i]=((Long)ls.get(i)).longValue();
+      List<String> path=files.get(i);
+      File f=createFileFromNames(base,path);
+      for (int j=0; j < i; j++) {
+        if (f.equals(RAFfile[j])) {
+          path=new ArrayList(path);
+          int last=path.size() - 1;
+          String lastPath=path.get(last);
+          int dot=lastPath.lastIndexOf('.');
+          if (dot >= 0)           lastPath=lastPath.substring(0,dot) + '_' + lastPath.substring(dot);
+ else           lastPath='_' + lastPath;
+          path.set(last,lastPath);
+          f=createFileFromNames(base,path);
+          j=0;
+        }
+      }
+      lengths[i]=ls.get(i).longValue();
       RAFlock[i]=new Object();
       RAFfile[i]=f;
       total+=lengths[i];

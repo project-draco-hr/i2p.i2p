@@ -8,16 +8,27 @@
   PrintStream systemOut=System.out;
   PrintStream pout=new PrintStream(new PipedOutputStream(pin));
   System.setOut(pout);
-  log.debug("INFO" + ": debug");
-  log.info("INFO" + ": info");
-  log.warn("INFO" + ": warn");
-  log.error("INFO" + ": error");
-  log.log(Log.CRIT,"INFO" + ": crit");
-  _context.logManager().shutdown();
-  String l1=in.readLine();
-  String l2=in.readLine();
-  String l3=in.readLine();
-  String l4=in.readLine();
-  assertTrue(l1.matches(".*INFO: info") && l2.matches(".*INFO: warn") && l3.matches(".*INFO: error")&& l4.matches(".*INFO: crit"));
-  System.setOut(systemOut);
+  try {
+    log.debug("INFO" + ": debug");
+    log.info("INFO" + ": info");
+    log.warn("INFO" + ": warn");
+    log.error("INFO" + ": error");
+    log.log(Log.CRIT,"INFO" + ": crit");
+    try {
+      Thread.sleep(12 * 1000);
+    }
+ catch (    InterruptedException ie) {
+    }
+    for (int i=0; i < 4; i++)     pout.println("");
+    pout.flush();
+    String l1=in.readLine();
+    String l2=in.readLine();
+    String l3=in.readLine();
+    String l4=in.readLine();
+    assertTrue(l1.matches(".*INFO: info") && l2.matches(".*INFO: warn") && l3.matches(".*INFO: error")&& l4.matches(".*INFO: crit"));
+  }
+  finally {
+    System.setOut(systemOut);
+    pout.close();
+  }
 }
