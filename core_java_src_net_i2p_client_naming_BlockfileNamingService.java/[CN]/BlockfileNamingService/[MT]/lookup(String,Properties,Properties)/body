@@ -1,0 +1,23 @@
+{
+  Destination d=super.lookup(hostname);
+  if (d != null)   return d;
+  String key=hostname.toLowerCase();
+synchronized (_bf) {
+    if (_isClosed)     return null;
+    for (    String list : _lists) {
+      try {
+        DestEntry de=getEntry(list,key);
+        if (de != null) {
+          d=de.dest;
+          if (storedOptions != null)           storedOptions.putAll(de.props);
+          break;
+        }
+      }
+ catch (      IOException ioe) {
+        break;
+      }
+    }
+  }
+  if (d != null)   putCache(hostname,d);
+  return d;
+}

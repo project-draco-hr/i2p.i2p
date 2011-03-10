@@ -1,0 +1,29 @@
+{
+  int pageCounter=curPageOff[0];
+  int curNextPage=nextPage[0];
+  int curPage=page;
+  int dct=0;
+  while (dct < data.length) {
+    int len=((int)BlockFile.PAGESIZE) - pageCounter;
+    if (len <= 0) {
+      if (curNextPage == 0) {
+        curNextPage=this.allocPage();
+        BlockFile.pageSeek(this.file,curNextPage);
+        this.file.writeInt(0);
+        BlockFile.pageSeek(this.file,curPage);
+        this.file.writeInt(curNextPage);
+      }
+      BlockFile.pageSeek(this.file,curNextPage);
+      curPage=curNextPage;
+      curNextPage=this.file.readInt();
+      pageCounter=4;
+      len=((int)BlockFile.PAGESIZE) - pageCounter;
+    }
+    this.file.write(data,dct,Math.min(len,data.length - dct));
+    pageCounter+=Math.min(len,data.length - dct);
+    dct+=Math.min(len,data.length - dct);
+  }
+  nextPage[0]=curNextPage;
+  curPageOff[0]=pageCounter;
+  return curPage;
+}

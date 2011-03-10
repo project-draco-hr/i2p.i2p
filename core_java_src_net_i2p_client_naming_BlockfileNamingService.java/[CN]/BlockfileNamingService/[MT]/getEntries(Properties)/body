@@ -1,0 +1,41 @@
+{
+  String listname=FALLBACK_LIST;
+  String startsWith=null;
+  String beginWith=null;
+  int limit=Integer.MAX_VALUE;
+  if (options != null) {
+    listname=options.getProperty("list");
+    startsWith=options.getProperty("startsWith");
+    beginWith=options.getProperty("beginWith");
+    if (beginWith == null)     beginWith=startsWith;
+    String lim=options.getProperty("limit");
+    try {
+      limit=Integer.parseInt(lim);
+    }
+ catch (    NumberFormatException nfe) {
+    }
+  }
+synchronized (_bf) {
+    try {
+      SkipList sl=_bf.getIndex(listname,_stringSerializer,_destSerializer);
+      if (sl == null)       return Collections.EMPTY_MAP;
+      SkipIterator iter;
+      if (startsWith != null)       iter=sl.find(beginWith);
+ else       iter=sl.iterator();
+      Map<String,Destination> rv=new HashMap();
+      for (int i=0; i < limit && iter.hasNext(); i++) {
+        String key=(String)iter.nextKey();
+        if (startsWith != null && !key.startsWith(startsWith))         break;
+        DestEntry de=(DestEntry)iter.next();
+        rv.put(key,de.dest);
+      }
+      return rv;
+    }
+ catch (    IOException re) {
+      return Collections.EMPTY_MAP;
+    }
+catch (    RuntimeException re) {
+      return Collections.EMPTY_MAP;
+    }
+  }
+}

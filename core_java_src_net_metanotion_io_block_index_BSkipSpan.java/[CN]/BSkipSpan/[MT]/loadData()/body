@@ -1,0 +1,27 @@
+{
+  this.keys=new Comparable[this.spanSize];
+  this.vals=new Object[this.spanSize];
+  int ksz, vsz;
+  int curPage=this.page;
+  int[] curNextPage=new int[1];
+  curNextPage[0]=this.overflowPage;
+  int[] pageCounter=new int[1];
+  pageCounter[0]=16;
+  for (int i=0; i < this.nKeys; i++) {
+    if ((pageCounter[0] + 4) > BlockFile.PAGESIZE) {
+      BlockFile.pageSeek(this.bf.file,curNextPage[0]);
+      curPage=curNextPage[0];
+      curNextPage[0]=this.bf.file.readInt();
+      pageCounter[0]=4;
+    }
+    ksz=this.bf.file.readShort();
+    vsz=this.bf.file.readShort();
+    pageCounter[0]+=4;
+    byte[] k=new byte[ksz];
+    byte[] v=new byte[vsz];
+    curPage=this.bf.readMultiPageData(k,curPage,pageCounter,curNextPage);
+    curPage=this.bf.readMultiPageData(v,curPage,pageCounter,curNextPage);
+    this.keys[i]=(Comparable)this.keySer.construct(k);
+    this.vals[i]=this.valSer.construct(v);
+  }
+}

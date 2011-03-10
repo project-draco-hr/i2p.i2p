@@ -1,0 +1,39 @@
+{
+  SkipSpan ss=null;
+  Object[] res=null;
+  SkipLevels slvls=null;
+  for (int i=Math.min(start,levels.length - 1); i >= 0; i--) {
+    if (levels[i] != null) {
+      int cmp=levels[i].key().compareTo(key);
+      if ((cmp < 0) || ((i == 0) && (cmp <= 0))) {
+        res=levels[i].remove(i,key,sl);
+        if ((res != null) && (res[1] != null)) {
+          slvls=(SkipLevels)res[1];
+          if (levels.length >= slvls.levels.length) {
+            res[1]=null;
+          }
+          for (int j=0; j < (Math.min(slvls.levels.length,levels.length)); j++) {
+            if (levels[j] == slvls) {
+              levels[j]=slvls.levels[j];
+            }
+          }
+          this.flush();
+        }
+        return res;
+      }
+    }
+  }
+  res=bottom.remove(key,sl);
+  if ((res != null) && (res[1] != null)) {
+    if (res[1] == bottom) {
+      res[1]=this;
+    }
+ else {
+      res[1]=null;
+    }
+  }
+  if ((bottom.nKeys == 0) && (sl.first != bottom)) {
+    this.killInstance();
+  }
+  return res;
+}

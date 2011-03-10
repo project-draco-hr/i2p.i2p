@@ -1,0 +1,59 @@
+{
+  long start=_context.clock().now();
+  try {
+    BlockFile rv=new BlockFile(f,true);
+    SkipList hdr=rv.makeIndex(INFO_SKIPLIST,_stringSerializer,_infoSerializer);
+    Properties info=new Properties();
+    info.setProperty(PROP_VERSION,VERSION);
+    info.setProperty(PROP_CREATED,Long.toString(_context.clock().now()));
+    String list=_context.getProperty(PROP_HOSTS_FILE,DEFAULT_HOSTS_FILE);
+    info.setProperty(PROP_LISTS,list);
+    hdr.put(PROP_INFO,info);
+    int total=0;
+    for (    String hostsfile : getFilenames(list)) {
+      File file=new File(_context.getRouterDir(),hostsfile);
+      if ((!file.exists()) || !(file.canRead()))       continue;
+      int count=0;
+      BufferedReader in=null;
+      try {
+        in=new BufferedReader(new InputStreamReader(new FileInputStream(file),"UTF-8"),16 * 1024);
+        String line=null;
+        while ((line=in.readLine()) != null) {
+          if (line.startsWith("#"))           continue;
+          int split=line.indexOf('=');
+          if (split <= 0)           continue;
+          String key=line.substring(0,split).toLowerCase();
+          if (line.indexOf('#') > 0) {
+            line=line.substring(0,line.indexOf('#')).trim();
+            if (line.length() < split + 1)             continue;
+          }
+          String b64=line.substring(split + 1);
+          Destination d=lookupBase64(b64);
+          if (d != null) {
+            addEntry(rv,hostsfile,key,d,hostsfile);
+            count++;
+          }
+        }
+      }
+ catch (      IOException ioe) {
+        _log.error("Failed to read hosts from " + file,ioe);
+      }
+ finally {
+        if (in != null)         try {
+          in.close();
+        }
+ catch (        IOException ioe) {
+        }
+      }
+      total+=count;
+      _log.logAlways(Log.INFO,"Added " + count + " hosts from "+ file);
+      _lists.add(hostsfile);
+    }
+    _log.error("DB init took " + DataHelper.formatDuration(_context.clock().now() - start));
+    if (total <= 0)     _log.error("Warning - initialized database with zero entries");
+    return rv;
+  }
+ catch (  RuntimeException e) {
+    throw new IOException(e.toString());
+  }
+}
