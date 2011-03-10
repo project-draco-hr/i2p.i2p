@@ -1,12 +1,14 @@
 {
   String message="";
   if (action != null) {
+    Properties nsOptions=new Properties();
+    nsOptions.setProperty("list",getFileName());
     if (lastSerial != null && serial != null && serial.compareTo(lastSerial) == 0) {
       boolean changed=false;
       if (action.equals(_("Add")) || action.equals(_("Replace"))) {
-        if (addressbook != null && hostname != null && destination != null) {
-          String oldDest=(String)addressbook.get(hostname);
-          if (destination.equals(oldDest)) {
+        if (hostname != null && destination != null) {
+          Destination oldDest=getNamingService().lookup(hostname,nsOptions,null);
+          if (oldDest != null && destination.equals(oldDest.toBase64())) {
             message=_("Host name {0} is already in addressbook, unchanged.",hostname);
           }
  else           if (oldDest != null && !action.equals(_("Replace"))) {
@@ -16,12 +18,12 @@
             boolean valid=true;
             try {
               Destination dest=new Destination(destination);
+              getNamingService().put(hostname,dest,nsOptions);
             }
  catch (            DataFormatException dfe) {
               valid=false;
             }
             if (valid) {
-              addressbook.put(hostname,destination);
               changed=true;
               if (oldDest == null)               message=_("Destination added for {0}.",hostname);
  else               message=_("Destination changed for {0}.",hostname);
@@ -42,7 +44,7 @@
         String name=null;
         int deleted=0;
         for (        String n : deletionMarks) {
-          addressbook.remove(n);
+          getNamingService().remove(n,nsOptions);
           if (deleted++ == 0) {
             changed=true;
             name=n;
@@ -54,14 +56,7 @@
         }
       }
       if (changed) {
-        try {
-          save();
-          message+="<br>" + _("Addressbook saved.");
-        }
- catch (        Exception e) {
-          Debug.debug(e.getClass().getName() + ": " + e.getMessage());
-          message+="<br>" + _("ERROR: Could not write addressbook file.");
-        }
+        message+="<br>" + _("Addressbook saved.");
       }
     }
  else {
