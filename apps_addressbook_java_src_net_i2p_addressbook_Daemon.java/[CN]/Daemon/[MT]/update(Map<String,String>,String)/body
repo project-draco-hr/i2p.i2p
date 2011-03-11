@@ -1,0 +1,26 @@
+{
+  File masterFile=new File(home,settings.get("master_addressbook"));
+  File routerFile=new File(home,settings.get("router_addressbook"));
+  File published=null;
+  if ("true".equals(settings.get("should_publish")))   published=new File(home,settings.get("published_addressbook"));
+  File subscriptionFile=new File(home,settings.get("subscriptions"));
+  File logFile=new File(home,settings.get("log"));
+  File etagsFile=new File(home,settings.get("etags"));
+  File lastModifiedFile=new File(home,settings.get("last_modified"));
+  File lastFetchedFile=new File(home,settings.get("last_fetched"));
+  long delay;
+  try {
+    delay=Long.parseLong(settings.get("update_delay"));
+  }
+ catch (  NumberFormatException nfe) {
+    delay=12;
+  }
+  delay*=60 * 60 * 1000;
+  AddressBook master=new AddressBook(masterFile);
+  AddressBook router=new AddressBook(routerFile);
+  List<String> defaultSubs=new LinkedList();
+  defaultSubs.add("http://www.i2p2.i2p/hosts.txt");
+  SubscriptionList subscriptions=new SubscriptionList(subscriptionFile,etagsFile,lastModifiedFile,lastFetchedFile,delay,defaultSubs,settings.get("proxy_host"),Integer.parseInt(settings.get("proxy_port")));
+  Log log=new Log(logFile);
+  update(master,router,published,subscriptions,log);
+}
