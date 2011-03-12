@@ -4,8 +4,16 @@
   boolean isInGW=req.readIsInboundGateway();
   boolean isOutEnd=req.readIsOutboundEndpoint();
   if ((!isOutEnd) && _context.routerHash().equals(nextPeer)) {
-    _log.error("Dropping build request where we are in two consecutive hops");
+    _log.error("Dropping build request, we the next hop");
     return;
+  }
+  if (!isInGW) {
+    Hash from=state.fromHash;
+    if (from == null)     from=state.from.calculateHash();
+    if (_context.routerHash().equals(from)) {
+      _log.error("Dropping build request, we are the previous hop");
+      return;
+    }
   }
   if ((!isOutEnd) && (!isInGW)) {
     Hash from=state.fromHash;
