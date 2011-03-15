@@ -1,4 +1,5 @@
 {
+  if (isDirect())   return super.getLoadBookMessages();
   NamingService service=getNamingService();
   Debug.debug("Searching within " + service + " with filename="+ getFileName()+ " and with filter="+ filter+ " and with search="+ search);
   String message="";
@@ -8,12 +9,15 @@
     Properties searchProps=new Properties();
     searchProps.setProperty("list",getFileName());
     if (filter != null) {
-      String startsAt=filter == "0-9" ? "0" : filter;
+      String startsAt=filter.equals("0-9") ? "[0-9]" : filter;
       searchProps.setProperty("startsWith",startsAt);
     }
-    if (beginIndex > 0)     searchProps.setProperty("skip",Integer.toString(beginIndex));
-    int limit=1 + endIndex - beginIndex;
-    if (limit > 0)     searchProps.setProperty("limit",Integer.toString(limit));
+    if (isPrefiltered()) {
+      if (beginIndex > 0)       searchProps.setProperty("skip",Integer.toString(beginIndex));
+      int limit=1 + endIndex - beginIndex;
+      if (limit > 0)       searchProps.setProperty("limit",Integer.toString(limit));
+    }
+    if (search != null && search.length() > 0)     searchProps.setProperty("search",search.toLowerCase());
     results=service.getEntries(searchProps);
     Debug.debug("Result count: " + results.size());
     for (    Map.Entry<String,Destination> entry : results.entrySet()) {

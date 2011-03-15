@@ -1,4 +1,5 @@
 {
+  if (isDirect())   return super.getMessages();
   String message="";
   if (action != null) {
     Properties nsOptions=new Properties();
@@ -15,22 +16,21 @@
             message=_("Host name {0} is already in addressbook with a different destination. Click \"Replace\" to overwrite.",hostname);
           }
  else {
-            boolean valid=true;
             try {
               Destination dest=new Destination(destination);
-              getNamingService().put(hostname,dest,nsOptions);
+              boolean success=getNamingService().put(hostname,dest,nsOptions);
+              if (success) {
+                changed=true;
+                if (oldDest == null)                 message=_("Destination added for {0}.",hostname);
+ else                 message=_("Destination changed for {0}.",hostname);
+                hostname=null;
+                destination=null;
+              }
+ else {
+                message=_("Failed to add Destination for {0} to naming service {1}",hostname,getNamingService()) + "<br>";
+              }
             }
  catch (            DataFormatException dfe) {
-              valid=false;
-            }
-            if (valid) {
-              changed=true;
-              if (oldDest == null)               message=_("Destination added for {0}.",hostname);
- else               message=_("Destination changed for {0}.",hostname);
-              hostname=null;
-              destination=null;
-            }
- else {
               message=_("Invalid Base 64 destination.");
             }
           }
@@ -44,15 +44,18 @@
         String name=null;
         int deleted=0;
         for (        String n : deletionMarks) {
-          getNamingService().remove(n,nsOptions);
-          if (deleted++ == 0) {
+          boolean success=getNamingService().remove(n,nsOptions);
+          if (!success) {
+            message+=_("Failed to delete Destination for {0} from naming service {1}",name,getNamingService()) + "<br>";
+          }
+ else           if (deleted++ == 0) {
             changed=true;
             name=n;
           }
         }
         if (changed) {
-          if (deleted == 1)           message=_("Destination {0} deleted.",name);
- else           message=_("{0} destinations deleted.",deleted);
+          if (deleted == 1)           message+=_("Destination {0} deleted.",name);
+ else           message=ngettext("1 destination deleted.","{0} destinations deleted.",deleted);
         }
       }
       if (changed) {

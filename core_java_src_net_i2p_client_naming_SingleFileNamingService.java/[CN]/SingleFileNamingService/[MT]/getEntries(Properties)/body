@@ -1,7 +1,9 @@
 {
   if (!_file.exists())   return Collections.EMPTY_MAP;
-  String startsWith="";
+  String searchOpt=null;
+  String startsWith=null;
   if (options != null) {
+    searchOpt=options.getProperty("search");
     startsWith=options.getProperty("startsWith");
   }
   BufferedReader in=null;
@@ -9,15 +11,24 @@
   try {
     in=new BufferedReader(new InputStreamReader(new FileInputStream(_file),"UTF-8"),16 * 1024);
     String line=null;
-    String search=startsWith + '=';
+    String search=startsWith == null ? null : startsWith + '=';
     Map<String,Destination> rv=new HashMap();
     while ((line=in.readLine()) != null) {
-      if ((!startsWith.equals("")) && !line.startsWith(search))       continue;
+      if (line.length() <= 0)       continue;
+      if (search != null) {
+        if (startsWith.equals("[0-9]")) {
+          if (line.charAt(0) < '0' || line.charAt(0) > '9')           continue;
+        }
+ else         if (!line.startsWith(search)) {
+          continue;
+        }
+      }
       if (line.startsWith("#"))       continue;
       if (line.indexOf('#') > 0)       line=line.substring(0,line.indexOf('#')).trim();
       int split=line.indexOf('=');
       if (split <= 0)       continue;
       String key=line.substring(split);
+      if (searchOpt != null && key.indexOf(searchOpt) < 0)       continue;
       String b64=line.substring(split + 1);
       try {
         Destination dest=new Destination(b64);
@@ -25,6 +36,10 @@
       }
  catch (      DataFormatException dfe) {
       }
+    }
+    if (searchOpt == null && startsWith == null) {
+      _lastWrite=_file.lastModified();
+      _size=rv.size();
     }
     return rv;
   }
