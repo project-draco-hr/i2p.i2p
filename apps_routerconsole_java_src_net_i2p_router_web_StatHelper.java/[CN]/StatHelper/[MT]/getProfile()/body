@@ -1,20 +1,11 @@
 {
-  RouterContext ctx=(RouterContext)net.i2p.router.RouterContext.listContexts().get(0);
-  Set peers=ctx.profileOrganizer().selectAllPeers();
-  for (Iterator iter=peers.iterator(); iter.hasNext(); ) {
-    Hash peer=(Hash)iter.next();
+  if (_peer == null || _peer.length() <= 0)   return "No peer specified";
+  if (_peer.length() >= 44)   return outputProfile();
+  Set<Hash> peers=_context.profileOrganizer().selectAllPeers();
+  for (  Hash peer : peers) {
     if (peer.toBase64().startsWith(_peer)) {
-      try {
-        WriterOutputStream wos=new WriterOutputStream(_out);
-        ctx.profileOrganizer().exportProfile(peer,wos);
-        wos.flush();
-        _out.flush();
-        return "";
-      }
- catch (      Exception e) {
-        e.printStackTrace();
-      }
+      return dumpProfile(peer);
     }
   }
-  return "Unknown";
+  return "Unknown peer " + _peer;
 }
