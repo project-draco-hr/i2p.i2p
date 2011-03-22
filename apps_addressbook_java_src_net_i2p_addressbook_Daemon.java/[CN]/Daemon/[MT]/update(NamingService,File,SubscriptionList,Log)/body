@@ -1,0 +1,37 @@
+{
+  NamingService publishedNS=null;
+  Iterator<AddressBook> iter=subscriptions.iterator();
+  while (iter.hasNext()) {
+    AddressBook sub=iter.next();
+    for (    Map.Entry<String,String> entry : sub.getAddresses().entrySet()) {
+      String key=entry.getKey();
+      Destination oldDest=router.lookup(key);
+      try {
+        if (oldDest == null) {
+          if (AddressBook.isValidKey(key)) {
+            Destination dest=new Destination(entry.getValue());
+            boolean success=router.put(key,dest);
+            if (log != null) {
+              if (success)               log.append("New address " + key + " added to address book. From: "+ sub.getLocation());
+ else               log.append("Save to naming service " + router + " failed for new key "+ key);
+            }
+            if (published != null) {
+              if (publishedNS == null)               publishedNS=new SingleFileNamingService(I2PAppContext.getGlobalContext(),published.getAbsolutePath());
+              success=publishedNS.putIfAbsent(key,dest);
+              if (!success)               log.append("Save to published addressbook " + published.getAbsolutePath() + " failed for new key "+ key);
+            }
+          }
+ else           if (log != null) {
+            log.append("Bad hostname " + key + " from "+ sub.getLocation());
+          }
+        }
+ else         if (!oldDest.toBase64().equals(entry.getValue()) && log != null) {
+          log.append("Conflict for " + key + " from "+ sub.getLocation()+ ". Destination in remote address book is "+ entry.getValue());
+        }
+      }
+ catch (      DataFormatException dfe) {
+        if (log != null)         log.append("Invalid b64 for" + key + " From: "+ sub.getLocation());
+      }
+    }
+  }
+}

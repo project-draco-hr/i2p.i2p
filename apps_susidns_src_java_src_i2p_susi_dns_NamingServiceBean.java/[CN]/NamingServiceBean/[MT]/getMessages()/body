@@ -1,0 +1,73 @@
+{
+  if (isDirect())   return super.getMessages();
+  String message="";
+  if (action != null) {
+    Properties nsOptions=new Properties();
+    nsOptions.setProperty("list",getFileName());
+    if (lastSerial != null && serial != null && serial.compareTo(lastSerial) == 0) {
+      boolean changed=false;
+      if (action.equals(_("Add")) || action.equals(_("Replace"))) {
+        if (hostname != null && destination != null) {
+          Destination oldDest=getNamingService().lookup(hostname,nsOptions,null);
+          if (oldDest != null && destination.equals(oldDest.toBase64())) {
+            message=_("Host name {0} is already in addressbook, unchanged.",hostname);
+          }
+ else           if (oldDest != null && !action.equals(_("Replace"))) {
+            message=_("Host name {0} is already in addressbook with a different destination. Click \"Replace\" to overwrite.",hostname);
+          }
+ else {
+            try {
+              Destination dest=new Destination(destination);
+              nsOptions.setProperty("s",_("Manually added via SusiDNS"));
+              boolean success=getNamingService().put(hostname,dest,nsOptions);
+              if (success) {
+                changed=true;
+                if (oldDest == null)                 message=_("Destination added for {0}.",hostname);
+ else                 message=_("Destination changed for {0}.",hostname);
+                hostname=null;
+                destination=null;
+              }
+ else {
+                message=_("Failed to add Destination for {0} to naming service {1}",hostname,getNamingService()) + "<br>";
+              }
+            }
+ catch (            DataFormatException dfe) {
+              message=_("Invalid Base 64 destination.");
+            }
+          }
+        }
+ else {
+          message=_("Please enter a host name and destination");
+        }
+        search=null;
+      }
+ else       if (action.equals(_("Delete Selected"))) {
+        String name=null;
+        int deleted=0;
+        for (        String n : deletionMarks) {
+          boolean success=getNamingService().remove(n,nsOptions);
+          if (!success) {
+            message+=_("Failed to delete Destination for {0} from naming service {1}",name,getNamingService()) + "<br>";
+          }
+ else           if (deleted++ == 0) {
+            changed=true;
+            name=n;
+          }
+        }
+        if (changed) {
+          if (deleted == 1)           message+=_("Destination {0} deleted.",name);
+ else           message=ngettext("1 destination deleted.","{0} destinations deleted.",deleted);
+        }
+      }
+      if (changed) {
+        message+="<br>" + _("Addressbook saved.");
+      }
+    }
+ else {
+      message=_("Invalid form submission, probably because you used the \"back\" or \"reload\" button on your browser. Please resubmit.");
+    }
+  }
+  action=null;
+  if (message.length() > 0)   message="<p class=\"messages\">" + message + "</p>";
+  return message;
+}

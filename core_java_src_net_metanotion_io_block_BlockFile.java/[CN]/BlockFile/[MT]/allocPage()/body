@@ -1,0 +1,21 @@
+{
+  if (freeListStart != 0) {
+    FreeListBlock flb=new FreeListBlock(file,freeListStart);
+    if (flb.len > 0) {
+      flb.len=flb.len - 1;
+      int page=flb.branches[flb.len];
+      flb.writeBlock();
+      return page;
+    }
+ else {
+      freeListStart=flb.nextPage;
+      writeSuperBlock();
+      return flb.page;
+    }
+  }
+  long offset=file.length();
+  fileLen=offset + BlockFile.PAGESIZE;
+  file.setLength(fileLen);
+  writeSuperBlock();
+  return ((int)((long)(offset / BlockFile.PAGESIZE))) + 1;
+}

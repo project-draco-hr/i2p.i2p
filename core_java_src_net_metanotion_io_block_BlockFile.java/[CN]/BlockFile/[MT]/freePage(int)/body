@@ -1,0 +1,28 @@
+{
+  System.out.println("Free Page " + page);
+  if (freeListStart == 0) {
+    freeListStart=page;
+    FreeListBlock.initPage(file,page);
+    writeSuperBlock();
+    return;
+  }
+  FreeListBlock flb=new FreeListBlock(file,freeListStart);
+  if (flb.isFull()) {
+    FreeListBlock.initPage(file,page);
+    if (flb.nextPage == 0) {
+      flb.nextPage=page;
+      flb.writeBlock();
+      return;
+    }
+ else {
+      flb=new FreeListBlock(file,page);
+      flb.nextPage=freeListStart;
+      flb.writeBlock();
+      freeListStart=page;
+      writeSuperBlock();
+      return;
+    }
+  }
+  flb.addPage(page);
+  flb.writeBlock();
+}

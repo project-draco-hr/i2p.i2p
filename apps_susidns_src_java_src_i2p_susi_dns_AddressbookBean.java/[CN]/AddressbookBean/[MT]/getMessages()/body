@@ -3,8 +3,6 @@
   if (action != null) {
     if (lastSerial != null && serial != null && serial.compareTo(lastSerial) == 0) {
       boolean changed=false;
-      int deleted=0;
-      String name=null;
       if (action.equals(_("Add")) || action.equals(_("Replace"))) {
         if (addressbook != null && hostname != null && destination != null) {
           String oldDest=(String)addressbook.get(hostname);
@@ -41,16 +39,18 @@
         search=null;
       }
  else       if (action.equals(_("Delete Selected"))) {
-        Iterator it=deletionMarks.iterator();
-        while (it.hasNext()) {
-          name=(String)it.next();
-          addressbook.remove(name);
-          changed=true;
-          deleted++;
+        String name=null;
+        int deleted=0;
+        for (        String n : deletionMarks) {
+          addressbook.remove(n);
+          if (deleted++ == 0) {
+            changed=true;
+            name=n;
+          }
         }
         if (changed) {
           if (deleted == 1)           message=_("Destination {0} deleted.",name);
- else           message=_("{0} destinations deleted.",deleted);
+ else           message=ngettext("1 destination deleted.","{0} destinations deleted.",deleted);
         }
       }
       if (changed) {
