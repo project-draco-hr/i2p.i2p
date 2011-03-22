@@ -1,4 +1,7 @@
 {
+  String nsClass=router.getClass().getSimpleName();
+  boolean isTextFile=nsClass.equals("HostsTxtNamingService") || nsClass.equals("SingleFileNamingService");
+  Set<String> knownNames=null;
   NamingService publishedNS=null;
   Iterator<AddressBook> iter=subscriptions.iterator();
   while (iter.hasNext()) {
@@ -11,9 +14,22 @@
     for (Iterator<Map.Entry<String,String>> eIter=sub.iterator(); eIter.hasNext(); ) {
       Map.Entry<String,String> entry=eIter.next();
       String key=entry.getKey();
-      Destination oldDest=router.lookup(key);
+      boolean isKnown;
+      Destination oldDest=null;
+      if (isTextFile) {
+        if (knownNames == null) {
+          Properties opts=new Properties();
+          opts.setProperty("file","hosts.txt");
+          knownNames=router.getNames(opts);
+        }
+        isKnown=knownNames.contains(key);
+      }
+ else {
+        oldDest=router.lookup(key);
+        isKnown=oldDest != null;
+      }
       try {
-        if (oldDest == null) {
+        if (!isKnown) {
           if (AddressBook.isValidKey(key)) {
             Destination dest=new Destination(entry.getValue());
             boolean success=router.put(key,dest);
@@ -26,6 +42,7 @@
               success=publishedNS.putIfAbsent(key,dest);
               if (!success)               log.append("Save to published addressbook " + published.getAbsolutePath() + " failed for new key "+ key);
             }
+            if (isTextFile)             knownNames.add(key);
             nnew++;
           }
  else           if (log != null) {
@@ -33,8 +50,9 @@
             invalid++;
           }
         }
- else         if (DEBUG && log != null) {
-          if (!oldDest.toBase64().equals(entry.getValue())) {
+ else         if (false && DEBUG && log != null) {
+          if (isTextFile)           oldDest=router.lookup(key);
+          if (oldDest != null && !oldDest.toBase64().equals(entry.getValue())) {
             log.append("Conflict for " + key + " from "+ sub.getLocation()+ ". Destination in remote address book is "+ entry.getValue());
             conflict++;
           }
@@ -56,4 +74,5 @@
     }
     sub.delete();
   }
+  subscriptions.write();
 }

@@ -1,8 +1,7 @@
 {
-  File masterFile=new File(home,settings.get("master_addressbook"));
-  File routerFile=new File(home,settings.get("router_addressbook"));
   File published=null;
-  if ("true".equals(settings.get("should_publish")))   published=new File(home,settings.get("published_addressbook"));
+  boolean should_publish=Boolean.valueOf(settings.get("should_publish")).booleanValue();
+  if (should_publish)   published=new File(home,settings.get("published_addressbook"));
   File subscriptionFile=new File(home,settings.get("subscriptions"));
   File logFile=new File(home,settings.get("log"));
   File etagsFile=new File(home,settings.get("etags"));
@@ -16,12 +15,24 @@
     delay=12;
   }
   delay*=60 * 60 * 1000;
-  AddressBook master=new AddressBook(masterFile);
-  AddressBook router=new AddressBook(routerFile);
   List<String> defaultSubs=new LinkedList();
   defaultSubs.add("http://www.i2p2.i2p/hosts.txt");
   SubscriptionList subscriptions=new SubscriptionList(subscriptionFile,etagsFile,lastModifiedFile,lastFetchedFile,delay,defaultSubs,settings.get("proxy_host"),Integer.parseInt(settings.get("proxy_port")));
   Log log=new Log(logFile);
-  if (true)   update(getNamingService(),published,subscriptions,log);
- else   update(master,router,published,subscriptions,log);
+  if (Boolean.valueOf(settings.get("update_direct")).booleanValue()) {
+    File routerFile=new File(home,settings.get("router_addressbook"));
+    AddressBook master;
+    if (should_publish) {
+      File masterFile=new File(home,settings.get("master_addressbook"));
+      master=new AddressBook(masterFile);
+    }
+ else {
+      master=null;
+    }
+    AddressBook router=new AddressBook(routerFile);
+    update(master,router,published,subscriptions,log);
+  }
+ else {
+    update(getNamingService(settings.get("naming_service")),published,subscriptions,log);
+  }
 }
