@@ -6,11 +6,15 @@
   curNextPage[0]=this.overflowPage;
   int[] pageCounter=new int[1];
   pageCounter[0]=16;
-  ksz=this.bf.file.readShort();
+  ksz=this.bf.file.readUnsignedShort();
   this.bf.file.skipBytes(2);
   pageCounter[0]+=4;
   byte[] k=new byte[ksz];
   curPage=this.bf.readMultiPageData(k,curPage,pageCounter,curNextPage);
   this.firstKey=(Comparable)this.keySer.construct(k);
+  if (this.firstKey == null) {
+    BlockFile.log.error("Null deserialized first key in page " + curPage);
+    repair(1);
+  }
   if (DEBUG)   System.err.println("Loaded header for page " + this.page + " containing "+ this.nKeys+ '/'+ this.spanSize+ " first key: "+ this.firstKey);
 }

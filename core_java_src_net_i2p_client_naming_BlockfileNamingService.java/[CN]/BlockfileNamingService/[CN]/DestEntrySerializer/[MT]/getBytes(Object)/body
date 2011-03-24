@@ -2,14 +2,20 @@
   DestEntry de=(DestEntry)o;
   ByteArrayOutputStream baos=new ByteArrayOutputStream(1024);
   try {
-    DataHelper.writeProperties(baos,de.props);
+    try {
+      DataHelper.writeProperties(baos,de.props,true,false);
+    }
+ catch (    DataFormatException dfe) {
+      logError("DB Write Fail - properties too big?",dfe);
+      baos.write(new byte[2]);
+    }
     de.dest.writeBytes(baos);
   }
  catch (  IOException ioe) {
-    return null;
+    logError("DB Write Fail",ioe);
   }
 catch (  DataFormatException dfe) {
-    return null;
+    logError("DB Write Fail",dfe);
   }
   return baos.toByteArray();
 }

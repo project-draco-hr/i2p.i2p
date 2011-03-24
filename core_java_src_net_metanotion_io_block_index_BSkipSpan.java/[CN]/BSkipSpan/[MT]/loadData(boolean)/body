@@ -1,5 +1,6 @@
 {
-  seekData();
+  this.keys=new Comparable[this.spanSize];
+  this.vals=new Object[this.spanSize];
   int ksz, vsz;
   int curPage=this.page;
   int[] curNextPage=new int[1];
@@ -21,27 +22,18 @@
     byte[] v=new byte[vsz];
     curPage=this.bf.readMultiPageData(k,curPage,pageCounter,curNextPage);
     curPage=this.bf.readMultiPageData(v,curPage,pageCounter,curNextPage);
-    Comparable ckey=(Comparable)this.keySer.construct(k);
-    if (ckey == null) {
-      BlockFile.log.error("Null deserialized key in entry " + i + " page "+ curPage);
+    this.keys[i]=(Comparable)this.keySer.construct(k);
+    this.vals[i]=this.valSer.construct(v);
+    if (this.keys[i] == null || this.vals[i] == null) {
+      BlockFile.log.error("Null deserialized data in entry " + i + " page "+ curPage+ " key="+ this.keys[i]+ " val="+ this.vals[i]);
       fail++;
+      nKeys--;
+      i--;
       continue;
     }
-    int diff=ckey.compareTo(key);
-    if (diff == 0) {
-      Object rv=this.valSer.construct(v);
-      if (rv == null) {
-        BlockFile.log.error("Null deserialized value in entry " + i + " page "+ curPage+ " key="+ ckey);
-        fail++;
-      }
-      if (fail > 0)       repair(fail);
-      return rv;
-    }
-    if (diff > 0) {
-      if (fail > 0)       repair(fail);
-      return null;
-    }
   }
-  if (fail > 0)   repair(fail);
-  return null;
+  if (fail > 0) {
+    BlockFile.log.error("Repairing corruption of " + fail + " entries");
+    if (flushOnError)     fflush();
+  }
 }
