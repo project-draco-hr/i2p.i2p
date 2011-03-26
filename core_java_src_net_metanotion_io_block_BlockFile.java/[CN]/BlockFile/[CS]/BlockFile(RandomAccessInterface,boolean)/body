@@ -9,18 +9,16 @@
     BSkipList.init(this,2,spanSize);
   }
   readSuperBlock();
-  if (magicBytes != 0x3141deadbeef0100L) {
-    if ((magicBytes & 0x3141deadbeef0000L) == 0x3141deadbeef0000L) {
-      throw new BadVersionException();
+  if (magicBytes != MAGIC) {
+    if ((magicBytes & MAGIC_BASE) == MAGIC_BASE) {
+      throw new IOException("Expected " + MAJOR + '.'+ MINOR+ " but got "+ (magicBytes >> 8 & 0xff)+ '.'+ (magicBytes & 0xff));
     }
  else {
-      throw new BadFileFormatException();
+      throw new IOException("Bad magic number");
     }
   }
   if (mounted != 0)   log.warn("Warning - file was not previously closed");
-  if (fileLen != file.length()) {
-    throw new CorruptFileException();
-  }
+  if (fileLen != file.length())   throw new IOException("Expected file length " + fileLen + " but actually "+ file.length());
   mount();
   metaIndex=new BSkipList(spanSize,this,2,new StringBytes(),new IntBytes());
 }

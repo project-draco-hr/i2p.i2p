@@ -8,9 +8,11 @@
     int len=((int)BlockFile.PAGESIZE) - pageCounter;
     if (len <= 0) {
       BlockFile.pageSeek(this.file,curNextPage);
+      int magic=this.file.readInt();
+      if (magic != MAGIC_CONT)       throw new IOException("Bad SkipSpan continuation magic number 0x" + Integer.toHexString(magic) + " on page "+ curNextPage);
       curPage=curNextPage;
       curNextPage=this.file.readUnsignedInt();
-      pageCounter=4;
+      pageCounter=8;
       len=((int)BlockFile.PAGESIZE) - pageCounter;
     }
     res=this.file.read(arr,dct,Math.min(len,arr.length - dct));
