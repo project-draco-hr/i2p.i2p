@@ -7,10 +7,11 @@
   bsl.levelHash.put(new Integer(this.levelPage),this);
   int maxLen=bf.file.readUnsignedShort();
   int nonNull=bf.file.readUnsignedShort();
+  if (maxLen < 1 || maxLen > MAX_SIZE || nonNull > maxLen)   throw new IOException("Invalid Level Skip size " + nonNull + " / "+ maxLen);
   spanPage=bf.file.readUnsignedInt();
   bottom=(BSkipSpan)bsl.spanHash.get(new Integer(spanPage));
   this.levels=new BSkipLevels[maxLen];
-  BlockFile.log.debug("Reading New BSkipLevels with " + nonNull + " valid levels out of "+ maxLen+ " page "+ levelPage);
+  if (BlockFile.log.shouldLog(Log.DEBUG))   BlockFile.log.debug("Reading New BSkipLevels with " + nonNull + " / "+ maxLen+ " valid levels page "+ levelPage);
   int[] lps=new int[nonNull];
   for (int i=0; i < nonNull; i++) {
     lps[i]=bf.file.readUnsignedInt();
@@ -27,7 +28,7 @@
       }
     }
  else {
-      BlockFile.log.warn("WTF page " + levelPage + " i = "+ i+ " of "+ nonNull+ " valid levels out of "+ maxLen+ " but level page is zero");
+      if (BlockFile.log.shouldLog(Log.WARN))       BlockFile.log.warn("WTF " + this + " i = "+ i+ " of "+ nonNull+ " / "+ maxLen+ " valid levels but page is zero");
       levels[i]=null;
     }
   }

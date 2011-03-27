@@ -1,28 +1,41 @@
 {
-  System.out.println("Free Page " + page);
-  if (freeListStart == 0) {
-    freeListStart=page;
-    FreeListBlock.initPage(file,page);
-    writeSuperBlock();
+  if (page < METAINDEX_PAGE) {
+    log.error("Negative page or superblock free attempt: " + page);
     return;
   }
-  FreeListBlock flb=new FreeListBlock(file,freeListStart);
-  if (flb.isFull()) {
-    FreeListBlock.initPage(file,page);
-    if (flb.nextPage == 0) {
-      flb.nextPage=page;
-      flb.writeBlock();
-      return;
-    }
- else {
-      flb=new FreeListBlock(file,page);
-      flb.nextPage=freeListStart;
-      flb.writeBlock();
+  try {
+    if (freeListStart == 0) {
       freeListStart=page;
+      FreeListBlock.initPage(file,page);
       writeSuperBlock();
       return;
     }
+    try {
+      FreeListBlock flb=new FreeListBlock(file,freeListStart);
+      if (flb.isFull()) {
+        FreeListBlock.initPage(file,page);
+        if (flb.getNextPage() == 0) {
+          flb.setNextPage(page);
+          return;
+        }
+ else {
+          flb=new FreeListBlock(file,page);
+          flb.setNextPage(freeListStart);
+          freeListStart=page;
+          writeSuperBlock();
+          return;
+        }
+      }
+      flb.addPage(page);
+    }
+ catch (    IOException ioe) {
+      log.error("Discarding corrupt free list block page " + freeListStart,ioe);
+      freeListStart=page;
+      FreeListBlock.initPage(file,page);
+      writeSuperBlock();
+    }
   }
-  flb.addPage(page);
-  flb.writeBlock();
+ catch (  IOException ioe) {
+    log.error("Error freeing page: " + page,ioe);
+  }
 }

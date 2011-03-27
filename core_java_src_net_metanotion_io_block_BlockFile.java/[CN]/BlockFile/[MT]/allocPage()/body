@@ -1,21 +1,24 @@
 {
   if (freeListStart != 0) {
-    FreeListBlock flb=new FreeListBlock(file,freeListStart);
-    if (flb.len > 0) {
-      flb.len=flb.len - 1;
-      int page=flb.branches[flb.len];
-      flb.writeBlock();
-      return page;
-    }
+    try {
+      FreeListBlock flb=new FreeListBlock(file,freeListStart);
+      if (!flb.isEmpty()) {
+        return flb.takePage();
+      }
  else {
-      freeListStart=flb.nextPage;
-      writeSuperBlock();
-      return flb.page;
+        freeListStart=flb.getNextPage();
+        writeSuperBlock();
+        return flb.page;
+      }
+    }
+ catch (    IOException ioe) {
+      log.error("Discarding corrupt free list block page " + freeListStart,ioe);
+      freeListStart=0;
     }
   }
   long offset=file.length();
-  fileLen=offset + BlockFile.PAGESIZE;
+  fileLen=offset + PAGESIZE;
   file.setLength(fileLen);
   writeSuperBlock();
-  return ((int)((long)(offset / BlockFile.PAGESIZE))) + 1;
+  return (int)((offset / PAGESIZE) + 1);
 }

@@ -1,17 +1,23 @@
 {
+  if (isKilled) {
+    BlockFile.log.error("Already killed!! " + this,new Exception());
+    return;
+  }
+  BlockFile.log.info("Killing " + this);
+  isKilled=true;
   try {
     int curPage=overflowPage;
-    int next;
+    bf.freePage(page);
     while (curPage != 0) {
       BlockFile.pageSeek(bf.file,curPage);
-      bf.file.skipBytes(4);
-      next=bf.file.readUnsignedInt();
+      int magic=bf.file.readInt();
+      if (magic != BlockFile.MAGIC_CONT)       throw new IOException("Bad SkipSpan magic number 0x" + Integer.toHexString(magic) + " on page "+ curPage);
+      int next=bf.file.readUnsignedInt();
       bf.freePage(curPage);
       curPage=next;
     }
-    bf.freePage(page);
   }
  catch (  IOException ioe) {
-    throw new RuntimeException("Error freeing database page",ioe);
+    BlockFile.log.error("Error freeing " + this,ioe);
   }
 }
