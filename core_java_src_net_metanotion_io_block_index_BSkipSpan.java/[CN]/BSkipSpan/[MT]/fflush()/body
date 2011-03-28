@@ -62,6 +62,19 @@
     BlockFile.pageSeek(bf.file,this.page);
     bf.file.skipBytes(4);
     this.overflowPage=bf.file.readUnsignedInt();
+    if (curNextPage[0] != 0) {
+      BlockFile.pageSeek(bf.file,curPage);
+      bf.file.skipBytes(4);
+      bf.file.writeInt(0);
+      if (curPage == this.page)       this.overflowPage=0;
+      try {
+        int freed=freeContinuationPages(curNextPage[0]);
+        if (BlockFile.log.shouldLog(Log.INFO))         BlockFile.log.info("Freed " + freed + " continuation pages");
+      }
+ catch (      IOException ioe) {
+        BlockFile.log.error("Error freeing " + this,ioe);
+      }
+    }
   }
  catch (  IOException ioe) {
     throw new RuntimeException("Error writing to database",ioe);

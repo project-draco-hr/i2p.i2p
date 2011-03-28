@@ -3,19 +3,19 @@
   int curNextPage=nextPage[0];
   int curPage=page;
   int dct=0;
-  int res;
   while (dct < arr.length) {
     int len=PAGESIZE - pageCounter;
     if (len <= 0) {
+      if (curNextPage <= 0)       throw new IOException("not enough pages to read data still need " + (arr.length - dct));
       BlockFile.pageSeek(this.file,curNextPage);
       int magic=this.file.readInt();
       if (magic != MAGIC_CONT)       throw new IOException("Bad SkipSpan continuation magic number 0x" + Integer.toHexString(magic) + " on page "+ curNextPage);
       curPage=curNextPage;
       curNextPage=this.file.readUnsignedInt();
-      pageCounter=8;
+      pageCounter=BSkipSpan.CONT_HEADER_LEN;
       len=PAGESIZE - pageCounter;
     }
-    res=this.file.read(arr,dct,Math.min(len,arr.length - dct));
+    int res=this.file.read(arr,dct,Math.min(len,arr.length - dct));
     if (res == -1) {
       throw new IOException();
     }

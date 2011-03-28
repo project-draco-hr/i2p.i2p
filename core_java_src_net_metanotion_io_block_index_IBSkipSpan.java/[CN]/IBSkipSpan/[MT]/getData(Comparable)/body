@@ -1,6 +1,5 @@
 {
   seekData();
-  int ksz, vsz;
   int curPage=this.page;
   int[] curNextPage=new int[1];
   curNextPage[0]=this.overflowPage;
@@ -16,21 +15,22 @@
       curNextPage[0]=this.bf.file.readUnsignedInt();
       pageCounter[0]=CONT_HEADER_LEN;
     }
-    ksz=this.bf.file.readUnsignedShort();
-    vsz=this.bf.file.readUnsignedShort();
+    int ksz=this.bf.file.readUnsignedShort();
+    int vsz=this.bf.file.readUnsignedShort();
     pageCounter[0]+=4;
     byte[] k=new byte[ksz];
-    byte[] v=new byte[vsz];
     curPage=this.bf.readMultiPageData(k,curPage,pageCounter,curNextPage);
-    curPage=this.bf.readMultiPageData(v,curPage,pageCounter,curNextPage);
     Comparable ckey=(Comparable)this.keySer.construct(k);
     if (ckey == null) {
+      curPage=this.bf.skipMultiPageBytes(vsz,curPage,pageCounter,curNextPage);
       BlockFile.log.error("Null deserialized key in entry " + i + " page "+ curPage);
       fail++;
       continue;
     }
     int diff=ckey.compareTo(key);
     if (diff == 0) {
+      byte[] v=new byte[vsz];
+      curPage=this.bf.readMultiPageData(v,curPage,pageCounter,curNextPage);
       Object rv=this.valSer.construct(v);
       if (rv == null) {
         BlockFile.log.error("Null deserialized value in entry " + i + " page "+ curPage+ " key="+ ckey);
@@ -43,6 +43,7 @@
       if (fail > 0)       repair(fail);
       return null;
     }
+    curPage=this.bf.skipMultiPageBytes(vsz,curPage,pageCounter,curNextPage);
   }
   if (fail > 0)   repair(fail);
   return null;
