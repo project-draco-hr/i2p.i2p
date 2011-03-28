@@ -1,6 +1,6 @@
 {
-  if (page < METAINDEX_PAGE) {
-    log.error("Negative page or superblock free attempt: " + page);
+  if (page <= METAINDEX_PAGE) {
+    log.error("Bad page free attempt: " + page);
     return;
   }
   try {
@@ -8,31 +8,35 @@
       freeListStart=page;
       FreeListBlock.initPage(file,page);
       writeSuperBlock();
+      if (log.shouldLog(Log.INFO))       log.info("Freed page " + page + " as new FLB");
       return;
     }
     try {
-      FreeListBlock flb=new FreeListBlock(file,freeListStart);
+      if (flb == null)       flb=new FreeListBlock(file,freeListStart);
       if (flb.isFull()) {
+        if (log.shouldLog(Log.INFO))         log.info("Full: " + flb);
         FreeListBlock.initPage(file,page);
         if (flb.getNextPage() == 0) {
           flb.setNextPage(page);
-          return;
         }
  else {
           flb=new FreeListBlock(file,page);
           flb.setNextPage(freeListStart);
           freeListStart=page;
           writeSuperBlock();
-          return;
         }
+        if (log.shouldLog(Log.INFO))         log.info("Freed page " + page + " to full "+ flb);
+        return;
       }
       flb.addPage(page);
+      if (log.shouldLog(Log.INFO))       log.info("Freed page " + page + " to "+ flb);
     }
  catch (    IOException ioe) {
       log.error("Discarding corrupt free list block page " + freeListStart,ioe);
       freeListStart=page;
       FreeListBlock.initPage(file,page);
       writeSuperBlock();
+      flb=null;
     }
   }
  catch (  IOException ioe) {

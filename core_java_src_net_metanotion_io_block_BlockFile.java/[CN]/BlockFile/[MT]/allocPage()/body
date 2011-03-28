@@ -1,14 +1,18 @@
 {
   if (freeListStart != 0) {
     try {
-      FreeListBlock flb=new FreeListBlock(file,freeListStart);
+      if (flb == null)       flb=new FreeListBlock(file,freeListStart);
       if (!flb.isEmpty()) {
+        if (log.shouldLog(Log.INFO))         log.info("Alloc from " + flb);
         return flb.takePage();
       }
  else {
+        if (log.shouldLog(Log.INFO))         log.info("Alloc returning empty " + flb);
         freeListStart=flb.getNextPage();
         writeSuperBlock();
-        return flb.page;
+        int rv=flb.page;
+        flb=null;
+        return rv;
       }
     }
  catch (    IOException ioe) {

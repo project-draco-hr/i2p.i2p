@@ -9,8 +9,15 @@
   if (len > MAX_SIZE)   throw new IOException("Bad freelist size " + len);
   branches=new int[MAX_SIZE];
   if (len > 0) {
+    int good=0;
     for (int i=0; i < len; i++) {
-      branches[i]=file.readUnsignedInt();
+      int fpg=file.readInt();
+      if (fpg > BlockFile.METAINDEX_PAGE)       branches[good++]=fpg;
+    }
+    if (good != len) {
+      BlockFile.log.error((len - good) + " bad pages in " + this);
+      len=good;
+      writeBlock();
     }
   }
 }
