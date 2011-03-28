@@ -10,11 +10,20 @@
   firstSpanPage=bf.file.readUnsignedInt();
   firstLevelPage=bf.file.readUnsignedInt();
   size=bf.file.readUnsignedInt();
-  spans=bf.file.readUnsignedInt();
-  levelCount=bf.file.readUnsignedInt();
+  int spans=bf.file.readInt();
+  int levelCount=bf.file.readInt();
   this.fileOnly=fileOnly;
   if (fileOnly)   first=new IBSkipSpan(bf,this,firstSpanPage,key,val);
  else   first=new BSkipSpan(bf,this,firstSpanPage,key,val);
   stack=new BSkipLevels(bf,firstLevelPage,this);
-  if (BlockFile.log.shouldLog(Log.DEBUG))   BlockFile.log.debug("Loaded " + this + " cached "+ levelHash.size()+ " levels and "+ spanHash.size()+ " spans");
+  int total=0;
+  for (  BSkipSpan ss : spanHash.values()) {
+    total+=ss.nKeys;
+  }
+  if (BlockFile.log.shouldLog(Log.DEBUG))   BlockFile.log.debug("Loaded " + this + " cached "+ levelHash.size()+ " levels and "+ spanHash.size()+ " spans with "+ total+ " entries");
+  if (levelCount != levelHash.size() || spans != spanHash.size() || size != total) {
+    if (BlockFile.log.shouldLog(Log.WARN))     BlockFile.log.warn("On-disk counts were " + levelCount + " / "+ spans+ " / "+ size+ ", correcting");
+    size=total;
+    flush();
+  }
 }
