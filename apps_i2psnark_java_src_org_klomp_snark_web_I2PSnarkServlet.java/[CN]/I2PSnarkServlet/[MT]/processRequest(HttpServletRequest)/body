@@ -20,11 +20,14 @@
     if (newURL != null) {
       if (newURL.startsWith("http://")) {
         _manager.addMessage(_("Fetching {0}",urlify(newURL)));
-        I2PAppThread fetch=new I2PAppThread(new FetchAndAdd(_manager,newURL),"Fetch and add");
+        I2PAppThread fetch=new I2PAppThread(new FetchAndAdd(_manager,newURL),"Fetch and add",true);
         fetch.start();
       }
+ else       if (newURL.startsWith(MAGNET) || newURL.startsWith(MAGGOT)) {
+        addMagnet(newURL);
+      }
  else {
-        _manager.addMessage(_("Invalid URL - must start with http://"));
+        _manager.addMessage(_("Invalid URL: Must start with \"http://\", \"{0}\", or \"{1}\"",MAGNET,MAGGOT));
       }
     }
  else {
@@ -38,8 +41,8 @@
         for (Iterator iter=_manager.listTorrentFiles().iterator(); iter.hasNext(); ) {
           String name=(String)iter.next();
           Snark snark=_manager.getTorrent(name);
-          if ((snark != null) && (DataHelper.eq(infoHash,snark.meta.getInfoHash()))) {
-            _manager.stopTorrent(name,false);
+          if ((snark != null) && (DataHelper.eq(infoHash,snark.getInfoHash()))) {
+            _manager.stopTorrent(snark,false);
             break;
           }
         }
@@ -53,10 +56,9 @@
       if ((infoHash != null) && (infoHash.length == 20)) {
         for (        String name : _manager.listTorrentFiles()) {
           Snark snark=_manager.getTorrent(name);
-          if ((snark != null) && (DataHelper.eq(infoHash,snark.meta.getInfoHash()))) {
+          if ((snark != null) && (DataHelper.eq(infoHash,snark.getInfoHash()))) {
             snark.startTorrent();
-            if (snark.storage != null)             name=snark.storage.getBaseName();
-            _manager.addMessage(_("Starting up torrent {0}",name));
+            _manager.addMessage(_("Starting up torrent {0}",snark.getBaseName()));
             break;
           }
         }
@@ -71,8 +73,14 @@
         for (Iterator iter=_manager.listTorrentFiles().iterator(); iter.hasNext(); ) {
           String name=(String)iter.next();
           Snark snark=_manager.getTorrent(name);
-          if ((snark != null) && (DataHelper.eq(infoHash,snark.meta.getInfoHash()))) {
-            _manager.stopTorrent(name,true);
+          if ((snark != null) && (DataHelper.eq(infoHash,snark.getInfoHash()))) {
+            MetaInfo meta=snark.getMetaInfo();
+            if (meta == null) {
+              _manager.deleteMagnet(snark);
+              _manager.addMessage(_("Magnet deleted: {0}",name));
+              return;
+            }
+            _manager.stopTorrent(snark,true);
             File f=new File(name);
             f.delete();
             _manager.addMessage(_("Torrent file deleted: {0}",f.getAbsolutePath()));
@@ -90,13 +98,19 @@
         for (Iterator iter=_manager.listTorrentFiles().iterator(); iter.hasNext(); ) {
           String name=(String)iter.next();
           Snark snark=_manager.getTorrent(name);
-          if ((snark != null) && (DataHelper.eq(infoHash,snark.meta.getInfoHash()))) {
-            _manager.stopTorrent(name,true);
+          if ((snark != null) && (DataHelper.eq(infoHash,snark.getInfoHash()))) {
+            MetaInfo meta=snark.getMetaInfo();
+            if (meta == null) {
+              _manager.deleteMagnet(snark);
+              _manager.addMessage(_("Magnet deleted: {0}",name));
+              return;
+            }
+            _manager.stopTorrent(snark,true);
             File f=new File(name);
             f.delete();
             _manager.addMessage(_("Torrent file deleted: {0}",f.getAbsolutePath()));
-            List files=snark.meta.getFiles();
-            String dataFile=snark.meta.getName();
+            List files=meta.getFiles();
+            String dataFile=snark.getBaseName();
             f=new File(_manager.getDataDir(),dataFile);
             if (files == null) {
               if (f.delete())               _manager.addMessage(_("Data file deleted: {0}",f.getAbsolutePath()));
@@ -146,20 +160,16 @@
       if ((announceURLOther != null) && (announceURLOther.trim().length() > "http://.i2p/announce".length()))       announceURL=announceURLOther;
       if (announceURL == null || announceURL.length() <= 0)       _manager.addMessage(_("Error creating torrent - you must select a tracker"));
  else       if (baseFile.exists()) {
+        _lastAnnounceURL=announceURL;
+        if (announceURL.equals("none"))         announceURL=null;
         try {
           Storage s=new Storage(_manager.util(),baseFile,announceURL,null);
-          s.create();
           s.close();
           MetaInfo info=s.getMetaInfo();
-          File torrentFile=new File(baseFile.getParent(),baseFile.getName() + ".torrent");
-          if (torrentFile.exists())           throw new IOException("Cannot overwrite an existing .torrent file: " + torrentFile.getPath());
-          _manager.saveTorrentStatus(info,s.getBitField(),null);
-          FileOutputStream out=new FileOutputStream(torrentFile);
-          out.write(info.getTorrentData());
-          out.close();
+          File torrentFile=new File(_manager.getDataDir(),s.getBaseName() + ".torrent");
+          _manager.addTorrent(info,s.getBitField(),torrentFile.getAbsolutePath(),true);
           _manager.addMessage(_("Torrent created for \"{0}\"",baseFile.getName()) + ": " + torrentFile.getAbsolutePath());
-          _manager.addTorrent(torrentFile.getCanonicalPath(),true);
-          _manager.addMessage(_("Many I2P trackers require you to register new torrents before seeding - please do so before starting \"{0}\"",baseFile.getName()));
+          if (announceURL != null)           _manager.addMessage(_("Many I2P trackers require you to register new torrents before seeding - please do so before starting \"{0}\"",baseFile.getName()));
         }
  catch (        IOException ioe) {
           _manager.addMessage(_("Error creating a torrent for \"{0}\"",baseFile.getAbsolutePath()) + ": " + ioe.getMessage());
@@ -178,7 +188,7 @@
     List snarks=getSortedSnarks(req);
     for (int i=0; i < snarks.size(); i++) {
       Snark snark=(Snark)snarks.get(i);
-      if (!snark.stopped)       _manager.stopTorrent(snark.torrent,false);
+      if (!snark.isStopped())       _manager.stopTorrent(snark,false);
     }
     if (_manager.util().connected()) {
       try {
@@ -195,7 +205,7 @@
     List snarks=getSortedSnarks(req);
     for (int i=0; i < snarks.size(); i++) {
       Snark snark=(Snark)snarks.get(i);
-      if (snark.stopped)       snark.startTorrent();
+      if (snark.isStopped())       snark.startTorrent();
     }
   }
  else {

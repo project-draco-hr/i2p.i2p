@@ -3,24 +3,27 @@
   this.listener=listener;
   getFiles(baseFile);
   long total=0;
-  ArrayList lengthsList=new ArrayList();
+  ArrayList<Long> lengthsList=new ArrayList();
   for (int i=0; i < lengths.length; i++) {
     long length=lengths[i];
     total+=length;
-    lengthsList.add(new Long(length));
+    lengthsList.add(Long.valueOf(length));
   }
-  piece_size=MIN_PIECE_SIZE;
-  pieces=(int)((total - 1) / piece_size) + 1;
-  while (pieces > MAX_PIECES && piece_size < MAX_PIECE_SIZE) {
-    piece_size=piece_size * 2;
-    pieces=(int)((total - 1) / piece_size) + 1;
+  if (total <= 0)   throw new IOException("Torrent contains no data");
+  int pc_size=MIN_PIECE_SIZE;
+  int pcs=(int)((total - 1) / pc_size) + 1;
+  while (pcs > MAX_PIECES && pc_size < MAX_PIECE_SIZE) {
+    pc_size*=2;
+    pcs=(int)((total - 1) / pc_size) + 1;
   }
-  byte[] piece_hashes=new byte[20 * pieces];
+  piece_size=pc_size;
+  pieces=pcs;
+  total_length=total;
   bitfield=new BitField(pieces);
   needed=0;
-  List files=new ArrayList();
+  List<List<String>> files=new ArrayList();
   for (int i=0; i < names.length; i++) {
-    List file=new ArrayList();
+    List<String> file=new ArrayList();
     StringTokenizer st=new StringTokenizer(names[i],File.separator);
     while (st.hasMoreTokens()) {
       String part=st.nextToken();
@@ -32,5 +35,6 @@
     files=null;
     lengthsList=null;
   }
+  byte[] piece_hashes=fast_digestCreate();
   metainfo=new MetaInfo(announce,baseFile.getName(),null,files,lengthsList,piece_size,piece_hashes,total);
 }

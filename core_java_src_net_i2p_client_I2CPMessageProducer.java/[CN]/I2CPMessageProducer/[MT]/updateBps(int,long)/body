@@ -1,0 +1,49 @@
+{
+  if (_maxBytesPerSecond <= 0)   return true;
+  _lock.lock();
+  try {
+    int waitCount=0;
+    while (true) {
+      long now=_context.clock().now();
+      if (waitCount > 0 && expires > 0 && expires < now) {
+        _context.statManager().addRateData("client.sendDropped",len,0);
+        if (_log.shouldLog(Log.WARN))         _log.warn("Dropping " + len + " byte msg expired in queue");
+        return false;
+      }
+      long period=now - _sendPeriodBeginTime;
+      if (period >= 2000) {
+        _sendPeriodBytes=len;
+        _sendPeriodBeginTime=now;
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("New period after idle, " + len + " bytes");
+        return true;
+      }
+      if (period >= 1000) {
+        if (_sendPeriodBytes > 0 && ((_sendPeriodBeginTime / 1000) & 0x01) == 0)         _sendPeriodBytes+=len - _maxBytesPerSecond;
+ else         _sendPeriodBytes=len;
+        _sendPeriodBeginTime+=1000;
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("New period, " + len + " bytes");
+        return true;
+      }
+      if (_sendPeriodBytes + len <= _maxBytesPerSecond) {
+        _sendPeriodBytes+=len;
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Sending " + len + ", Elapsed "+ period+ "ms, total "+ _sendPeriodBytes+ " bytes");
+        return true;
+      }
+      if (waitCount >= 2) {
+        _context.statManager().addRateData("client.sendDropped",len,0);
+        if (_log.shouldLog(Log.WARN))         _log.warn("Dropping " + len + " byte msg after waiting "+ waitCount+ " times");
+        return false;
+      }
+      _context.statManager().addRateData("client.sendThrottled",++waitCount,0);
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Throttled " + len + " bytes, wait #"+ waitCount+ ' '+ (1000 - period)+ "ms");
+      try {
+        _lock.newCondition().await(1000 - period,TimeUnit.MILLISECONDS);
+      }
+ catch (      InterruptedException ie) {
+      }
+    }
+  }
+  finally {
+    _lock.unlock();
+  }
+}

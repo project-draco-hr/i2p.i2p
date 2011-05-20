@@ -1,0 +1,19 @@
+{
+  if (pList.isEmpty())   return;
+  Map<String,Object> map=new HashMap();
+  byte[] peers=new byte[HASH_LENGTH * pList.size()];
+  int off=0;
+  for (  Peer p : pList) {
+    System.arraycopy(p.getPeerID().getDestHash(),0,peers,off,HASH_LENGTH);
+    off+=HASH_LENGTH;
+  }
+  map.put("added",peers);
+  byte[] payload=BEncoder.bencode(map);
+  try {
+    int hisMsgCode=peer.getHandshakeMap().get("m").getMap().get(TYPE_PEX).getInt();
+    peer.sendExtension(hisMsgCode,payload);
+  }
+ catch (  Exception e) {
+    if (_log.shouldLog(Log.WARN))     _log.info("PEX msg exception to " + peer,e);
+  }
+}

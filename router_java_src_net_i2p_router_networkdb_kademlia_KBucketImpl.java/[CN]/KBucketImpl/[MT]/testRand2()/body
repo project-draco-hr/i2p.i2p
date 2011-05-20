@@ -1,6 +1,5 @@
 {
   Log log=I2PAppContext.getGlobalContext().logManager().getLog(KBucketImpl.class);
-  StringBuilder buf=new StringBuilder(1024 * 1024 * 16);
   int low=1;
   int high=200;
   byte hash[]=new byte[Hash.HASH_LENGTH];
@@ -9,25 +8,22 @@
   local.prepareCache();
   KBucketImpl bucket=new KBucketImpl(I2PAppContext.getGlobalContext(),local);
   bucket.setRange(low,high);
-  Hash lowerBoundKey=bucket.getRangeBeginKey();
-  Hash upperBoundKey=bucket.getRangeEndKey();
   for (int i=0; i < 100000; i++) {
     Hash rnd=bucket.generateRandomKey();
     boolean ok=bucket.shouldContain(rnd);
     if (!ok) {
       byte diff[]=bucket.getLocal().cachedXor(rnd);
-      BigInteger dv=new BigInteger(1,diff);
       log.error("wtf, bucket doesnt want a key that it generated.  i == " + i);
       log.error("\nLow: " + DataHelper.toHexString(bucket.getRangeBeginKey().getData()) + "\nVal: "+ DataHelper.toHexString(rnd.getData())+ "\nHigh:"+ DataHelper.toHexString(bucket.getRangeEndKey().getData()));
       try {
         Thread.sleep(1000);
       }
- catch (      Exception e) {
+ catch (      InterruptedException e) {
       }
       System.exit(0);
     }
  else {
     }
   }
-  log.info("Passed 100,000 random key generations against a random hash\n" + buf.toString());
+  log.info("Passed 100,000 random key generations against a random hash");
 }

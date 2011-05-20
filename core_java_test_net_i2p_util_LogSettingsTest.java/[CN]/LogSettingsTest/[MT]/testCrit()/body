@@ -8,13 +8,24 @@
   PrintStream systemOut=System.out;
   PrintStream pout=new PrintStream(new PipedOutputStream(pin));
   System.setOut(pout);
-  log.debug("CRIT" + ": debug");
-  log.info("CRIT" + ": info");
-  log.warn("CRIT" + ": warn");
-  log.error("CRIT" + ": error");
-  log.log(Log.CRIT,"CRIT" + ": crit");
-  _context.logManager().shutdown();
-  String l1=in.readLine();
-  assertTrue(l1.matches(".*CRIT: crit"));
-  System.setOut(systemOut);
+  try {
+    log.debug("CRIT" + ": debug");
+    log.info("CRIT" + ": info");
+    log.warn("CRIT" + ": warn");
+    log.error("CRIT" + ": error");
+    log.log(Log.CRIT,"CRIT" + ": crit");
+    try {
+      Thread.sleep(12 * 1000);
+    }
+ catch (    InterruptedException ie) {
+    }
+    pout.println("");
+    pout.flush();
+    String l1=in.readLine();
+    assertTrue(l1.matches(".*CRIT: crit"));
+  }
+  finally {
+    System.setOut(systemOut);
+    pout.close();
+  }
 }

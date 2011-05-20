@@ -1,0 +1,88 @@
+{
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Creating a metaInfo: " + m,new Exception("source"));
+  BEValue val=m.get("announce");
+  if (val == null) {
+    this.announce=null;
+  }
+ else {
+    this.announce=val.getString();
+  }
+  val=m.get("info");
+  if (val == null)   throw new InvalidBEncodingException("Missing info map");
+  Map<String,BEValue> info=val.getMap();
+  infoMap=Collections.unmodifiableMap(info);
+  val=info.get("name");
+  if (val == null)   throw new InvalidBEncodingException("Missing name string");
+  name=val.getString();
+  if (name.indexOf('/') >= 0)   throw new InvalidBEncodingException("Invalid name containing '/' " + name);
+  val=info.get("name.utf-8");
+  if (val != null)   name_utf8=val.getString();
+ else   name_utf8=null;
+  val=info.get("piece length");
+  if (val == null)   throw new InvalidBEncodingException("Missing piece length number");
+  piece_length=val.getInt();
+  val=info.get("pieces");
+  if (val == null)   throw new InvalidBEncodingException("Missing piece bytes");
+  piece_hashes=val.getBytes();
+  val=info.get("length");
+  if (val != null) {
+    length=val.getLong();
+    files=null;
+    files_utf8=null;
+    lengths=null;
+  }
+ else {
+    val=info.get("files");
+    if (val == null)     throw new InvalidBEncodingException("Missing length number and/or files list");
+    List<BEValue> list=val.getList();
+    int size=list.size();
+    if (size == 0)     throw new InvalidBEncodingException("zero size files list");
+    List<List<String>> m_files=new ArrayList(size);
+    List<List<String>> m_files_utf8=new ArrayList(size);
+    List<Long> m_lengths=new ArrayList(size);
+    long l=0;
+    for (int i=0; i < list.size(); i++) {
+      Map<String,BEValue> desc=list.get(i).getMap();
+      val=desc.get("length");
+      if (val == null)       throw new InvalidBEncodingException("Missing length number");
+      long len=val.getLong();
+      if (len < 0)       throw new InvalidBEncodingException("Negative file length");
+      m_lengths.add(Long.valueOf(len));
+      long oldTotal=l;
+      l+=len;
+      if (l < oldTotal)       throw new InvalidBEncodingException("Huge total length");
+      val=(BEValue)desc.get("path");
+      if (val == null)       throw new InvalidBEncodingException("Missing path list");
+      List<BEValue> path_list=val.getList();
+      int path_length=path_list.size();
+      if (path_length == 0)       throw new InvalidBEncodingException("zero size file path list");
+      List<String> file=new ArrayList(path_length);
+      Iterator<BEValue> it=path_list.iterator();
+      while (it.hasNext()) {
+        String s=it.next().getString();
+        if (s.indexOf('/') >= 0)         s=s.replace("/","_");
+        file.add(s);
+      }
+      for (int j=0; j < i; j++) {
+        if (file.equals(m_files.get(j)))         throw new InvalidBEncodingException("Duplicate file path " + DataHelper.toString(file));
+      }
+      m_files.add(Collections.unmodifiableList(file));
+      val=(BEValue)desc.get("path.utf-8");
+      if (val != null) {
+        path_list=val.getList();
+        path_length=path_list.size();
+        if (path_length > 0) {
+          file=new ArrayList(path_length);
+          it=path_list.iterator();
+          while (it.hasNext())           file.add(it.next().getString());
+          m_files_utf8.add(Collections.unmodifiableList(file));
+        }
+      }
+    }
+    files=Collections.unmodifiableList(m_files);
+    files_utf8=Collections.unmodifiableList(m_files_utf8);
+    lengths=Collections.unmodifiableList(m_lengths);
+    length=l;
+  }
+  info_hash=calculateInfoHash();
+}

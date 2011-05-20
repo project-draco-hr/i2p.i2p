@@ -7,15 +7,7 @@
       _log.error("received it, but its not inbound? " + cfg);
     }
     BuildEndMessageState state=new BuildEndMessageState(cfg,receivedMessage);
-    if (HANDLE_REPLIES_INLINE) {
-      handleRequestAsInboundEndpoint(state);
-    }
- else {
-synchronized (_inboundBuildEndMessages) {
-        _inboundBuildEndMessages.add(state);
-      }
-      _exec.repoll();
-    }
+    handleRequestAsInboundEndpoint(state);
   }
  else {
     if (_exec.wasRecentlyBuilding(reqId)) {
@@ -23,38 +15,38 @@ synchronized (_inboundBuildEndMessages) {
       _context.statManager().addRateData("tunnel.buildReplyTooSlow",1,0);
     }
  else {
-synchronized (_inboundBuildMessages) {
-        boolean removed=false;
-        int dropped=0;
-        for (int i=0; i < _inboundBuildMessages.size(); i++) {
-          BuildMessageState cur=(BuildMessageState)_inboundBuildMessages.get(i);
-          long age=System.currentTimeMillis() - cur.recvTime;
-          if (age >= BuildRequestor.REQUEST_TIMEOUT / 4) {
-            _inboundBuildMessages.remove(i);
-            i--;
-            dropped++;
-            _context.statManager().addRateData("tunnel.dropLoad",age,_inboundBuildMessages.size());
-          }
-        }
-        if (dropped > 0) {
+      int sz=_inboundBuildMessages.size();
+      BuildMessageState cur=_inboundBuildMessages.peek();
+      boolean accept=true;
+      if (cur != null) {
+        long age=System.currentTimeMillis() - cur.recvTime;
+        if (age >= BuildRequestor.REQUEST_TIMEOUT / 4) {
+          _context.statManager().addRateData("tunnel.dropLoad",age,sz);
           _context.throttle().setTunnelStatus(_x("Dropping tunnel requests: High load"));
-          _context.statManager().addRateData("tunnel.dropLoadBacklog",_inboundBuildMessages.size(),_inboundBuildMessages.size());
+          _context.statManager().addRateData("tunnel.dropLoadBacklog",sz,sz);
+          accept=false;
+        }
+      }
+      if (accept) {
+        int queueTime=estimateQueueTime(sz);
+        float pDrop=queueTime / ((float)BuildRequestor.REQUEST_TIMEOUT * 3);
+        pDrop=(float)Math.pow(pDrop,16);
+        float f=_context.random().nextFloat();
+        if (pDrop > f) {
+          _context.throttle().setTunnelStatus(_x("Dropping tunnel requests: Queue time"));
+          _context.statManager().addRateData("tunnel.dropLoadProactive",queueTime,sz);
         }
  else {
-          int queueTime=estimateQueueTime(_inboundBuildMessages.size());
-          float pDrop=queueTime / ((float)BuildRequestor.REQUEST_TIMEOUT * 3);
-          pDrop=(float)Math.pow(pDrop,16);
-          float f=_context.random().nextFloat();
-          if ((pDrop > f) && (allowProactiveDrop())) {
-            _context.throttle().setTunnelStatus(_x("Dropping tunnel requests: Queue time"));
-            _context.statManager().addRateData("tunnel.dropLoadProactive",queueTime,_inboundBuildMessages.size());
+          accept=_inboundBuildMessages.offer(new BuildMessageState(receivedMessage,from,fromHash));
+          if (accept) {
+            _exec.repoll();
           }
  else {
-            _inboundBuildMessages.add(new BuildMessageState(receivedMessage,from,fromHash));
+            _context.throttle().setTunnelStatus(_x("Dropping tunnel requests: High load"));
+            _context.statManager().addRateData("tunnel.dropLoadBacklog",sz,sz);
           }
         }
       }
-      _exec.repoll();
     }
   }
   return _buildMessageHandlerJob;

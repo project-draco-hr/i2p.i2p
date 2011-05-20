@@ -34,12 +34,12 @@
       attempted.addAll(closestHashes);
       for (Iterator iter=closestHashes.iterator(); iter.hasNext(); ) {
         Hash peer=(Hash)iter.next();
-        DataStructure ds=_facade.getDataStore().get(peer);
+        DatabaseEntry ds=_facade.getDataStore().get(peer);
         if (ds == null) {
           if (_log.shouldLog(Log.INFO))           _log.info("Next closest peer " + peer + " was only recently referred to us, sending a search for them");
           getContext().netDb().lookupRouterInfo(peer,null,null,_timeoutMs);
         }
- else         if (!(ds instanceof RouterInfo)) {
+ else         if (!(ds.getType() == DatabaseEntry.KEY_TYPE_ROUTERINFO)) {
           if (_log.shouldLog(Log.WARN))           _log.warn(getJobId() + ": Error selecting closest hash that wasnt a router! " + peer+ " : "+ ds.getClass().getName());
           _state.replyTimeout(peer);
         }

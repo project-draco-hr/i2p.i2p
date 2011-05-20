@@ -1,5 +1,6 @@
 {
   try {
+    final long timeLimit=System.currentTimeMillis() + MAX_TIME_PER_HOST;
     System.setProperty(PROP_STATUS,_("Reseeding: fetching seed URL."));
     System.err.println("Reseeding from " + seedURL);
     URL dir=new URL(seedURL);
@@ -30,10 +31,10 @@
       return 0;
     }
     List<String> urlList=new ArrayList(urls);
-    Collections.shuffle(urlList);
+    Collections.shuffle(urlList,_context.random());
     int fetched=0;
     int errors=0;
-    for (Iterator<String> iter=urlList.iterator(); iter.hasNext() && fetched < 200; ) {
+    for (Iterator<String> iter=urlList.iterator(); iter.hasNext() && fetched < 200 && System.currentTimeMillis() < timeLimit; ) {
       try {
         System.setProperty(PROP_STATUS,_("Reseeding: fetching router info from seed URL ({0} successful, {1} errors).",fetched,errors));
         fetchSeed(seedURL,iter.next());
@@ -43,7 +44,7 @@
           if (fetched % 60 == 0)           System.out.println();
         }
       }
- catch (      Exception e) {
+ catch (      IOException e) {
         errors++;
       }
     }

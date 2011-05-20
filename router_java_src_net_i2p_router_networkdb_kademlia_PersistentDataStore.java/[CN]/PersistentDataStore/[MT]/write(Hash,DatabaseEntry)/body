@@ -1,0 +1,38 @@
+{
+  if (_log.shouldLog(Log.INFO))   _log.info("Writing key " + key);
+  FileOutputStream fos=null;
+  File dbFile=null;
+  try {
+    String filename=null;
+    if (data.getType() == DatabaseEntry.KEY_TYPE_LEASESET)     filename=getLeaseSetName(key);
+ else     if (data.getType() == DatabaseEntry.KEY_TYPE_ROUTERINFO)     filename=getRouterInfoName(key);
+ else     throw new IOException("We don't know how to write objects of type " + data.getClass().getName());
+    dbFile=new File(_dbDir,filename);
+    long dataPublishDate=getPublishDate(data);
+    if (dbFile.lastModified() < dataPublishDate) {
+      fos=new SecureFileOutputStream(dbFile);
+      try {
+        data.writeBytes(fos);
+        fos.close();
+        dbFile.setLastModified(dataPublishDate);
+      }
+ catch (      DataFormatException dfe) {
+        _log.error("Error writing out malformed object as " + key + ": "+ data,dfe);
+        dbFile.delete();
+      }
+    }
+ else {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Not writing " + key.toBase64() + ", as its up to date on disk (file mod-publish="+ (dbFile.lastModified() - dataPublishDate)+ ")");
+    }
+  }
+ catch (  IOException ioe) {
+    _log.error("Error writing out the object",ioe);
+  }
+ finally {
+    if (fos != null)     try {
+      fos.close();
+    }
+ catch (    IOException ioe) {
+    }
+  }
+}

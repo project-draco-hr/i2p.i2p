@@ -42,16 +42,21 @@ synchronized (_snarks) {
         }
  catch (        IOException e) {
         }
+        Snark snark=getTorrentByInfoHash(info.getInfoHash());
+        if (snark != null) {
+          addMessage(_("Torrent with this info hash is already running: {0}",snark.getBaseName()));
+          return;
+        }
         if (!TrackerClient.isValidAnnounce(info.getAnnounce())) {
           if (_util.shouldUseOpenTrackers() && _util.getOpenTrackers() != null) {
-            addMessage(_("Warning - Ignoring non-i2p tracker in \"{0}\", will announce to i2p open trackers only",info.getName()));
+            addMessage(_("Warning - No I2P trackers in \"{0}\", will announce to I2P open trackers only.",info.getName()));
           }
  else {
-            addMessage(_("Warning - Ignoring non-i2p tracker in \"{0}\", and open trackers are disabled, you must enable open trackers before starting the torrent!",info.getName()));
+            addMessage(_("Warning - No I2P Trackers found in \"{0}\". Make sure Open Tracker is enabled before starting this torrent.",info.getName()));
             dontAutoStart=true;
           }
         }
-        String rejectMessage=locked_validateTorrent(info);
+        String rejectMessage=validateTorrent(info);
         if (rejectMessage != null) {
           sfile.delete();
           addMessage(rejectMessage);
@@ -60,7 +65,6 @@ synchronized (_snarks) {
  else {
           torrent=new Snark(_util,filename,null,-1,null,null,this,_peerCoordinatorSet,_connectionAcceptor,false,dataDir.getPath());
           loadSavedFilePriorities(torrent);
-          torrent.completeListener=this;
 synchronized (_snarks) {
             _snarks.put(filename,torrent);
           }
@@ -69,6 +73,10 @@ synchronized (_snarks) {
  catch (      IOException ioe) {
         addMessage(_("Torrent in \"{0}\" is invalid",sfile.getName()) + ": " + ioe.getMessage());
         if (sfile.exists())         sfile.delete();
+        return;
+      }
+catch (      OutOfMemoryError oom) {
+        addMessage(_("ERROR - Out of memory, cannot create torrent from {0}",sfile.getName()) + ": " + oom.getMessage());
         return;
       }
  finally {
@@ -83,12 +91,11 @@ synchronized (_snarks) {
  else {
     return;
   }
-  File f=new File(filename);
   if (!dontAutoStart && shouldAutoStart()) {
     torrent.startTorrent();
-    addMessage(_("Torrent added and started: \"{0}\"",torrent.storage.getBaseName()));
+    addMessage(_("Torrent added and started: \"{0}\"",torrent.getBaseName()));
   }
  else {
-    addMessage(_("Torrent added: \"{0}\"",torrent.storage.getBaseName()));
+    addMessage(_("Torrent added: \"{0}\"",torrent.getBaseName()));
   }
 }

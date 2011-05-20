@@ -1,4 +1,5 @@
 {
+  if (metainfo == null || storage == null)   return true;
   if (halted) {
     _log.info("Got while-halted piece " + piece + "/"+ metainfo.getPieces()+ " from "+ peer+ " for "+ metainfo.getName());
     return true;
@@ -21,8 +22,11 @@ synchronized (wantedPieces) {
     }
  catch (    IOException ioe) {
       snark.stopTorrent();
-      _log.error("Error writing storage for " + metainfo.getName(),ioe);
-      throw new RuntimeException("B0rked");
+      String msg="Error writing storage (piece " + piece + ") for "+ metainfo.getName()+ ": "+ ioe;
+      _log.error(msg,ioe);
+      SnarkManager.instance().addMessage(msg);
+      SnarkManager.instance().addMessage("Fatal storage error: Stopping torrent " + metainfo.getName());
+      throw new RuntimeException(msg,ioe);
     }
     wantedPieces.remove(p);
   }

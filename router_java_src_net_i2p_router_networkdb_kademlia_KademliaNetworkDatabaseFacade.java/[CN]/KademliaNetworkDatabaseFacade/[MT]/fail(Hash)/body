@@ -1,18 +1,15 @@
 {
   if (!_initialized)   return;
-  boolean isRouterInfo=false;
-  Object o=_ds.get(dbEntry);
-  if (o instanceof RouterInfo)   isRouterInfo=true;
-  if (isRouterInfo) {
-    lookupBeforeDropping(dbEntry,(RouterInfo)o);
-    return;
-  }
- else {
-    if (_log.shouldLog(Log.INFO))     _log.info("Dropping a lease: " + dbEntry);
-  }
+  DatabaseEntry o=_ds.get(dbEntry);
   if (o == null) {
     _kb.remove(dbEntry);
     _context.peerManager().removeCapabilities(dbEntry);
+    return;
   }
-  _ds.remove(dbEntry,isRouterInfo);
+  if (o.getType() == DatabaseEntry.KEY_TYPE_ROUTERINFO) {
+    lookupBeforeDropping(dbEntry,(RouterInfo)o);
+    return;
+  }
+  if (_log.shouldLog(Log.INFO))   _log.info("Dropping a lease: " + dbEntry);
+  _ds.remove(dbEntry,false);
 }

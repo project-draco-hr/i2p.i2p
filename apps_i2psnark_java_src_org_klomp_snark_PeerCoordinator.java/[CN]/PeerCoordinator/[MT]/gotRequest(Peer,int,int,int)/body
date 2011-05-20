@@ -1,11 +1,15 @@
 {
   if (halted)   return null;
+  if (metainfo == null || storage == null)   return null;
   try {
     return storage.getPiece(piece,off,len);
   }
  catch (  IOException ioe) {
     snark.stopTorrent();
-    _log.error("Error reading the storage for " + metainfo.getName(),ioe);
-    throw new RuntimeException("B0rked");
+    String msg="Error reading the storage (piece " + piece + ") for "+ metainfo.getName()+ ": "+ ioe;
+    _log.error(msg,ioe);
+    SnarkManager.instance().addMessage(msg);
+    SnarkManager.instance().addMessage("Fatal storage error: Stopping torrent " + metainfo.getName());
+    throw new RuntimeException(msg,ioe);
   }
 }

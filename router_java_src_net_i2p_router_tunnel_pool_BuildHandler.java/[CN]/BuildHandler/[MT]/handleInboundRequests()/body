@@ -1,59 +1,20 @@
 {
-  int dropExpired=0;
-  int remaining=0;
-  List handled=null;
-  long beforeFindHandled=System.currentTimeMillis();
-synchronized (_inboundBuildMessages) {
-    int toHandle=_inboundBuildMessages.size();
-    if (toHandle > 0) {
-      if (toHandle > MAX_HANDLE_AT_ONCE)       toHandle=MAX_HANDLE_AT_ONCE;
-      handled=new ArrayList(toHandle);
-      long dropBefore=System.currentTimeMillis() - (BuildRequestor.REQUEST_TIMEOUT / 4);
-      do {
-        BuildMessageState state=(BuildMessageState)_inboundBuildMessages.get(0);
-        if (state.recvTime <= dropBefore) {
-          _inboundBuildMessages.remove(0);
-          dropExpired++;
-          if (_log.shouldLog(Log.WARN))           _log.warn("Not even trying to handle/decrypt the request " + state.msg.getUniqueId() + ", since we received it a long time ago: "+ (System.currentTimeMillis() - state.recvTime));
-          _context.statManager().addRateData("tunnel.dropLoadDelay",System.currentTimeMillis() - state.recvTime,0);
-        }
- else {
-          break;
-        }
-      }
- while (!_inboundBuildMessages.isEmpty());
-      if (dropExpired > 0)       _context.throttle().setTunnelStatus(_x("Dropping tunnel requests: Too slow"));
-      for (int i=0; i < toHandle && !_inboundBuildMessages.isEmpty(); i++)       handled.add(_inboundBuildMessages.remove(0));
+  for (int i=0; i < MAX_HANDLE_AT_ONCE; ) {
+    BuildMessageState state=_inboundBuildMessages.poll();
+    if (state == null)     return 0;
+    long dropBefore=System.currentTimeMillis() - (BuildRequestor.REQUEST_TIMEOUT / 4);
+    if (state.recvTime <= dropBefore) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Not even trying to handle/decrypt the request " + state.msg.getUniqueId() + ", since we received it a long time ago: "+ (System.currentTimeMillis() - state.recvTime));
+      _context.statManager().addRateData("tunnel.dropLoadDelay",System.currentTimeMillis() - state.recvTime,0);
+      _context.throttle().setTunnelStatus(_x("Dropping tunnel requests: Too slow"));
+      continue;
     }
-    remaining=_inboundBuildMessages.size();
+    i++;
+    long beforeHandle=System.currentTimeMillis();
+    long actualTime=handleRequest(state);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Handle took " + (System.currentTimeMillis() - beforeHandle) + "/"+ actualTime+ " ("+ i+ " with "+ _inboundBuildMessages.size()+ " remaining)");
   }
-  if (handled != null) {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Handling " + handled.size() + " requests (took "+ (System.currentTimeMillis() - beforeFindHandled)+ "ms to find them)");
-    for (int i=0; i < handled.size(); i++) {
-      BuildMessageState state=(BuildMessageState)handled.get(i);
-      long beforeHandle=System.currentTimeMillis();
-      long actualTime=handleRequest(state);
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Handle took " + (System.currentTimeMillis() - beforeHandle) + "/"+ actualTime+ " ("+ i+ " out of "+ handled.size()+ " with "+ remaining+ " remaining)");
-    }
-    handled.clear();
-  }
-  if (!HANDLE_REPLIES_INLINE) {
-synchronized (_inboundBuildEndMessages) {
-      int toHandle=_inboundBuildEndMessages.size();
-      if (toHandle > 0) {
-        if (handled == null)         handled=new ArrayList(_inboundBuildEndMessages);
- else         handled.addAll(_inboundBuildEndMessages);
-        _inboundBuildEndMessages.clear();
-      }
-    }
-  }
-  if (handled != null) {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Handling " + handled.size() + " requests that are actually replies");
-    for (int i=0; i < handled.size(); i++) {
-      BuildEndMessageState state=(BuildEndMessageState)handled.get(i);
-      handleRequestAsInboundEndpoint(state);
-    }
-  }
+  int remaining=_inboundBuildMessages.size();
   if (remaining > 0)   _context.statManager().addRateData("tunnel.handleRemaining",remaining,0);
   return remaining;
 }

@@ -1,21 +1,21 @@
 {
-  Map info=createInfoMap();
-  StringBuilder buf=new StringBuilder(128);
-  buf.append("info: ");
-  for (Iterator iter=info.entrySet().iterator(); iter.hasNext(); ) {
-    Map.Entry entry=(Map.Entry)iter.next();
-    String key=(String)entry.getKey();
-    Object val=entry.getValue();
-    buf.append(key).append('=');
-    if (val instanceof byte[])     buf.append(Base64.encode((byte[])val,true));
- else     buf.append(val.toString());
+  Map<String,BEValue> info=createInfoMap();
+  if (_log.shouldLog(Log.DEBUG)) {
+    StringBuilder buf=new StringBuilder(128);
+    buf.append("info: ");
+    for (    Map.Entry<String,BEValue> entry : info.entrySet()) {
+      String key=entry.getKey();
+      Object val=entry.getValue();
+      buf.append(key).append('=');
+      buf.append(val.toString());
+    }
+    _log.debug(buf.toString());
   }
-  if (_log.shouldLog(Log.DEBUG))   _log.debug(buf.toString());
   byte[] infoBytes=BEncoder.bencode(info);
   try {
     MessageDigest digest=MessageDigest.getInstance("SHA");
     byte hash[]=digest.digest(infoBytes);
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("info hash: [" + net.i2p.data.Base64.encode(hash) + "]");
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("info hash: " + I2PSnarkUtil.toHex(hash));
     return hash;
   }
  catch (  NoSuchAlgorithmException nsa) {

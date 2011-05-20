@@ -1,12 +1,18 @@
 {
+  if (!_state.getTarget().equals(_state.getData().getHash())) {
+    _log.error("Hash mismatch StoreJob");
+    return;
+  }
   DatabaseStoreMessage msg=new DatabaseStoreMessage(getContext());
-  msg.setKey(_state.getTarget());
-  if (_state.getData() instanceof RouterInfo) {
-    msg.setRouterInfo((RouterInfo)_state.getData());
+  if (_state.getData().getType() == DatabaseEntry.KEY_TYPE_ROUTERINFO) {
     if (responseTime > MAX_DIRECT_EXPIRATION)     responseTime=MAX_DIRECT_EXPIRATION;
   }
- else   if (_state.getData() instanceof LeaseSet)   msg.setLeaseSet((LeaseSet)_state.getData());
- else   throw new IllegalArgumentException("Storing an unknown data type! " + _state.getData());
+ else   if (_state.getData().getType() == DatabaseEntry.KEY_TYPE_LEASESET) {
+  }
+ else {
+    throw new IllegalArgumentException("Storing an unknown data type! " + _state.getData());
+  }
+  msg.setEntry(_state.getData());
   msg.setMessageExpiration(getContext().clock().now() + _timeoutMs);
   if (router.getIdentity().equals(getContext().router().getRouterInfo().getIdentity())) {
     if (_log.shouldLog(Log.ERROR))     _log.error(getJobId() + ": Dont send store to ourselves - why did we try?");
