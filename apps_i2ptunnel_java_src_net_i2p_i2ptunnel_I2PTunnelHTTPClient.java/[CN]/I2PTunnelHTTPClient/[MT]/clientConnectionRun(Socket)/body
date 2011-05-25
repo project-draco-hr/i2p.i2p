@@ -11,7 +11,10 @@
     InputReader reader=new InputReader(s.getInputStream());
     String line, method=null, protocol=null, host=null, destination=null;
     StringBuilder newRequest=new StringBuilder();
-    int ahelper=0;
+    boolean ahelperPresent=false;
+    boolean ahelperNew=false;
+    String ahelperKey=null;
+    String userAgent=null;
     String authorization=null;
     while ((line=reader.readLine(method)) != null) {
       line=line.trim();
@@ -85,7 +88,7 @@
           host=getHostName(destination);
           line=method + ' ' + request.substring(pos);
         }
- else         if (host.toLowerCase().equals("proxy.i2p")) {
+ else         if (host.toLowerCase().equals(LOCAL_SERVER)) {
           destination=host;
           usingInternalServer=true;
         }
@@ -94,7 +97,6 @@
           host=getHostName(destination);
           int pos2;
           if ((pos2=request.indexOf("?")) != -1) {
-            String ahelperKey=null;
             boolean ahelperConflict=false;
             String fragments=request.substring(pos2 + 1);
             String uriPath=request.substring(0,pos2);
@@ -109,20 +111,27 @@
               pos2=fragments.indexOf("&");
               fragment=fragments.substring(0,pos2);
               fragments=fragments.substring(pos2 + 1);
-              if (fragment.startsWith("i2paddresshelper=")) {
+              if (fragment.startsWith("i2paddresshelper=") && !Boolean.valueOf(getTunnel().getClientOptions().getProperty(PROP_DISABLE_HELPER)).booleanValue()) {
                 pos2=fragment.indexOf("=");
                 ahelperKey=fragment.substring(pos2 + 1);
                 if (ahelperKey != null) {
-                  if ((host == null) || ("i2p".equals(host))) {
-                    addressHelpers.put(destination,ahelperKey);
+                  ahelperPresent=true;
+                  if (host == null || "i2p".equals(host)) {
+                    String old=addressHelpers.putIfAbsent(destination.toLowerCase(),ahelperKey);
+                    ahelperNew=old == null;
+                    if ((!ahelperNew) && !old.equals(ahelperKey)) {
+                      ahelperConflict=true;
+                      if (_log.shouldLog(Log.WARN))                       _log.warn(getPrefix(requestId) + "Addresshelper key conflict for site [" + destination+ "], trusted key ["+ old+ "], specified key ["+ ahelperKey+ "].");
+                    }
                   }
  else {
-                    String destB64=null;
-                    Destination _dest=_context.namingService().lookup(host);
-                    if (_dest != null)                     destB64=_dest.toBase64();
-                    if (destB64 != null && !destB64.equals(ahelperKey)) {
-                      ahelperConflict=true;
-                      if (_log.shouldLog(Log.WARN))                       _log.warn(getPrefix(requestId) + "Addresshelper key conflict for site [" + destination+ "], trusted key ["+ destB64+ "], specified key ["+ ahelperKey+ "].");
+                    Destination hostDest=_context.namingService().lookup(destination);
+                    if (hostDest != null) {
+                      String destB64=hostDest.toBase64();
+                      if (destB64 != null && !destB64.equals(ahelperKey)) {
+                        ahelperConflict=true;
+                        if (_log.shouldLog(Log.WARN))                         _log.warn(getPrefix(requestId) + "Addresshelper key conflict for site [" + destination+ "], trusted key ["+ destB64+ "], specified key ["+ ahelperKey+ "].");
+                      }
                     }
                   }
                 }
@@ -137,6 +146,7 @@
               }
             }
             request=uriPath + urlEncoding + " "+ protocolVersion;
+            targetRequest=request;
             if (ahelperConflict) {
               if (out != null) {
                 String alias=getHostName(ahelperKey);
@@ -158,12 +168,8 @@
               return;
             }
           }
-          String addressHelper=(String)addressHelpers.get(destination);
-          if (addressHelper != null) {
-            destination=addressHelper;
-            host=getHostName(destination);
-            ahelper=1;
-          }
+          String addressHelper=addressHelpers.get(destination);
+          if (addressHelper != null)           host=getHostName(addressHelper);
           line=method + " " + request.substring(pos);
         }
  else         if (host.toLowerCase().equals("localhost") || host.equals("127.0.0.1") || host.startsWith("192.168.")) {
@@ -236,9 +242,12 @@
           line="Host: " + host;
           if (_log.shouldLog(Log.INFO))           _log.info(getPrefix(requestId) + "Setting host = " + host);
         }
- else         if (lowercaseLine.startsWith("user-agent: ") && !Boolean.valueOf(getTunnel().getClientOptions().getProperty(PROP_USER_AGENT)).booleanValue()) {
-          line=null;
-          continue;
+ else         if (lowercaseLine.startsWith("user-agent: ")) {
+          userAgent=lowercaseLine.substring(12);
+          if (!Boolean.valueOf(getTunnel().getClientOptions().getProperty(PROP_USER_AGENT)).booleanValue()) {
+            line=null;
+            continue;
+          }
         }
  else         if (lowercaseLine.startsWith("accept")) {
           line=null;
@@ -307,29 +316,44 @@
       return;
     }
     if (_log.shouldLog(Log.DEBUG))     _log.debug(getPrefix(requestId) + "Destination: " + destination);
-    if (usingInternalServer) {
-      serveLocalFile(out,method,targetRequest);
-      s.close();
-      return;
-    }
     if (!authorize(s,requestId,authorization)) {
       if (_log.shouldLog(Log.WARN)) {
         if (authorization != null)         _log.warn(getPrefix(requestId) + "Auth failed, sending 407 again");
  else         _log.warn(getPrefix(requestId) + "Auth required, sending 407");
       }
       out.write(getErrorPage("auth",ERR_AUTH));
+      writeFooter(out);
+      s.close();
+      return;
+    }
+    if (usingInternalServer) {
+      if (targetRequest.startsWith(LOCAL_SERVER + "/add?") && Boolean.valueOf(getTunnel().getClientOptions().getProperty(PROP_DISABLE_HELPER)).booleanValue()) {
+        out.write(ERR_HELPER_DISABLED);
+      }
+ else {
+        serveLocalFile(out,method,targetRequest,_proxyNonce);
+      }
       s.close();
       return;
     }
     Destination clientDest;
-    if ("i2p".equals(host))     clientDest=null;
- else     clientDest=_context.namingService().lookup(destination);
+    String addressHelper=addressHelpers.get(destination.toLowerCase());
+    if (addressHelper != null) {
+      clientDest=_context.namingService().lookup(addressHelper);
+      if (clientDest == null)       addressHelpers.remove(destination.toLowerCase());
+    }
+ else     if ("i2p".equals(host)) {
+      clientDest=null;
+    }
+ else {
+      clientDest=_context.namingService().lookup(destination);
+    }
     if (clientDest == null) {
       if (_log.shouldLog(Log.WARN))       _log.warn("Unable to resolve " + destination + " (proxy? "+ usingWWWProxy+ ", request: "+ targetRequest);
       byte[] header;
       String jumpServers=null;
       if (usingWWWProxy)       header=getErrorPage("dnfp",ERR_DESTINATION_UNKNOWN);
- else       if (ahelper != 0)       header=getErrorPage("dnfb",ERR_DESTINATION_UNKNOWN);
+ else       if (ahelperPresent)       header=getErrorPage("dnfb",ERR_DESTINATION_UNKNOWN);
  else       if (destination.length() == 60 && destination.endsWith(".b32.i2p"))       header=getErrorPage("dnf",ERR_DESTINATION_UNKNOWN);
  else {
         header=getErrorPage("dnfh",ERR_DESTINATION_UNKNOWN);
@@ -340,7 +364,20 @@
       s.close();
       return;
     }
-    String remoteID;
+    if (ahelperNew && "GET".equals(method) && (userAgent == null || !userAgent.startsWith("Wget"))&& !Boolean.valueOf(getTunnel().getClientOptions().getProperty(PROP_DISABLE_HELPER)).booleanValue()) {
+      writeHelperSaveForm(out,destination,ahelperKey,protocol + targetRequest);
+      s.close();
+      return;
+    }
+    if (ahelperPresent) {
+      String uri=protocol + targetRequest;
+      int spc=uri.indexOf(" ");
+      if (spc >= 0)       uri=uri.substring(0,spc);
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Auto redirecting to " + uri);
+      out.write(("HTTP/1.1 301 Address Helper Accepted\r\n" + "Location: " + uri + "\r\n"+ "\r\n").getBytes("UTF-8"));
+      s.close();
+      return;
+    }
     Properties opts=new Properties();
     I2PSocket i2ps=createI2PSocket(clientDest,getDefaultOptions(opts));
     byte[] data=newRequest.toString().getBytes("ISO-8859-1");
