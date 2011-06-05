@@ -1,30 +1,15 @@
 {
   _validated=true;
-  if (getSignature() == null) {
-    _log.error("Signature is null");
-    _isValid=false;
-    return;
-  }
-  byte data[]=null;
-  try {
-    data=getBytes();
-  }
- catch (  DataFormatException dfe) {
-    _log.error("Error validating",dfe);
-    _isValid=false;
-    return;
-  }
-  if (data == null) {
-    _log.error("Data could not be loaded");
-    _isValid=false;
-    return;
-  }
-  _isValid=DSAEngine.getInstance().verifySignature(_signature,data,_identity.getSigningPublicKey());
+  _isValid=super.verifySignature();
   if (!_isValid) {
-    if (_log.shouldLog(Log.ERROR))     _log.error("Invalid [" + SHA256Generator.getInstance().calculateHash(data).toBase64() + "] w/ signing key: "+ _identity.getSigningPublicKey(),new Exception("Signature failed"));
-    if (_log.shouldLog(Log.DEBUG)) {
-      _log.debug("Failed data: \n" + Base64.encode(data));
-      _log.debug("Signature: " + getSignature());
+    byte data[]=null;
+    try {
+      data=getBytes();
     }
+ catch (    DataFormatException dfe) {
+      _log.error("Error validating",dfe);
+      return;
+    }
+    if (_log.shouldLog(Log.ERROR))     _log.error("Invalid [" + SHA256Generator.getInstance().calculateHash(data).toBase64() + (_log.shouldLog(Log.WARN) ? ("]\n" + toString()) : ""),new Exception("Signature failed"));
   }
 }
