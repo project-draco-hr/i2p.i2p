@@ -1,25 +1,22 @@
 {
 synchronized (asyncBuffers) {
+    AsyncBuffer old=_currentBuffer;
+    if (old != null)     _emptyBuffers.offer(old);
     long before=System.currentTimeMillis();
-    long waited=0;
-    while (status[nextBuf] != STATUS_FILLED) {
-      asyncBuffers.notifyAll();
+    AsyncBuffer nextBuffer=null;
+    while (nextBuffer == null) {
+      if (!_isRunning)       throw new IllegalStateException("shutdown");
       try {
-        asyncBuffers.wait();
+        nextBuffer=_fullBuffers.take();
       }
  catch (      InterruptedException ie) {
+        continue;
       }
-      waited=System.currentTimeMillis() - before;
     }
+    long waited=System.currentTimeMillis() - before;
     _context.statManager().addRateData("prng.bufferWaitTime",waited,0);
     if (waited > 10 * 1000 && _log.shouldLog(Log.WARN))     _log.warn(Thread.currentThread().getName() + ": Took " + waited+ "ms for a full PRNG buffer to be found");
-    buffer=asyncBuffers[nextBuf];
-    status[nextBuf]=STATUS_LIVE;
-    int prev=nextBuf - 1;
-    if (prev < 0)     prev=_bufferCount - 1;
-    if (status[prev] == STATUS_LIVE)     status[prev]=STATUS_NEED_FILL;
-    nextBuf++;
-    if (nextBuf >= _bufferCount)     nextBuf=0;
-    asyncBuffers.notify();
+    _currentBuffer=nextBuffer;
+    buffer=nextBuffer.buffer;
   }
 }
