@@ -158,9 +158,9 @@ catch (        IOException ioe) {
     }
   }
   NewsFetcher fetcher=NewsFetcher.getInstance(I2PAppContext.getGlobalContext());
-  Thread t=new I2PAppThread(fetcher,"NewsFetcher",true);
-  t.start();
-  t=new I2PAppThread(new StatSummarizer(),"StatSummarizer",true);
+  Thread newsThread=new I2PAppThread(fetcher,"NewsFetcher",true);
+  newsThread.start();
+  Thread t=new I2PAppThread(new StatSummarizer(),"StatSummarizer",true);
   t.start();
   List<RouterContext> contexts=RouterContext.listContexts();
   if (contexts != null) {
@@ -170,5 +170,7 @@ catch (        IOException ioe) {
       t.start();
       ctx.addShutdownTask(new PluginStopper(ctx));
     }
+    ctx.addShutdownTask(new NewsShutdown(fetcher,newsThread));
+    ctx.addShutdownTask(new ServerShutdown());
   }
 }
