@@ -91,18 +91,24 @@
     _log.log(Log.CRIT,"Error shutting down the inbound net pool",t);
   }
   _context.deleteTempDir();
-  RouterContext.listContexts().remove(_context);
-  try {
-    DHSessionKeyBuilder.shutdown();
+  List<RouterContext> contexts=RouterContext.getContexts();
+  contexts.remove(_context);
+  if (contexts.isEmpty()) {
+    try {
+      DHSessionKeyBuilder.shutdown();
+    }
+ catch (    Throwable t) {
+      _log.log(Log.CRIT,"Error shutting DH",t);
+    }
+    try {
+      _context.elGamalEngine().shutdown();
+    }
+ catch (    Throwable t) {
+      _log.log(Log.CRIT,"Error shutting elGamal",t);
+    }
   }
- catch (  Throwable t) {
-    _log.log(Log.CRIT,"Error shutting DH",t);
-  }
-  try {
-    _context.elGamalEngine().shutdown();
-  }
- catch (  Throwable t) {
-    _log.log(Log.CRIT,"Error shutting elGamal",t);
+ else {
+    _log.logAlways(Log.WARN,"Warning - " + contexts.size() + " routers remaining in this JVM, not releasing all resources");
   }
   try {
     ((FortunaRandomSource)_context.random()).shutdown();
