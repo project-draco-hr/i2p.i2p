@@ -12,6 +12,16 @@
   File f=getPingFile();
   f.delete();
   if (RouterContext.getContexts().isEmpty())   RouterContext.killGlobalContext();
+  for (  Runnable task : _context.getFinalShutdownTasks()) {
+    System.err.println("Running final shutdown task " + task.getClass());
+    try {
+      task.run();
+    }
+ catch (    Throwable t) {
+      System.err.println("Running final shutdown task " + t);
+    }
+  }
+  _context.getFinalShutdownTasks().clear();
   if (_killVMOnEnd) {
     try {
       Thread.sleep(1000);

@@ -23,7 +23,18 @@
   envProps.putAll(_config);
   if (envProps.getProperty("i2p.dir.config") == null)   envProps.setProperty("i2p.dir.config",userDir);
   envProps.setProperty("i2p.systemTimeZone",originalTimeZoneID);
-  if (RouterContext.getContexts().isEmpty())   RouterContext.killGlobalContext();
+  List<RouterContext> contexts=RouterContext.getContexts();
+  if (contexts.isEmpty()) {
+    RouterContext.killGlobalContext();
+  }
+ else   if (System.getProperty("java.vendor").contains("Android")) {
+    System.err.println("Warning: Killing " + contexts.size() + " other routers in this JVM");
+    contexts.clear();
+    RouterContext.killGlobalContext();
+  }
+ else {
+    System.err.println("Warning: " + contexts.size() + " other routers in this JVM");
+  }
   _context=new RouterContext(this,envProps);
   if (!isOnlyRouterRunning()) {
     System.err.println("ERROR: There appears to be another router already running!");
