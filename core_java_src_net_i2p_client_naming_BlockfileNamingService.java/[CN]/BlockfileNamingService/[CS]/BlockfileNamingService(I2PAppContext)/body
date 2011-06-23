@@ -3,12 +3,19 @@
   _lists=new ArrayList();
   _invalid=new ArrayList();
   BlockFile bf=null;
-  RandomAccessFile raf=null;
+  RAIFile raf=null;
+  boolean readOnly=false;
   File f=new File(_context.getRouterDir(),HOSTS_DB);
   if (f.exists()) {
     try {
-      raf=new RandomAccessFile(f,"rw");
+      readOnly=(!f.canWrite()) || ((!context.isRouterContext()) && (!context.getBooleanProperty(PROP_FORCE)));
+      raf=new RAIFile(f,true,!readOnly);
       bf=initExisting(raf);
+      if (readOnly && context.isRouterContext())       _log.logAlways(Log.WARN,"Read-only hosts database in router context");
+      if (bf.wasMounted()) {
+        if (context.isRouterContext())         _log.logAlways(Log.WARN,"The hosts database was not closed cleanly or is still open by another process");
+ else         _log.logAlways(Log.WARN,"The hosts database is possibly in use by another process, perhaps the router? " + "The database is not designed for simultaneous access by multiple processes.\n" + "If you are using clients outside the router JVM, consider using the hosts.txt "+ "naming service with "+ "i2p.naming.impl=net.i2p.client.naming.HostsTxtNamingService");
+      }
     }
  catch (    IOException ioe) {
       if (raf != null) {
@@ -26,7 +33,7 @@
   }
   if (bf == null) {
     try {
-      raf=new RandomAccessFile(f,"rw");
+      raf=new RAIFile(f,true,true);
       SecureFileOutputStream.setPerms(f);
       bf=init(raf);
     }
@@ -41,8 +48,10 @@
       _log.log(Log.CRIT,"Failed to initialize database",ioe);
       throw new RuntimeException(ioe);
     }
+    readOnly=false;
   }
   _bf=bf;
   _raf=raf;
+  _readOnly=readOnly;
   _context.addShutdownTask(new Shutdown());
 }
