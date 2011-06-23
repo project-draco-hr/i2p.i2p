@@ -3,6 +3,7 @@
   _context.random().saveSeed();
   I2PThread.removeOOMEventListener(_oomListener);
   for (  Runnable task : _context.getShutdownTasks()) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Running shutdown task " + task.getClass());
     try {
       task.run();
     }
@@ -10,6 +11,7 @@
       _log.log(Log.CRIT,"Error running shutdown task",t);
     }
   }
+  _context.removeShutdownTasks();
   try {
     _context.clientManager().shutdown();
   }
@@ -59,6 +61,12 @@
     _log.log(Log.CRIT,"Error shutting down the comm system",t);
   }
   try {
+    _context.bandwidthLimiter().shutdown();
+  }
+ catch (  Throwable t) {
+    _log.log(Log.CRIT,"Error shutting down the comm system",t);
+  }
+  try {
     _context.peerManager().shutdown();
   }
  catch (  Throwable t) {
@@ -83,6 +91,32 @@
     _log.log(Log.CRIT,"Error shutting down the inbound net pool",t);
   }
   _context.deleteTempDir();
-  RouterContext.listContexts().remove(_context);
+  List<RouterContext> contexts=RouterContext.getContexts();
+  contexts.remove(_context);
+  if (contexts.isEmpty()) {
+    try {
+      DHSessionKeyBuilder.shutdown();
+    }
+ catch (    Throwable t) {
+      _log.log(Log.CRIT,"Error shutting DH",t);
+    }
+    try {
+      _context.elGamalEngine().shutdown();
+    }
+ catch (    Throwable t) {
+      _log.log(Log.CRIT,"Error shutting elGamal",t);
+    }
+  }
+ else {
+    _log.logAlways(Log.WARN,"Warning - " + contexts.size() + " routers remaining in this JVM, not releasing all resources");
+  }
+  try {
+    ((FortunaRandomSource)_context.random()).shutdown();
+  }
+ catch (  Throwable t) {
+    _log.log(Log.CRIT,"Error shutting random()",t);
+  }
+  _watchdog.shutdown();
+  _watchdogThread.interrupt();
   finalShutdown(exitCode);
 }

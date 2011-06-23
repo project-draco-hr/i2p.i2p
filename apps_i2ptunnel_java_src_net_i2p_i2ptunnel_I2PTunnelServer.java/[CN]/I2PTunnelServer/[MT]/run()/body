@@ -1,12 +1,11 @@
 {
   I2PServerSocket i2pS_S=sockMgr.getServerSocket();
-  ThreadPoolExecutor executor=null;
   if (_log.shouldLog(Log.WARN)) {
     if (_usePool)     _log.warn("Starting executor with " + getHandlerCount() + " threads max");
  else     _log.warn("Threads disabled, running blockingHandles inline");
   }
   if (_usePool) {
-    executor=new CustomThreadPoolExecutor(getHandlerCount(),"ServerHandler pool " + remoteHost + ':'+ remotePort);
+    _executor=new CustomThreadPoolExecutor(getHandlerCount(),"ServerHandler pool " + remoteHost + ':'+ remotePort);
   }
   while (open) {
     try {
@@ -14,7 +13,7 @@
       if (i2ps == null)       throw new I2PException("I2PServerSocket closed");
       if (_usePool) {
         try {
-          executor.execute(new Handler(i2ps));
+          _executor.execute(new Handler(i2ps));
         }
  catch (        RejectedExecutionException ree) {
           try {
@@ -44,5 +43,5 @@ catch (    ConnectException ce) {
 catch (    SocketTimeoutException ste) {
     }
   }
-  if (executor != null)   executor.shutdownNow();
+  if (_executor != null)   _executor.shutdownNow();
 }
