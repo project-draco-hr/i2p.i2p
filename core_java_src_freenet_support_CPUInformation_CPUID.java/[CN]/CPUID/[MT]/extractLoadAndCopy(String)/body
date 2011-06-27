@@ -1,0 +1,48 @@
+{
+  URL resource=CPUID.class.getClassLoader().getResource(resourceName);
+  if (resource == null)   return false;
+  File outFile=null;
+  FileOutputStream fos=null;
+  String filename=libPrefix + "jcpuid" + libSuffix;
+  try {
+    InputStream libStream=resource.openStream();
+    outFile=new File(I2PAppContext.getGlobalContext().getTempDir(),filename);
+    fos=new FileOutputStream(outFile);
+    byte buf[]=new byte[4096];
+    while (true) {
+      int read=libStream.read(buf);
+      if (read < 0)       break;
+      fos.write(buf,0,read);
+    }
+    fos.close();
+    fos=null;
+    System.load(outFile.getAbsolutePath());
+  }
+ catch (  UnsatisfiedLinkError ule) {
+    if (_doLog) {
+      System.err.println("WARNING: The resource " + resourceName + " was not a valid library for this platform "+ ule);
+    }
+    if (outFile != null)     outFile.delete();
+    return false;
+  }
+catch (  IOException ioe) {
+    if (_doLog) {
+      System.err.println("ERROR: Problem writing out the temporary native library data");
+      ioe.printStackTrace();
+    }
+    if (outFile != null)     outFile.delete();
+    return false;
+  }
+ finally {
+    if (fos != null) {
+      try {
+        fos.close();
+      }
+ catch (      IOException ioe) {
+      }
+    }
+  }
+  File newFile=new File(I2PAppContext.getGlobalContext().getBaseDir(),filename);
+  FileUtil.copy(outFile.getAbsolutePath(),newFile.getAbsolutePath(),false,true);
+  return true;
+}

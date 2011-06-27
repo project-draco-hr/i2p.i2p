@@ -1,17 +1,76 @@
 {
   I2PAppContext ctx=I2PAppContext.getGlobalContext();
-  byte data[]=new byte[4096];
+  byte data[]=new byte[1024];
   ctx.random().nextBytes(data);
-  Object keys[]=ctx.keyGenerator().generateSigningKeypair();
   try {
-    for (int i=0; i < 10; i++) {
-      Signature sig=ctx.dsa().sign(data,(SigningPrivateKey)keys[1]);
-      boolean ok=ctx.dsa().verifySignature(sig,data,(SigningPublicKey)keys[0]);
-      System.out.println("OK: " + ok);
+    Thread.sleep(1000);
+  }
+ catch (  InterruptedException ie) {
+  }
+  SimpleDataStructure keys[]=null;
+  System.err.println("100 runs with new data and keys each time");
+  for (int i=0; i < 100; i++) {
+    ctx.random().nextBytes(data);
+    keys=ctx.keyGenerator().generateSigningKeys();
+    Signature sig=ctx.dsa().sign(data,(SigningPrivateKey)keys[1]);
+    Signature jsig=null;
+    try {
+      jsig=ctx.dsa().altSignSHA1(data,(SigningPrivateKey)keys[1]);
+    }
+ catch (    GeneralSecurityException gse) {
+      gse.printStackTrace();
+    }
+    boolean ok=ctx.dsa().verifySignature(jsig,data,(SigningPublicKey)keys[0]);
+    boolean usok=ctx.dsa().verifySignature(sig,data,(SigningPublicKey)keys[0]);
+    boolean jok=false;
+    try {
+      jok=ctx.dsa().altVerifySigSHA1(sig,data,(SigningPublicKey)keys[0]);
+    }
+ catch (    GeneralSecurityException gse) {
+      gse.printStackTrace();
+    }
+    boolean jjok=false;
+    ;
+    try {
+      jjok=ctx.dsa().altVerifySigSHA1(jsig,data,(SigningPublicKey)keys[0]);
+    }
+ catch (    GeneralSecurityException gse) {
+      gse.printStackTrace();
+    }
+    System.err.println("TC->TC OK: " + usok + "  JL->TC OK: "+ ok+ "  TC->JK OK: "+ jok+ "  JL->JL OK: "+ jjok);
+    if (!(ok && usok && jok&& jjok)) {
+      System.out.println("privkey\n" + net.i2p.util.HexDump.dump(keys[1].getData()));
+      return;
     }
   }
- catch (  Exception e) {
-    e.printStackTrace();
+  System.err.println("Starting speed test");
+  long start=System.currentTimeMillis();
+  for (int i=0; i < RUNS; i++) {
+    Signature sig=ctx.dsa().sign(data,(SigningPrivateKey)keys[1]);
+    boolean ok=ctx.dsa().verifySignature(sig,data,(SigningPublicKey)keys[0]);
+    if (!ok) {
+      System.err.println("TheCrypto FAIL");
+      return;
+    }
   }
-  ctx.random().saveSeed();
+  long time=System.currentTimeMillis() - start;
+  System.err.println("Time for " + RUNS + " DSA sign/verifies:");
+  System.err.println("TheCrypto time (ms): " + time);
+  start=System.currentTimeMillis();
+  for (int i=0; i < RUNS; i++) {
+    boolean ok=false;
+    try {
+      Signature jsig=ctx.dsa().altSignSHA1(data,(SigningPrivateKey)keys[1]);
+      ok=ctx.dsa().altVerifySigSHA1(jsig,data,(SigningPublicKey)keys[0]);
+    }
+ catch (    GeneralSecurityException gse) {
+      gse.printStackTrace();
+    }
+    if (!ok) {
+      System.err.println("JavaLib FAIL");
+      return;
+    }
+  }
+  time=System.currentTimeMillis() - start;
+  System.err.println("JavaLib time (ms): " + time);
 }

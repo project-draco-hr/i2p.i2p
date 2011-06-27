@@ -1,0 +1,28 @@
+{
+  if (freeListStart != 0) {
+    try {
+      if (flb == null)       flb=new FreeListBlock(file,freeListStart);
+      if (!flb.isEmpty()) {
+        if (log.shouldLog(Log.INFO))         log.info("Alloc from " + flb);
+        return flb.takePage();
+      }
+ else {
+        if (log.shouldLog(Log.INFO))         log.info("Alloc returning empty " + flb);
+        freeListStart=flb.getNextPage();
+        writeSuperBlock();
+        int rv=flb.page;
+        flb=null;
+        return rv;
+      }
+    }
+ catch (    IOException ioe) {
+      log.error("Discarding corrupt free list block page " + freeListStart,ioe);
+      freeListStart=0;
+    }
+  }
+  long offset=file.length();
+  fileLen=offset + PAGESIZE;
+  file.setLength(fileLen);
+  writeSuperBlock();
+  return (int)((offset / PAGESIZE) + 1);
+}

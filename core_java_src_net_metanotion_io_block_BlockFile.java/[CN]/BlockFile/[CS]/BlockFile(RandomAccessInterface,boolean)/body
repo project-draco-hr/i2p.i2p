@@ -1,0 +1,24 @@
+{
+  if (rai == null) {
+    throw new NullPointerException();
+  }
+  file=rai;
+  if (init) {
+    file.setLength(fileLen);
+    writeSuperBlock();
+    BSkipList.init(this,METAINDEX_PAGE,spanSize);
+  }
+  readSuperBlock();
+  if (magicBytes != MAGIC) {
+    if ((magicBytes & MAGIC_BASE) == MAGIC_BASE) {
+      throw new IOException("Expected " + MAJOR + '.'+ MINOR+ " but got "+ (magicBytes >> 8 & 0xff)+ '.'+ (magicBytes & 0xff));
+    }
+ else {
+      throw new IOException("Bad magic number");
+    }
+  }
+  if (mounted != 0)   log.warn("Warning - file was not previously closed");
+  if (fileLen != file.length())   throw new IOException("Expected file length " + fileLen + " but actually "+ file.length());
+  mount();
+  metaIndex=new BSkipList(spanSize,this,METAINDEX_PAGE,new StringBytes(),new IntBytes());
+}

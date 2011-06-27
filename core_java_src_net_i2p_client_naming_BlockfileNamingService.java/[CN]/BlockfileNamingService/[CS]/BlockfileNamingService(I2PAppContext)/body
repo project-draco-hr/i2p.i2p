@@ -1,0 +1,48 @@
+{
+  super(context);
+  _lists=new ArrayList();
+  _invalid=new ArrayList();
+  BlockFile bf=null;
+  RandomAccessFile raf=null;
+  File f=new File(_context.getRouterDir(),HOSTS_DB);
+  if (f.exists()) {
+    try {
+      raf=new RandomAccessFile(f,"rw");
+      bf=initExisting(raf);
+    }
+ catch (    IOException ioe) {
+      if (raf != null) {
+        try {
+          raf.close();
+        }
+ catch (        IOException e) {
+        }
+      }
+      File corrupt=new File(_context.getRouterDir(),HOSTS_DB + ".corrupt");
+      _log.log(Log.CRIT,"Corrupt or unreadable database " + f + ", moving to "+ corrupt+ " and creating new database",ioe);
+      boolean success=f.renameTo(corrupt);
+      if (!success)       _log.log(Log.CRIT,"Failed to move corrupt database " + f + " to "+ corrupt);
+    }
+  }
+  if (bf == null) {
+    try {
+      raf=new RandomAccessFile(f,"rw");
+      SecureFileOutputStream.setPerms(f);
+      bf=init(raf);
+    }
+ catch (    IOException ioe) {
+      if (raf != null) {
+        try {
+          raf.close();
+        }
+ catch (        IOException e) {
+        }
+      }
+      _log.log(Log.CRIT,"Failed to initialize database",ioe);
+      throw new RuntimeException(ioe);
+    }
+  }
+  _bf=bf;
+  _raf=raf;
+  _context.addShutdownTask(new Shutdown());
+}

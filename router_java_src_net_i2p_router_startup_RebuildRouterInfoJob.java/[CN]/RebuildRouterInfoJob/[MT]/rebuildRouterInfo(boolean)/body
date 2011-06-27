@@ -61,22 +61,28 @@
       _log.log(Log.CRIT,"Error rebuilding the new router info",dfe);
       return;
     }
+    if (!info.isValid()) {
+      _log.log(Log.CRIT,"RouterInfo we just built is invalid: " + info,new Exception());
+      return;
+    }
     FileOutputStream fos=null;
-    try {
-      fos=new SecureFileOutputStream(infoFile);
-      info.writeBytes(fos);
-    }
- catch (    DataFormatException dfe) {
-      _log.log(Log.CRIT,"Error rebuilding the router information",dfe);
-    }
-catch (    IOException ioe) {
-      _log.log(Log.CRIT,"Error writing out the rebuilt router information",ioe);
-    }
- finally {
-      if (fos != null)       try {
-        fos.close();
+synchronized (getContext().router().routerInfoFileLock) {
+      try {
+        fos=new SecureFileOutputStream(infoFile);
+        info.writeBytes(fos);
       }
- catch (      IOException ioe) {
+ catch (      DataFormatException dfe) {
+        _log.log(Log.CRIT,"Error rebuilding the router information",dfe);
+      }
+catch (      IOException ioe) {
+        _log.log(Log.CRIT,"Error writing out the rebuilt router information",ioe);
+      }
+ finally {
+        if (fos != null)         try {
+          fos.close();
+        }
+ catch (        IOException ioe) {
+        }
       }
     }
   }

@@ -2,17 +2,18 @@
   if (props != null) {
     OrderedProperties p=new OrderedProperties();
     p.putAll(props);
-    ByteArrayOutputStream baos=new ByteArrayOutputStream(32);
-    for (Iterator iter=p.keySet().iterator(); iter.hasNext(); ) {
-      String key=(String)iter.next();
-      String val=p.getProperty(key);
-      writeString(baos,key);
+    ByteArrayOutputStream baos=new ByteArrayOutputStream(p.size() * 64);
+    for (    Map.Entry entry : p.entrySet()) {
+      String key=(String)entry.getKey();
+      String val=(String)entry.getValue();
+      writeStringUTF8(baos,key);
       baos.write(EQUAL_BYTES);
-      writeString(baos,val);
+      writeStringUTF8(baos,val);
       baos.write(SEMICOLON_BYTES);
     }
     baos.close();
     byte propBytes[]=baos.toByteArray();
+    if (propBytes.length > 65535)     throw new DataFormatException("Properties too big (65535 max): " + propBytes.length);
     toLong(target,offset,2,propBytes.length);
     offset+=2;
     System.arraycopy(propBytes,0,target,offset,propBytes.length);

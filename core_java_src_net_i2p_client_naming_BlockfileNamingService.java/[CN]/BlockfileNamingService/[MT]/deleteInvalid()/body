@@ -1,0 +1,25 @@
+{
+  if (_invalid.isEmpty())   return;
+  _log.error("Removing " + _invalid.size() + " corrupt entries from database");
+  for (  InvalidEntry ie : _invalid) {
+    String key=ie.key;
+    String list=ie.list;
+    try {
+      SkipList sl=_bf.getIndex(list,_stringSerializer,_destSerializer);
+      if (sl == null) {
+        _log.error("No list found to remove corrupt \"" + key + "\" from database "+ list);
+        continue;
+      }
+      boolean success=removeEntry(sl,key) != null;
+      if (success)       _log.error("Removed corrupt \"" + key + "\" from database "+ list);
+ else       _log.error("May have Failed to remove corrupt \"" + key + "\" from database "+ list);
+    }
+ catch (    RuntimeException re) {
+      _log.error("Error while removing corrupt \"" + key + "\" from database "+ list,re);
+    }
+catch (    IOException ioe) {
+      _log.error("Error while removing corrput \"" + key + "\" from database "+ list,ioe);
+    }
+  }
+  _invalid.clear();
+}

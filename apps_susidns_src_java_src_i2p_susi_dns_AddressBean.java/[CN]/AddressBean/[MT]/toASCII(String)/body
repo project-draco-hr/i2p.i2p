@@ -1,0 +1,26 @@
+{
+  host=host.toLowerCase();
+  boolean needsIDN=false;
+  for (int i=0; i < host.length(); i++) {
+    char c=host.charAt(i);
+    if (c <= 0x2c || c == 0x2f || c >= 0x3a && c <= 0x40 || c >= 0x5b && c <= 0x60 || c >= 0x7b && c <= 0x7f) {
+      String bad="\"" + c + "\" (0x"+ Integer.toHexString(c)+ ')';
+      throw new IllegalArgumentException(_("Host name \"{0}\" contains illegal character {1}",host,bad));
+    }
+    if (c == DOT2)     host=host.replace(DOT2,DOT);
+ else     if (c == DOT3)     host=host.replace(DOT3,DOT);
+ else     if (c == DOT4)     host=host.replace(DOT4,DOT);
+ else     if (c > 0x7f)     needsIDN=true;
+  }
+  if (host.startsWith("-"))   throw new IllegalArgumentException(_("Host name cannot start with \"{0}\"","-"));
+  if (host.startsWith("."))   throw new IllegalArgumentException(_("Host name cannot start with \"{0}\"","."));
+  if (host.endsWith("-"))   throw new IllegalArgumentException(_("Host name cannot end with \"{0}\"","-"));
+  if (host.endsWith("."))   throw new IllegalArgumentException(_("Host name cannot end with \"{0}\"","."));
+  if (needsIDN) {
+    if (host.startsWith("xn--"))     throw new IllegalArgumentException(_("Host name cannot start with \"{0}\"","xn--"));
+    if (host.contains(".xn--"))     throw new IllegalArgumentException(_("Host name cannot contain \"{0}\"",".xn--"));
+    if (haveIDN)     return IDN.toASCII(host,IDN.ALLOW_UNASSIGNED);
+    throw new IllegalArgumentException(_("Host name \"{0}\" requires conversion to ASCII but the conversion library is unavailable in this JVM",host));
+  }
+  return host;
+}

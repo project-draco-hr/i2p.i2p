@@ -1,0 +1,32 @@
+{
+  String listname=null;
+  if (lookupOptions != null)   listname=lookupOptions.getProperty("list");
+  Destination d=null;
+  if (listname == null && storedOptions == null) {
+    d=super.lookup(hostname,null,null);
+    if (d != null)     return d;
+    if (hostname.length() == BASE32_HASH_LENGTH + 8 && hostname.toLowerCase().endsWith(".b32.i2p"))     return null;
+  }
+  String key=hostname.toLowerCase();
+synchronized (_bf) {
+    if (_isClosed)     return null;
+    for (    String list : _lists) {
+      if (listname != null && !list.equals(listname))       continue;
+      try {
+        DestEntry de=getEntry(list,key);
+        if (de != null) {
+          if (!validate(key,de,listname))           continue;
+          d=de.dest;
+          if (storedOptions != null && de.props != null)           storedOptions.putAll(de.props);
+          break;
+        }
+      }
+ catch (      IOException ioe) {
+        break;
+      }
+    }
+    deleteInvalid();
+  }
+  if (d != null)   putCache(hostname,d);
+  return d;
+}

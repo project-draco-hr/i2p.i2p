@@ -1,0 +1,57 @@
+{
+  if (isDirect())   return super.getLoadBookMessages();
+  NamingService service=getNamingService();
+  Debug.debug("Searching within " + service + " with filename="+ getFileName()+ " and with filter="+ filter+ " and with search="+ search);
+  String message="";
+  try {
+    LinkedList<AddressBean> list=new LinkedList();
+    Map<String,Destination> results;
+    Properties searchProps=new Properties();
+    searchProps.setProperty("list",getFileName());
+    if (filter != null) {
+      String startsAt=filter.equals("0-9") ? "[0-9]" : filter;
+      searchProps.setProperty("startsWith",startsAt);
+    }
+    if (isPrefiltered()) {
+      if (beginIndex > 0)       searchProps.setProperty("skip",Integer.toString(beginIndex));
+      int limit=1 + endIndex - beginIndex;
+      if (limit > 0)       searchProps.setProperty("limit",Integer.toString(limit));
+    }
+    if (search != null && search.length() > 0)     searchProps.setProperty("search",search.toLowerCase());
+    results=service.getEntries(searchProps);
+    Debug.debug("Result count: " + results.size());
+    for (    Map.Entry<String,Destination> entry : results.entrySet()) {
+      String name=entry.getKey();
+      if (filter != null && filter.length() > 0) {
+        if (filter.compareTo("0-9") == 0) {
+          char first=name.charAt(0);
+          if (first < '0' || first > '9')           continue;
+        }
+ else         if (!name.toLowerCase().startsWith(filter.toLowerCase())) {
+          continue;
+        }
+      }
+      if (search != null && search.length() > 0) {
+        if (name.indexOf(search) == -1) {
+          continue;
+        }
+      }
+      String destination=entry.getValue().toBase64();
+      if (destination != null) {
+        list.addLast(new AddressBean(name,destination));
+      }
+ else {
+        System.err.println("Bad entry " + name + " in database "+ service.getName());
+      }
+    }
+    AddressBean array[]=list.toArray(new AddressBean[list.size()]);
+    Arrays.sort(array,sorter);
+    entries=array;
+    message=generateLoadMessage();
+  }
+ catch (  Exception e) {
+    Debug.debug(e.getClass().getName() + ": " + e.getMessage());
+  }
+  if (message.length() > 0)   message="<p>" + message + "</p>";
+  return message;
+}

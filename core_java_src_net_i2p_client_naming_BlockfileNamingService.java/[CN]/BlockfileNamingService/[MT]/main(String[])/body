@@ -1,0 +1,67 @@
+{
+  BlockfileNamingService bns=new BlockfileNamingService(I2PAppContext.getGlobalContext());
+  List<String> names=null;
+  Properties props=new Properties();
+  try {
+    DataHelper.loadProps(props,new File("hosts.txt"),true);
+    names=new ArrayList(props.keySet());
+    Collections.shuffle(names);
+  }
+ catch (  IOException ioe) {
+    System.out.println("No hosts.txt to test with");
+    bns.close();
+    return;
+  }
+  System.out.println("size() reports " + bns.size());
+  System.out.println("getEntries() returns " + bns.getEntries().size());
+  System.out.println("Testing with " + names.size() + " hostnames");
+  int found=0;
+  int notfound=0;
+  long start=System.currentTimeMillis();
+  for (  String name : names) {
+    Destination dest=bns.lookup(name);
+    if (dest != null)     found++;
+ else     notfound++;
+  }
+  System.out.println("BFNS took " + DataHelper.formatDuration(System.currentTimeMillis() - start));
+  System.out.println("found " + found + " notfound "+ notfound);
+  System.out.println("Removing all " + names.size() + " hostnames");
+  found=0;
+  notfound=0;
+  Collections.shuffle(names);
+  start=System.currentTimeMillis();
+  for (  String name : names) {
+    if (bns.remove(name))     found++;
+ else     notfound++;
+  }
+  System.out.println("BFNS took " + DataHelper.formatDuration(System.currentTimeMillis() - start));
+  System.out.println("removed " + found + " not removed "+ notfound);
+  System.out.println("Adding back " + names.size() + " hostnames");
+  found=0;
+  notfound=0;
+  Collections.shuffle(names);
+  start=System.currentTimeMillis();
+  for (  String name : names) {
+    try {
+      if (bns.put(name,new Destination(props.getProperty(name))))       found++;
+ else       notfound++;
+    }
+ catch (    DataFormatException dfe) {
+    }
+  }
+  System.out.println("BFNS took " + DataHelper.formatDuration(System.currentTimeMillis() - start));
+  System.out.println("Added " + found + " not added "+ notfound);
+  bns.close();
+  if (true)   return;
+  HostsTxtNamingService htns=new HostsTxtNamingService(I2PAppContext.getGlobalContext());
+  found=0;
+  notfound=0;
+  start=System.currentTimeMillis();
+  for (  String name : names) {
+    Destination dest=htns.lookup(name);
+    if (dest != null)     found++;
+ else     notfound++;
+  }
+  System.out.println("HTNS took " + DataHelper.formatDuration(System.currentTimeMillis() - start));
+  System.out.println("found " + found + " notfound "+ notfound);
+}

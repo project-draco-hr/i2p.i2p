@@ -1,42 +1,60 @@
 {
-  long end=_context.clock().now() - 60 * 1000;
+  SummaryListener txLsnr=null;
+  SummaryListener rxLsnr=null;
+  for (  SummaryListener lsnr : StatSummarizer.instance().getListeners()) {
+    String title=lsnr.getRate().getRateStat().getName();
+    if (title.equals("bw.sendRate"))     txLsnr=lsnr;
+ else     if (title.equals("bw.recvRate"))     rxLsnr=lsnr;
+  }
+  if (txLsnr == null || rxLsnr == null)   throw new IOException("no rates for combined graph");
+  long end=_context.clock().now() - 75 * 1000;
   if (width > GraphHelper.MAX_X)   width=GraphHelper.MAX_X;
+ else   if (width <= 0)   width=GraphHelper.DEFAULT_X;
   if (height > GraphHelper.MAX_Y)   height=GraphHelper.MAX_Y;
-  if (periodCount <= 0)   periodCount=SummaryListener.PERIODS;
-  if (periodCount > SummaryListener.PERIODS)   periodCount=SummaryListener.PERIODS;
+ else   if (height <= 0)   height=GraphHelper.DEFAULT_Y;
+  if (periodCount <= 0 || periodCount > txLsnr.getRows())   periodCount=txLsnr.getRows();
   long period=60 * 1000;
   long start=end - period * periodCount;
   try {
     RrdGraphDef def=new RrdGraphDef();
-    def.setTimePeriod(start / 1000,0);
-    def.setLowerLimit(0d);
-    def.setBaseValue(1024);
+    def.setTimeSpan(start / 1000,end / 1000);
+    def.setMinValue(0d);
+    def.setBase(1024);
     String title=_("Bandwidth usage");
     if (!hideTitle)     def.setTitle(title);
+    long started=_context.router().getWhenStarted();
+    if (started > start && started < end)     def.vrule(started / 1000,SummaryRenderer.RESTART_BAR_COLOR,null,4.0f);
     String sendName=SummaryListener.createName(_context,"bw.sendRate.60000");
     String recvName=SummaryListener.createName(_context,"bw.recvRate.60000");
-    def.datasource(sendName,sendName,sendName,"AVERAGE","MEMORY");
-    def.datasource(recvName,recvName,recvName,"AVERAGE","MEMORY");
-    def.area(sendName,Color.BLUE,_("Outbound bytes/sec"));
-    def.line(recvName,Color.RED,_("Inbound bytes/sec") + "@r",3);
+    def.datasource(sendName,txLsnr.getData().getPath(),sendName,SummaryListener.CF,txLsnr.getBackendName());
+    def.datasource(recvName,rxLsnr.getData().getPath(),recvName,SummaryListener.CF,rxLsnr.getBackendName());
+    def.area(sendName,Color.BLUE,_("Outbound Bytes/sec"));
+    def.line(recvName,Color.RED,_("Inbound Bytes/sec") + "\\r",3);
     if (!hideLegend) {
-      def.gprint(sendName,"AVERAGE",_("out average") + ": @2@s" + _("bytes/sec"));
-      def.gprint(sendName,"MAX",' ' + _("max") + ": @2@s"+ _("bytes/sec")+ "@r");
-      def.gprint(recvName,"AVERAGE",_("in average") + ":  @2@s" + _("bytes/sec"));
-      def.gprint(recvName,"MAX",' ' + _("max") + ": @2@s"+ _("bytes/sec")+ "@r");
+      def.gprint(sendName,SummaryListener.CF,_("Out average") + ": %.2f %s" + _("Bps"));
+      def.gprint(sendName,"MAX",' ' + _("max") + ": %.2f %S"+ _("Bps")+ "\\r");
+      def.gprint(recvName,SummaryListener.CF,_("In average") + ": %.2f %S" + _("Bps"));
+      def.gprint(recvName,"MAX",' ' + _("max") + ": %.2f %S"+ _("Bps")+ "\\r");
     }
     if (!showCredit)     def.setShowSignature(false);
-    if (hideLegend)     def.setShowLegend(false);
+    if (hideLegend)     def.setNoLegend(true);
     if (hideGrid) {
-      def.setGridX(false);
-      def.setGridY(false);
+      def.setDrawXGrid(false);
+      def.setDrawYGrid(false);
     }
     def.setAntiAliasing(false);
+    def.setWidth(width);
+    def.setHeight(height);
+    def.setImageFormat("PNG");
+    def.setLazy(true);
     RrdGraph graph=new RrdGraph(def);
-    byte data[]=null;
-    if ((width <= 0) || (height <= 0))     data=graph.getPNGBytes();
- else     data=graph.getPNGBytes(width,height);
-    out.write(data);
+    int totalWidth=graph.getRrdGraphInfo().getWidth();
+    int totalHeight=graph.getRrdGraphInfo().getHeight();
+    BufferedImage img=new BufferedImage(totalWidth,totalHeight,BufferedImage.TYPE_USHORT_565_RGB);
+    Graphics gfx=img.getGraphics();
+    graph.render(gfx);
+    ImageOutputStream ios=new MemoryCacheImageOutputStream(out);
+    ImageIO.write(img,"png",ios);
     return true;
   }
  catch (  RrdException re) {

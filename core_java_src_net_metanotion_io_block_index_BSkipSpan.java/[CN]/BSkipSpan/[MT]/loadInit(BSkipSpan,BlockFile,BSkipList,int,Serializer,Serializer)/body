@@ -1,0 +1,20 @@
+{
+  if (bss.isKilled)   throw new IOException("Already killed!! " + bss);
+  bss.page=spanPage;
+  bss.keySer=key;
+  bss.valSer=val;
+  bsl.spanHash.put(Integer.valueOf(spanPage),bss);
+  BlockFile.pageSeek(bf.file,spanPage);
+  int magic=bf.file.readInt();
+  if (magic != MAGIC)   throw new IOException("Bad SkipSpan magic number 0x" + Integer.toHexString(magic) + " on page "+ spanPage);
+  bss.overflowPage=bf.file.readUnsignedInt();
+  bss.prevPage=bf.file.readUnsignedInt();
+  bss.nextPage=bf.file.readUnsignedInt();
+  bss.spanSize=bf.file.readUnsignedShort();
+  bss.nKeys=bf.file.readUnsignedShort();
+  if (bss.spanSize < 1 || bss.spanSize > SkipSpan.MAX_SIZE || bss.nKeys > bss.spanSize) {
+    BlockFile.log.error("Invalid span size " + bss.nKeys + " / "+ bss.spanSize);
+    bss.nKeys=0;
+    bss.spanSize=bf.spanSize;
+  }
+}

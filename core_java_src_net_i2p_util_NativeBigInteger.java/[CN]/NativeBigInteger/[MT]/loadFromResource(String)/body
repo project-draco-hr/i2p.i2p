@@ -2,7 +2,7 @@
   if (resourceName == null)   return false;
   URL resource=ClassLoader.getSystemResource(resourceName);
   if (resource == null) {
-    if (_doLog)     System.err.println("NOTICE: Resource name [" + resourceName + "] was not found");
+    info("Resource name [" + resourceName + "] was not found");
     return false;
   }
   File outFile=null;
@@ -23,17 +23,13 @@
     System.load(outFile.getAbsolutePath());
   }
  catch (  UnsatisfiedLinkError ule) {
-    if (_doLog) {
-      System.err.println("ERROR: The resource " + resourceName + " was not a valid library for this platform");
-      ule.printStackTrace();
-    }
+    warn("Failed to load the resource " + resourceName + " - not a valid library for this platform");
+    if (outFile != null)     outFile.delete();
     return false;
   }
 catch (  IOException ioe) {
-    if (_doLog) {
-      System.err.println("ERROR: Problem writing out the temporary native library data");
-      ioe.printStackTrace();
-    }
+    warn("Problem writing out the temporary native library data",ioe);
+    if (outFile != null)     outFile.delete();
     return false;
   }
  finally {

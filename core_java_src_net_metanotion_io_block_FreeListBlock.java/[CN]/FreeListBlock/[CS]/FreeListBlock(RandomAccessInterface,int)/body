@@ -1,0 +1,23 @@
+{
+  this.file=file;
+  this.page=startPage;
+  BlockFile.pageSeek(file,startPage);
+  long magic=file.readLong();
+  if (magic != MAGIC)   throw new IOException("Bad freelist magic number 0x" + Long.toHexString(magic) + " on page "+ startPage);
+  nextPage=file.readUnsignedInt();
+  len=file.readUnsignedInt();
+  if (len > MAX_SIZE)   throw new IOException("Bad freelist size " + len);
+  branches=new int[MAX_SIZE];
+  if (len > 0) {
+    int good=0;
+    for (int i=0; i < len; i++) {
+      int fpg=file.readInt();
+      if (fpg > BlockFile.METAINDEX_PAGE)       branches[good++]=fpg;
+    }
+    if (good != len) {
+      BlockFile.log.error((len - good) + " bad pages in " + this);
+      len=good;
+      writeBlock();
+    }
+  }
+}

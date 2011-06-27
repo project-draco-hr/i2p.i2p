@@ -1,0 +1,87 @@
+{
+  String nsClass=router.getClass().getSimpleName();
+  boolean isTextFile=nsClass.equals("HostsTxtNamingService") || nsClass.equals("SingleFileNamingService");
+  Set<String> knownNames=null;
+  NamingService publishedNS=null;
+  Iterator<AddressBook> iter=subscriptions.iterator();
+  while (iter.hasNext()) {
+    long start=System.currentTimeMillis();
+    AddressBook sub=iter.next();
+    long end=System.currentTimeMillis();
+    if (DEBUG && log != null && sub.getLocation() != null)     log.append("Fetch of " + sub.getLocation() + " took "+ (end - start));
+    start=end;
+    int old=0, nnew=0, invalid=0, conflict=0, total=0;
+    for (Iterator<Map.Entry<String,String>> eIter=sub.iterator(); eIter.hasNext(); ) {
+      Map.Entry<String,String> entry=eIter.next();
+      String key=entry.getKey();
+      boolean isKnown;
+      Destination oldDest=null;
+      if (isTextFile) {
+        if (knownNames == null) {
+          Properties opts=new Properties();
+          opts.setProperty("file","hosts.txt");
+          knownNames=router.getNames(opts);
+        }
+        isKnown=knownNames.contains(key);
+      }
+ else {
+        oldDest=router.lookup(key);
+        isKnown=oldDest != null;
+      }
+      try {
+        if (!isKnown) {
+          if (AddressBook.isValidKey(key)) {
+            Destination dest=new Destination(entry.getValue());
+            Properties props=new Properties();
+            props.setProperty("s",sub.getLocation());
+            boolean success=router.put(key,dest,props);
+            if (log != null) {
+              if (success)               log.append("New address " + key + " added to address book. From: "+ sub.getLocation());
+ else               log.append("Save to naming service " + router + " failed for new key "+ key);
+            }
+            if (published != null) {
+              if (publishedNS == null)               publishedNS=new SingleFileNamingService(I2PAppContext.getGlobalContext(),published.getAbsolutePath());
+              success=publishedNS.putIfAbsent(key,dest);
+              if (!success) {
+                try {
+                  log.append("Save to published address book " + published.getCanonicalPath() + " failed for new key "+ key);
+                }
+ catch (                IOException ioe) {
+                }
+              }
+            }
+            if (isTextFile)             knownNames.add(key);
+            nnew++;
+          }
+ else           if (log != null) {
+            log.append("Bad hostname " + key + " from "+ sub.getLocation());
+            invalid++;
+          }
+        }
+ else         if (false && DEBUG && log != null) {
+          if (isTextFile)           oldDest=router.lookup(key);
+          if (oldDest != null && !oldDest.toBase64().equals(entry.getValue())) {
+            log.append("Conflict for " + key + " from "+ sub.getLocation()+ ". Destination in remote address book is "+ entry.getValue());
+            conflict++;
+          }
+ else {
+            old++;
+          }
+        }
+ else {
+          old++;
+        }
+      }
+ catch (      DataFormatException dfe) {
+        if (log != null)         log.append("Invalid b64 for" + key + " From: "+ sub.getLocation());
+        invalid++;
+      }
+      total++;
+    }
+    if (DEBUG && log != null && total > 0) {
+      log.append("Merge of " + sub.getLocation() + " into "+ router+ " took "+ (System.currentTimeMillis() - start)+ " ms with "+ total+ " total, "+ nnew+ " new, "+ old+ " old, "+ invalid+ " invalid, "+ conflict+ " conflicts");
+    }
+    sub.delete();
+  }
+  subscriptions.write();
+}

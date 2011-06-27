@@ -1,0 +1,29 @@
+{
+  if (spanSize < 1) {
+    throw new RuntimeException("Span size too small");
+  }
+  this.skipPage=skipPage;
+  this.bf=bf;
+  BlockFile.pageSeek(bf.file,skipPage);
+  long magic=bf.file.readLong();
+  if (magic != MAGIC)   throw new IOException("Bad SkipList magic number 0x" + Long.toHexString(magic) + " on page "+ skipPage);
+  firstSpanPage=bf.file.readUnsignedInt();
+  firstLevelPage=bf.file.readUnsignedInt();
+  size=bf.file.readUnsignedInt();
+  int spans=bf.file.readInt();
+  int levelCount=bf.file.readInt();
+  this.fileOnly=fileOnly;
+  if (fileOnly)   first=new IBSkipSpan(bf,this,firstSpanPage,key,val);
+ else   first=new BSkipSpan(bf,this,firstSpanPage,key,val);
+  stack=new BSkipLevels(bf,firstLevelPage,this);
+  int total=0;
+  for (  BSkipSpan ss : spanHash.values()) {
+    total+=ss.nKeys;
+  }
+  if (BlockFile.log.shouldLog(Log.DEBUG))   BlockFile.log.debug("Loaded " + this + " cached "+ levelHash.size()+ " levels and "+ spanHash.size()+ " spans with "+ total+ " entries");
+  if (levelCount != levelHash.size() || spans != spanHash.size() || size != total) {
+    if (BlockFile.log.shouldLog(Log.WARN))     BlockFile.log.warn("On-disk counts were " + levelCount + " / "+ spans+ " / "+ size+ ", correcting");
+    size=total;
+    flush();
+  }
+}

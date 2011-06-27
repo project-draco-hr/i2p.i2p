@@ -3,36 +3,43 @@
   if (action != null) {
     if (lastSerial != null && serial != null && serial.compareTo(lastSerial) == 0) {
       boolean changed=false;
-      int deleted=0;
-      String name=null;
       if (action.equals(_("Add")) || action.equals(_("Replace"))) {
         if (addressbook != null && hostname != null && destination != null) {
-          String oldDest=(String)addressbook.get(hostname);
-          if (destination.equals(oldDest)) {
-            message=_("Host name {0} is already in addressbook, unchanged.",hostname);
-          }
- else           if (oldDest != null && !action.equals(_("Replace"))) {
-            message=_("Host name {0} is already in addressbook with a different destination. Click \"Replace\" to overwrite.",hostname);
-          }
- else {
-            boolean valid=true;
-            try {
-              Destination dest=new Destination(destination);
+          try {
+            String host=AddressBean.toASCII(hostname);
+            String displayHost=host.equals(hostname) ? hostname : hostname + " (" + host+ ')';
+            String oldDest=(String)addressbook.get(host);
+            if (destination.equals(oldDest)) {
+              message=_("Host name {0} is already in address book, unchanged.",displayHost);
             }
- catch (            DataFormatException dfe) {
-              valid=false;
-            }
-            if (valid) {
-              addressbook.put(hostname,destination);
-              changed=true;
-              if (oldDest == null)               message=_("Destination added for {0}.",hostname);
- else               message=_("Destination changed for {0}.",hostname);
-              hostname=null;
-              destination=null;
+ else             if (oldDest != null && !action.equals(_("Replace"))) {
+              message=_("Host name {0} is already in address book with a different destination. Click \"Replace\" to overwrite.",displayHost);
             }
  else {
-              message=_("Invalid Base 64 destination.");
+              boolean valid=true;
+              try {
+                Destination dest=new Destination(destination);
+              }
+ catch (              DataFormatException dfe) {
+                valid=false;
+              }
+              if (valid) {
+                addressbook.put(host,destination);
+                changed=true;
+                if (oldDest == null)                 message=_("Destination added for {0}.",displayHost);
+ else                 message=_("Destination changed for {0}.",displayHost);
+                if (!host.endsWith(".i2p"))                 message+="<br>" + _("Warning - host name does not end with \".i2p\"");
+                hostname=null;
+                destination=null;
+              }
+ else {
+                message=_("Invalid Base 64 destination.");
+              }
             }
+          }
+ catch (          IllegalArgumentException iae) {
+            message=iae.getMessage();
+            if (message == null)             message=_("Invalid host name \"{0}\".",hostname);
           }
         }
  else {
@@ -40,23 +47,31 @@
         }
         search=null;
       }
- else       if (action.equals(_("Delete Selected"))) {
-        Iterator it=deletionMarks.iterator();
-        while (it.hasNext()) {
-          name=(String)it.next();
-          addressbook.remove(name);
-          changed=true;
-          deleted++;
+ else       if (action.equals(_("Delete Selected")) || action.equals(_("Delete Entry"))) {
+        String name=null;
+        int deleted=0;
+        for (        String n : deletionMarks) {
+          addressbook.remove(n);
+          String uni=AddressBean.toUnicode(n);
+          String displayHost=uni.equals(n) ? n : uni + " (" + n+ ')';
+          if (deleted++ == 0) {
+            changed=true;
+            name=displayHost;
+          }
         }
         if (changed) {
           if (deleted == 1)           message=_("Destination {0} deleted.",name);
- else           message=_("{0} destinations deleted.",deleted);
+ else           message=ngettext("1 destination deleted.","{0} destinations deleted.",deleted);
         }
+ else {
+          message=_("No entries selected to delete.");
+        }
+        if (action.equals(_("Delete Entry")))         search=null;
       }
       if (changed) {
         try {
           save();
-          message+="<br>" + _("Addressbook saved.");
+          message+="<br>" + _("Address book saved.");
         }
  catch (        Exception e) {
           Debug.debug(e.getClass().getName() + ": " + e.getMessage());

@@ -1,0 +1,68 @@
+{
+  seekData();
+  int curPage=this.page;
+  int[] curNextPage=new int[1];
+  curNextPage[0]=this.overflowPage;
+  int[] pageCounter=new int[1];
+  pageCounter[0]=HEADER_LEN;
+  int fail=0;
+  for (int i=0; i < this.nKeys; i++) {
+    if ((pageCounter[0] + 4) > BlockFile.PAGESIZE) {
+      BlockFile.pageSeek(this.bf.file,curNextPage[0]);
+      int magic=bf.file.readInt();
+      if (magic != BlockFile.MAGIC_CONT) {
+        BlockFile.log.error("Lost " + (this.nKeys - i) + " entries - Bad SkipSpan magic number 0x"+ Integer.toHexString(magic)+ " on page "+ curNextPage[0]);
+        lostEntries(i,curPage);
+        break;
+      }
+      curPage=curNextPage[0];
+      curNextPage[0]=this.bf.file.readUnsignedInt();
+      pageCounter[0]=CONT_HEADER_LEN;
+    }
+    int ksz=this.bf.file.readUnsignedShort();
+    int vsz=this.bf.file.readUnsignedShort();
+    pageCounter[0]+=4;
+    byte[] k=new byte[ksz];
+    try {
+      curPage=this.bf.readMultiPageData(k,curPage,pageCounter,curNextPage);
+    }
+ catch (    IOException ioe) {
+      BlockFile.log.error("Lost " + (this.nKeys - i) + " entries - Error loading "+ this+ " on page "+ curPage,ioe);
+      lostEntries(i,curPage);
+      break;
+    }
+    Comparable ckey=(Comparable)this.keySer.construct(k);
+    if (ckey == null) {
+      curPage=this.bf.skipMultiPageBytes(vsz,curPage,pageCounter,curNextPage);
+      BlockFile.log.error("Null deserialized key in entry " + i + " page "+ curPage);
+      fail++;
+      continue;
+    }
+    int diff=ckey.compareTo(key);
+    if (diff == 0) {
+      byte[] v=new byte[vsz];
+      try {
+        curPage=this.bf.readMultiPageData(v,curPage,pageCounter,curNextPage);
+      }
+ catch (      IOException ioe) {
+        BlockFile.log.error("Lost " + (this.nKeys - i) + " entries - Error loading "+ this+ " on page "+ curPage,ioe);
+        lostEntries(i,curPage);
+        break;
+      }
+      Object rv=this.valSer.construct(v);
+      if (rv == null) {
+        BlockFile.log.error("Null deserialized value in entry " + i + " page "+ curPage+ " key="+ ckey);
+        fail++;
+      }
+      if (fail > 0)       repair(fail);
+      return rv;
+    }
+    if (diff > 0) {
+      if (fail > 0)       repair(fail);
+      return null;
+    }
+    curPage=this.bf.skipMultiPageBytes(vsz,curPage,pageCounter,curNextPage);
+  }
+  if (fail > 0)   repair(fail);
+  return null;
+}

@@ -12,13 +12,11 @@
   SessionTag st=new SessionTag(tag);
   SessionKey key=keyManager.consumeTag(st);
   SessionKey foundKey=new SessionKey();
-  foundKey.setData(null);
   SessionKey usedKey=new SessionKey();
   Set foundTags=new HashSet();
   byte decrypted[]=null;
   boolean wasExisting=false;
   if (key != null) {
-    usedKey.setData(key.getData());
     long id=_context.random().nextLong();
     if (_log.shouldLog(Log.DEBUG))     _log.debug(id + ": Decrypting existing session encrypted with tag: " + st.toString()+ ": key: "+ key.toBase64()+ ": "+ data.length+ " bytes: "+ Base64.encode(data,0,64));
     decrypted=decryptExistingSession(data,key,targetPrivateKey,foundTags,usedKey,foundKey);
@@ -53,7 +51,7 @@
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Found key: " + foundKey.toBase64() + " tags: "+ foundTags+ " wasExisting? "+ wasExisting);
       keyManager.tagsReceived(foundKey,foundTags);
     }
- else {
+ else     if (usedKey.getData() != null) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Used key: " + usedKey.toBase64() + " tags: "+ foundTags+ " wasExisting? "+ wasExisting);
       keyManager.tagsReceived(usedKey,foundTags);
     }

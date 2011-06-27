@@ -5,15 +5,27 @@
   byte eqBuf[]=new byte[EQUAL_BYTES.length];
   byte semiBuf[]=new byte[SEMICOLON_BYTES.length];
   while (in.available() > 0) {
-    String key=readString(in);
-    int read=read(in,eqBuf);
-    if ((read != eqBuf.length) || (!eq(eqBuf,EQUAL_BYTES))) {
-      break;
+    String key;
+    try {
+      key=readString(in);
+      int read=read(in,eqBuf);
+      if ((read != eqBuf.length) || (!eq(eqBuf,EQUAL_BYTES))) {
+        throw new DataFormatException("Bad key");
+      }
     }
-    String val=readString(in);
-    read=read(in,semiBuf);
-    if ((read != semiBuf.length) || (!eq(semiBuf,SEMICOLON_BYTES))) {
-      break;
+ catch (    IOException ioe) {
+      throw new DataFormatException("Bad key",ioe);
+    }
+    String val;
+    try {
+      val=readString(in);
+      int read=read(in,semiBuf);
+      if ((read != semiBuf.length) || (!eq(semiBuf,SEMICOLON_BYTES))) {
+        throw new DataFormatException("Bad value");
+      }
+    }
+ catch (    IOException ioe) {
+      throw new DataFormatException("Bad value",ioe);
     }
     target.put(key,val);
   }

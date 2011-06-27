@@ -1,25 +1,27 @@
 {
-  _log=getContext().logManager().getLog(PersistRouterInfoJob.class);
+  Log _log=getContext().logManager().getLog(PersistRouterInfoJob.class);
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Persisting updated router info");
   String infoFilename=getContext().getProperty(PROP_INFO_FILENAME,PROP_INFO_FILENAME_DEFAULT);
   File infoFile=new File(getContext().getRouterDir(),infoFilename);
   RouterInfo info=getContext().router().getRouterInfo();
   FileOutputStream fos=null;
-  try {
-    fos=new SecureFileOutputStream(infoFile);
-    info.writeBytes(fos);
-  }
- catch (  DataFormatException dfe) {
-    _log.error("Error rebuilding the router information",dfe);
-  }
-catch (  IOException ioe) {
-    _log.error("Error writing out the rebuilt router information",ioe);
-  }
- finally {
-    if (fos != null)     try {
-      fos.close();
+synchronized (getContext().router().routerInfoFileLock) {
+    try {
+      fos=new SecureFileOutputStream(infoFile);
+      info.writeBytes(fos);
     }
- catch (    IOException ioe) {
+ catch (    DataFormatException dfe) {
+      _log.error("Error rebuilding the router information",dfe);
+    }
+catch (    IOException ioe) {
+      _log.error("Error writing out the rebuilt router information",ioe);
+    }
+ finally {
+      if (fos != null)       try {
+        fos.close();
+      }
+ catch (      IOException ioe) {
+      }
     }
   }
 }

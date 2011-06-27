@@ -1,11 +1,12 @@
 {
   super();
   _bufferCount=Math.max(context.getProperty("prng.buffers",DEFAULT_BUFFERS),2);
-  asyncBuffers=new byte[_bufferCount][BUFSIZE];
+  int bufferSize=Math.max(context.getProperty("prng.bufferSize",DEFAULT_BUFSIZE),16 * 1024);
+  asyncBuffers=new byte[_bufferCount][bufferSize];
   status=new int[_bufferCount];
   for (int i=0; i < _bufferCount; i++)   status[i]=STATUS_NEED_FILL;
   _context=context;
-  context.statManager().createRateStat("prng.bufferWaitTime","","Encryption",new long[]{60 * 1000,10 * 60 * 1000,60 * 60 * 1000});
-  context.statManager().createRateStat("prng.bufferFillTime","","Encryption",new long[]{60 * 1000,10 * 60 * 1000,60 * 60 * 1000});
+  context.statManager().createRequiredRateStat("prng.bufferWaitTime","Delay for random number buffer (ms)","Encryption",new long[]{60 * 1000,10 * 60 * 1000,60 * 60 * 1000});
+  context.statManager().createRequiredRateStat("prng.bufferFillTime","Time to fill random number buffer (ms)","Encryption",new long[]{60 * 1000,10 * 60 * 1000,60 * 60 * 1000});
   _log=context.logManager().getLog(AsyncFortunaStandalone.class);
 }
