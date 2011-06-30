@@ -1,0 +1,26 @@
+{
+  if (!file.exists())   throw new FileNotFoundException("File not found: " + file);
+  long len=file.length();
+  if (len < BLOCK_LEN + HEADER_LEN + skip)   throw new ZipException("File too short: " + file);
+  if (len > Integer.MAX_VALUE)   throw new ZipException("File too long: " + file);
+  int fileLen=(int)len;
+  byte[] buffer=new byte[Math.min(fileLen - skip,max + BLOCK_LEN)];
+  InputStream in=null;
+  try {
+    in=new FileInputStream(file);
+    if (skip > 0)     in.skip(skip);
+    byte[] hdr=new byte[HEADER_LEN];
+    DataHelper.read(in,hdr);
+    if (!DataHelper.eq(hdr,magicStart))     throw new ZipException("Not a zip file: " + file);
+    in.skip(fileLen - (skip + HEADER_LEN + buffer.length));
+    DataHelper.read(in,buffer);
+    return getComment(buffer);
+  }
+  finally {
+    if (in != null)     try {
+      in.close();
+    }
+ catch (    IOException ioe) {
+    }
+  }
+}
