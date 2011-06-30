@@ -1,7 +1,16 @@
 {
   _alive=false;
-  _timedJobs.clear();
-  _readyJobs.clear();
+synchronized (_jobLock) {
+    _timedJobs.clear();
+    _readyJobs.clear();
+    _jobLock.notifyAll();
+  }
   Job poison=new PoisonJob();
-  for (int i=0; i < _queueRunners.size(); i++)   _readyJobs.offer(poison);
+  for (  JobQueueRunner runner : _queueRunners.values()) {
+    runner.stopRunning();
+    _readyJobs.offer(poison);
+  }
+  _queueRunners.clear();
+  _jobStats.clear();
+  _runnerId=0;
 }

@@ -3,11 +3,11 @@
   StringBuilder buf=new StringBuilder(32);
   boolean read=DataHelper.readLine(_proxyIn,buf);
   if (!read)   throw new IOException("Unable to read the first line");
-  int responseCode=handleStatus(buf.toString());
+  _responseCode=handleStatus(buf.toString());
   boolean redirect=false;
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("rc: " + responseCode + " for "+ _actualURL);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("rc: " + _responseCode + " for "+ _actualURL);
   boolean rcOk=false;
-switch (responseCode) {
+switch (_responseCode) {
 case 200:
     if (_outputStream != null)     _out=_outputStream;
  else     _out=new FileOutputStream(_outputFile,false);
@@ -36,18 +36,42 @@ case 403:
 case 404:
 case 409:
 case 503:
-_keepFetching=false;
 _transferFailed=true;
+if (_alreadyTransferred == 0 && !_shouldWriteErrorToOutput) {
+_keepFetching=false;
 return;
+}
+rcOk=true;
+if (_out == null) {
+if (_outputStream != null) _out=_outputStream;
+ else _out=new FileOutputStream(_outputFile,true);
+}
+break;
 case 416:
 _bytesRemaining=0;
+if (_alreadyTransferred == 0 && !_shouldWriteErrorToOutput) {
 _keepFetching=false;
 return;
+}
+rcOk=true;
+if (_out == null) {
+if (_outputStream != null) _out=_outputStream;
+ else _out=new FileOutputStream(_outputFile,true);
+}
+break;
 case 504:
 throw new IOException("HTTP Proxy timeout");
 default :
-rcOk=false;
+if (_alreadyTransferred == 0 && !_shouldWriteErrorToOutput) {
 _keepFetching=false;
+}
+ else {
+rcOk=true;
+if (_out == null) {
+if (_outputStream != null) _out=_outputStream;
+ else _out=new FileOutputStream(_outputFile,true);
+}
+}
 _transferFailed=true;
 }
 _etag=null;
@@ -78,7 +102,7 @@ buf.setLength(0);
 key=null;
 increment(lookahead,cur);
 if (isEndOfHeaders(lookahead)) {
-if (!rcOk) throw new IOException("Invalid HTTP response code: " + responseCode);
+if (!rcOk) throw new IOException("Invalid HTTP response code: " + _responseCode);
 if (_encodingChunked) {
 _bytesRemaining=readChunkLength();
 }
