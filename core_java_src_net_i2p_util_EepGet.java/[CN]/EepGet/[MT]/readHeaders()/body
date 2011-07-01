@@ -37,7 +37,7 @@ case 404:
 case 409:
 case 503:
 _transferFailed=true;
-if (_alreadyTransferred == 0 && !_shouldWriteErrorToOutput) {
+if (_alreadyTransferred > 0 || !_shouldWriteErrorToOutput) {
 _keepFetching=false;
 return;
 }
@@ -49,7 +49,7 @@ if (_outputStream != null) _out=_outputStream;
 break;
 case 416:
 _bytesRemaining=0;
-if (_alreadyTransferred == 0 && !_shouldWriteErrorToOutput) {
+if (_alreadyTransferred > 0 || !_shouldWriteErrorToOutput) {
 _keepFetching=false;
 return;
 }
@@ -60,9 +60,18 @@ if (_outputStream != null) _out=_outputStream;
 }
 break;
 case 504:
+if (_alreadyTransferred > 0 || (!_shouldWriteErrorToOutput) || _currentAttempt < _numRetries) {
 throw new IOException("HTTP Proxy timeout");
+}
+rcOk=true;
+if (_out == null) {
+if (_outputStream != null) _out=_outputStream;
+ else _out=new FileOutputStream(_outputFile,true);
+}
+_transferFailed=true;
+break;
 default :
-if (_alreadyTransferred == 0 && !_shouldWriteErrorToOutput) {
+if (_alreadyTransferred > 0 || !_shouldWriteErrorToOutput) {
 _keepFetching=false;
 }
  else {
