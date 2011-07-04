@@ -1,10 +1,11 @@
 {
   if (!(((FloodfillNetworkDatabaseFacade)_facade).floodfillEnabled() || getContext().router().gracefulShutdownInProgress())) {
-    Set toExplore=selectKeysToExplore();
+    int num=MAX_PER_RUN;
+    if (_facade.getDataStore().size() < LOW_ROUTERS)     num*=2;
+    Set<Hash> toExplore=selectKeysToExplore(num);
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Keys to explore during this run: " + toExplore);
     _facade.removeFromExploreKeys(toExplore);
-    for (Iterator iter=toExplore.iterator(); iter.hasNext(); ) {
-      Hash key=(Hash)iter.next();
+    for (    Hash key : toExplore) {
       getContext().jobQueue().addJob(new ExploreJob(getContext(),_facade,key));
     }
   }
