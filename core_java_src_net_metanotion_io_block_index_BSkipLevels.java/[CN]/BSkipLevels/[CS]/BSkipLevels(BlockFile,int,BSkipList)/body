@@ -11,27 +11,47 @@
   if (maxLen < 1 || maxLen > MAX_SIZE || nonNull > maxLen)   throw new IOException("Invalid Level Skip size " + nonNull + " / "+ maxLen);
   spanPage=bf.file.readUnsignedInt();
   bottom=bsl.spanHash.get(Integer.valueOf(spanPage));
-  if (bottom == null)   BlockFile.log.error("No span found in cache???");
+  if (bottom == null) {
+    BlockFile.log.error("No span found in cache???");
+    throw new IOException("No span found in cache???");
+  }
   this.levels=new BSkipLevels[maxLen];
   if (BlockFile.log.shouldLog(Log.DEBUG))   BlockFile.log.debug("Reading New BSkipLevels with " + nonNull + " / "+ maxLen+ " valid levels page "+ levelPage);
   int[] lps=new int[nonNull];
   for (int i=0; i < nonNull; i++) {
     lps[i]=bf.file.readUnsignedInt();
   }
+  boolean fail=false;
   for (int i=0; i < nonNull; i++) {
     int lp=lps[i];
     if (lp != 0) {
       levels[i]=bsl.levelHash.get(Integer.valueOf(lp));
       if (levels[i] == null) {
-        levels[i]=new BSkipLevels(bf,lp,bsl);
-        bsl.levelHash.put(Integer.valueOf(lp),levels[i]);
+        try {
+          levels[i]=new BSkipLevels(bf,lp,bsl);
+          bsl.levelHash.put(Integer.valueOf(lp),levels[i]);
+        }
+ catch (        IOException ioe) {
+          BlockFile.log.error("Corrupt database, bad level " + i + " at page "+ lp,ioe);
+          levels[i]=null;
+          fail=true;
+          continue;
+        }
       }
- else {
+      Comparable ourKey=key();
+      Comparable nextKey=levels[i].key();
+      if (ourKey != null && nextKey != null && ourKey.compareTo(nextKey) >= 0) {
+        BlockFile.log.warn("Corrupt database, level out of order " + this + ' '+ print()+ " i = "+ i+ ' '+ levels[i]);
       }
     }
  else {
       if (BlockFile.log.shouldLog(Log.WARN))       BlockFile.log.warn("WTF " + this + " i = "+ i+ " of "+ nonNull+ " / "+ maxLen+ " valid levels but page is zero");
       levels[i]=null;
+      fail=true;
     }
+  }
+  if (fail && bf.file.canWrite()) {
+    BlockFile.log.error("Repairing corruption of " + this + ' '+ print());
+    flush();
   }
 }

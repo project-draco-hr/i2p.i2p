@@ -1,0 +1,44 @@
+{
+  BlockFile.log.warn("    Skip level at width " + width);
+  BlockFile.log.warn("        levels " + this.levels.length);
+  BlockFile.log.warn("        first key " + this.key());
+  BlockFile.log.warn("        spanPage " + this.spanPage);
+  BlockFile.log.warn("        levelPage " + this.levelPage);
+  SkipLevels higher=null;
+  for (int i=levels.length - 1; i >= 0; i--) {
+    if (levels[i] != null) {
+      BlockFile.log.info("                level " + i + " -> "+ levels[i].key()+ " ");
+      if (higher != null) {
+        if (higher.key().compareTo(key()) < 0)         BlockFile.log.warn("                Higher level has lower key " + higher.key());
+      }
+    }
+ else {
+      BlockFile.log.info("                level " + i + " empty");
+      if (higher != null)       BlockFile.log.warn("                Higher level is not empty, key is " + higher.key());
+    }
+  }
+  if (prevLevels != null) {
+    int min=Math.min(prevLevels.length,levels.length);
+    for (int i=0; i < min; i++) {
+      if (prevLevels[i] == this) {
+        prevLevels[i]=levels[i];
+      }
+ else       if (prevLevels[i] != null) {
+        BlockFile.log.warn("                Previous levels is non-null " + prevLevels[i].key() + " but not pointing to us at level "+ i);
+        prevLevels[i]=levels[i];
+      }
+ else {
+        if (levels[i] != null) {
+          BlockFile.log.warn("                Previous levels is null but we are non-null " + levels[i].key() + " at level "+ i);
+          prevLevels[i]=levels[i];
+        }
+      }
+    }
+  }
+ else {
+    prevLevels=new SkipLevels[levels.length];
+    System.arraycopy(levels,0,prevLevels,0,levels.length);
+  }
+  if (levels[0] != null)   levels[0].blvlck(fix,width + 1,prevLevels);
+  return false;
+}

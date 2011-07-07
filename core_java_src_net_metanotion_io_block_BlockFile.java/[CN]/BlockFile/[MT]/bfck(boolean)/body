@@ -1,28 +1,31 @@
 {
-  log.warn("magic bytes " + magicBytes);
-  log.warn("fileLen " + fileLen);
-  log.warn("freeListStart " + freeListStart);
-  log.warn("mounted " + mounted);
-  log.warn("spanSize " + spanSize);
-  log.warn("Metaindex");
-  metaIndex.bslck(true,fix);
+  log.info("magic bytes " + magicBytes);
+  log.info("fileLen " + fileLen);
+  log.info("freeListStart " + freeListStart);
+  log.info("mounted " + mounted);
+  log.info("spanSize " + spanSize);
+  log.info("Metaindex");
+  log.info("Checking meta index in blockfile " + file);
+  boolean rv=metaIndex.bslck(fix,true);
+  if (rv)   log.warn("Repaired meta index in blockfile " + file);
+ else   log.info("No errors in meta index in blockfile " + file);
   int items=0;
   for (SkipIterator iter=metaIndex.iterator(); iter.hasNext(); ) {
     String slname=(String)iter.nextKey();
     Integer page=(Integer)iter.next();
-    log.warn("List " + slname + " page "+ page);
+    log.info("List " + slname + " page "+ page);
     try {
       BSkipList bsl=getIndex(slname,new UTF8StringBytes(),new IdentityBytes());
       if (bsl == null) {
         log.error("Can't find list? " + slname);
         continue;
       }
-      bsl.bslck(false,fix);
       items++;
     }
  catch (    IOException ioe) {
       log.error("Error with list " + slname,ioe);
     }
   }
-  log.warn("actual size " + items);
+  log.info("Checked meta index and " + items + " skiplists");
+  return rv;
 }

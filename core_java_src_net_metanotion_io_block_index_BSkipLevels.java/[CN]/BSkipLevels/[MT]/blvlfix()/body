@@ -1,0 +1,43 @@
+{
+  TreeSet<SkipLevels> lvls=new TreeSet(new LevelComparator());
+  if (BlockFile.log.shouldLog(Log.DEBUG))   BlockFile.log.debug("Starting level search");
+  getAllLevels(this,lvls);
+  if (BlockFile.log.shouldLog(Log.DEBUG))   BlockFile.log.debug("Finished level search, found " + lvls.size() + " levels");
+  if (!this.equals(lvls.last())) {
+    BlockFile.log.error("First level is out of order! " + print());
+  }
+  boolean rv=false;
+  SkipLevels after=null;
+  for (  SkipLevels lv : lvls) {
+    boolean modified=false;
+    if (BlockFile.log.shouldLog(Log.DEBUG))     BlockFile.log.debug("Checking " + lv.print());
+    if (after != null) {
+      int min=Math.min(after.levels.length,lv.levels.length);
+      for (int i=0; i < min; i++) {
+        SkipLevels cur=lv.levels[i];
+        if (cur != after) {
+          if (cur != null)           BlockFile.log.warn("Level " + i + " was wrong, fixing for "+ lv.print());
+ else           BlockFile.log.warn("Level " + i + " was null, fixing for "+ lv.print());
+          lv.levels[i]=after;
+          modified=true;
+        }
+      }
+    }
+ else {
+      for (int i=0; i < lv.levels.length; i++) {
+        if (lv.levels[i] != null) {
+          lv.levels[i]=null;
+          BlockFile.log.warn("Last level " + i + " was non-null, fixing for "+ lv.print());
+          modified=true;
+        }
+      }
+    }
+    if (modified) {
+      lv.flush();
+      rv=true;
+    }
+    after=lv;
+  }
+  if (BlockFile.log.shouldLog(Log.INFO))   BlockFile.log.info("Checked " + lvls.size() + " levels");
+  return rv;
+}
