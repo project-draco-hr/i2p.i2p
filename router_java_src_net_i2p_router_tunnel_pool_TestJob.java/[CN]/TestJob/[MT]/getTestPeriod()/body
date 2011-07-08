@@ -1,5 +1,12 @@
 {
   if (_outTunnel == null || _replyTunnel == null)   return 15 * 1000;
-  int delay=3 * (int)getContext().statManager().getRate("transport.sendProcessingTime").getRate(60 * 1000).getAverageValue();
-  return delay + (2500 * (_outTunnel.getLength() + _replyTunnel.getLength()));
+  RateStat tspt=getContext().statManager().getRate("transport.sendProcessingTime");
+  if (tspt != null) {
+    Rate r=tspt.getRate(60 * 1000);
+    if (r != null) {
+      int delay=3 * (int)r.getAverageValue();
+      return delay + (2500 * (_outTunnel.getLength() + _replyTunnel.getLength()));
+    }
+  }
+  return 15 * 1000;
 }
