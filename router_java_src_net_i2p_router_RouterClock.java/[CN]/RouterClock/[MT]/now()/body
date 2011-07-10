@@ -1,7 +1,12 @@
 {
   long systemNow=System.currentTimeMillis();
   long offset=_offset;
-  if (systemNow >= _lastSlewed + MAX_SLEW) {
+  long sinceLastSlewed=systemNow - _lastSlewed;
+  if (sinceLastSlewed >= MASSIVE_SHIFT || sinceLastSlewed <= 0 - MASSIVE_SHIFT) {
+    _lastSlewed=systemNow;
+    notifyMassive(sinceLastSlewed);
+  }
+ else   if (sinceLastSlewed >= MAX_SLEW) {
     long desiredOffset=_desiredOffset;
     if (desiredOffset > offset) {
       _offset=++offset;

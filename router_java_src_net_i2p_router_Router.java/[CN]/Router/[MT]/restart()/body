@@ -1,43 +1,7 @@
 {
+  if (gracefulShutdownInProgress() || !_isAlive)   return;
+  ((RouterClock)_context.clock()).removeShiftListener(this);
   _isAlive=false;
-  try {
-    _context.commSystem().restart();
-  }
- catch (  Throwable t) {
-    _log.log(Log.CRIT,"Error restarting the comm system",t);
-  }
-  try {
-    _context.clientManager().restart();
-  }
- catch (  Throwable t) {
-    _log.log(Log.CRIT,"Error restarting the client manager",t);
-  }
-  try {
-    _context.tunnelManager().restart();
-  }
- catch (  Throwable t) {
-    _log.log(Log.CRIT,"Error restarting the tunnel manager",t);
-  }
-  try {
-    _context.peerManager().restart();
-  }
- catch (  Throwable t) {
-    _log.log(Log.CRIT,"Error restarting the peer manager",t);
-  }
-  try {
-    _context.netDb().restart();
-  }
- catch (  Throwable t) {
-    _log.log(Log.CRIT,"Error restarting the networkDb",t);
-  }
-  _log.log(Log.CRIT,"Restart teardown complete... ");
-  try {
-    Thread.sleep(10 * 1000);
-  }
- catch (  InterruptedException ie) {
-  }
-  _log.log(Log.CRIT,"Restarting...");
-  _isAlive=true;
-  _started=_context.clock().now();
-  _log.log(Log.CRIT,"Restart complete");
+  Thread t=new Thread(new Restarter(),"Router Restart");
+  t.start();
 }
