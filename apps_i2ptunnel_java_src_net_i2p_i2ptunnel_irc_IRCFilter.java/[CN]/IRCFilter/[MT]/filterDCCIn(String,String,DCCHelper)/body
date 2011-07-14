@@ -1,0 +1,34 @@
+{
+  int ctcp=msg.indexOf(0x01);
+  if (ctcp > 0)   msg=msg.substring(0,ctcp);
+  String[] args=msg.split(" ",5);
+  if (args.length <= 0)   return null;
+  String type=args[0];
+  if (!(type.equals("CHAT") || type.equals("SEND"))) {
+    if (ALLOW_ALL_DCC_IN) {
+      if (ctcp > 0)       return pfx + msg + (char)0x01;
+      return pfx + msg;
+    }
+    return null;
+  }
+  if (helper == null || !helper.isEnabled())   return null;
+  if (args.length < 4)   return null;
+  String arg=args[1];
+  String b32=args[2];
+  int cPort;
+  try {
+    String cp=args[3];
+    cPort=Integer.parseInt(cp);
+  }
+ catch (  NumberFormatException nfe) {
+    return null;
+  }
+  int port=helper.newIncoming(b32,cPort,type);
+  if (port < 0)   return null;
+  StringBuilder buf=new StringBuilder(256);
+  byte[] myIP={127,0,0,1};
+  buf.append(pfx).append(type).append(' ').append(arg).append(' ').append(DataHelper.fromLong(myIP,0,myIP.length)).append(' ').append(port);
+  if (args.length > 4)   buf.append(' ').append(args[4]);
+  if (pfx.indexOf(0x01) >= 0)   buf.append((char)0x01);
+  return buf.toString();
+}

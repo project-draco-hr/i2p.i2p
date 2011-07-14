@@ -1,0 +1,27 @@
+{
+  I2PSocket i2ps=null;
+  if (_log.shouldLog(Log.INFO))   _log.info("Opening DCC connection to " + _dest + ':'+ _remotePort);
+  Destination dest=_context.namingService().lookup(_dest);
+  if (dest == null) {
+    _log.error("Could not find leaseset for DCC connection to " + _dest + ':'+ _remotePort);
+    closeSocket(s);
+    return;
+  }
+  I2PSocketOptions opts=sockMgr.buildOptions();
+  opts.setPort(_remotePort);
+  try {
+    i2ps=createI2PSocket(dest,opts);
+    new I2PTunnelRunner(s,i2ps,sockLock,null,mySockets);
+  }
+ catch (  Exception ex) {
+    _log.error("Could not make DCC connection to " + _dest + ':'+ _remotePort,ex);
+    closeSocket(s);
+    if (i2ps != null) {
+      try {
+        i2ps.close();
+      }
+ catch (      IOException ioe) {
+      }
+    }
+  }
+}

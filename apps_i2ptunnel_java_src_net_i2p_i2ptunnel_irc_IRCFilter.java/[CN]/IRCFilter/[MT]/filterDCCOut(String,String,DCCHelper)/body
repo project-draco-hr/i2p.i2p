@@ -1,0 +1,48 @@
+{
+  int ctcp=msg.indexOf(0x01);
+  if (ctcp > 0)   msg=msg.substring(0,ctcp);
+  String[] args=msg.split(" ",5);
+  if (args.length <= 0)   return null;
+  String type=args[0];
+  if (!(type.equals("CHAT") || type.equals("SEND"))) {
+    if (ALLOW_ALL_DCC_OUT) {
+      if (ctcp > 0)       return pfx + msg + (char)0x01;
+      return pfx + msg;
+    }
+  }
+  if (helper == null || !helper.isEnabled())   return null;
+  if (args.length < 4)   return null;
+  String arg=args[1];
+  byte[] ip;
+  try {
+    String ips=args[2];
+    long ipl=Long.parseLong(ips);
+    if (ipl < 0x01000000) {
+      System.err.println("Reverse / Firewall DCC not supported IP = 0x" + Long.toHexString(ipl));
+      return null;
+    }
+    ip=DataHelper.toLong(4,ipl);
+  }
+ catch (  NumberFormatException nfe) {
+    return null;
+  }
+  int cPort;
+  try {
+    String cp=args[3];
+    cPort=Integer.parseInt(cp);
+  }
+ catch (  NumberFormatException nfe) {
+    return null;
+  }
+  if (cPort <= 0) {
+    System.err.println("Reverse / Firewall DCC not supported");
+    return null;
+  }
+  int port=helper.newOutgoing(ip,cPort,type);
+  if (port < 0)   return null;
+  StringBuilder buf=new StringBuilder(256);
+  buf.append(pfx).append(type).append(' ').append(arg).append(' ').append(helper.getB32Hostname()).append(' ').append(port);
+  if (args.length > 4)   buf.append(' ').append(args[4]);
+  if (pfx.indexOf(0x01) >= 0)   buf.append((char)0x01);
+  return buf.toString();
+}

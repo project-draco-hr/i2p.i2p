@@ -1,0 +1,56 @@
+{
+  BufferedReader in;
+  OutputStream output;
+  try {
+    in=new BufferedReader(new InputStreamReader(remote.getInputStream(),"ISO-8859-1"));
+    output=local.getOutputStream();
+  }
+ catch (  IOException e) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("IrcInboundFilter: no streams",e);
+    return;
+  }
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("IrcInboundFilter: Running.");
+  try {
+    while (true) {
+      try {
+        String inmsg=in.readLine();
+        if (inmsg == null)         break;
+        if (inmsg.endsWith("\r"))         inmsg=inmsg.substring(0,inmsg.length() - 1);
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("in: [" + inmsg + "]");
+        String outmsg=IRCFilter.inboundFilter(inmsg,expectedPong,_dccHelper);
+        if (outmsg != null) {
+          if (!inmsg.equals(outmsg)) {
+            if (_log.shouldLog(Log.WARN)) {
+              _log.warn("inbound FILTERED: " + outmsg);
+              _log.warn(" - inbound was: " + inmsg);
+            }
+          }
+ else {
+            if (_log.shouldLog(Log.INFO))             _log.info("inbound: " + outmsg);
+          }
+          outmsg=outmsg + "\r\n";
+          output.write(outmsg.getBytes("ISO-8859-1"));
+          output.flush();
+        }
+ else {
+          if (_log.shouldLog(Log.WARN))           _log.warn("inbound BLOCKED: " + inmsg);
+        }
+      }
+ catch (      IOException e1) {
+        if (_log.shouldLog(Log.WARN))         _log.warn("IrcInboundFilter: disconnected",e1);
+        break;
+      }
+    }
+  }
+ catch (  RuntimeException re) {
+    _log.error("Error filtering inbound data",re);
+  }
+ finally {
+    try {
+      local.close();
+    }
+ catch (    IOException e) {
+    }
+  }
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("IrcInboundFilter: Done.");
+}
