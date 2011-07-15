@@ -5,13 +5,15 @@
   if (dest == null) {
     _log.error("Could not find leaseset for DCC connection to " + _dest + ':'+ _remotePort);
     closeSocket(s);
+    stop();
+    notifyEvent(CONNECT_STOP_EVENT,Integer.valueOf(getLocalPort()));
     return;
   }
   I2PSocketOptions opts=sockMgr.buildOptions();
   opts.setPort(_remotePort);
   try {
     i2ps=createI2PSocket(dest,opts);
-    new I2PTunnelRunner(s,i2ps,sockLock,null,mySockets);
+    new Runner(s,i2ps);
   }
  catch (  Exception ex) {
     _log.error("Could not make DCC connection to " + _dest + ':'+ _remotePort,ex);
@@ -23,5 +25,7 @@
  catch (      IOException ioe) {
       }
     }
+    notifyEvent(CONNECT_STOP_EVENT,Integer.valueOf(getLocalPort()));
   }
+  stop();
 }
