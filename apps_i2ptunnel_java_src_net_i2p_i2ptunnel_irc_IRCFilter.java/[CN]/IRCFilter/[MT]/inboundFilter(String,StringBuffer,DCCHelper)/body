@@ -1,0 +1,56 @@
+{
+  String field[]=s.split(" ",4);
+  String command;
+  int idx=0;
+  final String[] allowedCommands={"MODE","JOIN","NICK","QUIT","PART","WALLOPS","ERROR","KICK","H","TOPIC","CAP"};
+  if (field[0].charAt(0) == ':')   idx++;
+  try {
+    command=field[idx++];
+  }
+ catch (  IndexOutOfBoundsException ioobe) {
+    return null;
+  }
+  idx++;
+  try {
+    new Integer(command);
+    return s;
+  }
+ catch (  NumberFormatException nfe) {
+  }
+  if ("PING".equalsIgnoreCase(command))   return "PING 127.0.0.1";
+  if ("PONG".equalsIgnoreCase(command)) {
+    String pong=expectedPong.length() > 0 ? expectedPong.toString() : s;
+    expectedPong.setLength(0);
+    return pong;
+  }
+  for (int i=0; i < allowedCommands.length; i++) {
+    if (allowedCommands[i].equalsIgnoreCase(command))     return s;
+  }
+  if ("PRIVMSG".equalsIgnoreCase(command) || "NOTICE".equalsIgnoreCase(command)) {
+    String msg;
+    msg=field[idx++];
+    if (msg.indexOf(0x01) >= 0) {
+      int count=0;
+      for (int i=0; i < msg.length(); i++) {
+        if (msg.charAt(i) == 0x01)         count++;
+      }
+      if (count != 2)       return null;
+      msg=msg.substring(2);
+      if (msg.startsWith("ACTION ")) {
+        return s;
+      }
+      if (msg.startsWith("DCC ")) {
+        StringBuilder buf=new StringBuilder(128);
+        for (int i=0; i <= idx - 2; i++) {
+          buf.append(field[i]).append(' ');
+        }
+        buf.append(":\001DCC ");
+        return filterDCCIn(buf.toString(),msg.substring(4),helper);
+      }
+      if (ALLOW_ALL_CTCP_IN)       return s;
+      return null;
+    }
+    return s;
+  }
+  return null;
+}
