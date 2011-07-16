@@ -4,7 +4,11 @@
   String[] args=msg.split(" ",5);
   if (args.length <= 0)   return null;
   String type=args[0];
-  if (!(type.equals("CHAT") || type.equals("SEND"))) {
+  boolean haveIP=true;
+  if (type == "RESUME" || type == "ACCEPT") {
+    haveIP=false;
+  }
+ else   if (!(type.equals("CHAT") || type.equals("SEND"))) {
     if (ALLOW_ALL_DCC_IN) {
       if (ctcp > 0)       return pfx + msg + (char)0x01;
       return pfx + msg;
@@ -12,23 +16,41 @@
     return null;
   }
   if (helper == null || !helper.isEnabled())   return null;
-  if (args.length < 4)   return null;
+  if (args.length < 3)   return null;
+  if (haveIP && args.length < 4)   return null;
   String arg=args[1];
-  String b32=args[2];
+  int nextArg=2;
+  String b32=null;
+  if (haveIP)   b32=args[nextArg++];
   int cPort;
   try {
-    String cp=args[3];
+    String cp=args[nextArg++];
     cPort=Integer.parseInt(cp);
   }
  catch (  NumberFormatException nfe) {
     return null;
   }
-  int port=helper.newIncoming(b32,cPort,type);
+  int port=-1;
+  if (haveIP) {
+    port=helper.newIncoming(b32,cPort,type);
+  }
+ else   if (type.equals("ACCEPT")) {
+    port=helper.acceptIncoming(cPort);
+  }
+ else   if (type.equals("RESUME")) {
+    port=helper.resumeIncoming(cPort);
+  }
   if (port < 0)   return null;
   StringBuilder buf=new StringBuilder(256);
-  byte[] myIP={127,0,0,1};
-  buf.append(pfx).append(type).append(' ').append(arg).append(' ').append(DataHelper.fromLong(myIP,0,myIP.length)).append(' ').append(port);
-  if (args.length > 4)   buf.append(' ').append(args[4]);
+  buf.append(pfx).append(type).append(' ').append(arg).append(' ');
+  if (haveIP) {
+    byte[] myIP={127,0,0,1};
+    buf.append(DataHelper.fromLong(myIP,0,myIP.length)).append(' ');
+  }
+  buf.append(port);
+  while (args.length > nextArg) {
+    buf.append(' ').append(args[nextArg++]);
+  }
   if (pfx.indexOf(0x01) >= 0)   buf.append((char)0x01);
   return buf.toString();
 }
