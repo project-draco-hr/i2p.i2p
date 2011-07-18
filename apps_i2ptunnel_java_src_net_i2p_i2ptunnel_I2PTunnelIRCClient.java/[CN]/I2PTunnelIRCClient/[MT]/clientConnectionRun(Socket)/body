@@ -1,14 +1,15 @@
 {
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("got a connection.");
+  if (_log.shouldLog(Log.INFO))   _log.info("New connection local addr is: " + s.getLocalAddress() + " from: "+ s.getInetAddress());
   Destination clientDest=pickDestination();
   I2PSocket i2ps=null;
   try {
     i2ps=createI2PSocket(clientDest);
     i2ps.setReadTimeout(readTimeout);
     StringBuffer expectedPong=new StringBuffer();
-    Thread in=new I2PAppThread(new IrcInboundFilter(s,i2ps,expectedPong,_log,this),"IRC Client " + __clientId + " in",true);
+    DCCHelper dcc=_dccEnabled ? new DCC(s.getLocalAddress().getAddress()) : null;
+    Thread in=new I2PAppThread(new IrcInboundFilter(s,i2ps,expectedPong,_log,dcc),"IRC Client " + __clientId + " in",true);
     in.start();
-    Thread out=new I2PAppThread(new IrcOutboundFilter(s,i2ps,expectedPong,_log,this),"IRC Client " + __clientId + " out",true);
+    Thread out=new I2PAppThread(new IrcOutboundFilter(s,i2ps,expectedPong,_log,dcc),"IRC Client " + __clientId + " out",true);
     out.start();
   }
  catch (  Exception ex) {
