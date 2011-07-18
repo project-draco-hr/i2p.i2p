@@ -2,7 +2,27 @@
   if (!_removeConfirmed)   return "Please confirm removal";
   TunnelController cur=getController(_tunnel);
   if (cur == null)   return "Invalid tunnel number";
-  List msgs=_group.removeController(cur);
+  List<String> msgs=_group.removeController(cur);
   msgs.addAll(doSave());
+  String pk=cur.getPrivKeyFile();
+  if (pk == null)   pk=_privKeyFile;
+  if (pk != null && pk.startsWith("i2ptunnel") && pk.endsWith("-privKeys.dat")) {
+    File pkf=new File(_context.getConfigDir(),pk);
+    if (pkf.exists()) {
+      String name=cur.getName();
+      if (name == null) {
+        name=cur.getDescription();
+        if (name == null) {
+          name=cur.getType();
+          if (name == null)           name=Long.toString(_context.clock().now());
+        }
+      }
+      name="i2ptunnel-deleted-" + name.replace(' ','_') + "-privkeys.dat";
+      File to=new File(_context.getConfigDir(),name);
+      if (to.exists())       to=new File(_context.getConfigDir(),name + '-' + _context.clock().now());
+      boolean success=FileUtil.rename(pkf,to);
+      if (success)       msgs.add("Private key file " + pkf.getAbsolutePath() + " renamed to "+ to.getAbsolutePath());
+    }
+  }
   return getMessages(msgs);
 }
