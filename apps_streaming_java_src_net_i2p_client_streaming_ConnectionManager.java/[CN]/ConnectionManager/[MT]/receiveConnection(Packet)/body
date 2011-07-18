@@ -10,22 +10,21 @@
     if (_log.shouldLog(Log.WARN))     _log.warn("Refusing connection since we have exceeded our max of " + _maxConcurrentStreams + " connections");
     reject=true;
   }
- else   if (shouldRejectConnection(synPacket)) {
-    String why;
-    if (_defaultOptions.isAccessListEnabled())     why="not whitelisted: ";
- else     if (_defaultOptions.isBlacklistEnabled())     why="blacklisted: ";
- else     why="throttled: ";
-    _log.error("Refusing connection since peer is " + why + (synPacket.getOptionalFrom() == null ? "null from" : synPacket.getOptionalFrom().calculateHash().toBase64()));
-    reject=true;
-  }
  else {
-    while (true) {
-      Connection oldCon=_connectionByInboundId.putIfAbsent(Long.valueOf(receiveId),con);
-      if (oldCon == null) {
-        break;
-      }
+    String why=shouldRejectConnection(synPacket);
+    if (why != null) {
+      _log.logAlways(Log.WARN,"Refusing connection since peer is " + why + (synPacket.getOptionalFrom() == null ? "" : ": " + synPacket.getOptionalFrom().calculateHash().toBase64()));
+      reject=true;
+    }
  else {
-        receiveId=_context.random().nextLong(Packet.MAX_STREAM_ID - 1) + 1;
+      while (true) {
+        Connection oldCon=_connectionByInboundId.putIfAbsent(Long.valueOf(receiveId),con);
+        if (oldCon == null) {
+          break;
+        }
+ else {
+          receiveId=_context.random().nextLong(Packet.MAX_STREAM_ID - 1) + 1;
+        }
       }
     }
   }
