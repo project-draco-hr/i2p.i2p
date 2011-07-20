@@ -1,13 +1,14 @@
 {
-  for (int i=0; i < _rates.length; i++) {
-    long period=_rates[i].getPeriod();
+  for (  Entry<Long,Rate> e : _rates.entrySet()) {
+    long period=e.getValue().getPeriod();
     String curPrefix=prefix + "." + DataHelper.formatDuration(period);
     try {
-      _rates[i].load(props,curPrefix,treatAsCurrent);
+      e.getValue().load(props,curPrefix,treatAsCurrent);
     }
  catch (    IllegalArgumentException iae) {
-      _rates[i]=new Rate(period);
-      _rates[i].setRateStat(this);
+      Rate rate=new Rate(period);
+      rate.setRateStat(this);
+      _rates.put(rate.getPeriod(),rate);
       if (_log.shouldLog(Log.WARN))       _log.warn("Rate for " + prefix + " is corrupt, reinitializing that period");
     }
   }
