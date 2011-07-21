@@ -1,24 +1,21 @@
 {
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Setting capabilities for " + peer.toBase64() + " to "+ caps);
-  if (caps != null)   caps=caps.toLowerCase();
-  String oldCaps=null;
-  if (caps != null)   oldCaps=_capabilitiesByPeer.put(peer,caps);
- else   oldCaps=_capabilitiesByPeer.remove(peer);
+  caps=caps.toLowerCase();
+  String oldCaps=_capabilitiesByPeer.put(peer,caps);
+  if (caps.equals(oldCaps))   return;
   if (oldCaps != null) {
     for (int i=0; i < oldCaps.length(); i++) {
       char c=oldCaps.charAt(i);
-      if ((caps == null) || (caps.indexOf(c) < 0)) {
+      if (caps.indexOf(c) < 0) {
         Set<Hash> peers=locked_getPeers(c);
         if (peers != null)         peers.remove(peer);
       }
     }
   }
-  if (caps != null) {
-    for (int i=0; i < caps.length(); i++) {
-      char c=caps.charAt(i);
-      if ((oldCaps != null) && (oldCaps.indexOf(c) >= 0))       continue;
-      Set<Hash> peers=locked_getPeers(c);
-      if (peers != null)       peers.add(peer);
-    }
+  for (int i=0; i < caps.length(); i++) {
+    char c=caps.charAt(i);
+    if ((oldCaps != null) && (oldCaps.indexOf(c) >= 0))     continue;
+    Set<Hash> peers=locked_getPeers(c);
+    if (peers != null)     peers.add(peer);
   }
 }
