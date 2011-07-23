@@ -1,0 +1,17 @@
+{
+  boolean wasEmpty=_activePeers.isEmpty();
+  boolean added=_activePeers.add(peer);
+  if (added) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Add a new message to a new peer " + peer.getRemotePeer().toBase64());
+    if (wasEmpty)     _lastCycleTime=System.currentTimeMillis();
+  }
+ else {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Add a new message to an existing peer " + peer.getRemotePeer().toBase64());
+  }
+  _context.statManager().addRateData("udp.outboundActivePeers",_activePeers.size(),0);
+  if (_isWaiting || wasEmpty) {
+synchronized (_activePeers) {
+      _activePeers.notifyAll();
+    }
+  }
+}

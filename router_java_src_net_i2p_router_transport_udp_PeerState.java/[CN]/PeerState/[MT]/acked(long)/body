@@ -1,13 +1,12 @@
 {
+  if (_dead)   return false;
   OutboundMessageState state=null;
   List<OutboundMessageState> msgs=_outboundMessages;
-  if (_dead)   return 0;
 synchronized (msgs) {
-    int sz=msgs.size();
-    for (int i=0; i < sz; i++) {
-      state=msgs.get(i);
+    for (Iterator<OutboundMessageState> iter=msgs.iterator(); iter.hasNext(); ) {
+      state=iter.next();
       if (state.getMessageId() == messageId) {
-        msgs.remove(i);
+        iter.remove();
         break;
       }
  else {
@@ -26,10 +25,9 @@ synchronized (msgs) {
     int numFragments=state.getFragmentCount();
     messageACKed(numFragments * state.getFragmentSize(),state.getLifetime(),numSends);
     state.releaseResources();
-    return numFragments;
   }
  else {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Received an ACK for a message not pending: " + messageId);
-    return 0;
   }
+  return state != null;
 }

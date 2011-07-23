@@ -1,20 +1,19 @@
 {
-  if (_dead)   return;
+  if (_dead)   return false;
   if (bitfield.receivedComplete()) {
-    acked(bitfield.getMessageId());
-    return;
+    return acked(bitfield.getMessageId());
   }
   List<OutboundMessageState> msgs=_outboundMessages;
   OutboundMessageState state=null;
   boolean isComplete=false;
 synchronized (msgs) {
-    for (int i=0; i < msgs.size(); i++) {
-      state=msgs.get(i);
+    for (Iterator<OutboundMessageState> iter=msgs.iterator(); iter.hasNext(); ) {
+      state=iter.next();
       if (state.getMessageId() == bitfield.getMessageId()) {
         boolean complete=state.acked(bitfield);
         if (complete) {
           isComplete=true;
-          msgs.remove(i);
+          iter.remove();
           if (state == _retransmitter)           _retransmitter=null;
         }
         break;
@@ -41,10 +40,10 @@ synchronized (msgs) {
     }
  else {
     }
-    return;
+    return isComplete;
   }
  else {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Received an ACK for a message not pending: " + bitfield);
-    return;
+    return false;
   }
 }
