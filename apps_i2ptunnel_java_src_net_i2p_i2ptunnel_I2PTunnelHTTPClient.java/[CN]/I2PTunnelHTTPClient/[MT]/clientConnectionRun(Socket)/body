@@ -115,9 +115,17 @@
                 pos2=fragment.indexOf("=");
                 ahelperKey=fragment.substring(pos2 + 1);
                 if (ahelperKey != null) {
-                  if (ahelperKey.endsWith(".b32.i2p")) {
+                  if (ahelperKey.endsWith(".i2p")) {
                     Destination dest=_context.namingService().lookup(ahelperKey);
-                    if (dest == null)                     throw new RuntimeException("Could not find destination for " + ahelperKey);
+                    if (dest == null) {
+                      if (_log.shouldLog(Log.WARN))                       _log.warn(getPrefix(requestId) + "Could not find destination for " + ahelperKey);
+                      byte[] header=getErrorPage("ahelper-notfound",ERR_AHELPER_NOTFOUND);
+                      out.write(header);
+                      out.write(("<p>" + _("This seems to be a bad destination:") + " "+ ahelperKey+ " "+ _("i2paddresshelper cannot help you with a destination like that!")+ "</p>").getBytes("UTF-8"));
+                      writeFooter(out);
+                      closeSocket(s);
+                      return;
+                    }
                     ahelperKey=dest.toBase64();
                   }
                   ahelperPresent=true;
@@ -165,7 +173,7 @@
                   byte[] header=getErrorPage("ahelper-conflict",ERR_AHELPER_CONFLICT);
                   out.write(header);
                   out.write(_("To visit the destination in your host database, click <a href=\"{0}\">here</a>. To visit the conflicting addresshelper destination, click <a href=\"{1}\">here</a>.",trustedURL,conflictURL).getBytes("UTF-8"));
-                  out.write(("<p></div>").getBytes());
+                  out.write(("</p></div>").getBytes());
                   writeFooter(out);
                 }
               }
