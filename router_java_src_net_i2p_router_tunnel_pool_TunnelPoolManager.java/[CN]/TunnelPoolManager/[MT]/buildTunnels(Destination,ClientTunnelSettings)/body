@@ -5,6 +5,7 @@
   settings.getOutboundSettings().setDestination(dest);
   TunnelPool inbound=null;
   TunnelPool outbound=null;
+  boolean delayOutbound=false;
 synchronized (this) {
     inbound=_clientInboundPools.get(dest);
     if (inbound == null) {
@@ -18,11 +19,13 @@ synchronized (this) {
     if (outbound == null) {
       outbound=new TunnelPool(_context,this,settings.getOutboundSettings(),new ClientPeerSelector());
       _clientOutboundPools.put(dest,outbound);
+      delayOutbound=true;
     }
  else {
       outbound.setSettings(settings.getOutboundSettings());
     }
   }
   inbound.startup();
-  SimpleScheduler.getInstance().addEvent(new DelayedStartup(outbound),3 * 1000);
+  if (delayOutbound)   SimpleScheduler.getInstance().addEvent(new DelayedStartup(outbound),1000);
+ else   outbound.startup();
 }
