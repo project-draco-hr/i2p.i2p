@@ -1,5 +1,10 @@
 {
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Handle message " + message);
-  session.propogateError(((DisconnectMessage)message).getReason(),new I2PSessionException("Disconnect Message received"));
+  String reason=((DisconnectMessage)message).getReason();
+  session.propogateError(reason,new I2PSessionException("Disconnect Message received"));
   session.destroySession(false);
+  if (reason.contains("restart")) {
+    Thread t=new I2PAppThread(new Reconnector(session),"Reconnect " + session,true);
+    t.start();
+  }
 }

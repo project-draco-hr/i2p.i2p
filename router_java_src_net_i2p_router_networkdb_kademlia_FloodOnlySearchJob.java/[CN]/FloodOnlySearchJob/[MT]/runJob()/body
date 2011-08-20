@@ -8,7 +8,7 @@
  else {
     floodfillPeers=Collections.EMPTY_LIST;
   }
-  _shouldProcessDSRM=floodfillPeers.size() < MIN_FOR_NO_DSRM || getContext().routingKeyGenerator().getLastChanged() > getContext().clock().now() - 30 * 60 * 1000;
+  _shouldProcessDSRM=floodfillPeers.size() < MIN_FOR_NO_DSRM || getContext().routingKeyGenerator().getLastChanged() > getContext().clock().now() - 60 * 60 * 1000;
   if (floodfillPeers.isEmpty()) {
     if (_log.shouldLog(Log.WARN))     _log.warn("Running netDb searches against the floodfill peers, but we don't know any");
     floodfillPeers=new ArrayList(_facade.getAllRouters());
@@ -19,10 +19,7 @@
     }
     Collections.shuffle(floodfillPeers,getContext().random());
   }
-  OutNetMessage out=getContext().messageRegistry().registerPending(_replySelector,_onReply,_onTimeout,_timeoutMs);
-synchronized (_out) {
-    _out.add(out);
-  }
+  _out=getContext().messageRegistry().registerPending(_replySelector,_onReply,_onTimeout,_timeoutMs);
   int count=0;
   for (int i=0; _lookupsRemaining < CONCURRENT_SEARCHES && i < floodfillPeers.size(); i++) {
     Hash peer=floodfillPeers.get(i);

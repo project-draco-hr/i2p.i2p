@@ -3,7 +3,6 @@
     _log.error("Can't addMapping: " + isDisabled + " "+ isNATPresent()+ " "+ _router);
     return false;
   }
-  removeMapping(protocol,port,fp,true);
   Action add=_service.getAction("AddPortMapping");
   if (add == null) {
     _log.error("Couldn't find AddPortMapping action!");
@@ -11,7 +10,10 @@
   }
   add.setArgumentValue("NewRemoteHost","");
   add.setArgumentValue("NewExternalPort",port);
-  add.setArgumentValue("NewInternalClient",_router.getInterfaceAddress());
+  String intf=_router.getInterfaceAddress();
+  String us=getOurAddress(intf);
+  if (_log.shouldLog(Log.WARN) && !us.equals(intf))   _log.warn("Requesting port forward to " + us + ':'+ port+ " when cybergarage wanted "+ intf);
+  add.setArgumentValue("NewInternalClient",us);
   add.setArgumentValue("NewInternalPort",port);
   add.setArgumentValue("NewProtocol",protocol);
   add.setArgumentValue("NewPortMappingDescription",description);

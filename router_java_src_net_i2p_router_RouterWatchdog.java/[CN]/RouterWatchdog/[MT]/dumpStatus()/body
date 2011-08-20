@@ -18,9 +18,13 @@
     _log.error("Memory: " + DataHelper.formatSize(used) + '/'+ DataHelper.formatSize(max));
     if (_consecutiveErrors == 1) {
       _log.log(Log.CRIT,"Router appears hung, or there is severe network congestion.  Watchdog starts barking!");
-      if (System.getProperty("wrapper.version") != null && !System.getProperty("os.name").startsWith("Win")) {
+      if (_context.hasWrapper() && !System.getProperty("os.name").startsWith("Win")) {
         ShellCommand sc=new ShellCommand();
-        boolean success=sc.executeSilentAndWaitTimed("./i2prouter dump",10);
+        File i2pr=new File(_context.getBaseDir(),"i2prouter");
+        String[] args=new String[2];
+        args[0]=i2pr.getAbsolutePath();
+        args[1]="dump";
+        boolean success=sc.executeSilentAndWaitTimed(args,10);
         if (success)         _log.log(Log.CRIT,"Threads dumped to wrapper log");
       }
     }

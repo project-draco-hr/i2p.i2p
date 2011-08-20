@@ -3,14 +3,7 @@ synchronized (this) {
     if (_dead)     return;
     _dead=true;
   }
-  List outBuf=null;
-synchronized (_out) {
-    outBuf=new ArrayList(_out);
-  }
-  for (int i=0; i < outBuf.size(); i++) {
-    OutNetMessage out=(OutNetMessage)outBuf.get(i);
-    getContext().messageRegistry().unregisterPending(out);
-  }
+  getContext().messageRegistry().unregisterPending(_out);
   int timeRemaining=(int)(_origExpiration - getContext().clock().now());
   if (_log.shouldLog(Log.INFO))   _log.info(getJobId() + ": Floodfill search for " + _key.toBase64()+ " failed with "+ timeRemaining+ " remaining after "+ (System.currentTimeMillis() - _created));
 synchronized (_unheardFrom) {
@@ -20,7 +13,7 @@ synchronized (_unheardFrom) {
   getContext().statManager().addRateData("netDb.failedTime",System.currentTimeMillis() - _created,System.currentTimeMillis() - _created);
 synchronized (_onFailed) {
     for (int i=0; i < _onFailed.size(); i++) {
-      Job j=(Job)_onFailed.remove(0);
+      Job j=_onFailed.remove(0);
       getContext().jobQueue().addJob(j);
     }
   }
