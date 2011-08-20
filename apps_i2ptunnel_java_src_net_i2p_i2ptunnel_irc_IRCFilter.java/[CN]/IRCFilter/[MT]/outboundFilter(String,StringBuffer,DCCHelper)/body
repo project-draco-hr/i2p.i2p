@@ -1,0 +1,68 @@
+{
+  String field[]=s.split(" ",3);
+  String command;
+  final String[] allowedCommands={"MODE","JOIN","NICK","WHO","WHOIS","LIST","NAMES","NICK","SILENCE","MAP","OPER","KICK","HELPME","RULES","TOPIC","ISON","INVITE","AWAY","CAP"};
+  if (field[0].length() == 0)   return null;
+  if (field[0].charAt(0) == ':')   return null;
+  command=field[0].toUpperCase();
+  if ("PING".equals(command)) {
+    String rv=null;
+    expectedPong.setLength(0);
+    if (field.length == 1) {
+      rv="PING";
+    }
+ else     if (field.length == 2) {
+      rv="PING " + field[1];
+    }
+ else     if (field.length == 3) {
+      rv="PING " + field[1];
+      expectedPong.append("PONG ").append(field[2]).append(" :").append(field[1]);
+    }
+ else {
+      rv=null;
+    }
+    return rv;
+  }
+  if ("PONG".equals(command))   return "PONG 127.0.0.1";
+  for (int i=0; i < allowedCommands.length; i++) {
+    if (allowedCommands[i].equals(command))     return s;
+  }
+  if ("NOTICE".equals(command)) {
+    String msg=field[2];
+    if (msg.startsWith(":DCC "))     return filterDCCOut(field[0] + ' ' + field[1]+ " :DCC ",msg.substring(5),helper);
+  }
+  if ("PRIVMSG".equals(command) || "NOTICE".equals(command)) {
+    String msg;
+    msg=field[2];
+    if (msg.indexOf(0x01) >= 0) {
+      int count=0;
+      for (int i=0; i < msg.length(); i++) {
+        if (msg.charAt(i) == 0x01)         count++;
+      }
+      if (count != 2)       return null;
+      msg=msg.substring(2);
+      if (msg.startsWith("ACTION ")) {
+        return s;
+      }
+      if (msg.startsWith("DCC "))       return filterDCCOut(field[0] + ' ' + field[1]+ " :\001DCC ",msg.substring(4),helper);
+      if (msg.toUpperCase().startsWith("XDCC ") && helper != null && helper.isEnabled())       return s;
+      if (ALLOW_ALL_CTCP_OUT)       return s;
+      return null;
+    }
+    return s;
+  }
+  if ("USER".equals(command)) {
+    int idx=field[2].lastIndexOf(":");
+    if (idx < 0)     return "USER user hostname localhost :realname";
+    String realname=field[2].substring(idx + 1);
+    String ret="USER " + field[1] + " hostname localhost :"+ realname;
+    return ret;
+  }
+  if ("PART".equals(command)) {
+    return "PART " + field[1] + " :leaving";
+  }
+  if ("QUIT".equals(command)) {
+    return "QUIT :leaving";
+  }
+  return null;
+}
