@@ -2,7 +2,7 @@
   long now=_context.clock().now();
   if (state.getNextSendTime() <= now) {
     if (!state.isFragmented()) {
-      state.fragment(fragmentSize(getMTU()));
+      state.fragment(fragmentSize(_mtu));
       if (state.getMessage() != null)       state.getMessage().timestamp("fragment into " + state.getFragmentCount());
       if (_log.shouldLog(Log.INFO))       _log.info("Fragmenting " + state);
     }
@@ -33,9 +33,9 @@
     }
  else {
       _context.statManager().addRateData("udp.sendRejected",state.getPushCount(),state.getLifetime());
-      if (_log.shouldLog(Log.WARN))       _log.warn("Allocation of " + size + " rejected w/ wsize="+ getSendWindowBytes()+ " available="+ getSendWindowBytesRemaining()+ " for message "+ state.getMessageId()+ ": "+ state);
+      if (_log.shouldLog(Log.INFO))       _log.info("Allocation of " + size + " rejected w/ wsize="+ getSendWindowBytes()+ " available="+ getSendWindowBytesRemaining()+ " for message "+ state.getMessageId()+ ": "+ state);
       state.setNextSendTime(now + (ACKSender.ACK_FREQUENCY / 2) + _context.random().nextInt(ACKSender.ACK_FREQUENCY));
-      if (_log.shouldLog(Log.WARN))       _log.warn("Retransmit after choke for next send time in " + (state.getNextSendTime() - now) + "ms");
+      if (_log.shouldLog(Log.INFO))       _log.info("Retransmit after choke for next send time in " + (state.getNextSendTime() - now) + "ms");
       return false;
     }
   }
