@@ -16,9 +16,16 @@ synchronized (_bf) {
     try {
       SkipList sl=_bf.getIndex(listname,_stringSerializer,_destSerializer);
       if (sl == null)       return false;
-      boolean rv=removeEntry(sl,key) != null;
+      Object removed=removeEntry(sl,key);
+      boolean rv=removed != null;
       if (rv) {
         removeCache(hostname);
+        try {
+          removeReverseEntry(key,((DestEntry)removed).dest);
+        }
+ catch (        ClassCastException cce) {
+          _log.error("DB reverse remove error",cce);
+        }
         for (        NamingServiceListener nsl : _listeners) {
           nsl.entryRemoved(this,key);
         }

@@ -1,0 +1,30 @@
+{
+  try {
+    SkipList rev=_bf.getIndex(REVERSE_SKIPLIST,_hashIndexSerializer,_infoSerializer);
+    if (rev == null)     rev=_bf.makeIndex(REVERSE_SKIPLIST,_hashIndexSerializer,_infoSerializer);
+    Map<String,Destination> entries=getEntries();
+    long start=System.currentTimeMillis();
+    int i=0;
+    for (    Map.Entry<String,Destination> entry : entries.entrySet()) {
+      addReverseEntry(entry.getKey(),entry.getValue());
+      i++;
+    }
+    if (_log.shouldLog(Log.WARN))     _log.warn("Created reverse index with " + i + " entries");
+    SkipList hdr=_bf.getIndex(INFO_SKIPLIST,_stringSerializer,_infoSerializer);
+    if (hdr == null)     throw new IOException("No db header");
+    Properties info=(Properties)hdr.get(PROP_INFO);
+    if (info == null)     throw new IOException("No header info");
+    info.setProperty(PROP_VERSION,VERSION);
+    info.setProperty(PROP_UPGRADED,Long.toString(_context.clock().now()));
+    hdr.put(PROP_INFO,info);
+    if (_log.shouldLog(Log.WARN))     _log.warn("Upgraded to version " + VERSION + " in "+ DataHelper.formatDuration(System.currentTimeMillis() - start));
+    return true;
+  }
+ catch (  IOException ioe) {
+    _log.error("Error upgrading DB",ioe);
+  }
+catch (  RuntimeException e) {
+    _log.error("Error upgrading DB",e);
+  }
+  return false;
+}

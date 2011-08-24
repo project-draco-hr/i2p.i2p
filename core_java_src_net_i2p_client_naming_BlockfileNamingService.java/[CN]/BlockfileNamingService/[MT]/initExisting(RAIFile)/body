@@ -6,8 +6,6 @@
     if (hdr == null)     throw new IOException("No db header");
     Properties info=(Properties)hdr.get(PROP_INFO);
     if (info == null)     throw new IOException("No header info");
-    String version=info.getProperty(PROP_VERSION);
-    if (!VERSION.equals(version))     throw new IOException("Bad db version: " + version);
     String list=info.getProperty(PROP_LISTS);
     if (list == null)     throw new IOException("No lists");
     long createdOn=0;
@@ -19,7 +17,14 @@
  catch (      NumberFormatException nfe) {
       }
     }
-    if (_log.shouldLog(Log.INFO))     _log.info("Found database version " + version + " created "+ (new Date(createdOn)).toString()+ " containing lists: "+ list);
+    String version=info.getProperty(PROP_VERSION);
+    _needsUpgrade=needsUpgrade(bf,version);
+    if (_needsUpgrade) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Upgrading from database version " + version + " to "+ VERSION+ " created "+ (new Date(createdOn)).toString()+ " containing lists: "+ list);
+    }
+ else {
+      if (_log.shouldLog(Log.INFO))       _log.info("Found database version " + version + " created "+ (new Date(createdOn)).toString()+ " containing lists: "+ list);
+    }
     List<String> skiplists=getFilenames(list);
     if (skiplists.isEmpty())     skiplists.add(FALLBACK_LIST);
     _lists.addAll(skiplists);
