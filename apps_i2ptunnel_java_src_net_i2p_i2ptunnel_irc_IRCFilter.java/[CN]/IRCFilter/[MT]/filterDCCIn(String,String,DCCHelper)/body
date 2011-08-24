@@ -30,9 +30,11 @@
  catch (  NumberFormatException nfe) {
     return null;
   }
+  if (cPort < 0 || cPort > 65535)   return null;
   int port=-1;
   if (haveIP) {
-    port=helper.newIncoming(b32,cPort,type);
+    if (cPort > 0)     port=helper.newIncoming(b32,cPort,type);
+ else     port=cPort;
   }
  else   if (type.equals("ACCEPT")) {
     port=helper.acceptIncoming(cPort);
@@ -44,8 +46,13 @@
   StringBuilder buf=new StringBuilder(256);
   buf.append(pfx).append(type).append(' ').append(arg).append(' ');
   if (haveIP) {
-    byte[] myIP=helper.getLocalAddress();
-    buf.append(DataHelper.fromLong(myIP,0,myIP.length)).append(' ');
+    if (port > 0) {
+      byte[] myIP=helper.getLocalAddress();
+      buf.append(DataHelper.fromLong(myIP,0,myIP.length)).append(' ');
+    }
+ else {
+      buf.append("0 ");
+    }
   }
   buf.append(port);
   while (args.length > nextArg) {

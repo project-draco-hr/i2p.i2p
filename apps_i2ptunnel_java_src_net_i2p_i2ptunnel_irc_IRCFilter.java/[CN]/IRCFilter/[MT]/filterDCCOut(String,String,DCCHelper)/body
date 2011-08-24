@@ -25,8 +25,8 @@
       String ips=args[nextArg++];
       long ipl=Long.parseLong(ips);
       if (ipl < 0x01000000) {
-        System.err.println("Reverse / Firewall DCC not supported IP = 0x" + Long.toHexString(ipl));
-        return null;
+        Log log=new Log(IRCFilter.class);
+        log.logAlways(Log.WARN,"Reverse / Firewall DCC, IP = 0x" + Long.toHexString(ipl));
       }
       ip=DataHelper.toLong(4,ipl);
     }
@@ -42,13 +42,18 @@
  catch (  NumberFormatException nfe) {
     return null;
   }
-  if (cPort <= 0) {
-    System.err.println("Reverse / Firewall DCC not supported");
-    return null;
-  }
+  if (cPort < 0 || cPort > 65535)   return null;
   int port=-1;
   if (haveIP) {
-    port=helper.newOutgoing(ip,cPort,type);
+    if (cPort > 0) {
+      if (ip[0] == 0)       ip=new byte[]{127,0,0,1};
+      port=helper.newOutgoing(ip,cPort,type);
+    }
+ else {
+      Log log=new Log(IRCFilter.class);
+      log.logAlways(Log.WARN,"Reverse / Firewall DCC, port = 0");
+      port=cPort;
+    }
   }
  else   if (type.equals("ACCEPT")) {
     port=helper.acceptOutgoing(cPort);
@@ -59,7 +64,10 @@
   if (port < 0)   return null;
   StringBuilder buf=new StringBuilder(256);
   buf.append(pfx).append(type).append(' ').append(arg).append(' ');
-  if (haveIP)   buf.append(helper.getB32Hostname()).append(' ');
+  if (haveIP) {
+    if (port > 0)     buf.append(helper.getB32Hostname()).append(' ');
+ else     buf.append("0 ");
+  }
   buf.append(port);
   while (args.length > nextArg) {
     buf.append(' ').append(args[nextArg++]);
