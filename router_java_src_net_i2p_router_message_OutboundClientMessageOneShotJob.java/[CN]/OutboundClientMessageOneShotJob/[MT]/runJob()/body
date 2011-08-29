@@ -4,12 +4,10 @@
     dieFatal();
     return;
   }
-  if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": Send outbound client message job beginning");
+  if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": Send outbound client message job beginning" + ": preparing to search for the leaseSet for "+ _toString);
   long timeoutMs=_overallExpiration - now;
-  if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": preparing to search for the leaseSet for " + _toString);
   Hash key=_to.calculateHash();
   SendJob success=new SendJob(getContext());
-  LookupLeaseSetFailedJob failed=new LookupLeaseSetFailedJob(getContext());
   LeaseSet ls=getContext().netDb().lookupLeaseSetLocally(key);
   if (ls != null) {
     getContext().statManager().addRateData("client.leaseSetFoundLocally",1,0);
@@ -20,6 +18,7 @@
  else {
     _leaseSetLookupBegin=getContext().clock().now();
     if (_log.shouldLog(Log.DEBUG))     _log.debug(getJobId() + ": Send outbound client message - sending off leaseSet lookup job for " + _toString);
+    LookupLeaseSetFailedJob failed=new LookupLeaseSetFailedJob(getContext());
     getContext().netDb().lookupLeaseSet(key,success,failed,timeoutMs);
   }
 }
