@@ -4,12 +4,16 @@
   }
  else {
     RouterInfo ri=_context.netDb().lookupRouterInfoLocally(_config.getSendTo());
+    int stat;
     if (ri != null) {
       _nextHopCache=ri;
       send(_config,_msg,ri);
+      stat=1;
     }
  else {
-      if (_log.shouldLog(Log.ERROR))       _log.error("Lookup the nextHop (" + _config.getSendTo().toBase64().substring(0,4) + " failed!  where do we go for "+ _config+ "?  msg dropped: "+ _msg);
+      if (_log.shouldLog(Log.WARN))       _log.warn("Lookup the nextHop (" + _config.getSendTo() + " failed!  where do we go for "+ _config+ "?  msg dropped: "+ _msg);
+      stat=0;
     }
+    _context.statManager().addRateData("tunnel.participantLookupSuccess",stat,0);
   }
 }

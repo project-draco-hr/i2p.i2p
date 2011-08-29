@@ -1,6 +1,12 @@
 {
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Request " + _state.msg.getUniqueId() + " handled with a successful deferred lookup for the next peer "+ _nextPeer.toBase64());
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Request " + _state.msg.getUniqueId() + " handled with a successful deferred lookup for the next peer "+ _nextPeer);
   RouterInfo ri=getContext().netDb().lookupRouterInfoLocally(_nextPeer);
-  if (ri != null)   handleReq(ri,_state,_req,_nextPeer);
- else   if (_log.shouldLog(Log.WARN))   _log.warn("Deferred successfully, but we couldnt find " + _nextPeer.toBase64() + "?");
+  if (ri != null) {
+    handleReq(ri,_state,_req,_nextPeer);
+    getContext().statManager().addRateData("tunnel.buildLookupSuccess",1,0);
+  }
+ else {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Deferred successfully, but we couldnt find " + _nextPeer);
+    getContext().statManager().addRateData("tunnel.buildLookupSuccess",0,0);
+  }
 }

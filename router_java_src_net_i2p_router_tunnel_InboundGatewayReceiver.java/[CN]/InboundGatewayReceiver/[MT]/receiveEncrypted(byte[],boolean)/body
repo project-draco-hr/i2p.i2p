@@ -4,11 +4,13 @@
     _target=_context.netDb().lookupRouterInfoLocally(_config.getSendTo());
     if (_target == null) {
       ReceiveJob j=null;
-      if (!alreadySearched)       j=new ReceiveJob(_context,encrypted);
-      _context.netDb().lookupRouterInfo(_config.getSendTo(),j,j,5 * 1000);
+      if (alreadySearched)       _context.statManager().addRateData("tunnel.inboundLookupSuccess",0,0);
+ else       j=new ReceiveJob(_context,encrypted);
+      _context.netDb().lookupRouterInfo(_config.getSendTo(),j,j,MAX_LOOKUP_TIME);
       return -1;
     }
   }
+  if (alreadySearched)   _context.statManager().addRateData("tunnel.inboundLookupSuccess",1,0);
   _config.incrementSentMessages();
   TunnelDataMessage msg=new TunnelDataMessage(_context);
   msg.setData(encrypted);
