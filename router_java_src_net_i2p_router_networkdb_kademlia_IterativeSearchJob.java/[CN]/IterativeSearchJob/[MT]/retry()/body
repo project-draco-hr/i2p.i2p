@@ -1,0 +1,30 @@
+{
+  long now=getContext().clock().now();
+  if (_expiration < now) {
+    failed();
+    return;
+  }
+  if (_expiration - 500 < now) {
+    return;
+  }
+  while (true) {
+    Hash peer;
+synchronized (this) {
+      if (_dead)       return;
+      int pend=_unheardFrom.size();
+      if (pend >= MAX_CONCURRENT)       return;
+      int done=_failedPeers.size();
+      if (done >= TOTAL_SEARCH_LIMIT) {
+        failed();
+        return;
+      }
+      if (done + pend >= TOTAL_SEARCH_LIMIT)       return;
+      if (_toTry.isEmpty())       return;
+      Iterator<Hash> iter=_toTry.iterator();
+      peer=iter.next();
+      iter.remove();
+      _unheardFrom.add(peer);
+    }
+    sendQuery(peer);
+  }
+}

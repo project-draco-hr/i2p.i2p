@@ -1,0 +1,26 @@
+{
+synchronized (this) {
+    if (_dead)     return;
+    _dead=true;
+  }
+  _facade.complete(_key);
+  getContext().messageRegistry().unregisterPending(_out);
+  int tries;
+synchronized (this) {
+    tries=_unheardFrom.size() + _failedPeers.size();
+    for (Iterator<Hash> iter=_unheardFrom.iterator(); iter.hasNext(); )     getContext().profileManager().dbLookupFailed(iter.next());
+  }
+  long time=System.currentTimeMillis() - _created;
+  if (_log.shouldLog(Log.INFO)) {
+    long timeRemaining=_expiration - getContext().clock().now();
+    _log.info(getJobId() + ": Iterative search for " + _key+ " failed with "+ timeRemaining+ " remaining after "+ time+ ", peers queried: "+ tries);
+  }
+  getContext().statManager().addRateData("netDb.failedTime",time,0);
+  getContext().statManager().addRateData("netDb.retries",Math.max(0,tries - 1),0);
+synchronized (_onFailed) {
+    for (int i=0; i < _onFailed.size(); i++) {
+      Job j=_onFailed.remove(0);
+      getContext().jobQueue().addJob(j);
+    }
+  }
+}

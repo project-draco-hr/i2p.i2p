@@ -3,15 +3,16 @@ synchronized (this) {
     if (_dead)     return;
     _dead=true;
   }
-  if (_log.shouldLog(Log.INFO))   _log.info(getJobId() + ": Floodfill search for " + _key.toBase64()+ " successful");
+  if (_log.shouldLog(Log.INFO))   _log.info(getJobId() + ": Floodfill search for " + _key+ " successful");
+  long time=System.currentTimeMillis() - _created;
 synchronized (_unheardFrom) {
     if (_unheardFrom.size() == 1) {
       Hash peer=_unheardFrom.iterator().next();
-      getContext().profileManager().dbLookupSuccessful(peer,System.currentTimeMillis() - _created);
+      getContext().profileManager().dbLookupSuccessful(peer,time);
     }
   }
   _facade.complete(_key);
-  getContext().statManager().addRateData("netDb.successTime",System.currentTimeMillis() - _created,System.currentTimeMillis() - _created);
+  getContext().statManager().addRateData("netDb.successTime",time,0);
 synchronized (_onFind) {
     while (!_onFind.isEmpty())     getContext().jobQueue().addJob(_onFind.remove(0));
   }

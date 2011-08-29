@@ -4,13 +4,16 @@ synchronized (this) {
     _dead=true;
   }
   getContext().messageRegistry().unregisterPending(_out);
-  int timeRemaining=(int)(_origExpiration - getContext().clock().now());
-  if (_log.shouldLog(Log.INFO))   _log.info(getJobId() + ": Floodfill search for " + _key.toBase64()+ " failed with "+ timeRemaining+ " remaining after "+ (System.currentTimeMillis() - _created));
+  long time=System.currentTimeMillis() - _created;
+  if (_log.shouldLog(Log.INFO)) {
+    int timeRemaining=(int)(_expiration - getContext().clock().now());
+    _log.info(getJobId() + ": Floodfill search for " + _key+ " failed with "+ timeRemaining+ " remaining after "+ time);
+  }
 synchronized (_unheardFrom) {
     for (Iterator<Hash> iter=_unheardFrom.iterator(); iter.hasNext(); )     getContext().profileManager().dbLookupFailed(iter.next());
   }
   _facade.complete(_key);
-  getContext().statManager().addRateData("netDb.failedTime",System.currentTimeMillis() - _created,System.currentTimeMillis() - _created);
+  getContext().statManager().addRateData("netDb.failedTime",time,0);
 synchronized (_onFailed) {
     for (int i=0; i < _onFailed.size(); i++) {
       Job j=_onFailed.remove(0);

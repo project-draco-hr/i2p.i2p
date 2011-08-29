@@ -1,0 +1,25 @@
+{
+  int tries;
+  Hash peer=null;
+synchronized (this) {
+    if (_dead)     return;
+    _dead=true;
+    tries=_unheardFrom.size() + _failedPeers.size();
+    if (_unheardFrom.size() == 1) {
+      peer=_unheardFrom.iterator().next();
+      _unheardFrom.clear();
+    }
+  }
+  _facade.complete(_key);
+  if (peer != null) {
+    Long timeSent=_sentTime.get(peer);
+    if (timeSent != null)     getContext().profileManager().dbLookupSuccessful(peer,getContext().clock().now() - timeSent.longValue());
+  }
+  long time=System.currentTimeMillis() - _created;
+  if (_log.shouldLog(Log.INFO))   _log.info(getJobId() + ": Iterative search for " + _key+ " successful after "+ time+ ", peers queried: "+ tries);
+  getContext().statManager().addRateData("netDb.successTime",time,0);
+  getContext().statManager().addRateData("netDb.retries",tries - 1,0);
+synchronized (_onFind) {
+    while (!_onFind.isEmpty())     getContext().jobQueue().addJob(_onFind.remove(0));
+  }
+}

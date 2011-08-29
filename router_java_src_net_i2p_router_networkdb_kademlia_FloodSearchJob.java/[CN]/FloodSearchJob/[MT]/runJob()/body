@@ -1,37 +1,3 @@
 {
-  List floodfillPeers=_facade.getFloodfillPeers();
-  FloodLookupSelector replySelector=new FloodLookupSelector(getContext(),this);
-  ReplyJob onReply=new FloodLookupMatchJob(getContext(),this);
-  Job onTimeout=new FloodLookupTimeoutJob(getContext(),this);
-  OutNetMessage out=getContext().messageRegistry().registerPending(replySelector,onReply,onTimeout,_timeoutMs);
-  for (int i=0; _lookupsRemaining < CONCURRENT_SEARCHES && i < floodfillPeers.size(); i++) {
-    Hash peer=(Hash)floodfillPeers.get(i);
-    if (peer.equals(getContext().routerHash()))     continue;
-    DatabaseLookupMessage dlm=new DatabaseLookupMessage(getContext(),true);
-    TunnelInfo replyTunnel=getContext().tunnelManager().selectInboundTunnel();
-    TunnelInfo outTunnel=getContext().tunnelManager().selectOutboundTunnel();
-    if ((replyTunnel == null) || (outTunnel == null)) {
-      _dead=true;
-      List<Job> removed=null;
-synchronized (_onFailed) {
-        removed=new ArrayList(_onFailed);
-        _onFailed.clear();
-      }
-      while (!removed.isEmpty())       getContext().jobQueue().addJob(removed.remove(0));
-      getContext().messageRegistry().unregisterPending(out);
-      return;
-    }
-    dlm.setFrom(replyTunnel.getPeer(0));
-    dlm.setMessageExpiration(getContext().clock().now() + 10 * 1000);
-    dlm.setReplyTunnel(replyTunnel.getReceiveTunnelId(0));
-    dlm.setSearchKey(_key);
-    if (_log.shouldLog(Log.INFO))     _log.info(getJobId() + ": Floodfill search for " + _key.toBase64()+ " to "+ peer.toBase64());
-    getContext().tunnelDispatcher().dispatchOutbound(dlm,outTunnel.getSendTunnelId(0),peer);
-    _lookupsRemaining++;
-  }
-  if (_lookupsRemaining <= 0) {
-    if (_log.shouldLog(Log.INFO))     _log.info(getJobId() + ": Floodfill search for " + _key.toBase64()+ " had no peers to send to");
-    getContext().messageRegistry().unregisterPending(out);
-    _facade.searchFull(_key,_onFind,_onFailed,_timeoutMs * FLOOD_SEARCH_TIME_FACTOR,_isLease);
-  }
+  throw new UnsupportedOperationException("use override");
 }

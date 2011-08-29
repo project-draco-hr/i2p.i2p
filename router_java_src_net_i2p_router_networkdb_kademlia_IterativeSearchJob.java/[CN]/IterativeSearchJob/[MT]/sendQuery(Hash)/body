@@ -1,0 +1,25 @@
+{
+  DatabaseLookupMessage dlm=new DatabaseLookupMessage(getContext(),true);
+  TunnelInfo replyTunnel=getContext().tunnelManager().selectInboundTunnel();
+  TunnelInfo outTunnel=getContext().tunnelManager().selectOutboundTunnel();
+  if ((replyTunnel == null) || (outTunnel == null)) {
+    failed();
+    return;
+  }
+  if (outTunnel.getLength() <= 1 && peer.equals(_key)) {
+    failed(peer,false);
+    return;
+  }
+  dlm.setFrom(replyTunnel.getPeer(0));
+  dlm.setMessageExpiration(getContext().clock().now() + SINGLE_SEARCH_MSG_TIME);
+  dlm.setReplyTunnel(replyTunnel.getReceiveTunnelId(0));
+  dlm.setSearchKey(_key);
+  if (_log.shouldLog(Log.INFO))   _log.info(getJobId() + ": Iterative search for " + _key+ " to "+ peer);
+  long now=getContext().clock().now();
+  _sentTime.put(peer,Long.valueOf(now));
+  getContext().tunnelDispatcher().dispatchOutbound(dlm,outTunnel.getSendTunnelId(0),peer);
+  Job j=new IterativeTimeoutJob(getContext(),peer,this);
+  long expire=Math.min(_expiration,now + SINGLE_SEARCH_TIME);
+  j.getTiming().setStartAfter(expire);
+  getContext().jobQueue().addJob(j);
+}

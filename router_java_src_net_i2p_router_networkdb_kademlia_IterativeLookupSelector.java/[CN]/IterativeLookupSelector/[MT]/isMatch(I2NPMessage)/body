@@ -1,0 +1,51 @@
+{
+  if (message == null)   return false;
+  if (message instanceof DatabaseStoreMessage) {
+    DatabaseStoreMessage dsm=(DatabaseStoreMessage)message;
+    if (_search.getKey().equals(dsm.getKey())) {
+      _matchFound=true;
+      return true;
+    }
+  }
+ else   if (message instanceof DatabaseSearchReplyMessage) {
+    DatabaseSearchReplyMessage dsrm=(DatabaseSearchReplyMessage)message;
+    if (_search.getKey().equals(dsrm.getSearchKey())) {
+      Hash from=dsrm.getFromHash();
+      if (_log.shouldLog(Log.INFO))       _log.info(_search.getJobId() + ": Processing DSRM via IterativeLookupJobs, apparently from " + from);
+      int limit=Math.min(dsrm.getNumReplies(),SingleLookupJob.MAX_TO_FOLLOW);
+      int newPeers=0;
+      int oldPeers=0;
+      int invalidPeers=0;
+      for (int i=0; i < limit; i++) {
+        Hash peer=dsrm.getReply(i);
+        if (peer.equals(_context.routerHash())) {
+          oldPeers++;
+          continue;
+        }
+        if (peer.equals(from)) {
+          invalidPeers++;
+          continue;
+        }
+        RouterInfo ri=_context.netDb().lookupRouterInfoLocally(peer);
+        if (ri == null) {
+          _context.jobQueue().addJob(new IterativeFollowupJob(_context,peer,from,_search));
+          newPeers++;
+        }
+ else         if (ri.getPublished() < _context.clock().now() - 60 * 60 * 1000 || !FloodfillNetworkDatabaseFacade.isFloodfill(ri)) {
+          _context.jobQueue().addJob(new IterativeFollowupJob(_context,peer,peer,_search));
+          oldPeers++;
+        }
+ else {
+          _search.newPeerToTry(peer);
+          oldPeers++;
+        }
+      }
+      long timeSent=_search.timeSent(from);
+      if (timeSent > 0) {
+        _context.profileManager().dbLookupReply(from,newPeers,oldPeers,invalidPeers,0,_context.clock().now() - timeSent);
+      }
+      _search.failed(dsrm.getFromHash(),false);
+    }
+  }
+  return false;
+}

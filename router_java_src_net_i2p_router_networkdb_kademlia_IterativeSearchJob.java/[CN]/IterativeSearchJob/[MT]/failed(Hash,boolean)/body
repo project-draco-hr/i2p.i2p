@@ -1,0 +1,18 @@
+{
+  boolean isNewFail;
+synchronized (this) {
+    if (_dead)     return;
+    _unheardFrom.remove(peer);
+    isNewFail=_failedPeers.add(peer);
+  }
+  if (isNewFail) {
+    if (timedOut) {
+      getContext().profileManager().dbLookupFailed(peer);
+      if (_log.shouldLog(Log.INFO))       _log.info(getJobId() + ": search timed out to " + peer);
+    }
+ else {
+      if (_log.shouldLog(Log.INFO))       _log.info(getJobId() + ": search failed to " + peer);
+    }
+  }
+  retry();
+}

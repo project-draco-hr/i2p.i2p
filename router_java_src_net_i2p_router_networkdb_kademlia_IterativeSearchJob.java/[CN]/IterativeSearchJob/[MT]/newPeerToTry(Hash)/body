@@ -1,0 +1,12 @@
+{
+  if (peer.equals(getContext().routerHash()) || peer.equals(_key))   return;
+  RouterInfo ri=getContext().netDb().lookupRouterInfoLocally(peer);
+  if (!FloodfillNetworkDatabaseFacade.isFloodfill(ri))   return;
+  if (getContext().shitlist().isShitlistedForever(peer))   return;
+synchronized (this) {
+    if (_failedPeers.contains(peer) || _unheardFrom.contains(peer))     return;
+    if (!_toTry.add(peer))     return;
+  }
+  if (_log.shouldLog(Log.INFO))   _log.info(getJobId() + ": new peer from DSRM " + peer);
+  retry();
+}
