@@ -348,7 +348,7 @@
       s.close();
       return;
     }
-    Destination clientDest;
+    Destination clientDest=null;
     String addressHelper=addressHelpers.get(destination.toLowerCase());
     if (addressHelper != null) {
       clientDest=_context.namingService().lookup(addressHelper);
@@ -356,6 +356,21 @@
     }
  else     if ("i2p".equals(host)) {
       clientDest=null;
+    }
+ else     if (destination.length() == 60 && destination.toLowerCase().endsWith(".b32.i2p")) {
+      verifySocketManager();
+      I2PSession sess=sockMgr.getSession();
+      if (sess != null && !sess.isClosed()) {
+        byte[] hData=Base32.decode(destination.substring(0,52));
+        if (hData != null) {
+          if (_log.shouldLog(Log.INFO))           _log.info("lookup in-session " + destination);
+          Hash hash=Hash.create(hData);
+          clientDest=sess.lookupDest(hash,20 * 1000);
+        }
+      }
+ else {
+        clientDest=_context.namingService().lookup(destination);
+      }
     }
  else {
       clientDest=_context.namingService().lookup(destination);
@@ -366,7 +381,7 @@
       String jumpServers=null;
       if (usingWWWProxy)       header=getErrorPage("dnfp",ERR_DESTINATION_UNKNOWN);
  else       if (ahelperPresent)       header=getErrorPage("dnfb",ERR_DESTINATION_UNKNOWN);
- else       if (destination.length() == 60 && destination.endsWith(".b32.i2p"))       header=getErrorPage("dnf",ERR_DESTINATION_UNKNOWN);
+ else       if (destination.length() == 60 && destination.toLowerCase().endsWith(".b32.i2p"))       header=getErrorPage("dnf",ERR_DESTINATION_UNKNOWN);
  else {
         header=getErrorPage("dnfh",ERR_DESTINATION_UNKNOWN);
         jumpServers=getTunnel().getClientOptions().getProperty(PROP_JUMP_SERVERS);
