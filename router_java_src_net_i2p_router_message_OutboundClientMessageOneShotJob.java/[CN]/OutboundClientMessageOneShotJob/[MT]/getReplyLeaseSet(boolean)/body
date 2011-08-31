@@ -18,20 +18,17 @@
       if (probability >= getContext().random().nextInt(100))       force=true;
     }
   }
-synchronized (_leaseSetCache) {
-    if (!force) {
-      LeaseSet ls=_leaseSetCache.get(hashPair());
-      if (ls != null) {
-        if (ls.equals(newLS)) {
-          if (_log.shouldLog(Log.INFO))           _log.info(getJobId() + ": Found in cache - NOT including reply leaseset for " + _toString);
-          return null;
-        }
+  LeaseSet ls=_leaseSetCache.put(_hashPair,newLS);
+  if (!force) {
+    if (ls != null) {
+      if (ls.equals(newLS)) {
+        if (_log.shouldLog(Log.INFO))         _log.info(getJobId() + ": Found in cache - NOT including reply leaseset for " + _toString);
+        return null;
+      }
  else {
-          if (_log.shouldLog(Log.INFO))           _log.info(getJobId() + ": Expired from cache - reply leaseset for " + _toString);
-        }
+        if (_log.shouldLog(Log.INFO))         _log.info(getJobId() + ": Expired from cache - reply leaseset for " + _toString);
       }
     }
-    _leaseSetCache.put(hashPair(),newLS);
   }
   if (_log.shouldLog(Log.INFO))   _log.info(getJobId() + ": Added to cache - reply leaseset for " + _toString);
   return newLS;

@@ -8,11 +8,9 @@
   int existingTags=GarlicMessageBuilder.estimateAvailableTags(getContext(),_leaseSet.getEncryptionKey(),_from.calculateHash());
   _outTunnel=selectOutboundTunnel(_to);
   boolean wantACK;
-synchronized (_lastReplyRequestCache) {
-    Long lastSent=_lastReplyRequestCache.get(hashPair());
-    wantACK=_wantACK || existingTags <= 30 || lastSent == null || lastSent.longValue() < now - REPLY_REQUEST_INTERVAL;
-    if (wantACK)     _lastReplyRequestCache.put(hashPair(),Long.valueOf(now));
-  }
+  Long lastSent=_lastReplyRequestCache.get(_hashPair);
+  wantACK=_wantACK || existingTags <= 30 || lastSent == null || lastSent.longValue() < now - REPLY_REQUEST_INTERVAL;
+  if (wantACK)   _lastReplyRequestCache.put(_hashPair,Long.valueOf(now));
   PublicKey key=_leaseSet.getEncryptionKey();
   SessionKey sessKey=new SessionKey();
   Set<SessionTag> tags=new HashSet();
@@ -50,9 +48,9 @@ synchronized (_lastReplyRequestCache) {
     onFail=new SendTimeoutJob(getContext(),sessKey,tsh);
     selector=new ReplySelector(token);
   }
-  if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": Placing GarlicMessage into the new tunnel message bound for " + _toString+ " at "+ _lease.getTunnelId()+ " on "+ _lease.getGateway().toBase64());
+  if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": Placing GarlicMessage into the new tunnel message bound for " + _toString+ " at "+ _lease.getTunnelId()+ " on "+ _lease.getGateway());
   if (_outTunnel != null) {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug(getJobId() + ": Sending tunnel message out " + _outTunnel.getSendTunnelId(0)+ " to "+ _toString+ " at "+ _lease.getTunnelId()+ " on "+ _lease.getGateway().toBase64());
+    if (_log.shouldLog(Log.DEBUG))     _log.debug(getJobId() + ": Sending tunnel message out " + _outTunnel.getSendTunnelId(0)+ " to "+ _toString+ " at "+ _lease.getTunnelId()+ " on "+ _lease.getGateway());
     DispatchJob dispatchJob=new DispatchJob(getContext(),msg,selector,onReply,onFail,(int)(_overallExpiration - getContext().clock().now()));
     dispatchJob.runJob();
   }
@@ -61,7 +59,6 @@ synchronized (_lastReplyRequestCache) {
     getContext().statManager().addRateData("client.dispatchNoTunnels",now - _start,0);
     dieFatal();
   }
-  _clientMessage=null;
   _clove=null;
   getContext().statManager().addRateData("client.dispatchPrepareTime",now - _start,0);
   if (!wantACK)   getContext().statManager().addRateData("client.dispatchNoACK",1,0);

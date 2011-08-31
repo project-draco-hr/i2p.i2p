@@ -1,26 +1,26 @@
 {
-  _leaseSet=getContext().netDb().lookupLeaseSetLocally(_to.calculateHash());
   if (_leaseSet == null) {
-    if (_log.shouldLog(Log.WARN))     _log.warn(getJobId() + ": Lookup locally didn't find the leaseSet for " + _toString);
-    return false;
-  }
-synchronized (_leaseCache) {
-    _lease=_leaseCache.get(hashPair());
-    if (_lease != null) {
-      if (!_lease.isExpired(Router.CLOCK_FUDGE_FACTOR)) {
-        for (int i=0; i < _leaseSet.getLeaseCount(); i++) {
-          Lease lease=_leaseSet.getLease(i);
-          if (_lease.equals(lease)) {
-            if (_log.shouldLog(Log.INFO))             _log.info(getJobId() + ": Found in cache - lease for " + _toString);
-            return true;
-          }
-        }
-      }
-      if (_log.shouldLog(Log.INFO))       _log.info(getJobId() + ": Expired from cache - lease for " + _toString);
-      _leaseCache.remove(hashPair());
+    _leaseSet=getContext().netDb().lookupLeaseSetLocally(_to.calculateHash());
+    if (_leaseSet == null) {
+      if (_log.shouldLog(Log.WARN))       _log.warn(getJobId() + ": Lookup locally didn't find the leaseSet for " + _toString);
+      return false;
     }
   }
-  List leases=new ArrayList(_leaseSet.getLeaseCount());
+  _lease=_leaseCache.get(_hashPair);
+  if (_lease != null) {
+    if (!_lease.isExpired(Router.CLOCK_FUDGE_FACTOR)) {
+      for (int i=0; i < _leaseSet.getLeaseCount(); i++) {
+        Lease lease=_leaseSet.getLease(i);
+        if (_lease.equals(lease)) {
+          if (_log.shouldLog(Log.INFO))           _log.info(getJobId() + ": Found in cache - lease for " + _toString);
+          return true;
+        }
+      }
+    }
+    _leaseCache.remove(_hashPair,_lease);
+    if (_log.shouldLog(Log.INFO))     _log.info(getJobId() + ": Expired from cache - lease for " + _toString);
+  }
+  List<Lease> leases=new ArrayList(_leaseSet.getLeaseCount());
   for (int i=0; i < _leaseSet.getLeaseCount(); i++) {
     Lease lease=_leaseSet.getLease(i);
     if (lease.isExpired(Router.CLOCK_FUDGE_FACTOR)) {
@@ -37,7 +37,7 @@ synchronized (_leaseCache) {
   }
   Collections.shuffle(leases,getContext().random());
   for (int i=0; i < leases.size(); i++) {
-    Lease l=(Lease)leases.get(i);
+    Lease l=leases.get(i);
     RouterInfo ri=getContext().netDb().lookupRouterInfoLocally(l.getGateway());
     if (ri == null || ri.getCapabilities().indexOf(Router.CAPABILITY_UNREACHABLE) < 0) {
       _lease=l;
@@ -46,12 +46,10 @@ synchronized (_leaseCache) {
     if (_log.shouldLog(Log.WARN))     _log.warn(getJobId() + ": Skipping unreachable gateway " + l.getGateway()+ " for "+ _toString);
   }
   if (_lease == null) {
-    _lease=(Lease)leases.get(0);
+    _lease=leases.get(0);
     if (_log.shouldLog(Log.WARN))     _log.warn(getJobId() + ": All leases are unreachable for " + _toString);
   }
-synchronized (_leaseCache) {
-    _leaseCache.put(hashPair(),_lease);
-  }
+  _leaseCache.put(_hashPair,_lease);
   if (_log.shouldLog(Log.INFO))   _log.info(getJobId() + ": Added to cache - lease for " + _toString);
   _wantACK=true;
   return true;

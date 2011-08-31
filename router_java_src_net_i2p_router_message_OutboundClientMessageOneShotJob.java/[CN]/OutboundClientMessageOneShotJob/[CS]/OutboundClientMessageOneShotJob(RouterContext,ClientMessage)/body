@@ -7,15 +7,15 @@
   _clientMessageSize=msg.getPayload().getSize();
   _from=msg.getFromDestination();
   _to=msg.getDestination();
+  _hashPair=new HashPair(_from.calculateHash(),_to.calculateHash());
   _toString=_to.calculateHash().toBase64().substring(0,4);
-  _leaseSetLookupBegin=-1;
   _start=getContext().clock().now();
-  _overallExpiration=msg.getExpiration();
-  if (_overallExpiration > 0) {
-    if (_overallExpiration <= _start) {
-      _overallExpiration=Math.max(_overallExpiration,_start + OVERALL_TIMEOUT_MS_MIN);
-      _overallExpiration=Math.min(_overallExpiration,_start + OVERALL_TIMEOUT_MS_DEFAULT);
-      if (_log.shouldLog(Log.INFO))       _log.info(getJobId() + ": Message Expiration (ms): " + (_overallExpiration - _start));
+  long overallExpiration=msg.getExpiration();
+  if (overallExpiration > 0) {
+    if (overallExpiration <= _start) {
+      overallExpiration=Math.max(overallExpiration,_start + OVERALL_TIMEOUT_MS_MIN);
+      overallExpiration=Math.min(overallExpiration,_start + OVERALL_TIMEOUT_MS_DEFAULT);
+      if (_log.shouldLog(Log.INFO))       _log.info(getJobId() + ": Message Expiration (ms): " + (overallExpiration - _start));
     }
  else {
       if (_log.shouldLog(Log.WARN))       _log.warn(getJobId() + ": Expired before we got to it");
@@ -33,7 +33,8 @@
         timeoutMs=OVERALL_TIMEOUT_MS_DEFAULT;
       }
     }
-    _overallExpiration=timeoutMs + _start;
+    overallExpiration=timeoutMs + _start;
     if (_log.shouldLog(Log.INFO))     _log.info(getJobId() + " Default Expiration (ms): " + timeoutMs);
   }
+  _overallExpiration=overallExpiration;
 }
