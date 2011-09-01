@@ -1,7 +1,7 @@
 {
   File GeoFile=new File(_context.getBaseDir(),GEOIP_DIR_DEFAULT);
   GeoFile=new File(GeoFile,GEOIP_FILE_DEFAULT);
-  if (GeoFile == null || (!GeoFile.exists())) {
+  if (!GeoFile.exists()) {
     if (_log.shouldLog(Log.WARN))     _log.warn("GeoIP file not found: " + GeoFile.getAbsolutePath());
     return new String[0];
   }
@@ -25,7 +25,10 @@
           idx++;
         }
         while (idx < search.length && search[idx].longValue() >= ip1 && search[idx].longValue() <= ip2) {
-          rv[idx++]=s[2].toLowerCase();
+          String lc=s[2].toLowerCase();
+          String cached=_codeCache.get(lc);
+          if (cached == null)           cached=lc;
+          rv[idx++]=cached;
         }
       }
  catch (      IndexOutOfBoundsException ioobe) {
@@ -45,8 +48,8 @@ catch (      NumberFormatException nfe) {
  catch (    IOException ioe) {
     }
   }
-  if (_log.shouldLog(Log.WARN)) {
-    _log.warn("GeoIP processing finished, time: " + (_context.clock().now() - start));
+  if (_log.shouldLog(Log.INFO)) {
+    _log.info("GeoIP processing finished, time: " + (_context.clock().now() - start));
   }
   return rv;
 }
