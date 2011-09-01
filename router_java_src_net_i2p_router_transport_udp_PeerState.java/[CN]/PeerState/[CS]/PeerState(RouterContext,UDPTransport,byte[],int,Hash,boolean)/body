@@ -2,19 +2,20 @@
   _context=ctx;
   _log=ctx.logManager().getLog(PeerState.class);
   _transport=transport;
-  _keyEstablishedTime=-1;
-  _currentReceiveSecond=-1;
-  _lastSendTime=-1;
-  _lastReceiveTime=-1;
+  long now=ctx.clock().now();
+  _keyEstablishedTime=now;
+  _currentReceiveSecond=now - (now % 1000);
+  _lastSendTime=now;
+  _lastReceiveTime=now;
   _currentACKs=new ConcurrentHashSet();
   _currentACKsResend=new LinkedBlockingQueue();
   _sendWindowBytes=DEFAULT_SEND_WINDOW_BYTES;
   _sendWindowBytesRemaining=DEFAULT_SEND_WINDOW_BYTES;
   _slowStartThreshold=MAX_SEND_WINDOW_BYTES / 2;
-  _lastSendRefill=_context.clock().now();
-  _receivePeriodBegin=_lastSendRefill;
+  _lastSendRefill=now;
+  _receivePeriodBegin=now;
   _lastCongestionOccurred=-1;
-  _remotePort=-1;
+  _remotePort=remotePort;
   _mtu=getDefaultMTU();
   _mtuReceive=_mtu;
   _lastACKSend=-1;
@@ -23,4 +24,8 @@
   _rttDeviation=_rtt;
   _inboundMessages=new HashMap(8);
   _outboundMessages=new ArrayList(32);
+  _remoteIP=remoteIP;
+  _remotePeer=remotePeer;
+  _isInbound=isInbound;
+  _remoteHostId=new RemoteHostId(remoteIP,remotePort);
 }
