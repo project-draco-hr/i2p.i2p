@@ -1,7 +1,7 @@
 {
   int fragmentNum=data.readMessageFragmentNum(dataFragment);
-  if ((fragmentNum < 0) || (fragmentNum > _fragments.length)) {
-    _log.warn("Invalid fragment " + fragmentNum + "/"+ _fragments.length);
+  if ((fragmentNum < 0) || (fragmentNum >= MAX_FRAGMENTS)) {
+    _log.warn("Invalid fragment " + fragmentNum + '/'+ MAX_FRAGMENTS);
     return false;
   }
   if (_fragments[fragmentNum] == null) {
@@ -12,7 +12,17 @@
       message.setValid(size);
       _fragments[fragmentNum]=message;
       boolean isLast=data.readMessageIsLast(dataFragment);
-      if (isLast)       _lastFragment=fragmentNum;
+      if (isLast) {
+        if (_lastFragment >= 0) {
+          if (_log.shouldLog(Log.ERROR))           _log.error("Multiple last fragments for message " + _messageId + " from "+ _from);
+          return false;
+        }
+        _lastFragment=fragmentNum;
+      }
+ else       if (_lastFragment >= 0 && fragmentNum >= _lastFragment) {
+        if (_log.shouldLog(Log.ERROR))         _log.error("Non-last fragment " + fragmentNum + " when last is "+ _lastFragment+ " for message "+ _messageId+ " from "+ _from);
+        return false;
+      }
       if (_log.shouldLog(Log.DEBUG))       _log.debug("New fragment " + fragmentNum + " for message "+ _messageId+ ", size="+ size+ ", isLast="+ isLast+ ", data="+ Base64.encode(message.getData(),0,size));
     }
  catch (    ArrayIndexOutOfBoundsException aioobe) {
