@@ -1,7 +1,7 @@
 {
   byte elgSrcData[]=new byte[SessionKey.KEYSIZE_BYTES + 32 + 158];
   System.arraycopy(key.getData(),0,elgSrcData,0,SessionKey.KEYSIZE_BYTES);
-  byte preIV[]=new byte[32];
+  byte preIV[]=SimpleByteCache.acquire(32);
   _context.random().nextBytes(preIV);
   System.arraycopy(preIV,0,elgSrcData,SessionKey.KEYSIZE_BYTES,32);
   byte rnd[]=new byte[158];
@@ -19,10 +19,10 @@
     System.arraycopy(elgEncr,0,elg,diff,elgEncr.length);
     elgEncr=elg;
   }
-  Hash ivHash=_context.sha().calculateHash(preIV);
-  byte iv[]=new byte[16];
-  System.arraycopy(ivHash.getData(),0,iv,0,16);
+  byte[] iv=halfHash(preIV);
+  SimpleByteCache.release(preIV);
   byte aesEncr[]=encryptAESBlock(data,key,iv,tagsForDelivery,newKey,paddedSize);
+  SimpleByteCache.release(iv);
   byte rv[]=new byte[elgEncr.length + aesEncr.length];
   System.arraycopy(elgEncr,0,rv,0,elgEncr.length);
   System.arraycopy(aesEncr,0,rv,elgEncr.length,aesEncr.length);

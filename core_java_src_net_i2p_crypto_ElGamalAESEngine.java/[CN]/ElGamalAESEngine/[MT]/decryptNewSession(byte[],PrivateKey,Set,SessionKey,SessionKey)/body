@@ -16,19 +16,18 @@
   if (elgDecr == null) {
     return null;
   }
-  byte preIV[]=null;
   int offset=0;
   byte key[]=new byte[SessionKey.KEYSIZE_BYTES];
   System.arraycopy(elgDecr,offset,key,0,SessionKey.KEYSIZE_BYTES);
   offset+=SessionKey.KEYSIZE_BYTES;
   usedKey.setData(key);
-  preIV=new byte[32];
+  byte[] preIV=SimpleByteCache.acquire(32);
   System.arraycopy(elgDecr,offset,preIV,0,32);
   offset+=32;
-  Hash ivHash=_context.sha().calculateHash(preIV);
-  byte iv[]=new byte[16];
-  System.arraycopy(ivHash.getData(),0,iv,0,16);
+  byte[] iv=halfHash(preIV);
+  SimpleByteCache.release(preIV);
   _context.random().harvester().feedEntropy("ElG/AES",elgDecr,offset,elgDecr.length - offset);
   byte aesDecr[]=decryptAESBlock(data,514,data.length - 514,usedKey,iv,null,foundTags,foundKey);
+  SimpleByteCache.release(iv);
   return aesDecr;
 }

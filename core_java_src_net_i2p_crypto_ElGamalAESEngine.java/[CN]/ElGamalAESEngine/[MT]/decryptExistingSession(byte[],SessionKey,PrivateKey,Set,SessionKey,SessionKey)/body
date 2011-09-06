@@ -1,10 +1,10 @@
 {
-  byte preIV[]=new byte[32];
-  System.arraycopy(data,0,preIV,0,preIV.length);
-  Hash ivHash=_context.sha().calculateHash(preIV);
-  byte iv[]=new byte[16];
-  System.arraycopy(ivHash.getData(),0,iv,0,16);
+  byte preIV[]=SimpleByteCache.acquire(32);
+  System.arraycopy(data,0,preIV,0,32);
+  byte[] iv=halfHash(preIV);
+  SimpleByteCache.release(preIV);
   byte decrypted[]=decryptAESBlock(data,32,data.length - 32,key,iv,preIV,foundTags,foundKey);
+  SimpleByteCache.release(iv);
   if (decrypted == null) {
     if (_log.shouldLog(Log.WARN))     _log.warn("Decrypting looks negative... existing key fails with existing tag, lets try as a new one");
     byte rv[]=decryptNewSession(data,targetPrivateKey,foundTags,usedKey,foundKey);
