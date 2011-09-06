@@ -4,7 +4,9 @@
   V rv;
   Integer key=hashCodeOf(data);
 synchronized (_cache) {
-    rv=_cache.get(key);
+    WeakReference<V> ref=_cache.get(key);
+    if (ref != null)     rv=ref.get();
+ else     rv=null;
     if (rv != null && DataHelper.eq(data,rv.getData())) {
       SimpleByteCache.release(data);
       found=1;
@@ -22,7 +24,7 @@ catch (      IllegalAccessException e) {
 catch (      InvocationTargetException e) {
         throw new RuntimeException("SDSCache error",e);
       }
-      _cache.put(key,rv);
+      _cache.put(key,new WeakReference(rv));
       found=0;
     }
   }
