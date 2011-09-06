@@ -6,15 +6,14 @@
       List<Job> toAdd=null;
       try {
 synchronized (_jobLock) {
-          for (int i=0; i < _timedJobs.size(); i++) {
-            Job j=_timedJobs.get(i);
+          for (Iterator<Job> iter=_timedJobs.iterator(); iter.hasNext(); ) {
+            Job j=iter.next();
             long timeLeft=j.getTiming().getStartAfter() - now;
             if (timeLeft <= 0) {
               if (j instanceof JobImpl)               ((JobImpl)j).madeReady();
               if (toAdd == null)               toAdd=new ArrayList(4);
               toAdd.add(j);
-              _timedJobs.remove(i);
-              i--;
+              iter.remove();
             }
  else {
               if ((timeToWait <= 0) || (timeLeft < timeToWait))               timeToWait=timeLeft;
