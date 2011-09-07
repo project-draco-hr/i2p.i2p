@@ -1,21 +1,3 @@
 {
-  Long dropTime=Long.valueOf(cfg.getExpiration() + 2 * Router.CLOCK_FUDGE_FACTOR + LEAVE_BATCH_TIME);
-  boolean noTunnels;
-synchronized (LeaveTunnel.this) {
-    noTunnels=_configs.isEmpty();
-    _configs.add(cfg);
-    _times.add(dropTime);
-    long oldAfter=getTiming().getStartAfter();
-    long oldStart=getTiming().getActualStart();
-    if (noTunnels || (oldAfter <= 0) || (oldAfter < getContext().clock().now() && oldAfter <= oldStart)|| (oldAfter >= dropTime.longValue())) {
-      getTiming().setStartAfter(dropTime.longValue());
-      getContext().jobQueue().addJob(LeaveTunnel.this);
-    }
- else {
-    }
-  }
-  if (_log.shouldLog(Log.DEBUG)) {
-    long now=getContext().clock().now();
-    _log.debug("Scheduling leave in " + DataHelper.formatDuration(dropTime.longValue() - now) + ": "+ cfg);
-  }
+  _configs.offer(cfg);
 }

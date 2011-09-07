@@ -1,28 +1,18 @@
 {
   HopConfig cur=null;
-  Long nextTime=null;
   long now=getContext().clock().now() + LEAVE_BATCH_TIME;
-  while (true) {
-synchronized (LeaveTunnel.this) {
-      if (_configs.isEmpty())       return;
-      nextTime=_times.get(0);
-      if (nextTime.longValue() <= now) {
-        cur=_configs.remove(0);
-        _times.remove(0);
-        if (!_times.isEmpty())         nextTime=_times.get(0);
- else         nextTime=null;
-      }
- else {
-        cur=null;
-      }
+  long nextTime=now + 10 * 60 * 1000;
+  while ((cur=_configs.peek()) != null) {
+    long exp=cur.getExpiration() + (2 * Router.CLOCK_FUDGE_FACTOR) + LEAVE_BATCH_TIME;
+    if (exp < now) {
+      _configs.poll();
+      remove(cur);
     }
-    if (cur != null)     remove(cur);
- else     break;
-  }
-  if (nextTime != null) {
-synchronized (LeaveTunnel.this) {
-      getTiming().setStartAfter(nextTime.longValue());
-      getContext().jobQueue().addJob(LeaveTunnel.this);
+ else     if (exp < nextTime) {
+      nextTime=exp;
+      break;
     }
   }
+  getTiming().setStartAfter(nextTime);
+  getContext().jobQueue().addJob(LeaveTunnel.this);
 }
