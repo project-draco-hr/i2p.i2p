@@ -1,6 +1,20 @@
 {
   int maxKBps=_context.bandwidthLimiter().getOutboundKBytesPerSecond();
   int allowed=maxKBps / 6;
+  RateStat rs=_context.statManager().getRate("tunnel.buildRequestTime");
+  if (rs != null) {
+    Rate r=rs.getRate(60 * 1000);
+    double avg=0;
+    if (r != null)     avg=r.getAverageValue();
+    if (avg <= 0)     avg=rs.getLifetimeAverageValue();
+    if (avg > 1) {
+      int throttle=(int)(75 * MAX_CONCURRENT_BUILDS / avg);
+      if (throttle < allowed) {
+        allowed=throttle;
+        if (allowed < MAX_CONCURRENT_BUILDS && _log.shouldLog(Log.INFO))         _log.info("Throttling max builds to " + allowed + " due to avg build time of "+ ((int)avg)+ " ms");
+      }
+    }
+  }
   if (allowed < 2)   allowed=2;
   if (allowed > MAX_CONCURRENT_BUILDS)   allowed=MAX_CONCURRENT_BUILDS;
   allowed=_context.getProperty("router.tunnelConcurrentBuilds",allowed);
