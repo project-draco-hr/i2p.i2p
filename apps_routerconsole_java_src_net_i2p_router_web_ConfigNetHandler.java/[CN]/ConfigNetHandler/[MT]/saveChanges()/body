@@ -11,9 +11,17 @@
  else         _udpAutoIP=UDPTransport.DEFAULT_SOURCES;
       }
       _context.router().setConfigSetting(UDPTransport.PROP_SOURCES,_udpAutoIP);
-      if (uhost.length() > 0)       _context.router().setConfigSetting(UDPTransport.PROP_EXTERNAL_HOST,uhost);
- else       _context.router().removeConfigSetting(UDPTransport.PROP_EXTERNAL_HOST);
-      if ((!oldUdp.equals(_udpAutoIP)) || (!oldUHost.equals(uhost))) {
+      boolean valid=true;
+      if (uhost.length() > 0) {
+        valid=verifyAddress(uhost);
+        if (valid) {
+          _context.router().setConfigSetting(UDPTransport.PROP_EXTERNAL_HOST,uhost);
+        }
+      }
+ else {
+        _context.router().removeConfigSetting(UDPTransport.PROP_EXTERNAL_HOST);
+      }
+      if (valid && ((!oldUdp.equals(_udpAutoIP)) || (!oldUHost.equals(uhost)))) {
         addFormNotice(_("Updating IP address"));
         restartRequired=true;
       }
@@ -27,21 +35,27 @@
     if (_ntcpPort == null)     _ntcpPort="";
     if (_ntcpAutoIP == null)     _ntcpAutoIP="true";
     if ((!oldAutoHost.equals(_ntcpAutoIP)) || !oldNHost.equalsIgnoreCase(_ntcpHostname)) {
+      boolean valid=true;
       if ("disabled".equals(_ntcpAutoIP)) {
         addFormNotice(_("Disabling TCP completely"));
       }
  else       if ("false".equals(_ntcpAutoIP) && _ntcpHostname.length() > 0) {
-        _context.router().setConfigSetting(ConfigNetHelper.PROP_I2NP_NTCP_HOSTNAME,_ntcpHostname);
-        addFormNotice(_("Updating inbound TCP address to") + " " + _ntcpHostname);
+        valid=verifyAddress(_ntcpHostname);
+        if (valid) {
+          _context.router().setConfigSetting(ConfigNetHelper.PROP_I2NP_NTCP_HOSTNAME,_ntcpHostname);
+          addFormNotice(_("Updating inbound TCP address to") + " " + _ntcpHostname);
+        }
       }
  else {
         _context.router().removeConfigSetting(ConfigNetHelper.PROP_I2NP_NTCP_HOSTNAME);
         if ("false".equals(_ntcpAutoIP))         addFormNotice(_("Disabling inbound TCP"));
  else         addFormNotice(_("Updating inbound TCP address to auto"));
       }
-      _context.router().setConfigSetting(ConfigNetHelper.PROP_I2NP_NTCP_AUTO_IP,_ntcpAutoIP);
-      _context.router().setConfigSetting(TransportManager.PROP_ENABLE_NTCP,"" + !"disabled".equals(_ntcpAutoIP));
-      restartRequired=true;
+      if (valid) {
+        _context.router().setConfigSetting(ConfigNetHelper.PROP_I2NP_NTCP_AUTO_IP,_ntcpAutoIP);
+        _context.router().setConfigSetting(TransportManager.PROP_ENABLE_NTCP,"" + !"disabled".equals(_ntcpAutoIP));
+        restartRequired=true;
+      }
     }
     if (oldAutoPort != _ntcpAutoPort || !oldNPort.equals(_ntcpPort)) {
       if (_ntcpPort.length() > 0 && !_ntcpAutoPort) {
