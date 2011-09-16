@@ -3,7 +3,6 @@
     while (_alive) {
       long now=_context.clock().now();
       long timeToWait=-1;
-      List<Job> toAdd=null;
       try {
 synchronized (_jobLock) {
           for (Iterator<Job> iter=_timedJobs.iterator(); iter.hasNext(); ) {
@@ -11,8 +10,7 @@ synchronized (_jobLock) {
             long timeLeft=j.getTiming().getStartAfter() - now;
             if (timeLeft <= 0) {
               if (j instanceof JobImpl)               ((JobImpl)j).madeReady();
-              if (toAdd == null)               toAdd=new ArrayList(4);
-              toAdd.add(j);
+              _readyJobs.offer(j);
               iter.remove();
             }
  else {
@@ -20,17 +18,10 @@ synchronized (_jobLock) {
               break;
             }
           }
-          if (toAdd != null) {
-            if (_log.shouldLog(Log.DEBUG))             _log.debug("Not waiting - we have " + toAdd.size() + " newly ready jobs");
-            for (int i=0; i < toAdd.size(); i++)             _readyJobs.offer(toAdd.get(i));
-            _jobLock.notifyAll();
-          }
- else {
-            if (timeToWait < 0)             timeToWait=30 * 1000;
- else             if (timeToWait < 10)             timeToWait=10;
- else             if (timeToWait > 10 * 1000)             timeToWait=10 * 1000;
-            _jobLock.wait(timeToWait);
-          }
+          if (timeToWait < 0)           timeToWait=1000;
+ else           if (timeToWait < 10)           timeToWait=10;
+ else           if (timeToWait > 10 * 1000)           timeToWait=10 * 1000;
+          _jobLock.wait(timeToWait);
         }
       }
  catch (      InterruptedException ie) {
