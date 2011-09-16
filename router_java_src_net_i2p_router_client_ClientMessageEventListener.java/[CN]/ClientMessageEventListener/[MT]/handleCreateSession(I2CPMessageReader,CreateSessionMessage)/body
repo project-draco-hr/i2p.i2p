@@ -1,5 +1,6 @@
 {
-  if (message.getSessionConfig().verifySignature()) {
+  SessionConfig in=message.getSessionConfig();
+  if (in.verifySignature()) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Signature verified correctly on create session message");
   }
  else {
@@ -11,7 +12,7 @@
     String configUser=_context.getProperty("i2cp.username");
     String configPW=_context.getProperty("i2cp.password");
     if (configUser != null && configPW != null) {
-      Properties props=message.getSessionConfig().getOptions();
+      Properties props=in.getOptions();
       String user=props.getProperty("i2cp.username");
       String pw=props.getProperty("i2cp.password");
       if (user == null || pw == null) {
@@ -31,7 +32,12 @@
   sessionId.setSessionId(getNextSessionId());
   _runner.setSessionId(sessionId);
   sendStatusMessage(SessionStatusMessage.STATUS_CREATED);
-  _runner.sessionEstablished(message.getSessionConfig());
+  SessionConfig cfg=new SessionConfig(in.getDestination());
+  cfg.setSignature(in.getSignature());
+  Properties props=new Properties();
+  props.putAll(in.getOptions());
+  cfg.setOptions(props);
+  _runner.sessionEstablished(cfg);
   if (_log.shouldLog(Log.DEBUG))   _log.debug("after sessionEstablished for " + message.getSessionConfig().getDestination().calculateHash().toBase64());
   _context.jobQueue().addJob(new CreateSessionJob(_context,_runner));
 }
