@@ -16,6 +16,11 @@
  else {
     boolean shouldProxy=_proxyHost != null && _proxyHost.length() > 0 && _proxyPort > 0;
     get=new EepGet(I2PAppContext.getGlobalContext(),shouldProxy,_proxyHost,_proxyPort,0,0,MAX_RESEED_RESPONSE_SIZE,null,baos,url.toString(),false,null,null);
+    if (shouldProxy && _context.getBooleanProperty(PROP_PROXY_AUTH_ENABLE)) {
+      String user=_context.getProperty(PROP_PROXY_USERNAME);
+      String pass=_context.getProperty(PROP_PROXY_PASSWORD);
+      if (user != null && user.length() > 0 && pass != null && pass.length() > 0)       get.addAuthorization(user,pass);
+    }
   }
   get.addStatusListener(ReseedRunner.this);
   if (get.fetch())   return baos.toByteArray();
