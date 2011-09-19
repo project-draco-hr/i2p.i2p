@@ -1,14 +1,16 @@
 {
-  _in=null;
+  ReusableGZIPInputStream _in=null;
   long written=0;
   ByteArray ba=null;
   try {
-    _in=new InternalGZIPInputStream(_inRaw);
+    _in=ReusableGZIPInputStream.acquire();
+    _in.initialize(_inRaw);
     ba=_cache.acquire();
     byte buf[]=ba.getData();
     int read=-1;
     while ((read=_in.read(buf)) != -1) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Read " + read + " and writing it to the browser/streams");
+      ;
       _out.write(buf,0,read);
       _out.flush();
       written+=read;
@@ -30,12 +32,15 @@ catch (  OutOfMemoryError oom) {
  catch (    IOException ioe) {
     }
   }
-  double compressed=(_in != null ? _in.getTotalRead() : 0);
-  double expanded=(_in != null ? _in.getTotalExpanded() : 0);
-  if (compressed > 0 && expanded > 0) {
-    double ratio=compressed / expanded;
-    _context.statManager().addRateData("i2ptunnel.httpCompressionRatio",(int)(100d * ratio),0);
-    _context.statManager().addRateData("i2ptunnel.httpCompressed",(long)compressed,0);
-    _context.statManager().addRateData("i2ptunnel.httpExpanded",(long)expanded,0);
+  if (_in != null) {
+    double compressed=_in.getTotalRead();
+    double expanded=_in.getTotalExpanded();
+    ReusableGZIPInputStream.release(_in);
+    if (compressed > 0 && expanded > 0) {
+      double ratio=compressed / expanded;
+      _context.statManager().addRateData("i2ptunnel.httpCompressionRatio",(int)(100d * ratio),0);
+      _context.statManager().addRateData("i2ptunnel.httpCompressed",(long)compressed,0);
+      _context.statManager().addRateData("i2ptunnel.httpExpanded",(long)expanded,0);
+    }
   }
 }
