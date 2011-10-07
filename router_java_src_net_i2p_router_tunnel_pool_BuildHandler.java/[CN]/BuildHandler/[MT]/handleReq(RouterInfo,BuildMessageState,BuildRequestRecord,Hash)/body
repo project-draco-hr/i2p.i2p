@@ -47,9 +47,17 @@
     }
   }
   RouterInfo ri=_context.router().getRouterInfo();
-  if (response == 0 && (ri == null || ri.getBandwidthTier().charAt(0) != 'O') && ((isInGW && !_context.commSystem().haveInboundCapacity(87)) || (isOutEnd && !_context.commSystem().haveOutboundCapacity(87)))) {
-    _context.throttle().setTunnelStatus(_x("Rejecting tunnels: Connection limit"));
-    response=TunnelHistory.TUNNEL_REJECT_BANDWIDTH;
+  if (response == 0) {
+    if (ri == null) {
+      response=TunnelHistory.TUNNEL_REJECT_BANDWIDTH;
+    }
+ else {
+      char bw=ri.getBandwidthTier().charAt(0);
+      if (bw != 'O' && bw != 'N' && ((isInGW && !_context.commSystem().haveInboundCapacity(87)) || (isOutEnd && !_context.commSystem().haveOutboundCapacity(87)))) {
+        _context.throttle().setTunnelStatus(_x("Rejecting tunnels: Connection limit"));
+        response=TunnelHistory.TUNNEL_REJECT_BANDWIDTH;
+      }
+    }
   }
   if (response == 0 && !isInGW) {
     Hash from=state.fromHash;
