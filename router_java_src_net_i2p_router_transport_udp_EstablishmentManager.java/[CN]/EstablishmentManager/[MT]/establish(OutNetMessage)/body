@@ -38,13 +38,15 @@
         rejected=true;
       }
  else {
-        List<OutNetMessage> newQueued=new ArrayList(1);
+        List<OutNetMessage> newQueued=new ArrayList(MAX_QUEUED_PER_PEER);
         List<OutNetMessage> queued=_queuedOutbound.putIfAbsent(to,newQueued);
         if (queued == null)         queued=newQueued;
-        queueCount=queued.size();
-        if (queueCount < MAX_QUEUED_PER_PEER)         queued.add(msg);
+synchronized (queued) {
+          queueCount=queued.size();
+          if (queueCount < MAX_QUEUED_PER_PEER)           queued.add(msg);
+          deferred=_queuedOutbound.size();
+        }
       }
-      deferred=_queuedOutbound.size();
     }
  else {
       byte[] keyBytes=addr.getIntroKey();
@@ -72,7 +74,13 @@
   if (state != null) {
     state.addMessage(msg);
     List<OutNetMessage> queued=_queuedOutbound.remove(to);
-    if (queued != null)     for (int i=0; i < queued.size(); i++)     state.addMessage(queued.get(i));
+    if (queued != null) {
+synchronized (queued) {
+        for (        OutNetMessage m : queued) {
+          state.addMessage(m);
+        }
+      }
+    }
   }
   if (rejected) {
     _transport.failed(msg,"Too many pending outbound connections");
