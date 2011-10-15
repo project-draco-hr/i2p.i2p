@@ -37,6 +37,7 @@ synchronized (_currentlyBuilding) {
           if (allowed > 2)           allowed=2;
           for (int i=0; (i < allowed) && (!wanted.isEmpty()); i++) {
             TunnelPool pool=wanted.remove(0);
+            long bef=System.currentTimeMillis();
             PooledTunnelCreatorConfig cfg=pool.configureNewTunnel();
             if (cfg != null) {
               if (cfg.getLength() <= 1 && !pool.needFallback()) {
@@ -45,6 +46,8 @@ synchronized (_currentlyBuilding) {
                 pool.buildComplete(cfg);
                 continue;
               }
+              long pTime=System.currentTimeMillis() - bef;
+              _context.statManager().addRateData("tunnel.buildConfigTime",pTime,0);
               if (_log.shouldLog(Log.DEBUG))               _log.debug("Configuring new tunnel " + i + " for "+ pool+ ": "+ cfg);
               buildTunnel(pool,cfg);
             }

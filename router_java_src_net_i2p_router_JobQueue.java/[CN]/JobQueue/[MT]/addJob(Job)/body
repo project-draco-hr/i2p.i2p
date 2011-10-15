@@ -7,7 +7,8 @@ synchronized (_jobLock) {
     if (_readyJobs.contains(job))     alreadyExists=true;
     numReady=_readyJobs.size();
     if (!alreadyExists) {
-      _timedJobs.remove(job);
+      boolean removed=_timedJobs.remove(job);
+      if (removed && _log.shouldLog(Log.WARN))       _log.warn("Rescheduling job: " + job);
     }
     if ((!alreadyExists) && shouldDrop(job,numReady)) {
       job.dropped();
@@ -29,7 +30,7 @@ synchronized (_jobLock) {
   }
   _context.statManager().addRateData("jobQueue.readyJobs",numReady,0);
   if (dropped) {
-    _context.statManager().addRateData("jobQueue.droppedJobs",1,1);
-    if (_log.shouldLog(Log.ERROR))     _log.error("Dropping job due to overload!  # ready jobs: " + numReady + ": job = "+ job);
+    _context.statManager().addRateData("jobQueue.droppedJobs",1,0);
+    _log.logAlways(Log.WARN,"Dropping job due to overload!  # ready jobs: " + numReady + ": job = "+ job);
   }
 }

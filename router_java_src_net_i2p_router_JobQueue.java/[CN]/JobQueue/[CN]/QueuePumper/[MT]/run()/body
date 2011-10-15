@@ -5,9 +5,16 @@
       long timeToWait=-1;
       try {
 synchronized (_jobLock) {
+          Job lastJob=null;
+          long lastTime=Long.MIN_VALUE;
           for (Iterator<Job> iter=_timedJobs.iterator(); iter.hasNext(); ) {
             Job j=iter.next();
             long timeLeft=j.getTiming().getStartAfter() - now;
+            if (lastJob != null && lastTime > j.getTiming().getStartAfter()) {
+              _log.error("Job " + lastJob + " out of order with job "+ j+ " difference of "+ DataHelper.formatDuration(lastTime - j.getTiming().getStartAfter()));
+            }
+            lastJob=j;
+            lastTime=lastJob.getTiming().getStartAfter();
             if (timeLeft <= 0) {
               if (j instanceof JobImpl)               ((JobImpl)j).madeReady();
               _readyJobs.offer(j);
