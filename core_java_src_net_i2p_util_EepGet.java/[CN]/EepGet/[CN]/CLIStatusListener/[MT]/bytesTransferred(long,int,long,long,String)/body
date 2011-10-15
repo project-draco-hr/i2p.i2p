@@ -20,29 +20,24 @@
         long timeToSend=now - _lastComplete;
         if (timeToSend > 0) {
           StringBuilder buf=new StringBuilder(50);
+          Formatter fmt=new Formatter(buf);
           buf.append(" ");
           if (bytesRemaining > 0) {
-            double pct=((double)_written + _previousWritten) / ((double)alreadyTransferred + (double)currentWrite + (double)bytesRemaining);
-synchronized (_pct) {
-              buf.append(_pct.format(pct));
-            }
-            buf.append(": ");
+            double pct=100 * ((double)_written + _previousWritten) / ((double)alreadyTransferred + (double)currentWrite + (double)bytesRemaining);
+            fmt.format("%4.1f",Double.valueOf(pct));
+            buf.append("%: ");
           }
-          buf.append(_written);
+          fmt.format("%8d",Long.valueOf(_written));
           buf.append(" @ ");
           double lineKBytes=((double)_markSize * (double)_lineSize) / 1024.0d;
           double kbps=lineKBytes / ((double)timeToSend / 1000.0d);
-synchronized (_kbps) {
-            buf.append(_kbps.format(kbps));
-          }
-          buf.append("KBps");
+          fmt.format("%7.2f",Double.valueOf(kbps));
+          buf.append(" KBps");
           buf.append(" / ");
           long lifetime=_context.clock().now() - _startedOn;
           double lifetimeKBps=(1000.0d * (double)(_written) / ((double)lifetime * 1024.0d));
-synchronized (_kbps) {
-            buf.append(_kbps.format(lifetimeKBps));
-          }
-          buf.append("KBps");
+          fmt.format("%7.2f",Double.valueOf(lifetimeKBps));
+          buf.append(" KBps");
           System.out.println(buf.toString());
         }
         _lastComplete=now;

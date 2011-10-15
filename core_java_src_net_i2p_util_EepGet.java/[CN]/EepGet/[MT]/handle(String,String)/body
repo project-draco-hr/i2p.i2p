@@ -1,28 +1,33 @@
 {
-  for (int i=0; i < _listeners.size(); i++)   _listeners.get(i).headerReceived(_url,_currentAttempt,key.trim(),val.trim());
+  key=key.trim();
+  val=val.trim();
+  for (int i=0; i < _listeners.size(); i++)   _listeners.get(i).headerReceived(_url,_currentAttempt,key,val);
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Header line: [" + key + "] = ["+ val+ "]");
   if (key.equalsIgnoreCase("Content-length")) {
     try {
-      _bytesRemaining=Long.parseLong(val.trim());
+      _bytesRemaining=Long.parseLong(val);
     }
  catch (    NumberFormatException nfe) {
       nfe.printStackTrace();
     }
   }
  else   if (key.equalsIgnoreCase("ETag")) {
-    _etag=val.trim();
+    _etag=val;
   }
  else   if (key.equalsIgnoreCase("Last-Modified")) {
-    _lastModified=val.trim();
+    _lastModified=val;
   }
  else   if (key.equalsIgnoreCase("Transfer-encoding")) {
-    if (val.indexOf("chunked") != -1)     _encodingChunked=true;
+    _encodingChunked=val.toLowerCase().contains("chunked");
+  }
+ else   if (key.equalsIgnoreCase("Content-encoding")) {
+    if ((!_actualURL.endsWith(".gz")) && (!_actualURL.endsWith(".tgz")))     _isGzippedResponse=val.toLowerCase().contains("gzip");
   }
  else   if (key.equalsIgnoreCase("Content-Type")) {
-    _contentType=val.trim();
+    _contentType=val;
   }
  else   if (key.equalsIgnoreCase("Location")) {
-    _redirectLocation=val.trim();
+    _redirectLocation=val;
   }
  else {
   }
