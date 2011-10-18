@@ -7,18 +7,19 @@
   Log log=ctx.logManager().getLog(BuildRequestor.class);
   cfg.setTunnelPool(pool);
   TunnelInfo pairedTunnel=null;
+  Hash farEnd=cfg.getFarEnd();
   if (pool.getSettings().isExploratory() || !usePairedTunnels(ctx)) {
-    if (pool.getSettings().isInbound())     pairedTunnel=ctx.tunnelManager().selectOutboundTunnel();
- else     pairedTunnel=ctx.tunnelManager().selectInboundTunnel();
+    if (pool.getSettings().isInbound())     pairedTunnel=ctx.tunnelManager().selectOutboundExploratoryTunnel(farEnd);
+ else     pairedTunnel=ctx.tunnelManager().selectInboundExploratoryTunnel(farEnd);
   }
  else {
-    if (pool.getSettings().isInbound())     pairedTunnel=ctx.tunnelManager().selectOutboundTunnel(pool.getSettings().getDestination());
- else     pairedTunnel=ctx.tunnelManager().selectInboundTunnel(pool.getSettings().getDestination());
+    if (pool.getSettings().isInbound())     pairedTunnel=ctx.tunnelManager().selectOutboundTunnel(pool.getSettings().getDestination(),farEnd);
+ else     pairedTunnel=ctx.tunnelManager().selectInboundTunnel(pool.getSettings().getDestination(),farEnd);
   }
   if (pairedTunnel == null) {
     if (log.shouldLog(Log.WARN))     log.warn("Couldn't find a paired tunnel for " + cfg + ", fall back on exploratory tunnels for pairing");
-    if (!pool.getSettings().isExploratory() && usePairedTunnels(ctx))     if (pool.getSettings().isInbound())     pairedTunnel=ctx.tunnelManager().selectOutboundTunnel();
- else     pairedTunnel=ctx.tunnelManager().selectInboundTunnel();
+    if (!pool.getSettings().isExploratory() && usePairedTunnels(ctx))     if (pool.getSettings().isInbound())     pairedTunnel=ctx.tunnelManager().selectOutboundExploratoryTunnel(farEnd);
+ else     pairedTunnel=ctx.tunnelManager().selectInboundExploratoryTunnel(farEnd);
   }
   if (pairedTunnel == null) {
     if (log.shouldLog(Log.ERROR))     log.error("Tunnel build failed, as we couldn't find a paired tunnel for " + cfg);

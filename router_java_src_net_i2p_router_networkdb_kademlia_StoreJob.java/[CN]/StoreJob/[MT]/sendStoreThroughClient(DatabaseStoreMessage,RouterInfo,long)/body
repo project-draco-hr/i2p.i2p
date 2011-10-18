@@ -1,7 +1,8 @@
 {
-  long token=getContext().random().nextLong(I2NPMessage.MAX_ID_VALUE);
+  long token=1 + getContext().random().nextLong(I2NPMessage.MAX_ID_VALUE);
   Hash client=msg.getKey();
-  TunnelInfo replyTunnel=getContext().tunnelManager().selectInboundTunnel(client);
+  Hash to=peer.getIdentity().getHash();
+  TunnelInfo replyTunnel=getContext().tunnelManager().selectInboundTunnel(client,to);
   if (replyTunnel == null) {
     if (_log.shouldLog(Log.WARN))     _log.warn("No reply inbound tunnels available!");
     fail();
@@ -12,8 +13,7 @@
   msg.setReplyTunnel(replyTunnelId);
   msg.setReplyGateway(replyTunnel.getPeer(0));
   if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": send(dbStore) w/ token expected " + token);
-  Hash to=peer.getIdentity().getHash();
-  TunnelInfo outTunnel=getContext().tunnelManager().selectOutboundTunnel(client);
+  TunnelInfo outTunnel=getContext().tunnelManager().selectOutboundTunnel(client,to);
   if (outTunnel != null) {
     I2NPMessage sent;
     boolean shouldEncrypt=supportsEncryption(peer);
