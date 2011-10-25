@@ -2,7 +2,8 @@
   int currentCount=0;
   long dups=0;
   double fpr=0d;
-synchronized (this) {
+  if (!getWriteLock())   return;
+  try {
     BloomSHA1 tmp=_previous;
     currentCount=_current.size();
     if (_log.shouldLog(Log.DEBUG) && currentCount > 0)     fpr=_current.falsePositives();
@@ -12,11 +13,14 @@ synchronized (this) {
     dups=_currentDuplicates;
     _currentDuplicates=0;
   }
+  finally {
+    releaseWriteLock();
+  }
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Decaying the filter " + _name + " after inserting "+ currentCount+ " elements and "+ dups+ " false positives with FPR = "+ fpr);
-  _context.statManager().addRateData("router.decayingBloomFilter." + _name + ".size",currentCount,0);
-  if (currentCount > 0)   _context.statManager().addRateData("router.decayingBloomFilter." + _name + ".dups",1000l * 1000 * dups / currentCount,0);
+  _context.statManager().addRateData("router.decayingBloomFilter." + _name + ".size",currentCount);
+  if (currentCount > 0)   _context.statManager().addRateData("router.decayingBloomFilter." + _name + ".dups",1000l * 1000 * dups / currentCount);
   if (fpr > 0d) {
     long exponent=(long)Math.log10(fpr);
-    _context.statManager().addRateData("router.decayingBloomFilter." + _name + ".log10(falsePos)",exponent,0);
+    _context.statManager().addRateData("router.decayingBloomFilter." + _name + ".log10(falsePos)",exponent);
   }
 }

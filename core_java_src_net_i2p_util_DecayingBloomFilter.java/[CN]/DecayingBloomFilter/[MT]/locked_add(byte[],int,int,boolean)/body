@@ -2,30 +2,36 @@
   if (_extended != null) {
     System.arraycopy(entry,offset,_extended,0,len);
     for (int i=0; i < _extenders.length; i++)     DataHelper.xor(entry,offset,_extenders[i],0,_extended,_entryBytes * (i + 1),_entryBytes);
-    boolean seen=_current.locked_member(_extended);
-    seen=seen || _previous.locked_member(_extended);
+    BloomSHA1.FilterKey key=_current.getFilterKey(_extended,0,32);
+    boolean seen=_current.locked_member(key);
+    if (!seen)     seen=_previous.locked_member(key);
     if (seen) {
       _currentDuplicates++;
+      _current.release(key);
       return true;
     }
  else {
       if (addIfNew) {
-        _current.locked_insert(_extended);
+        _current.locked_insert(key);
       }
+      _current.release(key);
       return false;
     }
   }
  else {
-    boolean seen=_current.locked_member(entry,offset,len);
-    seen=seen || _previous.locked_member(entry,offset,len);
+    BloomSHA1.FilterKey key=_current.getFilterKey(entry,offset,len);
+    boolean seen=_current.locked_member(key);
+    if (!seen)     seen=_previous.locked_member(key);
     if (seen) {
       _currentDuplicates++;
+      _current.release(key);
       return true;
     }
  else {
       if (addIfNew) {
-        _current.locked_insert(entry,offset,len);
+        _current.locked_insert(key);
       }
+      _current.release(key);
       return false;
     }
   }
