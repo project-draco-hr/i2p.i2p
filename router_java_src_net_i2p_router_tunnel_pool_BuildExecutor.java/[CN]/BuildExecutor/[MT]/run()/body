@@ -2,12 +2,11 @@
   _isRunning=true;
   List<TunnelPool> wanted=new ArrayList(MAX_CONCURRENT_BUILDS);
   List<TunnelPool> pools=new ArrayList(8);
-  int pendingRemaining=0;
   long afterBuildReal=0;
   long afterHandleInbound=0;
   while (!_manager.isShutdown()) {
     try {
-      _repoll=pendingRemaining > 0;
+      _repoll=false;
       _manager.listPools(pools);
       for (int i=0; i < pools.size(); i++) {
         TunnelPool pool=pools.get(i);
@@ -21,7 +20,7 @@
       if ((mgr == null) || (mgr.getFreeTunnelCount() <= 0) || (mgr.getOutboundTunnelCount() <= 0)) {
 synchronized (_currentlyBuilding) {
           if (!_repoll) {
-            if (_log.shouldLog(Log.DEBUG))             _log.debug("No tunnel to build with (allowed=" + allowed + ", wanted="+ wanted.size()+ ", pending="+ pendingRemaining+ "), wait for a while");
+            if (_log.shouldLog(Log.DEBUG))             _log.debug("No tunnel to build with (allowed=" + allowed + ", wanted="+ wanted.size()+ "), wait for a while");
             try {
               _currentlyBuilding.wait(1 * 1000 + _context.random().nextInt(1 * 1000));
             }
@@ -67,14 +66,11 @@ synchronized (_currentlyBuilding) {
         }
       }
       afterBuildReal=System.currentTimeMillis();
-      pendingRemaining=_handler.handleInboundRequests();
-      afterHandleInbound=System.currentTimeMillis();
-      if (pendingRemaining > 0)       _context.statManager().addRateData("tunnel.pendingRemaining",pendingRemaining,afterHandleInbound - afterBuildReal);
       wanted.clear();
       pools.clear();
     }
  catch (    RuntimeException e) {
-      if (_log.shouldLog(Log.CRIT))       _log.log(Log.CRIT,"B0rked in the tunnel builder",e);
+      _log.log(Log.CRIT,"B0rked in the tunnel builder",e);
     }
   }
   if (_log.shouldLog(Log.WARN))   _log.warn("Done building");
