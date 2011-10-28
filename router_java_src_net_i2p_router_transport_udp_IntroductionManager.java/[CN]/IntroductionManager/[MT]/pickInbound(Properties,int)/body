@@ -37,15 +37,6 @@
     ssuOptions.setProperty(UDPAddress.PROP_INTRO_TAG_PREFIX + found,String.valueOf(cur.getTheyRelayToUsAs()));
     found++;
   }
-  long pingCutoff=_context.clock().now() - (2 * 60 * 60* 1000);
-  inactivityCutoff=_context.clock().now() - (UDPTransport.EXPIRE_TIMEOUT / 4);
-  for (int i=0; i < sz; i++) {
-    PeerState cur=peers.get(i);
-    if (cur.getIntroducerTime() > pingCutoff && cur.getLastSendTime() < inactivityCutoff) {
-      if (_log.shouldLog(Log.INFO))       _log.info("Pinging introducer: " + cur);
-      cur.setLastSendTime(_context.clock().now());
-      _transport.send(_builder.buildPing(cur));
-    }
-  }
+  pingIntroducers();
   return found;
 }
