@@ -1,0 +1,23 @@
+{
+  int rv=_settings.getTotalQuantity();
+  if (_settings.isExploratory() && rv > 1) {
+    RateStat e=_context.statManager().getRate("tunnel.buildExploratoryExpire");
+    RateStat r=_context.statManager().getRate("tunnel.buildExploratoryReject");
+    RateStat s=_context.statManager().getRate("tunnel.buildExploratorySuccess");
+    if (e != null && r != null && s != null) {
+      Rate er=e.getRate(10 * 60 * 1000);
+      Rate rr=r.getRate(10 * 60 * 1000);
+      Rate sr=s.getRate(10 * 60 * 1000);
+      if (er != null && rr != null && sr != null) {
+        long ec=er.getCurrentEventCount();
+        long rc=rr.getCurrentEventCount();
+        long sc=sr.getCurrentEventCount();
+        long tot=ec + rc + sc;
+        if (tot >= 10) {
+          if (1000 * sc / tot <= 1000 / 10)           rv--;
+        }
+      }
+    }
+  }
+  return rv;
+}
