@@ -4,6 +4,7 @@
   long thresholdTime=0;
   long placeTime=0;
   int profileCount=0;
+  int expiredCount=0;
   long uptime=_context.router().getUptime();
   long expireOlderThan=-1;
   if (uptime > 60 * 60 * 1000) {
@@ -19,7 +20,10 @@
     long sortStart=System.currentTimeMillis();
     for (Iterator<PeerProfile> iter=_strictCapacityOrder.iterator(); iter.hasNext(); ) {
       PeerProfile prof=iter.next();
-      if ((expireOlderThan > 0) && (prof.getLastSendSuccessful() <= expireOlderThan))       continue;
+      if ((expireOlderThan > 0) && (prof.getLastSendSuccessful() <= expireOlderThan)) {
+        expiredCount++;
+        continue;
+      }
       if (shouldCoalesce) {
         long coalesceStart=System.currentTimeMillis();
         prof.coalesceStats();
@@ -40,8 +44,7 @@
     _notFailingPeersList.clear();
     _wellIntegratedPeers.clear();
     long placeStart=System.currentTimeMillis();
-    for (Iterator<PeerProfile> iter=allPeers.iterator(); iter.hasNext(); ) {
-      PeerProfile profile=iter.next();
+    for (    PeerProfile profile : _strictCapacityOrder) {
       locked_placeProfile(profile);
     }
     locked_unfailAsNecessary();
@@ -54,7 +57,7 @@
   finally {
     releaseWriteLock();
   }
-  if (_log.shouldLog(Log.INFO))   _log.info("Profiles reorganized.  averages: [integration: " + _thresholdIntegrationValue + ", capacity: "+ _thresholdCapacityValue+ ", speed: "+ _thresholdSpeedValue+ "]");
+  if (_log.shouldLog(Log.INFO))   _log.info("Profiles reorganized. Expired: " + expiredCount + " Averages: [integration: "+ _thresholdIntegrationValue+ ", capacity: "+ _thresholdCapacityValue+ ", speed: "+ _thresholdSpeedValue+ "]");
   long total=System.currentTimeMillis() - start;
   _context.statManager().addRateData("peer.profileSortTime",sortTime,profileCount);
   _context.statManager().addRateData("peer.profileCoalesceTime",coalesceTime,profileCount);

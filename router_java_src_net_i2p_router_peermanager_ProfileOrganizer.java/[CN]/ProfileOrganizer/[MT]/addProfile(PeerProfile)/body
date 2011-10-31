@@ -1,11 +1,16 @@
 {
-  if ((profile == null) || (profile.getPeer() == null))   return null;
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("New profile created for " + profile.getPeer().toBase64());
-  PeerProfile old=getProfile(profile.getPeer());
+  Hash peer=profile.getPeer();
+  if (profile == null || peer == null)   return null;
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("New profile created for " + peer);
+  PeerProfile old=getProfile(peer);
   profile.coalesceStats();
   if (!getWriteLock())   return old;
   try {
-    locked_placeProfile(profile);
+    _notFailingPeers.put(peer,profile);
+    if (old == null)     _notFailingPeersList.add(peer);
+    if (_thresholdCapacityValue <= profile.getCapacityValue() && isSelectable(peer) && _highCapacityPeers.size() < getMaximumHighCapPeers()) {
+      _highCapacityPeers.put(peer,profile);
+    }
     _strictCapacityOrder.add(profile);
   }
   finally {
