@@ -1,6 +1,7 @@
 {
-  int rv=_settings.getTotalQuantity();
-  if (_settings.isExploratory() && rv > 1) {
+  if (!_settings.isExploratory())   return;
+  int len=_settings.getLength();
+  if (len > 1) {
     RateStat e=_context.statManager().getRate("tunnel.buildExploratoryExpire");
     RateStat r=_context.statManager().getRate("tunnel.buildExploratoryReject");
     RateStat s=_context.statManager().getRate("tunnel.buildExploratorySuccess");
@@ -13,11 +14,12 @@
         long rc=rr.getCurrentEventCount() + rr.getLastEventCount();
         long sc=sr.getCurrentEventCount() + sr.getLastEventCount();
         long tot=ec + rc + sc;
-        if (tot >= BUILD_TRIES_QUANTITY_OVERRIDE) {
-          if (1000 * sc / tot <= 1000 / BUILD_TRIES_QUANTITY_OVERRIDE)           rv--;
+        if (tot >= BUILD_TRIES_LENGTH_OVERRIDE) {
+          if (1000 * sc / tot <= 1000 / BUILD_TRIES_LENGTH_OVERRIDE)           _settings.setLengthOverride(len - 1);
+          return;
         }
       }
     }
   }
-  return rv;
+  _settings.setLengthOverride(-1);
 }
