@@ -15,13 +15,18 @@
     int cur=0;
     int total=0;
     while (total++ < 1000) {
-      int start=content.indexOf("href=\"routerInfo-",cur);
+      int start=content.indexOf("href=\"" + ROUTERINFO_PREFIX,cur);
       if (start < 0) {
-        start=content.indexOf("HREF=\"routerInfo-",cur);
+        start=content.indexOf("HREF=\"" + ROUTERINFO_PREFIX,cur);
         if (start < 0)         break;
       }
-      int end=content.indexOf(".dat\">",start);
-      String name=content.substring(start + "href=\"routerInfo-".length(),end);
+      int end=content.indexOf(ROUTERINFO_SUFFIX + "\">",start);
+      if (end < 0)       break;
+      if (start - end > 200) {
+        cur=end + 1;
+        continue;
+      }
+      String name=content.substring(start + ("href=\"" + ROUTERINFO_PREFIX).length(),end);
       urls.add(name);
       cur=end + 1;
     }
@@ -44,10 +49,11 @@
           if (fetched % 60 == 0)           System.out.println();
         }
       }
- catch (      IOException e) {
+ catch (      Exception e) {
+        if (_log.shouldLog(Log.INFO))         _log.info("Failed fetch",e);
         errors++;
       }
-      if (errors >= 10 && fetched <= 1)       break;
+      if (errors >= 50 || (errors >= 10 && fetched <= 1))       break;
     }
     System.err.println("Reseed got " + fetched + " router infos from "+ seedURL+ " with "+ errors+ " errors");
     if (fetched > 0)     _context.netDb().rescan();

@@ -1,9 +1,11 @@
 {
-  URL url=new URL(seedURL + (seedURL.endsWith("/") ? "" : "/") + "routerInfo-"+ peer+ ".dat");
+  URI uri=new URI(peer);
+  String b64=uri.getPath();
+  if (b64 == null)   throw new IOException("bad hash " + peer);
+  byte[] hash=Base64.decode(b64);
+  if (hash == null || hash.length != Hash.HASH_LENGTH)   throw new IOException("bad hash " + peer);
+  URL url=new URL(seedURL + (seedURL.endsWith("/") ? "" : "/") + ROUTERINFO_PREFIX+ peer+ ROUTERINFO_SUFFIX);
   byte data[]=readURL(url);
-  if (data == null) {
-    _log.debug("Failed fetching seed: " + url.toString());
-    throw new IOException("Failed fetching seed.");
-  }
-  writeSeed(peer,data);
+  if (data == null || data.length <= 0)   throw new IOException("Failed fetch of " + url);
+  writeSeed(b64,data);
 }
