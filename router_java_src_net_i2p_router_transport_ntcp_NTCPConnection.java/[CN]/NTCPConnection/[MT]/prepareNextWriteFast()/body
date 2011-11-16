@@ -41,9 +41,11 @@ synchronized (_outbound) {
     }
     _currentOutbound=msg;
   }
-  msg.beginTransmission();
   PrepBuffer buf=(PrepBuffer)msg.releasePreparationBuffer();
-  if (buf == null)   throw new RuntimeException("buf is null for " + msg);
+  if (buf == null) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Null prep buf for " + msg);
+    return;
+  }
   _context.aes().encrypt(buf.unencrypted,0,buf.encrypted,0,_sessionKey,_prevWriteEnd,0,buf.unencryptedLength);
   System.arraycopy(buf.encrypted,buf.encrypted.length - 16,_prevWriteEnd,0,_prevWriteEnd.length);
   _transport.getPumper().wantsWrite(this,buf.encrypted);
