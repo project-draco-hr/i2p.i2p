@@ -1,14 +1,13 @@
 {
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("releasing read buffer " + System.identityHashCode(buf) + " with "+ __liveBufs+ " live: "+ buf);
   buf.clear();
   int extra=_bufCache.size();
-  boolean cached=extra < NUM_BUFS;
+  boolean cached=extra < _numBufs;
   if (cached) {
     _bufCache.offer(buf);
     if (extra > 5) {
       __consecutiveExtra++;
       if (__consecutiveExtra >= 20) {
-        NUM_BUFS=Math.max(NUM_BUFS - 1,MIN_BUFS);
+        _numBufs=Math.max(_numBufs - 1,MIN_BUFS);
         __consecutiveExtra=0;
       }
     }
@@ -16,5 +15,4 @@
  else {
     __liveBufs--;
   }
-  if (cached && _log.shouldLog(Log.DEBUG))   _log.debug("read buffer " + System.identityHashCode(buf) + " cached with "+ __liveBufs+ " live");
 }

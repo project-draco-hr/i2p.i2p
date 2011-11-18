@@ -1,46 +1,28 @@
 {
-  int totalWritten=0;
-  int buffers=0;
-  long before=System.currentTimeMillis();
   NTCPConnection con=(NTCPConnection)key.attachment();
   try {
     while (true) {
       ByteBuffer buf=con.getNextWriteBuf();
       if (buf != null) {
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("writing " + buf.remaining() + "...");
         if (buf.remaining() <= 0) {
-          long beforeRem=System.currentTimeMillis();
           con.removeWriteBuf(buf);
-          long afterRem=System.currentTimeMillis();
-          if (_log.shouldLog(Log.DEBUG))           _log.debug("buffer was already fully written and removed after " + (afterRem - beforeRem) + "...");
-          buf=null;
-          buffers++;
           continue;
         }
         int written=con.getChannel().write(buf);
-        totalWritten+=written;
         if (written == 0) {
-          if ((buf.remaining() > 0) || (con.getWriteBufCount() >= 1)) {
-            if (_log.shouldLog(Log.DEBUG))             _log.debug("done writing, but data remains...");
+          if ((buf.remaining() > 0) || (!con.isWriteBufEmpty())) {
             key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
           }
  else {
-            if (_log.shouldLog(Log.DEBUG))             _log.debug("done writing, no data remains...");
           }
           break;
         }
  else         if (buf.remaining() > 0) {
-          if (_log.shouldLog(Log.DEBUG))           _log.debug("buffer data remaining...");
           key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
           break;
         }
  else {
-          long beforeRem=System.currentTimeMillis();
           con.removeWriteBuf(buf);
-          long afterRem=System.currentTimeMillis();
-          if (_log.shouldLog(Log.DEBUG))           _log.debug("buffer " + buffers + "/"+ written+ "/"+ totalWritten+ " fully written after "+ (beforeRem - before)+ ", then removed after "+ (afterRem - beforeRem)+ "...");
-          buf=null;
-          buffers++;
         }
       }
  else {
@@ -50,14 +32,12 @@
   }
  catch (  CancelledKeyException cke) {
     if (_log.shouldLog(Log.WARN))     _log.warn("error writing",cke);
-    _context.statManager().addRateData("ntcp.writeError",1,0);
+    _context.statManager().addRateData("ntcp.writeError",1);
     con.close();
   }
 catch (  IOException ioe) {
     if (_log.shouldLog(Log.WARN))     _log.warn("error writing",ioe);
-    _context.statManager().addRateData("ntcp.writeError",1,0);
+    _context.statManager().addRateData("ntcp.writeError",1);
     con.close();
   }
-  long after=System.currentTimeMillis();
-  if (_log.shouldLog(Log.INFO))   _log.info("Wrote " + totalWritten + " in "+ buffers+ " buffers on "+ con+ " after "+ (after - before));
 }

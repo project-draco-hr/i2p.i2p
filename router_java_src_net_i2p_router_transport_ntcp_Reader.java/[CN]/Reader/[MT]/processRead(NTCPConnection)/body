@@ -9,18 +9,18 @@
         throw new RuntimeException("connection was not established, yet the establish state is null for " + con);
       }
  else {
-        if (_log.shouldLog(Log.ERROR))         _log.error("no establishment state but " + con + " is established... race?");
+        _log.error("no establishment state but " + con + " is established... race?");
         break;
       }
     }
     if (est.isComplete()) {
-      if (_log.shouldLog(Log.ERROR))       _log.error("establishment state [" + est + "] is complete, yet the connection isn't established? "+ con.isEstablished()+ " (inbound? "+ con.isInbound()+ " "+ con+ ")");
+      _log.error("establishment state [" + est + "] is complete, yet the connection isn't established? "+ con.isEstablished()+ " (inbound? "+ con.isInbound()+ " "+ con+ ")");
       break;
     }
     est.receive(buf);
     if (est.isCorrupt()) {
       if (_log.shouldLog(Log.WARN))       _log.warn("closing connection on establishment because: " + est.getError(),est.getException());
-      if (!est.getFailedBySkew())       _context.statManager().addRateData("ntcp.receiveCorruptEstablishment",1,0);
+      if (!est.getFailedBySkew())       _context.statManager().addRateData("ntcp.receiveCorruptEstablishment",1);
       con.close();
       return;
     }
