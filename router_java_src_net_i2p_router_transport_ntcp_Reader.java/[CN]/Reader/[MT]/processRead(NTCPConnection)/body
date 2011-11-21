@@ -5,6 +5,7 @@
     EstablishState est=con.getEstablishState();
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Processing read buffer as an establishment for " + con + " with ["+ est+ "]");
     if (est == null) {
+      EventPumper.releaseBuf(buf);
       if (!con.isEstablished()) {
         throw new RuntimeException("connection was not established, yet the establish state is null for " + con);
       }
@@ -15,16 +16,16 @@
     }
     if (est.isComplete()) {
       _log.error("establishment state [" + est + "] is complete, yet the connection isn't established? "+ con.isEstablished()+ " (inbound? "+ con.isInbound()+ " "+ con+ ")");
+      EventPumper.releaseBuf(buf);
       break;
     }
     est.receive(buf);
+    EventPumper.releaseBuf(buf);
     if (est.isCorrupt()) {
       if (_log.shouldLog(Log.WARN))       _log.warn("closing connection on establishment because: " + est.getError(),est.getException());
       if (!est.getFailedBySkew())       _context.statManager().addRateData("ntcp.receiveCorruptEstablishment",1);
       con.close();
       return;
-    }
- else     if (buf.remaining() <= 0) {
     }
     if (est.isComplete() && est.getExtraBytes() != null)     con.recvEncryptedI2NP(ByteBuffer.wrap(est.getExtraBytes()));
   }
@@ -32,5 +33,6 @@
   while (!con.isClosed() && (buf=con.getNextReadBuf()) != null) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Processing read buffer as part of an i2np message (" + buf.remaining() + " bytes)");
     con.recvEncryptedI2NP(buf);
+    EventPumper.releaseBuf(buf);
   }
 }

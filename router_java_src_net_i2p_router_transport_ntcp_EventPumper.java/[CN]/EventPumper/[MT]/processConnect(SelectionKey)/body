@@ -3,7 +3,7 @@
   try {
     SocketChannel chan=con.getChannel();
     boolean connected=chan.finishConnect();
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("processing connect for " + key + " / "+ con+ ": connected? "+ connected);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("processing connect for " + con + ": connected? "+ connected);
     if (connected) {
       chan.socket().setKeepAlive(true);
       con.setKey(key);
@@ -17,11 +17,12 @@
     }
   }
  catch (  IOException ioe) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("Failed outbound connection to " + con.getRemotePeer().calculateHash(),ioe);
+    if (_log.shouldLog(Log.INFO))     _log.info("Failed outbound " + con,ioe);
     con.close();
     _transport.markUnreachable(con.getRemotePeer().calculateHash());
     _context.statManager().addRateData("ntcp.connectFailedTimeoutIOE",1);
   }
 catch (  NoConnectionPendingException ncpe) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("error connecting on " + con,ncpe);
   }
 }

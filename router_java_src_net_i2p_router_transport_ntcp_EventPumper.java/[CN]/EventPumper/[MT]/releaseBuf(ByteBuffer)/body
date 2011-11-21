@@ -1,18 +1,19 @@
 {
+  if (buf.capacity() < BUF_SIZE) {
+    I2PAppContext.getGlobalContext().logManager().getLog(EventPumper.class).error("Bad size " + buf.capacity(),new Exception());
+    return;
+  }
   buf.clear();
   int extra=_bufCache.size();
   boolean cached=extra < _numBufs;
   if (cached) {
     _bufCache.offer(buf);
-    if (extra > 5) {
+    if (extra > MIN_BUFS) {
       __consecutiveExtra++;
       if (__consecutiveExtra >= 20) {
-        _numBufs=Math.max(_numBufs - 1,MIN_BUFS);
+        if (_numBufs > MIN_BUFS)         _numBufs--;
         __consecutiveExtra=0;
       }
     }
-  }
- else {
-    __liveBufs--;
   }
 }
