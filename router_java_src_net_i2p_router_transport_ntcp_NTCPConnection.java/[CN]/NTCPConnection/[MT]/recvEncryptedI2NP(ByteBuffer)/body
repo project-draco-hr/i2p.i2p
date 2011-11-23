@@ -1,13 +1,22 @@
 {
+  if (_curReadBlockIndex == 0 && buf.hasArray()) {
+    int tot=buf.remaining();
+    if (tot >= 32 && tot % 16 == 0) {
+      recvEncryptedFast(buf);
+      return;
+    }
+  }
   while (buf.hasRemaining() && !_closed) {
-    int want=Math.min(buf.remaining(),_curReadBlock.length - _curReadBlockIndex);
+    int want=Math.min(buf.remaining(),BLOCK_SIZE - _curReadBlockIndex);
     if (want > 0) {
       buf.get(_curReadBlock,_curReadBlockIndex,want);
       _curReadBlockIndex+=want;
     }
-    if (_curReadBlockIndex >= _curReadBlock.length) {
+    if (_curReadBlockIndex >= BLOCK_SIZE) {
       _context.aes().decryptBlock(_curReadBlock,0,_sessionKey,_decryptBlockBuf,0);
-      DataHelper.xor(_decryptBlockBuf,0,_prevReadBlock,0,_decryptBlockBuf,0,_decryptBlockBuf.length);
+      for (int i=0; i < BLOCK_SIZE; i++) {
+        _decryptBlockBuf[i]^=_prevReadBlock[i];
+      }
       boolean ok=recvUnencryptedI2NP();
       if (!ok) {
         _log.error("Read buffer " + System.identityHashCode(buf) + " contained corrupt data");

@@ -9,8 +9,19 @@
     }
  else     if (read == 0) {
       releaseBuf(buf);
+      int consec=con.gotZeroRead();
+      if (consec >= 5) {
+        _context.statManager().addRateData("ntcp.zeroReadDrop",1);
+        if (_log.shouldLog(Log.WARN))         _log.warn("Fail safe zero read close " + con);
+        con.close();
+      }
+ else {
+        _context.statManager().addRateData("ntcp.zeroRead",consec);
+        if (_log.shouldLog(Log.INFO))         _log.info("nothing to read for " + con + ", but stay interested");
+      }
     }
  else     if (read > 0) {
+      con.clearZeroRead();
       buf.flip();
       FIFOBandwidthLimiter.Request req=_context.bandwidthLimiter().requestInbound(read,"NTCP read");
       if (req.getPendingInboundRequested() > 0) {

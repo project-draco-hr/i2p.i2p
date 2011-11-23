@@ -7,12 +7,12 @@
   int rem=min % 16;
   int padding=0;
   if (rem > 0)   padding=16 - rem;
-  buf.padLength=padding;
   buf.unencryptedLength=min + padding;
   DataHelper.toLong(buf.unencrypted,0,2,sz);
   System.arraycopy(buf.base,0,buf.unencrypted,2,buf.baseLength);
-  if (padding > 0)   _context.random().nextBytes(buf.pad);
-  System.arraycopy(buf.pad,0,buf.unencrypted,2 + sz,buf.padLength);
+  if (padding > 0) {
+    _context.random().nextBytes(buf.unencrypted,2 + sz,padding);
+  }
   buf.crc.update(buf.unencrypted,0,buf.unencryptedLength - 4);
   long val=buf.crc.getValue();
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Outbound message " + _messagesWritten + " has crc "+ val+ " sz="+ sz+ " rem="+ rem+ " padding="+ padding);

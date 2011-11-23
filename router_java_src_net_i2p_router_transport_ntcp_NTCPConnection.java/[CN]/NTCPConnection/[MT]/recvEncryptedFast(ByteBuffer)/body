@@ -1,0 +1,28 @@
+{
+  byte[] array=buf.array();
+  int pos=buf.arrayOffset();
+  int end=pos + buf.remaining();
+  boolean first=true;
+  for (; pos < end && !_closed; pos+=BLOCK_SIZE) {
+    _context.aes().decryptBlock(array,pos,_sessionKey,_decryptBlockBuf,0);
+    if (first) {
+      for (int i=0; i < BLOCK_SIZE; i++) {
+        _decryptBlockBuf[i]^=_prevReadBlock[i];
+      }
+      first=false;
+    }
+ else {
+      int start=pos - BLOCK_SIZE;
+      for (int i=0; i < BLOCK_SIZE; i++) {
+        _decryptBlockBuf[i]^=array[start + i];
+      }
+    }
+    boolean ok=recvUnencryptedI2NP();
+    if (!ok) {
+      _log.error("Read buffer " + System.identityHashCode(buf) + " contained corrupt data");
+      _context.statManager().addRateData("ntcp.corruptDecryptedI2NP",1);
+      return;
+    }
+  }
+  System.arraycopy(array,end - BLOCK_SIZE,_prevReadBlock,0,BLOCK_SIZE);
+}
