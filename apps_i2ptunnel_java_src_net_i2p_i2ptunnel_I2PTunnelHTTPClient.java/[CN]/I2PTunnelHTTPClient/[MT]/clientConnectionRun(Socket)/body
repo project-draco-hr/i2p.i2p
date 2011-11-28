@@ -19,7 +19,7 @@
     while ((line=reader.readLine(method)) != null) {
       line=line.trim();
       if (_log.shouldLog(Log.DEBUG))       _log.debug(getPrefix(requestId) + "Line=[" + line+ "]");
-      String lowercaseLine=line.toLowerCase();
+      String lowercaseLine=line.toLowerCase(Locale.US);
       if (lowercaseLine.startsWith("connection: ") || lowercaseLine.startsWith("keep-alive: ") || lowercaseLine.startsWith("proxy-connection: "))       continue;
       if (method == null) {
         if (_log.shouldLog(Log.DEBUG))         _log.debug(getPrefix(requestId) + "First line [" + line+ "]");
@@ -39,7 +39,7 @@
           }
           request="http://" + uri + subRequest.substring(protopos);
         }
- else         if (request.toLowerCase().startsWith("http://i2p/")) {
+ else         if (request.toLowerCase(Locale.US).startsWith("http://i2p/")) {
           String subRequest=request.substring("http://i2p/".length());
           int protopos=subRequest.indexOf(" ");
           String uri=subRequest.substring(0,protopos);
@@ -88,11 +88,11 @@
           host=getHostName(destination);
           line=method + ' ' + request.substring(pos);
         }
- else         if (host.toLowerCase().equals(LOCAL_SERVER)) {
+ else         if (host.toLowerCase(Locale.US).equals(LOCAL_SERVER)) {
           destination=host;
           usingInternalServer=true;
         }
- else         if (host.toLowerCase().endsWith(".i2p")) {
+ else         if (host.toLowerCase(Locale.US).endsWith(".i2p")) {
           destination=host;
           host=getHostName(destination);
           int pos2;
@@ -130,7 +130,7 @@
                   }
                   ahelperPresent=true;
                   if (host == null || "i2p".equals(host)) {
-                    String old=addressHelpers.putIfAbsent(destination.toLowerCase(),ahelperKey);
+                    String old=addressHelpers.putIfAbsent(destination.toLowerCase(Locale.US),ahelperKey);
                     ahelperNew=old == null;
                     if ((!ahelperNew) && !old.equals(ahelperKey)) {
                       ahelperConflict=true;
@@ -185,7 +185,7 @@
           if (addressHelper != null)           host=getHostName(addressHelper);
           line=method + " " + request.substring(pos);
         }
- else         if (host.toLowerCase().equals("localhost") || host.equals("127.0.0.1") || host.startsWith("192.168.")) {
+ else         if (host.toLowerCase(Locale.US).equals("localhost") || host.equals("127.0.0.1") || host.startsWith("192.168.")) {
           if (out != null) {
             out.write(getErrorPage("localhost",ERR_LOCALHOST));
             writeFooter(out);
@@ -350,15 +350,15 @@
       return;
     }
     Destination clientDest=null;
-    String addressHelper=addressHelpers.get(destination.toLowerCase());
+    String addressHelper=addressHelpers.get(destination.toLowerCase(Locale.US));
     if (addressHelper != null) {
       clientDest=_context.namingService().lookup(addressHelper);
-      if (clientDest == null)       addressHelpers.remove(destination.toLowerCase());
+      if (clientDest == null)       addressHelpers.remove(destination.toLowerCase(Locale.US));
     }
  else     if ("i2p".equals(host)) {
       clientDest=null;
     }
- else     if (destination.length() == 60 && destination.toLowerCase().endsWith(".b32.i2p")) {
+ else     if (destination.length() == 60 && destination.toLowerCase(Locale.US).endsWith(".b32.i2p")) {
       verifySocketManager();
       I2PSession sess=sockMgr.getSession();
       if (sess != null && !sess.isClosed()) {
@@ -382,7 +382,7 @@
       String jumpServers=null;
       if (usingWWWProxy)       header=getErrorPage("dnfp",ERR_DESTINATION_UNKNOWN);
  else       if (ahelperPresent)       header=getErrorPage("dnfb",ERR_DESTINATION_UNKNOWN);
- else       if (destination.length() == 60 && destination.toLowerCase().endsWith(".b32.i2p"))       header=getErrorPage("dnf",ERR_DESTINATION_UNKNOWN);
+ else       if (destination.length() == 60 && destination.toLowerCase(Locale.US).endsWith(".b32.i2p"))       header=getErrorPage("dnf",ERR_DESTINATION_UNKNOWN);
  else {
         header=getErrorPage("dnfh",ERR_DESTINATION_UNKNOWN);
         jumpServers=getTunnel().getClientOptions().getProperty(PROP_JUMP_SERVERS);
