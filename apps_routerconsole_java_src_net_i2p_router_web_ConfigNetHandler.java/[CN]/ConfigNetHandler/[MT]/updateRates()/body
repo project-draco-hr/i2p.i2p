@@ -1,5 +1,6 @@
 {
   boolean updated=false;
+  boolean bwUpdated=false;
   if (_sharePct != null) {
     String old=_context.router().getConfigSetting(Router.PROP_BANDWIDTH_SHARE_PERCENTAGE);
     if ((old == null) || (!old.equals(_sharePct))) {
@@ -18,7 +19,7 @@
     }
  catch (    NumberFormatException nfe) {
     }
-    updated=true;
+    bwUpdated=true;
   }
   if ((_outboundRate != null) && (_outboundRate.length() > 0) && !_outboundRate.equals(_context.getProperty(FIFOBandwidthRefiller.PROP_OUTBOUND_BANDWIDTH,"" + FIFOBandwidthRefiller.DEFAULT_OUTBOUND_BANDWIDTH))) {
     _context.router().setConfigSetting(FIFOBandwidthRefiller.PROP_OUTBOUND_BANDWIDTH,_outboundRate);
@@ -30,10 +31,11 @@
     }
  catch (    NumberFormatException nfe) {
     }
+    bwUpdated=true;
+  }
+  if (bwUpdated) {
+    addFormNotice(_("Updated bandwidth limits"));
     updated=true;
   }
-  if (updated && !_ratesOnly) {
-    _context.bandwidthLimiter().reinitialize();
-    addFormNotice(_("Updated bandwidth limits"));
-  }
+  if (updated)   _context.bandwidthLimiter().reinitialize();
 }
