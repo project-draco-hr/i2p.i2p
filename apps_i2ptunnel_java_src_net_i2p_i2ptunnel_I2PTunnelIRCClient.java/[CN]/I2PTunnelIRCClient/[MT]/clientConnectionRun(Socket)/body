@@ -12,8 +12,17 @@
     Thread out=new I2PAppThread(new IrcOutboundFilter(s,i2ps,expectedPong,_log,dcc),"IRC Client " + __clientId + " out",true);
     out.start();
   }
- catch (  Exception ex) {
+ catch (  I2PException ex) {
     if (_log.shouldLog(Log.ERROR))     _log.error("Error connecting",ex);
+    closeSocket(s);
+    if (i2ps != null) {
+synchronized (sockLock) {
+        mySockets.remove(sockLock);
+      }
+    }
+  }
+catch (  Exception ex) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Error connecting",ex);
     closeSocket(s);
     if (i2ps != null) {
 synchronized (sockLock) {
