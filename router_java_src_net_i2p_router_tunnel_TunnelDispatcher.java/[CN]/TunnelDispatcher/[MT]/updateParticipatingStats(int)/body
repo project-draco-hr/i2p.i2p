@@ -1,18 +1,12 @@
 {
-  List<HopConfig> participating=listParticipatingTunnels();
-  int size=participating.size();
   long count=0;
   long bw=0;
-  long bwOut=0;
   long tcount=0;
   long tooYoung=_context.clock().now() - 60 * 1000;
   long tooOld=tooYoung - 9 * 60 * 1000;
-  for (int i=0; i < size; i++) {
-    HopConfig cfg=participating.get(i);
-    if (cfg == null)     continue;
+  for (  HopConfig cfg : _participatingConfig.values()) {
     long c=cfg.getRecentMessagesCount();
     bw+=c;
-    bwOut+=cfg.getRecentSentMessagesCount();
     long created=cfg.getCreation();
     if (created > tooYoung || created < tooOld)     continue;
     tcount++;
@@ -21,6 +15,5 @@
   if (tcount > 0)   count=count * 30 / tcount;
   _context.statManager().addRateData("tunnel.participatingMessageCount",count,ms);
   _context.statManager().addRateData("tunnel.participatingBandwidth",bw * 1024 / (ms / 1000),ms);
-  _context.statManager().addRateData("tunnel.participatingBandwidthOut",bwOut * 1024 / (ms / 1000),ms);
-  _context.statManager().addRateData("tunnel.participatingTunnels",size,0);
+  _context.statManager().addRateData("tunnel.participatingTunnels",tcount);
 }
