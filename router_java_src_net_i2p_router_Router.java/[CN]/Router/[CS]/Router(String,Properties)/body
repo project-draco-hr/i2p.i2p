@@ -64,28 +64,13 @@
   _log=_context.logManager().getLog(Router.class);
   _log.info("New router created with config file " + _configFilename);
   _killVMOnEnd=true;
-  _oomListener=new I2PThread.OOMEventListener(){
-    public void outOfMemory(    OutOfMemoryError oom){
-      clearCaches();
-      _log.log(Log.CRIT,"Thread ran out of memory, shutting down I2P",oom);
-      if (_shutdownInProgress)       return;
-      for (int i=0; i < 5; i++) {
-        try {
-          _log.log(Log.CRIT,"free mem: " + Runtime.getRuntime().freeMemory() + " total mem: "+ Runtime.getRuntime().totalMemory());
-          break;
-        }
- catch (        OutOfMemoryError oome) {
-        }
-      }
-      _log.log(Log.CRIT,"To prevent future shutdowns, increase wrapper.java.maxmemory in $I2P/wrapper.config");
-      shutdown(EXIT_OOM);
-    }
-  }
-;
+  _oomListener=new OOMListener(_context);
   _shutdownHook=new ShutdownHook(_context);
-  _gracefulShutdownDetector=new I2PAppThread(new GracefulShutdown(),"Graceful shutdown hook",true);
+  _gracefulShutdownDetector=new I2PAppThread(new GracefulShutdown(_context),"Graceful shutdown hook",true);
+  _gracefulShutdownDetector.setPriority(Thread.NORM_PRIORITY + 1);
   _gracefulShutdownDetector.start();
   _watchdog=new RouterWatchdog(_context);
   _watchdogThread=new I2PAppThread(_watchdog,"RouterWatchdog",true);
+  _watchdogThread.setPriority(Thread.NORM_PRIORITY + 1);
   _watchdogThread.start();
 }
