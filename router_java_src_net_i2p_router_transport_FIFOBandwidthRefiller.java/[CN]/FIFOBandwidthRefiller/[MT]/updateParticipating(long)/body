@@ -1,24 +1,9 @@
 {
-  long elapsed=now - _lastPartUpdateTime;
-  if (elapsed <= 0) {
-    _lastPartUpdateTime=now;
-    return;
+  _updateLock.writeLock().lock();
+  try {
+    locked_updateParticipating(now);
   }
-  _lastPartUpdateTime=now;
-  if (--_lastIndex < 0)   _lastIndex=PERIODS - 1;
-  _counts[_lastIndex]=_currentParticipating.getAndSet(0);
-  _times[_lastIndex]=elapsed;
-  _lastTotal=0;
-  _lastTotalTime=0;
-  for (int i=0; i < PERIODS; i++) {
-    int idx=(_lastIndex + i) % PERIODS;
-    _lastTotal+=_counts[idx];
-    _lastTotalTime+=_times[idx];
-    if (_lastTotalTime >= TOTAL_TIME)     break;
-  }
-  if (_lastIndex == 0 && _lastTotalTime > 0) {
-    long bw=1000l * _lastTotal / _lastTotalTime;
-    _context.statManager().addRateData("tunnel.participatingBandwidthOut",bw);
-    if (_lastTotal > 0 && _log.shouldLog(Log.INFO))     _log.info(DataHelper.formatSize(_lastTotal) + " bytes out part. tunnels in last " + _lastTotalTime+ " ms: "+ DataHelper.formatSize(bw)+ " Bps");
+  finally {
+    _updateLock.writeLock().unlock();
   }
 }

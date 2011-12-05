@@ -1,8 +1,9 @@
 {
-  int current=_currentParticipating.get();
-  long totalTime=(_limiter.now() - _lastPartUpdateTime) + _lastTotalTime;
-  if (totalTime <= 0)   return 0;
-  long bw=1000l * (current + _lastTotal) / totalTime;
-  if (bw > Integer.MAX_VALUE)   return 0;
-  return (int)bw;
+  _updateLock.readLock().lock();
+  try {
+    return locked_getCurrentParticipatingBandwidth();
+  }
+  finally {
+    _updateLock.readLock().unlock();
+  }
 }
