@@ -1,6 +1,9 @@
 {
-  _currentACKs.remove(messageId);
-  _currentACKsResend.offer(messageId);
-  while (_currentACKsResend.size() > MAX_RESEND_ACKS)   _currentACKsResend.poll();
+  boolean removed=_currentACKs.remove(messageId);
+  if (removed) {
+    _currentACKsResend.offer(messageId);
+    while (_currentACKsResend.size() > MAX_RESEND_ACKS)     _currentACKsResend.poll();
+    if (_log.shouldLog(Log.INFO))     _log.info("Sent ack " + messageId + " now "+ _currentACKs.size()+ " current and "+ _currentACKsResend.size()+ " resend acks");
+  }
   _lastACKSend=_context.clock().now();
 }
