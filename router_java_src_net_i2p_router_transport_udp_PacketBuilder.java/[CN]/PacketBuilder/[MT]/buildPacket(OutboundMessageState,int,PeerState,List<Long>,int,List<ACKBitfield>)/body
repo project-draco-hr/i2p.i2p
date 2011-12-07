@@ -22,6 +22,7 @@
   int partialAcksToSend=0;
   if (availableForExplicitAcks >= 6 && !partialACKsRemaining.isEmpty()) {
     for (    ACKBitfield bf : partialACKsRemaining) {
+      if (partialAcksToSend >= ABSOLUTE_MAX_ACKS)       break;
       if (bf.receivedComplete())       continue;
       int acksz=4 + (bf.fragmentCount() / 7) + 1;
       if (partialAcksToSend == 0)       acksz++;
@@ -40,9 +41,9 @@
   }
   off++;
   if (msg != null) {
-    msg.append(" data: ").append(dataSize).append(" bytes, mtu: ").append(currentMTU).append(", ").append(ackIdsRemaining.size()).append(" full acks requested, ").append(partialACKsRemaining.size()).append(" partial acks requested, ").append(availableForAcks).append(" avail. for all acks, ").append(availableForExplicitAcks).append(" for full acks, ");
+    msg.append(" data: ").append(dataSize).append(" bytes, mtu: ").append(currentMTU).append(", ").append(newAckCount).append(" new full acks requested, ").append(ackIdsRemaining.size() - newAckCount).append(" resend acks requested, ").append(partialACKsRemaining.size()).append(" partial acks requested, ").append(availableForAcks).append(" avail. for all acks, ").append(availableForExplicitAcks).append(" for full acks, ");
   }
-  int explicitToSend=Math.min(currentMTU > PeerState.MIN_MTU ? MAX_EXPLICIT_ACKS_LARGE : MAX_EXPLICIT_ACKS_SMALL,Math.min((availableForExplicitAcks - 1) / 4,ackIdsRemaining.size()));
+  int explicitToSend=Math.min(ABSOLUTE_MAX_ACKS,Math.min(newAckCount + (currentMTU > PeerState.MIN_MTU ? MAX_RESEND_ACKS_LARGE : MAX_RESEND_ACKS_SMALL),Math.min((availableForExplicitAcks - 1) / 4,ackIdsRemaining.size())));
   if (explicitToSend > 0) {
     if (msg != null)     msg.append(explicitToSend).append(" full acks included:");
     DataHelper.toLong(data,off,1,explicitToSend);
