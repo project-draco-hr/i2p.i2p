@@ -4,9 +4,11 @@
   _tunnelId=new TunnelId(DataHelper.fromLong(data,curIndex,4));
   curIndex+=4;
   if (_tunnelId.getTunnelId() <= 0)   throw new I2NPMessageException("Invalid tunnel Id " + _tunnelId);
-  DataHelper.fromLong(data,curIndex,2);
+  int len=(int)DataHelper.fromLong(data,curIndex,2);
   curIndex+=2;
-  curIndex=handler.readMessage(data,curIndex);
-  _msg=handler.lastRead();
-  if (_msg == null)   throw new I2NPMessageException("wtf, message read has no payload?");
+  if (len <= 1 || curIndex + len > data.length || len > dataSize - 6)   throw new I2NPMessageException("I2NP length in TGM: " + len + " but remaining bytes: "+ Math.min(data.length - curIndex,dataSize - 6));
+  int utype=data[curIndex++] & 0xff;
+  UnknownI2NPMessage umsg=new UnknownI2NPMessage(_context,utype);
+  umsg.readBytesIgnoreChecksum(data,curIndex);
+  _msg=umsg;
 }

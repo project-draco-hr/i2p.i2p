@@ -1,0 +1,18 @@
+{
+  I2NPMessage msg=I2NPMessageImpl.createMessage(_context,_type);
+  if (msg instanceof UnknownI2NPMessage)   throw new I2NPMessageException("Unable to convert unknown type " + _type);
+  byte[] calc=SimpleByteCache.acquire(Hash.HASH_LENGTH);
+  _context.sha().calculateHash(_data,0,_data.length,calc,0);
+  boolean eq=_checksum == calc[0];
+  SimpleByteCache.release(calc);
+  if (!eq)   throw new I2NPMessageException("Bad checksum on " + _data.length + " byte msg type "+ _type);
+  try {
+    msg.readMessage(_data,0,_data.length,_type);
+  }
+ catch (  IOException ioe) {
+    throw new I2NPMessageException("Unable to convert type " + _type,ioe);
+  }
+  msg.setUniqueId(getUniqueId());
+  msg.setMessageExpiration(getMessageExpiration());
+  return msg;
+}
