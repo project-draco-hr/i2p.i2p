@@ -1,24 +1,35 @@
 {
   try {
-    ByteArray fragments[]=state.getFragments();
+    I2NPMessage m;
     int numFragments=state.getFragmentCount();
-    int off=0;
-    for (int i=0; i < numFragments; i++) {
-      System.arraycopy(fragments[i].getData(),0,buf.getData(),off,fragments[i].getValid());
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Raw fragment[" + i + "] for "+ state.getMessageId()+ ": "+ Base64.encode(fragments[i].getData(),0,fragments[i].getValid())+ " (valid: "+ fragments[i].getValid()+ " raw: "+ Base64.encode(fragments[i].getData())+ ")");
-      off+=fragments[i].getValid();
+    if (numFragments > 1) {
+      ByteArray fragments[]=state.getFragments();
+      int off=0;
+      for (int i=0; i < numFragments; i++) {
+        System.arraycopy(fragments[i].getData(),0,buf.getData(),off,fragments[i].getValid());
+        off+=fragments[i].getValid();
+      }
+      if (off != state.getCompleteSize()) {
+        if (_log.shouldLog(Log.WARN))         _log.warn("Hmm, offset of the fragments = " + off + " while the state says "+ state.getCompleteSize());
+        return null;
+      }
+      m=I2NPMessageImpl.fromRawByteArray(_context,buf.getData(),0,state.getCompleteSize(),handler);
     }
-    if (off != state.getCompleteSize()) {
-      if (_log.shouldLog(Log.WARN))       _log.warn("Hmm, offset of the fragments = " + off + " while the state says "+ state.getCompleteSize());
-      return null;
+ else {
+      m=I2NPMessageImpl.fromRawByteArray(_context,state.getFragments()[0].getData(),0,state.getCompleteSize(),handler);
     }
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Raw byte array for " + state.getMessageId() + ": "+ Base64.encode(buf.getData(),0,state.getCompleteSize()));
-    I2NPMessage m=I2NPMessageImpl.fromRawByteArray(_context,buf.getData(),0,state.getCompleteSize(),handler);
+    if (state.getCompleteSize() == 534 && _log.shouldLog(Log.INFO)) {
+      _log.info(HexDump.dump(buf.getData(),0,state.getCompleteSize()));
+    }
     m.setUniqueId(state.getMessageId());
     return m;
   }
  catch (  I2NPMessageException ime) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("Message invalid: " + state,ime);
+    if (_log.shouldLog(Log.WARN)) {
+      _log.warn("Message invalid: " + state,ime);
+      _log.warn(HexDump.dump(buf.getData(),0,state.getCompleteSize()));
+      _log.warn("RAW: " + Base64.encode(buf.getData(),0,state.getCompleteSize()));
+    }
     _context.messageHistory().droppedInboundMessage(state.getMessageId(),state.getFrom(),"error: " + ime.toString() + ": "+ state.toString());
     return null;
   }

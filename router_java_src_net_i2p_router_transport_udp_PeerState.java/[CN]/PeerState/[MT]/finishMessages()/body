@@ -1,6 +1,5 @@
 {
-  List<OutboundMessageState> msgs=_outboundMessages;
-  if (msgs.isEmpty())   return 0;
+  if (_outboundMessages.isEmpty())   return 0;
   if (_dead) {
     dropOutbound();
     return 0;
@@ -8,8 +7,8 @@
   int rv=0;
   List<OutboundMessageState> succeeded=null;
   List<OutboundMessageState> failed=null;
-synchronized (msgs) {
-    for (Iterator<OutboundMessageState> iter=msgs.iterator(); iter.hasNext(); ) {
+synchronized (_outboundMessages) {
+    for (Iterator<OutboundMessageState> iter=_outboundMessages.iterator(); iter.hasNext(); ) {
       OutboundMessageState state=iter.next();
       if (state.isComplete()) {
         iter.remove();
@@ -32,7 +31,7 @@ synchronized (msgs) {
         failed.add(state);
       }
     }
-    rv=msgs.size();
+    rv=_outboundMessages.size();
   }
   for (int i=0; succeeded != null && i < succeeded.size(); i++) {
     OutboundMessageState state=succeeded.get(i);
