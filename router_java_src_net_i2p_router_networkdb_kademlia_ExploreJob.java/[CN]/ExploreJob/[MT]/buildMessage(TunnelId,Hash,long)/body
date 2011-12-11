@@ -2,21 +2,22 @@
   DatabaseLookupMessage msg=new DatabaseLookupMessage(getContext(),true);
   msg.setSearchKey(getState().getTarget());
   msg.setFrom(replyGateway);
-  msg.setDontIncludePeers(getState().getClosestAttempted(MAX_CLOSEST));
+  Set<Hash> dontIncludePeers=getState().getClosestAttempted(MAX_CLOSEST);
   msg.setMessageExpiration(expiration);
   msg.setReplyTunnel(replyTunnelId);
-  int available=MAX_CLOSEST - msg.getDontIncludePeers().size();
+  int available=MAX_CLOSEST - dontIncludePeers.size();
   if (available > 0) {
-    if (msg.getDontIncludePeers().add(Hash.FAKE_HASH))     available--;
+    if (dontIncludePeers.add(Hash.FAKE_HASH))     available--;
   }
   KBucketSet ks=_facade.getKBuckets();
   Hash rkey=getContext().routingKeyGenerator().getRoutingKey(getState().getTarget());
-  available=MAX_CLOSEST - msg.getDontIncludePeers().size();
+  available=MAX_CLOSEST - dontIncludePeers.size();
   if (available > 0) {
-    Set dontInclude=new HashSet(msg.getDontIncludePeers());
-    List peers=_peerSelector.selectNearestExplicit(rkey,available,dontInclude,ks);
-    msg.getDontIncludePeers().addAll(peers);
+    Set<Hash> dontInclude=new HashSet(dontIncludePeers);
+    List<Hash> peers=_peerSelector.selectNearestExplicit(rkey,available,dontInclude,ks);
+    dontIncludePeers.addAll(peers);
   }
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Peers we don't want to hear about: " + msg.getDontIncludePeers());
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Peers we don't want to hear about: " + dontIncludePeers);
+  msg.setDontIncludePeers(dontIncludePeers);
   return msg;
 }
