@@ -26,12 +26,15 @@
  catch (    DataFormatException dfe) {
       throw new I2NPMessageException("Error reading the leaseSet",dfe);
     }
+catch (    IOException ioe) {
+      throw new I2NPMessageException("Error reading the leaseSet",ioe);
+    }
   }
  else   if (type == DatabaseEntry.KEY_TYPE_ROUTERINFO) {
     _dbEntry=new RouterInfo();
     int compressedSize=(int)DataHelper.fromLong(data,curIndex,2);
     curIndex+=2;
-    if (compressedSize <= 0 || curIndex + compressedSize > data.length || (curIndex - offset) + compressedSize > dataSize)     throw new I2NPMessageException("Compressed RI length: " + compressedSize + " but remaining bytes: "+ Math.min(data.length - curIndex,dataSize - (curIndex - offset)));
+    if (compressedSize <= 0 || curIndex + compressedSize > data.length || curIndex + compressedSize > dataSize + offset)     throw new I2NPMessageException("Compressed RI length: " + compressedSize + " but remaining bytes: "+ Math.min(data.length - curIndex,dataSize + offset - curIndex));
     try {
       byte decompressed[]=DataHelper.decompress(data,curIndex,compressedSize);
       _dbEntry.readBytes(new ByteArrayInputStream(decompressed));

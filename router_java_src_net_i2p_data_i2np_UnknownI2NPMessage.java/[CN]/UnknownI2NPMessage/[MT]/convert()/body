@@ -1,4 +1,5 @@
 {
+  if (_data == null || !_hasChecksum)   throw new I2NPMessageException("Illegal state");
   I2NPMessage msg=I2NPMessageImpl.createMessage(_context,_type);
   if (msg instanceof UnknownI2NPMessage)   throw new I2NPMessageException("Unable to convert unknown type " + _type);
   byte[] calc=SimpleByteCache.acquire(Hash.HASH_LENGTH);
@@ -6,13 +7,8 @@
   boolean eq=_checksum == calc[0];
   SimpleByteCache.release(calc);
   if (!eq)   throw new I2NPMessageException("Bad checksum on " + _data.length + " byte msg type "+ _type);
-  try {
-    msg.readMessage(_data,0,_data.length,_type);
-  }
- catch (  IOException ioe) {
-    throw new I2NPMessageException("Unable to convert type " + _type,ioe);
-  }
-  msg.setUniqueId(getUniqueId());
-  msg.setMessageExpiration(getMessageExpiration());
+  msg.readMessage(_data,0,_data.length,_type);
+  msg.setUniqueId(_uniqueId);
+  msg.setMessageExpiration(_expiration);
   return msg;
 }

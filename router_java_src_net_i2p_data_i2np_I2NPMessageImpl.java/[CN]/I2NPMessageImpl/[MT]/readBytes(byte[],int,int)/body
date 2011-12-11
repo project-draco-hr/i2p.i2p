@@ -1,26 +1,3 @@
 {
-  int cur=offset;
-  if (type < 0) {
-    type=(int)DataHelper.fromLong(data,cur,1);
-    cur++;
-  }
-  _uniqueId=DataHelper.fromLong(data,cur,4);
-  cur+=4;
-  _expiration=DataHelper.fromLong(data,cur,DataHelper.DATE_LENGTH);
-  cur+=DataHelper.DATE_LENGTH;
-  int size=(int)DataHelper.fromLong(data,cur,2);
-  cur+=2;
-  byte hdata[]=new byte[CHECKSUM_LENGTH];
-  System.arraycopy(data,cur,hdata,0,CHECKSUM_LENGTH);
-  cur+=CHECKSUM_LENGTH;
-  if (cur + size > data.length)   throw new I2NPMessageException("Payload is too short [" + "data.len=" + data.length + " offset="+ offset+ " cur="+ cur+ " wanted="+ size+ "]: "+ getClass().getName());
-  byte[] calc=SimpleByteCache.acquire(Hash.HASH_LENGTH);
-  _context.sha().calculateHash(data,cur,size,calc,0);
-  boolean eq=DataHelper.eq(hdata,0,calc,0,CHECKSUM_LENGTH);
-  SimpleByteCache.release(calc);
-  if (!eq)   throw new I2NPMessageException("Bad checksum on " + size + " byte I2NP "+ getClass().getSimpleName());
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Reading bytes: type = " + type + " / uniqueId : "+ _uniqueId+ " / expiration : "+ _expiration);
-  readMessage(data,cur,size,type);
-  cur+=size;
-  return cur - offset;
+  return readBytes(data,type,offset,data.length - offset);
 }
