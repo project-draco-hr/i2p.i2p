@@ -3,9 +3,10 @@
   _completed++;
   String stringified=null;
   if (_log.shouldLog(Log.DEBUG))   stringified=msg.toString();
+  byte data[]=null;
   try {
     int fragmentCount=msg.getFragmentCount();
-    byte data[]=msg.toByteArray();
+    data=msg.toByteArray();
     if (data == null)     throw new I2NPMessageException("null data");
     if (_log.shouldLog(Log.DEBUG))     _log.debug("RECV(" + data.length + "): ");
     I2NPMessage m=new I2NPMessageHandler(_context).readMessage(data);
@@ -13,12 +14,12 @@
     noteCompletion(m.getUniqueId());
     _receiver.receiveComplete(m,msg.getTargetRouter(),msg.getTargetTunnel());
   }
- catch (  IOException ioe) {
+ catch (  I2NPMessageException ime) {
     if (stringified == null)     stringified=msg.toString();
-    if (_log.shouldLog(Log.ERROR))     _log.error("Error receiving fragmented message (corrupt?): " + stringified,ioe);
-  }
-catch (  I2NPMessageException ime) {
-    if (stringified == null)     stringified=msg.toString();
-    if (_log.shouldLog(Log.WARN))     _log.warn("Error receiving fragmented message (corrupt?): " + stringified,ime);
+    if (_log.shouldLog(Log.WARN)) {
+      _log.warn("Error receiving fragmented message (corrupt?): " + stringified,ime);
+      _log.warn("DUMP:\n" + HexDump.dump(data));
+      _log.warn("RAW:\n" + Base64.encode(data));
+    }
   }
 }
