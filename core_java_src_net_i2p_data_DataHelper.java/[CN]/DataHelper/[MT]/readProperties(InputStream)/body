@@ -9,14 +9,16 @@
   byte semiBuf[]=new byte[SEMICOLON_BYTES.length];
   while (in.available() > 0) {
     String key=readString(in);
+    String cached=_propertiesKeyCache.get(key);
+    if (cached != null)     key=cached;
     read=read(in,eqBuf);
     if ((read != eqBuf.length) || (!eq(eqBuf,EQUAL_BYTES))) {
-      break;
+      throw new DataFormatException("Bad key");
     }
     String val=readString(in);
     read=read(in,semiBuf);
     if ((read != semiBuf.length) || (!eq(semiBuf,SEMICOLON_BYTES))) {
-      break;
+      throw new DataFormatException("Bad value");
     }
     props.put(key,val);
   }

@@ -2,23 +2,19 @@
   if (numBytes > 8)   throw new DataFormatException("readLong doesn't currently support reading numbers > 8 bytes [as thats bigger than java's long]");
   long rv=0;
   for (int i=0; i < numBytes; i++) {
-    long cur=rawStream.read();
+    int cur=rawStream.read();
     if (cur == -1)     throw new EOFException("EOF reading " + numBytes + " byte value");
-    cur&=0xFF;
     if (cur != 0) {
-      long remaining=numBytes - i;
-      for (int j=0; j < remaining; j++) {
-        long shiftAmount=8 * (remaining - j - 1);
-        cur=cur << shiftAmount;
-        rv+=cur;
-        if (j + 1 < remaining) {
-          cur=rawStream.read();
-          if (cur == -1)           throw new EOFException("EOF reading " + numBytes + " byte value");
-          cur&=0xFF;
-        }
+      rv=cur & 0xff;
+      for (int j=i + 1; j < numBytes; j++) {
+        rv<<=8;
+        cur=rawStream.read();
+        if (cur == -1)         throw new EOFException("EOF reading " + numBytes + " byte value");
+        rv|=cur & 0xff;
       }
       break;
     }
   }
+  if (rv < 0)   throw new DataFormatException("wtf, fromLong got a negative? " + rv + " numBytes="+ numBytes);
   return rv;
 }
