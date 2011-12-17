@@ -1,10 +1,33 @@
 {
-  if (name.equals(".") || name.equals(" "))   return "_";
-  String rv=name;
-  if (rv.startsWith("."))   rv='_' + rv.substring(1);
-  if (rv.endsWith(".") || rv.endsWith(" "))   rv=rv.substring(0,rv.length() - 1) + '_';
-  for (int i=0; i < ILLEGAL.length; i++) {
-    if (rv.indexOf(ILLEGAL[i]) >= 0)     rv=rv.replace(ILLEGAL[i],'_');
+  String rv=_filterNameCache.get(name);
+  if (rv != null)   return rv;
+  if (name.equals(".") || name.equals(" ")) {
+    rv="_";
   }
+ else {
+    rv=name;
+    if (rv.startsWith("."))     rv='_' + rv.substring(1);
+    if (rv.endsWith(".") || rv.endsWith(" "))     rv=rv.substring(0,rv.length() - 1) + '_';
+    for (int i=0; i < ILLEGAL.length; i++) {
+      if (rv.indexOf(ILLEGAL[i]) >= 0)       rv=rv.replace(ILLEGAL[i],'_');
+    }
+    if (!Charset.defaultCharset().name().equals("UTF-8")) {
+      try {
+        CharsetEncoder enc=Charset.defaultCharset().newEncoder();
+        if (!enc.canEncode(rv)) {
+          String repl=rv;
+          for (int i=0; i < rv.length(); i++) {
+            char c=rv.charAt(i);
+            if (!enc.canEncode(c))             repl=repl.replace(c,'_');
+          }
+          rv=repl;
+        }
+      }
+ catch (      Exception ex) {
+        ex.printStackTrace();
+      }
+    }
+  }
+  _filterNameCache.put(name,rv);
   return rv;
 }
