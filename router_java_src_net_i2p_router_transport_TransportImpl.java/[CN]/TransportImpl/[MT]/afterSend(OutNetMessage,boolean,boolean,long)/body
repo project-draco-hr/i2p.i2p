@@ -4,26 +4,26 @@
  else   msg.timestamp("afterSend(failed)");
   if (!sendSuccessful)   msg.transportFailed(getStyle());
   if (msToSend > 1000) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("afterSend slow: [success=" + sendSuccessful + "] "+ msg.getMessageSize()+ " byte "+ msg.getMessageType()+ " "+ msg.getMessageId()+ " to "+ msg.getTarget().getIdentity().calculateHash().toBase64().substring(0,6)+ " took "+ msToSend);
+    if (_log.shouldLog(Log.WARN))     _log.warn(getStyle() + " afterSend slow: " + (sendSuccessful ? "success " : "FAIL ")+ msg.getMessageSize()+ " byte "+ msg.getMessageType()+ ' '+ msg.getMessageId()+ " to "+ msg.getTarget().getIdentity().calculateHash().toBase64().substring(0,6)+ " took "+ msToSend+ " ms");
   }
   long lifetime=msg.getLifetime();
   if (lifetime > 3000) {
     int level=Log.WARN;
     if (!sendSuccessful)     level=Log.INFO;
-    if (_log.shouldLog(level))     _log.log(level,"afterSend slow (" + lifetime + "/"+ msToSend+ "): [success="+ sendSuccessful+ "] "+ msg.getMessageSize()+ " byte "+ msg.getMessageType()+ " "+ msg.getMessageId()+ " from "+ _context.routerHash().toBase64().substring(0,6)+ " to "+ msg.getTarget().getIdentity().calculateHash().toBase64().substring(0,6)+ ": "+ msg.toString());
+    if (_log.shouldLog(level))     _log.log(level,getStyle() + " afterSend slow (" + (sendSuccessful ? "success " : "FAIL ")+ lifetime+ "/"+ msToSend+ "): "+ msg.getMessageSize()+ " byte "+ msg.getMessageType()+ " "+ msg.getMessageId()+ " from "+ _context.routerHash().toBase64().substring(0,6)+ " to "+ msg.getTarget().getIdentity().calculateHash().toBase64().substring(0,6)+ ": "+ msg.toString());
   }
  else {
-    if (_log.shouldLog(Log.INFO))     _log.info("afterSend: [success=" + sendSuccessful + "] "+ msg.getMessageSize()+ " byte "+ msg.getMessageType()+ " "+ msg.getMessageId()+ " from "+ _context.routerHash().toBase64().substring(0,6)+ " to "+ msg.getTarget().getIdentity().calculateHash().toBase64().substring(0,6)+ "\n"+ msg.toString());
+    if (_log.shouldLog(Log.INFO))     _log.info(getStyle() + " afterSend: " + (sendSuccessful ? "success " : "FAIL ")+ msg.getMessageSize()+ " byte "+ msg.getMessageType()+ " "+ msg.getMessageId()+ " from "+ _context.routerHash().toBase64().substring(0,6)+ " to "+ msg.getTarget().getIdentity().calculateHash().toBase64().substring(0,6)+ "\n"+ msg.toString());
   }
   if (sendSuccessful) {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Send message " + msg.getMessageType() + " to "+ msg.getTarget().getIdentity().getHash().toBase64()+ " with transport "+ getStyle()+ " successfully");
+    if (_log.shouldLog(Log.DEBUG))     _log.debug(getStyle() + " Sent " + msg.getMessageType()+ " successfully to "+ msg.getTarget().getIdentity().getHash().toBase64());
     Job j=msg.getOnSendJob();
     if (j != null)     _context.jobQueue().addJob(j);
     log=true;
     msg.discardData();
   }
  else {
-    if (_log.shouldLog(Log.INFO))     _log.info("Failed to send message " + msg.getMessageType() + " to "+ msg.getTarget().getIdentity().getHash().toBase64()+ " with transport "+ getStyle()+ " (details: "+ msg+ ")");
+    if (_log.shouldLog(Log.INFO))     _log.info(getStyle() + " Failed to send " + msg.getMessageType()+ " to "+ msg.getTarget().getIdentity().getHash().toBase64()+ " (details: "+ msg+ ')');
     if (msg.getExpiration() < _context.clock().now())     _context.statManager().addRateData("transport.expiredOnQueueLifetime",lifetime,lifetime);
     if (allowRequeue) {
       if (((msg.getExpiration() <= 0) || (msg.getExpiration() > _context.clock().now())) && (msg.getMessage() != null)) {
