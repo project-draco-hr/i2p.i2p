@@ -1,0 +1,37 @@
+{
+  File eepsite1=new File(olddir,"eepsite");
+  File oldFile=new File(eepsite1,filename);
+  File eepsite2=new File(todir,"eepsite");
+  File newFile=new File(eepsite2,filename);
+  FileInputStream in=null;
+  PrintWriter out=null;
+  try {
+    in=new FileInputStream(oldFile);
+    out=new PrintWriter(new BufferedWriter(new OutputStreamWriter(new SecureFileOutputStream(newFile),"UTF-8")));
+    String s=null;
+    while ((s=DataHelper.readLine(in)) != null) {
+      if (s.indexOf("./eepsite/") >= 0) {
+        s=s.replace("./eepsite/",todir.getAbsolutePath() + File.separatorChar + "eepsite"+ File.separatorChar);
+      }
+      out.println(s);
+    }
+    out.println("<!-- Modified by I2P User dir migration script -->");
+    System.err.println("Copied " + filename + " with modifications");
+    return true;
+  }
+ catch (  IOException ioe) {
+    if (in != null) {
+      System.err.println("FAILED copy " + filename);
+      return false;
+    }
+    return false;
+  }
+ finally {
+    if (in != null)     try {
+      in.close();
+    }
+ catch (    IOException ioe) {
+    }
+    if (out != null)     out.close();
+  }
+}

@@ -6,14 +6,21 @@
   if (!workDirCreated)   System.err.println("ERROR: Unable to create Jetty temporary work directory");
   System.setProperty("jetty.class.path",I2PAppContext.getGlobalContext().getBaseDir() + "/lib/routerconsole.jar");
   _server=new Server();
+  HandlerCollection hColl=new HandlerCollection();
+  ContextHandlerCollection chColl=new ContextHandlerCollection();
+  _server.addHandler(hColl);
+  hColl.addHandler(chColl);
+  hColl.addHandler(new DefaultHandler());
   String log=I2PAppContext.getGlobalContext().getProperty("routerconsole.log");
   if (log != null) {
     File logFile=new File(log);
     if (!logFile.isAbsolute())     logFile=new File(I2PAppContext.getGlobalContext().getLogDir(),"logs/" + log);
     try {
-      _server.setRequestLog(new NCSARequestLog(logFile.getAbsolutePath()));
+      RequestLogHandler rhl=new RequestLogHandler();
+      rhl.setRequestLog(new NCSARequestLog(logFile.getAbsolutePath()));
+      hColl.addHandler(rhl);
     }
- catch (    IOException ioe) {
+ catch (    Exception ioe) {
       System.err.println("ERROR: Unable to create Jetty log: " + ioe);
     }
   }
@@ -34,7 +41,7 @@
   }
   if (!_webAppsDir.endsWith("/"))   _webAppsDir+='/';
   List<String> notStarted=new ArrayList();
-  WebApplicationHandler baseHandler=null;
+  WebAppContext baseHandler=null;
   try {
     int boundAddresses=0;
     if (_listenPort != null) {
@@ -43,19 +50,18 @@
       while (tok.hasMoreTokens()) {
         String host=tok.nextToken().trim();
         try {
-          InetAddrPort iap=new InetAddrPort(host,lport);
-          SocketListener lsnr=new SocketListener(iap);
-          lsnr.setMinThreads(1);
-          lsnr.setMaxThreads(24);
-          lsnr.setMaxIdleTimeMs(90 * 1000);
+          AbstractConnector lsnr=new SelectChannelConnector();
+          lsnr.setHost(host);
+          lsnr.setPort(lport);
+          lsnr.setMaxIdleTime(90 * 1000);
           lsnr.setName("ConsoleSocket");
-          _server.addListener(lsnr);
+          _server.addConnector(lsnr);
           boundAddresses++;
         }
  catch (        NumberFormatException nfe) {
           System.err.println("Unable to bind routerconsole to " + host + " port "+ _listenPort+ ' '+ nfe);
         }
-catch (        IOException ioe) {
+catch (        Exception ioe) {
           System.err.println("Unable to bind routerconsole to " + host + " port "+ _listenPort+ ' '+ ioe);
         }
       }
@@ -77,17 +83,16 @@ catch (        IOException ioe) {
         StringTokenizer tok=new StringTokenizer(_sslListenHost," ,");
         while (tok.hasMoreTokens()) {
           String host=tok.nextToken().trim();
-          InetAddrPort iap=new InetAddrPort(host,sslPort);
           try {
-            SslListener ssll=new SslListener(iap);
+            SslSelectChannelConnector ssll=new SslSelectChannelConnector();
+            ssll.setHost(host);
+            ssll.setPort(sslPort);
             ssll.setKeystore(keyStore.getAbsolutePath());
             ssll.setPassword(ctx.getProperty(PROP_KEYSTORE_PASSWORD,DEFAULT_KEYSTORE_PASSWORD));
             ssll.setKeyPassword(ctx.getProperty(PROP_KEY_PASSWORD,"thisWontWork"));
-            ssll.setMinThreads(1);
-            ssll.setMaxThreads(24);
-            ssll.setMaxIdleTimeMs(90 * 1000);
+            ssll.setMaxIdleTime(90 * 1000);
             ssll.setName("ConsoleSocket");
-            _server.addListener(ssll);
+            _server.addConnector(ssll);
             boundAddresses++;
           }
  catch (          Exception e) {
@@ -104,14 +109,14 @@ catch (        IOException ioe) {
       System.err.println("Unable to bind routerconsole to any address on port " + _listenPort + (sslPort > 0 ? (" or SSL port " + sslPort) : ""));
       return;
     }
-    _server.setRootWebApp(ROUTERCONSOLE);
-    WebApplicationContext wac=_server.addWebApplication("/",_webAppsDir + ROUTERCONSOLE + ".war");
+    baseHandler=new LocaleWebAppHandler(I2PAppContext.getGlobalContext(),"/",_webAppsDir + ROUTERCONSOLE + ".war");
     File tmpdir=new SecureDirectory(workDir,ROUTERCONSOLE + "-" + (_listenPort != null ? _listenPort : _sslListenPort));
     tmpdir.mkdir();
-    wac.setTempDirectory(tmpdir);
-    baseHandler=new LocaleWebAppHandler(I2PAppContext.getGlobalContext());
-    wac.addHandler(0,baseHandler);
-    initialize(wac);
+    baseHandler.setTempDirectory(tmpdir);
+    baseHandler.setSessionHandler(new SessionHandler());
+    baseHandler.setServletHandler(new ServletHandler());
+    initialize(baseHandler);
+    chColl.addHandler(baseHandler);
     File dir=new File(_webAppsDir);
     String fileNames[]=dir.list(WarFilenameFilter.instance());
     if (fileNames != null) {
@@ -122,7 +127,7 @@ catch (        IOException ioe) {
           if (!"false".equals(enabled)) {
             String path=new File(dir,fileNames[i]).getCanonicalPath();
             tmpdir=new SecureDirectory(workDir,appName + "-" + (_listenPort != null ? _listenPort : _sslListenPort));
-            WebAppStarter.addWebApp(I2PAppContext.getGlobalContext(),_server,appName,path,tmpdir);
+            WebAppStarter.addWebApp(I2PAppContext.getGlobalContext(),chColl,appName,path,tmpdir);
             if (enabled == null) {
               props.setProperty(PREFIX + appName + ENABLED,"true");
               rewrite=true;
@@ -138,7 +143,7 @@ catch (        IOException ioe) {
       }
     }
   }
- catch (  IOException ioe) {
+ catch (  Exception ioe) {
     ioe.printStackTrace();
   }
   if (rewrite)   storeWebAppProperties(props);
@@ -152,7 +157,6 @@ catch (        IOException ioe) {
   if (baseHandler != null) {
     for (int i=0; i < notStarted.size(); i++) {
       try {
-        baseHandler.mapPathToServlet('/' + notStarted.get(i) + "/*","net.i2p.router.web.jsp.nowebapp_jsp");
       }
  catch (      Throwable me) {
         System.err.println(me);
