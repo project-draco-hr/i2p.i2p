@@ -1,7 +1,6 @@
 {
   String line=_in.readLine();
   if (!line.equals(_boundary)) {
-    log.warn(line);
     throw new IOException("Missing initial multi part boundary");
   }
   while (!_lastPart) {
@@ -9,14 +8,12 @@
     String content_disposition=null;
     while ((line=_in.readLine()) != null) {
       if (line.length() == 0)       break;
-      if (log.isDebugEnabled())       log.debug("LINE=" + line);
       int c=line.indexOf(':',0);
       if (c > 0) {
         String key=line.substring(0,c).trim().toLowerCase();
         String value=line.substring(c + 1,line.length()).trim();
         String ev=(String)part._headers.get(key);
         part._headers.put(key,(ev != null) ? (ev + ';' + value) : value);
-        if (log.isDebugEnabled())         log.debug(key + ": " + value);
         if (key.equals("content-disposition"))         content_disposition=value;
       }
     }
@@ -33,15 +30,11 @@
  else       if (tl.startsWith("filename="))       part._filename=value(t);
     }
     if (!form_data) {
-      log.warn("Non form-data part in multipart/form-data");
       continue;
     }
     if (part._name == null || part._name.length() == 0) {
-      log.warn("Part with no name in multipart/form-data");
       continue;
     }
-    if (log.isDebugEnabled())     log.debug("name=" + part._name);
-    if (log.isDebugEnabled())     log.debug("filename=" + part._filename);
     _partMap.add(part._name,part);
     part._data=readBytes();
   }
