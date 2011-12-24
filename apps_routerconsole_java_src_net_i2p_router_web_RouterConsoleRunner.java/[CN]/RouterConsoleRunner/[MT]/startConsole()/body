@@ -6,6 +6,19 @@
   if (!workDirCreated)   System.err.println("ERROR: Unable to create Jetty temporary work directory");
   System.setProperty("jetty.class.path",I2PAppContext.getGlobalContext().getBaseDir() + "/lib/routerconsole.jar");
   _server=new Server();
+  _server.setGracefulShutdown(1000);
+  try {
+    ThreadPool ctp=new CustomThreadPoolExecutor();
+    ctp.prestartAllCoreThreads();
+    _server.setThreadPool(ctp);
+  }
+ catch (  Throwable t) {
+    System.out.println("INFO: Jetty concurrent ThreadPool unavailable, using QueuedThreadPool");
+    QueuedThreadPool qtp=new QueuedThreadPool(MAX_THREADS);
+    qtp.setMinThreads(MIN_THREADS);
+    qtp.setMaxIdleTimeMs(MAX_IDLE_TIME);
+    _server.setThreadPool(qtp);
+  }
   HandlerCollection hColl=new HandlerCollection();
   ContextHandlerCollection chColl=new ContextHandlerCollection();
   _server.addHandler(hColl);
