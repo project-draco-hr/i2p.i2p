@@ -1,26 +1,5 @@
 {
   Properties props=new OrderedProperties();
-  long size=readLong(rawStream,2);
-  byte data[]=new byte[(int)size];
-  int read=read(rawStream,data);
-  if (read != size)   throw new DataFormatException("Not enough data to read the properties, expected " + size + " but got "+ read);
-  ByteArrayInputStream in=new ByteArrayInputStream(data);
-  byte eqBuf[]=new byte[EQUAL_BYTES.length];
-  byte semiBuf[]=new byte[SEMICOLON_BYTES.length];
-  while (in.available() > 0) {
-    String key=readString(in);
-    String cached=_propertiesKeyCache.get(key);
-    if (cached != null)     key=cached;
-    read=read(in,eqBuf);
-    if ((read != eqBuf.length) || (!eq(eqBuf,EQUAL_BYTES))) {
-      throw new DataFormatException("Bad key");
-    }
-    String val=readString(in);
-    read=read(in,semiBuf);
-    if ((read != semiBuf.length) || (!eq(semiBuf,SEMICOLON_BYTES))) {
-      throw new DataFormatException("Bad value");
-    }
-    props.put(key,val);
-  }
+  readProperties(rawStream,props);
   return props;
 }
