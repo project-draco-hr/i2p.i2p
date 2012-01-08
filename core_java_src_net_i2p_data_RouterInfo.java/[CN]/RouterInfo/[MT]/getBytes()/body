@@ -1,12 +1,10 @@
 {
   if (_byteified != null)   return _byteified;
   if (_identity == null)   throw new DataFormatException("Router identity isn't set? wtf!");
-  if (_addresses == null)   throw new DataFormatException("Router addressess isn't set? wtf!");
-  if (_options == null)   throw new DataFormatException("Router options isn't set? wtf!");
-  ByteArrayOutputStream out=new ByteArrayOutputStream(6 * 1024);
+  ByteArrayOutputStream out=new ByteArrayOutputStream(2 * 1024);
   try {
     _identity.writeBytes(out);
-    DataHelper.writeDate(out,new Date(_published));
+    DataHelper.writeLong(out,8,_published);
     int sz=_addresses.size();
     if (sz <= 0 || isHidden()) {
       DataHelper.writeLong(out,1,0);
@@ -14,7 +12,9 @@
  else {
       DataHelper.writeLong(out,1,sz);
       Collection<RouterAddress> addresses=_addresses;
-      if (sz > 1)       addresses=(Collection<RouterAddress>)DataHelper.sortStructures(addresses);
+      if (sz > 1) {
+        addresses=(Collection<RouterAddress>)DataHelper.sortStructures(addresses);
+      }
       for (      RouterAddress addr : addresses) {
         addr.writeBytes(out);
       }

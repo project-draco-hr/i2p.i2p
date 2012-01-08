@@ -1,0 +1,24 @@
+{
+  beginMarkingLiveliness();
+  System.setProperty("router.version",RouterVersion.VERSION);
+  _context.initAll();
+  if (_context.hasWrapper()) {
+    File f=new File(System.getProperty("java.io.tmpdir"),"wrapper.log");
+    if (!f.exists())     f=new File(_context.getBaseDir(),"wrapper.log");
+    if (f.exists())     SecureFileOutputStream.setPerms(f);
+  }
+  _routerInfo=null;
+  _higherVersionSeen=false;
+  _log=_context.logManager().getLog(Router.class);
+  _log.info("New router created with config file " + _configFilename);
+  _killVMOnEnd=true;
+  _oomListener=new OOMListener(_context);
+  _shutdownHook=new ShutdownHook(_context);
+  _gracefulShutdownDetector=new I2PAppThread(new GracefulShutdown(_context),"Graceful shutdown hook",true);
+  _gracefulShutdownDetector.setPriority(Thread.NORM_PRIORITY + 1);
+  _gracefulShutdownDetector.start();
+  _watchdog=new RouterWatchdog(_context);
+  _watchdogThread=new I2PAppThread(_watchdog,"RouterWatchdog",true);
+  _watchdogThread.setPriority(Thread.NORM_PRIORITY + 1);
+  _watchdogThread.start();
+}
