@@ -104,6 +104,7 @@
     statusDone("<b>" + _("This plugin requires Java version {0} or higher",minVersion) + "</b>");
     return;
   }
+  boolean wasRunning=false;
   File destDir=new SecureDirectory(appDir,appName);
   if (destDir.exists()) {
     if (Boolean.valueOf(props.getProperty("install-only")).booleanValue()) {
@@ -161,12 +162,15 @@
       statusDone("<b>" + _("Plugin requires Jetty version {0} or lower",maxVersion) + "</b>");
       return;
     }
-    try {
-      if (!PluginStarter.stopPlugin(_context,appName)) {
+    if (PluginStarter.isPluginRunning(appName,_context)) {
+      wasRunning=true;
+      try {
+        if (!PluginStarter.stopPlugin(_context,appName)) {
+        }
       }
-    }
- catch (    Throwable e) {
-      _log.error("Error stopping plugin " + appName,e);
+ catch (      Throwable e) {
+        _log.error("Error stopping plugin " + appName,e);
+      }
     }
   }
  else {
@@ -196,7 +200,7 @@
       PluginStarter.storePluginProperties(pluginProps);
     }
   }
- else {
+ else   if (wasRunning || PluginStarter.isPluginEnabled(appName)) {
     try {
       if (PluginStarter.startPlugin(_context,appName)) {
         String linkName=ConfigClientsHelper.stripHTML(props,"consoleLinkName_" + Messages.getLanguage(_context));
@@ -213,5 +217,8 @@
       statusDone("<b>" + _("Plugin {0} installed but failed to start",appName) + ": "+ e+ "</b>");
       _log.error("Error starting plugin " + appName,e);
     }
+  }
+ else {
+    statusDone("<b>" + _("Plugin {0} installed",appName) + "</b>");
   }
 }
