@@ -1,0 +1,35 @@
+{
+  SecurityHandler sec=new SecurityHandler();
+  List<ConstraintMapping> constraints=new ArrayList(4);
+  String password=getPassword();
+  if (password != null) {
+    HashUserRealm realm=new HashUserRealm("i2prouter");
+    realm.put("admin",password);
+    realm.addUserToRole("admin","routerAdmin");
+    sec.setUserRealm(realm);
+    sec.setAuthenticator(authenticator);
+    Constraint constraint=new Constraint("admin","routerAdmin");
+    constraint.setAuthenticate(true);
+    ConstraintMapping cm=new ConstraintMapping();
+    cm.setConstraint(constraint);
+    cm.setPathSpec("/");
+    constraints.add(cm);
+  }
+  Constraint sc=new Constraint();
+  sc.setName("No trace");
+  ConstraintMapping cm=new ConstraintMapping();
+  cm.setMethod("TRACE");
+  cm.setConstraint(sc);
+  cm.setPathSpec("/");
+  constraints.add(cm);
+  sc=new Constraint();
+  sc.setName("No options");
+  cm=new ConstraintMapping();
+  cm.setMethod("OPTIONS");
+  cm.setConstraint(sc);
+  cm.setPathSpec("/");
+  constraints.add(cm);
+  ConstraintMapping cmarr[]=constraints.toArray(new ConstraintMapping[constraints.size()]);
+  sec.setConstraintMappings(cmarr);
+  context.setSecurityHandler(sec);
+}
