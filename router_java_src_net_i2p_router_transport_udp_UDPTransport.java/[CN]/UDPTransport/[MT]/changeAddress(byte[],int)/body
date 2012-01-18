@@ -29,7 +29,8 @@ synchronized (this) {
   }
  else   if (updated) {
     _context.statManager().addRateData("udp.addressUpdated",1,0);
-    if (!fixedPort)     _context.router().setConfigSetting(PROP_EXTERNAL_PORT,ourPort + "");
+    Map<String,String> changes=new HashMap();
+    if (!fixedPort)     changes.put(PROP_EXTERNAL_PORT,ourPort + "");
     _context.commSystem().queueLookup(ourIP);
     String oldIP=_context.getProperty(PROP_IP);
     if (!_externalListenHost.getHostAddress().equals(oldIP)) {
@@ -43,14 +44,17 @@ synchronized (this) {
  catch (        NumberFormatException nfe) {
         }
       }
-      _context.router().setConfigSetting(PROP_IP,_externalListenHost.getHostAddress());
-      _context.router().setConfigSetting(PROP_IP_CHANGE,"" + now);
-      _context.router().saveConfig();
+      changes.put(PROP_IP,_externalListenHost.getHostAddress());
+      changes.put(PROP_IP_CHANGE,"" + now);
+      _context.router().saveConfig(changes,null);
       if (oldIP != null && System.getProperty("wrapper.version") != null && _context.getBooleanProperty(PROP_LAPTOP_MODE) && now - lastChanged > 10 * 60 * 1000 && _context.router().getUptime() < 10 * 60 * 1000) {
         _log.log(Log.CRIT,"IP changed, restarting with a new identity and port");
         _context.router().killKeys();
         _context.router().shutdown(Router.EXIT_HARD_RESTART);
       }
+    }
+ else     if (!fixedPort) {
+      _context.router().saveConfig(changes,null);
     }
     _context.router().rebuildRouterInfo();
   }
