@@ -1,0 +1,28 @@
+{
+  StringBuilder buf=new StringBuilder(512);
+  String status=UpdateHandler.getStatus();
+  if (status.length() > 0) {
+    buf.append("<h4>").append(status).append("</h4><hr>\n");
+  }
+  if (updateAvailable() || unsignedUpdateAvailable()) {
+    if ("true".equals(System.getProperty(UpdateHandler.PROP_UPDATE_IN_PROGRESS))) {
+    }
+ else     if (getAction() == null && getUpdateNonce() == null && ConfigRestartBean.getRestartTimeRemaining() > 12 * 60 * 1000) {
+      long nonce=_context.random().nextLong();
+      String prev=System.getProperty("net.i2p.router.web.UpdateHandler.nonce");
+      if (prev != null)       System.setProperty("net.i2p.router.web.UpdateHandler.noncePrev",prev);
+      System.setProperty("net.i2p.router.web.UpdateHandler.nonce",nonce + "");
+      String uri=getRequestURI();
+      buf.append("<form action=\"").append(uri).append("\" method=\"POST\">\n");
+      buf.append("<input type=\"hidden\" name=\"updateNonce\" value=\"").append(nonce).append("\" >\n");
+      if (updateAvailable()) {
+        buf.append("<button type=\"submit\" class=\"download\" name=\"updateAction\" value=\"signed\" >").append(_("Download {0} Update",getUpdateVersion())).append("</button><br>\n");
+      }
+      if (unsignedUpdateAvailable()) {
+        buf.append("<button type=\"submit\" class=\"download\" name=\"updateAction\" value=\"Unsigned\" >").append(_("Download Unsigned<br>Update {0}",getUnsignedUpdateVersion())).append("</button><br>\n");
+      }
+      buf.append("</form>\n");
+    }
+  }
+  return buf.toString();
+}
