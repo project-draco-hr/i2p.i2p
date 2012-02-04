@@ -23,7 +23,18 @@
  else   if (profile.getTunnelHistory().getLastRejectedProbabalistic() > now - 5 * 60 * 1000)   capacity-=_context.random().nextInt(5);
   if (now - profile.getFirstHeardAbout() < 45 * 60 * 1000)   capacity+=BONUS_NEW;
   if (profile.isEstablished())   capacity+=BONUS_ESTABLISHED;
-  if (profile.isSameCountry())   capacity+=BONUS_SAME_COUNTRY;
+  if (profile.isSameCountry()) {
+    double bonus=BONUS_SAME_COUNTRY;
+    String b=_context.getProperty(PROP_COUNTRY_BONUS);
+    if (b != null) {
+      try {
+        bonus=Double.parseDouble(b);
+      }
+ catch (      NumberFormatException nfe) {
+      }
+    }
+    capacity+=bonus;
+  }
   if (profile.wasUnreachable())   capacity-=PENALTY_UNREACHABLE;
   capacity-=profile.getXORDistance() * (BONUS_XOR / 128);
   capacity+=profile.getCapacityBonus();
