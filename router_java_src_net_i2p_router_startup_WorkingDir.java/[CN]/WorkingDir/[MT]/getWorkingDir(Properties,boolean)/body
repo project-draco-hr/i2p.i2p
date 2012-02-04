@@ -28,20 +28,28 @@
   File oldDirf=new File(cwd);
   File test=new File(oldDirf,"hosts.txt");
   if (!test.exists()) {
+    setupSystemOut(cwd);
     System.err.println("ERROR - Cannot find I2P installation in " + cwd + " - Will probably be just a router with no apps or console at all!");
     return cwd;
   }
   try {
-    if (oldDirf.getCanonicalPath().equals(dirf.getCanonicalPath()))     return cwd;
+    if (oldDirf.getCanonicalPath().equals(dirf.getCanonicalPath())) {
+      setupSystemOut(cwd);
+      return cwd;
+    }
   }
  catch (  IOException ioe) {
   }
   String rv=dirf.getAbsolutePath();
   if (dirf.exists()) {
     if (dirf.isDirectory()) {
-      if (isSetup(dirf))       return rv;
+      if (isSetup(dirf)) {
+        setupSystemOut(rv);
+        return rv;
+      }
     }
  else {
+      setupSystemOut(null);
       System.err.println("Wanted to use " + rv + " for a working directory but it is not a directory");
       return cwd;
     }
@@ -52,18 +60,24 @@
     test=new File(oldDirf,"logs");
     oldInstall=test.exists();
   }
-  if (oldInstall && !migrateOldConfig)   return cwd;
+  if (oldInstall && !migrateOldConfig) {
+    setupSystemOut(cwd);
+    return cwd;
+  }
   boolean migrateOldData=false;
   if (!dirf.exists() && !dirf.mkdir()) {
+    setupSystemOut(null);
     System.err.println("Wanted to use " + rv + " for a working directory but could not create it");
     return cwd;
   }
+  setupSystemOut(dirf.getAbsolutePath());
   if (migrateOldData)   System.err.println("Migrating data files to new user directory " + rv);
  else   System.err.println("Setting up new user directory " + rv);
   boolean success=migrate(MIGRATE_BASE,oldDirf,dirf);
   success&=migrateJettyXml(oldDirf,dirf);
   success&=migrateClientsConfig(oldDirf,dirf);
   success&=(new SecureDirectory(dirf,"docs")).mkdir();
+  touchRecursive(new File(dirf,"eepsite/docroot"),EEPSITE_TIMESTAMP);
   if (success) {
     System.err.println("Successfully copied data files to new user directory " + rv);
     return rv;
