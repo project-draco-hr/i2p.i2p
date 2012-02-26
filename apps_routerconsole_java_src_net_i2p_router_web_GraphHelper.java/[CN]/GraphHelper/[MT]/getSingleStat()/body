@@ -1,0 +1,83 @@
+{
+  try {
+    if (StatSummarizer.isDisabled())     return "";
+    if (_stat == null) {
+      _out.write("No stat");
+      return "";
+    }
+    List<Rate> rates=StatSummarizer.instance().parseSpecs(_stat);
+    if (rates.size() != 1) {
+      _out.write("Graphs not enabled for " + _stat);
+      return "";
+    }
+    Rate r=rates.get(0);
+    _out.write("<h3>");
+    _out.write(_("{0} for {1}",r.getRateStat().getName(),DataHelper.formatDuration2(_periodCount * r.getPeriod())));
+    if (_end > 0)     _out.write(' ' + _("ending {0} ago",DataHelper.formatDuration2(_end * r.getPeriod())));
+    _out.write("</h3><p><img class=\"statimage\" border=\"0\"" + " src=\"viewstat.jsp?stat=" + r.getRateStat().getName() + "&amp;showEvents="+ _showEvents+ "&amp;period="+ r.getPeriod()+ "&amp;periodCount="+ _periodCount+ "&amp;end="+ _end+ "&amp;width="+ _width+ "&amp;height="+ _height+ "\"></p><p>\n");
+    if (_width < MAX_X && _height < MAX_Y) {
+      _out.write(link(_stat,_showEvents,_periodCount,_end,_width * 3 / 2,_height * 3 / 2));
+      _out.write(_("Larger"));
+      _out.write("</a> - ");
+    }
+    if (_width > MIN_X && _height > MIN_Y) {
+      _out.write(link(_stat,_showEvents,_periodCount,_end,_width * 2 / 3,_height * 2 / 3));
+      _out.write(_("Smaller"));
+      _out.write("</a> - ");
+    }
+    if (_height < MAX_Y) {
+      _out.write(link(_stat,_showEvents,_periodCount,_end,_width,_height * 3 / 2));
+      _out.write(_("Taller"));
+      _out.write("</a> - ");
+    }
+    if (_height > MIN_Y) {
+      _out.write(link(_stat,_showEvents,_periodCount,_end,_width,_height * 2 / 3));
+      _out.write(_("Shorter"));
+      _out.write("</a> - ");
+    }
+    if (_width < MAX_X) {
+      _out.write(link(_stat,_showEvents,_periodCount,_end,_width * 3 / 2,_height));
+      _out.write(_("Wider"));
+      _out.write("</a> - ");
+    }
+    if (_width > MIN_X) {
+      _out.write(link(_stat,_showEvents,_periodCount,_end,_width * 2 / 3,_height));
+      _out.write(_("Narrower"));
+      _out.write("</a>");
+    }
+    _out.write("<br>");
+    if (_periodCount < MAX_C) {
+      _out.write(link(_stat,_showEvents,_periodCount * 2,_end,_width,_height));
+      _out.write(_("Larger interval"));
+      _out.write("</a> - ");
+    }
+    if (_periodCount > MIN_C) {
+      _out.write(link(_stat,_showEvents,_periodCount / 2,_end,_width,_height));
+      _out.write(_("Smaller interval"));
+      _out.write("</a>");
+    }
+    _out.write("<br>");
+    if (_periodCount < MAX_C) {
+      _out.write(link(_stat,_showEvents,_periodCount,_end + _periodCount,_width,_height));
+      _out.write(_("Previous interval"));
+      _out.write("</a>");
+    }
+    if (_end > 0) {
+      int end=_end - _periodCount;
+      if (end <= 0)       end=0;
+      if (_periodCount < MAX_C)       _out.write(" - ");
+      _out.write(link(_stat,_showEvents,_periodCount,end,_width,_height));
+      _out.write(_("Next interval"));
+      _out.write("</a> ");
+    }
+    _out.write("<br>");
+    _out.write(link(_stat,!_showEvents,_periodCount,_end,_width,_height));
+    _out.write(_showEvents ? _("Plot averages") : _("plot events"));
+    _out.write("</a>");
+    _out.write("</p><p><i>" + _("All times are UTC.") + "</i></p>\n");
+  }
+ catch (  IOException ioe) {
+    ioe.printStackTrace();
+  }
+  return "";
+}
