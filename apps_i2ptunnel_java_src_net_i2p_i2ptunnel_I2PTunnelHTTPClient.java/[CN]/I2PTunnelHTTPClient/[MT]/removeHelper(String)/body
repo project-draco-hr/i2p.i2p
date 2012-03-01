@@ -1,0 +1,29 @@
+{
+  int keystart=0;
+  int valstart=-1;
+  String key=null;
+  for (int i=0; i <= query.length(); i++) {
+    char c=i < query.length() ? query.charAt(i) : '&';
+    if (c == ';' || c == '&') {
+      if (valstart < 0)       key=query.substring(keystart,i);
+      String decodedKey=LocalHTTPServer.decode(key);
+      if (decodedKey.equals(HELPER_PARAM)) {
+        String newQuery=keystart > 0 ? query.substring(0,keystart - 1) : "";
+        if (i < query.length() - 1) {
+          if (keystart > 0)           newQuery+=query.substring(i);
+ else           newQuery+=query.substring(i + 1);
+        }
+        String value=valstart >= 0 ? query.substring(valstart,i) : "";
+        String helperValue=LocalHTTPServer.decode(value);
+        return new String[]{newQuery,helperValue};
+      }
+      keystart=i + 1;
+      valstart=-1;
+    }
+ else     if (c == '=') {
+      key=query.substring(keystart,i);
+      valstart=i + 1;
+    }
+  }
+  return null;
+}
