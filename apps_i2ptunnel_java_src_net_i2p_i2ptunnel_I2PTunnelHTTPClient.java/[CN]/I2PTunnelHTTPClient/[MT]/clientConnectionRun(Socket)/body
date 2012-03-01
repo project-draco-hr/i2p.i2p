@@ -57,7 +57,7 @@
         protocol=requestURI.getScheme();
         host=requestURI.getHost();
         if (protocol == null || host == null) {
-          _log.warn(request);
+          _log.warn("Null protocol or host: " + request);
           method=null;
           break;
         }
@@ -81,8 +81,7 @@
             destination=dest;
             host=getHostName(destination);
             targetRequest=requestURI.toASCIIString();
-            String newPath=dest.substring(slash);
-            String newURI=requestURI.getRawPath();
+            String newURI=oldPath.substring(slash);
             String query=requestURI.getRawQuery();
             if (query != null)             newURI+='?' + query;
             try {
@@ -95,7 +94,7 @@
             }
           }
  else {
-            _log.warn(request);
+            _log.warn("Bad http://i2p/b64dest " + request);
             host=null;
             break;
           }
@@ -217,8 +216,8 @@
           s.close();
           return;
         }
- else         if (host.indexOf(".") != -1) {
-          host=host + ":" + port;
+ else         if (host.contains(".") || host.startsWith("[")) {
+          if (port >= 0)           host=host + ':' + port;
           if (_log.shouldLog(Log.DEBUG))           _log.debug("Before selecting outproxy for " + host);
           currentProxy=selectProxy();
           if (_log.shouldLog(Log.DEBUG))           _log.debug("After selecting outproxy for " + host + ": "+ currentProxy);
@@ -239,9 +238,12 @@
         }
  else {
           if (_log.shouldLog(Log.WARN))           _log.warn("NODOTS, NOI2P: " + request);
-          destination=requestURI.getHost();
-          host=getHostName(destination);
-          targetRequest=requestURI.toASCIIString();
+          if (out != null) {
+            out.write(getErrorPage("denied",ERR_REQUEST_DENIED));
+            writeFooter(out);
+          }
+          s.close();
+          return;
         }
         boolean isValid=usingWWWProxy || usingInternalServer || isSupportedAddress(host,protocol);
         if (!isValid) {
@@ -360,7 +362,14 @@
     String addressHelper=addressHelpers.get(destination.toLowerCase(Locale.US));
     if (addressHelper != null) {
       clientDest=_context.namingService().lookup(addressHelper);
-      if (clientDest == null)       addressHelpers.remove(destination.toLowerCase(Locale.US));
+      if (clientDest == null) {
+        addressHelpers.remove(destination.toLowerCase(Locale.US));
+        if (_log.shouldLog(Log.WARN))         _log.warn(getPrefix(requestId) + "Could not find destination for " + addressHelper);
+        byte[] header=getErrorPage("ahelper-notfound",ERR_AHELPER_NOTFOUND);
+        writeErrorMessage(header,out,targetRequest,false,destination,null);
+        s.close();
+        return;
+      }
     }
  else     if ("i2p".equals(host)) {
       clientDest=null;
