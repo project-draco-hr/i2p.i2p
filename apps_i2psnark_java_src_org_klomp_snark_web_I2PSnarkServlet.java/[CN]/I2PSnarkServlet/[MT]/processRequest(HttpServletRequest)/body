@@ -168,19 +168,21 @@
     String theme=req.getParameter("theme");
     _manager.updateConfig(dataDir,filesPublic,autoStart,refreshDel,startupDel,seedPct,eepHost,eepPort,i2cpHost,i2cpPort,i2cpOpts,upLimit,upBW,useOpenTrackers,openTrackers,theme);
   }
+ else   if ("Save2".equals(action)) {
+    String taction=req.getParameter("taction");
+    if (taction != null)     processTrackerForm(taction,req);
+  }
  else   if ("Create".equals(action)) {
     String baseData=req.getParameter("baseFile");
     if (baseData != null && baseData.trim().length() > 0) {
       File baseFile=new File(_manager.getDataDir(),baseData);
       String announceURL=req.getParameter("announceURL");
-      String announceURLOther=req.getParameter("announceURLOther");
-      if ((announceURLOther != null) && (announceURLOther.trim().length() > "http://.i2p/announce".length()))       announceURL=announceURLOther;
       if (announceURL == null || announceURL.length() <= 0)       _manager.addMessage(_("Error creating torrent - you must select a tracker"));
  else       if (baseFile.exists()) {
         _lastAnnounceURL=announceURL;
         if (announceURL.equals("none"))         announceURL=null;
         try {
-          Storage s=new Storage(_manager.util(),baseFile,announceURL,null);
+          Storage s=new Storage(_manager.util(),baseFile,announceURL,req.getParameter("private") != null,null);
           s.close();
           MetaInfo info=s.getMetaInfo();
           File torrentFile=new File(_manager.getDataDir(),s.getBaseName() + ".torrent");
