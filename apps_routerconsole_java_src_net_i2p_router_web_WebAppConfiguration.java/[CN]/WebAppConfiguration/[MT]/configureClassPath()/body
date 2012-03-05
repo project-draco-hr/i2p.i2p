@@ -25,13 +25,23 @@
   }
   if (cp == null)   return;
   StringTokenizer tok=new StringTokenizer(cp," ,");
+  StringBuilder buf=new StringBuilder();
   while (tok.hasMoreTokens()) {
+    if (buf.length() > 0)     buf.append(',');
     String elem=tok.nextToken().trim();
     String path;
     if (elem.startsWith("$I2P"))     path=i2pContext.getBaseDir().getAbsolutePath() + elem.substring(4);
  else     if (elem.startsWith("$PLUGIN"))     path=dir.getAbsolutePath() + elem.substring(7);
  else     path=dir.getAbsolutePath() + '/' + elem;
     System.err.println("Adding " + path + " to classpath for "+ appName);
-    _wac.setExtraClasspath(path);
+    buf.append(path);
+  }
+  ClassLoader cl=_wac.getClassLoader();
+  if (cl != null && cl instanceof WebAppClassLoader) {
+    WebAppClassLoader wacl=(WebAppClassLoader)cl;
+    wacl.addClassPath(buf.toString());
+  }
+ else {
+    _wac.setExtraClasspath(buf.toString());
   }
 }
