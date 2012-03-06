@@ -4,6 +4,7 @@
   if (endp > 0)   end-=period * endp;
   if (periodCount <= 0 || periodCount > _listener.getRows())   periodCount=_listener.getRows();
   long start=end - (period * periodCount);
+  ImageOutputStream ios=null;
   try {
     RrdGraphDef def=new RrdGraphDef();
     def.setTimeSpan(start / 1000,end / 1000);
@@ -60,7 +61,7 @@
     BufferedImage img=new BufferedImage(totalWidth,totalHeight,BufferedImage.TYPE_USHORT_565_RGB);
     Graphics gfx=img.getGraphics();
     graph.render(gfx);
-    ImageOutputStream ios=new MemoryCacheImageOutputStream(out);
+    ios=new MemoryCacheImageOutputStream(out);
     ImageIO.write(img,"png",ios);
   }
  catch (  RrdException re) {
@@ -74,5 +75,12 @@ catch (  IOException ioe) {
 catch (  OutOfMemoryError oom) {
     _log.error("Error rendering",oom);
     throw new IOException("Error plotting: " + oom.getMessage());
+  }
+ finally {
+    if (ios != null)     try {
+      ios.close();
+    }
+ catch (    IOException ioe) {
+    }
   }
 }
