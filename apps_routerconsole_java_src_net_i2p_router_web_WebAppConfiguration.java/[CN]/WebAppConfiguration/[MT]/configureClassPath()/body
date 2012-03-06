@@ -26,6 +26,7 @@
   if (cp == null)   return;
   StringTokenizer tok=new StringTokenizer(cp," ,");
   StringBuilder buf=new StringBuilder();
+  Set<URL> systemCP=getSystemClassPath();
   while (tok.hasMoreTokens()) {
     if (buf.length() > 0)     buf.append(',');
     String elem=tok.nextToken().trim();
@@ -33,9 +34,15 @@
     if (elem.startsWith("$I2P"))     path=i2pContext.getBaseDir().getAbsolutePath() + elem.substring(4);
  else     if (elem.startsWith("$PLUGIN"))     path=dir.getAbsolutePath() + elem.substring(7);
  else     path=dir.getAbsolutePath() + '/' + elem;
+    File jfile=new File(path);
+    File jdir=jfile.getParentFile();
+    if (systemCP.contains(jfile.toURI().toURL()) || (jdir != null && systemCP.contains(jdir.toURI().toURL()))) {
+      continue;
+    }
     System.err.println("Adding " + path + " to classpath for "+ appName);
     buf.append(path);
   }
+  if (buf.length() <= 0)   return;
   ClassLoader cl=_wac.getClassLoader();
   if (cl != null && cl instanceof WebAppClassLoader) {
     WebAppClassLoader wacl=(WebAppClassLoader)cl;
