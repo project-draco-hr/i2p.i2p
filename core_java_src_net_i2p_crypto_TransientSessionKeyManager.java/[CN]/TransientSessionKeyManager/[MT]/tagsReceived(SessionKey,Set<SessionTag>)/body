@@ -1,11 +1,12 @@
 {
   int overage=0;
-  TagSet tagSet=new TagSet(sessionTags,key,_context.clock().now());
+  TagSet tagSet=new TagSet(sessionTags,key,_context.clock().now(),_rcvTagSetID.incrementAndGet());
+  if (_log.shouldLog(Log.INFO))   _log.info("Received " + tagSet);
   TagSet old=null;
   SessionTag dupTag=null;
   for (Iterator<SessionTag> iter=sessionTags.iterator(); iter.hasNext(); ) {
     SessionTag tag=iter.next();
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Receiving tag " + tag + " for key "+ key+ ": tagSet: "+ tagSet);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Receiving tag " + tag + " in tagSet: "+ tagSet);
 synchronized (_inboundTagSets) {
       old=_inboundTagSets.put(tag,tagSet);
       overage=_inboundTagSets.size() - MAX_INBOUND_SESSION_TAGS;
@@ -39,5 +40,4 @@ synchronized (_inboundTagSets) {
     }
   }
   if (overage > 0)   clearExcess(overage);
-  if ((sessionTags.isEmpty()) && (_log.shouldLog(Log.DEBUG)))   _log.debug("Received 0 tags for key " + key);
 }

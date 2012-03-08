@@ -1,6 +1,24 @@
 {
 synchronized (_tagSets) {
     _unackedTagSets.remove(set);
-    _tagSets.remove(set);
+    if (_tagSets.remove(set)) {
+      if (++_consecutiveFailures >= MAX_FAILS) {
+        _acked=false;
+        int acked=0;
+        int unacked=0;
+        for (Iterator<TagSet> iter=_tagSets.iterator(); iter.hasNext(); ) {
+          TagSet ts=iter.next();
+          if (!ts.getAcked()) {
+            iter.remove();
+            _unackedTagSets.add(ts);
+            unacked++;
+          }
+ else {
+            acked++;
+          }
+        }
+        if (_log.shouldLog(Log.WARN))         _log.warn(_consecutiveFailures + " consecutive failed tagset deliveries to " + _currentKey+ ": reverting to full ElG and un-acking "+ unacked+ " unacked tag sets, with "+ acked+ " remaining acked tag sets");
+      }
+    }
   }
 }
