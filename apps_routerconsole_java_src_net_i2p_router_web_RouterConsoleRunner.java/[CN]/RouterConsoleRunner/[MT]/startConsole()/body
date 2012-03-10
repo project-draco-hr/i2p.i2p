@@ -58,12 +58,23 @@
   ServletHandler rootServletHandler=null;
   try {
     int boundAddresses=0;
+    boolean hasIPV6=Addresses.getAllAddresses().contains("0:0:0:0:0:0:0:0");
+    int lport=0;
     if (_listenPort != null) {
-      Integer lport=Integer.parseInt(_listenPort);
+      try {
+        lport=Integer.parseInt(_listenPort);
+      }
+ catch (      NumberFormatException nfe) {
+      }
+      if (lport <= 0)       System.err.println("Bad routerconsole port " + _listenPort);
+    }
+    if (lport > 0) {
       StringTokenizer tok=new StringTokenizer(_listenHost," ,");
       while (tok.hasMoreTokens()) {
         String host=tok.nextToken().trim();
         try {
+          InetAddress test=InetAddress.getByName(host);
+          if ((!hasIPV6) && (!(test instanceof Inet4Address)))           throw new IOException("IPv6 addresses unsupported, you may ignore this warning if the console is still available at http://127.0.0.1:7657");
           AbstractConnector lsnr=new SelectChannelConnector();
           lsnr.setHost(host);
           lsnr.setPort(lport);
@@ -72,10 +83,7 @@
           _server.addConnector(lsnr);
           boundAddresses++;
         }
- catch (        NumberFormatException nfe) {
-          System.err.println("Unable to bind routerconsole to " + host + " port "+ _listenPort+ ' '+ nfe);
-        }
-catch (        Exception ioe) {
+ catch (        Exception ioe) {
           System.err.println("Unable to bind routerconsole to " + host + " port "+ _listenPort+ ' '+ ioe);
         }
       }
@@ -98,6 +106,8 @@ catch (        Exception ioe) {
         while (tok.hasMoreTokens()) {
           String host=tok.nextToken().trim();
           try {
+            InetAddress test=InetAddress.getByName(host);
+            if ((!hasIPV6) && (!(test instanceof Inet4Address)))             throw new IOException("IPv6 addresses unsupported, you may ignore this warning if the console is still available at http://127.0.0.1:7657");
             SslSelectChannelConnector ssll=new SslSelectChannelConnector();
             ssll.setHost(host);
             ssll.setPort(sslPort);
