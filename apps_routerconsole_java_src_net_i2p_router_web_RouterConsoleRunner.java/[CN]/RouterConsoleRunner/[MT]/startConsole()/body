@@ -76,8 +76,19 @@
         String host=tok.nextToken().trim();
         try {
           InetAddress test=InetAddress.getByName(host);
-          if ((!hasIPV6) && (!(test instanceof Inet4Address)))           throw new IOException("IPv6 addresses unsupported, you may ignore this warning if the console is still available at http://127.0.0.1:7657");
-          if ((!hasIPV4) && (test instanceof Inet4Address))           throw new IOException("IPv4 addresses unsupported, you may ignore this warning if the console is still available at http://localhost:7657");
+          ServerSocket testSock=null;
+          if ((!hasIPV6) && (!(test instanceof Inet4Address)))           throw new IOException("IPv6 addresses unsupported");
+          if ((!hasIPV4) && (test instanceof Inet4Address))           throw new IOException("IPv4 addresses unsupported");
+          try {
+            testSock=new ServerSocket(0,0,test);
+          }
+  finally {
+            if (testSock != null)             try {
+              testSock.close();
+            }
+ catch (            IOException ioe) {
+            }
+          }
           AbstractConnector lsnr=new SelectChannelConnector();
           lsnr.setHost(host);
           lsnr.setPort(lport);
@@ -87,7 +98,8 @@
           boundAddresses++;
         }
  catch (        Exception ioe) {
-          System.err.println("Unable to bind routerconsole to " + host + " port "+ _listenPort+ ' '+ ioe);
+          System.err.println("Unable to bind routerconsole to " + host + " port "+ _listenPort+ ": "+ ioe);
+          System.err.println("You may ignore this warning if the console is still available at http://localhost:" + _listenPort);
         }
       }
       I2PAppContext.getGlobalContext().portMapper().register(PortMapper.SVC_CONSOLE,lport);
@@ -110,8 +122,19 @@
           String host=tok.nextToken().trim();
           try {
             InetAddress test=InetAddress.getByName(host);
-            if ((!hasIPV6) && (!(test instanceof Inet4Address)))             throw new IOException("IPv6 addresses unsupported, you may ignore this warning if the console is still available at http://127.0.0.1:7657");
-            if ((!hasIPV4) && (test instanceof Inet4Address))             throw new IOException("IPv4 addresses unsupported, you may ignore this warning if the console is still available at http://localhost:7657");
+            if ((!hasIPV6) && (!(test instanceof Inet4Address)))             throw new IOException("IPv6 addresses unsupported");
+            if ((!hasIPV4) && (test instanceof Inet4Address))             throw new IOException("IPv4 addresses unsupported");
+            ServerSocket testSock=null;
+            try {
+              testSock=new ServerSocket(0,0,test);
+            }
+  finally {
+              if (testSock != null)               try {
+                testSock.close();
+              }
+ catch (              IOException ioe) {
+              }
+            }
             SslSelectChannelConnector ssll=new SslSelectChannelConnector();
             ssll.setHost(host);
             ssll.setPort(sslPort);
@@ -125,6 +148,7 @@
           }
  catch (          Exception e) {
             System.err.println("Unable to bind routerconsole to " + host + " port "+ sslPort+ " for SSL: "+ e);
+            System.err.println("You may ignore this warning if the console is still available at https://localhost:" + sslPort);
           }
         }
         I2PAppContext.getGlobalContext().portMapper().register(PortMapper.SVC_HTTPS_CONSOLE,sslPort);
