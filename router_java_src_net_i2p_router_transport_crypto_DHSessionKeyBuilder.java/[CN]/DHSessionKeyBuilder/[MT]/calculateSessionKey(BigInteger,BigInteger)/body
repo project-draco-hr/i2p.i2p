@@ -1,0 +1,20 @@
+{
+  SessionKey key=new SessionKey();
+  BigInteger exchangedKey=publicPeerValue.modPow(myPrivateValue,CryptoConstants.elgp);
+  byte buf[]=exchangedKey.toByteArray();
+  byte val[]=new byte[32];
+  if (buf.length < val.length) {
+    System.arraycopy(buf,0,val,0,buf.length);
+    byte remaining[]=SHA256Generator.getInstance().calculateHash(val).getData();
+    _extraExchangedBytes.setData(remaining);
+  }
+ else {
+    System.arraycopy(buf,0,val,0,val.length);
+    RandomSource.getInstance().harvester().feedEntropy("DH",buf,val.length,buf.length - val.length);
+    byte remaining[]=new byte[buf.length - val.length];
+    System.arraycopy(buf,val.length,remaining,0,remaining.length);
+    _extraExchangedBytes.setData(remaining);
+  }
+  key.setData(val);
+  return key;
+}
