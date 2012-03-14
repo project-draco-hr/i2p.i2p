@@ -14,7 +14,7 @@
       BlockFile.pageSeek(this.bf.file,curNextPage[0]);
       int magic=bf.file.readInt();
       if (magic != BlockFile.MAGIC_CONT) {
-        BlockFile.log.error("Lost " + (this.nKeys - i) + " entries - Bad SkipSpan magic number 0x"+ Integer.toHexString(magic)+ " on page "+ curNextPage[0]);
+        bf.log.error("Lost " + (this.nKeys - i) + " entries - Bad SkipSpan magic number 0x"+ Integer.toHexString(magic)+ " on page "+ curNextPage[0]);
         lostEntries(i,curPage);
         break;
       }
@@ -33,14 +33,14 @@
       curPage=this.bf.readMultiPageData(v,curPage,pageCounter,curNextPage);
     }
  catch (    IOException ioe) {
-      BlockFile.log.error("Lost " + (this.nKeys - i) + " entries - Error loading "+ this+ " on page "+ curPage,ioe);
+      bf.log.error("Lost " + (this.nKeys - i) + " entries - Error loading "+ this+ " on page "+ curPage,ioe);
       lostEntries(i,lastGood);
       break;
     }
     this.keys[i]=(Comparable)this.keySer.construct(k);
     this.vals[i]=this.valSer.construct(v);
     if (this.keys[i] == null || this.vals[i] == null) {
-      BlockFile.log.error("Null deserialized data in entry " + i + " page "+ curPage+ " key="+ this.keys[i]+ " val="+ this.vals[i]);
+      bf.log.error("Null deserialized data in entry " + i + " page "+ curPage+ " key="+ this.keys[i]+ " val="+ this.vals[i]);
       fail++;
       nKeys--;
       i--;
@@ -48,7 +48,7 @@
     }
   }
   if (fail > 0) {
-    BlockFile.log.error("Repairing corruption of " + fail + " entries");
+    bf.log.error("Repairing corruption of " + fail + " entries");
     if (flushOnError)     fflush();
   }
 }
