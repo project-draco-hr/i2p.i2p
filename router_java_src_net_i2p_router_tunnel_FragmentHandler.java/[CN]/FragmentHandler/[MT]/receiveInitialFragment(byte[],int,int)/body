@@ -32,8 +32,8 @@
   if (offset + 2 >= preprocessed.length)   return -1;
   int size=(int)DataHelper.fromLong(preprocessed,offset,2);
   offset+=2;
-  FragmentedMessage msg=null;
   if (fragmented) {
+    FragmentedMessage msg;
 synchronized (_fragmentedMessages) {
       msg=_fragmentedMessages.get(Long.valueOf(messageId));
       if (msg == null) {
@@ -41,11 +41,6 @@ synchronized (_fragmentedMessages) {
         _fragmentedMessages.put(Long.valueOf(messageId),msg);
       }
     }
-  }
- else {
-    msg=new FragmentedMessage(_context);
-  }
-  if (fragmented) {
 synchronized (msg) {
       boolean ok=msg.receive(messageId,preprocessed,offset,size,false,router,tunnelId);
       if (!ok)       return -1;
@@ -68,11 +63,8 @@ synchronized (_fragmentedMessages) {
     }
   }
  else {
-    boolean ok=msg.receive(messageId,preprocessed,offset,size,true,router,tunnelId);
-    if (!ok)     return -1;
-    receiveComplete(msg);
+    receiveComplete(preprocessed,offset,size,router,tunnelId);
   }
   offset+=size;
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Handling finished message " + msg.getMessageId() + " at offset "+ offset);
   return offset;
 }
