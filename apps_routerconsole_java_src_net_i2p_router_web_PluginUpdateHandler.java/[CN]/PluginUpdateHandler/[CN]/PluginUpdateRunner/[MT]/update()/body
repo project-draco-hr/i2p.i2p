@@ -1,16 +1,34 @@
 {
   _updated=false;
-  updateStatus("<b>" + _("Downloading plugin from {0}",_xpi2pURL) + "</b>");
-  boolean shouldProxy=Boolean.valueOf(_context.getProperty(ConfigUpdateHandler.PROP_SHOULD_PROXY,ConfigUpdateHandler.DEFAULT_SHOULD_PROXY)).booleanValue();
-  String proxyHost=_context.getProperty(ConfigUpdateHandler.PROP_PROXY_HOST,ConfigUpdateHandler.DEFAULT_PROXY_HOST);
-  int proxyPort=ConfigUpdateHandler.proxyPort(_context);
-  try {
-    if (shouldProxy)     _get=new EepGet(_context,proxyHost,proxyPort,10,_updateFile,_xpi2pURL,false);
- else     _get=new EepGet(_context,1,_updateFile,_xpi2pURL,false);
-    _get.addStatusListener(PluginUpdateRunner.this);
-    _get.fetch();
+  if (_xpi2pURL.startsWith("file://")) {
+    updateStatus("<b>" + _("Attempting to copy plugin from {0}",_xpi2pURL) + "</b>");
+    String xpi2pfile=_xpi2pURL.substring(7);
+    if (xpi2pfile.length() == 0) {
+      statusDone("<b>" + _("No file specified {0}",_xpi2pURL) + "</b>");
+    }
+ else {
+      long alreadyTransferred=(new File(xpi2pfile)).getAbsoluteFile().length();
+      if (FileUtil.copy((new File(xpi2pfile)).getAbsolutePath(),_updateFile,true,false)) {
+        transferComplete(alreadyTransferred,alreadyTransferred,0L,_xpi2pURL,_updateFile,false);
+      }
+ else {
+        statusDone("<b>" + _("Failed to copy file {0}",_xpi2pURL) + "</b>");
+      }
+    }
   }
- catch (  Throwable t) {
-    _log.error("Error downloading plugin",t);
+ else {
+    updateStatus("<b>" + _("Downloading plugin from {0}",_xpi2pURL) + "</b>");
+    boolean shouldProxy=Boolean.valueOf(_context.getProperty(ConfigUpdateHandler.PROP_SHOULD_PROXY,ConfigUpdateHandler.DEFAULT_SHOULD_PROXY)).booleanValue();
+    String proxyHost=_context.getProperty(ConfigUpdateHandler.PROP_PROXY_HOST,ConfigUpdateHandler.DEFAULT_PROXY_HOST);
+    int proxyPort=ConfigUpdateHandler.proxyPort(_context);
+    try {
+      if (shouldProxy)       _get=new EepGet(_context,proxyHost,proxyPort,10,_updateFile,_xpi2pURL,false);
+ else       _get=new EepGet(_context,1,_updateFile,_xpi2pURL,false);
+      _get.addStatusListener(PluginUpdateRunner.this);
+      _get.fetch();
+    }
+ catch (    Throwable t) {
+      _log.error("Error downloading plugin",t);
+    }
   }
 }

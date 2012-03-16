@@ -8,6 +8,9 @@
     if (hostname.length() == BASE32_HASH_LENGTH + 8 && hostname.toLowerCase(Locale.US).endsWith(".b32.i2p"))     return null;
   }
   String key=hostname.toLowerCase(Locale.US);
+synchronized (_negativeCache) {
+    if (_negativeCache.get(key) != null)     return null;
+  }
 synchronized (_bf) {
     if (_isClosed)     return null;
     for (    String list : _lists) {
@@ -27,6 +30,13 @@ synchronized (_bf) {
     }
     deleteInvalid();
   }
-  if (d != null)   putCache(hostname,d);
+  if (d != null) {
+    putCache(hostname,d);
+  }
+ else {
+synchronized (_negativeCache) {
+      _negativeCache.put(key,DUMMY);
+    }
+  }
   return d;
 }

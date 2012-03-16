@@ -1,0 +1,49 @@
+{
+  if (action.equals(_("Delete selected"))) {
+    boolean changed=false;
+    Map<String,String> trackers=_manager.getTrackers();
+    Enumeration e=req.getParameterNames();
+    while (e.hasMoreElements()) {
+      Object o=e.nextElement();
+      if (!(o instanceof String))       continue;
+      String k=(String)o;
+      if (!k.startsWith("delete_"))       continue;
+      k=k.substring(7);
+      if (trackers.remove(k) != null) {
+        _manager.addMessage(_("Removed") + ": " + k);
+        changed=true;
+      }
+    }
+    if (changed) {
+      _manager.saveTrackerMap();
+    }
+  }
+ else   if (action.equals(_("Add tracker"))) {
+    String name=req.getParameter("tname");
+    String hurl=req.getParameter("thurl");
+    String aurl=req.getParameter("taurl");
+    if (name != null && hurl != null && aurl != null) {
+      name=name.trim();
+      hurl=hurl.trim();
+      aurl=aurl.trim().replace("=","&#61;");
+      if (name.length() > 0 && hurl.startsWith("http://") && aurl.startsWith("http://")) {
+        Map<String,String> trackers=_manager.getTrackers();
+        trackers.put(name,aurl + '=' + hurl);
+        _manager.saveTrackerMap();
+      }
+ else {
+        _manager.addMessage(_("Enter valid tracker name and URLs"));
+      }
+    }
+ else {
+      _manager.addMessage(_("Enter valid tracker name and URLs"));
+    }
+  }
+ else   if (action.equals(_("Restore defaults"))) {
+    _manager.setDefaultTrackerMap();
+    _manager.addMessage(_("Restored default trackers"));
+  }
+ else {
+    _manager.addMessage("Unknown POST action: \"" + action + '\"');
+  }
+}

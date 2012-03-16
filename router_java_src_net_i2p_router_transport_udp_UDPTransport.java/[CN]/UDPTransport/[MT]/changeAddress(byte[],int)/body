@@ -2,13 +2,13 @@
   boolean fixedPort=getIsPortFixed();
   boolean updated=false;
   boolean fireTest=false;
-  if (_log.shouldLog(Log.WARN))   _log.warn("Change address? status = " + _reachabilityStatus + " diff = "+ (_context.clock().now() - _reachabilityStatusLastUpdated)+ " old = "+ _externalListenHost+ ':'+ _externalListenPort+ " new = "+ RemoteHostId.toString(ourIP)+ ':'+ ourPort);
+  if (_log.shouldLog(Log.INFO))   _log.info("Change address? status = " + _reachabilityStatus + " diff = "+ (_context.clock().now() - _reachabilityStatusLastUpdated)+ " old = "+ _externalListenHost+ ':'+ _externalListenPort+ " new = "+ Addresses.toString(ourIP,ourPort));
 synchronized (this) {
     if ((_externalListenHost == null) || (!eq(_externalListenHost.getAddress(),_externalListenPort,ourIP,ourPort))) {
-      if (_log.shouldLog(Log.WARN))       _log.warn("Trying to change our external address...");
       try {
         _externalListenHost=InetAddress.getByAddress(ourIP);
         if (ourPort >= MIN_EXTERNAL_PORT && !fixedPort)         _externalListenPort=ourPort;
+        if (_log.shouldLog(Log.WARN))         _log.warn("Trying to change our external address to " + Addresses.toString(ourIP,_externalListenPort));
         if (_externalListenPort > 0) {
           rebuildExternalAddress();
           replaceAddress(_externalAddress);
@@ -17,7 +17,7 @@ synchronized (this) {
       }
  catch (      UnknownHostException uhe) {
         _externalListenHost=null;
-        if (_log.shouldLog(Log.WARN))         _log.warn("Error trying to change our external address",uhe);
+        if (_log.shouldLog(Log.WARN))         _log.warn("Error trying to change our external address to " + Addresses.toString(ourIP,ourPort),uhe);
       }
     }
  else {

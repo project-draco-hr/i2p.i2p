@@ -11,7 +11,7 @@
       BlockFile.pageSeek(this.bf.file,curNextPage[0]);
       int magic=bf.file.readInt();
       if (magic != BlockFile.MAGIC_CONT) {
-        BlockFile.log.error("Lost " + (this.nKeys - i) + " entries - Bad SkipSpan magic number 0x"+ Integer.toHexString(magic)+ " on page "+ curNextPage[0]);
+        bf.log.error("Lost " + (this.nKeys - i) + " entries - Bad SkipSpan magic number 0x"+ Integer.toHexString(magic)+ " on page "+ curNextPage[0]);
         lostEntries(i,curPage);
         break;
       }
@@ -27,14 +27,14 @@
       curPage=this.bf.readMultiPageData(k,curPage,pageCounter,curNextPage);
     }
  catch (    IOException ioe) {
-      BlockFile.log.error("Lost " + (this.nKeys - i) + " entries - Error loading "+ this+ " on page "+ curPage,ioe);
+      bf.log.error("Lost " + (this.nKeys - i) + " entries - Error loading "+ this+ " on page "+ curPage,ioe);
       lostEntries(i,curPage);
       break;
     }
     Comparable ckey=(Comparable)this.keySer.construct(k);
     if (ckey == null) {
       curPage=this.bf.skipMultiPageBytes(vsz,curPage,pageCounter,curNextPage);
-      BlockFile.log.error("Null deserialized key in entry " + i + " page "+ curPage);
+      bf.log.error("Null deserialized key in entry " + i + " page "+ curPage);
       fail++;
       continue;
     }
@@ -45,13 +45,13 @@
         curPage=this.bf.readMultiPageData(v,curPage,pageCounter,curNextPage);
       }
  catch (      IOException ioe) {
-        BlockFile.log.error("Lost " + (this.nKeys - i) + " entries - Error loading "+ this+ " on page "+ curPage,ioe);
+        bf.log.error("Lost " + (this.nKeys - i) + " entries - Error loading "+ this+ " on page "+ curPage,ioe);
         lostEntries(i,curPage);
         break;
       }
       Object rv=this.valSer.construct(v);
       if (rv == null) {
-        BlockFile.log.error("Null deserialized value in entry " + i + " page "+ curPage+ " key="+ ckey);
+        bf.log.error("Null deserialized value in entry " + i + " page "+ curPage+ " key="+ ckey);
         fail++;
       }
       if (fail > 0)       repair(fail);

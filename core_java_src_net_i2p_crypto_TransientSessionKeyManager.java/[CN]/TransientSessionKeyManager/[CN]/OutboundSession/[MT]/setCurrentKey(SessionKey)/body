@@ -2,14 +2,17 @@
   _lastUsed=_context.clock().now();
   if (_currentKey != null) {
     if (!_currentKey.equals(key)) {
-      int dropped=0;
-      List<TagSet> sets=_tagSets;
-      _tagSets=new ArrayList();
-      for (int i=0; i < sets.size(); i++) {
-        TagSet set=(TagSet)sets.get(i);
-        dropped+=set.getTags().size();
+synchronized (_tagSets) {
+        if (_log.shouldLog(Log.WARN)) {
+          int dropped=0;
+          for (          TagSet set : _tagSets) {
+            dropped+=set.getTags().size();
+          }
+          _log.warn("Rekeyed from " + _currentKey + " to "+ key+ ": dropping "+ dropped+ " session tags",new Exception());
+        }
+        _acked=false;
+        _tagSets.clear();
       }
-      if (_log.shouldLog(Log.INFO))       _log.info("Rekeyed from " + _currentKey + " to "+ key+ ": dropping "+ dropped+ " session tags");
     }
   }
   _currentKey=key;

@@ -1,0 +1,61 @@
+{
+  if (_mark > 0) {
+    int saved=_contents - _mark;
+    System.arraycopy(_buf,_mark,_buf,0,saved);
+    _pos-=_mark;
+    _avail-=_mark;
+    _contents=saved;
+    _mark=0;
+  }
+ else   if (_mark < 0 && _pos > 0) {
+    int saved=_contents - _pos;
+    System.arraycopy(_buf,_pos,_buf,0,saved);
+    _avail-=_pos;
+    _contents=saved;
+    _pos=0;
+  }
+ else   if (_mark == 0 && _pos > 0 && _contents == _buf.length) {
+    _mark=-1;
+    fill();
+    return;
+  }
+  int n=0;
+  _eof=false;
+  if (_byteLimit == 0)   _eof=true;
+ else   while (!_eof && n == 0 && _buf.length > _contents) {
+    int space=_buf.length - _contents;
+    n=in.read(_buf,_contents,space);
+    if (n <= 0) {
+      if (n == 0) {
+        Thread.yield();
+        int b=in.read();
+        if (b >= 0) {
+          n=1;
+          _buf[_contents++]=(byte)b;
+        }
+ else         _eof=true;
+      }
+ else       _eof=true;
+    }
+ else     _contents+=n;
+    _avail=_contents;
+    if (_byteLimit > 0) {
+      if (_contents - _pos >= _byteLimit)       _avail=_byteLimit + _pos;
+      if (n > _byteLimit)       _byteLimit=0;
+ else       if (n >= 0)       _byteLimit-=n;
+ else       if (n == -1)       throw new IOException("Premature EOF");
+    }
+  }
+  if (_avail - _pos > 0 && _lastCr && _buf[_pos] == LF) {
+    _seenCrLf=true;
+    _pos++;
+    if (_mark >= 0)     _mark++;
+    _lastCr=false;
+    if (_byteLimit >= 0 && _newByteLimit) {
+      if (_avail < _contents)       _avail++;
+ else       _byteLimit++;
+    }
+    if (_pos == _avail)     fill();
+  }
+  _newByteLimit=false;
+}

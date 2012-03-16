@@ -2,12 +2,12 @@
   boolean isValid=isValid(ourIP) && (ourPort >= MIN_EXTERNAL_PORT || ourPort == _externalListenPort || _externalListenPort <= 0);
   boolean explicitSpecified=explicitAddressSpecified();
   boolean inboundRecent=_lastInboundReceivedOn + ALLOW_IP_CHANGE_INTERVAL > System.currentTimeMillis();
-  if (_log.shouldLog(Log.INFO))   _log.info("External address received: " + RemoteHostId.toString(ourIP) + ":"+ ourPort+ " from "+ from.toBase64()+ ", isValid? "+ isValid+ ", explicitSpecified? "+ explicitSpecified+ ", receivedInboundRecent? "+ inboundRecent+ " status "+ _reachabilityStatus);
+  if (_log.shouldLog(Log.INFO))   _log.info("External address received: " + Addresses.toString(ourIP,ourPort) + " from "+ from.toBase64()+ ", isValid? "+ isValid+ ", explicitSpecified? "+ explicitSpecified+ ", receivedInboundRecent? "+ inboundRecent+ " status "+ _reachabilityStatus);
   if (explicitSpecified)   return;
   String sources=_context.getProperty(PROP_SOURCES,DEFAULT_SOURCES);
   if (!sources.contains("ssu"))   return;
   if (!isValid) {
-    if (_log.shouldLog(Log.ERROR))     _log.error("The router " + from.toBase64() + " told us we have an invalid IP - "+ RemoteHostId.toString(ourIP)+ " port "+ ourPort+ ".  Lets throw tomatoes at them");
+    if (_log.shouldLog(Log.ERROR))     _log.error("The router " + from.toBase64() + " told us we have an invalid IP - "+ Addresses.toString(ourIP,ourPort)+ ".  Lets throw tomatoes at them");
     markUnreachable(from);
     return;
   }
@@ -18,10 +18,10 @@
     _lastFrom=from;
     _lastOurIP=ourIP;
     _lastOurPort=ourPort;
-    if (_log.shouldLog(Log.WARN))     _log.warn("The router " + from.toBase64() + " told us we have a new IP - "+ RemoteHostId.toString(ourIP)+ " port "+ ourPort+ ".  Wait until somebody else tells us the same thing.");
+    if (_log.shouldLog(Log.INFO))     _log.info("The router " + from.toBase64() + " told us we have a new IP - "+ Addresses.toString(ourIP,ourPort)+ ".  Wait until somebody else tells us the same thing.");
   }
  else {
-    if (_log.shouldLog(Log.WARN))     _log.warn(from.toBase64() + " and " + _lastFrom.toBase64()+ " agree we have a new IP - "+ RemoteHostId.toString(ourIP)+ " port "+ ourPort+ ".  Changing address.");
+    if (_log.shouldLog(Log.INFO))     _log.info(from.toBase64() + " and " + _lastFrom.toBase64()+ " agree we have a new IP - "+ Addresses.toString(ourIP,ourPort)+ ".  Changing address.");
     _lastFrom=from;
     _lastOurIP=ourIP;
     _lastOurPort=ourPort;

@@ -15,6 +15,7 @@
   if (periodCount <= 0 || periodCount > txLsnr.getRows())   periodCount=txLsnr.getRows();
   long period=60 * 1000;
   long start=end - period * periodCount;
+  ImageOutputStream ios=null;
   try {
     RrdGraphDef def=new RrdGraphDef();
     def.setTimeSpan(start / 1000,end / 1000);
@@ -35,6 +36,8 @@
       def.gprint(sendName,"MAX",' ' + _("max") + ": %.2f %S"+ _("Bps")+ "\\r");
       def.gprint(recvName,SummaryListener.CF,_("In average") + ": %.2f %S" + _("Bps"));
       def.gprint(recvName,"MAX",' ' + _("max") + ": %.2f %S"+ _("Bps")+ "\\r");
+      SimpleDateFormat sdf=new SimpleDateFormat("dd-MMM HH:mm");
+      def.comment(sdf.format(new Date(start)) + " -- " + sdf.format(new Date(end))+ " UTC\\r");
     }
     if (!showCredit)     def.setShowSignature(false);
     if (hideLegend)     def.setNoLegend(true);
@@ -53,7 +56,7 @@
     BufferedImage img=new BufferedImage(totalWidth,totalHeight,BufferedImage.TYPE_USHORT_565_RGB);
     Graphics gfx=img.getGraphics();
     graph.render(gfx);
-    ImageOutputStream ios=new MemoryCacheImageOutputStream(out);
+    ios=new MemoryCacheImageOutputStream(out);
     ImageIO.write(img,"png",ios);
     return true;
   }
@@ -68,5 +71,12 @@ catch (  IOException ioe) {
 catch (  OutOfMemoryError oom) {
     _log.error("Error rendering",oom);
     throw new IOException("Error plotting: " + oom.getMessage());
+  }
+ finally {
+    if (ios != null)     try {
+      ios.close();
+    }
+ catch (    IOException ioe) {
+    }
   }
 }
