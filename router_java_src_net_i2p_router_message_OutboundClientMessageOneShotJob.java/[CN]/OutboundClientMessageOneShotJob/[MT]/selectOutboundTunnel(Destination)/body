@@ -1,30 +1,30 @@
 {
   TunnelInfo tunnel;
-synchronized (_tunnelCache) {
-    tunnel=_backloggedTunnelCache.get(_hashPair);
+synchronized (_cache.tunnelCache) {
+    tunnel=_cache.backloggedTunnelCache.get(_hashPair);
     if (tunnel != null) {
       if (getContext().tunnelManager().isValidTunnel(_from.calculateHash(),tunnel)) {
         if (!getContext().commSystem().isBacklogged(tunnel.getPeer(1))) {
           if (_log.shouldLog(Log.WARN))           _log.warn("Switching back to tunnel " + tunnel + " for "+ _toString);
-          _backloggedTunnelCache.remove(_hashPair);
-          _tunnelCache.put(_hashPair,tunnel);
+          _cache.backloggedTunnelCache.remove(_hashPair);
+          _cache.tunnelCache.put(_hashPair,tunnel);
           _wantACK=true;
           return tunnel;
         }
       }
- else       _backloggedTunnelCache.remove(_hashPair);
+ else       _cache.backloggedTunnelCache.remove(_hashPair);
     }
-    tunnel=_tunnelCache.get(_hashPair);
+    tunnel=_cache.tunnelCache.get(_hashPair);
     if (tunnel != null) {
       if (getContext().tunnelManager().isValidTunnel(_from.calculateHash(),tunnel)) {
         if (tunnel.getLength() <= 1 || !getContext().commSystem().isBacklogged(tunnel.getPeer(1)))         return tunnel;
         if (_log.shouldLog(Log.WARN))         _log.warn("Switching from backlogged " + tunnel + " for "+ _toString);
-        _backloggedTunnelCache.put(_hashPair,tunnel);
+        _cache.backloggedTunnelCache.put(_hashPair,tunnel);
       }
-      _tunnelCache.remove(_hashPair);
+      _cache.tunnelCache.remove(_hashPair);
     }
     tunnel=selectOutboundTunnel();
-    if (tunnel != null)     _tunnelCache.put(_hashPair,tunnel);
+    if (tunnel != null)     _cache.tunnelCache.put(_hashPair,tunnel);
     _wantACK=true;
   }
   return tunnel;
