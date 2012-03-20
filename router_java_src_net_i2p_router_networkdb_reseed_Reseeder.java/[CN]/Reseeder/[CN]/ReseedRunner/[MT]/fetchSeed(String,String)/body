@@ -4,8 +4,10 @@
   if (b64 == null)   throw new IOException("bad hash " + peer);
   byte[] hash=Base64.decode(b64);
   if (hash == null || hash.length != Hash.HASH_LENGTH)   throw new IOException("bad hash " + peer);
+  Hash ourHash=_context.routerHash();
+  if (ourHash != null && DataHelper.eq(hash,ourHash.getData()))   return false;
   URL url=new URL(seedURL + (seedURL.endsWith("/") ? "" : "/") + ROUTERINFO_PREFIX+ peer+ ROUTERINFO_SUFFIX);
   byte data[]=readURL(url);
   if (data == null || data.length <= 0)   throw new IOException("Failed fetch of " + url);
-  writeSeed(b64,data);
+  return writeSeed(b64,data);
 }

@@ -12,6 +12,8 @@
     }
     String content=new String(contentRaw);
     Set<String> urls=new HashSet(1024);
+    Hash ourHash=_context.routerHash();
+    String ourB64=ourHash != null ? ourHash.toBase64() : null;
     int cur=0;
     int total=0;
     while (total++ < 1000) {
@@ -27,7 +29,12 @@
         continue;
       }
       String name=content.substring(start + ("href=\"" + ROUTERINFO_PREFIX).length(),end);
-      urls.add(name);
+      if (ourB64 == null || !name.contains(ourB64)) {
+        urls.add(name);
+      }
+ else {
+        if (_log.shouldLog(Log.INFO))         _log.info("Skipping our own RI");
+      }
       cur=end + 1;
     }
     if (total <= 0) {
@@ -42,7 +49,7 @@
     for (Iterator<String> iter=urlList.iterator(); iter.hasNext() && fetched < 200 && System.currentTimeMillis() < timeLimit; ) {
       try {
         System.setProperty(PROP_STATUS,_("Reseeding: fetching router info from seed URL ({0} successful, {1} errors).",fetched,errors));
-        fetchSeed(seedURL,iter.next());
+        if (!fetchSeed(seedURL,iter.next()))         continue;
         fetched++;
         if (echoStatus) {
           System.out.print(".");

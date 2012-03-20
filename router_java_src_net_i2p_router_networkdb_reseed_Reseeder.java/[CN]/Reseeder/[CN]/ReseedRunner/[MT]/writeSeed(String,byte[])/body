@@ -2,11 +2,15 @@
   String dirName="netDb";
   File netDbDir=new SecureDirectory(_context.getRouterDir(),dirName);
   if (!netDbDir.exists()) {
-    boolean ok=netDbDir.mkdirs();
+    netDbDir.mkdirs();
+  }
+  File file=new File(netDbDir,ROUTERINFO_PREFIX + name + ROUTERINFO_SUFFIX);
+  if (file.exists() && file.lastModified() > _context.clock().now() - 60 * 60 * 1000) {
+    if (_log.shouldLog(Log.INFO))     _log.info("Skipping RI, ours is recent: " + file);
+    return false;
   }
   FileOutputStream fos=null;
   try {
-    File file=new File(netDbDir,ROUTERINFO_PREFIX + name + ROUTERINFO_SUFFIX);
     fos=new SecureFileOutputStream(file);
     fos.write(data);
     if (_log.shouldLog(Log.INFO))     _log.info("Saved RI (" + data.length + " bytes) to "+ file);
@@ -18,4 +22,5 @@
  catch (    IOException ioe) {
     }
   }
+  return true;
 }
