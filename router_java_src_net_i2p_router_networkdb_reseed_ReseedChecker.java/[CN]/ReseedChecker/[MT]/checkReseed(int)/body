@@ -1,0 +1,24 @@
+{
+  if (count >= MINIMUM)   return false;
+  if (_context.getBooleanProperty(Reseeder.PROP_DISABLE)) {
+    String s="Only " + count + " peers remaining but reseed disabled by configuration";
+    _lastError=s;
+    _log.logAlways(Log.WARN,s);
+    return false;
+  }
+  File noReseedFile=new File(new File(System.getProperty("user.home")),".i2pnoreseed");
+  File noReseedFileAlt1=new File(new File(System.getProperty("user.home")),"noreseed.i2p");
+  File noReseedFileAlt2=new File(_context.getConfigDir(),".i2pnoreseed");
+  File noReseedFileAlt3=new File(_context.getConfigDir(),"noreseed.i2p");
+  if (!noReseedFile.exists() && !noReseedFileAlt1.exists() && !noReseedFileAlt2.exists()&& !noReseedFileAlt3.exists()) {
+    if (count <= 1)     _log.logAlways(Log.INFO,"Downloading peer router information for a new I2P installation");
+ else     _log.logAlways(Log.WARN,"Very few known peers remaining - reseeding now");
+    return requestReseed();
+  }
+ else {
+    String s="Only " + count + " peers remaining but reseed disabled by config file";
+    _lastError=s;
+    _log.logAlways(Log.WARN,s);
+    return false;
+  }
+}
