@@ -4,8 +4,8 @@
   int datalen=((DATA_LEN * size / 16) + 1) * 16;
   ByteArrayOutputStream baos=new ByteArrayOutputStream(datalen);
   for (int i=0; i < size; i++) {
-    ((Lease)_leases.get(i)).getGateway().writeBytes(baos);
-    ((Lease)_leases.get(i)).getTunnelId().writeBytes(baos);
+    _leases.get(i).getGateway().writeBytes(baos);
+    _leases.get(i).getTunnelId().writeBytes(baos);
   }
   int padlen=datalen - (DATA_LEN * size);
   byte[] pad=new byte[padlen];
@@ -18,15 +18,15 @@
   padlen=enc.length - datalen;
   RandomSource.getInstance().nextBytes(enc,datalen,padlen);
   Lease padLease=new Lease();
-  padLease.setEndDate(((Lease)_leases.get(0)).getEndDate());
+  padLease.setEndDate(_leases.get(0).getEndDate());
   _leases.add(padLease);
   ByteArrayInputStream bais=new ByteArrayInputStream(enc);
   for (int i=0; i < size + 1; i++) {
     Hash h=new Hash();
     h.readBytes(bais);
-    ((Lease)_leases.get(i)).setGateway(h);
+    _leases.get(i).setGateway(h);
     TunnelId t=new TunnelId();
     t.readBytes(bais);
-    ((Lease)_leases.get(i)).setTunnelId(t);
+    _leases.get(i).setTunnelId(t);
   }
 }
