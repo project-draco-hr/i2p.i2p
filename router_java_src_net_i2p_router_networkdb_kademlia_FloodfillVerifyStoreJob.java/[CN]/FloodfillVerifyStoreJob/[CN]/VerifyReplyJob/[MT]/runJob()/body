@@ -17,10 +17,13 @@
     if (_log.shouldLog(Log.INFO))     _log.info("Rcvd older data: " + dsm.getEntry());
   }
  else   if (_message instanceof DatabaseSearchReplyMessage) {
-    getContext().profileManager().dbLookupReply(_target,0,((DatabaseSearchReplyMessage)_message).getNumReplies(),0,0,delay);
+    DatabaseSearchReplyMessage dsrm=(DatabaseSearchReplyMessage)_message;
+    getContext().profileManager().dbLookupReply(_target,0,dsrm.getNumReplies(),0,0,delay);
     if (_log.shouldLog(Log.WARN))     _log.warn("Verify failed (DSRM) for " + _key);
+    if (_isRouterInfo)     getContext().jobQueue().addJob(new SingleLookupJob(getContext(),dsrm));
   }
   if (_sentTo != null)   getContext().profileManager().dbStoreFailed(_sentTo);
+  if (_target != null && !_target.equals(_sentTo))   getContext().profileManager().dbLookupFailed(_target);
   getContext().statManager().addRateData("netDb.floodfillVerifyFail",delay,0);
   resend();
 }
