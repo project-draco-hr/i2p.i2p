@@ -1,0 +1,58 @@
+{
+  if (metainfo == null || storage == null)   return true;
+  int piece=pp.getPiece();
+  if (halted) {
+    _log.info("Got while-halted piece " + piece + "/"+ metainfo.getPieces()+ " from "+ peer+ " for "+ metainfo.getName());
+    return true;
+  }
+synchronized (wantedPieces) {
+    Piece p=new Piece(piece);
+    if (!wantedPieces.contains(p)) {
+      _log.info("Got unwanted piece " + piece + "/"+ metainfo.getPieces()+ " from "+ peer+ " for "+ metainfo.getName());
+      if (storage.getBitField().get(piece))       return true;
+    }
+    try {
+      if (storage.putPiece(pp)) {
+        if (_log.shouldLog(Log.INFO))         _log.info("Got valid piece " + piece + "/"+ metainfo.getPieces()+ " from "+ peer+ " for "+ metainfo.getName());
+      }
+ else {
+        downloaded-=metainfo.getPieceLength(piece);
+        _log.warn("Got BAD piece " + piece + "/"+ metainfo.getPieces()+ " from "+ peer+ " for "+ metainfo.getName());
+        return false;
+      }
+    }
+ catch (    IOException ioe) {
+      snark.stopTorrent();
+      String msg="Error writing storage (piece " + piece + ") for "+ metainfo.getName()+ ": "+ ioe;
+      _log.error(msg,ioe);
+      SnarkManager.instance().addMessage(msg);
+      SnarkManager.instance().addMessage("Fatal storage error: Stopping torrent " + metainfo.getName());
+      throw new RuntimeException(msg,ioe);
+    }
+    wantedPieces.remove(p);
+  }
+  removePartialPiece(piece);
+  List<Peer> toDisconnect=new ArrayList();
+  Iterator<Peer> it=peers.iterator();
+  while (it.hasNext()) {
+    Peer p=it.next();
+    if (p.isConnected()) {
+      if (completed() && p.isCompleted())       toDisconnect.add(p);
+ else       p.have(piece);
+    }
+  }
+  it=toDisconnect.iterator();
+  while (it.hasNext()) {
+    Peer p=it.next();
+    p.disconnect(true);
+  }
+  if (completed()) {
+synchronized (partialPieces) {
+      for (      PartialPiece ppp : partialPieces) {
+        ppp.release();
+      }
+      partialPieces.clear();
+    }
+  }
+  return true;
+}

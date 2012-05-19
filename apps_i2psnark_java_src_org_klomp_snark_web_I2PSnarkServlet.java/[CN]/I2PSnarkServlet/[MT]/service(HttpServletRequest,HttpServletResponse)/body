@@ -8,11 +8,19 @@
   _imgPath=_themePath + "images/";
   String path=req.getServletPath();
   resp.setHeader("X-Frame-Options","SAMEORIGIN");
+  String peerParam=req.getParameter("p");
+  String peerString;
+  if (peerParam == null || (!_manager.util().connected()) || peerParam.replaceAll("[a-zA-Z0-9~=-]","").length() > 0) {
+    peerString="";
+  }
+ else {
+    peerString="?p=" + peerParam;
+  }
   if ("/.ajax/xhr1.html".equals(path)) {
     resp.setCharacterEncoding("UTF-8");
     resp.setContentType("text/html; charset=UTF-8");
     PrintWriter out=resp.getWriter();
-    writeMessages(out,false);
+    writeMessages(out,false,peerString);
     writeTorrents(out,req);
     return;
   }
@@ -47,14 +55,6 @@
   if (nonce != null) {
     if (nonce.equals(String.valueOf(_nonce)))     processRequest(req);
  else     _manager.addMessage("Please retry form submission (bad nonce)");
-  }
-  String peerParam=req.getParameter("p");
-  String peerString;
-  if (peerParam == null || (!_manager.util().connected()) || peerParam.replaceAll("[a-zA-Z0-9~=-]","").length() > 0) {
-    peerString="";
-  }
- else {
-    peerString="?p=" + peerParam;
   }
   PrintWriter out=resp.getWriter();
   out.write(DOCTYPE + "<html>\n" + "<head><link rel=\"shortcut icon\" href=\""+ _themePath+ "favicon.ico\">\n"+ "<title>");
@@ -104,7 +104,7 @@
   String newURL=req.getParameter("newURL");
   if (newURL != null && newURL.trim().length() > 0 && req.getMethod().equals("GET"))   _manager.addMessage(_("Click \"Add torrent\" button to fetch torrent"));
   out.write("<div class=\"page\"><div id=\"mainsection\" class=\"mainsection\">");
-  writeMessages(out,isConfigure);
+  writeMessages(out,isConfigure,peerString);
   if (isConfigure) {
     out.write("<div class=\"logshim\"></div></div>\n");
     writeConfigForm(out,req);

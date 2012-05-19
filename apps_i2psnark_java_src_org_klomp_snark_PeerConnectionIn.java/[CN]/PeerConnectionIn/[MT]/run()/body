@@ -57,16 +57,14 @@ piece=din.readInt();
 begin=din.readInt();
 len=i - 9;
 Request req=ps.getOutstandingRequest(piece,begin,len);
-byte[] piece_bytes;
 if (req != null) {
-piece_bytes=req.bs;
-din.readFully(piece_bytes,begin,len);
+req.read(din);
 ps.pieceMessage(req);
 if (_log.shouldLog(Log.DEBUG)) _log.debug("Received data(" + piece + ","+ begin+ ") from "+ peer);
 }
  else {
-piece_bytes=new byte[len];
-din.readFully(piece_bytes);
+int rcvd=din.skipBytes(len);
+if (rcvd != len) throw new IOException("EOF reading unwanted data");
 if (_log.shouldLog(Log.DEBUG)) _log.debug("Received UNWANTED data(" + piece + ","+ begin+ ") from "+ peer);
 }
 break;

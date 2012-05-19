@@ -21,14 +21,9 @@ synchronized (wantedPieces) {
     }
     if (_log.shouldLog(Log.WARN) && !partialPieces.isEmpty())     _log.warn("Peer " + peer + " has none of our partials "+ partialPieces);
   }
-  int piece=wantPiece(peer,havePieces);
-  if (piece >= 0) {
-    try {
-      return new PartialPiece(piece,metainfo.getPieceLength(piece));
-    }
- catch (    OutOfMemoryError oom) {
-      if (_log.shouldLog(Log.WARN))       _log.warn("OOM creating new partial piece");
-    }
+  Piece piece=wantPiece(peer,havePieces,true);
+  if (piece != null) {
+    return new PartialPiece(piece,metainfo.getPieceLength(piece.getId()),_util.getTempDir());
   }
   if (_log.shouldLog(Log.DEBUG))   _log.debug("We have no partial piece to return");
   return null;
