@@ -5,6 +5,7 @@
     _log.debug("Updated piece priorities called but no priorities to set?");
     return;
   }
+  List<Piece> toCancel=new ArrayList();
 synchronized (wantedPieces) {
     BitField want=new BitField(pri.length);
     for (    Piece p : wantedPieces) {
@@ -34,15 +35,20 @@ synchronized (wantedPieces) {
       }
  else {
         iter.remove();
-        for (        Peer peer : peers) {
-          peer.cancel(p.getId());
-        }
+        toCancel.add(p);
       }
     }
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Updated piece priorities, now wanted: " + wantedPieces);
     Collections.shuffle(wantedPieces,_random);
+  }
+  if (!toCancel.isEmpty()) {
     for (    Peer peer : peers) {
-      peer.request();
+      for (      Piece p : toCancel) {
+        peer.cancel(p.getId());
+      }
     }
+  }
+  for (  Peer peer : peers) {
+    peer.request();
   }
 }
