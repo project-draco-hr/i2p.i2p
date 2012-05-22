@@ -72,6 +72,7 @@
   if (isConfigure || delay <= 0)   out.write("<body>");
  else   out.write("<body onload=\"initAjax()\">");
   out.write("<center>");
+  List<Tracker> sortedTrackers=null;
   if (isConfigure) {
     out.write("<div class=\"snarknavbar\"><a href=\"/i2psnark/\" title=\"");
     out.write(_("Torrents"));
@@ -89,15 +90,10 @@
     out.write("</a> <a href=\"http://forum.i2p/viewforum.php?f=21\" class=\"snarkRefresh\" target=\"_blank\">");
     out.write(_("Forum"));
     out.write("</a>\n");
-    Map trackers=_manager.getTrackers();
-    for (Iterator iter=trackers.entrySet().iterator(); iter.hasNext(); ) {
-      Map.Entry entry=(Map.Entry)iter.next();
-      String name=(String)entry.getKey();
-      String baseURL=(String)entry.getValue();
-      int e=baseURL.indexOf('=');
-      if (e < 0)       continue;
-      baseURL=baseURL.substring(e + 1);
-      out.write(" <a href=\"" + baseURL + "\" class=\"snarkRefresh\" target=\"_blank\">"+ name+ "</a>");
+    sortedTrackers=_manager.getSortedTrackers();
+    for (    Tracker t : sortedTrackers) {
+      if (t.baseURL == null || !t.baseURL.startsWith("http"))       continue;
+      out.write(" <a href=\"" + t.baseURL + "\" class=\"snarkRefresh\" target=\"_blank\">"+ t.name+ "</a>");
     }
   }
   out.write("</div>\n");
@@ -114,7 +110,7 @@
     writeTorrents(out,req);
     out.write("</div><div id=\"lowersection\">\n");
     writeAddForm(out,req);
-    writeSeedForm(out,req);
+    writeSeedForm(out,req,sortedTrackers);
     writeConfigLink(out);
     out.write("</div>\n");
   }
