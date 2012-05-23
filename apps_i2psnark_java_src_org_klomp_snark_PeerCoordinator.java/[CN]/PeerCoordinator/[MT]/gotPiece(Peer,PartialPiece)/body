@@ -30,14 +30,16 @@ synchronized (wantedPieces) {
       throw new RuntimeException(msg,ioe);
     }
     wantedPieces.remove(p);
+    wantedBytes-=metainfo.getPieceLength(p.getId());
   }
   removePartialPiece(piece);
+  boolean done=wantedBytes <= 0;
   List<Peer> toDisconnect=new ArrayList();
   Iterator<Peer> it=peers.iterator();
   while (it.hasNext()) {
     Peer p=it.next();
     if (p.isConnected()) {
-      if (completed() && p.isCompleted())       toDisconnect.add(p);
+      if (done && p.isCompleted())       toDisconnect.add(p);
  else       p.have(piece);
     }
   }
@@ -46,7 +48,8 @@ synchronized (wantedPieces) {
     Peer p=it.next();
     p.disconnect(true);
   }
-  if (completed()) {
+  if (done) {
+    if (!completed())     snark.storageCompleted(storage);
 synchronized (partialPieces) {
       for (      PartialPiece ppp : partialPieces) {
         ppp.release();

@@ -90,7 +90,7 @@
       int maxSeenPeers=0;
       for (Iterator iter=trackers.iterator(); iter.hasNext(); ) {
         Tracker tr=(Tracker)iter.next();
-        if ((!stop) && (!tr.stop) && (completed || coordinator.needPeers())&& (event.equals(COMPLETED_EVENT) || System.currentTimeMillis() > tr.lastRequestTime + tr.interval)) {
+        if ((!stop) && (!tr.stop) && (completed || coordinator.needOutboundPeers())&& (event.equals(COMPLETED_EVENT) || System.currentTimeMillis() > tr.lastRequestTime + tr.interval)) {
           try {
             if (!tr.started)             event=STARTED_EVENT;
             TrackerInfo info=doRequest(tr,infoHash,peerID,uploaded,downloaded,left,event);
@@ -109,7 +109,7 @@
                 _util.getDHT().announce(snark.getInfoHash(),peer.getPeerID().getDestHash());
               }
             }
-            if ((left != 0) && (!completed)) {
+            if (coordinator.needOutboundPeers()) {
               List<Peer> ordered=new ArrayList(peers);
               Collections.shuffle(ordered,r);
               Iterator<Peer> it=ordered.iterator();
@@ -147,7 +147,7 @@
         }
         if ((!tr.stop) && maxSeenPeers < tr.seenPeers)         maxSeenPeers=tr.seenPeers;
       }
-      if (left > 0 && coordinator.needPeers() && (meta == null || !meta.isPrivate()) && !stop) {
+      if (coordinator.needOutboundPeers() && (meta == null || !meta.isPrivate()) && !stop) {
         Set<PeerID> pids=coordinator.getPEXPeers();
         if (!pids.isEmpty()) {
           _util.debug("Got " + pids.size() + " from PEX",Snark.INFO);
@@ -172,7 +172,7 @@
       }
       if (_util.getDHT() != null && (meta == null || !meta.isPrivate()) && !stop) {
         int numwant;
-        if (left == 0 || event.equals(STOPPED_EVENT) || !coordinator.needPeers())         numwant=1;
+        if (event.equals(STOPPED_EVENT) || !coordinator.needOutboundPeers())         numwant=1;
  else         numwant=_util.getMaxConnections();
         List<Hash> hashes=_util.getDHT().getPeers(snark.getInfoHash(),numwant,2 * 60 * 1000);
         _util.debug("Got " + hashes + " from DHT",Snark.INFO);
