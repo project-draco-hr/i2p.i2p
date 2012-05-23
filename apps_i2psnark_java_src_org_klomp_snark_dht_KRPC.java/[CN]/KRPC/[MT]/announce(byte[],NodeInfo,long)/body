@@ -1,0 +1,36 @@
+{
+  InfoHash iHash=new InfoHash(ih);
+  TokenKey tokenKey=new TokenKey(nInfo.getNID(),iHash);
+  Token token=_incomingTokens.get(tokenKey);
+  if (token == null) {
+    if (maxWait <= 0)     return false;
+    ReplyWaiter waiter=sendGetPeers(nInfo,iHash);
+    if (waiter == null)     return false;
+    long start=_context.clock().now();
+synchronized (waiter) {
+      try {
+        waiter.wait(maxWait);
+      }
+ catch (      InterruptedException ie) {
+      }
+    }
+    int replyType=waiter.getReplyCode();
+    if (!(replyType == REPLY_PEERS || replyType == REPLY_NODES))     return false;
+    token=_incomingTokens.get(tokenKey);
+    if (token == null)     return false;
+    maxWait-=_context.clock().now() - start;
+    if (maxWait < 1000)     return false;
+  }
+  ReplyWaiter waiter=sendAnnouncePeer(nInfo,iHash,token);
+  if (waiter == null)   return false;
+  if (maxWait <= 0)   return true;
+synchronized (waiter) {
+    try {
+      waiter.wait(maxWait);
+    }
+ catch (    InterruptedException ie) {
+    }
+  }
+  int replyType=waiter.getReplyCode();
+  return replyType == REPLY_PONG;
+}

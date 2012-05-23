@@ -1,0 +1,31 @@
+{
+  NodeInfo nInfo=waiter;
+  BEValue nodes=response.get("nodes");
+  BEValue values=response.get("values");
+  if (nodes != null || values != null) {
+    BEValue btok=response.get("token");
+    InfoHash ih=(InfoHash)waiter.getSentObject();
+    if (btok != null && ih != null) {
+      byte[] tok=btok.getBytes();
+      _incomingTokens.put(new TokenKey(nInfo.getNID(),ih),new Token(_context,tok));
+      if (_log.shouldLog(Log.INFO))       _log.info("Got token, must be a response to get_peers");
+    }
+ else {
+      if (_log.shouldLog(Log.INFO))       _log.info("No token and saved infohash, must be a response to find_node");
+    }
+  }
+  if (nodes != null) {
+    byte[] ids=nodes.getBytes();
+    List<NodeInfo> rlist=receiveNodes(nInfo,ids);
+    waiter.gotReply(REPLY_NODES,rlist);
+  }
+ else   if (values != null) {
+    List<BEValue> peers=values.getList();
+    List<Hash> rlist=receivePeers(nInfo,peers);
+    waiter.gotReply(REPLY_PEERS,rlist);
+  }
+ else {
+    receivePong(nInfo);
+    waiter.gotReply(REPLY_PONG,null);
+  }
+}

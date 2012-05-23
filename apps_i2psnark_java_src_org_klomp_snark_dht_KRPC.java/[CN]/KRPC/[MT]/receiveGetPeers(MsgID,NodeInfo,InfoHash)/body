@@ -1,0 +1,24 @@
+{
+  if (_log.shouldLog(Log.INFO))   _log.info("Rcvd get_peers from: " + nInfo + " for: "+ ih);
+  Token token=new Token(_context);
+  _outgoingTokens.put(ih,token);
+  List<Hash> peers=_tracker.getPeers(ih,MAX_WANT);
+  if (peers.isEmpty()) {
+    List<NodeInfo> nodes=_knownNodes.findClosest(ih,K);
+    nodes.remove(nInfo);
+    nodes.remove(_myNodeInfo);
+    byte[] nodeArray=new byte[nodes.size() * NodeInfo.LENGTH];
+    for (int i=0; i < nodes.size(); i++) {
+      System.arraycopy(nodes.get(i).getData(),0,nodeArray,i * NodeInfo.LENGTH,NodeInfo.LENGTH);
+    }
+    sendNodes(nInfo,msgID,token,nodeArray);
+  }
+ else {
+    List<byte[]> hashes=new ArrayList(peers.size());
+    Hash him=nInfo.getHash();
+    for (    Hash peer : peers) {
+      if (!peer.equals(him))       hashes.add(peer.getData());
+    }
+    sendPeers(nInfo,msgID,token,hashes);
+  }
+}
