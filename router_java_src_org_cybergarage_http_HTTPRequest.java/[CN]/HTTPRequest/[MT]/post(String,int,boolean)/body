@@ -1,5 +1,6 @@
 {
   HTTPResponse httpRes=new HTTPResponse();
+  setHost(host);
   setConnection((isKeepAlive == true) ? HTTP.KEEP_ALIVE : HTTP.CLOSE);
   boolean isHeaderRequest=isHeadRequest();
   OutputStream out=null;
@@ -21,7 +22,7 @@
     if (content != null)     contentLength=content.length();
     if (0 < contentLength) {
       if (isChunkedRequest == true) {
-        String chunSizeBuf=Long.toString(contentLength);
+        String chunSizeBuf=Long.toHexString(contentLength);
         pout.print(chunSizeBuf);
         pout.print(HTTP.CRLF);
       }
@@ -36,7 +37,11 @@
     in=postSocket.getInputStream();
     httpRes.set(in,isHeaderRequest);
   }
- catch (  Exception e) {
+ catch (  SocketException e) {
+    httpRes.setStatusCode(HTTPStatus.INTERNAL_SERVER_ERROR);
+    Debug.warning(e);
+  }
+catch (  IOException e) {
     httpRes.setStatusCode(HTTPStatus.INTERNAL_SERVER_ERROR);
     Debug.warning(e);
   }

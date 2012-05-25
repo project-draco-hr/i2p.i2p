@@ -1,9 +1,13 @@
 {
+  String host=locationURL.getHost();
+  int port=locationURL.getPort();
+  if (port == -1)   port=80;
+  String uri=locationURL.getPath();
   try {
     HttpURLConnection urlCon=(HttpURLConnection)locationURL.openConnection();
-    urlCon.setConnectTimeout(2 * 1000);
-    urlCon.setReadTimeout(1000);
     urlCon.setRequestMethod("GET");
+    urlCon.setRequestProperty(HTTP.CONTENT_LENGTH,"0");
+    if (host != null)     urlCon.setRequestProperty(HTTP.HOST,host);
     InputStream urlIn=urlCon.getInputStream();
     Node rootElem=parse(urlIn);
     urlIn.close();
@@ -11,6 +15,13 @@
     return rootElem;
   }
  catch (  Exception e) {
-    throw new ParserException(e);
   }
+  HTTPRequest httpReq=new HTTPRequest();
+  httpReq.setMethod(HTTP.GET);
+  httpReq.setURI(uri);
+  HTTPResponse httpRes=httpReq.post(host,port);
+  if (httpRes.isSuccessful() == false)   throw new ParserException("HTTP comunication failed: no answer from peer." + "Unable to retrive resoure -> " + locationURL.toString());
+  String content=new String(httpRes.getContent());
+  ByteArrayInputStream strBuf=new ByteArrayInputStream(content.getBytes());
+  return parse(strBuf);
 }
