@@ -2,8 +2,10 @@
   int domNodeType=domNode.getNodeType();
   String domNodeName=domNode.getNodeName();
   String domNodeValue=domNode.getNodeValue();
+  NamedNodeMap attrs=domNode.getAttributes();
+  int arrrsLen=(attrs != null) ? attrs.getLength() : 0;
   if (domNodeType == org.w3c.dom.Node.TEXT_NODE) {
-    parentNode.setValue(domNodeValue);
+    parentNode.addValue(domNodeValue);
     return parentNode;
   }
   if (domNodeType != org.w3c.dom.Node.ELEMENT_NODE)   return parentNode;
@@ -12,17 +14,24 @@
   node.setValue(domNodeValue);
   if (parentNode != null)   parentNode.addNode(node);
   NamedNodeMap attrMap=domNode.getAttributes();
-  int attrLen=attrMap.getLength();
-  for (int n=0; n < attrLen; n++) {
-    org.w3c.dom.Node attr=attrMap.item(n);
-    String attrName=attr.getNodeName();
-    String attrValue=attr.getNodeValue();
-    node.setAttribute(attrName,attrValue);
+  if (attrMap != null) {
+    int attrLen=attrMap.getLength();
+    for (int n=0; n < attrLen; n++) {
+      org.w3c.dom.Node attr=attrMap.item(n);
+      String attrName=attr.getNodeName();
+      String attrValue=attr.getNodeValue();
+      node.setAttribute(attrName,attrValue);
+    }
   }
   org.w3c.dom.Node child=domNode.getFirstChild();
-  while (child != null) {
+  if (child == null) {
+    node.setValue("");
+    return node;
+  }
+  do {
     parse(node,child,rank + 1);
     child=child.getNextSibling();
   }
+ while (child != null);
   return node;
 }
