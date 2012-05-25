@@ -3,12 +3,18 @@
   ControlPoint ctrlPoint=getControlPoint();
   while (deviceNotifyThread == thisThread) {
     Thread.yield();
-    SSDPPacket packet=receive();
+    SSDPPacket packet=null;
+    try {
+      packet=receive();
+    }
+ catch (    IOException e) {
+      break;
+    }
     if (packet == null)     continue;
     InetAddress maddr=getMulticastInetAddress();
     InetAddress pmaddr=packet.getHostInetAddress();
     if (maddr.equals(pmaddr) == false) {
-      Debug.warning("Invalidate Multicast Recieved : " + maddr + ","+ pmaddr);
+      Debug.warning("Invalidate Multicast Recieved from IP " + maddr + " on "+ pmaddr);
       continue;
     }
     if (ctrlPoint != null)     ctrlPoint.notifyReceived(packet);

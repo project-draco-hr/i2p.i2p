@@ -1,19 +1,19 @@
 {
   try {
-    BufferedReader reader=new BufferedReader(new InputStreamReader(in));
-    String firstLine=reader.readLine();
+    BufferedInputStream reader=new BufferedInputStream(in);
+    String firstLine=readLine(reader);
     if (firstLine == null || firstLine.length() <= 0)     return false;
     setFirstLine(firstLine);
     HTTPStatus httpStatus=new HTTPStatus(firstLine);
     int statCode=httpStatus.getStatusCode();
     if (statCode == HTTPStatus.CONTINUE) {
-      String headerLine=reader.readLine();
+      String headerLine=readLine(reader);
       while ((headerLine != null) && (0 < headerLine.length())) {
         HTTPHeader header=new HTTPHeader(headerLine);
         if (header.hasName() == true)         setHeader(header);
-        headerLine=reader.readLine();
+        headerLine=readLine(reader);
       }
-      String actualFirstLine=reader.readLine();
+      String actualFirstLine=readLine(reader);
       if ((actualFirstLine != null) && (0 < actualFirstLine.length())) {
         setFirstLine(actualFirstLine);
       }
@@ -21,11 +21,11 @@
         return true;
       }
     }
-    String headerLine=reader.readLine();
+    String headerLine=readLine(reader);
     while ((headerLine != null) && (0 < headerLine.length())) {
       HTTPHeader header=new HTTPHeader(headerLine);
       if (header.hasName() == true)       setHeader(header);
-      headerLine=reader.readLine();
+      headerLine=readLine(reader);
     }
     if (onlyHeaders == true) {
       setContent("",false);
@@ -35,18 +35,18 @@
     long contentLen=0;
     if (isChunkedRequest == true) {
       try {
-        String chunkSizeLine=reader.readLine();
-        contentLen=Long.parseLong(new String(chunkSizeLine.getBytes(),0,chunkSizeLine.length() - 2));
+        String chunkSizeLine=readLine(reader);
+        contentLen=(chunkSizeLine != null) ? Long.parseLong(chunkSizeLine.trim(),16) : 0;
       }
  catch (      Exception e) {
       }
       ;
     }
  else     contentLen=getContentLength();
-    StringBuilder contentBuf=new StringBuilder();
+    ByteArrayOutputStream contentBuf=new ByteArrayOutputStream();
     while (0 < contentLen) {
       int chunkSize=HTTP.getChunkSize();
-      char readBuf[]=new char[chunkSize];
+      byte readBuf[]=new byte[(int)(contentLen > chunkSize ? chunkSize : contentLen)];
       long readCnt=0;
       while (readCnt < contentLen) {
         try {
@@ -54,7 +54,7 @@
           if (chunkSize < bufReadLen)           bufReadLen=chunkSize;
           int readLen=reader.read(readBuf,0,(int)bufReadLen);
           if (readLen < 0)           break;
-          contentBuf.append(new String(readBuf,0,readLen));
+          contentBuf.write(readBuf,0,readLen);
           readCnt+=readLen;
         }
  catch (        Exception e) {
@@ -71,8 +71,8 @@
         }
  while (skipLen < HTTP.CRLF.length());
         try {
-          String chunkSizeLine=reader.readLine();
-          contentLen=Long.parseLong(new String(chunkSizeLine.getBytes(),0,chunkSizeLine.length() - 2));
+          String chunkSizeLine=readLine(reader);
+          contentLen=Long.parseLong(new String(chunkSizeLine.getBytes(),0,chunkSizeLine.length() - 2),16);
         }
  catch (        Exception e) {
           contentLen=0;
@@ -81,8 +81,7 @@
       }
  else       contentLen=0;
     }
-    String contentStr=contentBuf.toString();
-    setContent(contentStr.getBytes(),false);
+    setContent(contentBuf.toByteArray(),false);
   }
  catch (  Exception e) {
     Debug.warning(e);
