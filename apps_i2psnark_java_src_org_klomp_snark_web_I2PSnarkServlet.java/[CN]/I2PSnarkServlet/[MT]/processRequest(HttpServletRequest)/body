@@ -34,10 +34,15 @@
         _log.warn("hrm: " + local,ioe);
       }
     }
- else     if ((newURL != null) && (newURL.trim().length() > "http://.i2p/".length())) {
-      _manager.addMessage("Fetching " + newURL);
-      I2PAppThread fetch=new I2PAppThread(new FetchAndAdd(_manager,newURL),"Fetch and add");
-      fetch.start();
+ else     if (newURL != null) {
+      if (newURL.startsWith("http://")) {
+        _manager.addMessage("Fetching " + newURL);
+        I2PAppThread fetch=new I2PAppThread(new FetchAndAdd(_manager,newURL),"Fetch and add");
+        fetch.start();
+      }
+ else {
+        _manager.addMessage("Invalid URL - must start with http://");
+      }
     }
  else {
     }
@@ -149,7 +154,7 @@
   }
  else   if ("Create torrent".equals(action)) {
     String baseData=req.getParameter("baseFile");
-    if (baseData != null) {
+    if (baseData != null && baseData.trim().length() > 0) {
       File baseFile=new File(_manager.getDataDir(),baseData);
       String announceURL=req.getParameter("announceURL");
       String announceURLOther=req.getParameter("announceURLOther");
@@ -179,9 +184,12 @@
         _manager.addMessage("Cannot create a torrent for the nonexistent data: " + baseFile.getAbsolutePath());
       }
     }
+ else {
+      _manager.addMessage("Error creating torrent - you must enter a file or directory");
+    }
   }
  else   if ("StopAll".equals(action)) {
-    _manager.addMessage("Stopping all torrents and closing the I2P tunnel");
+    _manager.addMessage("Stopping all torrents and closing the I2P tunnel.");
     List snarks=getSortedSnarks(req);
     for (int i=0; i < snarks.size(); i++) {
       Snark snark=(Snark)snarks.get(i);
@@ -189,11 +197,11 @@
     }
     if (_manager.util().connected()) {
       _manager.util().disconnect();
-      _manager.addMessage("I2P tunnel closed");
+      _manager.addMessage("I2P tunnel closed.");
     }
   }
  else   if ("StartAll".equals(action)) {
-    _manager.addMessage("Opening the I2P tunnel and starting all torrents");
+    _manager.addMessage("Opening the I2P tunnel and starting all torrents.");
     List snarks=getSortedSnarks(req);
     for (int i=0; i < snarks.size(); i++) {
       Snark snark=(Snark)snarks.get(i);

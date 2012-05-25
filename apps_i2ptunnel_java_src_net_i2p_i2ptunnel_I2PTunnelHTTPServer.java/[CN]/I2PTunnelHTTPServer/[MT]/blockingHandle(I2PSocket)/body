@@ -4,9 +4,11 @@
   try {
     socket.setReadTimeout(5 * 1000);
     InputStream in=socket.getInputStream();
-    StringBuffer command=new StringBuffer(128);
+    StringBuilder command=new StringBuilder(128);
     Properties headers=readHeaders(in,command);
     headers.setProperty(HASH_HEADER,socket.getPeerDestination().calculateHash().toBase64());
+    headers.setProperty(DEST32_HEADER,Base32.encode(socket.getPeerDestination().calculateHash().getData()) + ".b32.i2p");
+    headers.setProperty(DEST64_HEADER,socket.getPeerDestination().toBase64());
     if ((_spoofHost != null) && (_spoofHost.trim().length() > 0))     headers.setProperty("Host",_spoofHost);
     headers.setProperty("Connection","close");
     String enc=headers.getProperty("Accept-encoding");
@@ -43,7 +45,20 @@
     }
   }
 catch (  IOException ex) {
+    try {
+      socket.close();
+    }
+ catch (    IOException ioe) {
+    }
     if (_log.shouldLog(Log.WARN))     _log.warn("Error while receiving the new HTTP request",ex);
+  }
+catch (  OutOfMemoryError oom) {
+    try {
+      socket.close();
+    }
+ catch (    IOException ioe) {
+    }
+    if (_log.shouldLog(Log.ERROR))     _log.error("OOM in HTTP server",oom);
   }
   long afterHandle=getTunnel().getContext().clock().now();
   long timeToHandle=afterHandle - afterAccept;

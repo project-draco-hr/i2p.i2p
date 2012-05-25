@@ -1,41 +1,41 @@
 {
-  StringBuffer buf=new StringBuffer(1024);
+  StringBuilder buf=new StringBuilder(1024);
   buf.append("<h2>Inbound sessions</h2>");
-  buf.append("<table border=\"1\">");
-  Set inbound=getInboundTagSets();
-  Map inboundSets=new HashMap(inbound.size());
-  for (Iterator iter=inbound.iterator(); iter.hasNext(); ) {
-    TagSet ts=(TagSet)iter.next();
+  buf.append("<table>");
+  Set<TagSet> inbound=getInboundTagSets();
+  Map<SessionKey,Set<TagSet>> inboundSets=new HashMap(inbound.size());
+  for (Iterator<TagSet> iter=inbound.iterator(); iter.hasNext(); ) {
+    TagSet ts=iter.next();
     if (!inboundSets.containsKey(ts.getAssociatedKey()))     inboundSets.put(ts.getAssociatedKey(),new HashSet());
-    Set sets=(Set)inboundSets.get(ts.getAssociatedKey());
+    Set<TagSet> sets=inboundSets.get(ts.getAssociatedKey());
     sets.add(ts);
   }
-  for (Iterator iter=inboundSets.keySet().iterator(); iter.hasNext(); ) {
-    SessionKey skey=(SessionKey)iter.next();
-    Set sets=(Set)inboundSets.get(skey);
+  for (Iterator<SessionKey> iter=inboundSets.keySet().iterator(); iter.hasNext(); ) {
+    SessionKey skey=iter.next();
+    Set<TagSet> sets=inboundSets.get(skey);
     buf.append("<tr><td><b>Session key</b>: ").append(skey.toBase64()).append("</td>");
     buf.append("<td><b># Sets:</b> ").append(sets.size()).append("</td></tr>");
     buf.append("<tr><td colspan=\"2\"><ul>");
-    for (Iterator siter=sets.iterator(); siter.hasNext(); ) {
-      TagSet ts=(TagSet)siter.next();
+    for (Iterator<TagSet> siter=sets.iterator(); siter.hasNext(); ) {
+      TagSet ts=siter.next();
       buf.append("<li><b>Received on:</b> ").append(new Date(ts.getDate())).append(" with ").append(ts.getTags().size()).append(" tags remaining</li>");
     }
     buf.append("</ul></td></tr>");
   }
   buf.append("</table>");
   buf.append("<h2><b>Outbound sessions</b></h2>");
-  buf.append("<table border=\"1\">");
-  Set outbound=getOutboundSessions();
-  for (Iterator iter=outbound.iterator(); iter.hasNext(); ) {
-    OutboundSession sess=(OutboundSession)iter.next();
+  buf.append("<table>");
+  Set<OutboundSession> outbound=getOutboundSessions();
+  for (Iterator<OutboundSession> iter=outbound.iterator(); iter.hasNext(); ) {
+    OutboundSession sess=iter.next();
     buf.append("<tr><td><b>Target key:</b> ").append(sess.getTarget().toString()).append("<br />");
     buf.append("<b>Established:</b> ").append(new Date(sess.getEstablishedDate())).append("<br />");
     buf.append("<b>Last Used:</b> ").append(new Date(sess.getLastUsedDate())).append("<br />");
     buf.append("<b># Sets:</b> ").append(sess.getTagSets().size()).append("</td></tr>");
     buf.append("<tr><td><b>Session key:</b> ").append(sess.getCurrentKey().toBase64()).append("</td></tr>");
     buf.append("<tr><td><ul>");
-    for (Iterator siter=sess.getTagSets().iterator(); siter.hasNext(); ) {
-      TagSet ts=(TagSet)siter.next();
+    for (Iterator<TagSet> siter=sess.getTagSets().iterator(); siter.hasNext(); ) {
+      TagSet ts=siter.next();
       buf.append("<li><b>Sent on:</b> ").append(new Date(ts.getDate())).append(" with ").append(ts.getTags().size()).append(" tags remaining</li>");
     }
     buf.append("</ul></td></tr>");

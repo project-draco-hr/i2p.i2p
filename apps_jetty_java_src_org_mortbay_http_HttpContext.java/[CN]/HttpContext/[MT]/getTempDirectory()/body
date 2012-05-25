@@ -1,0 +1,78 @@
+{
+  if (_tmpDir != null)   return _tmpDir;
+  Object t=getAttribute("javax.servlet.context.tempdir");
+  if (t != null && (t instanceof File)) {
+    _tmpDir=(File)t;
+    if (_tmpDir.isDirectory() && _tmpDir.canWrite())     return _tmpDir;
+  }
+  if (t != null && (t instanceof String)) {
+    try {
+      _tmpDir=new File((String)t);
+      if (_tmpDir.isDirectory() && _tmpDir.canWrite()) {
+        if (log.isDebugEnabled())         log.debug("Converted to File " + _tmpDir + " for "+ this);
+        setAttribute("javax.servlet.context.tempdir",_tmpDir);
+        return _tmpDir;
+      }
+    }
+ catch (    Exception e) {
+      log.warn(LogSupport.EXCEPTION,e);
+    }
+  }
+  File work=null;
+  try {
+    work=new File(System.getProperty("jetty.home"),"work");
+    if (!work.exists() || !work.canWrite() || !work.isDirectory())     work=null;
+  }
+ catch (  Exception e) {
+    LogSupport.ignore(log,e);
+  }
+  try {
+    HttpListener httpListener=_httpServer.getListeners()[0];
+    String vhost=null;
+    for (int h=0; vhost == null && _vhosts != null && h < _vhosts.size(); h++)     vhost=(String)_vhosts.get(h);
+    String host=httpListener.getHost();
+    String temp="Jetty_" + (host == null ? "" : host) + "_"+ httpListener.getPort()+ "_"+ (vhost == null ? "" : vhost)+ getContextPath();
+    temp=temp.replace('/','_');
+    temp=temp.replace('.','_');
+    temp=temp.replace('\\','_');
+    temp=temp.replace(':','_');
+    if (work != null)     _tmpDir=new File(work,temp);
+ else {
+      _tmpDir=new File(System.getProperty("java.io.tmpdir"),temp);
+      if (_tmpDir.exists()) {
+        if (log.isDebugEnabled())         log.debug("Delete existing temp dir " + _tmpDir + " for "+ this);
+        if (!IO.delete(_tmpDir)) {
+          if (log.isDebugEnabled())           log.debug("Failed to delete temp dir " + _tmpDir);
+        }
+        if (_tmpDir.exists()) {
+          String old=_tmpDir.toString();
+          _tmpDir=File.createTempFile(temp + "_","");
+          if (_tmpDir.exists())           _tmpDir.delete();
+          log.warn("Can't reuse " + old + ", using "+ _tmpDir);
+        }
+      }
+    }
+    if (!_tmpDir.exists())     _tmpDir.mkdir();
+    if (work == null)     _tmpDir.deleteOnExit();
+    if (log.isDebugEnabled())     log.debug("Created temp dir " + _tmpDir + " for "+ this);
+  }
+ catch (  Exception e) {
+    _tmpDir=null;
+    LogSupport.ignore(log,e);
+  }
+  if (_tmpDir == null) {
+    try {
+      _tmpDir=File.createTempFile("JettyContext","");
+      if (_tmpDir.exists())       _tmpDir.delete();
+      _tmpDir.mkdir();
+      _tmpDir.deleteOnExit();
+      if (log.isDebugEnabled())       log.debug("Created temp dir " + _tmpDir + " for "+ this);
+    }
+ catch (    IOException e) {
+      log.fatal(e);
+      System.exit(1);
+    }
+  }
+  setAttribute("javax.servlet.context.tempdir",_tmpDir);
+  return _tmpDir;
+}

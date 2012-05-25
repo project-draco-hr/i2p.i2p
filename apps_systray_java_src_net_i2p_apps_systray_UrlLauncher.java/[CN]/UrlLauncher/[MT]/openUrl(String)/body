@@ -1,5 +1,6 @@
 {
   String osName=System.getProperty("os.name");
+  waitForServer(url);
   if (validateUrlFormat(url)) {
     if (osName.toLowerCase().indexOf("mac") > -1) {
       if (osName.toLowerCase().startsWith("mac os x")) {
@@ -13,9 +14,10 @@
  else     if (osName.startsWith("Windows")) {
       String browserString="\"C:\\Program Files\\Internet Explorer\\iexplore.exe\" -nohome";
       BufferedReader bufferedReader=null;
-      _shellCommand.executeSilentAndWait("regedit /E browser.reg \"HKEY_CLASSES_ROOT\\http\\shell\\open\\command\"");
+      File foo=new File(I2PAppContext.getGlobalContext().getTempDir(),"browser.reg");
+      _shellCommand.executeSilentAndWait("regedit /E \"" + foo.getAbsolutePath() + "\" \"HKEY_CLASSES_ROOT\\http\\shell\\open\\command\"");
       try {
-        bufferedReader=new BufferedReader(new InputStreamReader(new FileInputStream("browser.reg"),"UTF-16"));
+        bufferedReader=new BufferedReader(new InputStreamReader(new FileInputStream(foo),"UTF-16"));
         for (String line; (line=bufferedReader.readLine()) != null; ) {
           if (line.startsWith("@=")) {
             browserString=line.substring(3,line.toLowerCase().indexOf(".exe") + 4);
@@ -28,7 +30,7 @@
         }
  catch (        IOException e) {
         }
-        new File("browser.reg").delete();
+        foo.delete();
       }
  catch (      Exception e) {
       }
@@ -43,12 +45,16 @@
     }
  else {
     }
+    if (_shellCommand.executeSilentAndWaitTimed("sensible-browser " + url,5))     return true;
+    if (_shellCommand.executeSilentAndWaitTimed("x-www-browser " + url,5))     return true;
+    if (_shellCommand.executeSilentAndWaitTimed("defaultbrowser " + url,5))     return true;
     if (_shellCommand.executeSilentAndWaitTimed("opera -newpage " + url,5))     return true;
     if (_shellCommand.executeSilentAndWaitTimed("firefox " + url,5))     return true;
     if (_shellCommand.executeSilentAndWaitTimed("mozilla " + url,5))     return true;
     if (_shellCommand.executeSilentAndWaitTimed("netscape " + url,5))     return true;
     if (_shellCommand.executeSilentAndWaitTimed("konqueror " + url,5))     return true;
     if (_shellCommand.executeSilentAndWaitTimed("galeon " + url,5))     return true;
+    if (_shellCommand.executeSilentAndWaitTimed("www-browser " + url,5))     return true;
     if (_shellCommand.executeSilentAndWaitTimed("links " + url,5))     return true;
     if (_shellCommand.executeSilentAndWaitTimed("lynx " + url,5))     return true;
   }

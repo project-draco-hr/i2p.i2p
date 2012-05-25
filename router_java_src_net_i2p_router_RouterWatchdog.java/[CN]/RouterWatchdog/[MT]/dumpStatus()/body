@@ -13,5 +13,16 @@
     if (rs != null)     r=rs.getRate(60 * 1000);
     double kbps=(r != null ? r.getAverageValue() : 0);
     _log.error("Outbound send rate: " + kbps + "KBps");
+    long max=Runtime.getRuntime().maxMemory();
+    long used=Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+    _log.error("Memory: " + DataHelper.formatSize(used) + '/'+ DataHelper.formatSize(max));
+    if (_consecutiveErrors == 1) {
+      _log.log(Log.CRIT,"Router appears hung, or there is severe network congestion.  Watchdog starts barking!");
+      if (System.getProperty("wrapper.version") != null && !System.getProperty("os.name").startsWith("Win")) {
+        ShellCommand sc=new ShellCommand();
+        boolean success=sc.executeSilentAndWaitTimed("./i2prouter dump",10);
+        if (success)         _log.log(Log.CRIT,"Threads dumped to wrapper log");
+      }
+    }
   }
 }

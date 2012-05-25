@@ -4,20 +4,12 @@
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Selected update URL: " + updateURL);
   boolean shouldProxy=Boolean.valueOf(_context.getProperty(ConfigUpdateHandler.PROP_SHOULD_PROXY,ConfigUpdateHandler.DEFAULT_SHOULD_PROXY)).booleanValue();
   String proxyHost=_context.getProperty(ConfigUpdateHandler.PROP_PROXY_HOST,ConfigUpdateHandler.DEFAULT_PROXY_HOST);
-  String port=_context.getProperty(ConfigUpdateHandler.PROP_PROXY_PORT,ConfigUpdateHandler.DEFAULT_PROXY_PORT);
-  int proxyPort=-1;
+  int proxyPort=_context.getProperty(ConfigUpdateHandler.PROP_PROXY_PORT,ConfigUpdateHandler.DEFAULT_PROXY_PORT_INT);
   try {
-    proxyPort=Integer.parseInt(port);
-  }
- catch (  NumberFormatException nfe) {
-    return;
-  }
-  try {
-    EepGet get=null;
-    if (shouldProxy)     get=new EepGet(_context,proxyHost,proxyPort,20,SIGNED_UPDATE_FILE,updateURL,false);
- else     get=new EepGet(_context,1,SIGNED_UPDATE_FILE,updateURL,false);
-    get.addStatusListener(UpdateRunner.this);
-    get.fetch();
+    if (shouldProxy)     _get=new EepGet(_context,proxyHost,proxyPort,40,_updateFile,updateURL,false);
+ else     _get=new EepGet(_context,1,_updateFile,updateURL,false);
+    _get.addStatusListener(UpdateRunner.this);
+    _get.fetch();
   }
  catch (  Throwable t) {
     _context.logManager().getLog(UpdateHandler.class).error("Error updating",t);

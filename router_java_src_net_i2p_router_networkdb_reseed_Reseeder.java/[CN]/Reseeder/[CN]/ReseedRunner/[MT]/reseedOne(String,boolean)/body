@@ -1,0 +1,66 @@
+{
+  try {
+    System.setProperty(PROP_ERROR,"");
+    System.setProperty(PROP_STATUS,"Reseeding: fetching seed URL.");
+    System.err.println("Reseed from " + seedURL);
+    URL dir=new URL(seedURL);
+    byte contentRaw[]=readURL(dir);
+    if (contentRaw == null) {
+      System.setProperty(PROP_ERROR,"Last reseed failed fully (failed reading seed URL). " + RESEED_TIPS);
+      _log.debug("Failed reading seed URL: " + seedURL);
+      return;
+    }
+    String content=new String(contentRaw);
+    Set urls=new HashSet();
+    int cur=0;
+    int total=0;
+    while (total++ < 1000) {
+      int start=content.indexOf("href=\"routerInfo-",cur);
+      if (start < 0) {
+        start=content.indexOf("HREF=\"routerInfo-",cur);
+        if (start < 0)         break;
+      }
+      int end=content.indexOf(".dat\">",start);
+      String name=content.substring(start + "href=\"routerInfo-".length(),end);
+      urls.add(name);
+      cur=end + 1;
+    }
+    if (total <= 0) {
+      _log.error("Read " + contentRaw.length + " bytes from seed "+ seedURL+ ", but found no routerInfo URLs.");
+      System.setProperty(PROP_ERROR,"Last reseed failed fully (no routerInfo URLs at seed URL). " + RESEED_TIPS);
+      return;
+    }
+    List urlList=new ArrayList(urls);
+    Collections.shuffle(urlList);
+    int fetched=0;
+    int errors=0;
+    for (Iterator iter=urlList.iterator(); iter.hasNext() && fetched < 200; ) {
+      try {
+        System.setProperty(PROP_STATUS,"Reseeding: fetching router info from seed URL (" + fetched + " successful, "+ errors+ " errors, "+ total+ " total).");
+        fetchSeed(seedURL,(String)iter.next());
+        fetched++;
+        if (echoStatus) {
+          System.out.print(".");
+          if (fetched % 60 == 0)           System.out.println();
+        }
+      }
+ catch (      Exception e) {
+        errors++;
+      }
+    }
+    System.err.println("Reseed got " + fetched + " router infos from "+ seedURL);
+    int failPercent=100 * errors / total;
+    if ((failPercent >= 10) && (failPercent < 90)) {
+      System.setProperty(PROP_ERROR,"Last reseed failed partly (" + failPercent + "% of "+ total+ "). "+ RESEED_TIPS);
+    }
+    if (failPercent >= 90) {
+      System.setProperty(PROP_ERROR,"Last reseed failed (" + failPercent + "% of "+ total+ "). "+ RESEED_TIPS);
+    }
+    if (fetched > 0)     _context.netDb().rescan();
+    if (fetched >= 100)     _isRunning=false;
+  }
+ catch (  Throwable t) {
+    System.setProperty(PROP_ERROR,"Last reseed failed fully (exception caught). " + RESEED_TIPS);
+    _log.error("Error reseeding",t);
+  }
+}

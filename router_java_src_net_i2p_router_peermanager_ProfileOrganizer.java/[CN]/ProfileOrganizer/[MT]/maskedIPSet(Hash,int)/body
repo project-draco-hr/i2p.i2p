@@ -1,0 +1,26 @@
+{
+  Set rv=new HashSet(2);
+  byte[] commIP=_context.commSystem().getIP(peer);
+  if (commIP != null)   rv.add(maskedIP(commIP,mask));
+  RouterInfo pinfo=_context.netDb().lookupRouterInfoLocally(peer);
+  if (pinfo == null)   return rv;
+  Set<RouterAddress> paddr=pinfo.getAddresses();
+  if (paddr == null)   return rv;
+  for (  RouterAddress pa : paddr) {
+    Properties pprops=pa.getOptions();
+    if (pprops == null)     continue;
+    String phost=pprops.getProperty("host");
+    if (phost == null)     continue;
+    InetAddress pi;
+    try {
+      pi=InetAddress.getByName(phost);
+    }
+ catch (    UnknownHostException uhe) {
+      continue;
+    }
+    if (pi == null)     continue;
+    byte[] pib=pi.getAddress();
+    rv.add(maskedIP(pib,mask));
+  }
+  return rv;
+}

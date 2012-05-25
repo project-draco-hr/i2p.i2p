@@ -1,71 +1,37 @@
 {
   boolean g=false;
-  boolean spin=true;
-  database.getReadLock();
-  info.getReadLock();
-  if (info.exists("OUTPORT")) {
-    tgwatch=2;
-  }
+  int conn=0;
   try {
-    Socket server=new Socket();
-    listener.setSoTimeout(1000);
-    info.releaseReadLock();
-    database.releaseReadLock();
-    while (spin) {
-      database.getReadLock();
-      info.getReadLock();
-      spin=info.get("RUNNING").equals(Boolean.TRUE);
-      info.releaseReadLock();
-      database.releaseReadLock();
+    die: {
       try {
-        server=listener.accept();
-        g=true;
+        Socket server=new Socket();
+        listener.setSoTimeout(50);
+        while (lives.get()) {
+          try {
+            server=listener.accept();
+            g=true;
+          }
+ catch (          SocketTimeoutException ste) {
+            g=false;
+          }
+          if (g) {
+            conn++;
+            TCPtoI2P conn_c=new TCPtoI2P(socketManager,server,info,database,lives);
+            Thread t=new Thread(conn_c,Thread.currentThread().getName() + " TCPtoI2P " + conn);
+            t.start();
+            g=false;
+          }
+        }
       }
- catch (      SocketTimeoutException ste) {
-        g=false;
-      }
-      if (g) {
-        TCPtoI2P conn_c=new TCPtoI2P(socketManager,server,info,database);
-        Thread t=new Thread(conn_c,"BOBTCPtoI2P");
-        t.start();
-        g=false;
+ catch (      IOException ioe) {
       }
     }
-    listener.close();
   }
- catch (  IOException ioe) {
+  finally {
     try {
       listener.close();
     }
- catch (    IOException e) {
-    }
-    database.getReadLock();
-    info.getReadLock();
-    spin=info.get("RUNNING").equals(Boolean.TRUE);
-    info.releaseReadLock();
-    database.releaseReadLock();
-    if (spin) {
-      database.getWriteLock();
-      info.getWriteLock();
-      info.add("STOPPING",new Boolean(true));
-      info.add("RUNNING",new Boolean(false));
-      info.releaseWriteLock();
-      database.releaseWriteLock();
-    }
-  }
-  I2PSession session=socketManager.getSession();
-  if (session != null) {
-    try {
-      session.destroySession();
-    }
- catch (    I2PSessionException ex) {
-    }
-  }
-  while (Thread.activeCount() > tgwatch) {
-    try {
-      Thread.sleep(100);
-    }
- catch (    Exception e) {
+ catch (    IOException ex) {
     }
   }
 }

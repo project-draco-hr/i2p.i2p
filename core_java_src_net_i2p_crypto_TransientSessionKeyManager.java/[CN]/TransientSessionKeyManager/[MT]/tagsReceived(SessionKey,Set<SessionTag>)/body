@@ -1,0 +1,44 @@
+{
+  int overage=0;
+  TagSet tagSet=new TagSet(sessionTags,key,_context.clock().now());
+  TagSet old=null;
+  SessionTag dupTag=null;
+  for (Iterator<SessionTag> iter=sessionTags.iterator(); iter.hasNext(); ) {
+    SessionTag tag=iter.next();
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Receiving tag " + tag + " for key "+ key.toBase64()+ " / "+ key.toString()+ ": tagSet: "+ tagSet);
+synchronized (_inboundTagSets) {
+      old=(TagSet)_inboundTagSets.put(tag,tagSet);
+      overage=_inboundTagSets.size() - MAX_INBOUND_SESSION_TAGS;
+      if (old != null) {
+        if (!old.getAssociatedKey().equals(tagSet.getAssociatedKey())) {
+          _inboundTagSets.remove(tag);
+          dupTag=tag;
+          break;
+        }
+ else {
+          old=null;
+        }
+      }
+    }
+  }
+  if (old != null) {
+synchronized (_inboundTagSets) {
+      for (Iterator<SessionTag> iter=old.getTags().iterator(); iter.hasNext(); ) {
+        SessionTag tag=iter.next();
+        _inboundTagSets.remove(tag);
+      }
+      for (Iterator<SessionTag> iter=sessionTags.iterator(); iter.hasNext(); ) {
+        SessionTag tag=iter.next();
+        _inboundTagSets.remove(tag);
+      }
+    }
+    if (_log.shouldLog(Log.WARN)) {
+      _log.warn("Multiple tags matching!  tagSet: " + tagSet + " and old tagSet: "+ old+ " tag: "+ dupTag+ "/"+ dupTag.toBase64());
+      _log.warn("Earlier tag set creation: " + old + ": key="+ old.getAssociatedKey().toBase64(),old.getCreatedBy());
+      _log.warn("Current tag set creation: " + tagSet + ": key="+ tagSet.getAssociatedKey().toBase64(),tagSet.getCreatedBy());
+    }
+  }
+  if (overage > 0)   clearExcess(overage);
+  if ((sessionTags.size() <= 0) && (_log.shouldLog(Log.DEBUG)))   _log.debug("Received 0 tags for key " + key);
+  if (false)   aggressiveExpire();
+}

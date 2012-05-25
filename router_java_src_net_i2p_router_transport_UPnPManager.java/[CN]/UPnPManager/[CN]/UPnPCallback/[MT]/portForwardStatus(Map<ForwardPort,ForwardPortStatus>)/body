@@ -1,11 +1,30 @@
 {
-  _log.error("UPnP Callback:");
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("UPnP Callback:");
   DetectedIP[] ips=_upnp.getAddress();
-  for (  DetectedIP ip : ips) {
-    _log.error("External address: " + ip.publicAddress + " type: "+ ip.natType);
+  byte[] detected=null;
+  if (ips != null) {
+    for (    DetectedIP ip : ips) {
+      if (TransportImpl.isPubliclyRoutable(ip.publicAddress.getAddress())) {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("External address: " + ip.publicAddress + " type: "+ ip.natType);
+        if (!ip.publicAddress.equals(_detectedAddress)) {
+          _detectedAddress=ip.publicAddress;
+          _manager.externalAddressReceived(Transport.SOURCE_UPNP,_detectedAddress.getAddress(),0);
+        }
+        break;
+      }
+    }
+  }
+ else {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("No external address returned");
   }
   for (  ForwardPort fp : statuses.keySet()) {
     ForwardPortStatus fps=statuses.get(fp);
-    _log.error(fp.name + " " + fp.protocol+ " "+ fp.portNumber+ " status: "+ fps.status+ " reason: "+ fps.reasonString+ " ext port: "+ fps.externalPort);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug(fp.name + " " + fp.protocol+ " "+ fp.portNumber+ " status: "+ fps.status+ " reason: "+ fps.reasonString+ " ext port: "+ fps.externalPort);
+    String style;
+    if (fp.protocol == ForwardPort.PROTOCOL_UDP_IPV4)     style="SSU";
+ else     if (fp.protocol == ForwardPort.PROTOCOL_TCP_IPV4)     style="NTCP";
+ else     continue;
+    boolean success=fps.status >= ForwardPortStatus.MAYBE_SUCCESS;
+    _manager.forwardPortStatus(style,fp.portNumber,success,fps.reasonString);
   }
 }

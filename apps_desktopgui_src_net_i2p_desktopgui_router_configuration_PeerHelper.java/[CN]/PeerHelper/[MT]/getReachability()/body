@@ -1,0 +1,30 @@
+{
+  RouterContext context=RouterHelper.getContext();
+  if (context.router().getUptime() > 60 * 1000 && (!context.router().gracefulShutdownInProgress()) && !context.clientManager().isAlive())   return "ERROR: Client Manager I2CP Error - check logs";
+  if (!context.clock().getUpdatedSuccessfully())   return "ERROR: ClockSkew";
+  if (context.router().isHidden())   return "Hidden";
+  int status=context.commSystem().getReachabilityStatus();
+switch (status) {
+case CommSystemFacade.STATUS_OK:
+    RouterAddress ra=context.router().getRouterInfo().getTargetAddress("NTCP");
+  if (ra == null || (new NTCPAddress(ra)).isPubliclyRoutable())   return "OK";
+return "ERROR: Private TCP Address";
+case CommSystemFacade.STATUS_DIFFERENT:
+return "ERROR: You are behind a symmetric NAT.";
+case CommSystemFacade.STATUS_REJECT_UNSOLICITED:
+if (context.router().getRouterInfo().getTargetAddress("NTCP") != null) return "WARNING: You are behind a firewall and have Inbound TCP Enabled";
+if (((FloodfillNetworkDatabaseFacade)context.netDb()).floodfillEnabled()) return "WARNING: You are behind a firewall and are a floodfill router";
+if (context.router().getRouterInfo().getCapabilities().indexOf('O') >= 0) return "WARNING: You are behind a firewall and are a fast router";
+return "Firewalled";
+case CommSystemFacade.STATUS_HOSED:
+return "ERROR: The UDP port is already in use. Set i2np.udp.internalPort=xxxx to a different value in the advanced config and restart";
+case CommSystemFacade.STATUS_UNKNOWN:
+default :
+ra=context.router().getRouterInfo().getTargetAddress("SSU");
+if (ra == null && context.router().getUptime() > 5 * 60 * 1000) {
+if (context.getProperty(PROP_I2NP_NTCP_HOSTNAME) == null || context.getProperty(PROP_I2NP_NTCP_PORT) == null) return "ERROR: UDP is disabled and the inbound TCP host/port combination is not set";
+ else return "WARNING: You are behind a firewall and have UDP Disabled";
+}
+return "Testing";
+}
+}

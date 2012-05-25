@@ -1,0 +1,58 @@
+{
+  super(localPort + " (uninitialized)",notifyThis,tunnel);
+  _clientId=++__clientId;
+  this.localPort=localPort;
+  this.l=l;
+  this.handlerName=handlerName + _clientId;
+  this.privKeyFile=pkf;
+  _ownDest=ownDest;
+  _context=tunnel.getContext();
+  _context.statManager().createRateStat("i2ptunnel.client.closeBacklog","How many pending sockets remain when we close one due to backlog?","I2PTunnel",new long[]{60 * 1000,10 * 60 * 1000,60 * 60 * 1000});
+  _context.statManager().createRateStat("i2ptunnel.client.closeNoBacklog","How many pending sockets remain when it was removed prior to backlog timeout?","I2PTunnel",new long[]{60 * 1000,10 * 60 * 1000,60 * 60 * 1000});
+  _context.statManager().createRateStat("i2ptunnel.client.manageTime","How long it takes to accept a socket and fire it into an i2ptunnel runner (or queue it for the pool)?","I2PTunnel",new long[]{60 * 1000,10 * 60 * 1000,60 * 60 * 1000});
+  _context.statManager().createRateStat("i2ptunnel.client.buildRunTime","How long it takes to run a queued socket into an i2ptunnel runner?","I2PTunnel",new long[]{60 * 1000,10 * 60 * 1000,60 * 60 * 1000});
+  tunnel.getClientOptions().setProperty("i2cp.dontPublishLeaseSet","true");
+  boolean openNow=!Boolean.valueOf(tunnel.getClientOptions().getProperty("i2cp.delayOpen")).booleanValue();
+  if (openNow) {
+    while (sockMgr == null) {
+      verifySocketManager();
+      if (sockMgr == null) {
+        _log.log(Log.CRIT,"Unable to create socket manager (our own? " + ownDest + ")");
+        try {
+          Thread.sleep(10 * 1000);
+        }
+ catch (        InterruptedException ie) {
+        }
+      }
+    }
+    if (sockMgr == null) {
+      l.log("Invalid I2CP configuration");
+      throw new IllegalArgumentException("Socket manager could not be created");
+    }
+    l.log("I2P session created");
+  }
+  Thread t=new I2PThread(this);
+  t.setName("Client " + _clientId);
+  listenerReady=false;
+  t.start();
+  open=true;
+synchronized (this) {
+    while (!listenerReady && open) {
+      try {
+        wait();
+      }
+ catch (      InterruptedException e) {
+      }
+    }
+  }
+  configurePool(tunnel);
+  if (open && listenerReady) {
+    if (openNow)     l.log("Ready! Port " + getLocalPort());
+ else     l.log("Listening on port " + getLocalPort() + ", delaying tunnel open until required");
+    notifyEvent("openBaseClientResult","ok");
+  }
+ else {
+    l.log("Error listening - please see the logs!");
+    notifyEvent("openBaseClientResult","error");
+  }
+}

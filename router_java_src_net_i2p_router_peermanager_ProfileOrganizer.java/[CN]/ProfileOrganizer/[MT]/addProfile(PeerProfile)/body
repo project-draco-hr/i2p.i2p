@@ -1,11 +1,15 @@
 {
   if ((profile == null) || (profile.getPeer() == null))   return null;
   if (_log.shouldLog(Log.DEBUG))   _log.debug("New profile created for " + profile.getPeer().toBase64());
-synchronized (_reorganizeLock) {
-    PeerProfile old=locked_getProfile(profile.getPeer());
-    profile.coalesceStats();
+  PeerProfile old=getProfile(profile.getPeer());
+  profile.coalesceStats();
+  if (!getWriteLock())   return old;
+  try {
     locked_placeProfile(profile);
     _strictCapacityOrder.add(profile);
-    return old;
   }
+  finally {
+    releaseWriteLock();
+  }
+  return old;
 }

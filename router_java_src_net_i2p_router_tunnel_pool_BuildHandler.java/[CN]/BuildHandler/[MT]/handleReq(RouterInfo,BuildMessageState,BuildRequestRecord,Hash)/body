@@ -26,7 +26,8 @@
       _context.statManager().addRateData("tunnel.acceptLoad",recvDelay,recvDelay);
     }
   }
-  if (response == 0 && (isInGW || isOutEnd) && (Boolean.valueOf(_context.getProperty(PROP_REJECT_NONPARTICIPANT)).booleanValue() || !_context.commSystem().haveCapacity())) {
+  RouterInfo ri=_context.router().getRouterInfo();
+  if (response == 0 && (ri == null || ri.getBandwidthTier().charAt(0) != 'O') && ((isInGW && !_context.commSystem().haveInboundCapacity(87)) || (isOutEnd && !_context.commSystem().haveOutboundCapacity(87)))) {
     _context.throttle().setTunnelStatus("Rejecting tunnels: Connection limit");
     response=TunnelHistory.TUNNEL_REJECT_BANDWIDTH;
   }
@@ -69,6 +70,10 @@
  else {
     _context.statManager().addRateData("tunnel.reject." + response,1,1);
     _context.messageHistory().tunnelRejected(state.fromHash,new TunnelId(ourId),req.readNextIdentity(),"rejecting for " + response + ": "+ state.msg.getUniqueId()+ "/"+ ourId+ "/"+ req.readNextTunnelId()+ " delay "+ recvDelay+ " as "+ (isOutEnd ? "outbound endpoint" : isInGW ? "inbound gw" : "participant"));
+  }
+  if (response != 0 && (!_context.routerHash().equals(nextPeer)) && (!_context.commSystem().haveOutboundCapacity(81)) && (!_context.commSystem().isEstablished(nextPeer))) {
+    _context.statManager().addRateData("tunnel.dropConnLimits",1,0);
+    return;
   }
   BuildResponseRecord resp=new BuildResponseRecord();
   byte reply[]=resp.create(_context,response,req.readReplyKey(),req.readReplyIV(),state.msg.getUniqueId());

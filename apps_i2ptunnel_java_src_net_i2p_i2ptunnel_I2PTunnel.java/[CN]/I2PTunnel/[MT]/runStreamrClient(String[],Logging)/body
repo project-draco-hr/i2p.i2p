@@ -1,0 +1,33 @@
+{
+  if (args.length == 3) {
+    InetAddress _host;
+    try {
+      _host=InetAddress.getByName(args[0]);
+    }
+ catch (    UnknownHostException uhe) {
+      l.log("unknown host");
+      _log.error(getPrefix() + "Error resolving " + args[0],uhe);
+      notifyEvent("streamrtunnelTaskId",Integer.valueOf(-1));
+      return;
+    }
+    int _port=-1;
+    try {
+      _port=Integer.parseInt(args[1]);
+    }
+ catch (    NumberFormatException nfe) {
+      l.log("invalid port");
+      _log.error(getPrefix() + "Port specified is not valid: " + args[0],nfe);
+      notifyEvent("streamrtunnelTaskId",Integer.valueOf(-1));
+      return;
+    }
+    StreamrConsumer task=new StreamrConsumer(_host,_port,args[2],l,(EventDispatcher)this,this);
+    task.startRunning();
+    addtask(task);
+    notifyEvent("streamrtunnelTaskId",Integer.valueOf(task.getId()));
+  }
+ else {
+    l.log("streamrclient <host> <port> <destination>");
+    l.log("  creates a tunnel that receives streaming data.");
+    notifyEvent("streamrtunnelTaskId",Integer.valueOf(-1));
+  }
+}

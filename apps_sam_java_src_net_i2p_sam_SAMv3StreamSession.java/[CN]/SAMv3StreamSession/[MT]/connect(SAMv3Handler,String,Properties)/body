@@ -1,0 +1,18 @@
+{
+  boolean verbose=(props.getProperty("SILENT","false").equals("false"));
+  Destination d=SAMUtils.getDest(dest);
+  I2PSocketOptions opts=socketMgr.buildOptions(props);
+  if (props.getProperty(I2PSocketOptions.PROP_CONNECT_TIMEOUT) == null)   opts.setConnectTimeout(60 * 1000);
+  _log.debug("Connecting new I2PSocket...");
+  I2PSocket i2ps=socketMgr.connect(d,opts);
+  SAMv3Handler.SessionRecord rec=SAMv3Handler.sSessionsHash.get(nick);
+  if (rec == null)   throw new InterruptedIOException();
+  handler.notifyStreamResult(verbose,"OK",null);
+  handler.stealSocket();
+  ReadableByteChannel fromClient=handler.getClientSocket();
+  ReadableByteChannel fromI2P=Channels.newChannel(i2ps.getInputStream());
+  WritableByteChannel toClient=handler.getClientSocket();
+  WritableByteChannel toI2P=Channels.newChannel(i2ps.getOutputStream());
+  (new Thread(rec.getThreadGroup(),new I2PAppThread(new Pipe(fromClient,toI2P,"SAMPipeClientToI2P"),"SAMPipeClientToI2P"),"SAMPipeClientToI2P")).start();
+  (new Thread(rec.getThreadGroup(),new I2PAppThread(new Pipe(fromI2P,toClient,"SAMPipeI2PToClient"),"SAMPipeI2PToClient"),"SAMPipeI2PToClient")).start();
+}

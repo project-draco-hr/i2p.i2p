@@ -8,18 +8,31 @@
   this.thread.setName("SAMv1Handler " + _id);
   _log.debug("SAM handling started");
   try {
-    InputStream in=getClientSocketInputStream();
-    int b=-1;
     while (true) {
       if (shouldStop()) {
         _log.debug("Stop request found");
         break;
       }
-      msg=DataHelper.readLine(in);
-      if (msg == null) {
-        _log.debug("Connection closed by client");
+      SocketChannel clientSocketChannel=getClientSocket();
+      if (clientSocketChannel == null) {
+        _log.info("Connection closed by client");
         break;
       }
+      if (clientSocketChannel.socket() == null) {
+        _log.info("Connection closed by client");
+        break;
+      }
+      java.io.InputStream is=clientSocketChannel.socket().getInputStream();
+      if (is == null) {
+        _log.info("Connection closed by client");
+        break;
+      }
+      msg=DataHelper.readLine(is);
+      if (msg == null) {
+        _log.info("Connection closed by client (line read : null)");
+        break;
+      }
+      msg=msg.trim();
       if (_log.shouldLog(Log.DEBUG)) {
         _log.debug("New message received: [" + msg + "]");
       }
@@ -80,14 +93,14 @@ catch (  Exception e) {
  catch (    IOException e) {
       _log.error("Error closing socket: " + e.getMessage());
     }
-    if (rawSession != null) {
-      rawSession.close();
+    if (getRawSession() != null) {
+      getRawSession().close();
     }
-    if (datagramSession != null) {
-      datagramSession.close();
+    if (getDatagramSession() != null) {
+      getDatagramSession().close();
     }
-    if (streamSession != null) {
-      streamSession.close();
+    if (getStreamSession() != null) {
+      getStreamSession().close();
     }
   }
 }

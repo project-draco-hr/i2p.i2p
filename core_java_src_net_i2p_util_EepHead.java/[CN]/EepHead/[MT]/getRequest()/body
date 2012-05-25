@@ -1,0 +1,21 @@
+{
+  StringBuilder buf=new StringBuilder(512);
+  URL url=new URL(_actualURL);
+  String proto=url.getProtocol();
+  String host=url.getHost();
+  int port=url.getPort();
+  String path=url.getPath();
+  String query=url.getQuery();
+  if (query != null)   path=path + "?" + query;
+  if (!path.startsWith("/"))   path="/" + path;
+  if ((port == 80) || (port == 443) || (port <= 0))   path=proto + "://" + host+ path;
+ else   path=proto + "://" + host+ ":"+ port+ path;
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Requesting " + path);
+  buf.append("HEAD ").append(_actualURL).append(" HTTP/1.1\r\n");
+  buf.append("Host: ").append(url.getHost()).append("\r\n");
+  buf.append("Accept-Encoding: \r\n");
+  if (_shouldProxy)   buf.append("X-Accept-Encoding: x-i2p-gzip;q=1.0, identity;q=0.5, deflate;q=0, gzip;q=0, *;q=0\r\n");
+  buf.append("Connection: close\r\n\r\n");
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Request: [" + buf.toString() + "]");
+  return buf.toString();
+}

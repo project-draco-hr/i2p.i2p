@@ -1,0 +1,21 @@
+{
+  long totalEvents=0;
+  for (  String tunnelStat : tunnelStats) {
+    String rateName="tunnel.build" + tunnelType + tunnelStat;
+    RateStat stat=_context.statManager().getRate(rateName);
+    if (stat == null)     continue;
+    Rate curRate=stat.getRate(selectedPeriod);
+    if (curRate == null)     continue;
+    totalEvents+=curRate.getLastEventCount();
+  }
+  if (totalEvents <= 0)   return;
+  for (  String tunnelStat : tunnelStats) {
+    String rateName="tunnel.build" + tunnelType + tunnelStat;
+    RateStat stat=_context.statManager().getRate(rateName);
+    if (stat == null)     continue;
+    Rate curRate=stat.getRate(selectedPeriod);
+    if (curRate == null)     continue;
+    double fudgeQuantity=100.0d * curRate.getLastEventCount() / totalEvents;
+    stats.setProperty("stat_" + rateName + '.'+ getPeriod(curRate),renderRate(curRate,fudgeQuantity));
+  }
+}

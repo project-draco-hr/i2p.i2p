@@ -1,0 +1,31 @@
+{
+  if (args.length == 2) {
+    int _port=-1;
+    try {
+      _port=Integer.parseInt(args[0]);
+    }
+ catch (    NumberFormatException nfe) {
+      l.log("invalid port");
+      _log.error(getPrefix() + "Port specified is not valid: " + args[0],nfe);
+      notifyEvent("streamrtunnelTaskId",Integer.valueOf(-1));
+      return;
+    }
+    File privKeyFile=new File(args[1]);
+    if (!privKeyFile.isAbsolute())     privKeyFile=new File(_context.getConfigDir(),args[1]);
+    if (!privKeyFile.canRead()) {
+      l.log("private key file does not exist");
+      _log.error(getPrefix() + "Private key file does not exist or is not readable: " + args[3]);
+      notifyEvent("serverTaskId",Integer.valueOf(-1));
+      return;
+    }
+    StreamrProducer task=new StreamrProducer(_port,privKeyFile,args[1],l,(EventDispatcher)this,this);
+    task.startRunning();
+    addtask(task);
+    notifyEvent("streamrtunnelTaskId",Integer.valueOf(task.getId()));
+  }
+ else {
+    l.log("streamrserver <port> <privkeyfile>");
+    l.log("  creates a tunnel that sends streaming data.");
+    notifyEvent("streamrtunnelTaskId",Integer.valueOf(-1));
+  }
+}

@@ -1,11 +1,4 @@
 {
-  if (!beginMarkingLiveliness(envProps)) {
-    System.err.println("ERROR: There appears to be another router already running!");
-    System.err.println("       Please make sure to shut down old instances before starting up");
-    System.err.println("       a new one.  If you are positive that no other instance is running,");
-    System.err.println("       please delete the file " + getPingFile(envProps));
-    System.exit(-1);
-  }
   _gracefulExitCode=-1;
   _config=new Properties();
   if (configFilename == null) {
@@ -16,6 +9,14 @@
   }
  else {
     _configFilename=configFilename;
+  }
+  String migrate=System.getProperty("i2p.dir.migrate");
+  boolean migrateFiles=Boolean.valueOf(migrate).booleanValue();
+  String userDir=WorkingDir.getWorkingDir(envProps,migrateFiles);
+  File cf=new File(_configFilename);
+  if (!cf.isAbsolute()) {
+    cf=new File(userDir,_configFilename);
+    _configFilename=cf.getAbsolutePath();
   }
   readConfig();
   if (envProps == null) {
@@ -28,12 +29,21 @@
       envProps.setProperty(k,v);
     }
   }
+  if (envProps.getProperty("i2p.dir.config") == null)   envProps.setProperty("i2p.dir.config",userDir);
   _context=new RouterContext(this,envProps);
+  if (!beginMarkingLiveliness()) {
+    System.err.println("ERROR: There appears to be another router already running!");
+    System.err.println("       Please make sure to shut down old instances before starting up");
+    System.err.println("       a new one.  If you are positive that no other instance is running,");
+    System.err.println("       please delete the file " + getPingFile().getAbsolutePath());
+    System.exit(-1);
+  }
+  installUpdates();
+  _context.initAll();
   _routerInfo=null;
   _higherVersionSeen=false;
   _log=_context.logManager().getLog(Router.class);
   _log.info("New router created with config file " + _configFilename);
-  _sessionKeyPersistenceHelper=new SessionKeyPersistenceHelper(_context);
   _killVMOnEnd=true;
   _oomListener=new I2PThread.OOMEventListener(){
     public void outOfMemory(    OutOfMemoryError oom){
@@ -59,5 +69,4 @@
   watchdog.setName("RouterWatchdog");
   watchdog.setDaemon(true);
   watchdog.start();
-  _shutdownTasks=new HashSet(0);
 }

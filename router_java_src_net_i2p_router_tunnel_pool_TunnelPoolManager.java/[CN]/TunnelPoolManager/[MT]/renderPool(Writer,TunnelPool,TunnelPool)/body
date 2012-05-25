@@ -5,23 +5,46 @@
   if (outPool != null)   tunnels.addAll(outPool.listTunnels());
   long processedIn=(in != null ? in.getLifetimeProcessed() : 0);
   long processedOut=(outPool != null ? outPool.getLifetimeProcessed() : 0);
-  out.write("<table border=\"1\"><tr><td><b>Direction</b></td><td><b>Expiration</b></td><td><b>Usage</b></td><td align=\"left\">Hops (gateway first)</td></tr>\n");
   int live=0;
+  int maxLength=1;
+  for (int i=0; i < tunnels.size(); i++) {
+    TunnelInfo info=(TunnelInfo)tunnels.get(i);
+    if (info.getLength() > maxLength)     maxLength=info.getLength();
+  }
+  out.write("<table><tr><th>In/Out</th><th>Expiry</th><th>Usage</th><th>Gateway</th>");
+  if (maxLength > 3) {
+    out.write("<th align=\"center\" colspan=\"" + (maxLength - 2));
+    out.write("\">Participants</th>");
+  }
+ else   if (maxLength == 3) {
+    out.write("<th>Participant</th>");
+  }
+  if (maxLength > 1) {
+    out.write("<th>Endpoint</th>");
+  }
+  out.write("</tr>\n");
   for (int i=0; i < tunnels.size(); i++) {
     TunnelInfo info=(TunnelInfo)tunnels.get(i);
     long timeLeft=info.getExpiration() - _context.clock().now();
     if (timeLeft <= 0)     continue;
     live++;
-    if (info.isInbound())     out.write("<tr><td><b>inbound</b></td>");
- else     out.write("<tr><td><b>outbound</b></td>");
-    out.write("<td align=right>" + DataHelper.formatDuration(timeLeft) + "</td>\n");
-    out.write("<td align=right>" + info.getProcessedMessagesCount() + "KB</td>\n");
+    if (info.isInbound())     out.write("<tr> <td class=\"cells\" align=\"center\"><img src=\"/themes/console/images/inbound.png\" alt=\"Inbound\" title=\"Inbound\"/></td>");
+ else     out.write("<tr> <td class=\"cells\" align=\"center\"><img src=\"/themes/console/images/outbound.png\" alt=\"Outbound\" title=\"Outbound\"/></td>");
+    out.write(" <td class=\"cells\" align=\"center\">" + DataHelper.formatDuration(timeLeft) + "</td>\n");
+    out.write(" <td class=\"cells\" align=\"center\">" + info.getProcessedMessagesCount() + "KB</td>\n");
     for (int j=0; j < info.getLength(); j++) {
       Hash peer=info.getPeer(j);
-      String cap=getCapacity(peer);
       TunnelId id=(info.isInbound() ? info.getReceiveTunnelId(j) : info.getSendTunnelId(j));
-      if (_context.routerHash().equals(peer))       out.write("<td>" + (id == null ? "" : "" + id) + "</td>");
- else       out.write("<td>" + netDbLink(peer) + (id == null ? "" : ":" + id)+ cap+ "</td>");
+      if (_context.routerHash().equals(peer)) {
+        out.write(" <td class=\"cells\" align=\"center\">" + (id == null ? "" : "" + id) + "</td>");
+      }
+ else {
+        String cap=getCapacity(peer);
+        out.write(" <td class=\"cells\" align=\"center\">" + netDbLink(peer) + (id == null ? "" : " " + id)+ cap+ "</td>");
+      }
+      if (info.getLength() < maxLength && (info.getLength() == 1 || j == info.getLength() - 2)) {
+        for (int k=info.getLength(); k < maxLength; k++)         out.write(" <td class=\"cells\" align=\"center\">&nbsp</td>");
+      }
     }
     out.write("</tr>\n");
     if (info.isInbound())     processedIn+=info.getProcessedMessagesCount();
@@ -30,20 +53,14 @@
   out.write("</table>\n");
   if (in != null) {
     List pending=in.listPending();
-    for (int i=0; i < pending.size(); i++) {
-      TunnelInfo info=(TunnelInfo)pending.get(i);
-      out.write("In progress: <code>" + info.toString() + "</code><br />\n");
-    }
+    if (pending.size() > 0)     out.write("<div class=\"statusnotes\"><center><b>Build in progress: " + pending.size() + " inbound</b></center></div>\n");
     live+=pending.size();
   }
   if (outPool != null) {
     List pending=outPool.listPending();
-    for (int i=0; i < pending.size(); i++) {
-      TunnelInfo info=(TunnelInfo)pending.get(i);
-      out.write("In progress: <code>" + info.toString() + "</code><br />\n");
-    }
+    if (pending.size() > 0)     out.write("<div class=\"statusnotes\"><center><b>Build in progress: " + pending.size() + " outbound</b></center></div>\n");
     live+=pending.size();
   }
-  if (live <= 0)   out.write("<b>No tunnels, waiting for the grace period to end</b><br />\n");
-  out.write("Lifetime bandwidth usage: " + DataHelper.formatSize(processedIn * 1024) + "B in, "+ DataHelper.formatSize(processedOut * 1024)+ "B out<br />");
+  if (live <= 0)   out.write("<div class=\"statusnotes\"><center><b>No tunnels; waiting for the grace period to end.</center></b></div>\n");
+  out.write("<div class=\"statusnotes\"><center><b>Lifetime bandwidth usage: " + DataHelper.formatSize(processedIn * 1024) + "B in, "+ DataHelper.formatSize(processedOut * 1024)+ "B out</b></center></div>");
 }

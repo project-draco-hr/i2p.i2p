@@ -2,14 +2,15 @@
   if ("Check for update now".equals(_action)) {
     NewsFetcher fetcher=NewsFetcher.getInstance(I2PAppContext.getGlobalContext());
     fetcher.fetchNews();
-    if (fetcher.updateAvailable()) {
+    if (fetcher.shouldFetchUnsigned())     fetcher.fetchUnsigned();
+    if (fetcher.updateAvailable() || fetcher.unsignedUpdateAvailable()) {
       if ((_updatePolicy == null) || (!_updatePolicy.equals("notify")))       addFormNotice("Update available, attempting to download now");
  else       addFormNotice("Update available, click button on left to download");
     }
  else     addFormNotice("No update available");
   }
   if ((_newsURL != null) && (_newsURL.length() > 0)) {
-    String oldURL=_context.router().getConfigSetting(PROP_NEWS_URL);
+    String oldURL=ConfigUpdateHelper.getNewsURL(_context);
     if ((oldURL == null) || (!_newsURL.equals(oldURL))) {
       _context.router().setConfigSetting(PROP_NEWS_URL,_newsURL);
       addFormNotice("Updating news URL to " + _newsURL);
@@ -29,12 +30,8 @@
       addFormNotice("Updating proxy port to " + _proxyPort);
     }
   }
-  if (_updateThroughProxy) {
-    _context.router().setConfigSetting(PROP_SHOULD_PROXY,Boolean.TRUE.toString());
-  }
- else {
-    _context.router().setConfigSetting(PROP_SHOULD_PROXY,Boolean.FALSE.toString());
-  }
+  _context.router().setConfigSetting(PROP_SHOULD_PROXY,"" + _updateThroughProxy);
+  _context.router().setConfigSetting(PROP_UPDATE_UNSIGNED,"" + _updateUnsigned);
   String oldFreqStr=_context.router().getConfigSetting(PROP_REFRESH_FREQUENCY);
   long oldFreq=-1;
   if (oldFreqStr != null)   try {
@@ -66,6 +63,13 @@
     if ((oldKeys == null) || (!_trustedKeys.equals(oldKeys))) {
       _context.router().setConfigSetting(PROP_TRUSTED_KEYS,_trustedKeys);
       addFormNotice("Updating trusted keys.");
+    }
+  }
+  if ((_zipURL != null) && (_zipURL.length() > 0)) {
+    String oldURL=_context.router().getConfigSetting(PROP_ZIP_URL);
+    if ((oldURL == null) || (!_zipURL.equals(oldURL))) {
+      _context.router().setConfigSetting(PROP_ZIP_URL,_zipURL);
+      addFormNotice("Updating unsigned update URL to " + _zipURL);
     }
   }
   _context.router().saveConfig();

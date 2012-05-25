@@ -1,0 +1,45 @@
+{
+  if (targetRequest.startsWith("proxy.i2p/ ")) {
+    try {
+      out.write(("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nCache-Control: max-age=86400\r\n\r\nI2P HTTP proxy OK").getBytes());
+      out.flush();
+    }
+ catch (    IOException ioe) {
+    }
+    return;
+  }
+  if ((method.equals("GET") || method.equals("HEAD")) && targetRequest.startsWith("proxy.i2p/themes/") && !targetRequest.contains("..")) {
+    int space=targetRequest.indexOf(' ');
+    String filename=null;
+    try {
+      filename=targetRequest.substring(17,space);
+    }
+ catch (    IndexOutOfBoundsException ioobe) {
+    }
+    if (filename.startsWith("console/default/"))     filename=filename.replaceFirst("default",I2PAppContext.getGlobalContext().getProperty("routerconsole.theme","light"));
+    File themesDir=new File(_errorDir,"themes");
+    File file=new File(themesDir,filename);
+    if (file.exists() && !file.isDirectory()) {
+      String type;
+      if (filename.endsWith(".css"))       type="text/css";
+ else       if (filename.endsWith(".png"))       type="image/png";
+ else       if (filename.endsWith(".jpg"))       type="image/jpeg";
+ else       type="text/html";
+      try {
+        out.write("HTTP/1.1 200 OK\r\nContent-Type: ".getBytes());
+        out.write(type.getBytes());
+        out.write("\r\nCache-Control: max-age=86400\r\n\r\n".getBytes());
+        FileUtil.readFile(filename,themesDir.getAbsolutePath(),out);
+        return;
+      }
+ catch (      IOException ioe) {
+      }
+    }
+  }
+  try {
+    out.write(ERR_404);
+    out.flush();
+  }
+ catch (  IOException ioe) {
+  }
+}

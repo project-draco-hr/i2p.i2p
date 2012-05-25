@@ -17,13 +17,9 @@
   out.write(HEADER_BEGIN);
   out.write("<meta http-equiv=\"refresh\" content=\"60;" + req.getRequestURI() + peerString+ "\">\n");
   out.write(HEADER);
-  out.write("<table border=\"0\" width=\"100%\">\n");
-  out.write("<tr><td width=\"20%\" class=\"snarkTitle\" valign=\"top\" align=\"left\">");
-  out.write("I2PSnark<br />\n");
-  out.write("<table border=\"0\" width=\"100%\">\n");
-  out.write("<tr><td><a href=\"" + req.getRequestURI() + peerString+ "\" class=\"snarkRefresh\">Refresh</a>\n");
-  out.write("<td><a href=\"http://forum.i2p/viewforum.php?f=21\" class=\"snarkRefresh\">Forum</a>\n");
-  int count=0;
+  out.write("</head><body>");
+  out.write("<center><div class=\"page\"><table border=\"0\" width=\"100%\"><tr><td align=\"center\" class=\"snarkTitle\"><a href=\"" + req.getRequestURI() + peerString+ "\" title=\"I2PSnark (Manual Page Refresh)\"><img src=\"/themes/console/images/i2psnark.png\" alt=\"I2PSnark Anonymous BitTorrent Client\" border=\"0\" class=\"snarklogo\"></a></table>");
+  out.write("<div class=\"snarknavbar\"><a href=\"http://forum.i2p/viewforum.php?f=21\" class=\"snarkRefresh\" target=\"_blank\">Forum</a>\n");
   Map trackers=_manager.getTrackers();
   for (Iterator iter=trackers.entrySet().iterator(); iter.hasNext(); ) {
     Map.Entry entry=(Map.Entry)iter.next();
@@ -32,18 +28,16 @@
     int e=baseURL.indexOf('=');
     if (e < 0)     continue;
     baseURL=baseURL.substring(e + 1);
-    if (count++ % 2 == 0)     out.write("<tr>");
-    out.write("<td><a href=\"" + baseURL + "\" class=\"snarkRefresh\">"+ name+ "</a>\n");
+    out.write("<a href=\"" + baseURL + "\" class=\"snarkRefresh\" target=\"_blank\">"+ name+ "</a>");
   }
-  if (count % 2 == 1)   out.write("<td>&nbsp;\n");
-  out.write("</table>\n");
-  out.write("</td><td width=\"80%\" class=\"snarkMessages\" valign=\"top\" align=\"left\"><pre>");
+  out.write("</div>\n");
+  out.write("<div class=\"mainsection\"><div class=\"snarkMessages\"><table><tr><td align=\"left\"><pre>");
   List msgs=_manager.getMessages();
   for (int i=msgs.size() - 1; i >= 0; i--) {
     String msg=(String)msgs.get(i);
     out.write(msg + "\n");
   }
-  out.write("</pre></td></tr></table>\n");
+  out.write("</pre></td></tr></table></div>");
   List snarks=getSortedSnarks(req);
   String uri=req.getRequestURI();
   out.write(TABLE_HEADER);
@@ -52,7 +46,7 @@
  else     out.write("(<a href=\"" + req.getRequestURI() + "?p=1"+ "\">Show Peers</a>)<br />\n");
   }
   out.write(TABLE_HEADER2);
-  out.write("<th align=\"left\" valign=\"top\">");
+  out.write("<th align=\"left\">");
   if (_manager.util().connected())   out.write("<a href=\"" + uri + "?action=StopAll&nonce="+ _nonce+ "\" title=\"Stop all torrents and the i2p tunnel\">Stop All</a>");
  else   if (snarks.size() > 0)   out.write("<a href=\"" + uri + "?action=StartAll&nonce="+ _nonce+ "\" title=\"Start all torrents and the i2p tunnel\">Start All</a>");
  else   out.write("&nbsp;");
@@ -67,7 +61,7 @@
     out.write(TABLE_EMPTY);
   }
  else   if (snarks.size() > 1) {
-    out.write("<tfoot><tr>\n" + "    <th align=\"left\" valign=\"top\" colspan=\"2\">Totals (" + snarks.size() + " torrents, "+ stats[4]+ " connected peers)</th>\n"+ "    <th>&nbsp;</th>\n"+ "    <th align=\"right\" valign=\"top\">"+ formatSize(stats[0])+ "</th>\n"+ "    <th align=\"right\" valign=\"top\">"+ formatSize(stats[1])+ "</th>\n"+ "    <th align=\"right\" valign=\"top\">"+ formatSize(stats[2])+ "ps</th>\n"+ "    <th align=\"right\" valign=\"top\">"+ formatSize(stats[3])+ "ps</th>\n"+ "    <th>&nbsp;</th></tr>\n"+ "</tfoot>\n");
+    out.write("<tfoot><tr>\n" + "    <th align=\"left\" colspan=\"2\">Totals (" + snarks.size() + " torrents, "+ stats[4]+ " connected peers)</th>\n"+ "    <th>&nbsp;</th>\n"+ "    <th align=\"right\">"+ formatSize(stats[0])+ "</th>\n"+ "    <th align=\"right\">"+ formatSize(stats[1])+ "</th>\n"+ "    <th align=\"right\">"+ formatSize(stats[2])+ "ps</th>\n"+ "    <th align=\"right\">"+ formatSize(stats[3])+ "ps</th>\n"+ "    <th>&nbsp;</th></tr>\n"+ "</tfoot>\n");
   }
   out.write(TABLE_FOOTER);
   writeAddForm(out,req);

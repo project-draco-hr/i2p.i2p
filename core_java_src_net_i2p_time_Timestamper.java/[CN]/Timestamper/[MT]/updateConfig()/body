@@ -1,46 +1,32 @@
 {
   String serverList=_context.getProperty(PROP_SERVER_LIST);
-  if ((serverList == null) || (serverList.trim().length() <= 0))   serverList=DEFAULT_SERVER_LIST;
-synchronized (_servers) {
-    _servers.clear();
-    StringTokenizer tok=new StringTokenizer(serverList,",");
-    while (tok.hasMoreTokens()) {
-      String val=(String)tok.nextToken();
-      val=val.trim();
-      if (val.length() > 0)       _servers.add(val);
+  if ((serverList == null) || (serverList.trim().length() <= 0)) {
+    serverList=DEFAULT_SERVER_LIST;
+    String country=_context.getProperty(PROP_IP_COUNTRY);
+    if (country == null) {
+      country=Locale.getDefault().getCountry();
+      if (country != null)       country=country.toLowerCase();
     }
-  }
-  String freq=_context.getProperty(PROP_QUERY_FREQUENCY);
-  if ((freq == null) || (freq.trim().length() <= 0))   freq=DEFAULT_QUERY_FREQUENCY + "";
-  try {
-    int ms=Integer.parseInt(freq);
-    if (ms > 60 * 1000) {
-      _queryFrequency=ms;
+    if (country != null && country.length() > 0) {
+      _priorityServers=new ArrayList(3);
+      for (int i=0; i < 3; i++)       _priorityServers.add(i + "." + country+ ".pool.ntp.org");
     }
  else {
-      if ((_log != null) && (_log.shouldLog(Log.ERROR)))       _log.error("Query frequency once every " + ms + "ms is too fast!");
-      _queryFrequency=DEFAULT_QUERY_FREQUENCY;
+      _priorityServers=null;
     }
   }
- catch (  NumberFormatException nfe) {
-    if ((_log != null) && (_log.shouldLog(Log.WARN)))     _log.warn("Invalid query frequency [" + freq + "], falling back on "+ DEFAULT_QUERY_FREQUENCY);
-    _queryFrequency=DEFAULT_QUERY_FREQUENCY;
+ else {
+    _priorityServers=null;
   }
-  String disabled=_context.getProperty(PROP_DISABLED);
-  if (disabled == null)   disabled=DEFAULT_DISABLED + "";
+  _servers.clear();
+  StringTokenizer tok=new StringTokenizer(serverList,", ");
+  while (tok.hasMoreTokens()) {
+    String val=(String)tok.nextToken();
+    val=val.trim();
+    if (val.length() > 0)     _servers.add(val);
+  }
+  _queryFrequency=Math.max(MIN_QUERY_FREQUENCY,_context.getProperty(PROP_QUERY_FREQUENCY,DEFAULT_QUERY_FREQUENCY));
+  String disabled=_context.getProperty(PROP_DISABLED,DEFAULT_DISABLED);
   _disabled=Boolean.valueOf(disabled).booleanValue();
-  String concurring=_context.getProperty(PROP_CONCURRING_SERVERS);
-  if (concurring == null) {
-    _concurringServers=DEFAULT_CONCURRING_SERVERS;
-  }
- else {
-    try {
-      int servers=Integer.parseInt(concurring);
-      if ((servers > 0) && (servers < 5))       _concurringServers=servers;
- else       _concurringServers=DEFAULT_CONCURRING_SERVERS;
-    }
- catch (    NumberFormatException nfe) {
-      _concurringServers=DEFAULT_CONCURRING_SERVERS;
-    }
-  }
+  _concurringServers=Math.min(4,Math.max(1,_context.getProperty(PROP_CONCURRING_SERVERS,DEFAULT_CONCURRING_SERVERS)));
 }

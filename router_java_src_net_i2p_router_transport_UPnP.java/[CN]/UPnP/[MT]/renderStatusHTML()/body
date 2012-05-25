@@ -1,0 +1,32 @@
+{
+  final StringBuilder sb=new StringBuilder();
+  sb.append("<a name=\"upnp\"></a><b>UPnP Status:</b><br />");
+  if (isDisabled) {
+    sb.append("UPnP has been disabled; Do you have more than one UPnP Internet Gateway Device on your LAN ?");
+    return sb.toString();
+  }
+ else   if (!isNATPresent()) {
+    sb.append("UPnP has not found any UPnP-aware, compatible device on your LAN.");
+    return sb.toString();
+  }
+  sb.append("<p>Found ");
+  listSubDev(null,_router,sb);
+  String addr=getNATAddress();
+  if (addr != null)   sb.append("<br>The current external IP address reported by UPnP is " + addr);
+ else   sb.append("<br>The current external IP address is not available.");
+  int downstreamMaxBitRate=getDownstreamMaxBitRate();
+  int upstreamMaxBitRate=getUpstreamMaxBitRate();
+  if (downstreamMaxBitRate > 0)   sb.append("<br>UPnP reports the max downstream bit rate is : " + downstreamMaxBitRate + " bits/sec\n");
+  if (upstreamMaxBitRate > 0)   sb.append("<br>UPnP reports the max upstream bit rate is : " + upstreamMaxBitRate + " bits/sec\n");
+synchronized (lock) {
+    if (portsToForward != null) {
+      for (      ForwardPort port : portsToForward) {
+        sb.append("<br>" + protoToString(port.protocol) + " port "+ port.portNumber+ " for "+ port.name);
+        if (portsForwarded.contains(port))         sb.append(" has been forwarded successfully by UPnP.\n");
+ else         sb.append(" has not been forwarded by UPnP.\n");
+      }
+    }
+  }
+  sb.append("</p>");
+  return sb.toString();
+}

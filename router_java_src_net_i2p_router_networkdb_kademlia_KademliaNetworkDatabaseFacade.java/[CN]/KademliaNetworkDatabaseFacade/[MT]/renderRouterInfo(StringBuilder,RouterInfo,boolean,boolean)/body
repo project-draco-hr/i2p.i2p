@@ -1,0 +1,43 @@
+{
+  String hash=info.getIdentity().getHash().toBase64();
+  buf.append("<a name=\"").append(hash.substring(0,6)).append("\" ></a>");
+  if (isUs) {
+    buf.append("<a name=\"our-info\" ></a><b>Our info: ").append(hash).append("</b><br />\n");
+  }
+ else {
+    buf.append("<b>Peer info for:</b> ").append(hash).append("<br />\n");
+  }
+  long age=_context.clock().now() - info.getPublished();
+  if (isUs && _context.router().isHidden())   buf.append("Hidden, Updated: <i>").append(DataHelper.formatDuration(age)).append(" ago</i><br />\n");
+ else   if (age > 0)   buf.append("Published: <i>").append(DataHelper.formatDuration(age)).append(" ago</i><br />\n");
+ else   buf.append("Published: <i>in ").append(DataHelper.formatDuration(0 - age)).append("???</i><br />\n");
+  buf.append("Address(es): <i>");
+  String country=_context.commSystem().getCountry(info.getIdentity().getHash());
+  if (country != null) {
+    buf.append("<img height=\"11\" width=\"16\" alt=\"").append(country.toUpperCase()).append("\"");
+    buf.append(" src=\"/flags.jsp?c=").append(country).append("\"> ");
+  }
+  for (Iterator iter=info.getAddresses().iterator(); iter.hasNext(); ) {
+    RouterAddress addr=(RouterAddress)iter.next();
+    buf.append(addr.getTransportStyle()).append(": ");
+    for (Iterator optIter=addr.getOptions().keySet().iterator(); optIter.hasNext(); ) {
+      String name=(String)optIter.next();
+      String val=addr.getOptions().getProperty(name);
+      buf.append('[').append(DataHelper.stripHTML(name)).append('=').append(DataHelper.stripHTML(val)).append("] ");
+    }
+  }
+  buf.append("</i><br />\n");
+  if (full) {
+    buf.append("Stats: <br /><i><code>\n");
+    for (Iterator iter=info.getOptions().keySet().iterator(); iter.hasNext(); ) {
+      String key=(String)iter.next();
+      String val=info.getOption(key);
+      buf.append(DataHelper.stripHTML(key)).append(" = ").append(DataHelper.stripHTML(val)).append("<br />\n");
+    }
+    buf.append("</code></i>\n");
+  }
+ else {
+    buf.append("<a href=\"netdb.jsp?r=").append(hash.substring(0,6)).append("\" >Full entry</a>\n");
+  }
+  buf.append("<hr />\n");
+}

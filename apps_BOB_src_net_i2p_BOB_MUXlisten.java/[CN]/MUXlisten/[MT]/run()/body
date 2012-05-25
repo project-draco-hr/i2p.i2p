@@ -1,137 +1,184 @@
 {
+  I2PServerSocket SS=null;
+  Thread t=null;
+  Thread q=null;
   try {
-    wlock();
     try {
-      info.add("RUNNING",Boolean.TRUE);
-      info.add("STARTING",Boolean.FALSE);
+      wlock();
+      try {
+        info.add("RUNNING",new Boolean(true));
+      }
+ catch (      Exception e) {
+        lock.set(false);
+        wunlock();
+        return;
+      }
     }
  catch (    Exception e) {
-      wunlock();
+      lock.set(false);
       return;
     }
-  }
- catch (  Exception e) {
-    return;
-  }
-  try {
-    wunlock();
-  }
- catch (  Exception e) {
-    return;
-  }
-  quit: {
     try {
-      tg=new ThreadGroup(N);
-      die: {
-        if (go_out) {
-          I2Plistener conn=new I2Plistener(socketManager,info,database,_log);
-          Thread t=new Thread(tg,conn,"BOBI2Plistener " + N);
-          t.start();
-        }
-        if (come_in) {
-          TCPlistener conn=new TCPlistener(listener,socketManager,info,database,_log);
-          Thread q=new Thread(tg,conn,"BOBTCPlistener" + N);
-          q.start();
-        }
-        boolean spin=true;
-        while (spin) {
-          try {
-            Thread.sleep(1000);
+      wunlock();
+    }
+ catch (    Exception e) {
+      lock.set(false);
+      return;
+    }
+    lives.set(true);
+    lock.set(false);
+    quit: {
+      try {
+        tg=new ThreadGroup(N);
+{
+          if (go_out) {
+            SS=socketManager.getServerSocket();
+            I2Plistener conn=new I2Plistener(SS,socketManager,info,database,_log,lives);
+            t=new Thread(tg,conn,"BOBI2Plistener " + N);
+            t.start();
           }
- catch (          InterruptedException e) {
+          if (come_in) {
+            TCPlistener conn=new TCPlistener(listener,socketManager,info,database,_log,lives);
+            q=new Thread(tg,conn,"BOBTCPlistener " + N);
+            q.start();
           }
           try {
-            rlock();
+            wlock();
             try {
-              spin=info.get("STOPPING").equals(Boolean.FALSE);
+              info.add("STARTING",new Boolean(false));
             }
  catch (            Exception e) {
-              runlock();
-              break die;
+              wunlock();
+              break quit;
             }
           }
  catch (          Exception e) {
-            break die;
+            break quit;
           }
           try {
-            runlock();
-          }
- catch (          Exception e) {
-            break die;
-          }
-        }
-        try {
-          wlock();
-          try {
-            info.add("RUNNING",Boolean.FALSE);
-          }
- catch (          Exception e) {
             wunlock();
-            break die;
+          }
+ catch (          Exception e) {
+            break quit;
+          }
+          boolean spin=true;
+          while (spin && lives.get()) {
+            try {
+              Thread.sleep(1000);
+            }
+ catch (            InterruptedException e) {
+              break quit;
+            }
+            try {
+              rlock();
+              try {
+                spin=info.get("STOPPING").equals(Boolean.FALSE);
+              }
+ catch (              Exception e) {
+                runlock();
+                break quit;
+              }
+            }
+ catch (            Exception e) {
+              break quit;
+            }
+            try {
+              runlock();
+            }
+ catch (            Exception e) {
+              break quit;
+            }
           }
         }
- catch (        Exception e) {
-          break die;
-        }
-        try {
-          wunlock();
-        }
- catch (        Exception e) {
-          break die;
+      }
+ catch (      Exception e) {
+        break quit;
+      }
+    }
+  }
+  finally {
+    lives.set(false);
+    try {
+      Thread.sleep(100);
+    }
+ catch (    InterruptedException ex) {
+    }
+    try {
+      wlock();
+      try {
+        info.add("STARTING",new Boolean(false));
+        info.add("STOPPING",new Boolean(true));
+        info.add("RUNNING",new Boolean(false));
+      }
+ catch (      Exception e) {
+        lock.set(false);
+        wunlock();
+        return;
+      }
+      wunlock();
+    }
+ catch (    Exception e) {
+    }
+    while (!lock.compareAndSet(false,true)) {
+    }
+    if (SS != null) {
+      try {
+        SS.close();
+      }
+ catch (      I2PException ex) {
+      }
+    }
+    if (listener != null) {
+      try {
+        listener.close();
+      }
+ catch (      IOException e) {
+      }
+    }
+    try {
+      Thread.sleep(100);
+    }
+ catch (    InterruptedException ex) {
+    }
+    try {
+      wlock();
+      try {
+        info.add("STARTING",new Boolean(false));
+        info.add("STOPPING",new Boolean(false));
+        info.add("RUNNING",new Boolean(false));
+      }
+ catch (      Exception e) {
+        lock.set(false);
+        wunlock();
+        return;
+      }
+      wunlock();
+    }
+ catch (    Exception e) {
+    }
+    lock.set(false);
+    if (tg != null) {
+      String boner=tg.getName();
+      _log.warn("BOB: MUXlisten: Starting thread collection for: " + boner);
+      if (tg.activeCount() + tg.activeGroupCount() != 0) {
+        int foo=tg.activeCount() + tg.activeGroupCount();
+        while (foo != 0) {
+          foo=tg.activeCount() + tg.activeGroupCount();
+          try {
+            Thread.sleep(100);
+          }
+ catch (          InterruptedException ex) {
+          }
         }
       }
-      while (tg.activeCount() + tg.activeGroupCount() != 0) {
-        tg.interrupt();
-        try {
-          Thread.sleep(100);
-        }
- catch (        InterruptedException ex) {
-        }
-      }
+      _log.warn("BOB: MUXlisten: Threads went away. Success: " + boner);
       tg.destroy();
       tg=null;
     }
- catch (    Exception e) {
-      break quit;
-    }
-  }
-  if (tg != null) {
-    System.out.println("BOB: MUXlisten: Something fucked up REALLY bad!");
-    System.out.println("BOB: MUXlisten: Please email the following dump to sponge@mail.i2p");
-    WrapperManager.requestThreadDump();
-    System.out.println("BOB: MUXlisten: Something fucked up REALLY bad!");
-    System.out.println("BOB: MUXlisten: Please email the above dump to sponge@mail.i2p");
-  }
-  try {
-    socketManager.destroySocketManager();
-  }
- catch (  Exception e) {
-  }
-  try {
-    wlock();
     try {
-      info.add("STARTING",Boolean.FALSE);
-      info.add("STOPPING",Boolean.FALSE);
-      info.add("RUNNING",Boolean.FALSE);
+      socketManager.destroySocketManager();
     }
  catch (    Exception e) {
-      wunlock();
-      return;
     }
-    wunlock();
-  }
- catch (  Exception e) {
-  }
-  if (tg != null) {
-    while (tg.activeCount() + tg.activeGroupCount() != 0) {
-      tg.interrupt();
-      try {
-        Thread.sleep(100);
-      }
- catch (      InterruptedException ex) {
-      }
-    }
-    tg.destroy();
-    tg=null;
   }
 }

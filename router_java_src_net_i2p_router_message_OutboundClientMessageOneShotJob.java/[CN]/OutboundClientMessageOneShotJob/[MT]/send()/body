@@ -1,12 +1,18 @@
 {
   if (_finished)   return;
-  if (getContext().clock().now() >= _overallExpiration) {
+  long now=getContext().clock().now();
+  if (now >= _overallExpiration) {
     dieFatal();
     return;
   }
-  int existingTags=GarlicMessageBuilder.estimateAvailableTags(getContext(),_leaseSet.getEncryptionKey());
+  int existingTags=GarlicMessageBuilder.estimateAvailableTags(getContext(),_leaseSet.getEncryptionKey(),_from);
   _outTunnel=selectOutboundTunnel(_to);
-  boolean wantACK=_wantACK || existingTags <= 30 || getContext().random().nextInt(100) < 5;
+  boolean wantACK;
+synchronized (_lastReplyRequestCache) {
+    Long lastSent=_lastReplyRequestCache.get(hashPair());
+    wantACK=_wantACK || existingTags <= 30 || lastSent == null || lastSent.longValue() < now - REPLY_REQUEST_INTERVAL;
+    if (wantACK)     _lastReplyRequestCache.put(hashPair(),Long.valueOf(now));
+  }
   PublicKey key=_leaseSet.getEncryptionKey();
   SessionKey sessKey=new SessionKey();
   Set tags=new HashSet();
@@ -24,7 +30,7 @@
   GarlicMessage msg=OutboundClientMessageJobHelper.createGarlicMessage(getContext(),token,msgExpiration,key,_clove,_from.calculateHash(),_to,_inTunnel,sessKey,tags,wantACK,replyLeaseSet);
   if (msg == null) {
     if (_log.shouldLog(Log.WARN))     _log.warn(getJobId() + ": Unable to create the garlic message (no tunnels left or too lagged) to " + _toString);
-    getContext().statManager().addRateData("client.dispatchNoTunnels",getContext().clock().now() - _start,0);
+    getContext().statManager().addRateData("client.dispatchNoTunnels",now - _start,0);
     dieFatal();
     return;
   }
@@ -46,11 +52,11 @@
   }
  else {
     if (_log.shouldLog(Log.WARN))     _log.warn(getJobId() + ": Could not find any outbound tunnels to send the payload through... this might take a while");
-    getContext().statManager().addRateData("client.dispatchNoTunnels",getContext().clock().now() - _start,0);
+    getContext().statManager().addRateData("client.dispatchNoTunnels",now - _start,0);
     dieFatal();
   }
   _clientMessage=null;
   _clove=null;
-  getContext().statManager().addRateData("client.dispatchPrepareTime",getContext().clock().now() - _start,0);
+  getContext().statManager().addRateData("client.dispatchPrepareTime",now - _start,0);
   if (!wantACK)   getContext().statManager().addRateData("client.dispatchNoACK",1,0);
 }

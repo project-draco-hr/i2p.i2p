@@ -1,0 +1,22 @@
+{
+  if (data.length <= 8)   throw new IllegalArgumentException("Header too short: " + data.length);
+  if (data[0] != 0 || data[1] != 0)   throw new IllegalArgumentException("Not a SOCKS datagram?");
+  if (data[2] != 0)   throw new IllegalArgumentException("We can't handle fragments!");
+  int headerlen=0;
+  int addressType=data[3];
+  if (addressType == 1) {
+    headerlen=6 + 4;
+  }
+ else   if (addressType == 3) {
+    headerlen=6 + 1 + (data[4] & 0xff);
+  }
+ else   if (addressType == 4) {
+    headerlen=6 + 16;
+  }
+ else {
+    throw new IllegalArgumentException("Unknown address type: " + addressType);
+  }
+  if (data.length < headerlen)   throw new IllegalArgumentException("Header too short: " + data.length);
+  this.header=new byte[headerlen];
+  System.arraycopy(this.header,0,data,0,headerlen);
+}

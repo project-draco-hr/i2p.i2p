@@ -1,11 +1,19 @@
 {
   _status="<b>Update downloaded</b>";
   TrustedUpdate up=new TrustedUpdate(_context);
-  String err=up.migrateVerified(RouterVersion.VERSION,SIGNED_UPDATE_FILE,Router.UPDATE_FILE);
-  File f=new File(SIGNED_UPDATE_FILE);
+  File f=new File(_updateFile);
+  File to=new File(_context.getBaseDir(),Router.UPDATE_FILE);
+  String err=up.migrateVerified(RouterVersion.VERSION,f,to);
   f.delete();
   if (err == null) {
     String policy=_context.getProperty(ConfigUpdateHandler.PROP_UPDATE_POLICY);
+    this.done=true;
+    String lastmod=_get.getLastModified();
+    long modtime=0;
+    if (lastmod != null)     modtime=NewsFetcher.parse822Date(lastmod);
+    if (modtime <= 0)     modtime=_context.clock().now();
+    _context.router().setConfigSetting(PROP_LAST_UPDATE_TIME,"" + modtime);
+    _context.router().saveConfig();
     if ("install".equals(policy)) {
       _log.log(Log.CRIT,"Update was VERIFIED, restarting to install it");
       _status="<b>Update verified</b><br />Restarting";
@@ -13,7 +21,10 @@
     }
  else {
       _log.log(Log.CRIT,"Update was VERIFIED, will be installed at next restart");
-      _status="<b>Update downloaded</b><br />Click Restart to Install";
+      _status="<b>Update downloaded</b><br />";
+      if (System.getProperty("wrapper.version") != null)       _status+="Click Restart to install";
+ else       _status+="Click Shutdown and restart to install";
+      if (up.newVersion() != null)       _status+=" Version " + up.newVersion();
     }
   }
  else {

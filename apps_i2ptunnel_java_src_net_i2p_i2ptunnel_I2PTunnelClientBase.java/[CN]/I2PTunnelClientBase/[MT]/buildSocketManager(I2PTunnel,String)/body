@@ -1,0 +1,48 @@
+{
+  Properties props=new Properties();
+  props.putAll(tunnel.getClientOptions());
+  int portNum=7654;
+  if (tunnel.port != null) {
+    try {
+      portNum=Integer.parseInt(tunnel.port);
+    }
+ catch (    NumberFormatException nfe) {
+      _log.log(Log.CRIT,"Invalid port specified [" + tunnel.port + "], reverting to "+ portNum);
+    }
+  }
+  I2PSocketManager sockManager=null;
+  while (sockManager == null) {
+    if (pkf != null) {
+      FileInputStream fis=null;
+      try {
+        fis=new FileInputStream(pkf);
+        sockManager=I2PSocketManagerFactory.createManager(fis,tunnel.host,portNum,props);
+      }
+ catch (      IOException ioe) {
+        _log.error("Error opening key file",ioe);
+      }
+ finally {
+        if (fis != null)         try {
+          fis.close();
+        }
+ catch (        IOException ioe) {
+        }
+      }
+    }
+ else {
+      sockManager=I2PSocketManagerFactory.createManager(tunnel.host,portNum,props);
+    }
+    if (sockManager == null) {
+      _log.log(Log.CRIT,"Unable to create socket manager");
+      try {
+        Thread.sleep(10 * 1000);
+      }
+ catch (      InterruptedException ie) {
+      }
+    }
+  }
+  sockManager.setName("Client");
+  if (_log.shouldLog(Log.INFO))   _log.info(tunnel.getClientOptions().getProperty("inbound.nickname") + ": Built a new socket manager [s=" + sockManager.getSession()+ "]");
+  tunnel.addSession(sockManager.getSession());
+  return sockManager;
+}

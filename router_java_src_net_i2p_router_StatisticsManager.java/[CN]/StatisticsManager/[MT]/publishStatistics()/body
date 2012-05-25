@@ -3,29 +3,18 @@
   stats.setProperty("router.version",RouterVersion.VERSION);
   stats.setProperty("coreVersion",CoreVersion.VERSION);
   if (_includePeerRankings) {
-    if (false)     stats.putAll(_context.profileManager().summarizePeers(_publishedStats));
     long publishedUptime=_context.router().getUptime();
-    if (publishedUptime > 60 * 60 * 1000)     includeThroughput(stats);
-    includeRate("tunnel.participatingTunnels",stats,new long[]{5 * 60 * 1000,60 * 60 * 1000});
-    if (publishedUptime < 60 * 60 * 1000)     publishedUptime=60 * 60 * 1000;
- else     if (publishedUptime < 2 * 60 * 60* 1000)     publishedUptime=90 * 60 * 1000;
-    stats.setProperty("stat_uptime",DataHelper.formatDuration(publishedUptime));
-    includeRate("tunnel.buildClientExpire",stats,new long[]{10 * 60 * 1000});
-    includeRate("tunnel.buildClientReject",stats,new long[]{10 * 60 * 1000});
-    includeRate("tunnel.buildClientSuccess",stats,new long[]{10 * 60 * 1000});
-    includeRate("tunnel.buildExploratoryExpire",stats,new long[]{10 * 60 * 1000});
-    includeRate("tunnel.buildExploratoryReject",stats,new long[]{10 * 60 * 1000});
-    includeRate("tunnel.buildExploratorySuccess",stats,new long[]{10 * 60 * 1000});
-    _log.debug("Publishing peer rankings");
+    if (publishedUptime > 62 * 60 * 1000)     includeAverageThroughput(stats);
+    boolean hideTotals=!RouterVersion.VERSION.equals("0.7.6");
+    includeRate("tunnel.participatingTunnels",stats,new long[]{60 * 60 * 1000},hideTotals);
+    long rate=60 * 60 * 1000;
+    includeTunnelRates("Client",stats,rate);
+    includeTunnelRates("Exploratory",stats,rate);
   }
- else {
-    stats.setProperty("stat_uptime","90m");
-    _log.debug("Not publishing peer rankings");
-  }
+  stats.setProperty("stat_uptime","90m");
   if (FloodfillNetworkDatabaseFacade.isFloodfill(_context.router().getRouterInfo())) {
     stats.setProperty("netdb.knownRouters","" + _context.netDb().getKnownRouters());
     stats.setProperty("netdb.knownLeaseSets","" + _context.netDb().getKnownLeaseSets());
   }
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Building status: " + stats);
   return stats;
 }

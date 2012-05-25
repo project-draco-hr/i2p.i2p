@@ -4,7 +4,8 @@
     int needed=howMany - orig;
     int start=0;
     List selected=new ArrayList(needed);
-synchronized (_reorganizeLock) {
+    getReadLock();
+    try {
       start=_context.random().nextInt(_notFailingPeersList.size());
       for (int i=0; i < _notFailingPeersList.size() && selected.size() < needed; i++) {
         int curIndex=(i + start) % _notFailingPeersList.size();
@@ -21,6 +22,9 @@ synchronized (_reorganizeLock) {
  else           if (_log.shouldLog(Log.DEBUG))           _log.debug("Not selectable: " + cur.toBase64());
         }
       }
+    }
+  finally {
+      releaseReadLock();
     }
     if (_log.shouldLog(Log.INFO))     _log.info("Selecting all not failing (strict? " + onlyNotFailing + " start="+ start+ ") found "+ selected.size()+ " new peers: "+ selected+ " all="+ _notFailingPeersList.size()+ " strict="+ _strictCapacityOrder.size());
     matches.addAll(selected);

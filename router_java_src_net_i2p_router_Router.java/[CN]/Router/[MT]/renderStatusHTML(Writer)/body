@@ -1,6 +1,6 @@
 {
   out.write("<h1>Router console</h1>\n" + "<i><a href=\"/oldconsole.jsp\">console</a> | <a href=\"/oldstats.jsp\">stats</a></i><br>\n" + "<form action=\"/oldconsole.jsp\">"+ "<select name=\"go\" onChange='location.href=this.value'>"+ "<option value=\"/oldconsole.jsp#bandwidth\">Bandwidth</option>\n"+ "<option value=\"/oldconsole.jsp#clients\">Clients</option>\n"+ "<option value=\"/oldconsole.jsp#transports\">Transports</option>\n"+ "<option value=\"/oldconsole.jsp#profiles\">Peer Profiles</option>\n"+ "<option value=\"/oldconsole.jsp#tunnels\">Tunnels</option>\n"+ "<option value=\"/oldconsole.jsp#jobs\">Jobs</option>\n"+ "<option value=\"/oldconsole.jsp#shitlist\">Shitlist</option>\n"+ "<option value=\"/oldconsole.jsp#pending\">Pending messages</option>\n"+ "<option value=\"/oldconsole.jsp#netdb\">Network Database</option>\n"+ "<option value=\"/oldconsole.jsp#logs\">Log messages</option>\n"+ "</select> <input type=\"submit\" value=\"GO\" /> </form>"+ "<hr />\n");
-  StringBuffer buf=new StringBuffer(32 * 1024);
+  StringBuilder buf=new StringBuilder(32 * 1024);
   if ((_routerInfo != null) && (_routerInfo.getIdentity() != null))   buf.append("<b>Router: </b> ").append(_routerInfo.getIdentity().getHash().toBase64()).append("<br />\n");
   buf.append("<b>As of: </b> ").append(new Date(_context.clock().now())).append(" (uptime: ").append(DataHelper.formatDuration(getUptime())).append(") <br />\n");
   buf.append("<b>Started on: </b> ").append(new Date(getWhenStarted())).append("<br />\n");
@@ -127,14 +127,15 @@
   out.write("\n<hr /><a name=\"pending\"> </a>\n");
   _context.messageRegistry().renderStatusHTML(out);
   out.write("\n<hr /><a name=\"netdb\"> </a>\n");
+  _context.netDb().renderLeaseSetHTML(out);
   _context.netDb().renderStatusHTML(out);
   buf.setLength(0);
   buf.append("\n<hr /><a name=\"logs\"> </a>\n");
   List msgs=_context.logManager().getBuffer().getMostRecentMessages();
-  buf.append("\n<h2>Most recent console messages:</h2><table border=\"1\">\n");
+  buf.append("\n<h2>Most recent console messages:</h2><table>\n");
   for (Iterator iter=msgs.iterator(); iter.hasNext(); ) {
     String msg=(String)iter.next();
-    buf.append("<tr><td valign=\"top\" align=\"left\"><pre>");
+    buf.append("<tr><td align=\"left\"><pre>");
     appendLogMessage(buf,msg);
     buf.append("</pre></td></tr>\n");
   }

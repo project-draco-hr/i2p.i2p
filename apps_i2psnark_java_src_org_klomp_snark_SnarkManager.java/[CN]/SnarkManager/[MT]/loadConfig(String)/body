@@ -1,8 +1,9 @@
 {
   if (_config == null)   _config=new Properties();
   if (filename != null) {
-    _configFile=filename;
     File cfg=new File(filename);
+    if (!cfg.isAbsolute())     cfg=new File(_context.getConfigDir(),filename);
+    _configFile=cfg;
     if (cfg.exists()) {
       try {
         DataHelper.loadProps(_config,cfg);
@@ -12,21 +13,12 @@
       }
     }
   }
-  if (!_config.containsKey(PROP_I2CP_HOST))   _config.setProperty(PROP_I2CP_HOST,"localhost");
+  if (!_config.containsKey(PROP_I2CP_HOST))   _config.setProperty(PROP_I2CP_HOST,"127.0.0.1");
   if (!_config.containsKey(PROP_I2CP_PORT))   _config.setProperty(PROP_I2CP_PORT,"7654");
   if (!_config.containsKey(PROP_I2CP_OPTS))   _config.setProperty(PROP_I2CP_OPTS,"inbound.length=2 inbound.lengthVariance=0 outbound.length=2 outbound.lengthVariance=0 inbound.quantity=3 outbound.quantity=3");
-  if (!_config.containsKey(PROP_EEP_HOST))   _config.setProperty(PROP_EEP_HOST,"localhost");
+  if (!_config.containsKey(PROP_EEP_HOST))   _config.setProperty(PROP_EEP_HOST,"127.0.0.1");
   if (!_config.containsKey(PROP_EEP_PORT))   _config.setProperty(PROP_EEP_PORT,"4444");
   if (!_config.containsKey(PROP_UPLOADERS_TOTAL))   _config.setProperty(PROP_UPLOADERS_TOTAL,"" + Snark.MAX_TOTAL_UPLOADERS);
-  if (!_config.containsKey(PROP_UPBW_MAX)) {
-    try {
-      if (_context instanceof RouterContext)       _config.setProperty(PROP_UPBW_MAX,"" + (((RouterContext)_context).bandwidthLimiter().getOutboundKBytesPerSecond() / 2));
- else       _config.setProperty(PROP_UPBW_MAX,"" + DEFAULT_MAX_UP_BW);
-    }
- catch (    NoClassDefFoundError ncdfe) {
-      _config.setProperty(PROP_UPBW_MAX,"" + DEFAULT_MAX_UP_BW);
-    }
-  }
   if (!_config.containsKey(PROP_DIR))   _config.setProperty(PROP_DIR,"i2psnark");
   if (!_config.containsKey(PROP_AUTO_START))   _config.setProperty(PROP_AUTO_START,DEFAULT_AUTO_START);
   updateConfig();

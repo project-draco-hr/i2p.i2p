@@ -1,8 +1,8 @@
 {
-  if (args.length >= 2 && args.length <= 3) {
-    int port=-1;
+  if (args.length >= 2) {
+    int _port=-1;
     try {
-      port=Integer.parseInt(args[0]);
+      _port=Integer.parseInt(args[0]);
     }
  catch (    NumberFormatException nfe) {
       l.log("invalid port");
@@ -26,18 +26,20 @@
     I2PTunnelTask task;
     ownDest=!isShared;
     try {
-      task=new I2PTunnelIRCClient(port,args[1],l,ownDest,(EventDispatcher)this,this);
+      String privateKeyFile=null;
+      if (args.length >= 4)       privateKeyFile=args[3];
+      task=new I2PTunnelIRCClient(_port,args[1],l,ownDest,(EventDispatcher)this,this,privateKeyFile);
       addtask(task);
       notifyEvent("ircclientTaskId",Integer.valueOf(task.getId()));
     }
  catch (    IllegalArgumentException iae) {
-      _log.error(getPrefix() + "Invalid I2PTunnel config to create an ircclient [" + host+ ":"+ port+ "]",iae);
-      l.log("Invalid I2PTunnel configuration [" + host + ":"+ port+ "]");
+      _log.error(getPrefix() + "Invalid I2PTunnel config to create an ircclient [" + host+ ":"+ _port+ "]",iae);
+      l.log("Invalid I2PTunnel configuration [" + host + ":"+ _port+ "]");
       notifyEvent("ircclientTaskId",Integer.valueOf(-1));
     }
   }
  else {
-    l.log("ircclient <port> [<sharedClient>]");
+    l.log("ircclient <port> [<sharedClient> [<privKeyFile>]]");
     l.log("  creates a client that filter IRC protocol.");
     l.log("  <sharedClient> (optional) indicates if this client shares tunnels with other clients (true of false)");
     notifyEvent("ircclientTaskId",Integer.valueOf(-1));

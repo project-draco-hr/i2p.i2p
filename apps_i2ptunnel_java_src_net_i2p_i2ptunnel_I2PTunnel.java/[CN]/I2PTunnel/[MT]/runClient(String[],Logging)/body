@@ -1,7 +1,7 @@
 {
   boolean isShared=true;
-  if (args.length == 3)   isShared=Boolean.valueOf(args[2].trim()).booleanValue();
-  if ((args.length == 2) || (args.length == 3)) {
+  if (args.length >= 3)   isShared=Boolean.valueOf(args[2].trim()).booleanValue();
+  if (args.length >= 2) {
     int portNum=-1;
     try {
       portNum=Integer.parseInt(args[0]);
@@ -15,7 +15,9 @@
     I2PTunnelTask task;
     ownDest=!isShared;
     try {
-      task=new I2PTunnelClient(portNum,args[1],l,ownDest,(EventDispatcher)this,this);
+      String privateKeyFile=null;
+      if (args.length >= 4)       privateKeyFile=args[3];
+      task=new I2PTunnelClient(portNum,args[1],l,ownDest,(EventDispatcher)this,this,privateKeyFile);
       addtask(task);
       notifyEvent("clientTaskId",Integer.valueOf(task.getId()));
     }
@@ -26,7 +28,7 @@
     }
   }
  else {
-    l.log("client <port> <pubkey>[,<pubkey>]|file:<pubkeyfile>[ <sharedClient>]");
+    l.log("client <port> <pubkey>[,<pubkey>]|file:<pubkeyfile>[ <sharedClient>] [<privKeyFile>]");
     l.log("  creates a client that forwards port to the pubkey.\n" + "  use 0 as port to get a free port assigned.  If you specify\n" + "  a comma delimited list of pubkeys, it will rotate among them\n"+ "  randomlyl. sharedClient indicates if this client shares \n"+ "   with other clients (true of false)");
     notifyEvent("clientTaskId",Integer.valueOf(-1));
   }

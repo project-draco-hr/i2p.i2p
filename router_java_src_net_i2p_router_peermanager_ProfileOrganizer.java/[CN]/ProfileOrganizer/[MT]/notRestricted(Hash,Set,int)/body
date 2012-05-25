@@ -1,62 +1,6 @@
 {
-  if (mask <= 0)   return true;
-  if (matches.size() <= 0)   return true;
-  RouterInfo pinfo=_context.netDb().lookupRouterInfoLocally(peer);
-  if (pinfo == null)   return false;
-  Set paddr=pinfo.getAddresses();
-  if (paddr == null || paddr.size() == 0)   return false;
-  List pladdr=new ArrayList(paddr);
-  List lmatches=new ArrayList(matches);
-  for (int i=0; i < matches.size(); i++) {
-    RouterInfo minfo=_context.netDb().lookupRouterInfoLocally((Hash)lmatches.get(i));
-    if (minfo == null)     continue;
-    Set maddr=minfo.getAddresses();
-    if (maddr == null || maddr.size() == 0)     continue;
-    List mladdr=new ArrayList(maddr);
-    String oldphost=null;
-    for (int j=0; j < paddr.size(); j++) {
-      RouterAddress pa=(RouterAddress)pladdr.get(j);
-      if (pa == null)       continue;
-      Properties pprops=pa.getOptions();
-      if (pprops == null)       continue;
-      String phost=pprops.getProperty("host");
-      if (phost == null)       continue;
-      if (oldphost != null && oldphost.equals(phost))       continue;
-      oldphost=phost;
-      InetAddress pi;
-      try {
-        pi=InetAddress.getByName(phost);
-      }
- catch (      UnknownHostException uhe) {
-        continue;
-      }
-      if (pi == null)       continue;
-      byte[] pib=pi.getAddress();
-      String oldmhost=null;
-      for (int k=0; k < maddr.size(); k++) {
-        RouterAddress ma=(RouterAddress)mladdr.get(k);
-        if (ma == null)         continue;
-        Properties mprops=ma.getOptions();
-        if (mprops == null)         continue;
-        String mhost=mprops.getProperty("host");
-        if (mhost == null)         continue;
-        if (oldmhost != null && oldmhost.equals(mhost))         continue;
-        oldmhost=mhost;
-        InetAddress mi;
-        try {
-          mi=InetAddress.getByName(mhost);
-        }
- catch (        UnknownHostException uhe) {
-          continue;
-        }
-        if (mi == null)         continue;
-        byte[] mib=mi.getAddress();
-        for (int m=0; m < mask; m++) {
-          if (pib[m] != mib[m])           break;
-          if (m == mask - 1)           return false;
-        }
-      }
-    }
-  }
+  Set peerIPs=maskedIPSet(peer,mask);
+  if (containsAny(IPSet,peerIPs))   return false;
+  IPSet.addAll(peerIPs);
   return true;
 }

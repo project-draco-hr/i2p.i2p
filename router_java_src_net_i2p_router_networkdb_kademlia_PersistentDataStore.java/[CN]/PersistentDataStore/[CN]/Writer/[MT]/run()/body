@@ -1,31 +1,51 @@
 {
+  _quit=false;
   Hash key=null;
   DataStructure data=null;
   int count=0;
+  int lastCount=0;
+  long startTime=0;
   while (true) {
+    Iterator<Map.Entry<Hash,DataStructure>> iter=_keys.entrySet().iterator();
     try {
-synchronized (_keys) {
-        if (_keyOrder.size() <= 0) {
-          count=0;
-          _keys.wait();
+      Map.Entry<Hash,DataStructure> entry=iter.next();
+      key=entry.getKey();
+      data=entry.getValue();
+      iter.remove();
+      count++;
+    }
+ catch (    NoSuchElementException nsee) {
+      lastCount=count;
+      count=0;
+    }
+catch (    IllegalStateException ise) {
+      lastCount=count;
+      count=0;
+    }
+    if (key != null) {
+      if (data != null) {
+        write(key,data);
+        data=null;
+      }
+      key=null;
+    }
+    if (count >= WRITE_LIMIT)     count=0;
+    if (count == 0) {
+      if (lastCount > 0) {
+        long time=_context.clock().now() - startTime;
+        if (_log.shouldLog(Log.WARN))         _log.warn("Wrote " + lastCount + " entries to disk in "+ time);
+        _context.statManager().addRateData("netDb.writeOut",lastCount,0);
+        _context.statManager().addRateData("netDb.writeTime",time,0);
+      }
+      if (_quit)       break;
+synchronized (_waitLock) {
+        try {
+          _waitLock.wait(WRITE_DELAY);
         }
- else {
-          count++;
-          key=(Hash)_keyOrder.remove(0);
-          data=(DataStructure)_keys.remove(key);
+ catch (        InterruptedException ie) {
         }
       }
-    }
- catch (    InterruptedException ie) {
-    }
-    if ((key != null) && (data != null))     write(key,data);
-    key=null;
-    data=null;
-    if (count >= 600)     count=0;
-    if (count == 0)     try {
-      Thread.sleep(10 * 60 * 1000);
-    }
- catch (    InterruptedException ie) {
+      startTime=_context.clock().now();
     }
   }
 }

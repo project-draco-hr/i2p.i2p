@@ -1,0 +1,51 @@
+{
+  boolean fixedPort=getIsPortFixed();
+  boolean updated=false;
+  boolean fireTest=false;
+synchronized (this) {
+    if ((_externalListenHost == null) || (!eq(_externalListenHost.getAddress(),_externalListenPort,ourIP,ourPort))) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Change address? status = " + _reachabilityStatus + " diff = "+ (_context.clock().now() - _reachabilityStatusLastUpdated)+ " old = "+ _externalListenHost+ ':'+ _externalListenPort);
+      if ((_reachabilityStatus != CommSystemFacade.STATUS_OK) || (_externalListenHost == null) || (_externalListenPort <= 0)|| (_context.clock().now() - _reachabilityStatusLastUpdated > 2 * TEST_FREQUENCY)) {
+        if (_log.shouldLog(Log.WARN))         _log.warn("Trying to change our external address...");
+        try {
+          _externalListenHost=InetAddress.getByAddress(ourIP);
+          if (ourPort >= MIN_EXTERNAL_PORT && !fixedPort)           _externalListenPort=ourPort;
+          if (_externalListenPort > 0) {
+            rebuildExternalAddress();
+            replaceAddress(_externalAddress);
+            updated=true;
+          }
+        }
+ catch (        UnknownHostException uhe) {
+          _externalListenHost=null;
+          if (_log.shouldLog(Log.WARN))           _log.warn("Error trying to change our external address",uhe);
+        }
+      }
+ else {
+        fireTest=true;
+        if (_log.shouldLog(Log.WARN))         _log.warn("Different address, but we're fine.. (" + _reachabilityStatus + ")");
+      }
+    }
+ else {
+      if (_log.shouldLog(Log.INFO))       _log.info("Same address as the current one");
+    }
+  }
+  if (fireTest) {
+    _context.statManager().addRateData("udp.addressTestInsteadOfUpdate",1,0);
+  }
+ else   if (updated) {
+    _context.statManager().addRateData("udp.addressUpdated",1,0);
+    if (!fixedPort)     _context.router().setConfigSetting(PROP_EXTERNAL_PORT,ourPort + "");
+    _context.commSystem().queueLookup(ourIP);
+    String oldIP=_context.getProperty(PROP_IP);
+    if (!_externalListenHost.getHostAddress().equals(oldIP)) {
+      _context.router().setConfigSetting(PROP_IP,_externalListenHost.getHostAddress());
+      _context.router().setConfigSetting(PROP_IP_CHANGE,"" + _context.clock().now());
+      _context.router().saveConfig();
+    }
+    _context.router().rebuildRouterInfo();
+  }
+  _testEvent.forceRun();
+  SimpleTimer.getInstance().addEvent(_testEvent,5 * 1000);
+  return updated;
+}

@@ -1,7 +1,8 @@
 {
-synchronized (_reorganizeLock) {
-    int activePeers=0;
-    long hideBefore=_context.clock().now() - 6 * 60 * 60* 1000;
+  int activePeers=0;
+  long hideBefore=_context.clock().now() - 6 * 60 * 60* 1000;
+  getReadLock();
+  try {
     for (Iterator iter=_failingPeers.values().iterator(); iter.hasNext(); ) {
       PeerProfile profile=(PeerProfile)iter.next();
       if (profile.getLastSendSuccessful() >= hideBefore)       activePeers++;
@@ -12,6 +13,9 @@ synchronized (_reorganizeLock) {
       if (profile.getLastSendSuccessful() >= hideBefore)       activePeers++;
  else       if (profile.getLastHeardFrom() >= hideBefore)       activePeers++;
     }
-    return activePeers;
   }
+  finally {
+    releaseReadLock();
+  }
+  return activePeers;
 }

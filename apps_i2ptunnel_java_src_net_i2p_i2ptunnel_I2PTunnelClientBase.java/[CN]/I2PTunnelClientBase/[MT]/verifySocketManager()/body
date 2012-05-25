@@ -1,0 +1,23 @@
+{
+synchronized (sockLock) {
+    boolean newManager=false;
+    if (this.sockMgr == null) {
+      newManager=true;
+    }
+ else {
+      I2PSession sess=sockMgr.getSession();
+      if (sess == null) {
+        newManager=true;
+      }
+ else       if (sess.isClosed() && Boolean.valueOf(getTunnel().getClientOptions().getProperty("i2cp.closeOnIdle")).booleanValue() && Boolean.valueOf(getTunnel().getClientOptions().getProperty("i2cp.newDestOnResume")).booleanValue()) {
+        getTunnel().removeSession(sess);
+        if (_log.shouldLog(Log.WARN))         _log.warn(getTunnel().getClientOptions().getProperty("inbound.nickname") + ": Built a new destination on resume");
+        newManager=true;
+      }
+    }
+    if (newManager) {
+      if (_ownDest)       this.sockMgr=buildSocketManager();
+ else       this.sockMgr=getSocketManager();
+    }
+  }
+}

@@ -1,0 +1,29 @@
+{
+  Object old_scope=null;
+  try {
+    old_scope=enterContextScope(request,response);
+    HttpHandler[] handlers=getHandlers();
+    for (int k=0; k < handlers.length; k++) {
+      HttpHandler handler=handlers[k];
+      if (handler == null) {
+        handlers=getHandlers();
+        k=-1;
+        continue;
+      }
+      if (!handler.isStarted()) {
+        if (log.isDebugEnabled())         log.debug(handler + " not started in " + this);
+        continue;
+      }
+      if (log.isDebugEnabled())       log.debug("Handler " + handler);
+      handler.handle(pathInContext,pathParams,request,response);
+      if (request.isHandled()) {
+        if (log.isDebugEnabled())         log.debug("Handled by " + handler);
+        return;
+      }
+    }
+    return;
+  }
+  finally {
+    leaveContextScope(request,response,old_scope);
+  }
+}

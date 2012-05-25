@@ -1,31 +1,35 @@
 {
-  Set clients=_context.clientManager().listClients();
-  StringBuffer buf=new StringBuffer(512);
-  buf.append("<u><b>Local destinations</b></u><br />");
+  List clients=new ArrayList(_context.clientManager().listClients());
+  Collections.sort(clients,new AlphaComparator());
+  StringBuilder buf=new StringBuilder(512);
+  buf.append("<h3><a href=\"i2ptunnel/index.jsp\" target=\"_blank\" title=\"Add/remove/edit &amp; control your client and server tunnels (local destinations).\"  title=\"View existing tunnels and tunnel build status.\">Local destinations</a></h3><hr><table>");
   for (Iterator iter=clients.iterator(); iter.hasNext(); ) {
     Destination client=(Destination)iter.next();
-    TunnelPoolSettings in=_context.tunnelManager().getInboundSettings(client.calculateHash());
-    TunnelPoolSettings out=_context.tunnelManager().getOutboundSettings(client.calculateHash());
-    String name=(in != null ? in.getDestinationNickname() : null);
-    if (name == null)     name=(out != null ? out.getDestinationNickname() : null);
-    if (name == null)     name=client.calculateHash().toBase64().substring(0,6);
-    buf.append("<b>*</b> ").append(name).append("<br />\n");
-    LeaseSet ls=_context.netDb().lookupLeaseSetLocally(client.calculateHash());
+    String name=getName(client);
+    Hash h=client.calculateHash();
+    buf.append("<tr><td align=\"right\"><b><img src=\"/themes/console/images/");
+    if (_context.clientManager().shouldPublishLeaseSet(h))     buf.append("server.png\" alt=\"Server\" title=\"Server\" />");
+ else     buf.append("client.png\" alt=\"Client\" title=\"Client\" />");
+    buf.append("</td><td align=\"left\"><a href=\"tunnels.jsp#").append(h.toBase64().substring(0,4));
+    buf.append("\" target=\"_top\" title=\"Show tunnels\">");
+    if (name.length() < 16)     buf.append(name);
+ else     buf.append(name.substring(0,15)).append("&hellip;");
+    buf.append("</a></td>\n");
+    LeaseSet ls=_context.netDb().lookupLeaseSetLocally(h);
     if (ls != null) {
       long timeToExpire=ls.getEarliestLeaseDate() - _context.clock().now();
       if (timeToExpire < 0) {
-        buf.append("<i>expired ").append(DataHelper.formatDuration(0 - timeToExpire));
-        buf.append(" ago</i><br />\n");
+        buf.append("<td align=\right\"><img src=\"/themes/console/images/local_inprogress.png\" alt=\"Rebuilding&hellip;\" title=\"Leases expired ").append(DataHelper.formatDuration(0 - timeToExpire));
+        buf.append(" ago. Rebuilding..\"></td></tr>\n");
+      }
+ else {
+        buf.append("<td align=\right\"><img src=\"/themes/console/images/local_up.png\" alt=\"Ready\" title=\"Ready\"></td></tr>\n");
       }
     }
  else {
-      buf.append("<i>No leases</i><br />\n");
+      buf.append("<td align=\right\"><img src=\"/themes/console/images/local_inprogress.png\" alt=\"Building&hellip;\" title=\"Tunnel building in progress&hellip;\"></td></tr>\n");
     }
-    buf.append("<a href=\"tunnels.jsp#").append(client.calculateHash().toBase64().substring(0,4));
-    buf.append("\">Details</a> ");
-    buf.append("<a href=\"configtunnels.jsp#").append(client.calculateHash().toBase64().substring(0,4));
-    buf.append("\">Config</a><br />\n");
   }
-  buf.append("<hr />\n");
+  buf.append("</table><hr>\n");
   return buf.toString();
 }

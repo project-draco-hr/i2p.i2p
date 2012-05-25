@@ -1,0 +1,24 @@
+{
+synchronized (reachabilityListeners) {
+    reachabilityListeners.add(listener);
+    if (reachabilityTimer == null) {
+      reachabilityTimer=new Timer();
+      TimerTask t=new TimerTask(){
+        private String reachability="";
+        @Override public void run(){
+          String newReachability=getReachability();
+          if (!reachability.equals(newReachability)) {
+synchronized (reachabilityListeners) {
+              for (int i=0; i < reachabilityListeners.size(); i++) {
+                reachabilityListeners.get(i).actionPerformed(new ActionEvent(this,0,""));
+              }
+            }
+            reachability=newReachability;
+          }
+        }
+      }
+;
+      reachabilityTimer.schedule(t,0,60 * 1000);
+    }
+  }
+}

@@ -4,7 +4,7 @@
   filename=f.getName();
   int i=filename.lastIndexOf(".torrent");
   if (i > 0)   filename=filename.substring(0,i);
-  if (filename.length() > MAX_DISPLAYED_FILENAME_LENGTH)   filename=filename.substring(0,MAX_DISPLAYED_FILENAME_LENGTH) + "...";
+  if (filename.length() > MAX_DISPLAYED_FILENAME_LENGTH)   filename=filename.substring(0,MAX_DISPLAYED_FILENAME_LENGTH) + "&hellip;";
   long total=snark.meta.getTotalLength();
   long remaining=(long)snark.storage.needed() * (long)snark.meta.getPieceLength(0);
   if (remaining > total)   remaining=total;
@@ -44,7 +44,7 @@
     if (isRunning && curPeers > 0 && !showPeers)     statusString="<a title=\"" + err + "\">TrackerErr</a> ("+ curPeers+ "/"+ knownPeers+ " <a href=\""+ uri+ "?p="+ Base64.encode(snark.meta.getInfoHash())+ "\">peers</a>)";
  else     if (isRunning)     statusString="<a title=\"" + err + "\">TrackerErr ("+ curPeers+ "/"+ knownPeers+ " peers)";
  else {
-      if (err.length() > MAX_DISPLAYED_ERROR_LENGTH)       err=err.substring(0,MAX_DISPLAYED_ERROR_LENGTH) + "...";
+      if (err.length() > MAX_DISPLAYED_ERROR_LENGTH)       err=err.substring(0,MAX_DISPLAYED_ERROR_LENGTH) + "&hellip;";
       statusString="TrackerErr<br />(" + err + ")";
     }
   }
@@ -63,45 +63,45 @@
   }
   String rowClass=(row % 2 == 0 ? "snarkTorrentEven" : "snarkTorrentOdd");
   out.write("<tr class=\"" + rowClass + "\">");
-  out.write("<td valign=\"top\" align=\"left\" class=\"snarkTorrentStatus " + rowClass + "\">");
+  out.write("<td align=\"left\" class=\"snarkTorrentStatus " + rowClass + "\">");
   out.write(statusString + "</td>\n\t");
-  out.write("<td valign=\"top\" align=\"left\" class=\"snarkTorrentName " + rowClass + "\">");
-  if (remaining == 0)   out.write("<a href=\"" + _manager.linkPrefix() + snark.meta.getName()+ "\" title=\"Download the completed file\">");
+  out.write("<td align=\"left\" class=\"snarkTorrentName " + rowClass + "\">");
+  if (remaining == 0)   out.write("<a href=\"" + _manager.linkPrefix() + snark.meta.getName()+ "\" title=\"Click to access completed downloaded..\">");
   out.write(filename);
   if (remaining == 0)   out.write("</a>");
   String announce=snark.meta.getAnnounce();
-  if (announce.startsWith("http://YRgrgTLG") || announce.startsWith("http://8EoJZIKr")) {
+  if (announce.startsWith("http://YRgrgTLG") || announce.startsWith("http://8EoJZIKr") || announce.startsWith("http://lnQ6yoBT")|| announce.startsWith("http://tracker2.postman.i2p/")) {
     Map trackers=_manager.getTrackers();
     for (Iterator iter=trackers.entrySet().iterator(); iter.hasNext(); ) {
       Map.Entry entry=(Map.Entry)iter.next();
       String name=(String)entry.getKey();
       String baseURL=(String)entry.getValue();
-      if (!baseURL.startsWith(announce))       continue;
+      if (!(baseURL.startsWith(announce) || (announce.startsWith("http://lnQ6yoBT") && baseURL.startsWith("http://tracker2.postman.i2p/"))))       continue;
       int e=baseURL.indexOf('=');
       if (e < 0)       continue;
       baseURL=baseURL.substring(e + 1);
-      out.write("&nbsp;&nbsp;&nbsp;(<a href=\"" + baseURL + "details.php?dllist=1&filelist=1&info_hash=");
+      out.write("&nbsp;&nbsp;&nbsp;[<a href=\"" + baseURL + "details.php?dllist=1&filelist=1&info_hash=");
       out.write(TrackerClient.urlencode(snark.meta.getInfoHash()));
-      out.write("\" title=\"" + name + " Tracker\">Details</a>)");
+      out.write("\" title=\"" + name + " Tracker\">Details</a>]");
       break;
     }
   }
   out.write("</td>\n\t");
-  out.write("<td valign=\"top\" align=\"right\" class=\"snarkTorrentETA " + rowClass + "\">");
+  out.write("<td align=\"right\" class=\"snarkTorrentETA " + rowClass + "\">");
   if (isRunning && remainingSeconds > 0)   out.write(DataHelper.formatDuration(remainingSeconds * 1000));
   out.write("</td>\n\t");
-  out.write("<td valign=\"top\" align=\"right\" class=\"snarkTorrentDownloaded " + rowClass + "\">");
+  out.write("<td align=\"right\" class=\"snarkTorrentDownloaded " + rowClass + "\">");
   if (remaining > 0)   out.write(formatSize(total - remaining) + "/" + formatSize(total));
  else   out.write(formatSize(total));
   out.write("</td>\n\t");
-  out.write("<td valign=\"top\" align=\"right\" class=\"snarkTorrentUploaded " + rowClass + "\">"+ formatSize(uploaded)+ "</td>\n\t");
-  out.write("<td valign=\"top\" align=\"right\" class=\"snarkTorrentRate\">");
+  out.write("<td align=\"right\" class=\"snarkTorrentUploaded " + rowClass + "\">"+ formatSize(uploaded)+ "</td>\n\t");
+  out.write("<td align=\"right\" class=\"snarkTorrentRate\">");
   if (isRunning && remaining > 0)   out.write(formatSize(downBps) + "ps");
   out.write("</td>\n\t");
-  out.write("<td valign=\"top\" align=\"right\" class=\"snarkTorrentRate\">");
+  out.write("<td align=\"right\" class=\"snarkTorrentRate\">");
   if (isRunning)   out.write(formatSize(upBps) + "ps");
   out.write("</td>\n\t");
-  out.write("<td valign=\"top\" align=\"left\" class=\"snarkTorrentAction " + rowClass + "\">");
+  out.write("<td align=\"left\" class=\"snarkTorrentAction " + rowClass + "\">");
   String parameters="&nonce=" + _nonce + "&torrent="+ Base64.encode(snark.meta.getInfoHash());
   if (showPeers)   parameters=parameters + "&p=1";
   if (isRunning) {
@@ -122,7 +122,7 @@
       out.write("<tr class=\"" + rowClass + "\">");
       out.write("<td class=\"snarkTorrentStatus " + rowClass + "\">");
       out.write("</td>\n\t");
-      out.write("<td valign=\"top\" align=\"right\" class=\"snarkTorrentStatus " + rowClass + "\">");
+      out.write("<td align=\"right\" class=\"snarkTorrentStatus " + rowClass + "\">");
       String ch=peer.toString().substring(0,4);
       String client;
       if ("AwMD".equals(ch))       client="I2PSnark";
@@ -131,13 +131,14 @@
  else       if ("LUFa".equals(ch))       client="Azureus";
  else       if ("CwsL".equals(ch))       client="I2PSnarkXL";
  else       if ("ZV".equals(ch.substring(2,4)))       client="Robert";
+ else       if ("VUZP".equals(ch))       client="Robert";
  else       client="Unknown (" + ch + ')';
       out.write("<font size=-1>" + client + "</font>&nbsp;&nbsp;<tt>"+ peer.toString().substring(5,9)+ "</tt>");
       if (showDebug)       out.write(" inactive " + (peer.getInactiveTime() / 1000) + "s");
       out.write("</td>\n\t");
       out.write("<td class=\"snarkTorrentStatus " + rowClass + "\">");
       out.write("</td>\n\t");
-      out.write("<td valign=\"top\" align=\"right\" class=\"snarkTorrentStatus " + rowClass + "\">");
+      out.write("<td align=\"right\" class=\"snarkTorrentStatus " + rowClass + "\">");
       float pct=(float)(100.0 * (float)peer.completed() / snark.meta.getPieces());
       if (pct == 100.0)       out.write("<font size=-1>Seed</font>");
  else {
@@ -148,7 +149,7 @@
       out.write("</td>\n\t");
       out.write("<td class=\"snarkTorrentStatus " + rowClass + "\">");
       out.write("</td>\n\t");
-      out.write("<td valign=\"top\" align=\"right\" class=\"snarkTorrentStatus " + rowClass + "\">");
+      out.write("<td align=\"right\" class=\"snarkTorrentStatus " + rowClass + "\">");
       if (remaining > 0) {
         if (peer.isInteresting() && !peer.isChoked()) {
           out.write("<font color=#008000>");
@@ -162,7 +163,7 @@
         }
       }
       out.write("</td>\n\t");
-      out.write("<td valign=\"top\" align=\"right\" class=\"snarkTorrentStatus " + rowClass + "\">");
+      out.write("<td align=\"right\" class=\"snarkTorrentStatus " + rowClass + "\">");
       if (pct != 100.0) {
         if (peer.isInterested() && !peer.isChoking()) {
           out.write("<font color=#008000>");

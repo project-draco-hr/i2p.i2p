@@ -1,0 +1,41 @@
+{
+  super("UDPServer",notifyThis,tunnel);
+  _clientId=++__clientId;
+  this.l=l;
+  _context=tunnel.getContext();
+  tunnel.getClientOptions().setProperty("i2cp.dontPublishLeaseSet","true");
+  I2PClient client=I2PClientFactory.createClient();
+  Destination destN;
+  byte[] key;
+  try {
+    ByteArrayOutputStream out=new ByteArrayOutputStream(512);
+    destN=client.createDestination(out);
+    key=out.toByteArray();
+  }
+ catch (  Exception exc) {
+    throw new RuntimeException("failed to create i2p-destination",exc);
+  }
+  try {
+    ByteArrayInputStream in=new ByteArrayInputStream(key);
+    _session=client.createSession(in,tunnel.getClientOptions());
+  }
+ catch (  Exception exc) {
+    throw new RuntimeException("failed to create session",exc);
+  }
+  _i2pSource=new I2PSource(_session,false,true);
+  if (destination != null && destination.length() > 0) {
+    try {
+      _otherDest=I2PTunnel.destFromName(destination);
+    }
+ catch (    DataFormatException dfe) {
+    }
+    if (_otherDest == null) {
+      l.log("Could not resolve " + destination);
+      throw new RuntimeException("failed to create session - could not resolve " + destination);
+    }
+    _i2pSink=new I2PSink(_session,_otherDest,false);
+  }
+ else {
+    _i2pSink=new I2PSinkAnywhere(_session,false);
+  }
+}

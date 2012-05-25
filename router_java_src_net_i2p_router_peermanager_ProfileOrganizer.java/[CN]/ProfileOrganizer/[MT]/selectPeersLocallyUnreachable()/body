@@ -1,9 +1,13 @@
 {
   List n;
   int count;
-synchronized (_reorganizeLock) {
+  getReadLock();
+  try {
     count=_notFailingPeers.size();
     n=new ArrayList(_notFailingPeers.keySet());
+  }
+  finally {
+    releaseReadLock();
   }
   List l=new ArrayList(count / 4);
   for (Iterator iter=n.iterator(); iter.hasNext(); ) {
@@ -17,7 +21,7 @@ synchronized (_reorganizeLock) {
  else {
           RouterAddress ra=info.getTargetAddress("SSU");
           if (ra == null) {
-            l.add(peer);
+            if (info.getTargetAddress("NTCP") == null)             l.add(peer);
             continue;
           }
           Properties props=ra.getOptions();
@@ -26,6 +30,6 @@ synchronized (_reorganizeLock) {
       }
     }
   }
-  if (_log.shouldLog(Log.INFO))   _log.info("Unreachable: " + l);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Unreachable: " + l);
   return l;
 }

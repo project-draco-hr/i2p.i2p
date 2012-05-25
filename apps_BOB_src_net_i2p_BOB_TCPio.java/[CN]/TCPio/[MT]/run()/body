@@ -1,34 +1,38 @@
 {
   int b;
   byte a[]=new byte[1];
-  boolean spin=true;
   try {
-    while (spin) {
-      database.getReadLock();
-      info.getReadLock();
-      spin=info.get("RUNNING").equals(Boolean.TRUE);
-      info.releaseReadLock();
-      database.releaseReadLock();
-      b=Ain.read(a,0,1);
-      if (b > 0) {
-        Aout.write(a,0,b);
-      }
- else       if (b == 0) {
-        Thread.yield();
-        if (Ain.available() == 0) {
-          try {
+    try {
+      while (lives.get()) {
+        b=Ain.read(a,0,1);
+        if (b > 0) {
+          Aout.write(a,0,b);
+        }
+ else         if (b == 0) {
+          Thread.yield();
+          if (Ain.available() == 0) {
             Thread.sleep(10);
           }
- catch (          InterruptedException ex) {
-          }
+        }
+ else {
+          break;
         }
       }
- else {
-        return;
-      }
+    }
+ catch (    Exception e) {
     }
   }
- catch (  Exception e) {
+  finally {
+    try {
+      Ain.close();
+    }
+ catch (    IOException ex) {
+    }
+    try {
+      Aout.close();
+    }
+ catch (    IOException ex) {
+    }
     return;
   }
 }

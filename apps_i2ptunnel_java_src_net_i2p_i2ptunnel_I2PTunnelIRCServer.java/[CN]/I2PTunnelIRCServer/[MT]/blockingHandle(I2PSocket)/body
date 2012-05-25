@@ -1,0 +1,34 @@
+{
+  try {
+    socket.setReadTimeout(15 * 1000);
+    InputStream in=socket.getInputStream();
+    String modifiedRegistration=filterRegistration(in,cloakDest(socket.getPeerDestination()));
+    socket.setReadTimeout(readTimeout);
+    Socket s=new Socket(remoteHost,remotePort);
+    new I2PTunnelRunner(s,socket,slock,null,modifiedRegistration.getBytes(),null);
+  }
+ catch (  SocketException ex) {
+    try {
+      socket.close();
+    }
+ catch (    IOException ioe) {
+      if (_log.shouldLog(Log.ERROR))       _log.error("Error while closing the received i2p con",ex);
+    }
+  }
+catch (  IOException ex) {
+    try {
+      socket.close();
+    }
+ catch (    IOException ioe) {
+    }
+    if (_log.shouldLog(Log.WARN))     _log.warn("Error while receiving the new IRC Connection",ex);
+  }
+catch (  OutOfMemoryError oom) {
+    try {
+      socket.close();
+    }
+ catch (    IOException ioe) {
+    }
+    if (_log.shouldLog(Log.ERROR))     _log.error("OOM in IRC server",oom);
+  }
+}

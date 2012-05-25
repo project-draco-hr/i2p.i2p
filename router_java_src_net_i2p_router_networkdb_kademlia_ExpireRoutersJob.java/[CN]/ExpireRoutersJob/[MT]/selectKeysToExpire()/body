@@ -1,18 +1,9 @@
 {
-  Set possible=getNotInUse();
-  Set expiring=new HashSet(16);
-  for (Iterator iter=possible.iterator(); iter.hasNext(); ) {
+  for (Iterator iter=_facade.getAllRouters().iterator(); iter.hasNext(); ) {
     Hash key=(Hash)iter.next();
-    RouterInfo ri=_facade.lookupRouterInfoLocally(key);
-    if (ri != null) {
-      if (!ri.isCurrent(EXPIRE_DELAY)) {
-        if (_log.shouldLog(Log.INFO))         _log.info("Expiring RouterInfo for " + key.toBase64() + " [published on "+ new Date(ri.getPublished())+ "]");
-        expiring.add(key);
-      }
- else {
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("Not expiring routerInfo for " + key.toBase64() + " [published on "+ new Date(ri.getPublished())+ "]");
-      }
+    if (!getContext().commSystem().isEstablished(key)) {
+      RouterInfo ri=_facade.lookupRouterInfoLocally(key);
     }
   }
-  return expiring;
+  return Collections.EMPTY_SET;
 }

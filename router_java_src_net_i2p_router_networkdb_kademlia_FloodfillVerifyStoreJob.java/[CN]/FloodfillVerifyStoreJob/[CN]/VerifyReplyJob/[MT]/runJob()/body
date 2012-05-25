@@ -1,14 +1,20 @@
 {
   long delay=getContext().clock().now() - _sendTime;
   if (_message instanceof DatabaseStoreMessage) {
-    getContext().profileManager().dbLookupSuccessful(_target,delay);
-    getContext().statManager().addRateData("netDb.floodfillVerifyOK",delay,0);
-  }
- else {
-    if (_message instanceof DatabaseSearchReplyMessage) {
-      getContext().profileManager().dbLookupReply(_target,0,((DatabaseSearchReplyMessage)_message).getNumReplies(),0,0,delay);
+    boolean success=false;
+    DatabaseStoreMessage dsm=(DatabaseStoreMessage)_message;
+    if (_isRouterInfo && dsm.getValueType() == DatabaseStoreMessage.KEY_TYPE_ROUTERINFO)     success=dsm.getRouterInfo().getPublished() >= _published;
+ else     if ((!_isRouterInfo) && dsm.getValueType() == DatabaseStoreMessage.KEY_TYPE_LEASESET)     success=dsm.getLeaseSet().getEarliestLeaseDate() >= _published;
+    if (success) {
+      getContext().profileManager().dbLookupSuccessful(_target,delay);
+      getContext().statManager().addRateData("netDb.floodfillVerifyOK",delay,0);
+      return;
     }
-    getContext().statManager().addRateData("netDb.floodfillVerifyFail",delay,0);
-    resend();
+    if (_log.shouldLog(Log.WARN))     _log.warn("Verify failed - older");
   }
+ else   if (_message instanceof DatabaseSearchReplyMessage) {
+    getContext().profileManager().dbLookupReply(_target,0,((DatabaseSearchReplyMessage)_message).getNumReplies(),0,0,delay);
+  }
+  getContext().statManager().addRateData("netDb.floodfillVerifyFail",delay,0);
+  resend();
 }

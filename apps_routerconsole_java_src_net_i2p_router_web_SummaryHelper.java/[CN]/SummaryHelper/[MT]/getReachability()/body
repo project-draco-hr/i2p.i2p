@@ -1,28 +1,3 @@
 {
-  if (!_context.clock().getUpdatedSuccessfully())   return "ERR-ClockSkew";
-  if (_context.router().isHidden())   return "Hidden";
-  int status=_context.commSystem().getReachabilityStatus();
-switch (status) {
-case CommSystemFacade.STATUS_OK:
-    RouterAddress ra=_context.router().getRouterInfo().getTargetAddress("NTCP");
-  if (ra == null || (new NTCPAddress(ra)).isPubliclyRoutable())   return "OK";
-return "ERR-Private TCP Address";
-case CommSystemFacade.STATUS_DIFFERENT:
-return "ERR-SymmetricNAT";
-case CommSystemFacade.STATUS_REJECT_UNSOLICITED:
-if (_context.router().getRouterInfo().getTargetAddress("NTCP") != null) return "WARN-Firewalled with Inbound TCP Enabled";
-if (((FloodfillNetworkDatabaseFacade)_context.netDb()).floodfillEnabled()) return "WARN-Firewalled and Floodfill";
-if (_context.router().getRouterInfo().getCapabilities().indexOf('O') >= 0) return "WARN-Firewalled and Fast";
-return "Firewalled";
-case CommSystemFacade.STATUS_HOSED:
-return "ERR-UDP Port In Use - Set i2np.udp.internalPort=xxxx in advanced config and restart";
-case CommSystemFacade.STATUS_UNKNOWN:
-default :
-ra=_context.router().getRouterInfo().getTargetAddress("UDP");
-if (ra == null && _context.router().getUptime() > 5 * 60 * 1000) {
-if (_context.getProperty(ConfigNetHelper.PROP_I2NP_NTCP_HOSTNAME) == null || _context.getProperty(ConfigNetHelper.PROP_I2NP_NTCP_PORT) == null) return "ERR-UDP Disabled and Inbound TCP host/port not set";
- else return "WARN-Firewalled with UDP Disabled";
-}
-return "Testing";
-}
+  return reachability() + timeSkew();
 }

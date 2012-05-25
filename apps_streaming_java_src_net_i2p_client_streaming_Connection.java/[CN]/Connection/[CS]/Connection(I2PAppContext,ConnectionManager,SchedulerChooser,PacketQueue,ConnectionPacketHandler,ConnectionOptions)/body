@@ -1,20 +1,21 @@
 {
   _context=ctx;
-  _log=ctx.logManager().getLog(Connection.class);
-  _receiver=new ConnectionDataReceiver(ctx,this);
-  _inputStream=new MessageInputStream(ctx);
-  _outputStream=new MessageOutputStream(ctx,_receiver,(opts == null ? Packet.MAX_PAYLOAD_SIZE : opts.getMaxMessageSize()));
+  _connectionManager=manager;
   _chooser=chooser;
-  _outboundPackets=new TreeMap();
   _outboundQueue=queue;
   _handler=handler;
+  _log=_context.logManager().getLog(Connection.class);
+  _receiver=new ConnectionDataReceiver(_context,this);
+  _inputStream=new MessageInputStream(_context);
+  _outputStream=new MessageOutputStream(_context,_receiver,(opts == null ? Packet.MAX_PAYLOAD_SIZE : opts.getMaxMessageSize()));
+  _outboundPackets=new TreeMap();
   _options=(opts != null ? opts : new ConnectionOptions());
   _outputStream.setWriteTimeout((int)_options.getWriteTimeout());
   _inputStream.setReadTimeout((int)_options.getReadTimeout());
   _lastSendId=-1;
   _nextSendTime=-1;
   _ackedPackets=0;
-  _createdOn=ctx.clock().now();
+  _createdOn=_context.clock().now();
   _closeSentOn=-1;
   _closeReceivedOn=-1;
   _unackedPacketsReceived=0;
@@ -23,7 +24,6 @@
   _lastCongestionSeenAt=MAX_WINDOW_SIZE * 2;
   _lastCongestionTime=-1;
   _lastCongestionHighestUnacked=-1;
-  _connectionManager=manager;
   _resetReceived=false;
   _connected=true;
   _disconnectScheduledOn=-1;
