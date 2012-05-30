@@ -1,0 +1,67 @@
+{
+  try {
+    Thread.sleep(1000);
+  }
+ catch (  InterruptedException ie) {
+  }
+  _log=_context.logManager().getLog(Timestamper.class);
+  if (_log.shouldLog(Log.INFO))   _log.info("Starting timestamper");
+  boolean lastFailed=false;
+  try {
+    while (_isRunning) {
+      updateConfig();
+      if (!_disabled) {
+        if (_priorityServers != null) {
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("Querying servers " + _priorityServers);
+          try {
+            lastFailed=!queryTime(_priorityServers.toArray(new String[_priorityServers.size()]));
+          }
+ catch (          IllegalArgumentException iae) {
+            if ((!lastFailed) && (_log.shouldLog(Log.WARN)))             _log.warn("Unable to reach country-specific NTP servers");
+            lastFailed=true;
+          }
+        }
+        if (_priorityServers == null || lastFailed) {
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("Querying servers " + _servers);
+          try {
+            lastFailed=!queryTime(_servers.toArray(new String[_servers.size()]));
+          }
+ catch (          IllegalArgumentException iae) {
+            if ((!_initialized) && (_log.shouldLog(Log.ERROR))) {
+              List<String> all=new ArrayList();
+              if (_priorityServers != null)               all.addAll(_priorityServers);
+              all.addAll(_servers);
+              _log.error("Unable to reach any of the NTP servers " + all + " - network disconnected? Or set time.sntpServerList=myserver1.com,myserver2.com in advanced configuration.");
+            }
+            lastFailed=true;
+          }
+        }
+      }
+      _initialized=true;
+synchronized (this) {
+        notifyAll();
+      }
+      long sleepTime;
+      if (lastFailed) {
+        if (++_consecutiveFails >= MAX_CONSECUTIVE_FAILS)         sleepTime=30 * 60 * 1000;
+ else         sleepTime=30 * 1000;
+      }
+ else {
+        _consecutiveFails=0;
+        sleepTime=_context.random().nextInt(_queryFrequency / 2) + _queryFrequency;
+        if (_wellSynced)         sleepTime*=3;
+      }
+      try {
+        Thread.sleep(sleepTime);
+      }
+ catch (      InterruptedException ie) {
+      }
+    }
+  }
+ catch (  Throwable t) {
+    _log.log(Log.CRIT,"Timestamper died!",t);
+synchronized (this) {
+      notifyAll();
+    }
+  }
+}
