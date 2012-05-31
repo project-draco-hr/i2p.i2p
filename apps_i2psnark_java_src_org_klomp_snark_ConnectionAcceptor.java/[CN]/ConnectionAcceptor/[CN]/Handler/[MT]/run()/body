@@ -6,7 +6,15 @@
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Handling socket from " + _socket.getPeerDestination().calculateHash().toBase64());
     peeracceptor.connection(_socket,in,out);
   }
- catch (  IOException ioe) {
+ catch (  PeerAcceptor.ProtocolException ihe) {
+    _badCounter.increment(_socket.getPeerDestination().calculateHash());
+    try {
+      _socket.close();
+    }
+ catch (    IOException ignored) {
+    }
+  }
+catch (  IOException ioe) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Error handling connection from " + _socket.getPeerDestination().calculateHash().toBase64(),ioe);
     try {
       _socket.close();
