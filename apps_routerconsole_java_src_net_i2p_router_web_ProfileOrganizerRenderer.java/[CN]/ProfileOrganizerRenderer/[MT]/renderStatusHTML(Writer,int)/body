@@ -1,4 +1,5 @@
 {
+  boolean full=mode == 1;
   Set<Hash> peers=_organizer.selectAllPeers();
   long now=_context.clock().now();
   long hideBefore=now - 90 * 60 * 1000;
@@ -26,57 +27,57 @@
   int reliable=0;
   int integrated=0;
   StringBuilder buf=new StringBuilder(16 * 1024);
-  buf.append("<h2>").append(_("Peer Profiles")).append("</h2>\n<p>");
-  buf.append(ngettext("Showing 1 recent profile.","Showing {0} recent profiles.",order.size())).append('\n');
-  if (older > 0)   buf.append(ngettext("Hiding 1 older profile.","Hiding {0} older profiles.",older)).append('\n');
-  if (standard > 0)   buf.append("<a href=\"/profiles?f=1\">").append(ngettext("Hiding 1 standard profile.","Hiding {0} standard profiles.",standard)).append("</a>\n");
-  buf.append("</p>");
-  buf.append("<table>");
-  buf.append("<tr>");
-  buf.append("<th>").append(_("Peer")).append("</th>");
-  buf.append("<th>").append(_("Groups (Caps)")).append("</th>");
-  buf.append("<th>").append(_("Speed")).append("</th>");
-  buf.append("<th>").append(_("Capacity")).append("</th>");
-  buf.append("<th>").append(_("Integration")).append("</th>");
-  buf.append("<th>").append(_("Status")).append("</th>");
-  buf.append("<th>&nbsp;</th>");
-  buf.append("</tr>");
-  int prevTier=1;
-  for (Iterator<PeerProfile> iter=order.iterator(); iter.hasNext(); ) {
-    PeerProfile prof=iter.next();
-    Hash peer=prof.getPeer();
-    int tier=0;
-    boolean isIntegrated=false;
-    if (_organizer.isFast(peer)) {
-      tier=1;
-      fast++;
-      reliable++;
-    }
- else     if (_organizer.isHighCapacity(peer)) {
-      tier=2;
-      reliable++;
-    }
- else     if (_organizer.isFailing(peer)) {
-    }
+  if (mode < 2) {
+    buf.append(ngettext("Showing 1 recent profile.","Showing {0} recent profiles.",order.size())).append('\n');
+    if (older > 0)     buf.append(ngettext("Hiding 1 older profile.","Hiding {0} older profiles.",older)).append('\n');
+    if (standard > 0)     buf.append("<a href=\"/profiles?f=1\">").append(ngettext("Hiding 1 standard profile.","Hiding {0} standard profiles.",standard)).append("</a>\n");
+    buf.append("</p>");
+    buf.append("<table>");
+    buf.append("<tr>");
+    buf.append("<th>").append(_("Peer")).append("</th>");
+    buf.append("<th>").append(_("Groups (Caps)")).append("</th>");
+    buf.append("<th>").append(_("Speed")).append("</th>");
+    buf.append("<th>").append(_("Capacity")).append("</th>");
+    buf.append("<th>").append(_("Integration")).append("</th>");
+    buf.append("<th>").append(_("Status")).append("</th>");
+    buf.append("<th>&nbsp;</th>");
+    buf.append("</tr>");
+    int prevTier=1;
+    for (Iterator<PeerProfile> iter=order.iterator(); iter.hasNext(); ) {
+      PeerProfile prof=iter.next();
+      Hash peer=prof.getPeer();
+      int tier=0;
+      boolean isIntegrated=false;
+      if (_organizer.isFast(peer)) {
+        tier=1;
+        fast++;
+        reliable++;
+      }
+ else       if (_organizer.isHighCapacity(peer)) {
+        tier=2;
+        reliable++;
+      }
+ else       if (_organizer.isFailing(peer)) {
+      }
  else {
-      tier=3;
-    }
-    if (_organizer.isWellIntegrated(peer)) {
-      isIntegrated=true;
-      integrated++;
-    }
-    if (tier != prevTier)     buf.append("<tr><td colspan=\"7\"><hr></td></tr>\n");
-    prevTier=tier;
-    buf.append("<tr><td align=\"center\" nowrap>");
-    buf.append(_context.commSystem().renderPeerHTML(peer));
-    buf.append("</td><td align=\"center\">");
+        tier=3;
+      }
+      if (_organizer.isWellIntegrated(peer)) {
+        isIntegrated=true;
+        integrated++;
+      }
+      if (tier != prevTier)       buf.append("<tr><td colspan=\"7\"><hr></td></tr>\n");
+      prevTier=tier;
+      buf.append("<tr><td align=\"center\" nowrap>");
+      buf.append(_context.commSystem().renderPeerHTML(peer));
+      buf.append("</td><td align=\"center\">");
 switch (tier) {
 case 1:
-      buf.append(_("Fast, High Capacity"));
-    break;
+        buf.append(_("Fast, High Capacity"));
+      break;
 case 2:
-  buf.append(_("High Capacity"));
-break;
+    buf.append(_("High Capacity"));
+  break;
 case 3:
 buf.append(_("Standard"));
 break;
@@ -126,7 +127,8 @@ out.write(buf.toString());
 buf.setLength(0);
 }
 buf.append("</table>");
-buf.append("<h2><a name=\"flood\"></a>").append(_("Floodfill and Integrated Peers")).append(" (").append(integratedPeers.size()).append(")</h2>\n");
+}
+ else {
 buf.append("<table>");
 buf.append("<tr>");
 buf.append("<th class=\"smallhead\">").append(_("Peer")).append("</th>");
@@ -187,6 +189,8 @@ for (int i=0; i < 6; i++) buf.append("<td align=\"right\">").append(_(NA));
 buf.append("</tr>\n");
 }
 buf.append("</table>");
+}
+if (mode < 2) {
 buf.append("<h3>").append(_("Thresholds")).append("</h3>");
 buf.append("<p><b>").append(_("Speed")).append(":</b> ").append(num(_organizer.getSpeedThreshold())).append(" (").append(fast).append(' ').append(_("fast peers")).append(")<br>");
 buf.append("<b>").append(_("Capacity")).append(":</b> ").append(num(_organizer.getCapacityThreshold())).append(" (").append(reliable).append(' ').append(_("high capacity peers")).append(")<br>");
@@ -199,6 +203,7 @@ buf.append("<li><b>").append(_("capacity")).append("</b>: ").append(_("how many 
 buf.append("<li><b>").append(_("integration")).append("</b>: ").append(_("how many new peers have they told us about lately?")).append("</li>");
 buf.append("<li><b>").append(_("status")).append("</b>: ").append(_("is the peer banned, or unreachable, or failing tunnel tests?")).append("</li>");
 buf.append("</ul>");
+}
 out.write(buf.toString());
 out.flush();
 }
