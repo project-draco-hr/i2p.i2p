@@ -22,6 +22,17 @@ synchronized (_jobLock) {
             }
  else {
               timeToWait=timeLeft;
+              if (timeToWait > 10 * 1000 && iter.hasNext()) {
+                if (_log.shouldLog(Log.WARN))                 _log.warn("Failsafe re-sort job " + j + " with delay "+ DataHelper.formatDuration(timeToWait));
+                iter.remove();
+                Job nextJob=iter.next();
+                _timedJobs.add(j);
+                long nextTimeLeft=nextJob.getTiming().getStartAfter() - now;
+                if (timeToWait > nextTimeLeft) {
+                  _log.error("Job " + j + " out of order with job "+ nextJob+ " difference of "+ DataHelper.formatDuration(timeToWait - nextTimeLeft));
+                  timeToWait=Math.max(10,nextTimeLeft);
+                }
+              }
               break;
             }
           }
