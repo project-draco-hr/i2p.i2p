@@ -90,7 +90,7 @@
       int maxSeenPeers=0;
       for (Iterator iter=trackers.iterator(); iter.hasNext(); ) {
         Tracker tr=(Tracker)iter.next();
-        if ((!stop) && (!tr.stop) && (completed || coordinator.needOutboundPeers())&& (event.equals(COMPLETED_EVENT) || System.currentTimeMillis() > tr.lastRequestTime + tr.interval)) {
+        if ((!stop) && (!tr.stop) && (completed || coordinator.needOutboundPeers() || !tr.started)&& (event.equals(COMPLETED_EVENT) || System.currentTimeMillis() > tr.lastRequestTime + tr.interval)) {
           try {
             if (!tr.started)             event=STARTED_EVENT;
             TrackerInfo info=doRequest(tr,infoHash,peerID,uploaded,downloaded,left,event);
@@ -113,7 +113,7 @@
               List<Peer> ordered=new ArrayList(peers);
               Collections.shuffle(ordered,r);
               Iterator<Peer> it=ordered.iterator();
-              while ((!stop) && it.hasNext()) {
+              while ((!stop) && it.hasNext() && coordinator.needOutboundPeers()) {
                 Peer cur=it.next();
                 if (coordinator.addPeer(cur) && it.hasNext()) {
                   int delay=(DELAY_MUL * r.nextInt(10)) + DELAY_MIN;
@@ -157,7 +157,7 @@
           }
           Collections.shuffle(peers,r);
           Iterator<Peer> it=peers.iterator();
-          while ((!stop) && it.hasNext()) {
+          while ((!stop) && it.hasNext() && coordinator.needOutboundPeers()) {
             Peer cur=it.next();
             if (coordinator.addPeer(cur) && it.hasNext()) {
               int delay=(DELAY_MUL * r.nextInt(10)) + DELAY_MIN;
@@ -188,7 +188,7 @@
           }
           Collections.shuffle(peers,r);
           Iterator<Peer> it=peers.iterator();
-          while ((!stop) && it.hasNext()) {
+          while ((!stop) && it.hasNext() && coordinator.needOutboundPeers()) {
             Peer cur=it.next();
             if (coordinator.addPeer(cur) && it.hasNext()) {
               int delay=(DELAY_MUL * r.nextInt(10)) + DELAY_MIN;
