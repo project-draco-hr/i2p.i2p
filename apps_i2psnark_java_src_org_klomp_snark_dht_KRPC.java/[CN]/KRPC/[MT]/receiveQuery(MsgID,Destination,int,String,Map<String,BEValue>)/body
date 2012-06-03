@@ -1,14 +1,24 @@
 {
+  if (dest == null && !method.equals("announce_peer")) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Received non-announce_peer query method on reply port: " + method);
+    return;
+  }
   byte[] nid=args.get("id").getBytes();
-  NodeInfo nInfo=new NodeInfo(nid);
-  nInfo=heardFrom(nInfo);
-  nInfo.setDestination(dest);
+  NodeInfo nInfo;
+  if (dest != null) {
+    nInfo=new NodeInfo(new NID(nid),dest,fromPort);
+    nInfo=heardFrom(nInfo);
+    nInfo.setDestination(dest);
+  }
+ else {
+    nInfo=null;
+  }
   if (method.equals("ping")) {
     receivePing(msgID,nInfo);
   }
  else   if (method.equals("find_node")) {
     byte[] tid=args.get("target").getBytes();
-    NodeInfo tID=new NodeInfo(tid);
+    NID tID=new NID(tid);
     receiveFindNode(msgID,nInfo,tID);
   }
  else   if (method.equals("get_peers")) {
@@ -20,7 +30,7 @@
     byte[] hash=args.get("info_hash").getBytes();
     InfoHash ih=new InfoHash(hash);
     byte[] token=args.get("token").getBytes();
-    receiveAnnouncePeer(msgID,nInfo,ih,token);
+    receiveAnnouncePeer(msgID,ih,token);
   }
  else {
     if (_log.shouldLog(Log.WARN))     _log.warn("Unknown query method rcvd: " + method);

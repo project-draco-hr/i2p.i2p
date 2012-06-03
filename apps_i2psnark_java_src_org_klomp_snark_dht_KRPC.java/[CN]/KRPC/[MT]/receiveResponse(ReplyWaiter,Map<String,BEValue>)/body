@@ -7,8 +7,9 @@
     InfoHash ih=(InfoHash)waiter.getSentObject();
     if (btok != null && ih != null) {
       byte[] tok=btok.getBytes();
-      _incomingTokens.put(new TokenKey(nInfo.getNID(),ih),new Token(_context,tok));
-      if (_log.shouldLog(Log.INFO))       _log.info("Got token, must be a response to get_peers");
+      Token token=new Token(_context,tok);
+      _incomingTokens.put(nInfo.getNID(),token);
+      if (_log.shouldLog(Log.INFO))       _log.info("Got token: " + token + ", must be a response to get_peers");
     }
  else {
       if (_log.shouldLog(Log.INFO))       _log.info("No token and saved infohash, must be a response to find_node");
@@ -25,7 +26,8 @@
     waiter.gotReply(REPLY_PEERS,rlist);
   }
  else {
-    receivePong(nInfo);
+    byte[] nid=response.get("id").getBytes();
+    receivePong(nInfo,nid);
     waiter.gotReply(REPLY_PONG,null);
   }
 }
