@@ -1,0 +1,58 @@
+{
+  InfoHash iHash=new InfoHash(ih);
+  List<Hash> rv=_tracker.getPeers(iHash,max);
+  rv.remove(_myNodeInfo.getHash());
+  if (!rv.isEmpty())   return rv;
+  List<NodeInfo> nodes=_knownNodes.findClosest(iHash,max);
+  SortedSet<NodeInfo> toTry=new TreeSet(new NodeInfoComparator(iHash));
+  toTry.addAll(nodes);
+  Set<NodeInfo> tried=new HashSet();
+  if (_log.shouldLog(Log.INFO))   _log.info("Starting getPeers with " + nodes.size() + " to try");
+  for (int i=0; i < max; i++) {
+    NodeInfo nInfo;
+    try {
+      nInfo=toTry.first();
+    }
+ catch (    NoSuchElementException nsee) {
+      break;
+    }
+    toTry.remove(nInfo);
+    tried.add(nInfo);
+    ReplyWaiter waiter=sendGetPeers(nInfo,iHash);
+    if (waiter == null)     continue;
+synchronized (waiter) {
+      try {
+        waiter.wait(maxWait);
+      }
+ catch (      InterruptedException ie) {
+      }
+    }
+    int replyType=waiter.getReplyCode();
+    if (replyType == REPLY_NONE) {
+      if (_log.shouldLog(Log.INFO))       _log.info("Got no reply");
+    }
+ else     if (replyType == REPLY_PONG) {
+      if (_log.shouldLog(Log.INFO))       _log.info("Got pong");
+    }
+ else     if (replyType == REPLY_PEERS) {
+      if (_log.shouldLog(Log.INFO))       _log.info("Got peers");
+      List<Hash> reply=(List<Hash>)waiter.getReplyObject();
+      if (!reply.isEmpty()) {
+        if (_log.shouldLog(Log.INFO))         _log.info("Finished get Peers, returning " + reply.size());
+        return reply;
+      }
+    }
+ else     if (replyType == REPLY_NODES) {
+      List<NodeInfo> reply=(List<NodeInfo>)waiter.getReplyObject();
+      if (_log.shouldLog(Log.INFO))       _log.info("Got " + reply.size() + " nodes");
+      for (      NodeInfo ni : reply) {
+        if (!(ni.equals(_myNodeInfo) || tried.contains(ni) || toTry.contains(ni)))         toTry.add(ni);
+      }
+    }
+ else {
+      if (_log.shouldLog(Log.INFO))       _log.info("Got unexpected reply " + replyType + ": "+ waiter.getReplyObject());
+    }
+  }
+  if (_log.shouldLog(Log.INFO))   _log.info("Finished get Peers, fail");
+  return Collections.EMPTY_LIST;
+}

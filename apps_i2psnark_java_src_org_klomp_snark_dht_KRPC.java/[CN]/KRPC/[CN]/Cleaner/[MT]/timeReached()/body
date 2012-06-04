@@ -1,0 +1,16 @@
+{
+  long now=_context.clock().now();
+  for (Iterator<Token> iter=_outgoingTokens.keySet().iterator(); iter.hasNext(); ) {
+    Token tok=iter.next();
+    if (tok.lastSeen() < now - MAX_TOKEN_AGE)     iter.remove();
+  }
+  for (Iterator<Token> iter=_incomingTokens.values().iterator(); iter.hasNext(); ) {
+    Token tok=iter.next();
+    if (tok.lastSeen() < now - MAX_INBOUND_TOKEN_AGE)     iter.remove();
+  }
+  for (Iterator<NodeInfo> iter=_knownNodes.values().iterator(); iter.hasNext(); ) {
+    NodeInfo ni=iter.next();
+    if (ni.lastSeen() < now - MAX_NODEINFO_AGE)     iter.remove();
+  }
+  if (_log.shouldLog(Log.INFO))   _log.info("KRPC cleaner done, now with " + _outgoingTokens.size() + " sent Tokens, "+ _incomingTokens.size()+ " rcvd Tokens, "+ _knownNodes.size()+ " known peers, "+ _sentQueries.size()+ " queries awaiting response");
+}

@@ -1,0 +1,45 @@
+{
+  InfoHash iHash=new InfoHash(ih);
+  Token token=_incomingTokens.get(nInfo.getNID());
+  if (token == null) {
+    if (maxWait <= 0)     return false;
+    if (_log.shouldLog(Log.INFO))     _log.info("No token for announce to " + nInfo + " sending get_peers first");
+    ReplyWaiter waiter=sendGetPeers(nInfo,iHash);
+    if (waiter == null)     return false;
+    long start=_context.clock().now();
+synchronized (waiter) {
+      try {
+        waiter.wait(maxWait);
+      }
+ catch (      InterruptedException ie) {
+      }
+    }
+    int replyType=waiter.getReplyCode();
+    if (!(replyType == REPLY_PEERS || replyType == REPLY_NODES)) {
+      if (_log.shouldLog(Log.INFO))       _log.info("Get_peers failed to " + nInfo);
+      return false;
+    }
+    token=_incomingTokens.get(nInfo.getNID());
+    if (token == null) {
+      if (_log.shouldLog(Log.INFO))       _log.info("Huh? no token after get_peers succeeded to " + nInfo);
+      return false;
+    }
+    maxWait-=_context.clock().now() - start;
+    if (maxWait < 1000) {
+      if (_log.shouldLog(Log.INFO))       _log.info("Ran out of time after get_peers succeeded to " + nInfo);
+      return false;
+    }
+  }
+  ReplyWaiter waiter=sendAnnouncePeer(nInfo,iHash,token);
+  if (waiter == null)   return false;
+  if (maxWait <= 0)   return true;
+synchronized (waiter) {
+    try {
+      waiter.wait(maxWait);
+    }
+ catch (    InterruptedException ie) {
+    }
+  }
+  int replyType=waiter.getReplyCode();
+  return replyType == REPLY_PONG;
+}
