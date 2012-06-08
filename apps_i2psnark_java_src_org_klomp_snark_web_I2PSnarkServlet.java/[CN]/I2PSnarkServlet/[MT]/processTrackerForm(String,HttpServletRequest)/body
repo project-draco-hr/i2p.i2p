@@ -1,9 +1,10 @@
 {
-  if (action.equals(_("Delete selected")) || action.equals(_("Change open trackers"))) {
+  if (action.equals(_("Delete selected")) || action.equals(_("Save tracker configuration"))) {
     boolean changed=false;
     Map<String,Tracker> trackers=_manager.getTrackerMap();
     List<String> removed=new ArrayList();
     List<String> open=new ArrayList();
+    List<String> priv=new ArrayList();
     Enumeration e=req.getParameterNames();
     while (e.hasMoreElements()) {
       Object o=e.nextElement();
@@ -21,20 +22,24 @@
  else       if (k.startsWith("open_")) {
         open.add(k.substring(5));
       }
+ else       if (k.startsWith("private_")) {
+        priv.add(k.substring(8));
+      }
     }
     if (changed) {
       _manager.saveTrackerMap();
     }
     open.removeAll(removed);
-    StringBuilder openBuf=new StringBuilder(128);
-    for (    String s : open) {
-      if (openBuf.length() > 0)       openBuf.append(',');
-      openBuf.append(s);
-    }
-    String newOpen=openBuf.toString();
-    if (!newOpen.equals(_manager.util().getOpenTrackerString())) {
-      _manager.saveOpenTrackers(newOpen);
-    }
+    List<String> oldOpen=new ArrayList(_manager.util().getOpenTrackers());
+    Collections.sort(oldOpen);
+    Collections.sort(open);
+    if (!open.equals(oldOpen))     _manager.saveOpenTrackers(open);
+    priv.removeAll(removed);
+    priv.removeAll(open);
+    List<String> oldPriv=new ArrayList(_manager.getPrivateTrackers());
+    Collections.sort(oldPriv);
+    Collections.sort(priv);
+    if (!priv.equals(oldPriv))     _manager.savePrivateTrackers(priv);
   }
  else   if (action.equals(_("Add tracker"))) {
     String name=req.getParameter("tname");
@@ -49,9 +54,14 @@
         trackers.put(name,new Tracker(name,aurl,hurl));
         _manager.saveTrackerMap();
         if (req.getParameter("_add_open_") != null) {
-          String oldOpen=_manager.util().getOpenTrackerString();
-          String newOpen=oldOpen.length() <= 0 ? aurl : oldOpen + ',' + aurl;
+          List newOpen=new ArrayList(_manager.util().getOpenTrackers());
+          newOpen.add(aurl);
           _manager.saveOpenTrackers(newOpen);
+        }
+ else         if (req.getParameter("_add_private_") != null) {
+          List newPriv=new ArrayList(_manager.getPrivateTrackers());
+          newPriv.add(aurl);
+          _manager.savePrivateTrackers(newPriv);
         }
       }
  else {

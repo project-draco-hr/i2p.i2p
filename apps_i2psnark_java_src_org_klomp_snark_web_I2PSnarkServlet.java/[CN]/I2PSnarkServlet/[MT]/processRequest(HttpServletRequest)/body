@@ -183,13 +183,14 @@
         _lastAnnounceURL=announceURL;
         if (announceURL.equals("none"))         announceURL=null;
         try {
-          Storage s=new Storage(_manager.util(),baseFile,announceURL,req.getParameter("private") != null,null);
+          boolean isPrivate=_manager.getPrivateTrackers().contains(announceURL);
+          Storage s=new Storage(_manager.util(),baseFile,announceURL,isPrivate,null);
           s.close();
           MetaInfo info=s.getMetaInfo();
           File torrentFile=new File(_manager.getDataDir(),s.getBaseName() + ".torrent");
           _manager.addTorrent(info,s.getBitField(),torrentFile.getAbsolutePath(),true);
           _manager.addMessage(_("Torrent created for \"{0}\"",baseFile.getName()) + ": " + torrentFile.getAbsolutePath());
-          if (announceURL != null)           _manager.addMessage(_("Many I2P trackers require you to register new torrents before seeding - please do so before starting \"{0}\"",baseFile.getName()));
+          if (announceURL != null && !_manager.util().getOpenTrackers().contains(announceURL))           _manager.addMessage(_("Many I2P trackers require you to register new torrents before seeding - please do so before starting \"{0}\"",baseFile.getName()));
         }
  catch (        IOException ioe) {
           _manager.addMessage(_("Error creating a torrent for \"{0}\"",baseFile.getAbsolutePath()) + ": " + ioe.getMessage());
