@@ -1,0 +1,35 @@
+{
+  if (nInfo.equals(_myNodeInfo))   throw new IllegalArgumentException("wtf don't send to ourselves");
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Sending query to: " + nInfo);
+  if (nInfo.getDestination() == null) {
+    NodeInfo newInfo=_knownNodes.get(nInfo.getNID());
+    if (newInfo != null && newInfo.getDestination() != null) {
+      nInfo=newInfo;
+    }
+ else     if (!repliable) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Dropping non-repliable query, no dest for " + nInfo);
+      return null;
+    }
+ else {
+      if (!lookupDest(nInfo)) {
+        if (_log.shouldLog(Log.WARN))         _log.warn("Dropping repliable query, no dest for " + nInfo);
+        return null;
+      }
+    }
+  }
+  map.put("y","q");
+  MsgID mID=new MsgID(_context);
+  map.put("t",mID.getData());
+  Map<String,Object> args=(Map<String,Object>)map.get("a");
+  if (args == null)   throw new IllegalArgumentException("no args");
+  args.put("id",_myID);
+  int port=nInfo.getPort();
+  if (!repliable)   port++;
+  boolean success=sendMessage(nInfo.getDestination(),port,map,repliable);
+  if (success) {
+    ReplyWaiter rv=new ReplyWaiter(mID,nInfo,null,null);
+    _sentQueries.put(mID,rv);
+    return rv;
+  }
+  return null;
+}
