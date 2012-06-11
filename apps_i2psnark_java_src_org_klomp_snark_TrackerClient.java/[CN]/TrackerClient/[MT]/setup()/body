@@ -1,0 +1,50 @@
+{
+  String primary=null;
+  if (meta != null)   primary=meta.getAnnounce();
+ else   if (additionalTrackerURL != null)   primary=additionalTrackerURL;
+  if (primary != null) {
+    if (isValidAnnounce(primary)) {
+      trackers.add(new Tracker(primary,true));
+      _log.debug("Announce: [" + primary + "] infoHash: "+ infoHash);
+    }
+ else {
+      _log.warn("Skipping invalid or non-i2p announce: " + primary);
+    }
+  }
+ else {
+    _log.warn("No primary announce");
+    primary="";
+  }
+  List tlist=_util.getOpenTrackers();
+  if (tlist != null && (meta == null || !meta.isPrivate())) {
+    for (int i=0; i < tlist.size(); i++) {
+      String url=(String)tlist.get(i);
+      if (!isValidAnnounce(url)) {
+        _log.error("Bad announce URL: [" + url + "]");
+        continue;
+      }
+      int slash=url.indexOf('/',7);
+      if (slash <= 7) {
+        _log.error("Bad announce URL: [" + url + "]");
+        continue;
+      }
+      if (primary.startsWith(url.substring(0,slash)))       continue;
+      String dest=_util.lookup(url.substring(7,slash));
+      if (dest == null) {
+        _log.error("Announce host unknown: [" + url.substring(7,slash) + "]");
+        continue;
+      }
+      if (primary.startsWith("http://" + dest))       continue;
+      if (primary.startsWith("http://i2p/" + dest))       continue;
+      trackers.add(new Tracker(url,primary.equals("")));
+      _log.debug("Additional announce: [" + url + "] for infoHash: "+ infoHash);
+    }
+  }
+  if (trackers.isEmpty()) {
+    stop=true;
+    SnarkManager.instance().addMessage("No valid trackers for " + this.snark.getBaseName() + " - enable opentrackers?");
+    _log.error("No valid trackers for " + this.snark.getBaseName());
+    this.snark.stopTorrent();
+    return;
+  }
+}
