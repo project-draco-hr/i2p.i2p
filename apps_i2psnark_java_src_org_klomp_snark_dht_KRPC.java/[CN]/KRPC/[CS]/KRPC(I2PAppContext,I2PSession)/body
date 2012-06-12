@@ -9,10 +9,15 @@
   _incomingTokens=new ConcurrentHashMap();
   _qPort=2555 + ctx.random().nextInt(61111);
   _rPort=_qPort + 1;
-  _myID=new byte[NID.HASH_LENGTH];
-  if (SECURE_NID)   System.arraycopy(session.getMyDestination().calculateHash().getData(),0,_myID,0,NID.HASH_LENGTH);
- else   ctx.random().nextBytes(_myID);
-  _myNID=new NID(_myID);
+  if (SECURE_NID) {
+    _myNID=NodeInfo.generateNID(session.getMyDestination().calculateHash(),_qPort);
+    _myID=_myNID.getData();
+  }
+ else {
+    _myID=new byte[NID.HASH_LENGTH];
+    ctx.random().nextBytes(_myID);
+    _myNID=new NID(_myID);
+  }
   _myNodeInfo=new NodeInfo(_myNID,session.getMyDestination(),_qPort);
   _dhtFile=new File(ctx.getConfigDir(),DHT_FILE);
   session.addMuxedSessionListener(this,I2PSession.PROTO_DATAGRAM_RAW,_rPort);
