@@ -7,50 +7,46 @@
     if (url != null)     toUpdate.put(appName,url);
   }
   if (toUpdate.isEmpty())   return;
-  PluginUpdateChecker puc=PluginUpdateChecker.getInstance(ctx);
-  if (puc.isRunning())   return;
+  ConsoleUpdateManager mgr=(ConsoleUpdateManager)ctx.updateManager();
+  if (mgr == null)   return;
+  if (mgr.isUpdateInProgress())   return;
   if (delay) {
-    System.setProperty(UpdateHandler.PROP_UPDATE_IN_PROGRESS,"true");
-    puc.setAppStatus(Messages.getString("Checking for plugin updates",ctx));
-    try {
-      Thread.sleep(3 * 60 * 1000);
+    mgr.update(TYPE_DUMMY,3 * 60 * 1000);
+    mgr.notifyProgress(null,Messages.getString("Checking for plugin updates",ctx));
+    int loop=0;
+    do {
+      try {
+        Thread.sleep(5 * 1000);
+      }
+ catch (      InterruptedException ie) {
+      }
+      if (loop++ > 40)       break;
     }
- catch (    InterruptedException ie) {
-    }
-    System.setProperty(UpdateHandler.PROP_UPDATE_IN_PROGRESS,"false");
+ while (mgr.isUpdateInProgress(TYPE_DUMMY));
   }
   Log log=ctx.logManager().getLog(PluginStarter.class);
   int updated=0;
   for (  Map.Entry<String,String> entry : toUpdate.entrySet()) {
     String appName=entry.getKey();
     if (log.shouldLog(Log.WARN))     log.warn("Checking for update plugin: " + appName);
-    puc.update(appName);
-    do {
-      try {
-        Thread.sleep(5 * 1000);
-      }
- catch (      InterruptedException ie) {
-      }
-    }
- while (puc.isRunning());
-    if (!puc.isNewerAvailable()) {
+    if (mgr.checkAvailable(PLUGIN,appName,60 * 1000) == null) {
       if (log.shouldLog(Log.WARN))       log.warn("No update available for plugin: " + appName);
       continue;
     }
-    PluginUpdateHandler puh=PluginUpdateHandler.getInstance(ctx);
-    String url=entry.getValue();
     if (log.shouldLog(Log.WARN))     log.warn("Updating plugin: " + appName);
-    puh.update(url);
+    mgr.update(PLUGIN,appName,30 * 60 * 1000);
+    int loop=0;
     do {
       try {
         Thread.sleep(5 * 1000);
       }
  catch (      InterruptedException ie) {
       }
+      if (loop++ > 40)       break;
     }
- while (puh.isRunning());
-    if (puh.wasUpdateSuccessful())     updated++;
+ while (mgr.isUpdateInProgress(PLUGIN,appName));
+    if (mgr.getUpdateAvailable(PLUGIN,appName) != null)     updated++;
   }
-  if (updated > 0)   puc.setDoneStatus(ngettext("1 plugin updated","{0} plugins updated",updated,ctx));
- else   puc.setDoneStatus(Messages.getString("Plugin update check complete",ctx));
+  if (updated > 0)   mgr.notifyComplete(null,ngettext("1 plugin updated","{0} plugins updated",updated,ctx));
+ else   mgr.notifyComplete(null,Messages.getString("Plugin update check complete",ctx));
 }

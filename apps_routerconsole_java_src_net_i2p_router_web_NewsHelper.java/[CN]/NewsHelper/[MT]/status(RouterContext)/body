@@ -1,0 +1,25 @@
+{
+  StringBuilder buf=new StringBuilder(128);
+  long now=ctx.clock().now();
+  buf.append("<i>");
+  long lastUpdated=lastUpdated(ctx);
+  long lastFetch=lastChecked(ctx);
+  if (lastUpdated > 0) {
+    buf.append(Messages.getString("News last updated {0} ago.",DataHelper.formatDuration2(now - lastUpdated),ctx)).append('\n');
+  }
+  if (lastFetch > lastUpdated) {
+    buf.append(Messages.getString("News last checked {0} ago.",DataHelper.formatDuration2(now - lastFetch),ctx));
+  }
+  buf.append("</i>");
+  String consoleNonce=System.getProperty("router.consoleNonce");
+  if (lastUpdated > 0 && consoleNonce != null) {
+    if (shouldShowNews(ctx)) {
+      buf.append(" <a href=\"/?news=0&amp;consoleNonce=").append(consoleNonce).append("\">").append(Messages.getString("Hide news",ctx));
+    }
+ else {
+      buf.append(" <a href=\"/?news=1&amp;consoleNonce=").append(consoleNonce).append("\">").append(Messages.getString("Show news",ctx));
+    }
+    buf.append("</a>");
+  }
+  return buf.toString();
+}

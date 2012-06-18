@@ -1,0 +1,24 @@
+{
+  notifyInstalled(NEWS,"",Long.toString(NewsHelper.lastUpdated(_context)));
+  notifyInstalled(ROUTER_SIGNED,"",RouterVersion.VERSION);
+  (new NewsFetcher(_context,Collections.EMPTY_LIST)).checkForUpdates();
+  for (  String plugin : PluginStarter.getPlugins()) {
+    Properties props=PluginStarter.pluginProperties(_context,plugin);
+    String ver=props.getProperty("version");
+    if (ver != null)     notifyInstalled(PLUGIN,plugin,ver);
+  }
+  _context.registerUpdateManager(this);
+  Updater u=new DummyHandler(_context);
+  register(u,TYPE_DUMMY,HTTP,0);
+  u=new NewsHandler(_context);
+  register(u,NEWS,HTTP,0);
+  register(u,ROUTER_SIGNED,HTTP,0);
+  u=new UpdateHandler(_context);
+  register(u,ROUTER_SIGNED,HTTP,0);
+  u=new UnsignedUpdateHandler(_context);
+  register(u,ROUTER_UNSIGNED,HTTP,0);
+  u=new PluginUpdateHandler(_context);
+  register(u,PLUGIN,HTTP,0);
+  register(u,PLUGIN_INSTALL,HTTP,0);
+  new NewsTimerTask(_context);
+}
