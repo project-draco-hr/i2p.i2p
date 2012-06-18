@@ -1,0 +1,34 @@
+{
+  if (finalShutdown && _log.shouldLog(Log.WARN))   _log.warn("SnarkManager final shutdown");
+  int count=0;
+  for (  Snark snark : _snarks.values()) {
+    if (!snark.isStopped()) {
+      if (count == 0)       addMessage(_("Stopping all torrents and closing the I2P tunnel."));
+      count++;
+      if (finalShutdown)       snark.stopTorrent(true);
+ else       stopTorrent(snark,false);
+      try {
+        Thread.sleep(20);
+      }
+ catch (      InterruptedException ie) {
+      }
+    }
+  }
+  if (_util.connected()) {
+    if (count > 0) {
+      SimpleScheduler.getInstance().addEvent(new Disconnector(),60 * 1000);
+      addMessage(_("Closing I2P tunnel after announces to trackers."));
+      if (finalShutdown) {
+        try {
+          Thread.sleep(5 * 1000);
+        }
+ catch (        InterruptedException ie) {
+        }
+      }
+    }
+ else {
+      _util.disconnect();
+      addMessage(_("I2P tunnel closed."));
+    }
+  }
+}

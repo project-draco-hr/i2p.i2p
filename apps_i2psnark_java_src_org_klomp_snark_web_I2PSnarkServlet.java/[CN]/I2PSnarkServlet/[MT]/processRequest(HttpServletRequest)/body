@@ -120,8 +120,11 @@
             }
             for (int i=0; i < files.size(); i++) {
               File df=Storage.getFileFromNames(f,files.get(i));
-              if (df.delete())               _manager.addMessage(_("Data file deleted: {0}",df.getAbsolutePath()));
- else               _manager.addMessage(_("Data file could not be deleted: {0}",df.getAbsolutePath()));
+              if (df.delete()) {
+              }
+ else {
+                _manager.addMessage(_("Data file could not be deleted: {0}",df.getAbsolutePath()));
+              }
             }
             Set<File> dirs=new TreeSet(Collections.reverseOrder());
             for (            List<String> list : files) {
@@ -131,17 +134,18 @@
             }
             for (            File df : dirs) {
               if (df.delete()) {
-                _manager.addMessage(_("Data dir deleted: {0}",df.getAbsolutePath()));
               }
- else               if (_log.shouldLog(Log.WARN)) {
-                _log.warn("Could not delete dir " + df);
+ else {
+                _manager.addMessage(_("Directory could not be deleted: {0}",df.getAbsolutePath()));
+                if (_log.shouldLog(Log.WARN))                 _log.warn("Could not delete dir " + df);
               }
             }
             if (f.delete()) {
-              _manager.addMessage(_("Data dir deleted: {0}",f.getAbsolutePath()));
+              _manager.addMessage(_("Directory deleted: {0}",f.getAbsolutePath()));
             }
- else             if (_log.shouldLog(Log.WARN)) {
-              _log.warn("Could not delete dir " + f);
+ else {
+              _manager.addMessage(_("Directory could not be deleted: {0}",f.getAbsolutePath()));
+              if (_log.shouldLog(Log.WARN))               _log.warn("Could not delete dir " + f);
             }
             break;
           }
@@ -203,34 +207,13 @@
     }
   }
  else   if ("StopAll".equals(action)) {
-    _manager.addMessage(_("Stopping all torrents and closing the I2P tunnel."));
-    List snarks=getSortedSnarks(req);
-    for (int i=0; i < snarks.size(); i++) {
-      Snark snark=(Snark)snarks.get(i);
-      if (!snark.isStopped()) {
-        _manager.stopTorrent(snark,false);
-        try {
-          Thread.sleep(50);
-        }
- catch (        InterruptedException ie) {
-        }
-      }
-    }
-    if (_manager.util().connected()) {
-      try {
-        Thread.sleep(2000);
-      }
- catch (      InterruptedException ie) {
-      }
-      _manager.util().disconnect();
-      _manager.addMessage(_("I2P tunnel closed."));
-    }
+    _manager.stopAllTorrents(false);
   }
  else   if ("StartAll".equals(action)) {
     _manager.addMessage(_("Opening the I2P tunnel and starting all torrents."));
-    List snarks=getSortedSnarks(req);
+    List<Snark> snarks=getSortedSnarks(req);
     for (int i=0; i < snarks.size(); i++) {
-      Snark snark=(Snark)snarks.get(i);
+      Snark snark=snarks.get(i);
       if (snark.isStopped())       snark.startTorrent();
     }
   }
