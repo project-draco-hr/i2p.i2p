@@ -23,12 +23,16 @@
         StringTokenizer tok=new StringTokenizer(jumpServers,", ");
         while (tok.hasMoreTokens()) {
           String jurl=tok.nextToken();
-          if (!jurl.startsWith("http://")) {
-            continue;
+          String jumphost;
+          try {
+            URI jURI=new URI(jurl);
+            String proto=jURI.getScheme();
+            jumphost=jURI.getHost();
+            if (proto == null || jumphost == null || !proto.toLowerCase(Locale.US).equals("http"))             continue;
+            jumphost=jumphost.toLowerCase(Locale.US);
+            if (!jumphost.endsWith(".i2p"))             continue;
           }
-          String jumphost=jurl.substring(7);
-          jumphost=jumphost.substring(0,jumphost.indexOf('/'));
-          if (!jumphost.endsWith(".i2p")) {
+ catch (          URISyntaxException use) {
             continue;
           }
           if (!jumphost.endsWith(".b32.i2p")) {
@@ -41,8 +45,7 @@
           out.write(jurl.getBytes());
           out.write(uri.getBytes());
           out.write("\">".getBytes());
-          out.write(jurl.substring(7).getBytes());
-          out.write(uri.getBytes());
+          out.write(_("{0} jump service",jumphost).getBytes());
           out.write("</a>\n".getBytes());
         }
       }

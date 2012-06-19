@@ -1,7 +1,7 @@
 {
   final long stats[]={0,0,0,0,0,0};
   String peerParam=req.getParameter("p");
-  List snarks=getSortedSnarks(req);
+  List<Snark> snarks=getSortedSnarks(req);
   boolean isForm=_manager.util().connected() || !snarks.isEmpty();
   if (isForm) {
     out.write("<form action=\"_post\" method=\"POST\">\n");
@@ -75,7 +75,10 @@
   String ua=req.getHeader("User-Agent");
   boolean isDegraded=ua != null && (ua.startsWith("Lynx") || ua.startsWith("w3m") || ua.startsWith("ELinks")|| ua.startsWith("Links")|| ua.startsWith("Dillo"));
   boolean noThinsp=isDegraded || (ua != null && ua.startsWith("Opera"));
-  if (_manager.util().connected()) {
+  if (_manager.isStopping()) {
+    out.write("&nbsp;");
+  }
+ else   if (_manager.util().connected()) {
     if (isDegraded)     out.write("<a href=\"/i2psnark/?action=StopAll&amp;nonce=" + _nonce + "\"><img title=\"");
  else {
       out.write("<input type=\"image\" name=\"action_StopAll\" value=\"foo\" title=\"");
@@ -86,7 +89,7 @@
     out.write("\">");
     if (isDegraded)     out.write("</a>");
   }
- else   if (!snarks.isEmpty()) {
+ else   if ((!_manager.util().isConnecting()) && !snarks.isEmpty()) {
     if (isDegraded)     out.write("<a href=\"/i2psnark/?action=StartAll&amp;nonce=" + _nonce + "\"><img title=\"");
  else     out.write("<input type=\"image\" name=\"action_StartAll\" value=\"foo\" title=\"");
     out.write(_("Start all torrents and the I2P tunnel"));

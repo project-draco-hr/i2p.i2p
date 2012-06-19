@@ -1,4 +1,5 @@
 {
+  if (_log.shouldLog(Log.INFO))   _log.info("Incoming connection to '" + toString() + "' port "+ socket.getLocalPort()+ " from: "+ socket.getPeerDestination().calculateHash()+ " port "+ socket.getPort());
   long afterAccept=getTunnel().getContext().clock().now();
   long afterSocket=-1;
   try {
@@ -9,7 +10,18 @@
     addEntry(headers,HASH_HEADER,socket.getPeerDestination().calculateHash().toBase64());
     addEntry(headers,DEST32_HEADER,Base32.encode(socket.getPeerDestination().calculateHash().getData()) + ".b32.i2p");
     addEntry(headers,DEST64_HEADER,socket.getPeerDestination().toBase64());
-    if ((_spoofHost != null) && (_spoofHost.trim().length() > 0))     setEntry(headers,"Host",_spoofHost);
+    Properties opts=getTunnel().getClientOptions();
+    String spoofHost;
+    int ourPort=socket.getLocalPort();
+    if (ourPort != 80 && ourPort > 0 && ourPort <= 65535 && opts != null) {
+      String portSpoof=opts.getProperty("spoofedHost." + ourPort);
+      if (portSpoof != null)       spoofHost=portSpoof.trim();
+ else       spoofHost=_spoofHost;
+    }
+ else {
+      spoofHost=_spoofHost;
+    }
+    if (spoofHost != null)     setEntry(headers,"Host",spoofHost);
     setEntry(headers,"Connection","close");
     String enc=getEntryOrNull(headers,"Accept-encoding");
     String altEnc=getEntryOrNull(headers,"X-Accept-encoding");
@@ -17,7 +29,6 @@
     socket.setReadTimeout(readTimeout);
     Socket s=new Socket(remoteHost,remotePort);
     afterSocket=getTunnel().getContext().clock().now();
-    Properties opts=getTunnel().getClientOptions();
     boolean allowGZIP=true;
     if (opts != null) {
       String val=opts.getProperty("i2ptunnel.gzip");
