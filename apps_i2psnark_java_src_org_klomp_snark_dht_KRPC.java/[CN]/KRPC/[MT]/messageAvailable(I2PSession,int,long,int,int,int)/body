@@ -1,0 +1,27 @@
+{
+  try {
+    byte[] payload=session.receiveMessage(msgId);
+    if (toPort == _qPort) {
+      I2PDatagramDissector dgDiss=new I2PDatagramDissector();
+      dgDiss.loadI2PDatagram(payload);
+      payload=dgDiss.getPayload();
+      Destination from=dgDiss.getSender();
+      receiveMessage(from,fromPort,payload);
+    }
+ else     if (toPort == _rPort) {
+      receiveMessage(null,fromPort,payload);
+    }
+ else {
+      if (_log.shouldLog(Log.WARN))       _log.warn("msg on bad port");
+    }
+  }
+ catch (  DataFormatException e) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("bad msg");
+  }
+catch (  I2PInvalidDatagramException e) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("bad msg");
+  }
+catch (  I2PSessionException e) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("bad msg");
+  }
+}
