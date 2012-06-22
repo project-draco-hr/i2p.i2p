@@ -1,0 +1,49 @@
+{
+  int begin=bucket.getRangeBegin();
+  int end=bucket.getRangeEnd();
+  int fixed=0;
+  int bsz=1 + end - begin;
+  while (bsz < B_FACTOR) {
+    fixed++;
+    bsz<<=1;
+  }
+  int fixedBits=0;
+  if (fixed > 0) {
+    int mask=(1 << fixed) - 1;
+    fixedBits=(begin >> (B_VALUE - (fixed + 1))) & mask;
+  }
+  int obegin=begin;
+  int oend=end;
+  begin>>=(B_VALUE - 1);
+  end>>=(B_VALUE - 1);
+  BigInteger variance;
+  if (begin > 0)   variance=new BigInteger(begin - fixed,_context.random());
+ else   variance=BigInteger.ZERO;
+  int numNonZero=1 + end - begin;
+  if (numNonZero == 1) {
+    variance=variance.setBit(begin);
+    if (fixed > 0)     variance=variance.or(BigInteger.valueOf(fixedBits).shiftLeft(begin - fixed));
+  }
+ else {
+    if (fixed > 0)     throw new IllegalStateException("WTF " + bucket);
+    BigInteger nonz;
+    if (numNonZero <= 62) {
+      long nz=1 + _context.random().nextLong((1l << numNonZero) - 1);
+      nonz=BigInteger.valueOf(nz);
+    }
+ else {
+      do {
+        nonz=new BigInteger(numNonZero,_context.random());
+      }
+ while (nonz.equals(BigInteger.ZERO));
+    }
+    if (begin > 0)     nonz=nonz.shiftLeft(begin);
+    variance=variance.or(nonz);
+  }
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("SB(" + obegin + ','+ oend+ ") KB("+ begin+ ','+ end+ ") fixed="+ fixed+ " fixedBits="+ fixedBits+ " numNonZ="+ numNonZero);
+  byte data[]=variance.toByteArray();
+  T key=makeKey(data);
+  byte[] hash=DataHelper.xor(key.getData(),_us.getData());
+  T rv=makeKey(hash);
+  return rv;
+}
