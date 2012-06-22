@@ -1,14 +1,13 @@
 {
-  NID myNID=_myNodeInfo.getNID();
-  List<NodeInfo> nodes=_knownNodes.findClosest(myNID,maxNodes);
+  List<NodeInfo> nodes=_knownNodes.findClosest(target,maxNodes);
   if (nodes.isEmpty()) {
     if (_log.shouldLog(Log.WARN))     _log.info("DHT is empty, cannot explore");
     return;
   }
-  SortedSet<NodeInfo> toTry=new TreeSet(new NodeInfoComparator(myNID));
+  SortedSet<NodeInfo> toTry=new TreeSet(new NodeInfoComparator(target));
   toTry.addAll(nodes);
   Set<NodeInfo> tried=new HashSet();
-  if (_log.shouldLog(Log.INFO))   _log.info("Starting explore");
+  if (_log.shouldLog(Log.INFO))   _log.info("Starting explore of " + target);
   for (int i=0; i < maxNodes; i++) {
     if (!_isRunning)     break;
     NodeInfo nInfo;
@@ -20,7 +19,7 @@
     }
     toTry.remove(nInfo);
     tried.add(nInfo);
-    ReplyWaiter waiter=sendFindNode(nInfo,_myNID);
+    ReplyWaiter waiter=sendFindNode(nInfo,target);
     if (waiter == null)     continue;
 synchronized (waiter) {
       try {
@@ -44,5 +43,5 @@ synchronized (waiter) {
       if (_log.shouldLog(Log.INFO))       _log.info("Got unexpected reply " + replyType + ": "+ waiter.getReplyObject());
     }
   }
-  if (_log.shouldLog(Log.INFO))   _log.info("Finished explore");
+  if (_log.shouldLog(Log.INFO))   _log.info("Finished explore of " + target);
 }
