@@ -25,18 +25,14 @@
     trackerclient=new TrackerClient(_util,meta,additionalTrackerURL,coordinator,this);
   }
   stopped=false;
-  boolean coordinatorChanged=false;
   if (coordinator.halted()) {
-    if (_peerCoordinatorSet != null)     _peerCoordinatorSet.remove(coordinator);
-    PeerCoordinator newCoord=new PeerCoordinator(_util,id,infoHash,meta,storage,this,this);
-    if (_peerCoordinatorSet != null)     _peerCoordinatorSet.add(newCoord);
-    coordinator=newCoord;
-    coordinatorChanged=true;
+    coordinator.restart();
+    if (_peerCoordinatorSet != null)     _peerCoordinatorSet.add(coordinator);
   }
-  if (!trackerclient.started() && !coordinatorChanged) {
+  if (!trackerclient.started()) {
     trackerclient.start();
   }
- else   if (trackerclient.halted() || coordinatorChanged) {
+ else   if (trackerclient.halted()) {
     if (storage != null) {
       try {
         storage.reopen(rootDataDir);
