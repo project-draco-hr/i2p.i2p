@@ -5,20 +5,33 @@
     dieFatal();
     return;
   }
-  int existingTags=GarlicMessageBuilder.estimateAvailableTags(getContext(),_leaseSet.getEncryptionKey(),_from.calculateHash());
   _outTunnel=selectOutboundTunnel(_to);
-  boolean wantACK;
-  Long lastSent=_cache.lastReplyRequestCache.get(_hashPair);
-  wantACK=_wantACK || existingTags <= 30 || lastSent == null || lastSent.longValue() < now - REPLY_REQUEST_INTERVAL;
-  if (wantACK)   _cache.lastReplyRequestCache.put(_hashPair,Long.valueOf(now));
+  Long lastReplyRequestSent=_cache.lastReplyRequestCache.get(_hashPair);
+  boolean shouldRequestReply=lastReplyRequestSent == null || lastReplyRequestSent.longValue() < now - REPLY_REQUEST_INTERVAL;
+  boolean wantACK=_wantACK || shouldRequestReply || GarlicMessageBuilder.needsTags(getContext(),_leaseSet.getEncryptionKey(),_from.calculateHash());
   PublicKey key=_leaseSet.getEncryptionKey();
   SessionKey sessKey=new SessionKey();
   Set<SessionTag> tags=new HashSet();
-  LeaseSet replyLeaseSet=getReplyLeaseSet(wantACK);
-  if (replyLeaseSet != null)   wantACK=true;
-  long token=(wantACK ? getContext().random().nextLong(I2NPMessage.MAX_ID_VALUE) : -1);
-  if (wantACK)   _inTunnel=selectInboundTunnel();
-  boolean ok=(_clientMessage != null) && buildClove();
+  LeaseSet replyLeaseSet;
+  String allow=_clientMessage.getSenderConfig().getOptions().getProperty(BUNDLE_REPLY_LEASESET);
+  boolean allowLeaseBundle=allow == null || Boolean.valueOf(allow).booleanValue();
+  if (allowLeaseBundle) {
+    replyLeaseSet=getReplyLeaseSet(false);
+    if (replyLeaseSet != null)     wantACK=true;
+  }
+ else {
+    replyLeaseSet=null;
+  }
+  long token;
+  if (wantACK) {
+    _cache.lastReplyRequestCache.put(_hashPair,Long.valueOf(now));
+    token=getContext().random().nextLong(I2NPMessage.MAX_ID_VALUE);
+    _inTunnel=selectInboundTunnel();
+  }
+ else {
+    token=-1;
+  }
+  boolean ok=buildClove();
   if (!ok) {
     dieFatal();
     return;
@@ -36,11 +49,9 @@
   ReplySelector selector=null;
   if (wantACK) {
     TagSetHandle tsh=null;
-    if ((sessKey != null) && (tags != null) && (!tags.isEmpty())) {
-      if (_leaseSet != null) {
-        SessionKeyManager skm=getContext().clientManager().getClientSessionKeyManager(_from.calculateHash());
-        if (skm != null)         tsh=skm.tagsDelivered(_leaseSet.getEncryptionKey(),sessKey,tags);
-      }
+    if (!tags.isEmpty()) {
+      SessionKeyManager skm=getContext().clientManager().getClientSessionKeyManager(_from.calculateHash());
+      if (skm != null)       tsh=skm.tagsDelivered(_leaseSet.getEncryptionKey(),sessKey,tags);
     }
     onReply=new SendSuccessJob(getContext(),sessKey,tsh);
     onFail=new SendTimeoutJob(getContext(),sessKey,tsh);
