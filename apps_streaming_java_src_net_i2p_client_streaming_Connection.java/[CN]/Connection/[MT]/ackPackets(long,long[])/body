@@ -15,15 +15,15 @@
   }
   List<PacketLocal> acked=null;
 synchronized (_outboundPackets) {
-    for (Iterator<Long> iter=_outboundPackets.keySet().iterator(); iter.hasNext(); ) {
-      Long id=iter.next();
-      if (id.longValue() <= ackThrough) {
+    for (    Map.Entry<Long,PacketLocal> e : _outboundPackets.entrySet()) {
+      long id=e.getKey().longValue();
+      if (id <= ackThrough) {
         boolean nacked=false;
         if (nacks != null) {
           for (int i=0; i < nacks.length; i++) {
-            if (nacks[i] == id.longValue()) {
+            if (nacks[i] == id) {
               nacked=true;
-              PacketLocal nackedPacket=_outboundPackets.get(id);
+              PacketLocal nackedPacket=e.getValue();
               nackedPacket.incrementNACKs();
               break;
             }
@@ -31,7 +31,7 @@ synchronized (_outboundPackets) {
         }
         if (!nacked) {
           if (acked == null)           acked=new ArrayList(1);
-          PacketLocal ackedPacket=_outboundPackets.get(id);
+          PacketLocal ackedPacket=e.getValue();
           ackedPacket.ackReceived();
           acked.add(ackedPacket);
         }
