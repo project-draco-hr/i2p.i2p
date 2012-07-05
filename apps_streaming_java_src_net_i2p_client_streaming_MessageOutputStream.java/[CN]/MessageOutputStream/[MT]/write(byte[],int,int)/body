@@ -26,13 +26,8 @@ synchronized (_dataLock) {
         remaining-=toWrite;
         cur+=toWrite;
         _valid=_buf.length;
-        DataReceiver rcvr=_dataReceiver;
-        if (rcvr == null) {
-          throwAnyError();
-          return;
-        }
         if (_log.shouldLog(Log.INFO))         _log.info("write() direct valid = " + _valid);
-        ws=rcvr.writeData(_buf,0,_valid);
+        ws=_dataReceiver.writeData(_buf,0,_valid);
         _written+=_valid;
         _valid=0;
         throwAnyError();
@@ -53,11 +48,10 @@ synchronized (_dataLock) {
       }
     }
  else {
-      if (_log.shouldLog(Log.INFO))       _log.info("Queued " + len + " without sending to the receiver");
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Queued " + len + " without sending to the receiver");
     }
   }
   long elapsed=_context.clock().now() - begin;
   if ((elapsed > 10 * 1000) && (_log.shouldLog(Log.INFO)))   _log.info("wtf, took " + elapsed + "ms to write to the stream?",new Exception("foo"));
   throwAnyError();
-  updateBps(len);
 }

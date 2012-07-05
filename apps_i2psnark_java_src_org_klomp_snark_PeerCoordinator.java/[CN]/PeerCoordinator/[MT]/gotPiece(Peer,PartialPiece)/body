@@ -34,21 +34,17 @@ synchronized (wantedPieces) {
   }
   removePartialPiece(piece);
   boolean done=wantedBytes <= 0;
-  List<Peer> toDisconnect=new ArrayList();
-  Iterator<Peer> it=peers.iterator();
-  while (it.hasNext()) {
-    Peer p=it.next();
+  List<Peer> toDisconnect=done ? new ArrayList() : null;
+  for (  Peer p : peers) {
     if (p.isConnected()) {
       if (done && p.isCompleted())       toDisconnect.add(p);
  else       p.have(piece);
     }
   }
-  it=toDisconnect.iterator();
-  while (it.hasNext()) {
-    Peer p=it.next();
-    p.disconnect(true);
-  }
   if (done) {
+    for (    Peer p : toDisconnect) {
+      p.disconnect(true);
+    }
     if (!completed())     snark.storageCompleted(storage);
 synchronized (partialPieces) {
       for (      PartialPiece ppp : partialPieces) {
