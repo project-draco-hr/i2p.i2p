@@ -23,55 +23,56 @@
   if (parent)   buf.append("<div class=\"page\"><div class=\"mainsection\">");
   boolean showPriority=ls != null && snark != null && snark.getStorage() != null && !snark.getStorage().complete();
   if (showPriority)   buf.append("<form action=\"").append(base).append("\" method=\"POST\">\n");
-  buf.append("<TABLE BORDER=0 class=\"snarkTorrents\" ><thead>\n");
   if (snark != null) {
-    buf.append("<tr><th colspan=\"" + (showPriority ? '5' : '4') + "\"><div>").append(_("Torrent")).append(": ").append(snark.getBaseName());
+    buf.append("<table class=\"snarkTorrentInfo\">\n");
+    buf.append("<tr><th>").append(_("Torrent")).append(":</th><td>").append(snark.getBaseName()).append("</td></tr>\n");
     int pieces=snark.getPieces();
     double completion=(pieces - snark.getNeeded()) / (double)pieces;
-    if (completion < 1.0)     buf.append("<br>").append(_("Completion")).append(": ").append((new DecimalFormat("0.00%")).format(completion));
- else     buf.append("<br>").append(_("Complete"));
+    if (completion < 1.0)     buf.append("<tr><th>").append(_("Completion")).append(":</th><td>").append((new DecimalFormat("0.00%")).format(completion)).append("</td></tr>\n");
+ else     buf.append("<tr><td colspan=\"2\">").append(_("Complete")).append("</td></tr>\n");
     long needed=snark.getNeededLength();
-    if (needed > 0)     buf.append("<br>").append(_("Remaining")).append(": ").append(formatSize(needed));
-    buf.append("<br>").append(_("Size")).append(": ").append(formatSize(snark.getTotalLength()));
+    if (needed > 0)     buf.append("<tr><th>").append(_("Remaining")).append(":</th><td>").append(formatSize(needed)).append("</td></tr>\n");
+    buf.append("<tr><th>").append(_("Size")).append(":</th><td>").append(formatSize(snark.getTotalLength())).append("</td></tr>\n");
     MetaInfo meta=snark.getMetaInfo();
     if (meta != null) {
       List files=meta.getFiles();
       int fileCount=files != null ? files.size() : 1;
-      buf.append("<br>").append(_("Files")).append(": ").append(fileCount);
+      buf.append("<tr><th>").append(_("Files")).append(":</th><td>").append(fileCount).append("</td></tr>\n");
     }
-    buf.append("<br>").append(_("Pieces")).append(": ").append(pieces);
-    buf.append("<br>").append(_("Piece size")).append(": ").append(formatSize(snark.getPieceLength(0)));
+    buf.append("<tr><th>").append(_("Pieces")).append(":</th><td>").append(pieces).append("</td></tr>\n");
+    buf.append("<tr><th>").append(_("Piece size")).append(":</th><td>").append(formatSize(snark.getPieceLength(0))).append("</td></tr>\n");
     if (meta != null) {
       String announce=meta.getAnnounce();
       if (announce != null) {
-        buf.append("<br>");
+        buf.append("<tr><th>");
         String trackerLink=getTrackerLink(announce,snark.getInfoHash());
         if (trackerLink != null)         buf.append(trackerLink).append(' ');
-        buf.append(_("Tracker")).append(": ");
+        buf.append(_("Tracker")).append(":</th><td>");
         if (announce.startsWith("http://"))         announce=announce.substring(7);
         int slsh=announce.indexOf('/');
         if (slsh > 0)         announce=announce.substring(0,slsh);
         if (announce.length() > 67)         announce=announce.substring(0,40) + "&hellip;" + announce.substring(announce.length() - 8);
-        buf.append(announce);
+        buf.append(announce).append("</td></tr>");
       }
     }
     String hex=I2PSnarkUtil.toHex(snark.getInfoHash());
     if (meta == null || !meta.isPrivate()) {
-      buf.append("<br>").append(toImg("magnet",_("Magnet link"))).append(" <a href=\"").append(MAGNET_FULL).append(hex).append("\">").append(MAGNET_FULL).append(hex).append("</a>");
+      buf.append("<tr><th>").append(toImg("magnet",_("Magnet link"))).append("</th><td><a href=\"").append(MAGNET_FULL).append(hex).append("\">").append(MAGNET_FULL).append(hex).append("</a>").append("</td></tr>\n");
     }
  else {
-      buf.append("<br>").append(_("Private torrent"));
+      buf.append("<tr><td colspan=\"2\">").append(_("Private torrent")).append("</td></tr>\n");
     }
-    buf.append("<br>").append(_("Torrent file")).append(": ").append(snark.getName());
-    buf.append("</div></th></tr>\n");
+    buf.append("<tr><th>").append(_("Torrent file")).append(":</th><td>").append(snark.getName()).append("</td></tr>\n");
   }
  else {
     buf.append("<tr><th>Not found<br>resource=\"").append(r.toString()).append("\"<br>base=\"").append(base).append("\"<br>torrent=\"").append(torrentName).append("\"</th></tr>\n");
   }
+  buf.append("</table>\n");
   if (ls == null) {
-    buf.append("</thead></table></div></div></BODY></HTML>");
+    buf.append("</div></div></BODY></HTML>");
     return buf.toString();
   }
+  buf.append("<table class=\"snarkDirInfo\"><thead>\n");
   buf.append("<tr>\n").append("<th colspan=2>").append("<img alt=\"\" border=\"0\" src=\"" + _imgPath + "file.png\" >&nbsp;").append(_("Directory")).append(": ").append(directory).append("</th>\n");
   buf.append("<th align=\"right\">").append("<img alt=\"\" border=\"0\" src=\"" + _imgPath + "size.png\" >&nbsp;").append(_("Size")).append("</th>\n");
   buf.append("<th class=\"headerstatus\">").append("<img alt=\"\" border=\"0\" src=\"" + _imgPath + "status.png\" >&nbsp;").append(_("Status")).append("</th>\n");
@@ -180,7 +181,7 @@
     buf.append(_("Save priorities"));
     buf.append("\" name=\"foo\" ></th></tr></thead>\n");
   }
-  buf.append("</TABLE>\n");
+  buf.append("</table>\n");
   if (showPriority)   buf.append("</form>");
   buf.append("</div></div></BODY></HTML>\n");
   return buf.toString();
