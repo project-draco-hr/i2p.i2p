@@ -1,0 +1,34 @@
+{
+  if (_helper == null)   return "";
+  NewsHelper newshelper=_helper.getNewsHelper();
+  if (newshelper == null || newshelper.shouldShowNews())   return "";
+  StringBuilder buf=new StringBuilder(512);
+  String consoleNonce=System.getProperty("router.consoleNonce");
+  if (consoleNonce != null) {
+    buf.append("<h3><a href=\"/configupdate\">").append(_("News & Updates")).append("</a></h3><hr class=\"b\"><div class=\"newsheadings\">\n");
+    String newsContent=newshelper.getContent();
+    if (newsContent != "") {
+      buf.append("<ul>\n");
+      int start=newsContent.indexOf("<h3>");
+      while (start >= 0) {
+        newsContent=newsContent.substring(start + 16,newsContent.length());
+        int end=newsContent.indexOf("</h3>");
+        if (end >= 0) {
+          String heading=newsContent.substring(0,end);
+          buf.append("<li>").append(heading).append("</li>\n");
+        }
+        start=newsContent.indexOf("<h3>");
+      }
+      buf.append("</ul>\n");
+      String requestURI=_helper.getRequestURI();
+      if (requestURI.contains("/home")) {
+        buf.append("<a href=\"/?news=1&amp;consoleNonce=").append(consoleNonce).append("\">").append(_("Show news")).append("</a>\n");
+      }
+    }
+ else {
+      buf.append("<center><i>").append(_("none")).append("</i></center>");
+    }
+    buf.append("</div>\n");
+  }
+  return buf.toString();
+}

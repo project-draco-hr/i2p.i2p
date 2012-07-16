@@ -1,0 +1,33 @@
+{
+  String[] allSections=SummaryBarRenderer.ALL_SECTIONS;
+  List<String> sections=getSummaryBarSections("default");
+  TreeSet<String> sortedSections=new TreeSet();
+  for (int i=0; i < allSections.length; i++) {
+    String section=allSections[i];
+    if (!sections.contains(section))     sortedSections.add(section);
+  }
+  String theme=_context.getProperty(CSSHelper.PROP_THEME_NAME,CSSHelper.DEFAULT_THEME);
+  String imgPath=CSSHelper.BASE_THEME_PATH + theme + "/images/";
+  StringBuilder buf=new StringBuilder(2048);
+  buf.append("<table class=\"sidebarconf\"><tr><th>").append(_("Remove")).append("</th><th>").append(_("Name")).append("</th><th colspan=\"2\">").append(_("Order")).append("</th></tr>\n");
+  for (  String section : sections) {
+    int i=sections.indexOf(section);
+    buf.append("<tr><td align=\"center\"><input type=\"checkbox\" class=\"optbox\" name=\"delete_").append(i).append("\"></td><td align=\"left\">").append(section).append("</td><td align=\"right\"><input type=\"hidden\" name=\"order_").append(i + "_" + section).append("\" value=\"").append(i).append("\">");
+    if (i > 0) {
+      buf.append("<input type=\"image\" class=\"buttonTop\" name=\"move_").append(i).append("_top\" alt=\"").append(_("Top")).append("\" src=\"" + imgPath + "move_top.png\">");
+      buf.append("<input type=\"image\" class=\"buttonUp\" name=\"move_").append(i).append("_up\" alt=\"").append(_("Up")).append("\" src=\"" + imgPath + "move_up.png\">");
+    }
+    buf.append("</td><td align=\"left\">");
+    if (i < sections.size() - 1) {
+      buf.append("<input type=\"image\" class=\"buttonDown\" name=\"move_").append(i).append("_down\" alt=\"").append(_("Down")).append("\" src=\"" + imgPath + "move_down.png\">");
+      buf.append("<input type=\"image\" class=\"buttonBottom\" name=\"move_").append(i).append("_bottom\" alt=\"").append(_("Bottom")).append("\" src=\"" + imgPath + "move_bottom.png\">");
+    }
+    buf.append("</td></tr>\n");
+  }
+  buf.append("<tr><td align=\"center\">" + "<input type=\"submit\" name=\"action\" class=\"delete\" value=\"").append(_("Delete selected")).append("\"></td><td align=\"left\"><b>").append(_("Add")).append(":</b> " + "<select name=\"name\">\n" + "<option value=\"\" selected=\"selected\">").append(_("Select a section to add")).append("</option>\n");
+  for (  String s : sortedSections) {
+    buf.append("<option value=\"").append(s).append("\">").append(s).append("</option>\n");
+  }
+  buf.append("</select>\n" + "<input type=\"hidden\" name=\"order\" value=\"").append(sections.size()).append("\"></td>" + "<td align=\"center\" colspan=\"2\">" + "<input type=\"submit\" name=\"action\" class=\"add\" value=\"").append(_("Add item")).append("\"></td></tr>").append("</table>\n");
+  return buf.toString();
+}
