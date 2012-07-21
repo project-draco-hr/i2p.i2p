@@ -1,0 +1,36 @@
+{
+synchronized (this) {
+    FileOutputStream fos=null;
+    String filename=configFilename;
+    try {
+      File f=new File(configFilename);
+      if (!f.isAbsolute()) {
+        f=new File(this.getConfigDir(),configFilename);
+        filename=f.getAbsolutePath();
+      }
+      fos=new SecureFileOutputStream(filename);
+      StringBuilder buf=new StringBuilder(8 * 1024);
+      buf.append("# NOTE: This I2P config file must use UTF-8 encoding\n");
+      TreeSet ordered=new TreeSet(props.keySet());
+      for (Iterator iter=ordered.iterator(); iter.hasNext(); ) {
+        String key=(String)iter.next();
+        String val=props.getProperty(key);
+        buf.append(key).append('=').append(val).append('\n');
+      }
+      fos.write(buf.toString().getBytes("UTF-8"));
+    }
+ catch (    IOException ioe) {
+      Log log=logManager().getLog(I2PAppContext.class);
+      if (log.shouldLog(Log.ERROR))       log.error("Error saving the config to " + filename,ioe);
+      return false;
+    }
+ finally {
+      if (fos != null)       try {
+        fos.close();
+      }
+ catch (      IOException ioe) {
+      }
+    }
+  }
+  return true;
+}
