@@ -4,7 +4,7 @@
   if (_log.shouldLog(Log.DEBUG))   conStr=(packet.getConnection() != null ? packet.getConnection().toString() : "");
   if (packet.getAckTime() > 0) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Not resending " + packet);
-    return;
+    return false;
   }
  else {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Sending... " + packet);
@@ -21,7 +21,7 @@
  else     size=packet.writePacket(buf,0);
     long writeTime=System.currentTimeMillis() - beforeWrite;
     if ((writeTime > 1000) && (_log.shouldLog(Log.WARN)))     _log.warn("took " + writeTime + "ms to write the packet: "+ packet);
-    if (packet.getAckTime() > 0)     return;
+    if (packet.getAckTime() > 0)     return false;
     begin=_context.clock().now();
     long expires=0;
     Connection.ResendPacketEvent rpe=(Connection.ResendPacketEvent)packet.getResendEvent();
@@ -66,4 +66,5 @@
  else   if (packet.isFlagSet(Packet.FLAG_RESET)) {
     packet.releasePayload();
   }
+  return sent;
 }

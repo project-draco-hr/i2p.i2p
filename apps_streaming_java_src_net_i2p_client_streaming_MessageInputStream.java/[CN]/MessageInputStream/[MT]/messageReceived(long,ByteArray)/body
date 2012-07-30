@@ -1,6 +1,6 @@
 {
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("received " + messageId + " with "+ (payload != null ? payload.getValid() + "" : "no payload"));
 synchronized (_dataLock) {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("received " + messageId + " with "+ (payload != null ? payload.getValid() + "" : "no payload"));
     if (messageId <= _highestReadyBlockId) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("ignoring dup message " + messageId);
       _dataLock.notifyAll();
@@ -23,14 +23,13 @@ synchronized (_dataLock) {
         cur++;
         _highestReadyBlockId++;
       }
-      _dataLock.notifyAll();
     }
  else {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("message is out of order: " + messageId);
       if (_locallyClosed)       _notYetReadyBlocks.put(Long.valueOf(messageId),new ByteArray(null));
  else       _notYetReadyBlocks.put(Long.valueOf(messageId),payload);
-      _dataLock.notifyAll();
     }
+    _dataLock.notifyAll();
   }
   return true;
 }

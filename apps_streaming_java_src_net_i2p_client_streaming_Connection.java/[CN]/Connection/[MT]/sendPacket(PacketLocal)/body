@@ -1,7 +1,6 @@
 {
   if (packet == null)   return;
   setNextSendTime(-1);
-  _unackedPacketsReceived=0;
   if (_options.getRequireFullySigned()) {
     packet.setFlag(Packet.FLAG_SIGNATURE_INCLUDED);
     packet.setFlag(Packet.FLAG_SIGNATURE_REQUESTED);
@@ -20,7 +19,6 @@ synchronized (_outboundPackets) {
     if (packet.isFlagSet(Packet.FLAG_CLOSE) || (remaining < (windowSize + 2) / 3) || (remaining < 3)|| (packet.getSequenceNum() % 8 == 0)) {
       packet.setOptionalDelay(0);
       packet.setFlag(Packet.FLAG_DELAY_REQUESTED);
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Requesting no ack delay for packet " + packet);
     }
  else {
       int delay=_options.getRTT() / 2;
@@ -34,7 +32,9 @@ synchronized (_outboundPackets) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Resend in " + timeout + " for "+ packet);
     new ResendPacketEvent(packet,timeout);
   }
-  _lastSendTime=_context.clock().now();
-  _outboundQueue.enqueue(packet);
-  resetActivityTimer();
+  if (_outboundQueue.enqueue(packet)) {
+    _unackedPacketsReceived=0;
+    _lastSendTime=_context.clock().now();
+    resetActivityTimer();
+  }
 }
