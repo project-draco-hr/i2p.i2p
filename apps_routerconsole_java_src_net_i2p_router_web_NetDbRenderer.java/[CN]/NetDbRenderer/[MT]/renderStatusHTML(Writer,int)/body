@@ -1,5 +1,4 @@
 {
-  out.write("<h2>" + _("Network Database Contents") + " (<a href=\"netdb?l=1\">"+ _("View LeaseSets")+ "</a>)</h2>\n");
   if (!_context.netDb().isInitialized()) {
     out.write(_("Not initialized"));
     out.flush();
@@ -9,15 +8,13 @@
   boolean shortStats=mode == 2;
   boolean showStats=full || shortStats;
   Hash us=_context.routerHash();
-  out.write("<a name=\"routers\" ></a><h3>" + _("Routers") + " (<a href=\"netdb");
-  if (full || !showStats)   out.write("?f=2#routers\" >" + _("Show all routers"));
- else   out.write("?f=1#routers\" >" + _("Show all routers with full stats"));
-  out.write("</a>)</h3>\n");
   StringBuilder buf=new StringBuilder(8192);
-  RouterInfo ourInfo=_context.router().getRouterInfo();
-  renderRouterInfo(buf,ourInfo,true,true);
-  out.write(buf.toString());
-  buf.setLength(0);
+  if (showStats) {
+    RouterInfo ourInfo=_context.router().getRouterInfo();
+    renderRouterInfo(buf,ourInfo,true,true);
+    out.write(buf.toString());
+    buf.setLength(0);
+  }
   ObjectCounter<String> versions=new ObjectCounter();
   ObjectCounter<String> countries=new ObjectCounter();
   int[] transportCount=new int[8];
@@ -40,50 +37,52 @@
       transportCount[classifyTransports(ri)]++;
     }
   }
-  buf.append("<table border=\"0\" cellspacing=\"30\"><tr><th colspan=\"3\">").append(_("Network Database Router Statistics")).append("</th></tr><tr><td style=\"vertical-align: top;\">");
-  List<String> versionList=new ArrayList(versions.objects());
-  if (!versionList.isEmpty()) {
-    Collections.sort(versionList,Collections.reverseOrder(new VersionComparator()));
+  if (!showStats) {
+    buf.append("<table border=\"0\" cellspacing=\"30\"><tr><th colspan=\"3\">").append(_("Network Database Router Statistics")).append("</th></tr><tr><td style=\"vertical-align: top;\">");
+    List<String> versionList=new ArrayList(versions.objects());
+    if (!versionList.isEmpty()) {
+      Collections.sort(versionList,Collections.reverseOrder(new VersionComparator()));
+      buf.append("<table>\n");
+      buf.append("<tr><th>" + _("Version") + "</th><th>"+ _("Count")+ "</th></tr>\n");
+      for (      String routerVersion : versionList) {
+        int num=versions.count(routerVersion);
+        buf.append("<tr><td align=\"center\">").append(DataHelper.stripHTML(routerVersion));
+        buf.append("</td><td align=\"center\">").append(num).append("</td></tr>\n");
+      }
+      buf.append("</table>\n");
+    }
+    buf.append("</td><td style=\"vertical-align: top;\">");
+    out.write(buf.toString());
+    buf.setLength(0);
     buf.append("<table>\n");
-    buf.append("<tr><th>" + _("Version") + "</th><th>"+ _("Count")+ "</th></tr>\n");
-    for (    String routerVersion : versionList) {
-      int num=versions.count(routerVersion);
-      buf.append("<tr><td align=\"center\">").append(DataHelper.stripHTML(routerVersion));
-      buf.append("</td><td align=\"center\">").append(num).append("</td></tr>\n");
+    buf.append("<tr><th align=\"left\">" + _("Transports") + "</th><th>"+ _("Count")+ "</th></tr>\n");
+    for (int i=0; i < 8; i++) {
+      int num=transportCount[i];
+      if (num > 0) {
+        buf.append("<tr><td>").append(_(TNAMES[i]));
+        buf.append("</td><td align=\"center\">").append(num).append("</td></tr>\n");
+      }
     }
     buf.append("</table>\n");
-  }
-  buf.append("</td><td style=\"vertical-align: top;\">");
-  out.write(buf.toString());
-  buf.setLength(0);
-  buf.append("<table>\n");
-  buf.append("<tr><th align=\"left\">" + _("Transports") + "</th><th>"+ _("Count")+ "</th></tr>\n");
-  for (int i=0; i < 8; i++) {
-    int num=transportCount[i];
-    if (num > 0) {
-      buf.append("<tr><td>").append(_(TNAMES[i]));
-      buf.append("</td><td align=\"center\">").append(num).append("</td></tr>\n");
+    buf.append("</td><td style=\"vertical-align: top;\">");
+    out.write(buf.toString());
+    buf.setLength(0);
+    List<String> countryList=new ArrayList(countries.objects());
+    if (!countryList.isEmpty()) {
+      Collections.sort(countryList,new CountryComparator());
+      buf.append("<table>\n");
+      buf.append("<tr><th align=\"left\">" + _("Country") + "</th><th>"+ _("Count")+ "</th></tr>\n");
+      for (      String country : countryList) {
+        int num=countries.count(country);
+        buf.append("<tr><td><img height=\"11\" width=\"16\" alt=\"").append(country.toUpperCase(Locale.US)).append("\"");
+        buf.append(" src=\"/flags.jsp?c=").append(country).append("\"> ");
+        buf.append(_(_context.commSystem().getCountryName(country)));
+        buf.append("</td><td align=\"center\">").append(num).append("</td></tr>\n");
+      }
+      buf.append("</table>\n");
     }
+    buf.append("</td></tr></table>");
   }
-  buf.append("</table>\n");
-  buf.append("</td><td style=\"vertical-align: top;\">");
-  out.write(buf.toString());
-  buf.setLength(0);
-  List<String> countryList=new ArrayList(countries.objects());
-  if (!countryList.isEmpty()) {
-    Collections.sort(countryList,new CountryComparator());
-    buf.append("<table>\n");
-    buf.append("<tr><th align=\"left\">" + _("Country") + "</th><th>"+ _("Count")+ "</th></tr>\n");
-    for (    String country : countryList) {
-      int num=countries.count(country);
-      buf.append("<tr><td><img height=\"11\" width=\"16\" alt=\"").append(country.toUpperCase(Locale.US)).append("\"");
-      buf.append(" src=\"/flags.jsp?c=").append(country).append("\"> ");
-      buf.append(_(_context.commSystem().getCountryName(country)));
-      buf.append("</td><td align=\"center\">").append(num).append("</td></tr>\n");
-    }
-    buf.append("</table>\n");
-  }
-  buf.append("</td></tr></table>");
   out.write(buf.toString());
   out.flush();
 }

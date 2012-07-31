@@ -1,0 +1,43 @@
+{
+  if (_log.shouldLog(Log.INFO))   _log.info("Partials received from " + peer + ": "+ partials);
+  if (halted || completed()) {
+    for (    Request req : partials) {
+      PartialPiece pp=req.getPartialPiece();
+      pp.release();
+    }
+    return;
+  }
+synchronized (wantedPieces) {
+    for (    Request req : partials) {
+      PartialPiece pp=req.getPartialPiece();
+      if (req.off > 0) {
+        int idx=partialPieces.indexOf(pp);
+        if (idx < 0) {
+          partialPieces.add(pp);
+          if (_log.shouldLog(Log.INFO))           _log.info("Saving orphaned partial piece (new) " + pp);
+        }
+ else         if (idx >= 0 && pp.getDownloaded() > partialPieces.get(idx).getDownloaded()) {
+          partialPieces.get(idx).release();
+          partialPieces.set(idx,pp);
+          if (_log.shouldLog(Log.INFO))           _log.info("Saving orphaned partial piece (bigger) " + pp);
+        }
+ else {
+          pp.release();
+          if (_log.shouldLog(Log.INFO))           _log.info("Discarding partial piece (not bigger)" + pp);
+        }
+        int max=getMaxConnections();
+        if (partialPieces.size() > max) {
+          Collections.sort(partialPieces);
+          PartialPiece gone=partialPieces.remove(max);
+          gone.release();
+          if (_log.shouldLog(Log.INFO))           _log.info("Discarding orphaned partial piece (list full)" + gone);
+        }
+      }
+ else {
+        pp.release();
+      }
+      markUnrequested(peer,pp.getPiece());
+    }
+    if (_log.shouldLog(Log.INFO))     _log.info("Partial list size now: " + partialPieces.size());
+  }
+}

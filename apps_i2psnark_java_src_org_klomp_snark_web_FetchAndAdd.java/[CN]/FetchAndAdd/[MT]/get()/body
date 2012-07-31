@@ -1,0 +1,31 @@
+{
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Fetching [" + _url + "]");
+  File out=null;
+  try {
+    out=SecureFile.createTempFile("torrentFile",null,_mgr.util().getTempDir());
+  }
+ catch (  IOException ioe) {
+    _log.error("temp file error",ioe);
+    _mgr.addMessage("Temp file error: " + ioe);
+    if (out != null)     out.delete();
+    return null;
+  }
+  out.deleteOnExit();
+  if (!_mgr.util().connected()) {
+    _mgr.addMessage(_("Opening the I2P tunnel"));
+    if (!_mgr.util().connect())     return null;
+  }
+  I2PSocketManager manager=_mgr.util().getSocketManager();
+  if (manager == null)   return null;
+  _eepGet=new I2PSocketEepGet(_ctx,manager,RETRIES,out.getAbsolutePath(),_url);
+  _eepGet.addStatusListener(this);
+  if (_eepGet.fetch()) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Fetch successful [" + _url + "]: size="+ out.length());
+    return out;
+  }
+ else {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Fetch failed [" + _url + ']');
+    out.delete();
+    return null;
+  }
+}

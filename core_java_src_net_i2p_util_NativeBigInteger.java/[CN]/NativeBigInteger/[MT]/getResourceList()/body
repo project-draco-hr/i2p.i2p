@@ -8,32 +8,23 @@
       rv.add(_libPrefix + getMiddleName1() + JBIGI_OPTIMIZATION_ATHLON64+ "_64"+ _libSuffix);
     }
     if (_isArm) {
-      InputStream in=null;
-      try {
-        in=new FileInputStream("/proc/cpuinfo");
-        while (true) {
-          String line=DataHelper.readLine(in);
-          if (line == null)           break;
-          if (!line.startsWith("CPU architecture"))           continue;
-          int colon=line.indexOf(": ");
-          String sver=line.substring(colon + 2,colon + 3);
-          int ver=Integer.parseInt(sver);
-          for (int i=ver; i >= 3; i--) {
-            rv.add(_libPrefix + getMiddleName1() + primary+ 'v'+ i+ _libSuffix);
-          }
-          break;
+      Map<String,String> cpuinfo=getCPUInfo();
+      int ver=0;
+      String proc=cpuinfo.get("processor");
+      String arch=cpuinfo.get("cpu architecture");
+      if (proc != null && proc.contains("ARMv6")) {
+        ver=6;
+      }
+ else       if (arch != null && arch.length() > 0) {
+        String sver=arch.substring(0,1);
+        try {
+          ver=Integer.parseInt(sver);
+        }
+ catch (        NumberFormatException nfe) {
         }
       }
- catch (      NumberFormatException nfe) {
-      }
-catch (      IOException ioe) {
-      }
- finally {
-        if (in != null)         try {
-          in.close();
-        }
- catch (        IOException ioe) {
-        }
+      for (int i=ver; i >= 3; i--) {
+        rv.add(_libPrefix + getMiddleName1() + primary+ 'v'+ i+ _libSuffix);
       }
     }
     rv.add(_libPrefix + getMiddleName1() + primary+ _libSuffix);

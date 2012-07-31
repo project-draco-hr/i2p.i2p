@@ -1,28 +1,5 @@
 {
   PacketLocal packet=null;
-synchronized (_outboundPackets) {
-    if (!_outboundPackets.isEmpty()) {
-      Iterator<PacketLocal> iter=_outboundPackets.values().iterator();
-      packet=iter.next();
-    }
-  }
-  if (packet != null) {
-    if (packet.isFlagSet(Packet.FLAG_RESET)) {
-      sendReset();
-      return;
-    }
-    ResendPacketEvent evt=(ResendPacketEvent)packet.getResendEvent();
-    if (evt != null) {
-      boolean sent=evt.retransmit(false);
-      if (sent) {
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("Retransmitting " + packet + " as an ack");
-        return;
-      }
- else {
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("Not retransmitting " + packet + " as an ack");
-      }
-    }
-  }
   packet=_receiver.send(null,0,0);
   if (_log.shouldLog(Log.DEBUG))   _log.debug("sending new ack: " + packet);
 }

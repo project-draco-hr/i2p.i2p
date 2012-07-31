@@ -5,25 +5,37 @@
     dieFatal();
     return;
   }
-  int existingTags=GarlicMessageBuilder.estimateAvailableTags(getContext(),_leaseSet.getEncryptionKey(),_from.calculateHash());
   _outTunnel=selectOutboundTunnel(_to);
-  boolean wantACK;
-  Long lastSent=_cache.lastReplyRequestCache.get(_hashPair);
-  wantACK=_wantACK || existingTags <= 30 || lastSent == null || lastSent.longValue() < now - REPLY_REQUEST_INTERVAL;
-  if (wantACK)   _cache.lastReplyRequestCache.put(_hashPair,Long.valueOf(now));
+  Long lastReplyRequestSent=_cache.lastReplyRequestCache.get(_hashPair);
+  boolean shouldRequestReply=lastReplyRequestSent == null || lastReplyRequestSent.longValue() < now - REPLY_REQUEST_INTERVAL;
+  boolean wantACK=_wantACK || shouldRequestReply || GarlicMessageBuilder.needsTags(getContext(),_leaseSet.getEncryptionKey(),_from.calculateHash());
   PublicKey key=_leaseSet.getEncryptionKey();
   SessionKey sessKey=new SessionKey();
   Set<SessionTag> tags=new HashSet();
-  LeaseSet replyLeaseSet=getReplyLeaseSet(wantACK);
-  if (replyLeaseSet != null)   wantACK=true;
-  long token=(wantACK ? getContext().random().nextLong(I2NPMessage.MAX_ID_VALUE) : -1);
-  if (wantACK)   _inTunnel=selectInboundTunnel();
-  boolean ok=(_clientMessage != null) && buildClove();
+  LeaseSet replyLeaseSet;
+  String allow=_clientMessage.getSenderConfig().getOptions().getProperty(BUNDLE_REPLY_LEASESET);
+  boolean allowLeaseBundle=allow == null || Boolean.valueOf(allow).booleanValue();
+  if (allowLeaseBundle) {
+    replyLeaseSet=getReplyLeaseSet(false);
+    if (replyLeaseSet != null)     wantACK=true;
+  }
+ else {
+    replyLeaseSet=null;
+  }
+  long token;
+  if (wantACK) {
+    _cache.lastReplyRequestCache.put(_hashPair,Long.valueOf(now));
+    token=getContext().random().nextLong(I2NPMessage.MAX_ID_VALUE);
+    _inTunnel=selectInboundTunnel();
+  }
+ else {
+    token=-1;
+  }
+  boolean ok=buildClove();
   if (!ok) {
     dieFatal();
     return;
   }
-  if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": Clove built to " + _toString);
   long msgExpiration=_overallExpiration;
   GarlicMessage msg=OutboundClientMessageJobHelper.createGarlicMessage(getContext(),token,msgExpiration,key,_clove,_from.calculateHash(),_to,_inTunnel,sessKey,tags,wantACK,replyLeaseSet);
   if (msg == null) {
@@ -32,25 +44,22 @@
     dieFatal();
     return;
   }
-  if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": send() - token expected " + token+ " to "+ _toString);
   SendSuccessJob onReply=null;
   SendTimeoutJob onFail=null;
   ReplySelector selector=null;
   if (wantACK) {
     TagSetHandle tsh=null;
-    if ((sessKey != null) && (tags != null) && (!tags.isEmpty())) {
-      if (_leaseSet != null) {
-        SessionKeyManager skm=getContext().clientManager().getClientSessionKeyManager(_from.calculateHash());
-        if (skm != null)         tsh=skm.tagsDelivered(_leaseSet.getEncryptionKey(),sessKey,tags);
-      }
+    if (!tags.isEmpty()) {
+      SessionKeyManager skm=getContext().clientManager().getClientSessionKeyManager(_from.calculateHash());
+      if (skm != null)       tsh=skm.tagsDelivered(_leaseSet.getEncryptionKey(),sessKey,tags);
     }
     onReply=new SendSuccessJob(getContext(),sessKey,tsh);
     onFail=new SendTimeoutJob(getContext(),sessKey,tsh);
     selector=new ReplySelector(token);
   }
-  if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": Placing GarlicMessage into the new tunnel message bound for " + _toString+ " at "+ _lease.getTunnelId()+ " on "+ _lease.getGateway());
+  if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": GarlicMessage in new tunnel msg for " + _toString+ " at "+ _lease.getTunnelId()+ " on "+ _lease.getGateway());
   if (_outTunnel != null) {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug(getJobId() + ": Sending tunnel message out " + _outTunnel.getSendTunnelId(0)+ " to "+ _toString+ " at "+ _lease.getTunnelId()+ " on "+ _lease.getGateway());
+    if (_log.shouldLog(Log.DEBUG))     _log.debug(getJobId() + ": Sending msg out " + _outTunnel.getSendTunnelId(0)+ " to "+ _toString+ " at "+ _lease.getTunnelId()+ " on "+ _lease.getGateway());
     DispatchJob dispatchJob=new DispatchJob(getContext(),msg,selector,onReply,onFail,(int)(_overallExpiration - getContext().clock().now()));
     dispatchJob.runJob();
   }

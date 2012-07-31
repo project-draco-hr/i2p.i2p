@@ -2,7 +2,15 @@
   byte peerInfoHash[]=null;
   if (in instanceof BufferedInputStream) {
     in.mark(LOOKAHEAD_SIZE);
-    peerInfoHash=readHash(in);
+    long timeout=socket.getReadTimeout();
+    socket.setReadTimeout(HASH_READ_TIMEOUT);
+    try {
+      peerInfoHash=readHash(in);
+    }
+ catch (    IOException ioe) {
+      throw new ProtocolException(ioe.toString());
+    }
+    socket.setReadTimeout(timeout);
     in.reset();
   }
  else {

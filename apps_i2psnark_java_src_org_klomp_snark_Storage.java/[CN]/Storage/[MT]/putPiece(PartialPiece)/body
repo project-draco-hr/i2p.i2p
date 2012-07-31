@@ -1,0 +1,63 @@
+{
+  int piece=pp.getPiece();
+  try {
+synchronized (bitfield) {
+      if (bitfield.get(piece))       return true;
+    }
+    boolean correctHash=metainfo.checkPiece(pp);
+    if (listener != null)     listener.storageChecked(this,piece,correctHash);
+    if (!correctHash) {
+      return false;
+    }
+    long start=(long)piece * (long)piece_size;
+    int i=0;
+    long raflen=lengths[i];
+    while (start > raflen) {
+      i++;
+      start-=raflen;
+      raflen=lengths[i];
+    }
+    int written=0;
+    int off=0;
+    int length=metainfo.getPieceLength(piece);
+    while (written < length) {
+      int need=length - written;
+      int len=(start + need < raflen) ? need : (int)(raflen - start);
+synchronized (RAFlock[i]) {
+        checkRAF(i);
+        if (isSparse[i]) {
+          if (priorities == null || priorities[i] >= 0)           balloonFile(i);
+ else           isSparse[i]=false;
+        }
+        rafs[i].seek(start);
+        pp.write(rafs[i],off + written,len);
+      }
+      written+=len;
+      if (need - len > 0) {
+        i++;
+        raflen=lengths[i];
+        start=0;
+      }
+    }
+  }
+  finally {
+    pp.release();
+  }
+  changed=true;
+  boolean complete=false;
+synchronized (bitfield) {
+    if (!bitfield.get(piece)) {
+      bitfield.set(piece);
+      needed--;
+      complete=needed == 0;
+    }
+  }
+  if (complete) {
+    checkCreateFiles(true);
+    if (needed > 0) {
+      if (listener != null)       listener.setWantedPieces(this);
+      _util.debug("WARNING: Not really done, missing " + needed + " pieces",Snark.WARNING);
+    }
+  }
+  return true;
+}

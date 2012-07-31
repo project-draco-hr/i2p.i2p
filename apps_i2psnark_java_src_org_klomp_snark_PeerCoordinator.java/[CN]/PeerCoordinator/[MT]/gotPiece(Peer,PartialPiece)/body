@@ -1,0 +1,57 @@
+{
+  if (metainfo == null || storage == null)   return true;
+  int piece=pp.getPiece();
+  if (halted) {
+    _log.info("Got while-halted piece " + piece + "/"+ metainfo.getPieces()+ " from "+ peer+ " for "+ metainfo.getName());
+    return true;
+  }
+synchronized (wantedPieces) {
+    Piece p=new Piece(piece);
+    if (!wantedPieces.contains(p)) {
+      _log.info("Got unwanted piece " + piece + "/"+ metainfo.getPieces()+ " from "+ peer+ " for "+ metainfo.getName());
+      if (storage.getBitField().get(piece))       return true;
+    }
+    try {
+      if (storage.putPiece(pp)) {
+        if (_log.shouldLog(Log.INFO))         _log.info("Got valid piece " + piece + "/"+ metainfo.getPieces()+ " from "+ peer+ " for "+ metainfo.getName());
+      }
+ else {
+        downloaded-=metainfo.getPieceLength(piece);
+        _log.warn("Got BAD piece " + piece + "/"+ metainfo.getPieces()+ " from "+ peer+ " for "+ metainfo.getName());
+        return false;
+      }
+    }
+ catch (    IOException ioe) {
+      snark.stopTorrent();
+      String msg="Error writing storage (piece " + piece + ") for "+ metainfo.getName()+ ": "+ ioe;
+      _log.error(msg,ioe);
+      SnarkManager.instance().addMessage(msg);
+      SnarkManager.instance().addMessage("Fatal storage error: Stopping torrent " + metainfo.getName());
+      throw new RuntimeException(msg,ioe);
+    }
+    wantedPieces.remove(p);
+    wantedBytes-=metainfo.getPieceLength(p.getId());
+  }
+  removePartialPiece(piece);
+  boolean done=wantedBytes <= 0;
+  List<Peer> toDisconnect=done ? new ArrayList() : null;
+  for (  Peer p : peers) {
+    if (p.isConnected()) {
+      if (done && p.isCompleted())       toDisconnect.add(p);
+ else       p.have(piece);
+    }
+  }
+  if (done) {
+    for (    Peer p : toDisconnect) {
+      p.disconnect(true);
+    }
+    if (!completed())     snark.storageCompleted(storage);
+synchronized (partialPieces) {
+      for (      PartialPiece ppp : partialPieces) {
+        ppp.release();
+      }
+      partialPieces.clear();
+    }
+  }
+  return true;
+}

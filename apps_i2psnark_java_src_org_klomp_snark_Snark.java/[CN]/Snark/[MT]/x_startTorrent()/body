@@ -1,0 +1,55 @@
+{
+  boolean ok=_util.connect();
+  if (!ok)   fatal("Unable to connect to I2P");
+  if (coordinator == null) {
+    I2PServerSocket serversocket=_util.getServerSocket();
+    if (serversocket == null)     fatal("Unable to listen for I2P connections");
+ else {
+      Destination d=serversocket.getManager().getSession().getMyDestination();
+      debug("Listening on I2P destination " + d.toBase64() + " / "+ d.calculateHash().toBase64(),NOTICE);
+    }
+    debug("Starting PeerCoordinator, ConnectionAcceptor, and TrackerClient",NOTICE);
+    activity="Collecting pieces";
+    coordinator=new PeerCoordinator(_util,id,infoHash,meta,storage,this,this);
+    if (_peerCoordinatorSet != null) {
+      _peerCoordinatorSet.add(coordinator);
+      if (acceptor != null) {
+        acceptor.startAccepting(_peerCoordinatorSet,serversocket);
+      }
+ else {
+      }
+    }
+ else {
+      acceptor=new ConnectionAcceptor(_util,serversocket,new PeerAcceptor(coordinator));
+    }
+    trackerclient=new TrackerClient(_util,meta,additionalTrackerURL,coordinator,this);
+  }
+  stopped=false;
+  if (coordinator.halted()) {
+    coordinator.restart();
+    if (_peerCoordinatorSet != null)     _peerCoordinatorSet.add(coordinator);
+  }
+  if (!trackerclient.started()) {
+    trackerclient.start();
+  }
+ else   if (trackerclient.halted()) {
+    if (storage != null) {
+      try {
+        storage.reopen(rootDataDir);
+      }
+ catch (      IOException ioe) {
+        try {
+          storage.close();
+        }
+ catch (        IOException ioee) {
+          ioee.printStackTrace();
+        }
+        fatal("Could not reopen storage",ioe);
+      }
+    }
+    trackerclient.start();
+  }
+ else {
+    debug("NOT starting TrackerClient???",NOTICE);
+  }
+}

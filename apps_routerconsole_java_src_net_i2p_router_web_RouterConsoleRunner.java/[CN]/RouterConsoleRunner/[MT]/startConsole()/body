@@ -56,6 +56,7 @@
   if (!_webAppsDir.endsWith("/"))   _webAppsDir+='/';
   WebAppContext rootWebApp=null;
   ServletHandler rootServletHandler=null;
+  List<Connector> connectors=new ArrayList(4);
   try {
     int boundAddresses=0;
     Set addresses=Addresses.getAllAddresses();
@@ -91,12 +92,12 @@
  catch (            IOException ioe) {
             }
           }
-          AbstractConnector lsnr=new SelectChannelConnector();
+          SelectChannelConnector lsnr=new SelectChannelConnector();
           lsnr.setHost(host);
           lsnr.setPort(lport);
           lsnr.setMaxIdleTime(90 * 1000);
           lsnr.setName("ConsoleSocket");
-          _server.addConnector(lsnr);
+          connectors.add(lsnr);
           boundAddresses++;
         }
  catch (        Exception ioe) {
@@ -147,7 +148,7 @@
             ssll.setKeyPassword(ctx.getProperty(PROP_KEY_PASSWORD,"thisWontWork"));
             ssll.setMaxIdleTime(90 * 1000);
             ssll.setName("ConsoleSocket");
-            _server.addConnector(ssll);
+            connectors.add(ssll);
             boundAddresses++;
           }
  catch (          Exception e) {
@@ -183,8 +184,31 @@
     _server.start();
   }
  catch (  Throwable me) {
-    System.err.println("WARNING: Error starting one or more listeners of the Router Console server.\n" + "If your console is still accessible at http://127.0.0.1:7657/,\n" + "this may be a problem only with binding to the IPV6 address ::1.\n"+ "If so, you may ignore this error, or remove the\n"+ "\"::1,\" in the \"clientApp.0.args\" line of the clients.config file.\n"+ "Exception: "+ me);
+    System.err.println("Error starting the Router Console server: " + me);
     me.printStackTrace();
+  }
+  if (_server.isRunning()) {
+    boolean error=false;
+    for (    Connector conn : connectors) {
+      try {
+        _server.addConnector(conn);
+        conn.start();
+      }
+ catch (      Throwable me) {
+        try {
+          _server.removeConnector(conn);
+        }
+ catch (        Throwable t) {
+          t.printStackTrace();
+        }
+        System.err.println("WARNING: Error starting " + conn + ": "+ me);
+        me.printStackTrace();
+        error=true;
+      }
+    }
+    if (error) {
+      System.err.println("WARNING: Error starting one or more listeners of the Router Console server.\n" + "If your console is still accessible at http://127.0.0.1:7657/,\n" + "this may be a problem only with binding to the IPV6 address ::1.\n"+ "If so, you may ignore this error, or remove the\n"+ "\"::1,\" in the \"clientApp.0.args\" line of the clients.config file.");
+    }
   }
   List<String> notStarted=new ArrayList();
   if (_server.isRunning()) {

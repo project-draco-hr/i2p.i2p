@@ -9,12 +9,13 @@
   buf.append("&compact=1");
   if (!event.equals(NO_EVENT))   buf.append("&event=").append(event);
   buf.append("&numwant=");
-  if (left == 0 || event.equals(STOPPED_EVENT) || !coordinator.needPeers())   buf.append('0');
+  if (left == 0 || event.equals(STOPPED_EVENT) || !coordinator.needOutboundPeers())   buf.append('0');
  else   buf.append(_util.getMaxConnections());
   String s=buf.toString();
   _util.debug("Sending TrackerClient request: " + s,Snark.INFO);
   tr.lastRequestTime=System.currentTimeMillis();
-  File fetched=_util.get(s);
+  boolean fast=_fastUnannounce && event.equals(STOPPED_EVENT);
+  File fetched=_util.get(s,true,fast ? -1 : 0);
   if (fetched == null) {
     throw new IOException("Error fetching " + s);
   }

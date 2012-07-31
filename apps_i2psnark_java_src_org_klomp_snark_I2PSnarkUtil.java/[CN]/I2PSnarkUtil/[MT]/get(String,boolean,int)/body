@@ -5,18 +5,27 @@
     out=SecureFile.createTempFile("i2psnark",null,_tmpDir);
   }
  catch (  IOException ioe) {
-    ioe.printStackTrace();
+    _log.error("temp file error",ioe);
     if (out != null)     out.delete();
     return null;
   }
   out.deleteOnExit();
   String fetchURL=url;
   if (rewrite)   fetchURL=rewriteAnnounce(url);
-  if (!connected()) {
-    if (!connect())     return null;
+  int timeout;
+  if (retries < 0) {
+    if (!connected())     return null;
+    timeout=EEPGET_CONNECT_TIMEOUT_SHORT;
+    retries=0;
+  }
+ else {
+    timeout=EEPGET_CONNECT_TIMEOUT;
+    if (!connected()) {
+      if (!connect())       return null;
+    }
   }
   EepGet get=new I2PSocketEepGet(_context,_manager,retries,out.getAbsolutePath(),fetchURL);
-  if (get.fetch()) {
+  if (get.fetch(timeout)) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Fetch successful [" + url + "]: size="+ out.length());
     return out;
   }

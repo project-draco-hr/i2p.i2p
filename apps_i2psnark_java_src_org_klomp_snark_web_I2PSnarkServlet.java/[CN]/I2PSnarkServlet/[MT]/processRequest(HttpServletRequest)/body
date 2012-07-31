@@ -18,10 +18,8 @@
     String newURL=req.getParameter("newURL");
     if (newURL != null) {
       if (newURL.startsWith("http://")) {
-        if (!_manager.util().connected())         _manager.addMessage(_("Opening the I2P tunnel"));
-        _manager.addMessage(_("Fetching {0}",urlify(newURL)));
-        I2PAppThread fetch=new I2PAppThread(new FetchAndAdd(_manager,newURL),"Fetch and add",true);
-        fetch.start();
+        FetchAndAdd fetch=new FetchAndAdd(_context,_manager,newURL);
+        _manager.addDownloader(fetch);
       }
  else       if (newURL.startsWith(MAGNET) || newURL.startsWith(MAGGOT)) {
         addMagnet(newURL);
@@ -57,14 +55,7 @@
     if (torrent != null) {
       byte infoHash[]=Base64.decode(torrent);
       if ((infoHash != null) && (infoHash.length == 20)) {
-        for (        String name : _manager.listTorrentFiles()) {
-          Snark snark=_manager.getTorrent(name);
-          if ((snark != null) && (DataHelper.eq(infoHash,snark.getInfoHash()))) {
-            snark.startTorrent();
-            _manager.addMessage(_("Starting up torrent {0}",snark.getBaseName()));
-            break;
-          }
-        }
+        _manager.startTorrent(infoHash);
       }
     }
   }
@@ -122,8 +113,11 @@
             }
             for (int i=0; i < files.size(); i++) {
               File df=Storage.getFileFromNames(f,files.get(i));
-              if (df.delete())               _manager.addMessage(_("Data file deleted: {0}",df.getAbsolutePath()));
- else               _manager.addMessage(_("Data file could not be deleted: {0}",df.getAbsolutePath()));
+              if (df.delete()) {
+              }
+ else {
+                _manager.addMessage(_("Data file could not be deleted: {0}",df.getAbsolutePath()));
+              }
             }
             Set<File> dirs=new TreeSet(Collections.reverseOrder());
             for (            List<String> list : files) {
@@ -133,17 +127,18 @@
             }
             for (            File df : dirs) {
               if (df.delete()) {
-                _manager.addMessage(_("Data dir deleted: {0}",df.getAbsolutePath()));
               }
- else               if (_log.shouldLog(Log.WARN)) {
-                _log.warn("Could not delete dir " + df);
+ else {
+                _manager.addMessage(_("Directory could not be deleted: {0}",df.getAbsolutePath()));
+                if (_log.shouldLog(Log.WARN))                 _log.warn("Could not delete dir " + df);
               }
             }
             if (f.delete()) {
-              _manager.addMessage(_("Data dir deleted: {0}",f.getAbsolutePath()));
+              _manager.addMessage(_("Directory deleted: {0}",f.getAbsolutePath()));
             }
- else             if (_log.shouldLog(Log.WARN)) {
-              _log.warn("Could not delete dir " + f);
+ else {
+              _manager.addMessage(_("Directory could not be deleted: {0}",f.getAbsolutePath()));
+              if (_log.shouldLog(Log.WARN))               _log.warn("Could not delete dir " + f);
             }
             break;
           }
@@ -166,9 +161,8 @@
     String refreshDel=req.getParameter("refreshDelay");
     String startupDel=req.getParameter("startupDelay");
     boolean useOpenTrackers=req.getParameter("useOpenTrackers") != null;
-    String openTrackers=req.getParameter("openTrackers");
     String theme=req.getParameter("theme");
-    _manager.updateConfig(dataDir,filesPublic,autoStart,refreshDel,startupDel,seedPct,eepHost,eepPort,i2cpHost,i2cpPort,i2cpOpts,upLimit,upBW,useOpenTrackers,openTrackers,theme);
+    _manager.updateConfig(dataDir,filesPublic,autoStart,refreshDel,startupDel,seedPct,eepHost,eepPort,i2cpHost,i2cpPort,i2cpOpts,upLimit,upBW,useOpenTrackers,theme);
   }
  else   if ("Save2".equals(action)) {
     String taction=req.getParameter("taction");
@@ -184,13 +178,14 @@
         _lastAnnounceURL=announceURL;
         if (announceURL.equals("none"))         announceURL=null;
         try {
-          Storage s=new Storage(_manager.util(),baseFile,announceURL,req.getParameter("private") != null,null);
+          boolean isPrivate=_manager.getPrivateTrackers().contains(announceURL);
+          Storage s=new Storage(_manager.util(),baseFile,announceURL,isPrivate,null);
           s.close();
           MetaInfo info=s.getMetaInfo();
           File torrentFile=new File(_manager.getDataDir(),s.getBaseName() + ".torrent");
           _manager.addTorrent(info,s.getBitField(),torrentFile.getAbsolutePath(),true);
           _manager.addMessage(_("Torrent created for \"{0}\"",baseFile.getName()) + ": " + torrentFile.getAbsolutePath());
-          if (announceURL != null)           _manager.addMessage(_("Many I2P trackers require you to register new torrents before seeding - please do so before starting \"{0}\"",baseFile.getName()));
+          if (announceURL != null && !_manager.util().getOpenTrackers().contains(announceURL))           _manager.addMessage(_("Many I2P trackers require you to register new torrents before seeding - please do so before starting \"{0}\"",baseFile.getName()));
         }
  catch (        IOException ioe) {
           _manager.addMessage(_("Error creating a torrent for \"{0}\"",baseFile.getAbsolutePath()) + ": " + ioe.getMessage());
@@ -205,29 +200,10 @@
     }
   }
  else   if ("StopAll".equals(action)) {
-    _manager.addMessage(_("Stopping all torrents and closing the I2P tunnel."));
-    List snarks=getSortedSnarks(req);
-    for (int i=0; i < snarks.size(); i++) {
-      Snark snark=(Snark)snarks.get(i);
-      if (!snark.isStopped())       _manager.stopTorrent(snark,false);
-    }
-    if (_manager.util().connected()) {
-      try {
-        Thread.sleep(2000);
-      }
- catch (      InterruptedException ie) {
-      }
-      _manager.util().disconnect();
-      _manager.addMessage(_("I2P tunnel closed."));
-    }
+    _manager.stopAllTorrents(false);
   }
  else   if ("StartAll".equals(action)) {
-    _manager.addMessage(_("Opening the I2P tunnel and starting all torrents."));
-    List snarks=getSortedSnarks(req);
-    for (int i=0; i < snarks.size(); i++) {
-      Snark snark=(Snark)snarks.get(i);
-      if (snark.isStopped())       snark.startTorrent();
-    }
+    _manager.startAllTorrents();
   }
  else   if ("Clear".equals(action)) {
     _manager.clearMessages();

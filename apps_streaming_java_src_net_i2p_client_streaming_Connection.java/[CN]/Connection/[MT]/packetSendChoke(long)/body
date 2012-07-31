@@ -9,13 +9,15 @@ synchronized (_outboundPackets) {
       if (start + 5 * 60 * 1000 < _context.clock().now())       return false;
       if (!_connected)       return false;
       started=true;
-      if ((_outboundPackets.size() >= _options.getWindowSize()) || (_activeResends > 0) || (_lastSendId.get() - _highestAckedThrough > _options.getWindowSize())) {
+      int unacked=_outboundPackets.size();
+      int wsz=_options.getWindowSize();
+      if (unacked >= wsz || _activeResends >= (wsz + 1) / 2 || _lastSendId.get() - _highestAckedThrough >= Math.max(MAX_WINDOW_SIZE,2 * wsz)) {
         if (timeoutMs > 0) {
           if (timeLeft <= 0) {
-            if (_log.shouldLog(Log.INFO))             _log.info("Outbound window is full of " + _outboundPackets.size() + " with "+ _activeResends+ " active resends"+ " and we've waited too long ("+ (0 - (timeLeft - timeoutMs))+ "ms): "+ toString());
+            if (_log.shouldLog(Log.INFO))             _log.info("Outbound window is full " + unacked + " unacked with "+ _activeResends+ " active resends"+ " and we've waited too long ("+ (0 - (timeLeft - timeoutMs))+ "ms): "+ toString());
             return false;
           }
-          if (_log.shouldLog(Log.DEBUG))           _log.debug("Outbound window is full (" + _outboundPackets.size() + "/"+ _options.getWindowSize()+ "/"+ _activeResends+ "), waiting "+ timeLeft);
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("Outbound window is full (" + unacked + "/"+ wsz+ "/"+ _activeResends+ "), waiting "+ timeLeft);
           try {
             _outboundPackets.wait(Math.min(timeLeft,250l));
           }
