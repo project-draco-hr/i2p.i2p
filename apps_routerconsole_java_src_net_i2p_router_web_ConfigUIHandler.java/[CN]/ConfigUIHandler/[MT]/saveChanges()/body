@@ -1,16 +1,13 @@
 {
   if (_config == null)   return;
-  Properties props=_context.readConfigFile(CSSHelper.THEME_CONFIG_FILE);
-  String oldTheme=props.getProperty(CSSHelper.PROP_THEME_NAME,CSSHelper.DEFAULT_THEME);
-  if (_config.equals("default"))   props.put(CSSHelper.PROP_THEME_NAME,null);
- else   props.put(CSSHelper.PROP_THEME_NAME,_config);
-  if (_universalTheming) {
-    for (Iterator it=props.keySet().iterator(); it.hasNext(); ) {
-      String key=(String)it.next();
-      props.put(key,_config);
-    }
+  String oldTheme=_context.getProperty(CSSHelper.PROP_THEME_NAME,CSSHelper.DEFAULT_THEME);
+  boolean ok;
+  if (_config.equals("default"))   ok=_context.router().saveConfig(CSSHelper.PROP_THEME_NAME,null);
+ else   ok=_context.router().saveConfig(CSSHelper.PROP_THEME_NAME,_config);
+  if (ok) {
+    if (_universalTheming)     ok=_context.router().saveConfig(CSSHelper.PROP_UNIVERSAL_THEMING,"true");
+ else     ok=_context.router().saveConfig(CSSHelper.PROP_UNIVERSAL_THEMING,null);
   }
-  boolean ok=_context.writeConfigFile(CSSHelper.THEME_CONFIG_FILE,props);
   if (ok) {
     if (!oldTheme.equals(_config))     addFormNotice(_("Theme change saved.") + " <a href=\"configui\">" + _("Refresh the page to view.")+ "</a>");
   }
