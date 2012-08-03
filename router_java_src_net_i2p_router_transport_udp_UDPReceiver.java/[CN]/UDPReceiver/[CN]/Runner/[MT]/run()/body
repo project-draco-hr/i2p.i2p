@@ -1,20 +1,13 @@
 {
-  _socketChanged=false;
   FIFOBandwidthLimiter.Request req=_context.bandwidthLimiter().createRequest();
   while (_keepRunning) {
-    if (_socketChanged) {
-      Thread.currentThread().setName(_name + "." + _id);
-      _socketChanged=false;
-    }
     UDPPacket packet=UDPPacket.acquire(_context,true);
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Before throttling receive");
     while (!_context.throttle().acceptNetworkMessage())     try {
       Thread.sleep(10);
     }
  catch (    InterruptedException ie) {
     }
     try {
-      if (_log.shouldLog(Log.INFO))       _log.info("Before blocking socket.receive on " + System.identityHashCode(packet));
 synchronized (Runner.this) {
         _socket.receive(packet.getPacket());
       }
@@ -33,15 +26,11 @@ synchronized (Runner.this) {
  else {
         _context.statManager().addRateData("udp.receiveHolePunch",1,0);
         if (_log.shouldLog(Log.INFO))         _log.info("Received a 0 byte udp packet from " + packet.getPacket().getAddress() + ":"+ packet.getPacket().getPort());
+        packet.release();
       }
     }
  catch (    IOException ioe) {
-      if (_socketChanged) {
-        if (_log.shouldLog(Log.INFO))         _log.info("Changing ports...");
-      }
- else {
-        if (_log.shouldLog(Log.WARN))         _log.warn("Error receiving",ioe);
-      }
+      if (_log.shouldLog(Log.WARN))       _log.warn("Error receiving",ioe);
       packet.release();
     }
   }

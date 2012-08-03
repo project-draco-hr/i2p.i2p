@@ -8,23 +8,21 @@
   boolean resend=false;
   boolean isLowest=false;
 synchronized (_outboundPackets) {
-    if (_packet.getSequenceNum() == _highestAckedThrough + 1)     isLowest=true;
+    if (_packet.getSequenceNum() == _highestAckedThrough + 1 || _packet.getNumSends() > 1 || _activeResends < Math.max(3,(_options.getWindowSize() + 1) / 2))     isLowest=true;
     if (_outboundPackets.containsKey(Long.valueOf(_packet.getSequenceNum())))     resend=true;
   }
   if ((resend) && (_packet.getAckTime() <= 0)) {
     boolean fastRetransmit=((_packet.getNACKs() >= FAST_RETRANSMIT_THRESHOLD) && (_packet.getNumSends() == 1));
     if ((!isLowest) && (!fastRetransmit)) {
-      if (_log.shouldLog(Log.INFO))       _log.info("Delaying resend of " + _packet + " as there are "+ _activeResends+ " active resends already in play");
-      forceReschedule(1000);
-      _nextSendTime=1000 + _context.clock().now();
+      if (_log.shouldLog(Log.INFO))       _log.info("Delaying resend of " + _packet + " with "+ _activeResends+ " active resend, "+ _outboundPackets.size()+ " unacked, window size = "+ _options.getWindowSize());
+      forceReschedule(1333);
+      _nextSendTime=1333 + _context.clock().now();
       return false;
     }
     if (fastRetransmit)     _context.statManager().addRateData("stream.fastRetransmit",_packet.getLifetime(),_packet.getLifetime());
-    _inputStream.updateAcks(_packet);
     int choke=getOptions().getChoke();
     _packet.setOptionalDelay(choke);
     if (choke > 0)     _packet.setFlag(Packet.FLAG_DELAY_REQUESTED);
-    _packet.setOptionalMaxSize(getOptions().getMaxMessageSize());
     _packet.setResendDelay(getOptions().getResendDelay() / 1000);
     if (_packet.getReceiveStreamId() <= 0)     _packet.setReceiveStreamId(_receiveStreamId);
     if (_packet.getSendStreamId() <= 0)     _packet.setSendStreamId(_sendStreamId);
@@ -36,14 +34,11 @@ synchronized (_outboundPackets) {
         newWindowSize/=2;
         if (newWindowSize <= 0)         newWindowSize=1;
         getOptions().setWindowSize(newWindowSize);
-        if (_log.shouldLog(Log.WARN))         _log.warn("Congestion resending packet " + _packet.getSequenceNum() + ": new windowSize "+ newWindowSize+ "/"+ getOptions().getWindowSize()+ ") for "+ Connection.this.toString());
+        if (_log.shouldLog(Log.WARN))         _log.warn("Congestion, resending packet " + _packet.getSequenceNum() + " (new windowSize "+ newWindowSize+ "/"+ getOptions().getWindowSize()+ ") for "+ Connection.this.toString());
         windowAdjusted();
       }
     }
     int numSends=_packet.getNumSends() + 1;
-    if (numSends == 2) {
-      _activeResends++;
-    }
     if (numSends - 1 > _options.getMaxResends()) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Too many resends");
       _packet.cancelled();
@@ -55,10 +50,13 @@ synchronized (_outboundPackets) {
       long timeout=rto << (numSends - 1);
       if ((timeout > MAX_RESEND_DELAY) || (timeout <= 0))       timeout=MAX_RESEND_DELAY;
       _nextSendTime=timeout + _context.clock().now();
-      if (_log.shouldLog(Log.INFO))       _log.info("Resend packet " + _packet + " time "+ numSends+ " activeResends: "+ _activeResends+ " (wsize "+ newWindowSize+ " lifetime "+ (_context.clock().now() - _packet.getCreatedOn())+ "ms)");
-      _outboundQueue.enqueue(_packet);
-      _lastSendTime=_context.clock().now();
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Scheduling resend in " + timeout + "ms for "+ _packet);
+      if (_outboundQueue.enqueue(_packet)) {
+        if (numSends == 2)         _activeResends++;
+        if (_log.shouldLog(Log.INFO))         _log.info("Resent packet " + (fastRetransmit ? "(fast) " : "(timeout) ") + _packet+ " next resend in "+ timeout+ "ms"+ " activeResends: "+ _activeResends+ " (wsize "+ newWindowSize+ " lifetime "+ (_context.clock().now() - _packet.getCreatedOn())+ "ms)");
+        _unackedPacketsReceived=0;
+        _lastSendTime=_context.clock().now();
+        resetActivityTimer();
+      }
       forceReschedule(timeout);
     }
     if ((_packet.getAckTime() > 0) && (_packet.getNumSends() > 1)) {
@@ -66,7 +64,6 @@ synchronized (_outboundPackets) {
 synchronized (_outboundPackets) {
         _outboundPackets.notifyAll();
       }
-      return true;
     }
     return true;
   }

@@ -57,7 +57,7 @@
             }
           }
  catch (          IOException ioe) {
-            _util.debug("WARNING: Could not contact tracker at '" + tr.announce + "': "+ ioe,Snark.WARNING);
+            if (_log.shouldLog(Log.WARN))             _log.warn("WARNING: Could not contact tracker at '" + tr.announce + "': "+ ioe);
             tr.trackerProblems=ioe.getMessage();
             if (tr.isPrimary)             snark.setTrackerProblems(tr.trackerProblems);
             if (tr.trackerProblems.toLowerCase(Locale.US).startsWith(NOT_REGISTERED)) {
@@ -76,14 +76,14 @@
           }
         }
  else {
-          _util.debug("Not announcing to " + tr.announce + " last announce was "+ new Date(tr.lastRequestTime)+ " interval is "+ DataHelper.formatDuration(tr.interval),Snark.INFO);
+          if (_log.shouldLog(Log.INFO))           _log.info("Not announcing to " + tr.announce + " last announce was "+ new Date(tr.lastRequestTime)+ " interval is "+ DataHelper.formatDuration(tr.interval));
         }
         if ((!tr.stop) && maxSeenPeers < tr.seenPeers)         maxSeenPeers=tr.seenPeers;
       }
       if (coordinator.needOutboundPeers() && (meta == null || !meta.isPrivate()) && !stop) {
         Set<PeerID> pids=coordinator.getPEXPeers();
         if (!pids.isEmpty()) {
-          _util.debug("Got " + pids.size() + " from PEX",Snark.INFO);
+          if (_log.shouldLog(Log.INFO))           _log.info("Got " + pids.size() + " from PEX");
           List<Peer> peers=new ArrayList(pids.size());
           for (          PeerID pID : pids) {
             peers.add(new Peer(pID,snark.getID(),snark.getInfoHash(),snark.getMetaInfo()));
@@ -104,17 +104,17 @@
         }
       }
  else {
-        _util.debug("Not getting PEX peers",Snark.INFO);
+        if (_log.shouldLog(Log.INFO))         _log.info("Not getting PEX peers");
       }
       if (_util.getDHT() != null && (meta == null || !meta.isPrivate()) && !stop) {
         int numwant;
         if (event.equals(STOPPED_EVENT) || !coordinator.needOutboundPeers())         numwant=1;
  else         numwant=_util.getMaxConnections();
         List<Hash> hashes=_util.getDHT().getPeers(snark.getInfoHash(),numwant,2 * 60 * 1000);
-        _util.debug("Got " + hashes + " from DHT",Snark.INFO);
+        if (_log.shouldLog(Log.INFO))         _log.info("Got " + hashes + " from DHT");
         if (!stop) {
           int good=_util.getDHT().announce(snark.getInfoHash(),1,5 * 60 * 1000);
-          _util.debug("Sent " + good + " good announces to DHT",Snark.INFO);
+          if (_log.shouldLog(Log.INFO))           _log.info("Sent " + good + " good announces to DHT");
         }
         if ((!stop) && !hashes.isEmpty()) {
           List<Peer> peers=new ArrayList(hashes.size());
@@ -138,11 +138,11 @@
         }
       }
  else {
-        _util.debug("Not getting DHT peers",Snark.INFO);
+        if (_log.shouldLog(Log.INFO))         _log.info("Not getting DHT peers");
       }
       snark.setTrackerSeenPeers(maxSeenPeers);
       if (stop)       return;
-      if (!runStarted)       _util.debug("         Retrying in one minute...",Snark.DEBUG);
+      if (!runStarted)       if (_log.shouldLog(Log.DEBUG))       _log.debug("         Retrying in one minute...");
       try {
         int delay;
         int random=r.nextInt(120 * 1000);
@@ -163,7 +163,7 @@
     }
   }
  catch (  Throwable t) {
-    _util.debug("TrackerClient: " + t,Snark.ERROR,t);
+    _log.error("TrackerClient: " + t,t);
     if (t instanceof OutOfMemoryError)     throw (OutOfMemoryError)t;
   }
 }
