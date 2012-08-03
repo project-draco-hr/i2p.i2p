@@ -10,9 +10,21 @@
   boolean success=false;
   String override=System.getProperty("javax.net.ssl.keyStore");
   if (override != null)   success=loadCerts(new File(override),ks);
-  if (!success)   success=loadCerts(new File(System.getProperty("java.home"),"lib/security/jssecacerts"),ks);
-  if (!success)   success=loadCerts(new File(System.getProperty("java.home"),"lib/security/cacerts"),ks);
   if (!success) {
+    if (_isAndroid) {
+      success=loadCerts(new File(System.getProperty("java.home"),"etc/security/cacerts.bks"),ks);
+    }
+ else {
+      success=loadCerts(new File(System.getProperty("java.home"),"lib/security/jssecacerts"),ks);
+      if (!success)       success=loadCerts(new File(System.getProperty("java.home"),"lib/security/cacerts"),ks);
+    }
+  }
+  if (!success) {
+    try {
+      ks.load(null,"changeit".toCharArray());
+    }
+ catch (    Exception e) {
+    }
     _log.error("All key store loads failed, will only load local certificates");
   }
  else   if (_log.shouldLog(Log.INFO)) {

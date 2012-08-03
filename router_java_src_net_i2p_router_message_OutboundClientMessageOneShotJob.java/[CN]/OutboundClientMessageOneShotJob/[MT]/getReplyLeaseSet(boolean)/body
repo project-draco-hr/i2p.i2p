@@ -1,23 +1,6 @@
 {
   LeaseSet newLS=getContext().netDb().lookupLeaseSetLocally(_from.calculateHash());
   if (newLS == null)   return null;
-  if (!force) {
-    Properties opts=_clientMessage.getSenderConfig().getOptions();
-    String wantBundle=opts.getProperty(BUNDLE_REPLY_LEASESET,"false");
-    if ("true".equals(wantBundle)) {
-      int probability=BUNDLE_PROBABILITY_DEFAULT;
-      String str=opts.getProperty(BUNDLE_PROBABILITY);
-      try {
-        if (str != null)         probability=Integer.parseInt(str);
-      }
- catch (      NumberFormatException nfe) {
-        if (_log.shouldLog(Log.WARN))         _log.warn(getJobId() + ": Bundle leaseSet probability overridden incorrectly [" + str+ "]",nfe);
-      }
-      if (probability >= 100)       return newLS;
-      if (_log.shouldLog(Log.INFO))       _log.info(getJobId() + ": Bundle leaseSet probability is " + probability);
-      if (probability >= getContext().random().nextInt(100))       force=true;
-    }
-  }
   LeaseSet ls=_cache.leaseSetCache.put(_hashPair,newLS);
   if (!force) {
     if (ls != null) {
