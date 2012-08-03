@@ -1,11 +1,6 @@
 {
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Running the UDP sender");
-  _socketChanged=false;
   while (_keepRunning) {
-    if (_socketChanged) {
-      Thread.currentThread().setName(_name);
-      _socketChanged=false;
-    }
     UDPPacket packet=getNextPacket();
     if (packet != null) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Packet to send known: " + packet);
@@ -16,16 +11,12 @@
         while (req.getPendingOutboundRequested() > 0)         req.waitForNextAllocation();
       }
       long afterBW=_context.clock().now();
-      if (_log.shouldLog(Log.DEBUG)) {
-      }
       if (packet.getMessageType() >= PacketBuilder.TYPE_FIRST)       _context.statManager().addRateData("udp.sendPacketSize." + packet.getMessageType(),size,packet.getFragmentCount());
       try {
         long before=_context.clock().now();
 synchronized (Runner.this) {
           DatagramPacket dp=packet.getPacket();
-          if (_log.shouldLog(Log.DEBUG))           _log.debug("Just before socket.send of " + packet);
           _socket.send(dp);
-          if (_log.shouldLog(Log.DEBUG))           _log.debug("Just after socket.send of " + packet);
         }
         long sendTime=_context.clock().now() - before;
         _context.statManager().addRateData("udp.socketSendTime",sendTime,packet.getLifetime());
