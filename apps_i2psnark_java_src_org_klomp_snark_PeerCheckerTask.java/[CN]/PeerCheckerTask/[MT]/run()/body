@@ -18,6 +18,11 @@
     if (!peer.isConnected()) {
       continue;
     }
+    if (peer.getInactiveTime() > PeerCoordinator.MAX_INACTIVE) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Disconnecting peer idle " + DataHelper.formatDuration(peer.getInactiveTime()) + ": "+ peer);
+      peer.disconnect();
+      continue;
+    }
     if (!peer.isChoking())     uploaders++;
     long upload=peer.getUploaded();
     uploaded+=upload;
@@ -25,19 +30,20 @@
     downloaded+=download;
     peer.setRateHistory(upload,download);
     peer.resetCounters();
-    _util.debug(peer + ":",Snark.DEBUG);
-    _util.debug(" ul: " + upload * 1024 / KILOPERSECOND + " dl: " + download * 1024 / KILOPERSECOND + " i: " + peer.isInterested() + " I: " + peer.isInteresting() + " c: " + peer.isChoking() + " C: " + peer.isChoked(),Snark.DEBUG);
+    if (_log.shouldLog(Log.DEBUG)) {
+      _log.debug(peer + ":" + " ul: "+ upload * 1024 / KILOPERSECOND + " dl: " + download * 1024 / KILOPERSECOND + " i: " + peer.isInterested() + " I: " + peer.isInteresting() + " c: " + peer.isChoking() + " C: " + peer.isChoked());
+    }
     boolean overBWLimitChoke=upload > 0 && ((overBWLimit && (random.nextInt(8) > (coordinator.completed() ? 2 : 4))) || (coordinator.overUpBWLimit(uploaded)));
     if (((coordinator.uploaders == uploadLimit && coordinator.interestedAndChoking > 0) || coordinator.uploaders > uploadLimit || overBWLimitChoke) && !peer.isChoking()) {
       if (!peer.isInterested()) {
-        _util.debug("Choke uninterested peer: " + peer,Snark.INFO);
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Choke uninterested peer: " + peer);
         peer.setChoking(true);
         uploaders--;
         coordinator.uploaders--;
         removed.add(peer);
       }
  else       if (overBWLimitChoke) {
-        _util.debug("BW limit (" + upload + "/"+ uploaded+ "), choke peer: "+ peer,Snark.INFO);
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("BW limit (" + upload + "/"+ uploaded+ "), choke peer: "+ peer);
         peer.setChoking(true);
         uploaders--;
         coordinator.uploaders--;
@@ -45,7 +51,7 @@
         removed.add(peer);
       }
  else       if (peer.isInteresting() && peer.isChoked()) {
-        _util.debug("Choke choking peer: " + peer,Snark.DEBUG);
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Choke choking peer: " + peer);
         peer.setChoking(true);
         uploaders--;
         coordinator.uploaders--;
@@ -53,7 +59,7 @@
         removed.add(peer);
       }
  else       if (!peer.isInteresting() && !coordinator.completed()) {
-        _util.debug("Choke uninteresting peer: " + peer,Snark.DEBUG);
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Choke uninteresting peer: " + peer);
         peer.setChoking(true);
         uploaders--;
         coordinator.uploaders--;
@@ -61,7 +67,7 @@
         removed.add(peer);
       }
  else       if (peer.isInteresting() && !peer.isChoked() && download == 0) {
-        _util.debug("Choke downloader that doesn't deliver:" + peer,Snark.DEBUG);
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Choke downloader that doesn't deliver: " + peer);
         peer.setChoking(true);
         uploaders--;
         coordinator.uploaders--;
@@ -79,14 +85,14 @@
     }
     peer.retransmitRequests();
     if ((_runCount % 17) == 0 && !peer.isCompleted())     coordinator.sendPeers(peer);
-    peer.keepAlive();
+    if (coordinator.getNeededLength() > 0 || !peer.isCompleted())     peer.keepAlive();
     if (_util.getDHT() != null && (_runCount % 5) == 0) {
       _util.getDHT().announce(coordinator.getInfoHash(),peer.getPeerID().getDestHash());
     }
   }
   coordinator.uploaders=uploaders;
   if (((uploaders == uploadLimit && coordinator.interestedAndChoking > 0) || uploaders > uploadLimit) && worstDownloader != null) {
-    _util.debug("Choke worst downloader: " + worstDownloader,Snark.DEBUG);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Choke worst downloader: " + worstDownloader);
     worstDownloader.setChoking(true);
     coordinator.uploaders--;
     removedCount++;

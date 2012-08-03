@@ -13,7 +13,8 @@
   _conPacketHandler=new ConnectionPacketHandler(_context);
   _timer=new RetransmissionTimer(_context,"Streaming Timer " + session.getMyDestination().calculateHash().toBase64().substring(0,4));
   _tcbShare=new TCBShare(_context,_timer);
-  _session.addMuxedSessionListener(_messageHandler,I2PSession.PROTO_ANY,I2PSession.PORT_ANY);
+  int protocol=defaultOptions.getEnforceProtocol() ? I2PSession.PROTO_STREAMING : I2PSession.PROTO_ANY;
+  _session.addMuxedSessionListener(_messageHandler,protocol,defaultOptions.getLocalPort());
   _outboundQueue=new PacketQueue(_context,_session,this);
   _soTimeout=-1;
   _context.statManager().createRateStat("stream.con.lifetimeMessagesSent","How many messages do we send on a stream?","Stream",new long[]{60 * 60 * 1000,24 * 60 * 60* 1000});
@@ -26,4 +27,10 @@
   _context.statManager().createRateStat("stream.con.lifetimeCongestionSeenAt","When was the last congestion seen at when a stream closes?","Stream",new long[]{60 * 60 * 1000,24 * 60 * 60* 1000});
   _context.statManager().createRateStat("stream.con.lifetimeSendWindowSize","What is the final send window size when a stream closes?","Stream",new long[]{60 * 60 * 1000,24 * 60 * 60* 1000});
   _context.statManager().createRateStat("stream.receiveActive","How many streams are active when a new one is received (period being not yet dropped)","Stream",new long[]{60 * 60 * 1000,24 * 60 * 60* 1000});
+  _context.statManager().createRateStat("stream.con.windowSizeAtCongestion","How large was our send window when we send a dup?","Stream",new long[]{60 * 1000,10 * 60 * 1000,60 * 60 * 1000});
+  _context.statManager().createRateStat("stream.chokeSizeBegin","How many messages were outstanding when we started to choke?","Stream",new long[]{60 * 1000,10 * 60 * 1000,60 * 60 * 1000});
+  _context.statManager().createRateStat("stream.chokeSizeEnd","How many messages were outstanding when we stopped being choked?","Stream",new long[]{60 * 1000,10 * 60 * 1000,60 * 60 * 1000});
+  _context.statManager().createRateStat("stream.fastRetransmit","How long a packet has been around for if it has been resent per the fast retransmit timer?","Stream",new long[]{60 * 1000,10 * 60 * 1000});
+  _context.statManager().createRateStat("stream.con.sendMessageSize","Size of a message sent on a connection","Stream",new long[]{60 * 1000,10 * 60 * 1000,60 * 60 * 1000});
+  _context.statManager().createRateStat("stream.con.sendDuplicateSize","Size of a message resent on a connection","Stream",new long[]{60 * 1000,10 * 60 * 1000,60 * 60 * 1000});
 }

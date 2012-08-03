@@ -9,7 +9,7 @@
 synchronized (this) {
     inbound=_clientInboundPools.get(dest);
     if (inbound == null) {
-      inbound=new TunnelPool(_context,this,settings.getInboundSettings(),new ClientPeerSelector());
+      inbound=new TunnelPool(_context,this,settings.getInboundSettings(),_clientPeerSelector);
       _clientInboundPools.put(dest,inbound);
     }
  else {
@@ -17,7 +17,7 @@ synchronized (this) {
     }
     outbound=_clientOutboundPools.get(dest);
     if (outbound == null) {
-      outbound=new TunnelPool(_context,this,settings.getOutboundSettings(),new ClientPeerSelector());
+      outbound=new TunnelPool(_context,this,settings.getOutboundSettings(),_clientPeerSelector);
       _clientOutboundPools.put(dest,outbound);
       delayOutbound=true;
     }
@@ -26,6 +26,6 @@ synchronized (this) {
     }
   }
   inbound.startup();
-  if (delayOutbound)   SimpleScheduler.getInstance().addEvent(new DelayedStartup(outbound),1000);
+  if (delayOutbound)   _context.simpleScheduler().addEvent(new DelayedStartup(outbound),1000);
  else   outbound.startup();
 }

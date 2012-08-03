@@ -2,8 +2,33 @@
   _destHashCache=config.getDestination().calculateHash();
   if (_log.shouldLog(Log.DEBUG))   _log.debug("SessionEstablished called for destination " + _destHashCache.toBase64());
   _config=config;
-  if (config.getOptions() != null)   _dontSendMSM="none".equals(config.getOptions().getProperty(I2PClient.PROP_RELIABILITY,"").toLowerCase(Locale.US));
-  if (_sessionKeyManager == null)   _sessionKeyManager=new TransientSessionKeyManager(_context);
- else   _log.error("SessionEstablished called for twice for destination " + _destHashCache.toBase64().substring(0,4));
+  Properties opts=config.getOptions();
+  if (opts != null)   _dontSendMSM="none".equals(config.getOptions().getProperty(I2PClient.PROP_RELIABILITY,"").toLowerCase(Locale.US));
+  if (_sessionKeyManager == null) {
+    int tags=TransientSessionKeyManager.DEFAULT_TAGS;
+    int thresh=TransientSessionKeyManager.LOW_THRESHOLD;
+    if (opts != null) {
+      String ptags=opts.getProperty(PROP_TAGS);
+      if (ptags != null) {
+        try {
+          tags=Integer.parseInt(ptags);
+        }
+ catch (        NumberFormatException nfe) {
+        }
+      }
+      String pthresh=opts.getProperty(PROP_THRESH);
+      if (pthresh != null) {
+        try {
+          thresh=Integer.parseInt(pthresh);
+        }
+ catch (        NumberFormatException nfe) {
+        }
+      }
+    }
+    _sessionKeyManager=new TransientSessionKeyManager(_context,tags,thresh);
+  }
+ else {
+    _log.error("SessionEstablished called for twice for destination " + _destHashCache.toBase64().substring(0,4));
+  }
   _manager.destinationEstablished(this);
 }
