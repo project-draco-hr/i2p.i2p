@@ -2,14 +2,24 @@
   _context=ctx;
   _log=ctx.logManager().getLog(MessageReceiver.class);
   _transport=transport;
-  _completeMessages=new LinkedBlockingQueue();
   long maxMemory=Runtime.getRuntime().maxMemory();
   if (maxMemory == Long.MAX_VALUE)   maxMemory=96 * 1024 * 1024l;
-  if (maxMemory < 32 * 1024 * 1024)   _threadCount=1;
- else   if (maxMemory < 64 * 1024 * 1024)   _threadCount=2;
- else   _threadCount=Math.max(MIN_THREADS,Math.min(MAX_THREADS,ctx.bandwidthLimiter().getInboundKBytesPerSecond() / 20));
+  int qsize;
+  if (maxMemory < 32 * 1024 * 1024) {
+    _threadCount=1;
+    qsize=16;
+  }
+ else   if (maxMemory < 64 * 1024 * 1024) {
+    _threadCount=2;
+    qsize=32;
+  }
+ else {
+    _threadCount=Math.max(MIN_THREADS,Math.min(MAX_THREADS,ctx.bandwidthLimiter().getInboundKBytesPerSecond() / 20));
+    qsize=(int)Math.max(MIN_QUEUE_SIZE,Math.min(MAX_QUEUE_SIZE,maxMemory / (2 * 1024 * 1024)));
+  }
+  _completeMessages=new LinkedBlockingQueue(qsize);
   _context.statManager().createRateStat("udp.inboundExpired","How many messages were expired before reception?","udp",UDPTransport.RATES);
   _context.statManager().createRateStat("udp.inboundReady","How many messages were ready when a message is added to the complete queue?","udp",UDPTransport.RATES);
-  _context.statManager().createRateStat("udp.inboundLag","How long the olded ready message has been sitting on the queue (period is the queue size)?","udp",UDPTransport.RATES);
+  _context.statManager().createRateStat("udp.inboundLag","How long the oldest ready message has been sitting on the queue (period is the queue size)?","udp",UDPTransport.RATES);
   _alive=true;
 }
