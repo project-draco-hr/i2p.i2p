@@ -6,7 +6,8 @@
         stop=true;
         return;
       }
-      if (_util.getDHT() != null)       _util.getDHT().announce(snark.getInfoHash());
+      DHT dht=_util.getDHT();
+      if (dht != null)       dht.announce(snark.getInfoHash());
       long uploaded=coordinator.getUploaded();
       long downloaded=coordinator.getDownloaded();
       long left=coordinator.getLeft();
@@ -34,9 +35,10 @@
             Set<Peer> peers=info.getPeers();
             tr.seenPeers=info.getPeerCount();
             if (snark.getTrackerSeenPeers() < tr.seenPeers)             snark.setTrackerSeenPeers(tr.seenPeers);
-            if (_util.getDHT() != null) {
+            dht=_util.getDHT();
+            if (dht != null) {
               for (              Peer peer : peers) {
-                _util.getDHT().announce(snark.getInfoHash(),peer.getPeerID().getDestHash());
+                dht.announce(snark.getInfoHash(),peer.getPeerID().getDestHash());
               }
             }
             if (coordinator.needOutboundPeers()) {
@@ -106,14 +108,15 @@
  else {
         if (_log.shouldLog(Log.INFO))         _log.info("Not getting PEX peers");
       }
-      if (_util.getDHT() != null && (meta == null || !meta.isPrivate()) && !stop) {
+      dht=_util.getDHT();
+      if (dht != null && (meta == null || !meta.isPrivate()) && !stop) {
         int numwant;
         if (event.equals(STOPPED_EVENT) || !coordinator.needOutboundPeers())         numwant=1;
  else         numwant=_util.getMaxConnections();
-        List<Hash> hashes=_util.getDHT().getPeers(snark.getInfoHash(),numwant,2 * 60 * 1000);
+        List<Hash> hashes=dht.getPeers(snark.getInfoHash(),numwant,2 * 60 * 1000);
         if (_log.shouldLog(Log.INFO))         _log.info("Got " + hashes + " from DHT");
         if (!stop) {
-          int good=_util.getDHT().announce(snark.getInfoHash(),8,5 * 60 * 1000);
+          int good=dht.announce(snark.getInfoHash(),1,5 * 60 * 1000);
           if (_log.shouldLog(Log.INFO))           _log.info("Sent " + good + " good announces to DHT");
         }
         if ((!stop) && !hashes.isEmpty()) {

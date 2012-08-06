@@ -1,0 +1,29 @@
+{
+  int b=pickBucket(r);
+  while (shouldSplit(_buckets.get(b))) {
+    KBucket<T> b0=_buckets.get(b);
+    int s1, e1, s2, e2;
+    s1=b0.getRangeBegin();
+    e2=b0.getRangeEnd();
+    if (B_FACTOR > 1 && (s1 & (B_FACTOR - 1)) == 0 && ((e2 + 1) & (B_FACTOR - 1)) == 0 && e2 > s1 + B_FACTOR) {
+      s2=e2 + 1 - B_FACTOR;
+    }
+ else {
+      s2=s1 + ((1 + e2 - s1) / 2);
+    }
+    e1=s2 - 1;
+    if (_log.shouldLog(Log.INFO))     _log.info("Splitting (" + s1 + ','+ e2+ ") -> ("+ s1+ ','+ e1+ ") ("+ s2+ ','+ e2+ ')');
+    KBucket<T> b1=createBucket(s1,e1);
+    KBucket<T> b2=createBucket(s2,e2);
+    for (    T key : b0.getEntries()) {
+      if (getRange(key) < s2)       b1.add(key);
+ else       b2.add(key);
+    }
+    _buckets.set(b,b1);
+    _buckets.add(b + 1,b2);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Split bucket at idx " + b + ":\n"+ b0+ "\ninto: "+ b1+ "\nand: "+ b2);
+    if (b2.getKeyCount() > BUCKET_SIZE) {
+      if (_log.shouldLog(Log.INFO))       _log.info("All went into 2nd bucket after split");
+    }
+  }
+}

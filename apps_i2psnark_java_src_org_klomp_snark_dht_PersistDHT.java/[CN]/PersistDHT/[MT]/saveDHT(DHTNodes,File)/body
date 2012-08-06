@@ -1,0 +1,22 @@
+{
+  Log log=I2PAppContext.getGlobalContext().logManager().getLog(PersistDHT.class);
+  int count=0;
+  long maxAge=I2PAppContext.getGlobalContext().clock().now() - MAX_AGE;
+  PrintWriter out=null;
+  try {
+    out=new PrintWriter(new BufferedWriter(new OutputStreamWriter(new SecureFileOutputStream(file),"ISO-8859-1")));
+    out.println("# DHT nodes, format is NID:Hash:Destination:port");
+    for (    NodeInfo ni : nodes.values()) {
+      if (ni.lastSeen() < maxAge)       continue;
+      out.println(ni.toPersistentString());
+      count++;
+    }
+  }
+ catch (  IOException ioe) {
+    if (log.shouldLog(Log.WARN))     log.warn("Error writing the DHT File",ioe);
+  }
+ finally {
+    if (out != null)     out.close();
+  }
+  if (log.shouldLog(Log.INFO))   log.info("Stored " + count + " nodes to "+ file);
+}
