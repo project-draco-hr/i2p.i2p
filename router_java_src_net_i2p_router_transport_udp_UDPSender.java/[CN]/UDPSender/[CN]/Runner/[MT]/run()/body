@@ -13,14 +13,9 @@
       long afterBW=_context.clock().now();
       if (packet.getMessageType() >= PacketBuilder.TYPE_FIRST)       _context.statManager().addRateData("udp.sendPacketSize." + packet.getMessageType(),size,packet.getFragmentCount());
       try {
-        long before=_context.clock().now();
-synchronized (Runner.this) {
-          DatagramPacket dp=packet.getPacket();
-          _socket.send(dp);
-        }
-        long sendTime=_context.clock().now() - before;
-        _context.statManager().addRateData("udp.socketSendTime",sendTime,packet.getLifetime());
-        if (_log.shouldLog(Log.INFO))         _log.info("Sent the packet " + packet);
+        DatagramPacket dp=packet.getPacket();
+        _socket.send(dp);
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Sent the packet " + packet);
         long throttleTime=afterBW - acquireTime;
         if (throttleTime > 10)         _context.statManager().addRateData("udp.sendBWThrottleTime",throttleTime,acquireTime - packet.getBegin());
         if (packet.getMarkedType() == 1)         _context.statManager().addRateData("udp.sendACKTime",throttleTime,packet.getLifetime());
