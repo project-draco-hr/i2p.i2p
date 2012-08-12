@@ -9,7 +9,7 @@
   msg.timestamp("sending on UDP transport");
   Hash to=msg.getTarget().getIdentity().calculateHash();
   PeerState peer=getPeerState(to);
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Sending to " + (to != null ? to.toBase64() : ""));
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Sending to " + (to != null ? to.toString() : ""));
   if (peer != null) {
     long lastSend=peer.getLastSendFullyTime();
     long lastRecv=peer.getLastReceiveTime();
@@ -19,19 +19,19 @@
       if ((now - lastSend > MAX_IDLE_TIME) && (now - lastRecv > MAX_IDLE_TIME) && (peer.getConsecutiveFailedSends() > 0)&& (inboundActive <= 0)) {
         dropPeer(peer,false,"proactive reconnection");
         msg.timestamp("peer is really idle, dropping con and reestablishing");
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("Proactive reestablish to " + to.toBase64());
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Proactive reestablish to " + to);
         _establisher.establish(msg);
         _context.statManager().addRateData("udp.proactiveReestablish",now - lastSend,now - peer.getKeyEstablishedTime());
         return;
       }
     }
     msg.timestamp("enqueueing for an already established peer");
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Add to fragments for " + to.toBase64());
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Add to fragments for " + to);
     if (USE_PRIORITY)     _outboundMessages.add(msg);
  else     _fragments.add(msg);
   }
  else {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Establish new connection to " + to.toBase64());
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Establish new connection to " + to);
     msg.timestamp("establishing a new connection");
     _establisher.establish(msg);
   }

@@ -7,7 +7,7 @@
   long skew=recvOn - sendOn;
   if (state != null) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Received packet from " + state.getRemoteHostId().toString() + " with skew "+ skew);
-    state.adjustClockSkew(skew);
+    if (isAuthenticated)     state.adjustClockSkew(skew);
   }
   _context.statManager().addRateData("udp.receivePacketSkew",skew,packet.getLifetime());
   if (!_context.clock().getUpdatedSuccessfully()) {
@@ -27,24 +27,34 @@
   _state=45;
   RemoteHostId from=packet.getRemoteHost();
   _state=46;
-switch (reader.readPayloadType()) {
+  int type=reader.readPayloadType();
+switch (type) {
 case UDPPacket.PAYLOAD_TYPE_SESSION_REQUEST:
     _state=47;
   _establisher.receiveSessionRequest(from,reader);
-_context.statManager().addRateData("udp.receivePacketSize.sessionRequest",packet.getPacket().getLength(),packet.getLifetime());
 break;
 case UDPPacket.PAYLOAD_TYPE_SESSION_CONFIRMED:
 _state=48;
+if (!isAuthenticated) {
+if (_log.shouldLog(Log.WARN)) _log.warn("Dropping unauthenticated type " + type + ": "+ packet);
+break;
+}
 _establisher.receiveSessionConfirmed(from,reader);
-_context.statManager().addRateData("udp.receivePacketSize.sessionConfirmed",packet.getPacket().getLength(),packet.getLifetime());
 break;
 case UDPPacket.PAYLOAD_TYPE_SESSION_CREATED:
 _state=49;
+if (!isAuthenticated) {
+if (_log.shouldLog(Log.WARN)) _log.warn("Dropping unauthenticated type " + type + ": "+ packet);
+break;
+}
 _establisher.receiveSessionCreated(from,reader);
-_context.statManager().addRateData("udp.receivePacketSize.sessionCreated",packet.getPacket().getLength(),packet.getLifetime());
 break;
 case UDPPacket.PAYLOAD_TYPE_DATA:
 _state=50;
+if (!isAuthenticated) {
+if (_log.shouldLog(Log.WARN)) _log.warn("Dropping unauthenticated type " + type + ": "+ packet);
+break;
+}
 if (outState != null) state=_establisher.receiveData(outState);
 if (_log.shouldLog(Log.DEBUG)) _log.debug("Received new DATA packet from " + state + ": "+ packet);
 if (state != null) {
@@ -75,32 +85,33 @@ case UDPPacket.PAYLOAD_TYPE_TEST:
 _state=51;
 if (_log.shouldLog(Log.DEBUG)) _log.debug("Received test packet: " + reader + " from "+ from);
 _testManager.receiveTest(from,reader);
-_context.statManager().addRateData("udp.receivePacketSize.test",packet.getPacket().getLength(),packet.getLifetime());
 break;
 case UDPPacket.PAYLOAD_TYPE_RELAY_REQUEST:
 if (_log.shouldLog(Log.INFO)) _log.info("Received relay request packet: " + reader + " from "+ from);
 _introManager.receiveRelayRequest(from,reader);
-_context.statManager().addRateData("udp.receivePacketSize.relayRequest",packet.getPacket().getLength(),packet.getLifetime());
 break;
 case UDPPacket.PAYLOAD_TYPE_RELAY_INTRO:
+if (!isAuthenticated) {
+if (_log.shouldLog(Log.WARN)) _log.warn("Dropping unauthenticated type " + type + ": "+ packet);
+break;
+}
 if (_log.shouldLog(Log.INFO)) _log.info("Received relay intro packet: " + reader + " from "+ from);
 _introManager.receiveRelayIntro(from,reader);
-_context.statManager().addRateData("udp.receivePacketSize.relayIntro",packet.getPacket().getLength(),packet.getLifetime());
 break;
 case UDPPacket.PAYLOAD_TYPE_RELAY_RESPONSE:
 if (_log.shouldLog(Log.INFO)) _log.info("Received relay response packet: " + reader + " from "+ from);
 _establisher.receiveRelayResponse(from,reader);
-_context.statManager().addRateData("udp.receivePacketSize.relayResponse",packet.getPacket().getLength(),packet.getLifetime());
 break;
 case UDPPacket.PAYLOAD_TYPE_SESSION_DESTROY:
 _state=53;
-if (outState != null) _establisher.receiveSessionDestroy(from,outState);
+if (!isAuthenticated) _establisher.receiveSessionDestroy(from);
+ else if (outState != null) _establisher.receiveSessionDestroy(from,outState);
  else if (state != null) _establisher.receiveSessionDestroy(from,state);
  else _establisher.receiveSessionDestroy(from);
 break;
 default :
 _state=52;
-if (_log.shouldLog(Log.WARN)) _log.warn("Unknown payload type: " + reader.readPayloadType());
+if (_log.shouldLog(Log.WARN)) _log.warn("Unknown payload type: " + type);
 _context.statManager().addRateData("udp.droppedInvalidUnknown",packet.getLifetime(),packet.getExpiration());
 return;
 }

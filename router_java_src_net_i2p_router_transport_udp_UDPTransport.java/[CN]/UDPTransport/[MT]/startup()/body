@@ -6,7 +6,6 @@
   if (_establisher != null)   _establisher.shutdown();
   if (_refiller != null)   _refiller.shutdown();
   _inboundFragments.shutdown();
-  if (_flooder != null)   _flooder.shutdown();
   _introManager.reset();
   UDPPacket.clearCache();
   _introKey=new SessionKey(new byte[SessionKey.KEYSIZE_BYTES]);
@@ -58,7 +57,6 @@
   if (_testManager == null)   _testManager=new PeerTestManager(_context,this);
   if (_handler == null)   _handler=new PacketHandler(_context,this,_endpoint,_establisher,_inboundFragments,_testManager,_introManager);
   if (USE_PRIORITY && _refiller == null)   _refiller=new OutboundRefiller(_context,_fragments,_outboundMessages);
-  if (SHOULD_FLOOD_PEERS && _flooder == null)   _flooder=new UDPFlooder(_context,this);
   _endpoint.startup();
   int newPort=_endpoint.getListenPort();
   _externalListenPort=newPort;
@@ -69,8 +67,8 @@
   }
   if (newPort != port || newPort != oldIPort || newPort != oldEPort) {
     Map<String,String> changes=new HashMap();
-    changes.put(PROP_INTERNAL_PORT,newPort + "");
-    changes.put(PROP_EXTERNAL_PORT,newPort + "");
+    changes.put(PROP_INTERNAL_PORT,Integer.toString(newPort));
+    changes.put(PROP_EXTERNAL_PORT,Integer.toString(newPort));
     _context.router().saveConfig(changes,null);
   }
   _establisher.startup();
@@ -80,7 +78,6 @@
   _pusher=new PacketPusher(_context,_fragments,_endpoint.getSender());
   _pusher.startup();
   if (USE_PRIORITY)   _refiller.startup();
-  if (SHOULD_FLOOD_PEERS)   _flooder.startup();
   _expireEvent.setIsAlive(true);
   _testEvent.setIsAlive(true);
   SimpleTimer.getInstance().addEvent(_testEvent,10 * 1000);

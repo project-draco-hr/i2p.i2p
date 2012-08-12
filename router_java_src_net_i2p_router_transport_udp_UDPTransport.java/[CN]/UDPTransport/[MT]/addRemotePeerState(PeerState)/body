@@ -18,6 +18,7 @@
   oldPeer=null;
   RemoteHostId remoteId=peer.getRemoteHostId();
   if (remoteId == null)   return false;
+  if (remoteId.getIP() == null && _log.shouldLog(Log.WARN))   _log.warn("Add indirect: " + peer);
   oldPeer=_peersByRemoteHost.put(remoteId,peer);
   if ((oldPeer != null) && (oldPeer != peer)) {
     peer.loadFrom(oldPeer);
@@ -31,7 +32,6 @@
   if ((oldPeer != null) && (_log.shouldLog(Log.WARN)))   _log.warn("Peer already connected: old=" + oldPeer + " new="+ peer,new Exception("dup"));
   _activeThrottle.unchoke(peer.getRemotePeer());
   markReachable(peer.getRemotePeer(),peer.isInbound());
-  if (SHOULD_FLOOD_PEERS)   _flooder.addPeer(peer);
   _expireEvent.add(peer);
   _introManager.add(peer);
   if (oldEstablishedOn > 0)   _context.statManager().addRateData("udp.alreadyConnected",oldEstablishedOn,0);
