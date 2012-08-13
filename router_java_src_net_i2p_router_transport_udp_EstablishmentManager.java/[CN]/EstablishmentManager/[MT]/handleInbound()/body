@@ -2,22 +2,24 @@
   long now=_context.clock().now();
   long nextSendTime=-1;
   InboundEstablishState inboundState=null;
+  boolean expired=false;
   for (Iterator<InboundEstablishState> iter=_inboundStates.values().iterator(); iter.hasNext(); ) {
     InboundEstablishState cur=iter.next();
-    if (cur.getState() == InboundEstablishState.STATE_CONFIRMED_COMPLETELY) {
+    if (cur.getState() == IB_STATE_CONFIRMED_COMPLETELY) {
       iter.remove();
       inboundState=cur;
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Removing completely confirmed inbound state");
       break;
     }
- else     if (cur.getLifetime() > MAX_ESTABLISH_TIME) {
+ else     if (cur.getLifetime() > MAX_IB_ESTABLISH_TIME) {
       iter.remove();
-      _context.statManager().addRateData("udp.inboundEstablishFailedState",cur.getState(),cur.getLifetime());
+      inboundState=cur;
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Removing expired inbound state");
+      expired=true;
+      break;
     }
- else     if (cur.getState() == InboundEstablishState.STATE_FAILED) {
+ else     if (cur.getState() == IB_STATE_FAILED) {
       iter.remove();
-      _context.statManager().addRateData("udp.inboundEstablishFailedState",cur.getState(),cur.getLifetime());
     }
  else {
       if (cur.getNextSendTime() <= now) {
@@ -27,7 +29,7 @@
  else {
         long when=-1;
         if (cur.getNextSendTime() <= 0) {
-          when=cur.getEstablishBeginTime() + MAX_ESTABLISH_TIME;
+          when=cur.getEstablishBeginTime() + MAX_IB_ESTABLISH_TIME;
         }
  else {
           when=cur.getNextSendTime();
@@ -37,36 +39,42 @@
     }
   }
   if (inboundState != null) {
+synchronized (inboundState) {
 switch (inboundState.getState()) {
-case InboundEstablishState.STATE_REQUEST_RECEIVED:
+case IB_STATE_REQUEST_RECEIVED:
+        if (!expired)         sendCreated(inboundState);
+      break;
+case IB_STATE_CREATED_SENT:
+case IB_STATE_CONFIRMED_PARTIALLY:
+    if (expired) {
+      sendDestroy(inboundState);
+    }
+ else     if (inboundState.getNextSendTime() <= now) {
       sendCreated(inboundState);
-    break;
-case InboundEstablishState.STATE_CREATED_SENT:
-case InboundEstablishState.STATE_CONFIRMED_PARTIALLY:
-  if (inboundState.getNextSendTime() <= now)   sendCreated(inboundState);
-break;
-case InboundEstablishState.STATE_CONFIRMED_COMPLETELY:
+    }
+  break;
+case IB_STATE_CONFIRMED_COMPLETELY:
 RouterIdentity remote=inboundState.getConfirmedIdentity();
 if (remote != null) {
 if (_context.shitlist().isShitlistedForever(remote.calculateHash())) {
-if (_log.shouldLog(Log.WARN)) _log.warn("Dropping inbound connection from permanently shitlisted peer: " + remote.calculateHash());
-_context.blocklist().add(inboundState.getSentIP());
-inboundState.fail();
-break;
+  if (_log.shouldLog(Log.WARN))   _log.warn("Dropping inbound connection from permanently shitlisted peer: " + remote.calculateHash());
+  _context.blocklist().add(inboundState.getSentIP());
+  inboundState.fail();
 }
-handleCompletelyEstablished(inboundState);
-break;
+ else {
+  handleCompletelyEstablished(inboundState);
+}
 }
  else {
 if (_log.shouldLog(Log.WARN)) _log.warn("confirmed with invalid? " + inboundState);
 inboundState.fail();
-break;
 }
-case InboundEstablishState.STATE_FAILED:
 break;
-case InboundEstablishState.STATE_UNKNOWN:
-default :
+case IB_STATE_FAILED:
+break;
+case IB_STATE_UNKNOWN:
 if (_log.shouldLog(Log.ERROR)) _log.error("hrm, state is unknown for " + inboundState);
+}
 }
 nextSendTime=now;
 }

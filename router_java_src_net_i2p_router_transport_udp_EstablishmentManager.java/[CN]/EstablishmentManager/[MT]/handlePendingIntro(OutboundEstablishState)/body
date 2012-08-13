@@ -1,21 +1,19 @@
 {
-  long nonce=_context.random().nextLong(MAX_NONCE);
-  while (true) {
-    OutboundEstablishState old=_liveIntroductions.putIfAbsent(Long.valueOf(nonce),state);
-    if (old != null) {
+  long nonce=state.getIntroNonce();
+  if (nonce < 0) {
+    OutboundEstablishState old;
+    do {
       nonce=_context.random().nextLong(MAX_NONCE);
+      old=_liveIntroductions.putIfAbsent(Long.valueOf(nonce),state);
     }
- else {
-      break;
-    }
+ while (old != null);
+    state.setIntroNonce(nonce);
   }
-  _context.simpleScheduler().addEvent(new FailIntroduction(state,nonce),INTRO_ATTEMPT_TIMEOUT);
-  state.setIntroNonce(nonce);
   _context.statManager().addRateData("udp.sendIntroRelayRequest",1,0);
   UDPPacket requests[]=_builder.buildRelayRequest(_transport,state,_transport.getIntroKey());
   for (int i=0; i < requests.length; i++) {
     if (requests[i] != null)     _transport.send(requests[i]);
   }
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Send intro for " + state.getRemoteHostId().toString() + " with our intro key as "+ _transport.getIntroKey());
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Send intro for " + state.getRemoteHostId() + " with our intro key as "+ _transport.getIntroKey());
   state.introSent();
 }

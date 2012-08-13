@@ -1,7 +1,15 @@
 {
   _lastSend=_context.clock().now();
-  long delay=Math.min(RETRANSMIT_DELAY << (_confirmedSentCount++),MAX_DELAY);
+  long delay;
+  if (_confirmedSentCount == 0) {
+    delay=RETRANSMIT_DELAY;
+    _confirmedSentTime=_lastSend;
+  }
+ else {
+    delay=Math.min(RETRANSMIT_DELAY << _confirmedSentCount,MAX_DELAY);
+  }
+  _confirmedSentCount++;
   _nextSend=_lastSend + delay;
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Send confirm packets, nextSend in " + delay);
-  if ((_currentState == STATE_UNKNOWN) || (_currentState == STATE_REQUEST_SENT) || (_currentState == STATE_CREATED_RECEIVED))   _currentState=STATE_CONFIRMED_PARTIALLY;
+  if ((_currentState == OutboundState.OB_STATE_UNKNOWN) || (_currentState == OutboundState.OB_STATE_REQUEST_SENT) || (_currentState == OutboundState.OB_STATE_CREATED_RECEIVED))   _currentState=OutboundState.OB_STATE_CONFIRMED_PARTIALLY;
 }

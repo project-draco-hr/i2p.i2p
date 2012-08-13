@@ -4,16 +4,15 @@
   OutboundEstablishState outboundState=null;
   for (Iterator<OutboundEstablishState> iter=_outboundStates.values().iterator(); iter.hasNext(); ) {
     OutboundEstablishState cur=iter.next();
-    if (cur.getState() == OutboundEstablishState.STATE_CONFIRMED_COMPLETELY) {
+    if (cur.getState() == OB_STATE_CONFIRMED_COMPLETELY) {
       iter.remove();
       outboundState=cur;
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Removing confirmed outbound: " + cur);
       break;
     }
- else     if (cur.getLifetime() > MAX_ESTABLISH_TIME) {
+ else     if (cur.getLifetime() > MAX_OB_ESTABLISH_TIME) {
       iter.remove();
       outboundState=cur;
-      _context.statManager().addRateData("udp.outboundEstablishFailedState",cur.getState(),cur.getLifetime());
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Removing expired outbound: " + cur);
       break;
     }
@@ -25,7 +24,7 @@
  else {
         long when=-1;
         if (cur.getNextSendTime() <= 0) {
-          when=cur.getEstablishBeginTime() + MAX_ESTABLISH_TIME;
+          when=cur.getEstablishBeginTime() + MAX_OB_ESTABLISH_TIME;
         }
  else {
           when=cur.getNextSendTime();
@@ -35,33 +34,44 @@
     }
   }
   if (outboundState != null) {
-    if (outboundState.getLifetime() > MAX_ESTABLISH_TIME) {
-      processExpired(outboundState);
-    }
- else {
+synchronized (outboundState) {
+      boolean expired=outboundState.getLifetime() > MAX_OB_ESTABLISH_TIME;
 switch (outboundState.getState()) {
-case OutboundEstablishState.STATE_UNKNOWN:
-        sendRequest(outboundState);
+case OB_STATE_UNKNOWN:
+        if (expired)         processExpired(outboundState);
+ else         sendRequest(outboundState);
       break;
-case OutboundEstablishState.STATE_REQUEST_SENT:
-    if (outboundState.getNextSendTime() <= now)     sendRequest(outboundState);
-  break;
-case OutboundEstablishState.STATE_CREATED_RECEIVED:
-case OutboundEstablishState.STATE_CONFIRMED_PARTIALLY:
-if (outboundState.getNextSendTime() <= now) sendConfirmation(outboundState);
+case OB_STATE_REQUEST_SENT:
+    long rtime=outboundState.getRequestSentTime();
+  if (expired || (rtime > 0 && rtime + OB_MESSAGE_TIMEOUT < now))   processExpired(outboundState);
+ else   if (outboundState.getNextSendTime() <= now)   sendRequest(outboundState);
 break;
-case OutboundEstablishState.STATE_CONFIRMED_COMPLETELY:
-handleCompletelyEstablished(outboundState);
+case OB_STATE_CREATED_RECEIVED:
+if (expired) processExpired(outboundState);
+ else if (outboundState.getNextSendTime() <= now) sendConfirmation(outboundState);
 break;
-case OutboundEstablishState.STATE_PENDING_INTRO:
-handlePendingIntro(outboundState);
+case OB_STATE_CONFIRMED_PARTIALLY:
+long ctime=outboundState.getConfirmedSentTime();
+if (expired || (ctime > 0 && ctime + OB_MESSAGE_TIMEOUT < now)) {
+sendDestroy(outboundState);
+processExpired(outboundState);
+}
+ else if (outboundState.getNextSendTime() <= now) {
+sendConfirmation(outboundState);
+}
 break;
-default :
+case OB_STATE_CONFIRMED_COMPLETELY:
+if (expired) processExpired(outboundState);
+ else handleCompletelyEstablished(outboundState);
+break;
+case OB_STATE_PENDING_INTRO:
+long itime=outboundState.getIntroSentTime();
+if (expired || (itime > 0 && itime + OB_MESSAGE_TIMEOUT < now)) processExpired(outboundState);
+ else if (outboundState.getNextSendTime() <= now) handlePendingIntro(outboundState);
+break;
 }
 }
 nextSendTime=now;
-}
- else {
 }
 return nextSendTime;
 }

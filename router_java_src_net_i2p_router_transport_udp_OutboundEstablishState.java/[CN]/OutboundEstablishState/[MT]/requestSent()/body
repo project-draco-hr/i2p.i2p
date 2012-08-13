@@ -1,7 +1,15 @@
 {
   _lastSend=_context.clock().now();
-  long delay=Math.min(RETRANSMIT_DELAY << (_requestSentCount++),MAX_DELAY);
+  long delay;
+  if (_requestSentCount == 0) {
+    delay=RETRANSMIT_DELAY;
+    _requestSentTime=_lastSend;
+  }
+ else {
+    delay=Math.min(RETRANSMIT_DELAY << _requestSentCount,MAX_DELAY);
+  }
+  _requestSentCount++;
   _nextSend=_lastSend + delay;
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Send a request packet, nextSend in " + delay);
-  if (_currentState == STATE_UNKNOWN)   _currentState=STATE_REQUEST_SENT;
+  if (_currentState == OutboundState.OB_STATE_UNKNOWN)   _currentState=OutboundState.OB_STATE_REQUEST_SENT;
 }

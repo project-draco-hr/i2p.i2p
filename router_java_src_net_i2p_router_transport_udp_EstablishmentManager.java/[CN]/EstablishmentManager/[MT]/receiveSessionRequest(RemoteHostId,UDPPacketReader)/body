@@ -1,14 +1,17 @@
 {
-  if (!_transport.isValid(from.getIP()))   return;
-  int maxInbound=getMaxInboundEstablishers();
-  boolean isNew=false;
-  if (_inboundStates.size() >= maxInbound) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("Dropping inbound establish, increase " + PROP_MAX_CONCURRENT_ESTABLISH);
-    _context.statManager().addRateData("udp.establishDropped",1);
+  if (!_transport.isValid(from.getIP())) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Receive session request from invalid IP: " + from);
     return;
   }
+  int maxInbound=getMaxInboundEstablishers();
+  boolean isNew=false;
   InboundEstablishState state=_inboundStates.get(from);
   if (state == null) {
+    if (_inboundStates.size() >= maxInbound) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Dropping inbound establish, increase " + PROP_MAX_CONCURRENT_ESTABLISH);
+      _context.statManager().addRateData("udp.establishDropped",1);
+      return;
+    }
     if (_context.blocklist().isBlocklisted(from.getIP())) {
       if (_log.shouldLog(Log.WARN))       _log.warn("Receive session request from blocklisted IP: " + from);
       return;
@@ -24,12 +27,14 @@
     if ((!_context.router().isHidden()) && (!_transport.introducersRequired()) && _transport.haveCapacity()&& !((FloodfillNetworkDatabaseFacade)_context.netDb()).floodfillEnabled()) {
       long tag=1 + _context.random().nextLong(MAX_TAG_VALUE);
       state.setSentRelayTag(tag);
-      if (_log.shouldLog(Log.INFO))       _log.info("Received session request from " + from + ", sending relay tag "+ tag);
+      if (_log.shouldLog(Log.INFO))       _log.info("Received NEW session request from " + from + ", sending relay tag "+ tag);
     }
  else {
       if (_log.shouldLog(Log.INFO))       _log.info("Received session request, but our status is " + _transport.getReachabilityStatus());
     }
   }
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Receive session request from: " + state.getRemoteHostId().toString());
+ else {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Receive DUP session request from: " + state.getRemoteHostId());
+  }
   notifyActivity();
 }

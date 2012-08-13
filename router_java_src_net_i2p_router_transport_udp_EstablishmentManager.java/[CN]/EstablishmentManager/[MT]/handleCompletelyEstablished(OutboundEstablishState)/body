@@ -14,19 +14,16 @@
   _transport.setIP(remote.calculateHash(),state.getSentIP());
   _context.statManager().addRateData("udp.outboundEstablishTime",state.getLifetime(),0);
   sendOurInfo(peer,false);
-  int i=0;
-  while (true) {
-    OutNetMessage msg=state.getNextQueuedMessage();
-    if (msg == null)     break;
+  OutNetMessage msg;
+  while ((msg=state.getNextQueuedMessage()) != null) {
     if (now - Router.CLOCK_FUDGE_FACTOR > msg.getExpiration()) {
       msg.timestamp("took too long but established...");
       _transport.failed(msg,"Took too long to establish, but it was established");
     }
  else {
-      msg.timestamp("session fully established and sent " + i);
+      msg.timestamp("session fully established and sent");
       _transport.send(msg);
     }
-    i++;
   }
   return peer;
 }

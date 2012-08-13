@@ -1,38 +1,30 @@
 {
-  if (outboundState.getState() != OutboundEstablishState.STATE_CONFIRMED_COMPLETELY) {
+  long nonce=outboundState.getIntroNonce();
+  if (nonce >= 0) {
+    boolean removed=_liveIntroductions.remove(Long.valueOf(nonce),outboundState);
+    if (removed) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Send intro for " + outboundState.getRemoteHostId() + " timed out");
+      _context.statManager().addRateData("udp.sendIntroRelayTimeout",1,0);
+    }
+  }
+  boolean removed=_outboundStates.remove(outboundState.getRemoteHostId(),outboundState);
+  if (outboundState.getState() != OB_STATE_CONFIRMED_COMPLETELY) {
     if (_log.shouldLog(Log.INFO))     _log.info("Lifetime of expired outbound establish: " + outboundState.getLifetime());
     while (true) {
       OutNetMessage msg=outboundState.getNextQueuedMessage();
       if (msg == null)       break;
       _transport.failed(msg,"Expired during failed establish");
     }
-    String err=null;
-switch (outboundState.getState()) {
-case OutboundEstablishState.STATE_CONFIRMED_PARTIALLY:
-      err="Took too long to establish remote connection (confirmed partially)";
-    break;
-case OutboundEstablishState.STATE_CREATED_RECEIVED:
-  err="Took too long to establish remote connection (created received)";
-break;
-case OutboundEstablishState.STATE_REQUEST_SENT:
-err="Took too long to establish remote connection (request sent)";
-break;
-case OutboundEstablishState.STATE_PENDING_INTRO:
-err="Took too long to establish remote connection (intro failed)";
-break;
-case OutboundEstablishState.STATE_UNKNOWN:
-default :
-err="Took too long to establish remote connection (unknown state)";
-}
-Hash peer=outboundState.getRemoteIdentity().calculateHash();
-_transport.markUnreachable(peer);
-_transport.dropPeer(peer,false,err);
-}
+    String err="Took too long to establish OB connection, state = " + outboundState.getState();
+    Hash peer=outboundState.getRemoteIdentity().calculateHash();
+    _transport.markUnreachable(peer);
+    _transport.dropPeer(peer,false,err);
+  }
  else {
-while (true) {
-OutNetMessage msg=outboundState.getNextQueuedMessage();
-if (msg == null) break;
-_transport.send(msg);
-}
-}
+    while (true) {
+      OutNetMessage msg=outboundState.getNextQueuedMessage();
+      if (msg == null)       break;
+      _transport.send(msg);
+    }
+  }
 }

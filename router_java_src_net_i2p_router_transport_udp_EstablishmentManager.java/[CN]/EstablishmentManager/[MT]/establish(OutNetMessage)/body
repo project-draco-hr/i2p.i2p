@@ -34,10 +34,11 @@
   state=_outboundStates.get(to);
   if (state == null) {
     if (_outboundStates.size() >= getMaxConcurrentEstablish()) {
-      if (_queuedOutbound.size() > MAX_QUEUED_OUTBOUND) {
+      if (_queuedOutbound.size() >= MAX_QUEUED_OUTBOUND) {
         rejected=true;
       }
  else {
+        if (_log.shouldLog(Log.WARN))         _log.warn("Queueing outbound establish, increase " + PROP_MAX_CONCURRENT_ESTABLISH);
         List<OutNetMessage> newQueued=new ArrayList(MAX_QUEUED_PER_PEER);
         List<OutNetMessage> queued=_queuedOutbound.putIfAbsent(to,newQueued);
         if (queued == null)         queued=newQueued;
@@ -71,7 +72,6 @@ synchronized (queued) {
       OutboundEstablishState oldState=_outboundStates.putIfAbsent(to,state);
       boolean isNew=oldState == null;
       if (!isNew)       state=oldState;
- else       _context.simpleScheduler().addEvent(new Expire(to,state),10 * 1000);
     }
   }
   if (state != null) {
@@ -96,7 +96,7 @@ synchronized (queued) {
     _context.statManager().addRateData("udp.establishOverflow",queueCount,deferred);
     return;
   }
-  if (deferred > 0)   msg.timestamp("too many deferred establishers: " + deferred);
- else   if (state != null)   msg.timestamp("establish state already waiting " + state.getLifetime());
+  if (deferred > 0)   msg.timestamp("too many deferred establishers");
+ else   if (state != null)   msg.timestamp("establish state already waiting");
   notifyActivity();
 }
