@@ -11,7 +11,6 @@
       long uploaded=coordinator.getUploaded();
       long downloaded=coordinator.getDownloaded();
       long left=coordinator.getLeft();
-      boolean completed=(left == 0);
       String event;
       if (!completed && left == 0) {
         completed=true;
@@ -19,8 +18,7 @@
       }
  else       event=NO_EVENT;
       int maxSeenPeers=0;
-      for (Iterator iter=trackers.iterator(); iter.hasNext(); ) {
-        Tracker tr=(Tracker)iter.next();
+      for (      Tracker tr : trackers) {
         if ((!stop) && (!tr.stop) && (completed || coordinator.needOutboundPeers() || !tr.started)&& (event.equals(COMPLETED_EVENT) || System.currentTimeMillis() > tr.lastRequestTime + tr.interval)) {
           try {
             if (!tr.started)             event=STARTED_EVENT;
@@ -113,7 +111,8 @@
         int numwant;
         if (event.equals(STOPPED_EVENT) || !coordinator.needOutboundPeers())         numwant=1;
  else         numwant=_util.getMaxConnections();
-        List<Hash> hashes=dht.getPeers(snark.getInfoHash(),numwant,2 * 60 * 1000);
+        Collection<Hash> hashes=dht.getPeers(snark.getInfoHash(),numwant,2 * 60 * 1000);
+        if (!hashes.isEmpty())         runStarted=true;
         if (_log.shouldLog(Log.INFO))         _log.info("Got " + hashes + " from DHT");
         if (!stop) {
           int good=dht.announce(snark.getInfoHash(),1,5 * 60 * 1000);
@@ -145,12 +144,12 @@
       }
       snark.setTrackerSeenPeers(maxSeenPeers);
       if (stop)       return;
-      if (!runStarted)       if (_log.shouldLog(Log.DEBUG))       _log.debug("         Retrying in one minute...");
       try {
         int delay;
         int random=r.nextInt(120 * 1000);
         if (completed && runStarted)         delay=3 * SLEEP * 60* 1000 + random;
  else         if (snark.getTrackerProblems() != null && ++consecutiveFails < MAX_CONSEC_FAILS)         delay=INITIAL_SLEEP;
+ else         if ((!runStarted) && _runCount < MAX_CONSEC_FAILS)         delay=INITIAL_SLEEP;
  else         delay=SLEEP * 60 * 1000 + random;
         if (delay > 20 * 1000) {
           if (_log.shouldLog(Log.DEBUG))           _log.debug("Requeueing in " + DataHelper.formatDuration(delay) + ": "+ Thread.currentThread().getName());
