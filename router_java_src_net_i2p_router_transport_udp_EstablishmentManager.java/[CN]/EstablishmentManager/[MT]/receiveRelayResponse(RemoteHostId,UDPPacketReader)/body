@@ -18,11 +18,15 @@
   _context.statManager().addRateData("udp.receiveIntroRelayResponse",state.getLifetime(),0);
   int port=reader.getRelayResponseReader().readCharliePort();
   if (_log.shouldLog(Log.INFO))   _log.info("Received RelayResponse for " + state.getRemoteIdentity().calculateHash() + " - they are on "+ addr.toString()+ ":"+ port+ " (according to "+ bob+ ")");
-  RemoteHostId oldId=state.getRemoteHostId();
-  state.introduced(addr,ip,port);
-  RemoteHostId newId=state.getRemoteHostId();
-  OutboundEstablishState oldState=_outboundStates.remove(oldId);
-  _outboundStates.put(newId,state);
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("RR replaced " + oldId + " -> "+ oldState+ " with "+ newId+ " -> "+ state);
+synchronized (state) {
+    RemoteHostId oldId=state.getRemoteHostId();
+    state.introduced(addr,ip,port);
+    RemoteHostId newId=state.getRemoteHostId();
+    if (!oldId.equals(newId)) {
+      _outboundStates.remove(oldId);
+      _outboundStates.put(newId,state);
+      if (_log.shouldLog(Log.WARN))       _log.warn("RR replaced " + oldId + " with "+ newId+ " -> "+ state);
+    }
+  }
   notifyActivity();
 }

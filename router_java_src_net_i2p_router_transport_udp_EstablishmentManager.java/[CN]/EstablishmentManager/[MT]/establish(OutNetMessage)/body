@@ -21,82 +21,108 @@
       _transport.markUnreachable(msg.getTarget().getIdentity().calculateHash());
       return;
     }
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Add outbound establish state to: " + to);
-  }
+    InboundEstablishState inState=_inboundStates.get(to);
+    if (inState != null) {
+synchronized (inState) {
+switch (inState.getState()) {
+case IB_STATE_UNKNOWN:
+case IB_STATE_REQUEST_RECEIVED:
+case IB_STATE_CREATED_SENT:
+case IB_STATE_CONFIRMED_PARTIALLY:
+case IB_STATE_CONFIRMED_COMPLETELY:
+          inState.addMessage(msg);
+        if (_log.shouldLog(Log.WARN))         _log.debug("OB msg queued to IES");
+      break;
+case IB_STATE_COMPLETE:
+    _transport.sendIfEstablished(msg);
+  break;
+case IB_STATE_FAILED:
+_transport.failed(msg,"OB msg failed during IB establish");
+break;
+}
+}
+return;
+}
+}
  else {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Add indirect outbound establish state to: " + addr);
-    to=new RemoteHostId(msg.getTarget().getIdentity().calculateHash().getData());
-  }
-  OutboundEstablishState state=null;
-  int deferred=0;
-  boolean rejected=false;
-  int queueCount=0;
-  state=_outboundStates.get(to);
-  if (state == null) {
-    if (_outboundStates.size() >= getMaxConcurrentEstablish()) {
-      if (_queuedOutbound.size() >= MAX_QUEUED_OUTBOUND) {
-        rejected=true;
-      }
+if (_log.shouldLog(Log.DEBUG)) _log.debug("Add indirect outbound establish state to: " + addr);
+to=new RemoteHostId(msg.getTarget().getIdentity().calculateHash().getData());
+}
+OutboundEstablishState state=null;
+int deferred=0;
+boolean rejected=false;
+int queueCount=0;
+state=_outboundStates.get(to);
+if (state == null) {
+if (_outboundStates.size() >= getMaxConcurrentEstablish()) {
+if (_queuedOutbound.size() >= MAX_QUEUED_OUTBOUND) {
+rejected=true;
+}
  else {
-        if (_log.shouldLog(Log.WARN))         _log.warn("Queueing outbound establish, increase " + PROP_MAX_CONCURRENT_ESTABLISH);
-        List<OutNetMessage> newQueued=new ArrayList(MAX_QUEUED_PER_PEER);
-        List<OutNetMessage> queued=_queuedOutbound.putIfAbsent(to,newQueued);
-        if (queued == null)         queued=newQueued;
+if (_log.shouldLog(Log.WARN)) _log.warn("Queueing outbound establish, increase " + PROP_MAX_CONCURRENT_ESTABLISH);
+List<OutNetMessage> newQueued=new ArrayList(MAX_QUEUED_PER_PEER);
+List<OutNetMessage> queued=_queuedOutbound.putIfAbsent(to,newQueued);
+if (queued == null) queued=newQueued;
 synchronized (queued) {
-          queueCount=queued.size();
-          if (queueCount < MAX_QUEUED_PER_PEER) {
-            queued.add(msg);
-            queueCount++;
-          }
-          deferred=_queuedOutbound.size();
-        }
-      }
-    }
+queueCount=queued.size();
+if (queueCount < MAX_QUEUED_PER_PEER) {
+queued.add(msg);
+queueCount++;
+}
+deferred=_queuedOutbound.size();
+}
+}
+}
  else {
-      byte[] keyBytes=addr.getIntroKey();
-      if (keyBytes == null) {
-        _transport.markUnreachable(msg.getTarget().getIdentity().calculateHash());
-        _transport.failed(msg,"Peer has no key, cannot establish");
-        return;
-      }
-      SessionKey sessionKey;
-      try {
-        sessionKey=new SessionKey(keyBytes);
-      }
- catch (      IllegalArgumentException iae) {
-        _transport.markUnreachable(msg.getTarget().getIdentity().calculateHash());
-        _transport.failed(msg,"Peer has bad key, cannot establish");
-        return;
-      }
-      state=new OutboundEstablishState(_context,remAddr,port,msg.getTarget().getIdentity(),sessionKey,addr,_transport.getDHBuilder());
-      OutboundEstablishState oldState=_outboundStates.putIfAbsent(to,state);
-      boolean isNew=oldState == null;
-      if (!isNew)       state=oldState;
-    }
-  }
-  if (state != null) {
-    state.addMessage(msg);
-    List<OutNetMessage> queued=_queuedOutbound.remove(to);
-    if (queued != null) {
+byte[] keyBytes=addr.getIntroKey();
+if (keyBytes == null) {
+_transport.markUnreachable(msg.getTarget().getIdentity().calculateHash());
+_transport.failed(msg,"Peer has no key, cannot establish");
+return;
+}
+SessionKey sessionKey;
+try {
+sessionKey=new SessionKey(keyBytes);
+}
+ catch (IllegalArgumentException iae) {
+_transport.markUnreachable(msg.getTarget().getIdentity().calculateHash());
+_transport.failed(msg,"Peer has bad key, cannot establish");
+return;
+}
+state=new OutboundEstablishState(_context,remAddr,port,msg.getTarget().getIdentity(),sessionKey,addr,_transport.getDHBuilder());
+OutboundEstablishState oldState=_outboundStates.putIfAbsent(to,state);
+boolean isNew=oldState == null;
+if (isNew) {
+if (_log.shouldLog(Log.DEBUG)) _log.debug("Adding new " + state);
+}
+ else {
+state=oldState;
+}
+}
+}
+if (state != null) {
+state.addMessage(msg);
+List<OutNetMessage> queued=_queuedOutbound.remove(to);
+if (queued != null) {
 synchronized (queued) {
-        for (        OutNetMessage m : queued) {
-          state.addMessage(m);
-        }
-      }
-    }
-  }
-  if (rejected) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("Rejecting outbound establish");
-    _transport.failed(msg,"Too many pending outbound connections");
-    _context.statManager().addRateData("udp.establishRejected",deferred,0);
-    return;
-  }
-  if (queueCount >= MAX_QUEUED_PER_PEER) {
-    _transport.failed(msg,"Too many pending messages for the given peer");
-    _context.statManager().addRateData("udp.establishOverflow",queueCount,deferred);
-    return;
-  }
-  if (deferred > 0)   msg.timestamp("too many deferred establishers");
- else   if (state != null)   msg.timestamp("establish state already waiting");
-  notifyActivity();
+for (OutNetMessage m : queued) {
+state.addMessage(m);
+}
+}
+}
+}
+if (rejected) {
+if (_log.shouldLog(Log.WARN)) _log.warn("Rejecting outbound establish");
+_transport.failed(msg,"Too many pending outbound connections");
+_context.statManager().addRateData("udp.establishRejected",deferred,0);
+return;
+}
+if (queueCount >= MAX_QUEUED_PER_PEER) {
+_transport.failed(msg,"Too many pending messages for the given peer");
+_context.statManager().addRateData("udp.establishOverflow",queueCount,deferred);
+return;
+}
+if (deferred > 0) msg.timestamp("too many deferred establishers");
+ else if (state != null) msg.timestamp("establish state already waiting");
+notifyActivity();
 }

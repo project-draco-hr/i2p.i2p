@@ -10,9 +10,8 @@
   boolean removed=_outboundStates.remove(outboundState.getRemoteHostId(),outboundState);
   if (outboundState.getState() != OB_STATE_CONFIRMED_COMPLETELY) {
     if (_log.shouldLog(Log.INFO))     _log.info("Lifetime of expired outbound establish: " + outboundState.getLifetime());
-    while (true) {
-      OutNetMessage msg=outboundState.getNextQueuedMessage();
-      if (msg == null)       break;
+    OutNetMessage msg;
+    while ((msg=outboundState.getNextQueuedMessage()) != null) {
       _transport.failed(msg,"Expired during failed establish");
     }
     String err="Took too long to establish OB connection, state = " + outboundState.getState();
@@ -21,9 +20,8 @@
     _transport.dropPeer(peer,false,err);
   }
  else {
-    while (true) {
-      OutNetMessage msg=outboundState.getNextQueuedMessage();
-      if (msg == null)       break;
+    OutNetMessage msg;
+    while ((msg=outboundState.getNextQueuedMessage()) != null) {
       _transport.send(msg);
     }
   }

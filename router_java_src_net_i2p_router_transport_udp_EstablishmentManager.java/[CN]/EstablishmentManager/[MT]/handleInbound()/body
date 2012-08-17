@@ -42,12 +42,14 @@
 synchronized (inboundState) {
 switch (inboundState.getState()) {
 case IB_STATE_REQUEST_RECEIVED:
-        if (!expired)         sendCreated(inboundState);
+        if (expired)         processExpired(inboundState);
+ else         sendCreated(inboundState);
       break;
 case IB_STATE_CREATED_SENT:
 case IB_STATE_CONFIRMED_PARTIALLY:
     if (expired) {
       sendDestroy(inboundState);
+      processExpired(inboundState);
     }
  else     if (inboundState.getNextSendTime() <= now) {
       sendCreated(inboundState);
@@ -60,6 +62,7 @@ if (_context.shitlist().isShitlistedForever(remote.calculateHash())) {
   if (_log.shouldLog(Log.WARN))   _log.warn("Dropping inbound connection from permanently shitlisted peer: " + remote.calculateHash());
   _context.blocklist().add(inboundState.getSentIP());
   inboundState.fail();
+  processExpired(inboundState);
 }
  else {
   handleCompletelyEstablished(inboundState);
@@ -68,8 +71,10 @@ if (_context.shitlist().isShitlistedForever(remote.calculateHash())) {
  else {
 if (_log.shouldLog(Log.WARN)) _log.warn("confirmed with invalid? " + inboundState);
 inboundState.fail();
+processExpired(inboundState);
 }
 break;
+case IB_STATE_COMPLETE:
 case IB_STATE_FAILED:
 break;
 case IB_STATE_UNKNOWN:

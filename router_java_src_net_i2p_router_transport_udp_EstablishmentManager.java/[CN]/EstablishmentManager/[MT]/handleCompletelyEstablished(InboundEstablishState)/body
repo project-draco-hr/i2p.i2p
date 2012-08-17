@@ -1,14 +1,41 @@
 {
-  if (state.complete())   return;
+  if (state.isComplete())   return;
   RouterIdentity remote=state.getConfirmedIdentity();
   PeerState peer=new PeerState(_context,_transport,state.getSentIP(),state.getSentPort(),remote.calculateHash(),true);
   peer.setCurrentCipherKey(state.getCipherKey());
   peer.setCurrentMACKey(state.getMACKey());
   peer.setWeRelayToThemAs(state.getSentRelayTag());
+  RouterInfo info=_context.netDb().lookupRouterInfoLocally(remote.calculateHash());
+  if (info != null) {
+    RouterAddress addr=info.getTargetAddress(UDPTransport.STYLE);
+    if (addr != null) {
+      String smtu=addr.getOption(UDPAddress.PROP_MTU);
+      if (smtu != null) {
+        try {
+          int mtu=MTU.rectify(Integer.parseInt(smtu));
+          peer.setHisMTU(mtu);
+        }
+ catch (        NumberFormatException nfe) {
+        }
+      }
+    }
+  }
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Handle completely established (inbound): " + state.getRemoteHostId().toString() + " - "+ peer.getRemotePeer());
   _transport.addRemotePeerState(peer);
   _transport.inboundConnectionReceived();
   _transport.setIP(remote.calculateHash(),state.getSentIP());
   _context.statManager().addRateData("udp.inboundEstablishTime",state.getLifetime(),0);
   sendInboundComplete(peer);
+  OutNetMessage msg;
+  while ((msg=state.getNextQueuedMessage()) != null) {
+    if (_context.clock().now() - Router.CLOCK_FUDGE_FACTOR > msg.getExpiration()) {
+      msg.timestamp("took too long but established...");
+      _transport.failed(msg,"Took too long to establish, but it was established");
+    }
+ else {
+      msg.timestamp("session fully established and sent");
+      _transport.send(msg);
+    }
+  }
+  state.complete();
 }
