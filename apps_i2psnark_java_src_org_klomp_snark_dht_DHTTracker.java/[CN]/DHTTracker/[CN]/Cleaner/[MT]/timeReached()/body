@@ -14,8 +14,20 @@
         peerCount++;
       }
     }
-    if (recent <= 0)     iter.remove();
- else     torrentCount++;
+    if (recent > MAX_PEERS_PER_TORRENT) {
+      for (Iterator<Peer> iterp=p.values().iterator(); iterp.hasNext() && p.size() > MAX_PEERS_PER_TORRENT; ) {
+        iterp.next();
+        iterp.remove();
+        peerCount--;
+      }
+      torrentCount++;
+    }
+ else     if (recent <= 0) {
+      iter.remove();
+    }
+ else {
+      torrentCount++;
+    }
   }
   if (peerCount > MAX_PEERS)   _expireTime=Math.max(_expireTime - DELTA_EXPIRE_TIME,MIN_EXPIRE_TIME);
  else   _expireTime=Math.min(_expireTime + DELTA_EXPIRE_TIME,MAX_EXPIRE_TIME);
