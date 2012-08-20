@@ -107,12 +107,15 @@
         if (_log.shouldLog(Log.INFO))         _log.info("Not getting PEX peers");
       }
       dht=_util.getDHT();
-      if (dht != null && (meta == null || !meta.isPrivate()) && !stop) {
+      if (dht != null && (meta == null || !meta.isPrivate()) && (!stop) && _util.getContext().clock().now() > lastDHTAnnounce + MIN_DHT_ANNOUNCE_INTERVAL) {
         int numwant;
         if (event.equals(STOPPED_EVENT) || !coordinator.needOutboundPeers())         numwant=1;
  else         numwant=_util.getMaxConnections();
         Collection<Hash> hashes=dht.getPeers(snark.getInfoHash(),numwant,2 * 60 * 1000);
-        if (!hashes.isEmpty())         runStarted=true;
+        if (!hashes.isEmpty()) {
+          runStarted=true;
+          lastDHTAnnounce=_util.getContext().clock().now();
+        }
         if (_log.shouldLog(Log.INFO))         _log.info("Got " + hashes + " from DHT");
         if (!stop) {
           int good=dht.announce(snark.getInfoHash(),1,5 * 60 * 1000);
