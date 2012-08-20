@@ -19,11 +19,21 @@
   add.setArgumentValue("NewPortMappingDescription",description);
   add.setArgumentValue("NewEnabled","1");
   add.setArgumentValue("NewLeaseDuration",0);
-  if (add.postControlAction()) {
+  boolean rv=add.postControlAction();
+  if (rv) {
 synchronized (lock) {
       portsForwarded.add(fp);
     }
-    return true;
   }
- else   return false;
+  int level=rv ? Log.INFO : Log.WARN;
+  if (_log.shouldLog(level)) {
+    StringBuilder buf=new StringBuilder();
+    buf.append("AddPortMapping result for ").append(protocol).append(" port ").append(port);
+    UPnPStatus status=add.getStatus();
+    if (status != null)     buf.append(" Status: ").append(status.getCode()).append(' ').append(status.getDescription());
+    status=add.getControlStatus();
+    if (status != null)     buf.append(" ControlStatus: ").append(status.getCode()).append(' ').append(status.getDescription());
+    _log.log(level,buf.toString());
+  }
+  return rv;
 }
