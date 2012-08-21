@@ -10,7 +10,7 @@
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Removing confirmed outbound: " + cur);
       break;
     }
- else     if (cur.getLifetime() > MAX_OB_ESTABLISH_TIME) {
+ else     if (cur.getLifetime() >= MAX_OB_ESTABLISH_TIME) {
       iter.remove();
       outboundState=cur;
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Removing expired outbound: " + cur);
@@ -35,7 +35,7 @@
   }
   if (outboundState != null) {
 synchronized (outboundState) {
-      boolean expired=outboundState.getLifetime() > MAX_OB_ESTABLISH_TIME;
+      boolean expired=outboundState.getLifetime() >= MAX_OB_ESTABLISH_TIME;
 switch (outboundState.getState()) {
 case OB_STATE_UNKNOWN:
 case OB_STATE_INTRODUCED:
@@ -44,7 +44,7 @@ case OB_STATE_INTRODUCED:
       break;
 case OB_STATE_REQUEST_SENT:
     long rtime=outboundState.getRequestSentTime();
-  if (expired || (rtime > 0 && rtime + OB_MESSAGE_TIMEOUT < now))   processExpired(outboundState);
+  if (expired || (rtime > 0 && rtime + OB_MESSAGE_TIMEOUT <= now))   processExpired(outboundState);
  else   if (outboundState.getNextSendTime() <= now)   sendRequest(outboundState);
 break;
 case OB_STATE_CREATED_RECEIVED:
@@ -53,7 +53,7 @@ if (expired) processExpired(outboundState);
 break;
 case OB_STATE_CONFIRMED_PARTIALLY:
 long ctime=outboundState.getConfirmedSentTime();
-if (expired || (ctime > 0 && ctime + OB_MESSAGE_TIMEOUT < now)) {
+if (expired || (ctime > 0 && ctime + OB_MESSAGE_TIMEOUT <= now)) {
 sendDestroy(outboundState);
 processExpired(outboundState);
 }
@@ -67,7 +67,7 @@ if (expired) processExpired(outboundState);
 break;
 case OB_STATE_PENDING_INTRO:
 long itime=outboundState.getIntroSentTime();
-if (expired || (itime > 0 && itime + OB_MESSAGE_TIMEOUT < now)) processExpired(outboundState);
+if (expired || (itime > 0 && itime + OB_MESSAGE_TIMEOUT <= now)) processExpired(outboundState);
  else if (outboundState.getNextSendTime() <= now) handlePendingIntro(outboundState);
 break;
 }

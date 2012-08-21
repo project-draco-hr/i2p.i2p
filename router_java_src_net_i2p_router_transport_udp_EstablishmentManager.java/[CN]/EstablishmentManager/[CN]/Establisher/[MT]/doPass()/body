@@ -6,11 +6,17 @@
     if (iactive > 0 || oactive > 0) {
       int queued=_queuedOutbound.size();
       int live=_liveIntroductions.size();
-      _log.debug("OB states: " + oactive + " IB states: "+ iactive+ " OB queued: "+ queued+ " intros: "+ live);
+      int claimed=_outboundByClaimedAddress.size();
+      int hash=_outboundByHash.size();
+      _log.debug("OB states: " + oactive + " IB states: "+ iactive+ " OB queued: "+ queued+ " intros: "+ live+ " OB claimed: "+ claimed+ " hash: "+ hash);
     }
   }
   _activity=0;
   long now=_context.clock().now();
+  if (_lastFailsafe + FAILSAFE_INTERVAL < _context.clock().now()) {
+    _lastFailsafe=_context.clock().now();
+    doFailsafe();
+  }
   long nextSendTime=-1;
   long nextSendInbound=handleInbound();
   long nextSendOutbound=handleOutbound();

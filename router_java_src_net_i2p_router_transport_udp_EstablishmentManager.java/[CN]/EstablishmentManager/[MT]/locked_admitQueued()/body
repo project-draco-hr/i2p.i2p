@@ -20,22 +20,9 @@ synchronized (allQueued) {
       }
     }
     if (queued.isEmpty())     continue;
-    OutNetMessage msg=queued.get(0);
-    RouterAddress ra=msg.getTarget().getTargetAddress(_transport.getStyle());
-    if (ra == null) {
-      for (int i=0; i < queued.size(); i++)       _transport.failed(queued.get(i),"Cannot admit to the queue, as it has no address");
-      continue;
-    }
-    UDPAddress addr=new UDPAddress(ra);
-    InetAddress remAddr=addr.getHostAddress();
-    int port=addr.getPort();
-    OutboundEstablishState qstate=new OutboundEstablishState(_context,remAddr,port,msg.getTarget().getIdentity(),new SessionKey(addr.getIntroKey()),addr,_transport.getDHBuilder());
-    OutboundEstablishState old=_outboundStates.putIfAbsent(to,qstate);
-    if (old != null)     qstate=old;
-    for (int i=0; i < queued.size(); i++) {
-      OutNetMessage m=queued.get(i);
+    for (    OutNetMessage m : queued) {
       m.timestamp("no longer deferred... establishing");
-      qstate.addMessage(m);
+      establish(m,false);
     }
     admitted++;
   }

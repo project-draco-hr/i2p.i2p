@@ -1,32 +1,40 @@
 {
   long nonce=reader.getRelayResponseReader().readNonce();
   OutboundEstablishState state=_liveIntroductions.remove(Long.valueOf(nonce));
-  if (state == null)   return;
+  if (state == null) {
+    if (_log.shouldLog(Log.INFO))     _log.info("Dup or unknown RelayResponse: " + nonce);
+    return;
+  }
   int sz=reader.getRelayResponseReader().readCharlieIPSize();
   byte ip[]=new byte[sz];
   reader.getRelayResponseReader().readCharlieIP(ip,0);
+  int port=reader.getRelayResponseReader().readCharliePort();
   InetAddress addr=null;
   try {
+    if (!_transport.isValid(ip))     throw new UnknownHostException("non-public IP");
+    if (port <= 0 || port > 65535)     throw new UnknownHostException("bad port " + port);
     addr=InetAddress.getByAddress(ip);
   }
  catch (  UnknownHostException uhe) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("Introducer for " + state + " ("+ bob+ ") sent us an invalid IP for our target: "+ Addresses.toString(ip),uhe);
+    if (_log.shouldLog(Log.WARN))     _log.warn("Introducer for " + state + " ("+ bob+ ") sent us an invalid address for our target: "+ Addresses.toString(ip,port),uhe);
     state.introductionFailed();
     notifyActivity();
     return;
   }
   _context.statManager().addRateData("udp.receiveIntroRelayResponse",state.getLifetime(),0);
-  int port=reader.getRelayResponseReader().readCharliePort();
-  if (_log.shouldLog(Log.INFO))   _log.info("Received RelayResponse for " + state.getRemoteIdentity().calculateHash() + " - they are on "+ addr.toString()+ ":"+ port+ " (according to "+ bob+ ")");
+  if (_log.shouldLog(Log.INFO))   _log.info("Received RelayResponse for " + state.getRemoteIdentity().calculateHash() + " - they are on "+ addr.toString()+ ":"+ port+ " (according to "+ bob+ ") nonce="+ nonce);
 synchronized (state) {
     RemoteHostId oldId=state.getRemoteHostId();
-    state.introduced(addr,ip,port);
+    state.introduced(ip,port);
     RemoteHostId newId=state.getRemoteHostId();
+    _outboundByHash.put(state.getRemoteIdentity().calculateHash(),state);
+    RemoteHostId claimed=state.getClaimedAddress();
     if (!oldId.equals(newId)) {
       _outboundStates.remove(oldId);
       _outboundStates.put(newId,state);
-      if (_log.shouldLog(Log.WARN))       _log.warn("RR replaced " + oldId + " with "+ newId+ " -> "+ state);
+      if (_log.shouldLog(Log.WARN))       _log.warn("RR replaced " + oldId + " with "+ newId+ ", claimed address was "+ claimed);
     }
+    if (claimed != null)     _outboundByClaimedAddress.remove(oldId,state);
   }
   notifyActivity();
 }

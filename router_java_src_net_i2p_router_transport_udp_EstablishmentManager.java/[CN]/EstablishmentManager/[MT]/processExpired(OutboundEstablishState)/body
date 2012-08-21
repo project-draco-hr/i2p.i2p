@@ -3,13 +3,16 @@
   if (nonce >= 0) {
     boolean removed=_liveIntroductions.remove(Long.valueOf(nonce),outboundState);
     if (removed) {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Send intro for " + outboundState.getRemoteHostId() + " timed out");
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Send intro for " + outboundState + " timed out");
       _context.statManager().addRateData("udp.sendIntroRelayTimeout",1,0);
     }
   }
+  RemoteHostId claimed=outboundState.getClaimedAddress();
+  if (claimed != null)   _outboundByClaimedAddress.remove(claimed,outboundState);
+  _outboundByHash.remove(outboundState.getRemoteIdentity().calculateHash(),outboundState);
   boolean removed=_outboundStates.remove(outboundState.getRemoteHostId(),outboundState);
   if (outboundState.getState() != OB_STATE_CONFIRMED_COMPLETELY) {
-    if (_log.shouldLog(Log.INFO))     _log.info("Lifetime of expired outbound establish: " + outboundState.getLifetime());
+    if (_log.shouldLog(Log.INFO))     _log.info("Expired: " + outboundState + " Lifetime: "+ outboundState.getLifetime());
     OutNetMessage msg;
     while ((msg=outboundState.getNextQueuedMessage()) != null) {
       _transport.failed(msg,"Expired during failed establish");
