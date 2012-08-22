@@ -2,18 +2,53 @@
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Running: " + this);
   long before=System.currentTimeMillis();
   long delay=0;
-  if (_future != null)   delay=_future.getDelay(TimeUnit.MILLISECONDS);
- else   if (_log.shouldLog(Log.WARN))   _log.warn(_pool + " wtf, no _future " + this);
-  if (_log.shouldLog(Log.WARN) && delay > 100)   _log.warn(_pool + " wtf, early execution " + delay+ ": "+ this);
- else   if (_log.shouldLog(Log.WARN) && delay < -1000)   _log.warn(" wtf, late execution " + (0 - delay) + ": "+ this+ _pool.debug());
-  try {
-    timeReached();
-  }
- catch (  Throwable t) {
-    _log.log(Log.CRIT,_pool + ": Timed task " + this+ " exited unexpectedly, please report",t);
-  }
-  long time=System.currentTimeMillis() - before;
-  if (time > 500 && _log.shouldLog(Log.WARN))   _log.warn(_pool + " wtf, event execution took " + time+ ": "+ this);
-  long completed=_pool.getCompletedTaskCount();
-  if (_log.shouldLog(Log.INFO) && completed % 250 == 0)   _log.info(_pool.debug());
+synchronized (this) {
+    if (_rescheduleAfterRun)     throw new IllegalStateException("rescheduleAfterRun cannot be true here");
+switch (_state) {
+case CANCELLED:
+      return;
+case IDLE:
+case RUNNING:
+    throw new IllegalStateException("not possible to be in " + _state);
+case SCHEDULED:
+  _state=TimedEventState.IDLE;
+}
+int difference=(int)(_nextRun - before);
+if (difference > _fuzz) {
+schedule(difference);
+return;
+}
+_state=TimedEventState.RUNNING;
+}
+if (_future != null) delay=_future.getDelay(TimeUnit.MILLISECONDS);
+ else if (_log.shouldLog(Log.WARN)) _log.warn(_pool + " wtf, no _future " + this);
+if (_log.shouldLog(Log.WARN) && delay > 100) _log.warn(_pool + " wtf, early execution " + delay+ ": "+ this);
+ else if (_log.shouldLog(Log.WARN) && delay < -1000) _log.warn(" wtf, late execution " + (0 - delay) + ": "+ this+ _pool.debug());
+try {
+timeReached();
+}
+ catch (Throwable t) {
+_log.log(Log.CRIT,_pool + ": Timed task " + this+ " exited unexpectedly, please report",t);
+}
+ finally {
+synchronized (this) {
+switch (_state) {
+case SCHEDULED:
+case IDLE:
+  throw new IllegalStateException("can't be " + _state);
+case CANCELLED:
+break;
+case RUNNING:
+_state=TimedEventState.IDLE;
+if (_rescheduleAfterRun) {
+_rescheduleAfterRun=false;
+schedule(_nextRun - System.currentTimeMillis());
+}
+}
+}
+}
+long time=System.currentTimeMillis() - before;
+if (time > 500 && _log.shouldLog(Log.WARN)) _log.warn(_pool + " wtf, event execution took " + time+ ": "+ this);
+long completed=_pool.getCompletedTaskCount();
+if (_log.shouldLog(Log.INFO) && completed % 250 == 0) _log.info(_pool.debug());
 }

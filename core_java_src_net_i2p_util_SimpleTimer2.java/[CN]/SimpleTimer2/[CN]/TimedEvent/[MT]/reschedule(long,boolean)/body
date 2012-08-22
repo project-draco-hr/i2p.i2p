@@ -1,11 +1,12 @@
 {
+  final long now=System.currentTimeMillis();
   long oldTimeout;
-  boolean scheduled=_future != null && !_future.isDone();
-  if (scheduled)   oldTimeout=_future.getDelay(TimeUnit.MILLISECONDS);
+  boolean scheduled=_state == TimedEventState.SCHEDULED;
+  if (scheduled)   oldTimeout=_nextRun - now;
  else   oldTimeout=timeoutMs;
   if ((oldTimeout - _fuzz > timeoutMs && useEarliestTime) || (oldTimeout + _fuzz < timeoutMs && !useEarliestTime) || (!scheduled)) {
-    if (scheduled) {
-      if (_log.shouldLog(Log.INFO))       _log.info("Re-scheduling: " + this + " timeout = "+ timeoutMs+ " old timeout was "+ oldTimeout);
+    if (scheduled && (now + timeoutMs) < _nextRun) {
+      if (_log.shouldLog(Log.INFO))       _log.info("Re-scheduling: " + this + " timeout = "+ timeoutMs+ " old timeout was "+ oldTimeout+ " state: "+ _state);
       cancel();
     }
     schedule(timeoutMs);

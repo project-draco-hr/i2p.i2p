@@ -1,5 +1,16 @@
 {
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Scheduling: " + this + " timeout = "+ timeoutMs);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Scheduling: " + this + " timeout = "+ timeoutMs+ " state: "+ _state);
   if (timeoutMs <= 0 && _log.shouldLog(Log.WARN))   timeoutMs=1;
-  _future=_pool.schedule(this,timeoutMs);
+  _nextRun=timeoutMs + System.currentTimeMillis();
+switch (_state) {
+case RUNNING:
+    _rescheduleAfterRun=true;
+  break;
+case IDLE:
+case CANCELLED:
+_future=_pool.schedule(this,timeoutMs);
+_state=TimedEventState.SCHEDULED;
+break;
+case SCHEDULED:
+}
 }
