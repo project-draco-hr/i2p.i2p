@@ -10,9 +10,12 @@
     state.setIntroNonce(nonce);
   }
   _context.statManager().addRateData("udp.sendIntroRelayRequest",1,0);
-  UDPPacket requests[]=_builder.buildRelayRequest(_transport,state,_transport.getIntroKey());
-  for (int i=0; i < requests.length; i++) {
-    if (requests[i] != null)     _transport.send(requests[i]);
+  List<UDPPacket> requests=_builder.buildRelayRequest(_transport,state,_transport.getIntroKey());
+  if (requests.isEmpty()) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("No valid introducers! " + state);
+  }
+  for (  UDPPacket req : requests) {
+    _transport.send(req);
   }
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Send intro for " + state + " with our intro key as "+ _transport.getIntroKey());
   state.introSent();

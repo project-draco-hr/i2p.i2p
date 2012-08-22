@@ -4,16 +4,15 @@
   OutboundEstablishState outboundState=null;
   for (Iterator<OutboundEstablishState> iter=_outboundStates.values().iterator(); iter.hasNext(); ) {
     OutboundEstablishState cur=iter.next();
-    if (cur.getState() == OB_STATE_CONFIRMED_COMPLETELY) {
+    OutboundEstablishState.OutboundState state=cur.getState();
+    if (state == OB_STATE_CONFIRMED_COMPLETELY || state == OB_STATE_VALIDATION_FAILED) {
       iter.remove();
       outboundState=cur;
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Removing confirmed outbound: " + cur);
       break;
     }
  else     if (cur.getLifetime() >= MAX_OB_ESTABLISH_TIME) {
       iter.remove();
       outboundState=cur;
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Removing expired outbound: " + cur);
       break;
     }
  else {
@@ -69,6 +68,9 @@ case OB_STATE_PENDING_INTRO:
 long itime=outboundState.getIntroSentTime();
 if (expired || (itime > 0 && itime + OB_MESSAGE_TIMEOUT <= now)) processExpired(outboundState);
  else if (outboundState.getNextSendTime() <= now) handlePendingIntro(outboundState);
+break;
+case OB_STATE_VALIDATION_FAILED:
+processExpired(outboundState);
 break;
 }
 }

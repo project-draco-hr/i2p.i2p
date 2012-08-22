@@ -17,18 +17,20 @@
     return null;
   }
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Sending request");
-  System.arraycopy(state.getSentX(),0,data,off,state.getSentX().length);
-  off+=state.getSentX().length;
-  DataHelper.toLong(data,off,1,state.getSentIP().length);
+  byte[] x=state.getSentX();
+  System.arraycopy(x,0,data,off,x.length);
+  off+=x.length;
+  DataHelper.toLong(data,off,1,toIP.length);
   off+=1;
-  System.arraycopy(toIP,0,data,off,state.getSentIP().length);
+  System.arraycopy(toIP,0,data,off,toIP.length);
   off+=toIP.length;
-  DataHelper.toLong(data,off,2,state.getSentPort());
+  int port=state.getSentPort();
+  DataHelper.toLong(data,off,2,port);
   off+=2;
   if ((off % 16) != 0)   off+=16 - (off % 16);
   packet.getPacket().setLength(off);
   authenticate(packet,state.getIntroKey(),state.getIntroKey());
-  setTo(packet,to,state.getSentPort());
+  setTo(packet,to,port);
   packet.setMessageType(TYPE_SREQ);
   return packet;
 }
