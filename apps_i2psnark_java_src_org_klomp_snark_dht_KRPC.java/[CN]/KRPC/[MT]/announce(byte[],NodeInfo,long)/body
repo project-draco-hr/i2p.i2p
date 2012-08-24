@@ -1,6 +1,9 @@
 {
   InfoHash iHash=new InfoHash(ih);
   Token token=_incomingTokens.get(nInfo.getNID());
+  if (token != null && token.lastSeen() < _context.clock().now() - MAX_INBOUND_TOKEN_AGE) {
+    token=null;
+  }
   if (token == null) {
     if (maxWait <= 0)     return false;
     if (_log.shouldLog(Log.INFO))     _log.info("No token for announce to " + nInfo + ", sending get_peers first");
@@ -20,7 +23,7 @@ synchronized (waiter) {
       return false;
     }
     token=_incomingTokens.get(nInfo.getNID());
-    if (token == null) {
+    if (token == null || token.lastSeen() < _context.clock().now() - MAX_INBOUND_TOKEN_AGE) {
       if (_log.shouldLog(Log.INFO))       _log.info("Huh? no token after get_peers in announce() succeeded to " + nInfo);
       return false;
     }

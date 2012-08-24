@@ -19,10 +19,16 @@
     payload=dgMaker.makeI2PDatagram(payload);
     if (payload == null) {
       if (_log.shouldLog(Log.WARN))       _log.warn("WTF DGM fail");
+      return false;
     }
   }
+  SendMessageOptions opts=new SendMessageOptions();
+  opts.setDate(_context.clock().now() + 60 * 1000);
+  opts.setTagsToSend(SEND_CRYPTO_TAGS);
+  opts.setTagThreshold(LOW_CRYPTO_TAGS);
+  if (!repliable)   opts.setSendLeaseSet(false);
   try {
-    boolean success=_session.sendMessage(dest,payload,0,payload.length,null,null,60 * 1000,repliable ? I2PSession.PROTO_DATAGRAM : I2PSession.PROTO_DATAGRAM_RAW,fromPort,toPort);
+    boolean success=_session.sendMessage(dest,payload,0,payload.length,repliable ? I2PSession.PROTO_DATAGRAM : I2PSession.PROTO_DATAGRAM_RAW,fromPort,toPort,opts);
     if (success) {
       _txPkts.incrementAndGet();
       _txBytes.addAndGet(payload.length);
