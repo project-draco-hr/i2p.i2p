@@ -13,12 +13,14 @@
     }
  else     key=config.getRecipient().getIdentity().getPublicKey();
   }
-  if (log.shouldLog(Log.INFO))   log.info("Encrypted with public key " + key + " to expire on "+ new Date(config.getExpiration()));
+  if (log.shouldLog(Log.INFO))   log.info("Encrypted with public key to expire on " + new Date(config.getExpiration()));
   SessionKey curKey=skm.getCurrentOrNewKey(key);
   SessionTag curTag=null;
   curTag=skm.consumeNextAvailableTag(key,curKey);
-  int availTags=skm.getAvailableTags(key,curKey);
-  if (log.shouldLog(Log.DEBUG))   log.debug("Available tags for encryption to " + key + ": "+ availTags);
+  if (log.shouldLog(Log.DEBUG)) {
+    int availTags=skm.getAvailableTags(key,curKey);
+    log.debug("Available tags for encryption: " + availTags + " low threshold: "+ lowTagsThreshold);
+  }
   if (numTagsToDeliver > 0 && skm.shouldSendTags(key,curKey,lowTagsThreshold)) {
     for (int i=0; i < numTagsToDeliver; i++)     wrappedTags.add(new SessionTag(true));
     if (log.shouldLog(Log.INFO))     log.info("Too few tags available so we're including " + numTagsToDeliver);

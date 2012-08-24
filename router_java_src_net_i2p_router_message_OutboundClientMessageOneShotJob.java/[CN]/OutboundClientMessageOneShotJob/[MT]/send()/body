@@ -8,13 +8,15 @@
   _outTunnel=selectOutboundTunnel(_to);
   Long lastReplyRequestSent=_cache.lastReplyRequestCache.get(_hashPair);
   boolean shouldRequestReply=lastReplyRequestSent == null || lastReplyRequestSent.longValue() < now - REPLY_REQUEST_INTERVAL;
-  boolean wantACK=_wantACK || shouldRequestReply || GarlicMessageBuilder.needsTags(getContext(),_leaseSet.getEncryptionKey(),_from.calculateHash());
+  int sendFlags=_clientMessage.getFlags();
+  int tagsRequired=SendMessageOptions.getTagThreshold(sendFlags);
+  boolean wantACK=_wantACK || shouldRequestReply || GarlicMessageBuilder.needsTags(getContext(),_leaseSet.getEncryptionKey(),_from.calculateHash(),tagsRequired);
   PublicKey key=_leaseSet.getEncryptionKey();
   SessionKey sessKey=new SessionKey();
   Set<SessionTag> tags=new HashSet();
   LeaseSet replyLeaseSet;
   String allow=_clientMessage.getSenderConfig().getOptions().getProperty(BUNDLE_REPLY_LEASESET);
-  boolean allowLeaseBundle=allow == null || Boolean.valueOf(allow).booleanValue();
+  boolean allowLeaseBundle=SendMessageOptions.getSendLeaseSet(sendFlags) && (allow == null || Boolean.valueOf(allow).booleanValue());
   if (allowLeaseBundle) {
     replyLeaseSet=getReplyLeaseSet(false);
     if (replyLeaseSet != null)     wantACK=true;
@@ -37,7 +39,8 @@
     return;
   }
   long msgExpiration=_overallExpiration;
-  GarlicMessage msg=OutboundClientMessageJobHelper.createGarlicMessage(getContext(),token,msgExpiration,key,_clove,_from.calculateHash(),_to,_inTunnel,sessKey,tags,wantACK,replyLeaseSet);
+  int tagsToSend=SendMessageOptions.getTagsToSend(sendFlags);
+  GarlicMessage msg=OutboundClientMessageJobHelper.createGarlicMessage(getContext(),token,msgExpiration,key,_clove,_from.calculateHash(),_to,_inTunnel,tagsToSend,tagsRequired,sessKey,tags,wantACK,replyLeaseSet);
   if (msg == null) {
     if (_log.shouldLog(Log.WARN))     _log.warn(getJobId() + ": Unable to create the garlic message (no tunnels left or too lagged) to " + _toString);
     getContext().statManager().addRateData("client.dispatchNoTunnels",now - _start,0);

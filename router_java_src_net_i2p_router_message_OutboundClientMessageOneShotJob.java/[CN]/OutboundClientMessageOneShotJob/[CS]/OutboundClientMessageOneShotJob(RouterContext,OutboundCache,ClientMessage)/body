@@ -13,7 +13,11 @@
   _start=getContext().clock().now();
   long overallExpiration=msg.getExpiration();
   if (overallExpiration > 0) {
-    if (overallExpiration <= _start) {
+    if (overallExpiration < 24 * 60 * 60* 1000l) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Client bug - interval instead of timestamp " + overallExpiration);
+      overallExpiration+=_start;
+    }
+    if (overallExpiration > _start) {
       overallExpiration=Math.max(overallExpiration,_start + OVERALL_TIMEOUT_MS_MIN);
       overallExpiration=Math.min(overallExpiration,_start + OVERALL_TIMEOUT_MS_DEFAULT);
       if (_log.shouldLog(Log.INFO))       _log.info(getJobId() + ": Message Expiration (ms): " + (overallExpiration - _start));
