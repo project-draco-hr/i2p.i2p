@@ -1,15 +1,17 @@
 {
-  if (packet == null || !_keepRunning)   return 0;
-  int size=0;
+  if (packet == null || !_keepRunning)   return;
   int psz=packet.getPacket().getLength();
   if (psz > PeerState.LARGE_MTU) {
     _log.error("Dropping large UDP packet " + psz + " bytes: "+ packet);
-    return 0;
+    return;
   }
-  _outboundQueue.offer(packet);
+  try {
+    _outboundQueue.put(packet);
+  }
+ catch (  InterruptedException ie) {
+    return;
+  }
   if (_log.shouldLog(Log.DEBUG)) {
-    size=_outboundQueue.size();
-    _log.debug("Added the packet onto the queue with " + size + " remaining and a lifetime of "+ packet.getLifetime());
+    _log.debug("Added the packet onto the queue with a lifetime of " + packet.getLifetime());
   }
-  return size;
 }

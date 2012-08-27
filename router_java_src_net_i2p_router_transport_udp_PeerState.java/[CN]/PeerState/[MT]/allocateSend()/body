@@ -2,9 +2,13 @@
   if (_dead)   return null;
 synchronized (_outboundMessages) {
     for (    OutboundMessageState state : _outboundMessages) {
-      if (locked_shouldSend(state)) {
+      ShouldSend should=locked_shouldSend(state);
+      if (should == ShouldSend.YES) {
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Allocate sending to " + _remotePeer + ": "+ state.getMessageId());
         return state;
+      }
+ else       if (should == ShouldSend.NO_BW) {
+        break;
       }
     }
   }

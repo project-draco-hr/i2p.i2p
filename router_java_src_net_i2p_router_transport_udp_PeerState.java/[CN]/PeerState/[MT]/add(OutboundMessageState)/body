@@ -9,7 +9,7 @@
   boolean fail=false;
 synchronized (_outboundMessages) {
     rv=_outboundMessages.size() + 1;
-    if (rv > 32) {
+    if (rv > MAX_SEND_MSGS_PENDING) {
       fail=true;
       rv--;
     }
@@ -17,6 +17,9 @@ synchronized (_outboundMessages) {
       _outboundMessages.add(state);
     }
   }
-  if (fail)   _transport.failed(state,false);
+  if (fail) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Dropping msg, OB queue full for " + toString());
+    _transport.failed(state,false);
+  }
   return rv;
 }
