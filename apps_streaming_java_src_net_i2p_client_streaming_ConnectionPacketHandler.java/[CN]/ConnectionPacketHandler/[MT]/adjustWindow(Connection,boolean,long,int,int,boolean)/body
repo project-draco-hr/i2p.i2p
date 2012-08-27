@@ -18,7 +18,10 @@
     if ((!congested) && (acked > 0) && (numResends <= 0)) {
       if (newWindowSize < con.getLastCongestionSeenAt() / 2) {
         int factor=con.getOptions().getSlowStartGrowthRateFactor();
-        if (factor <= 1)         newWindowSize+=acked;
+        if (factor <= 1) {
+          if (newWindowSize >= MAX_SLOW_START_WINDOW)           newWindowSize++;
+ else           newWindowSize=Math.min(MAX_SLOW_START_WINDOW,newWindowSize + acked);
+        }
  else         if (acked < factor)         newWindowSize++;
  else         newWindowSize+=acked / factor;
         if (_log.shouldLog(Log.DEBUG))         _log.debug("slow start acks = " + acked + " for "+ con);
