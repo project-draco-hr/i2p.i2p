@@ -1,0 +1,44 @@
+{
+  SortedMap<Long,String> rv=_cache.get(event);
+  if (rv != null) {
+    Long cacheTime=_cacheTime.get(event);
+    if (cacheTime != null) {
+      if (since >= cacheTime.longValue())       return rv.tailMap(Long.valueOf(since));
+    }
+  }
+  rv=new TreeMap();
+  InputStream in=null;
+  try {
+    in=new FileInputStream(_file);
+    BufferedReader br=new BufferedReader(new InputStreamReader(in,"UTF-8"));
+    String line=null;
+    while ((line=br.readLine()) != null) {
+      try {
+        String[] s=line.split(" ",3);
+        if (!s[1].equals(event))         continue;
+        long time=Long.parseLong(s[0]);
+        if (time <= since)         continue;
+        Long ltime=Long.valueOf(time);
+        String info=s.length > 2 ? s[2] : "";
+        rv.put(time,info);
+      }
+ catch (      IndexOutOfBoundsException ioobe) {
+      }
+catch (      NumberFormatException nfe) {
+      }
+    }
+    rv=Collections.unmodifiableSortedMap(rv);
+    _cache.put(event,rv);
+    _cacheTime.put(event,Long.valueOf(since));
+  }
+ catch (  IOException ioe) {
+  }
+ finally {
+    if (in != null)     try {
+      in.close();
+    }
+ catch (    IOException ioe) {
+    }
+  }
+  return rv;
+}

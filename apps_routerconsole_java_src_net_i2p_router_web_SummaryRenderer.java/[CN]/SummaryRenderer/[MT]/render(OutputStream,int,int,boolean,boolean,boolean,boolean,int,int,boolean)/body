@@ -32,8 +32,6 @@
       plotName=dsNames[0];
       descr=_(_listener.getRate().getRateStat().getDescription());
     }
-    long started=((RouterContext)_context).router().getWhenStarted();
-    if (started > start && started < end)     def.vrule(started / 1000,RESTART_BAR_COLOR,_("Restart"),4.0f);
     def.datasource(plotName,path,plotName,SummaryListener.CF,_listener.getBackendName());
     if (descr.length() > 0)     def.area(plotName,Color.BLUE,descr + "\\r");
  else     def.area(plotName,Color.BLUE);
@@ -42,6 +40,14 @@
       def.gprint(plotName,"MAX",' ' + _("max") + ": %.2f %S");
       def.gprint(plotName,"LAST",' ' + _("now") + ": %.2f %S\\r");
       SimpleDateFormat sdf=new SimpleDateFormat("dd-MMM HH:mm");
+      Map<Long,String> events=((RouterContext)_context).router().eventLog().getEvents(EventLog.STARTED,start);
+      for (      Map.Entry<Long,String> event : events.entrySet()) {
+        long started=event.getKey().longValue();
+        if (started > start && started < end) {
+          String legend=_("Restart") + ' ' + sdf.format(new Date(started))+ " UTC "+ event.getValue()+ "\\r";
+          def.vrule(started / 1000,RESTART_BAR_COLOR,legend,4.0f);
+        }
+      }
       def.comment(sdf.format(new Date(start)) + " -- " + sdf.format(new Date(end))+ " UTC\\r");
     }
     if (!showCredit)     def.setShowSignature(false);
