@@ -1,0 +1,42 @@
+{
+  BEValue reason=(BEValue)m.get("failure reason");
+  if (reason != null) {
+    failure_reason=reason.getString();
+    interval=-1;
+    peers=null;
+  }
+ else {
+    failure_reason=null;
+    BEValue beInterval=(BEValue)m.get("interval");
+    if (beInterval == null)     throw new InvalidBEncodingException("No interval given");
+ else     interval=beInterval.getInt();
+    BEValue bePeers=(BEValue)m.get("peers");
+    if (bePeers == null) {
+      peers=Collections.EMPTY_SET;
+    }
+ else {
+      Set<Peer> p;
+      try {
+        p=getPeers(bePeers.getBytes(),my_id,infohash,metainfo,util);
+      }
+ catch (      InvalidBEncodingException ibe) {
+        p=getPeers(bePeers.getList(),my_id,infohash,metainfo,util);
+      }
+      peers=p;
+    }
+    BEValue bev=(BEValue)m.get("complete");
+    if (bev != null)     try {
+      complete=bev.getInt();
+      if (complete < 0)       complete=0;
+    }
+ catch (    InvalidBEncodingException ibe) {
+    }
+    bev=(BEValue)m.get("incomplete");
+    if (bev != null)     try {
+      incomplete=bev.getInt();
+      if (incomplete < 0)       incomplete=0;
+    }
+ catch (    InvalidBEncodingException ibe) {
+    }
+  }
+}
