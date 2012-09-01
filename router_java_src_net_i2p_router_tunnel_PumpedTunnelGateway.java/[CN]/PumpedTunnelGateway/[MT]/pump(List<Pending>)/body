@@ -1,5 +1,5 @@
 {
-  _prequeue.drainTo(queueBuf);
+  _prequeue.drainTo(queueBuf,MAX_MSGS_PER_PUMP);
   if (queueBuf.isEmpty())   return;
   long startAdd=System.currentTimeMillis();
   long beforeLock=startAdd;
@@ -32,8 +32,10 @@ synchronized (_queue) {
   if (delayedFlush) {
     _delayedFlush.reschedule(delayAmount);
   }
-  _context.statManager().addRateData("tunnel.lockedGatewayAdd",afterAdded - beforeLock,remaining);
-  long complete=System.currentTimeMillis();
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Time to add " + queueBuf.size() + " messages to "+ toString()+ ": "+ (complete - startAdd)+ " delayed? "+ delayedFlush+ " remaining: "+ remaining+ " add: "+ (afterAdded - beforeLock)+ " preprocess: "+ (afterPreprocess - afterAdded)+ " expire: "+ (afterExpire - afterPreprocess)+ " queue flush: "+ (complete - afterExpire));
+  if (_log.shouldLog(Log.DEBUG)) {
+    long complete=System.currentTimeMillis();
+    _log.debug("Time to add " + queueBuf.size() + " messages to "+ toString()+ ": "+ (complete - startAdd)+ " delayed? "+ delayedFlush+ " remaining: "+ remaining+ " add: "+ (afterAdded - beforeLock)+ " preprocess: "+ (afterPreprocess - afterAdded)+ " expire: "+ (afterExpire - afterPreprocess)+ " queue flush: "+ (complete - afterExpire));
+  }
   queueBuf.clear();
+  if (!_prequeue.isEmpty())   _pumper.wantsPumping(this);
 }

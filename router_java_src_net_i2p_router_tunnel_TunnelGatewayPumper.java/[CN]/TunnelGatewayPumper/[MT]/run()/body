@@ -3,7 +3,16 @@
   List<TunnelGateway.Pending> queueBuf=new ArrayList(32);
   while (!_stop) {
     try {
-      gw=_wantsPumping.take();
+synchronized (_wantsPumping) {
+        if (_wantsPumping.isEmpty()) {
+          _wantsPumping.wait();
+        }
+ else {
+          Iterator<PumpedTunnelGateway> iter=_wantsPumping.iterator();
+          gw=iter.next();
+          iter.remove();
+        }
+      }
     }
  catch (    InterruptedException ie) {
     }
