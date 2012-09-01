@@ -1,0 +1,35 @@
+{
+synchronized (this) {
+    boolean ok_to_drop=updateVars(rv);
+    if (_dropping) {
+      if (!ok_to_drop) {
+        _dropping=false;
+      }
+ else       if (_now >= _drop_next) {
+        while (_now >= _drop_next && _dropping && rv.getPriority() <= _lastDroppedPriority) {
+          drop(rv);
+          _count++;
+          rv=super.poll();
+          ok_to_drop=updateVars(rv);
+          if (!ok_to_drop) {
+            _dropping=false;
+          }
+ else {
+            control_law(_drop_next);
+          }
+        }
+      }
+    }
+ else     if (ok_to_drop && (_now - _drop_next < INTERVAL || _now - _first_above_time >= INTERVAL)) {
+      drop(rv);
+      _lastDroppedPriority=rv.getPriority();
+      rv=super.poll();
+      updateVars(rv);
+      _dropping=true;
+      if (_now - _drop_next < INTERVAL)       _count=_count > 2 ? _count - 2 : 1;
+ else       _count=1;
+      control_law(_now);
+    }
+  }
+  return rv;
+}
