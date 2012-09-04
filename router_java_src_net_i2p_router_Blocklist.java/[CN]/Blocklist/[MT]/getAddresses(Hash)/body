@@ -2,21 +2,12 @@
   List<byte[]> rv=new ArrayList(1);
   RouterInfo pinfo=_context.netDb().lookupRouterInfoLocally(peer);
   if (pinfo == null)   return rv;
-  String oldphost=null;
+  byte[] oldpib=null;
   for (  RouterAddress pa : pinfo.getAddresses()) {
-    String phost=pa.getOption("host");
-    if (phost == null)     continue;
-    if (oldphost != null && oldphost.equals(phost))     continue;
-    oldphost=phost;
-    InetAddress pi;
-    try {
-      pi=InetAddress.getByName(phost);
-    }
- catch (    UnknownHostException uhe) {
-      continue;
-    }
-    if (pi == null)     continue;
-    byte[] pib=pi.getAddress();
+    byte[] pib=pa.getIP();
+    if (pib == null)     continue;
+    if (DataHelper.eq(oldpib,pib))     continue;
+    oldpib=pib;
     rv.add(pib);
   }
   return rv;
