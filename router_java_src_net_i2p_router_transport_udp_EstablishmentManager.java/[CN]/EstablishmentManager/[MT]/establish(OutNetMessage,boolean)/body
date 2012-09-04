@@ -66,19 +66,24 @@ if (state != null && _log.shouldLog(Log.INFO)) _log.info("Found by hash: " + sta
 }
 if (state == null) {
 if (queueIfMaxExceeded && _outboundStates.size() >= getMaxConcurrentEstablish()) {
-if (_queuedOutbound.size() >= MAX_QUEUED_OUTBOUND) {
+if (_queuedOutbound.size() >= MAX_QUEUED_OUTBOUND && !_queuedOutbound.containsKey(to)) {
 rejected=true;
 }
  else {
-if (_log.shouldLog(Log.WARN)) _log.warn("Queueing outbound establish, increase " + PROP_MAX_CONCURRENT_ESTABLISH);
 List<OutNetMessage> newQueued=new ArrayList(MAX_QUEUED_PER_PEER);
 List<OutNetMessage> queued=_queuedOutbound.putIfAbsent(to,newQueued);
-if (queued == null) queued=newQueued;
+if (queued == null) {
+queued=newQueued;
+if (_log.shouldLog(Log.WARN)) _log.warn("Queueing outbound establish to " + to + ", increase "+ PROP_MAX_CONCURRENT_ESTABLISH);
+}
 synchronized (queued) {
 queueCount=queued.size();
 if (queueCount < MAX_QUEUED_PER_PEER) {
 queued.add(msg);
 queueCount++;
+}
+ else {
+rejected=true;
 }
 deferred=_queuedOutbound.size();
 }
@@ -124,7 +129,7 @@ state.addMessage(m);
 }
 }
 if (rejected) {
-if (_log.shouldLog(Log.WARN)) _log.warn("Rejecting outbound establish");
+if (_log.shouldLog(Log.WARN)) _log.warn("Too many pending, rejecting outbound establish to " + to);
 _transport.failed(msg,"Too many pending outbound connections");
 _context.statManager().addRateData("udp.establishRejected",deferred,0);
 return;
