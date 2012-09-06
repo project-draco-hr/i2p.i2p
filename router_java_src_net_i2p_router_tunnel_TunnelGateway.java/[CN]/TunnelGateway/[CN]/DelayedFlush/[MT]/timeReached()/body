@@ -1,18 +1,14 @@
 {
   boolean wantRequeue=false;
-  int remaining=0;
-  long beforeLock=_context.clock().now();
-  long afterChecked=-1;
   long delayAmount=-1;
 synchronized (_queue) {
-    afterChecked=_context.clock().now();
     if (!_queue.isEmpty()) {
-      if ((remaining > 0) && (_log.shouldLog(Log.DEBUG)))       _log.debug("Remaining before delayed flush preprocessing: " + _queue);
       wantRequeue=_preprocessor.preprocessQueue(_queue,_sender,_receiver);
-      if (wantRequeue)       delayAmount=_preprocessor.getDelayAmount();
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Remaining after delayed flush preprocessing (requeue? " + wantRequeue + "): "+ _queue);
+      if (wantRequeue) {
+        delayAmount=_preprocessor.getDelayAmount();
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Remaining after delayed flush preprocessing: " + _queue);
+      }
     }
-    remaining=_queue.size();
   }
   if (wantRequeue)   schedule(delayAmount);
  else   _lastFlush=_context.clock().now();
