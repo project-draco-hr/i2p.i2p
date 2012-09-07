@@ -1,6 +1,19 @@
 {
-  if (isClosed())   throw new I2PSessionException("Already closed");
- else   if (_queue != null)   _queue.offer(message);
- else   if (_writer == null)   throw new I2PSessionException("Already closed");
- else   _writer.addMessage(message);
+  if (isClosed()) {
+    throw new I2PSessionException("Already closed");
+  }
+ else   if (_queue != null) {
+    try {
+      if (!_queue.offer(message,MAX_SEND_WAIT))       throw new I2PSessionException("Timed out waiting while write queue was full");
+    }
+ catch (    InterruptedException ie) {
+      throw new I2PSessionException("Interrupted while write queue was full",ie);
+    }
+  }
+ else   if (_writer == null) {
+    throw new I2PSessionException("Already closed");
+  }
+ else {
+    _writer.addMessage(message);
+  }
 }
