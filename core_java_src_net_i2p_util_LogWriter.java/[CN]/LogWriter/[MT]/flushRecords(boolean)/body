@@ -3,10 +3,25 @@
     Queue<LogRecord> records=_manager.getQueue();
     if (records == null)     return;
     if (!records.isEmpty()) {
+      LogRecord last=null;
       LogRecord rec;
+      int dupCount=0;
       while ((rec=records.poll()) != null) {
-        writeRecord(rec);
+        if (rec.equals(last)) {
+          dupCount++;
+        }
+ else {
+          if (dupCount > 0) {
+            if (dupCount == 1)             writeRecord("*** 1 similar message omitted\n");
+ else             writeRecord("*** " + dupCount + " similar messages omitted\n");
+            dupCount=0;
+          }
+          last=rec;
+          writeRecord(rec);
+        }
       }
+      if (dupCount == 1)       writeRecord("*** 1 similar message omitted\n");
+ else       if (dupCount > 0)       writeRecord("*** " + dupCount + " similar messages omitted\n");
       try {
         if (_currentOut != null)         _currentOut.flush();
       }
