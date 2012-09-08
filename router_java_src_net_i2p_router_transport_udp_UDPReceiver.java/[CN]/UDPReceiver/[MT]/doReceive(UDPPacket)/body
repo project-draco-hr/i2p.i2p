@@ -13,38 +13,12 @@
     packet.release();
     return 0;
   }
-  packet.enqueue();
-  boolean rejected=false;
-  int queueSize=0;
-  long headPeriod=0;
-  UDPPacket head=_inboundQueue.peek();
-  if (head != null) {
-    headPeriod=head.getLifetime();
-    if (headPeriod > MAX_QUEUE_PERIOD) {
-      rejected=true;
-    }
+  try {
+    _inboundQueue.put(packet);
   }
-  if (!rejected) {
-    try {
-      _inboundQueue.put(packet);
-    }
- catch (    InterruptedException ie) {
-      packet.release();
-      _keepRunning=false;
-    }
-    return 0;
+ catch (  InterruptedException ie) {
+    packet.release();
+    _keepRunning=false;
   }
-  packet.release();
-  _context.statManager().addRateData("udp.droppedInbound",queueSize,headPeriod);
-  if (_log.shouldLog(Log.WARN)) {
-    queueSize=_inboundQueue.size();
-    StringBuilder msg=new StringBuilder();
-    msg.append("Dropping inbound packet with ");
-    msg.append(queueSize);
-    msg.append(" queued for ");
-    msg.append(headPeriod);
-    msg.append(" packet handlers: ").append(_transport.getPacketHandlerStatus());
-    _log.warn(msg.toString());
-  }
-  return queueSize;
+  return 0;
 }
