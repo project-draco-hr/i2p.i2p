@@ -1,16 +1,12 @@
 {
-  try {
-    _reader=new I2CPMessageReader(new BufferedInputStream(_socket.getInputStream(),BUF_SIZE),new ClientMessageEventListener(_context,this,true));
-    _writer=new ClientWriterRunner(_context,this);
-    I2PThread t=new I2PThread(_writer);
-    t.setName("I2CP Writer " + ++__id);
-    t.setDaemon(true);
-    t.setPriority(I2PThread.MAX_PRIORITY);
-    t.start();
-    _out=_socket.getOutputStream();
-    _reader.startReading();
-  }
- catch (  IOException ioe) {
-    _log.error("Error starting up the runner",ioe);
-  }
+  if (_dead || _reader != null)   throw new IllegalStateException();
+  _reader=new I2CPMessageReader(new BufferedInputStream(_socket.getInputStream(),BUF_SIZE),new ClientMessageEventListener(_context,this,true));
+  _writer=new ClientWriterRunner(_context,this);
+  I2PThread t=new I2PThread(_writer);
+  t.setName("I2CP Writer " + __id.incrementAndGet());
+  t.setDaemon(true);
+  t.setPriority(I2PThread.MAX_PRIORITY);
+  t.start();
+  _out=new BufferedOutputStream(_socket.getOutputStream());
+  _reader.startReading();
 }
