@@ -1,20 +1,19 @@
 {
-  ByteArray ivBuf=_ivCache.acquire();
-  byte iv[]=ivBuf.getData();
+  byte iv[]=SimpleByteCache.acquire(IV_SIZE);
   _context.random().nextBytes(iv);
   System.arraycopy(iv,0,fragments,fragmentLength,IV_SIZE);
-  ByteArray hashBuf=_hashCache.acquire();
-  _context.sha().calculateHash(fragments,0,fragmentLength + IV_SIZE,hashBuf.getData(),0);
+  byte[] hashBuf=SimpleByteCache.acquire(Hash.HASH_LENGTH);
+  _context.sha().calculateHash(fragments,0,fragmentLength + IV_SIZE,hashBuf,0);
   int distance=PREPROCESSED_SIZE - fragmentLength;
   System.arraycopy(fragments,0,fragments,distance,fragmentLength);
   java.util.Arrays.fill(fragments,0,distance,(byte)0x0);
   int offset=0;
   System.arraycopy(iv,0,fragments,offset,IV_SIZE);
   offset+=IV_SIZE;
-  System.arraycopy(hashBuf.getData(),0,fragments,offset,4);
+  System.arraycopy(hashBuf,0,fragments,offset,4);
   offset+=4;
-  _hashCache.release(hashBuf);
-  _ivCache.release(ivBuf);
+  SimpleByteCache.release(hashBuf);
+  SimpleByteCache.release(iv);
   int numPadBytes=PREPROCESSED_SIZE - IV_SIZE - 4- 1- fragmentLength;
   if (numPadBytes > 0) {
     fillRandomNonZero(fragments,offset,numPadBytes);

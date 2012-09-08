@@ -49,16 +49,16 @@
     buf.append("\nsignedTime: ").append(Base64.encode(data,off - 8 - Signature.SIGNATURE_BYTES- 4,4));
     _log.debug(buf.toString());
   }
-  ByteArray iv=_ivCache.acquire();
-  _context.random().nextBytes(iv.getData());
+  byte[] iv=SimpleByteCache.acquire(UDPPacket.IV_SIZE);
+  _context.random().nextBytes(iv);
   int encrWrite=Signature.SIGNATURE_BYTES + 8;
   int sigBegin=off - encrWrite;
-  _context.aes().encrypt(data,sigBegin,data,sigBegin,state.getCipherKey(),iv.getData(),encrWrite);
+  _context.aes().encrypt(data,sigBegin,data,sigBegin,state.getCipherKey(),iv,encrWrite);
   if ((off % 16) != 0)   off+=16 - (off % 16);
   packet.getPacket().setLength(off);
   authenticate(packet,ourIntroKey,ourIntroKey,iv);
   setTo(packet,to,state.getSentPort());
-  _ivCache.release(iv);
+  SimpleByteCache.release(iv);
   packet.setMessageType(TYPE_CREAT);
   return packet;
 }

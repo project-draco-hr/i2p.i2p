@@ -23,7 +23,7 @@ synchronized (msg) {
 synchronized (_fragmentedMessages) {
         _fragmentedMessages.remove(Long.valueOf(messageId));
       }
-      if (msg.getExpireEvent() != null)       SimpleTimer.getInstance().removeEvent(msg.getExpireEvent());
+      if (msg.getExpireEvent() != null)       msg.getExpireEvent().cancel();
       _context.statManager().addRateData("tunnel.fragmentedComplete",msg.getFragmentCount(),msg.getLifetime());
       receiveComplete(msg);
     }
@@ -33,7 +33,7 @@ synchronized (_fragmentedMessages) {
         RemoveFailed evt=new RemoveFailed(msg);
         msg.setExpireEvent(evt);
         if (_log.shouldLog(Log.DEBUG))         _log.debug("In " + MAX_DEFRAGMENT_TIME + " dropping "+ msg.getMessageId()+ "/"+ fragmentNum);
-        SimpleTimer.getInstance().addEvent(evt,MAX_DEFRAGMENT_TIME);
+        evt.schedule(MAX_DEFRAGMENT_TIME);
       }
     }
   }
