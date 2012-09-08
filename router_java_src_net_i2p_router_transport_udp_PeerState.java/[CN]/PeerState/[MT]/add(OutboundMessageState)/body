@@ -1,25 +1,14 @@
 {
   if (_dead) {
     _transport.failed(state,false);
-    return 0;
+    return;
   }
   state.setPeer(this);
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Adding to " + _remotePeer + ": "+ state.getMessageId());
   int rv=0;
-  boolean fail=false;
-synchronized (_outboundMessages) {
-    rv=_outboundMessages.size() + 1;
-    if (rv > MAX_SEND_MSGS_PENDING) {
-      fail=true;
-      rv--;
-    }
- else {
-      _outboundMessages.add(state);
-    }
-  }
+  boolean fail=!_outboundQueue.offer(state);
   if (fail) {
     if (_log.shouldLog(Log.WARN))     _log.warn("Dropping msg, OB queue full for " + toString());
     _transport.failed(state,false);
   }
-  return rv;
 }

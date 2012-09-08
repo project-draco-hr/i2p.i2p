@@ -20,13 +20,14 @@
   while ((bb=_readBufs.poll()) != null) {
     EventPumper.releaseBuf(bb);
   }
-  OutNetMessage msg;
-  while ((msg=_outbound.poll()) != null) {
+  List<OutNetMessage> pending=new ArrayList();
+  _outbound.drainAllTo(pending);
+  for (  OutNetMessage msg : pending) {
     Object buf=msg.releasePreparationBuffer();
     if (buf != null)     releaseBuf((PrepBuffer)buf);
     _transport.afterSend(msg,false,allowRequeue,msg.getLifetime());
   }
-  msg=_currentOutbound;
+  OutNetMessage msg=_currentOutbound;
   if (msg != null) {
     Object buf=msg.releasePreparationBuffer();
     if (buf != null)     releaseBuf((PrepBuffer)buf);

@@ -19,25 +19,8 @@ synchronized (_outbound) {
       if (_log.shouldLog(Log.INFO))       _log.info("attempt for multiple outbound messages with " + System.identityHashCode(_currentOutbound) + " already waiting and "+ _outbound.size()+ " queued");
       return;
     }
-    if (queueTime() > 3 * 1000) {
-      msg=_outbound.poll();
-      if (msg == null)       return;
-    }
- else {
-      int slot=0;
-      Iterator<OutNetMessage> it=_outbound.iterator();
-      for (int i=0; it.hasNext() && i < 75; i++) {
-        OutNetMessage mmsg=it.next();
-        if (msg == null || mmsg.getPriority() > msg.getPriority()) {
-          msg=mmsg;
-          slot=i;
-        }
-      }
-      if (msg == null)       return;
-      if (_log.shouldLog(Log.INFO))       _log.info("Type " + msg.getMessage().getType() + " pri "+ msg.getPriority()+ " slot "+ slot);
-      boolean removed=_outbound.remove(msg);
-      if ((!removed) && _log.shouldLog(Log.WARN))       _log.warn("Already removed??? " + msg.getMessage().getType());
-    }
+    msg=_outbound.poll();
+    if (msg == null)     return;
     _currentOutbound=msg;
   }
   PrepBuffer buf=(PrepBuffer)msg.releasePreparationBuffer();

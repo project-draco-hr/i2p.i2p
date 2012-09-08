@@ -4,14 +4,26 @@ synchronized (_outboundMessages) {
     for (    OutboundMessageState state : _outboundMessages) {
       ShouldSend should=locked_shouldSend(state);
       if (should == ShouldSend.YES) {
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("Allocate sending to " + _remotePeer + ": "+ state.getMessageId());
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Allocate sending (OLD) to " + _remotePeer + ": "+ state.getMessageId());
         return state;
       }
  else       if (should == ShouldSend.NO_BW) {
-        break;
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Nothing to send (BW) to " + _remotePeer + ", with "+ _outboundMessages.size()+ " / "+ _outboundQueue.size()+ " remaining");
+        return null;
+      }
+    }
+    OutboundMessageState state=_outboundQueue.peek();
+    if (state != null && ShouldSend.YES == locked_shouldSend(state)) {
+      OutboundMessageState dequeuedState=_outboundQueue.poll();
+      if (dequeuedState != null) {
+        _outboundMessages.add(dequeuedState);
+        if (dequeuedState == state || ShouldSend.YES == locked_shouldSend(dequeuedState)) {
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("Allocate sending (NEW) to " + _remotePeer + ": "+ dequeuedState.getMessageId());
+          return dequeuedState;
+        }
       }
     }
   }
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Nothing to send to " + _remotePeer + ", with "+ _outboundMessages.size()+ " remaining");
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Nothing to send to " + _remotePeer + ", with "+ _outboundMessages.size()+ " / "+ _outboundQueue.size()+ " remaining");
   return null;
 }
