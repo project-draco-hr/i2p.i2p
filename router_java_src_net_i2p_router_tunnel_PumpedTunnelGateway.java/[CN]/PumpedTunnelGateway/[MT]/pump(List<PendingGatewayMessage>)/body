@@ -1,7 +1,12 @@
 {
-  int max=_isInbound ? MAX_IB_MSGS_PER_PUMP : MAX_OB_MSGS_PER_PUMP;
+  int max;
+  boolean backlogged=_context.commSystem().isBacklogged(_nextHop);
+  if (backlogged && _log.shouldLog(Log.INFO))   _log.info("PTG backlogged, queued to " + _nextHop + " : "+ _prequeue.size()+ " IB? "+ _isInbound);
+  if (backlogged)   max=_isInbound ? 1 : 2;
+ else   max=_isInbound ? MAX_IB_MSGS_PER_PUMP : MAX_OB_MSGS_PER_PUMP;
   _prequeue.drainTo(queueBuf,max);
-  if (queueBuf.isEmpty())   return;
+  if (queueBuf.isEmpty())   return false;
+  boolean rv=!_prequeue.isEmpty();
   long startAdd=System.currentTimeMillis();
   long beforeLock=startAdd;
   long afterAdded=-1;
@@ -38,5 +43,6 @@ synchronized (_queue) {
     _log.debug("Time to add " + queueBuf.size() + " messages to "+ toString()+ ": "+ (complete - startAdd)+ " delayed? "+ delayedFlush+ " remaining: "+ remaining+ " add: "+ (afterAdded - beforeLock)+ " preprocess: "+ (afterPreprocess - afterAdded)+ " expire: "+ (afterExpire - afterPreprocess)+ " queue flush: "+ (complete - afterExpire));
   }
   queueBuf.clear();
-  if (!_prequeue.isEmpty())   _pumper.wantsPumping(this);
+  if (rv && _log.shouldLog(Log.INFO))   _log.info("PTG remaining to " + _nextHop + " : "+ _prequeue.size()+ " IB? "+ _isInbound+ " backlogged? "+ backlogged);
+  return rv;
 }
