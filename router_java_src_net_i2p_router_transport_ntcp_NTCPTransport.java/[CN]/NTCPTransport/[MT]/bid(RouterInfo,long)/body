@@ -15,35 +15,35 @@
   }
   boolean established=isEstablished(toAddress.getIdentity());
   if (established) {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("fast bid when trying to send to " + peer.toBase64() + " as its already established");
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("fast bid when trying to send to " + peer + " as its already established");
     return _fastBid;
   }
   RouterAddress addr=toAddress.getTargetAddress(STYLE);
   if (addr == null) {
     markUnreachable(peer);
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("no bid when trying to send to " + peer.toBase64() + " as they don't have an ntcp address");
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("no bid when trying to send to " + peer + " as they don't have an ntcp address");
     return null;
   }
   byte[] ip=addr.getIP();
   if ((addr.getPort() <= 0) || (ip == null)) {
     _context.statManager().addRateData("ntcp.connectFailedInvalidPort",1);
     markUnreachable(peer);
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("no bid when trying to send to " + peer.toBase64() + " as they don't have a valid ntcp address");
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("no bid when trying to send to " + peer + " as they don't have a valid ntcp address");
     return null;
   }
   if (!isPubliclyRoutable(ip)) {
     if (!_context.getProperty("i2np.ntcp.allowLocal","false").equals("true")) {
       _context.statManager().addRateData("ntcp.bidRejectedLocalAddress",1);
       markUnreachable(peer);
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("no bid when trying to send to " + peer.toBase64() + " as they have a private ntcp address");
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("no bid when trying to send to " + peer + " as they have a private ntcp address");
       return null;
     }
   }
   if (!allowConnection()) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("no bid when trying to send to " + peer.toBase64() + ", max connection limit reached");
+    if (_log.shouldLog(Log.WARN))     _log.warn("no bid when trying to send to " + peer + ", max connection limit reached");
     return _transientFail;
   }
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("slow bid when trying to send to " + peer.toBase64());
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("slow bid when trying to send to " + peer);
   if (haveCapacity()) {
     if (addr.getCost() > NTCPAddress.DEFAULT_COST)     return _slowCostBid;
  else     return _slowBid;
