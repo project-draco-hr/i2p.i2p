@@ -4,7 +4,17 @@
   }
  else {
     int read=0;
-    byte[] buf=new byte[Math.min(len,16384)];
+    int buflen=Math.min(len,BUFSIZE);
+    ByteArray ba;
+    byte[] buf;
+    if (buflen == BUFSIZE) {
+      ba=_cache.acquire();
+      buf=ba.getData();
+    }
+ else {
+      ba=null;
+      buf=new byte[buflen];
+    }
 synchronized (this) {
       if (raf == null)       throw new IOException();
       raf.seek(offset);
@@ -15,5 +25,6 @@ synchronized (this) {
         out.write(buf,0,rd);
       }
     }
+    if (ba != null)     _cache.release(ba,false);
   }
 }

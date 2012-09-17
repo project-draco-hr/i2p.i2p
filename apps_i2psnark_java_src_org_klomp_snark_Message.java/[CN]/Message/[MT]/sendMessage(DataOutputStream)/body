@@ -3,9 +3,14 @@
     dos.writeInt(0);
     return;
   }
+  ByteArray ba;
   if (data == null && dataLoader != null) {
-    data=dataLoader.loadData(piece,begin,length);
-    if (data == null)     return;
+    ba=dataLoader.loadData(piece,begin,length);
+    if (ba == null)     return;
+    data=ba.getData();
+  }
+ else {
+    ba=null;
   }
   int datalen=1;
   if (type == HAVE || type == REQUEST || type == PIECE || type == CANCEL)   datalen+=4;
@@ -22,4 +27,5 @@
   if (type == EXTENSION)   dos.writeByte((byte)piece & 0xff);
   if (type == PORT)   dos.writeShort(piece & 0xffff);
   if (type == BITFIELD || type == PIECE || type == EXTENSION)   dos.write(data,off,len);
+  if (ba != null && ba.getData().length == BUFSIZE)   _cache.release(ba,false);
 }

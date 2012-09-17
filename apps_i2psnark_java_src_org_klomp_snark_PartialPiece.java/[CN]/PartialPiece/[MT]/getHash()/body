@@ -5,7 +5,17 @@
   }
  else {
     int read=0;
-    byte[] buf=new byte[Math.min(pclen,16384)];
+    int buflen=Math.min(pclen,BUFSIZE);
+    ByteArray ba;
+    byte[] buf;
+    if (buflen == BUFSIZE) {
+      ba=_cache.acquire();
+      buf=ba.getData();
+    }
+ else {
+      ba=null;
+      buf=new byte[buflen];
+    }
 synchronized (this) {
       if (raf == null)       throw new IOException();
       raf.seek(0);
@@ -16,6 +26,7 @@ synchronized (this) {
         sha1.update(buf,0,rd);
       }
     }
+    if (ba != null)     _cache.release(ba,false);
     if (read < pclen)     throw new IOException();
   }
   return sha1.digest();
