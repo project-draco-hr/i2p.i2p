@@ -23,28 +23,17 @@
         if (age >= BuildRequestor.REQUEST_TIMEOUT / 4) {
           _context.statManager().addRateData("tunnel.dropLoad",age,sz);
           _context.throttle().setTunnelStatus(_x("Dropping tunnel requests: High load"));
-          _context.statManager().addRateData("tunnel.dropLoadBacklog",sz,sz);
           accept=false;
         }
       }
       if (accept) {
-        int queueTime=estimateQueueTime(sz);
-        float pDrop=queueTime / ((float)BuildRequestor.REQUEST_TIMEOUT * 3);
-        pDrop=(float)Math.pow(pDrop,16);
-        float f=_context.random().nextFloat();
-        if (pDrop > f) {
-          _context.throttle().setTunnelStatus(_x("Dropping tunnel requests: Queue time"));
-          _context.statManager().addRateData("tunnel.dropLoadProactive",queueTime,sz);
+        accept=_inboundBuildMessages.offer(new BuildMessageState(_context,receivedMessage,from,fromHash));
+        if (accept) {
+          _exec.repoll();
         }
  else {
-          accept=_inboundBuildMessages.offer(new BuildMessageState(receivedMessage,from,fromHash));
-          if (accept) {
-            _exec.repoll();
-          }
- else {
-            _context.throttle().setTunnelStatus(_x("Dropping tunnel requests: High load"));
-            _context.statManager().addRateData("tunnel.dropLoadBacklog",sz,sz);
-          }
+          _context.throttle().setTunnelStatus(_x("Dropping tunnel requests: High load"));
+          _context.statManager().addRateData("tunnel.dropLoadBacklog",sz,sz);
         }
       }
     }
