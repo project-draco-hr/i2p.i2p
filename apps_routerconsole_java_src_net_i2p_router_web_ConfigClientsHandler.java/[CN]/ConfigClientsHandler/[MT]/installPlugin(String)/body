@@ -1,15 +1,23 @@
 {
-  if ("true".equals(System.getProperty(UpdateHandler.PROP_UPDATE_IN_PROGRESS))) {
+  ConsoleUpdateManager mgr=(ConsoleUpdateManager)_context.updateManager();
+  if (mgr == null) {
+    addFormError("Update manager not registered, cannot install");
+    return;
+  }
+  if (mgr.isUpdateInProgress()) {
     addFormError(_("Plugin or update download already in progress."));
     return;
   }
-  PluginUpdateHandler puh=PluginUpdateHandler.getInstance(_context);
-  if (puh.isRunning()) {
-    addFormError(_("Plugin or update download already in progress."));
+  URI uri;
+  try {
+    uri=new URI(url);
+  }
+ catch (  URISyntaxException use) {
+    addFormError(_("Bad URL {0}",url));
     return;
   }
-  puh.update(url);
-  addFormNotice(_("Downloading plugin from {0}",url));
+  if (mgr.installPlugin(uri))   addFormNotice(_("Downloading plugin from {0}",url));
+ else   addFormError("Cannot install, check logs");
   try {
     Thread.sleep(1000);
   }

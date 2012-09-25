@@ -1,0 +1,41 @@
+{
+  if (FileUtil.verifyZip(updFile)) {
+    updateStatus("<b>" + _("Update downloaded") + "</b>");
+  }
+ else {
+    updFile.delete();
+    String url=uri.toString();
+    updateStatus("<b>" + _("Unsigned update file from {0} is corrupt",url) + "</b>");
+    _log.log(Log.CRIT,"Corrupt zip file from " + url);
+    return false;
+  }
+  File to=new File(_context.getRouterDir(),Router.UPDATE_FILE);
+  boolean copied=FileUtil.copy(updFile,to,true,false);
+  if (copied) {
+    updFile.delete();
+    String policy=_context.getProperty(ConfigUpdateHandler.PROP_UPDATE_POLICY);
+    long modtime=0;
+    if (lastmod != null)     modtime=RFC822Date.parse822Date(lastmod);
+    if (modtime <= 0)     modtime=_context.clock().now();
+    _context.router().saveConfig(NewsHelper.PROP_LAST_UPDATE_TIME,"" + modtime);
+    if ("install".equals(policy)) {
+      _log.log(Log.CRIT,"Update was downloaded, restarting to install it");
+      updateStatus("<b>" + _("Update downloaded") + "</b><br>"+ _("Restarting"));
+      restart();
+    }
+ else {
+      _log.log(Log.CRIT,"Update was downloaded, will be installed at next restart");
+      StringBuilder buf=new StringBuilder(64);
+      buf.append("<b>").append(_("Update downloaded")).append("</b><br>");
+      if (_context.hasWrapper())       buf.append(_("Click Restart to install"));
+ else       buf.append(_("Click Shutdown and restart to install"));
+      buf.append(' ').append(_("Version {0}",lastmod));
+      updateStatus(buf.toString());
+    }
+  }
+ else {
+    _log.log(Log.CRIT,"Failed copy to " + to);
+    updateStatus("<b>" + _("Failed copy to {0}",to.getAbsolutePath()) + "</b>");
+  }
+  return copied;
+}

@@ -1,0 +1,58 @@
+{
+  if (type == NEWS) {
+    notifyInstalled(NEWS,"",newVersion);
+    return true;
+  }
+  UpdateItem ui=new UpdateItem(type,id);
+  VersionAvailable newVA=new VersionAvailable(newVersion,minVersion,method,updateSources);
+  Version old=_installed.get(ui);
+  if (_log.shouldLog(Log.INFO))   _log.info("notifyVersionAvailable " + ui + ' '+ newVA+ " old: "+ old);
+  if (old != null && old.compareTo(newVA) >= 0) {
+    if (_log.shouldLog(Log.WARN))     _log.warn(ui.toString() + ' ' + old+ " already installed");
+    return false;
+  }
+  old=_downloaded.get(ui);
+  if (old != null && old.compareTo(newVA) >= 0) {
+    if (_log.shouldLog(Log.WARN))     _log.warn(ui.toString() + ' ' + old+ " already downloaded");
+    return false;
+  }
+  VersionAvailable oldVA=_available.get(ui);
+  if (oldVA != null) {
+    int comp=oldVA.compareTo(newVA);
+    if (comp > 0) {
+      if (_log.shouldLog(Log.WARN))       _log.warn(ui.toString() + ' ' + oldVA+ " already available");
+      return false;
+    }
+    if (comp == 0) {
+      if (oldVA.sourceMap.putIfAbsent(method,updateSources) == null) {
+        if (_log.shouldLog(Log.WARN))         _log.warn(ui.toString() + ' ' + oldVA+ " updated with new source method");
+      }
+ else {
+        if (_log.shouldLog(Log.WARN))         _log.warn(ui.toString() + ' ' + oldVA+ " already available");
+      }
+      return false;
+    }
+  }
+  if (_log.shouldLog(Log.INFO))   _log.info(ui.toString() + ' ' + newVA+ " now available");
+  _available.put(ui,newVA);
+switch (type) {
+case NEWS:
+    break;
+case ROUTER_SIGNED:
+case ROUTER_SIGNED_PACK200:
+  if (shouldInstall()) {
+  }
+break;
+case ROUTER_UNSIGNED:
+if (shouldInstall()) {
+}
+break;
+case PLUGIN:
+String msg="<b>" + _("New plugin version {0} is available",newVersion) + "</b>";
+finishStatus(msg);
+break;
+default :
+break;
+}
+return true;
+}

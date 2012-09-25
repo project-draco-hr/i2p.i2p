@@ -1,0 +1,28 @@
+{
+  if (_urls.isEmpty())   return false;
+  _currentURI=_urls.get(0);
+  String url=_currentURI.toString();
+  String proxyHost=_context.getProperty(ConfigUpdateHandler.PROP_PROXY_HOST,ConfigUpdateHandler.DEFAULT_PROXY_HOST);
+  int proxyPort=_context.getProperty(ConfigUpdateHandler.PROP_PROXY_PORT,ConfigUpdateHandler.DEFAULT_PROXY_PORT_INT);
+  try {
+    EepHead get=new EepHead(_context,proxyHost,proxyPort,0,url);
+    if (get.fetch()) {
+      String lastmod=get.getLastModified();
+      if (lastmod != null) {
+        long modtime=RFC822Date.parse822Date(lastmod);
+        if (modtime <= 0)         return false;
+        if (_ms <= 0)         return false;
+        if (modtime > _ms) {
+          _unsignedUpdateAvailable=true;
+          String unsignedUpdateVersion=(new SimpleDateFormat("dd-MMM HH:mm")).format(new Date(modtime)) + " UTC";
+          _mgr.notifyVersionAvailable(this,_urls.get(0),getType(),"",getMethod(),_urls,unsignedUpdateVersion,"");
+        }
+      }
+      return true;
+    }
+  }
+ catch (  Throwable t) {
+    _log.error("Error fetching the unsigned update",t);
+  }
+  return false;
+}

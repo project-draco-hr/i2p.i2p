@@ -1,0 +1,50 @@
+{
+  VersionAvailable va=_available.get(new UpdateItem(type,id));
+  if (va != null) {
+    List<URI> rv=va.sourceMap.get(method);
+    if (rv != null)     return rv;
+  }
+switch (type) {
+case NEWS:
+    break;
+case ROUTER_SIGNED:
+case ROUTER_SIGNED_PACK200:
+  String URLs=_context.getProperty(ConfigUpdateHandler.PROP_UPDATE_URL,ConfigUpdateHandler.DEFAULT_UPDATE_URL);
+StringTokenizer tok=new StringTokenizer(URLs," ,\r\n");
+List<URI> rv=new ArrayList();
+while (tok.hasMoreTokens()) {
+try {
+rv.add(new URI(tok.nextToken().trim()));
+}
+ catch (URISyntaxException use) {
+}
+}
+Collections.shuffle(rv,_context.random());
+return rv;
+case ROUTER_UNSIGNED:
+String url=_context.getProperty(ConfigUpdateHandler.PROP_ZIP_URL);
+if (url != null) {
+try {
+return Collections.singletonList(new URI(url));
+}
+ catch (URISyntaxException use) {
+}
+}
+break;
+case PLUGIN:
+Properties props=PluginStarter.pluginProperties(_context,id);
+String oldVersion=props.getProperty("version");
+String xpi2pURL=props.getProperty("updateURL");
+if (xpi2pURL != null) {
+try {
+return Collections.singletonList(new URI(xpi2pURL));
+}
+ catch (URISyntaxException use) {
+}
+}
+break;
+default :
+break;
+}
+return Collections.EMPTY_LIST;
+}

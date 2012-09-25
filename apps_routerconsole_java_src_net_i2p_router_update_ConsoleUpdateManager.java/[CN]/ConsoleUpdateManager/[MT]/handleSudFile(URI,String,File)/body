@@ -1,0 +1,35 @@
+{
+  String url=uri.toString();
+  updateStatus("<b>" + _("Update downloaded") + "</b>");
+  TrustedUpdate up=new TrustedUpdate(_context);
+  File to=new File(_context.getRouterDir(),Router.UPDATE_FILE);
+  String err=up.migrateVerified(RouterVersion.VERSION,f,to);
+  if (err == null) {
+    String policy=_context.getProperty(ConfigUpdateHandler.PROP_UPDATE_POLICY);
+    String lastmod=null;
+    long modtime=0;
+    if (lastmod != null)     modtime=RFC822Date.parse822Date(lastmod);
+    if (modtime <= 0)     modtime=_context.clock().now();
+    _context.router().saveConfig(NewsHelper.PROP_LAST_UPDATE_TIME,"" + modtime);
+    if ("install".equals(policy)) {
+      _log.log(Log.CRIT,"Update was VERIFIED, restarting to install it");
+      updateStatus("<b>" + _("Update verified") + "</b><br>"+ _("Restarting"));
+      restart();
+    }
+ else {
+      _log.log(Log.CRIT,"Update was VERIFIED, will be installed at next restart");
+      StringBuilder buf=new StringBuilder(64);
+      buf.append("<b>").append(_("Update downloaded")).append("<br>");
+      if (_context.hasWrapper())       buf.append(_("Click Restart to install"));
+ else       buf.append(_("Click Shutdown and restart to install"));
+      if (up.newVersion() != null)       buf.append(' ').append(_("Version {0}",up.newVersion()));
+      buf.append("</b>");
+      updateStatus(buf.toString());
+    }
+  }
+ else {
+    _log.log(Log.CRIT,err + " from " + url);
+    updateStatus("<b>" + err + ' '+ _("from {0}",linkify(url))+ " </b>");
+  }
+  return err == null;
+}

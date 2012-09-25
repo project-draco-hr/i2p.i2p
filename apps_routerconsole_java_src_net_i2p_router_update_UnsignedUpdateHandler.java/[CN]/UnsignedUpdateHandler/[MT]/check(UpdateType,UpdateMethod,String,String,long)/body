@@ -1,0 +1,30 @@
+{
+  if (type != UpdateType.ROUTER_UNSIGNED || method != UpdateMethod.HTTP)   return null;
+  String url=_context.getProperty(ConfigUpdateHandler.PROP_ZIP_URL);
+  if (url == null)   return null;
+  List<URI> updateSources;
+  try {
+    updateSources=Collections.singletonList(new URI(url));
+  }
+ catch (  URISyntaxException use) {
+    return null;
+  }
+  String lastUpdate=_context.getProperty(NewsHelper.PROP_LAST_UPDATE_TIME);
+  if (lastUpdate == null) {
+    _context.router().saveConfig(NewsHelper.PROP_LAST_UPDATE_TIME,Long.toString(_context.clock().now()));
+    return null;
+  }
+  long ms=0;
+  try {
+    ms=Long.parseLong(lastUpdate);
+  }
+ catch (  NumberFormatException nfe) {
+  }
+  if (ms <= 0) {
+    _context.router().saveConfig(NewsHelper.PROP_LAST_UPDATE_TIME,Long.toString(_context.clock().now()));
+    return null;
+  }
+  UpdateRunner update=new UnsignedUpdateChecker(_context,updateSources,ms);
+  update.start();
+  return update;
+}

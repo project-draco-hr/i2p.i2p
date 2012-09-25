@@ -1,0 +1,28 @@
+{
+  boolean shouldProxy=Boolean.valueOf(_context.getProperty(ConfigUpdateHandler.PROP_SHOULD_PROXY,ConfigUpdateHandler.DEFAULT_SHOULD_PROXY)).booleanValue();
+  String proxyHost=_context.getProperty(ConfigUpdateHandler.PROP_PROXY_HOST,ConfigUpdateHandler.DEFAULT_PROXY_HOST);
+  int proxyPort=ConfigUpdateHandler.proxyPort(_context);
+  for (  URI uri : _urls) {
+    _currentURI=uri;
+    String newsURL=uri.toString();
+    if (_tempFile.exists())     _tempFile.delete();
+    try {
+      EepGet get;
+      if (shouldProxy)       get=new EepGet(_context,true,proxyHost,proxyPort,0,_tempFile.getAbsolutePath(),newsURL,true,null,_lastModified);
+ else       get=new EepGet(_context,false,null,0,0,_tempFile.getAbsolutePath(),newsURL,true,null,_lastModified);
+      get.addStatusListener(this);
+      if (get.fetch()) {
+        String lastMod=get.getLastModified();
+        if (lastMod != null) {
+          _lastModified=lastMod;
+          long lm=RFC822Date.parse822Date(lastMod);
+          if (lm > 0)           _context.router().saveConfig(NewsHelper.PROP_LAST_CHECKED,Long.toString(lm));
+        }
+        return;
+      }
+    }
+ catch (    Throwable t) {
+      _log.error("Error fetching the news",t);
+    }
+  }
+}

@@ -1,0 +1,16 @@
+{
+  if (_log.shouldLog(Log.WARN))   _log.warn("Failed " + task + ": "+ reason,t);
+  List<RegisteredUpdater> toTry=_downloaders.get(task);
+  if (toTry != null) {
+    UpdateItem ui=new UpdateItem(task.getType(),task.getID());
+    VersionAvailable va=_available.get(ui);
+    if (va != null) {
+      UpdateTask next=retry(ui,va.sourceMap,toTry,3 * 60 * 1000);
+      if (next != null) {
+        if (_log.shouldLog(Log.WARN))         _log.warn("Retrying with " + next);
+      }
+    }
+  }
+  _downloaders.remove(task);
+  finishStatus("<b>" + _("Transfer failed from {0}",linkify(task.getURI().toString())) + "</b>");
+}

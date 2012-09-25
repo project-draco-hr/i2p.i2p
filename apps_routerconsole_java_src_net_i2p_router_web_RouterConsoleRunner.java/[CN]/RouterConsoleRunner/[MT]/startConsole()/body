@@ -270,17 +270,14 @@
   List<RouterContext> contexts=RouterContext.listContexts();
   if (contexts != null) {
     RouterContext ctx=contexts.get(0);
-    NewsFetcher fetcher=NewsFetcher.getInstance(ctx);
-    Thread newsThread=new I2PAppThread(fetcher,"NewsFetcher",true);
-    newsThread.setPriority(Thread.NORM_PRIORITY - 1);
-    newsThread.start();
+    ConsoleUpdateManager um=new ConsoleUpdateManager(ctx);
+    um.start();
     if (PluginStarter.pluginsEnabled(ctx)) {
       t=new I2PAppThread(new PluginStarter(ctx),"PluginStarter",true);
       t.setPriority(Thread.NORM_PRIORITY - 1);
       t.start();
       ctx.addShutdownTask(new PluginStopper(ctx));
     }
-    ctx.addShutdownTask(new NewsShutdown(fetcher,newsThread));
     ctx.addShutdownTask(new ServerShutdown());
     ConfigServiceHandler.registerSignalHandler(ctx);
   }
