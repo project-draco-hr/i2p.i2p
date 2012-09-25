@@ -7,14 +7,14 @@ synchronized (lock) {
       _log.error("ForwardPortCallback changed from " + forwardCallback + " to "+ cb+ " - using new value, but this is very strange!");
     }
     forwardCallback=cb;
-    if (portsToForward == null || portsToForward.isEmpty()) {
-      portsToForward=ports;
+    if (portsToForward.isEmpty()) {
+      portsToForward.addAll(ports);
       portsToForwardNow=ports;
       portsToDumpNow=null;
     }
  else     if (ports.isEmpty()) {
       portsToDumpNow=portsToForward;
-      portsToForward=ports;
+      portsToForward.clear();
       portsToForwardNow=null;
     }
  else {
@@ -34,13 +34,14 @@ synchronized (lock) {
           portsToDumpNow.add(port);
         }
       }
-      portsToForward=ports;
+      portsToForward.clear();
+      portsToForward.addAll(ports);
     }
     if (_router == null) {
       if (_log.shouldLog(Log.WARN))       _log.warn("No UPnP router available to update");
       return;
     }
   }
-  if (portsToDumpNow != null)   unregisterPorts(portsToDumpNow);
-  if (portsToForwardNow != null)   registerPorts(portsToForwardNow);
+  if (portsToDumpNow != null && !portsToDumpNow.isEmpty())   unregisterPorts(portsToDumpNow);
+  if (portsToForwardNow != null && !portsToForwardNow.isEmpty())   registerPorts(portsToForwardNow);
 }
