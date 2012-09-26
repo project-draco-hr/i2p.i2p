@@ -1,5 +1,6 @@
 {
   boolean restartRequired=false;
+  boolean error=false;
   List<String> removes=new ArrayList();
   if (!_ratesOnly) {
     String oldUdp=_context.getProperty(UDPTransport.PROP_SOURCES,_context.router().isHidden() ? "hidden" : UDPTransport.DEFAULT_SOURCES);
@@ -17,6 +18,9 @@
         valid=verifyAddress(uhost);
         if (valid) {
           changes.put(UDPTransport.PROP_EXTERNAL_HOST,uhost);
+        }
+ else {
+          error=true;
         }
       }
  else {
@@ -44,7 +48,10 @@
         valid=verifyAddress(_ntcpHostname);
         if (valid) {
           changes.put(ConfigNetHelper.PROP_I2NP_NTCP_HOSTNAME,_ntcpHostname);
-          addFormNotice(_("Updating inbound TCP address to") + " " + _ntcpHostname);
+          addFormNotice(_("Updating TCP address to {0}",_ntcpHostname));
+        }
+ else {
+          error=true;
         }
       }
  else {
@@ -60,8 +67,14 @@
     }
     if (oldAutoPort != _ntcpAutoPort || !oldNPort.equals(_ntcpPort)) {
       if (_ntcpPort.length() > 0 && !_ntcpAutoPort) {
-        changes.put(ConfigNetHelper.PROP_I2NP_NTCP_PORT,_ntcpPort);
-        addFormNotice(_("Updating inbound TCP port to") + " " + _ntcpPort);
+        if (Addresses.getPort(_ntcpPort) != 0) {
+          changes.put(ConfigNetHelper.PROP_I2NP_NTCP_PORT,_ntcpPort);
+          addFormNotice(_("Updating TCP port to {0}",_ntcpPort));
+        }
+ else {
+          addFormError(_("Invalid port") + ": " + _ntcpPort);
+          error=true;
+        }
       }
  else {
         removes.add(ConfigNetHelper.PROP_I2NP_NTCP_PORT);
@@ -73,10 +86,16 @@
     if ((_udpPort != null) && (_udpPort.length() > 0)) {
       String oldPort=_context.getProperty(UDPTransport.PROP_INTERNAL_PORT,"unset");
       if (!oldPort.equals(_udpPort)) {
-        changes.put(UDPTransport.PROP_INTERNAL_PORT,_udpPort);
-        changes.put(UDPTransport.PROP_EXTERNAL_PORT,_udpPort);
-        addFormNotice(_("Updating UDP port from") + " " + oldPort+ " "+ _("to")+ " "+ _udpPort);
-        restartRequired=true;
+        if (Addresses.getPort(_udpPort) != 0) {
+          changes.put(UDPTransport.PROP_INTERNAL_PORT,_udpPort);
+          changes.put(UDPTransport.PROP_EXTERNAL_PORT,_udpPort);
+          addFormNotice(_("Updating UDP port to {0}",_udpPort));
+          restartRequired=true;
+        }
+ else {
+          addFormError(_("Invalid port") + ": " + _udpPort);
+          error=true;
+        }
       }
     }
   }
@@ -118,11 +137,13 @@
   if (saved)   addFormNotice(_("Configuration saved successfully"));
  else   addFormError(_("Error saving the configuration (applied but not saved) - please see the error logs"));
   if (ratesUpdated)   _context.bandwidthLimiter().reinitialize();
-  if (switchRequired) {
-    hiddenSwitch();
-  }
- else   if (restartRequired) {
-    addFormNotice("Performing a soft restart");
-    _context.router().restart();
+  if (saved && !error) {
+    if (switchRequired) {
+      hiddenSwitch();
+    }
+ else     if (restartRequired) {
+      addFormNotice("Performing a soft restart");
+      _context.router().restart();
+    }
   }
 }
