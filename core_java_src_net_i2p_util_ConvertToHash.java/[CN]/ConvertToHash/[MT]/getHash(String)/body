@@ -1,44 +1,41 @@
 {
   if (peer == null)   return null;
-  Hash h=new Hash();
   String peerLC=peer.toLowerCase(Locale.US);
   if (peer.length() == 44 && !peerLC.endsWith(".i2p")) {
-    try {
-      h.fromBase64(peer);
-    }
- catch (    DataFormatException dfe) {
-    }
+    byte[] b=Base64.decode(peer);
+    if (b != null && b.length == Hash.HASH_LENGTH)     return Hash.create(b);
   }
-  if (h.getData() == null && peer.length() >= 520 && peerLC.endsWith(".i2p")) {
+  if (peer.length() == 48 && peerLC.endsWith(".i2p")) {
+    byte[] b=Base64.decode(peer.substring(0,44));
+    if (b != null && b.length == Hash.HASH_LENGTH)     return Hash.create(b);
+  }
+  if (peer.length() >= 520 && peerLC.endsWith(".i2p")) {
     try {
       Destination d=new Destination();
       d.fromBase64(peer.substring(0,peer.length() - 4));
-      h=d.calculateHash();
+      return d.calculateHash();
     }
  catch (    DataFormatException dfe) {
     }
   }
-  if (h.getData() == null && peer.length() >= 516 && !peerLC.endsWith(".i2p")) {
+  if (peer.length() >= 516 && !peerLC.endsWith(".i2p")) {
     try {
       Destination d=new Destination();
       d.fromBase64(peer);
-      h=d.calculateHash();
+      return d.calculateHash();
     }
  catch (    DataFormatException dfe) {
     }
   }
-  if (h.getData() == null && peer.length() == 60 && peerLC.endsWith(".b32.i2p")) {
+  if (peer.length() == 60 && peerLC.endsWith(".b32.i2p")) {
     byte[] b=Base32.decode(peer.substring(0,52));
-    if (b != null && b.length == Hash.HASH_LENGTH)     h.setData(b);
+    if (b != null && b.length == Hash.HASH_LENGTH)     return Hash.create(b);
   }
-  if (h.getData() == null && peer.length() == 52 && !peerLC.endsWith(".i2p")) {
+  if (peer.length() == 52 && !peerLC.endsWith(".i2p")) {
     byte[] b=Base32.decode(peer);
-    if (b != null && b.length == Hash.HASH_LENGTH)     h.setData(b);
+    if (b != null && b.length == Hash.HASH_LENGTH)     return Hash.create(b);
   }
-  if (h.getData() == null) {
-    Destination d=I2PAppContext.getGlobalContext().namingService().lookup(peer);
-    if (d != null)     h=d.calculateHash();
-  }
-  if (h.getData() == null)   return null;
-  return h;
+  Destination d=I2PAppContext.getGlobalContext().namingService().lookup(peer);
+  if (d != null)   return d.calculateHash();
+  return null;
 }
