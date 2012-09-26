@@ -1,18 +1,11 @@
 {
   _connectionHandler.setActive(allow);
-  if (allow && !_throttlersInitialized) {
-    _throttlersInitialized=true;
-    if (_defaultOptions.getMaxConnsPerMinute() > 0 || _defaultOptions.getMaxTotalConnsPerMinute() > 0) {
-      _context.statManager().createRateStat("stream.con.throttledMinute","Dropped for conn limit","Stream",new long[]{5 * 60 * 1000});
-      _minuteThrottler=new ConnThrottler(_defaultOptions.getMaxConnsPerMinute(),_defaultOptions.getMaxTotalConnsPerMinute(),60 * 1000);
-    }
-    if (_defaultOptions.getMaxConnsPerHour() > 0 || _defaultOptions.getMaxTotalConnsPerHour() > 0) {
-      _context.statManager().createRateStat("stream.con.throttledHour","Dropped for conn limit","Stream",new long[]{5 * 60 * 1000});
-      _hourThrottler=new ConnThrottler(_defaultOptions.getMaxConnsPerHour(),_defaultOptions.getMaxTotalConnsPerHour(),60 * 60 * 1000);
-    }
-    if (_defaultOptions.getMaxConnsPerDay() > 0 || _defaultOptions.getMaxTotalConnsPerDay() > 0) {
-      _context.statManager().createRateStat("stream.con.throttledDay","Dropped for conn limit","Stream",new long[]{5 * 60 * 1000});
-      _dayThrottler=new ConnThrottler(_defaultOptions.getMaxConnsPerDay(),_defaultOptions.getMaxTotalConnsPerDay(),24 * 60 * 60* 1000);
+  if (allow) {
+synchronized (this) {
+      if (!_throttlersInitialized) {
+        updateOptions();
+        _throttlersInitialized=true;
+      }
     }
   }
 }

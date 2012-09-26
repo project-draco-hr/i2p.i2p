@@ -7,13 +7,14 @@
   while (true) {
     long remaining=expiration - _context.clock().now();
     if (remaining <= 0) {
-      _log.logAlways(Log.WARN,"Refusing to connect since we have exceeded our max of " + _maxConcurrentStreams + " connections");
+      _log.logAlways(Log.WARN,"Refusing to connect since we have exceeded our max of " + _defaultOptions.getMaxConns() + " connections");
       _numWaiting--;
       return null;
     }
     if (locked_tooManyStreams()) {
-      if (_numWaiting > _maxConcurrentStreams) {
-        _log.logAlways(Log.WARN,"Refusing connection since we have exceeded our max of " + _maxConcurrentStreams + " and there are "+ _numWaiting+ " waiting already");
+      int max=_defaultOptions.getMaxConns();
+      if (_numWaiting > max) {
+        _log.logAlways(Log.WARN,"Refusing connection since we have exceeded our max of " + max + " and there are "+ _numWaiting+ " waiting already");
         _numWaiting--;
         return null;
       }
