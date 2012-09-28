@@ -10,8 +10,21 @@ synchronized (wantedPieces) {
         for (        Piece piece : wantedPieces) {
           if (piece.getId() == savedPiece) {
             if (peer.isCompleted() && piece.getPeerCount() > 1) {
-              skipped=true;
-              break;
+              boolean nonSeeds=false;
+              for (              Peer pr : peers) {
+                PeerState state=pr.state;
+                if (state == null)                 continue;
+                BitField bf=state.bitfield;
+                if (bf == null)                 continue;
+                if (bf.get(savedPiece) && !pr.isCompleted()) {
+                  nonSeeds=true;
+                  break;
+                }
+              }
+              if (nonSeeds) {
+                skipped=true;
+                break;
+              }
             }
             iter.remove();
             piece.setRequested(peer,true);
