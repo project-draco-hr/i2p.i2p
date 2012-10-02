@@ -1,44 +1,6 @@
 {
   if (_log.shouldLog(Log.INFO))   _log.info("Add remote peer state: " + peer);
-  Hash remotePeer=peer.getRemotePeer();
-  long oldEstablishedOn=-1;
-  PeerState oldPeer=null;
-  if (remotePeer != null) {
-    oldPeer=_peersByIdent.put(remotePeer,peer);
-    if ((oldPeer != null) && (oldPeer != peer)) {
-      peer.loadFrom(oldPeer);
-      oldEstablishedOn=oldPeer.getKeyEstablishedTime();
-    }
+synchronized (_addDropLock) {
+    return locked_addRemotePeerState(peer);
   }
-  if (oldPeer != null) {
-    oldPeer.dropOutbound();
-    _introManager.remove(oldPeer);
-    _expireEvent.remove(oldPeer);
-  }
-  oldPeer=null;
-  RemoteHostId remoteId=peer.getRemoteHostId();
-  if (remoteId == null)   return false;
-  if (remoteId.getIP() == null && _log.shouldLog(Log.WARN))   _log.warn("Add indirect: " + peer);
-  oldPeer=_peersByRemoteHost.put(remoteId,peer);
-  if ((oldPeer != null) && (oldPeer != peer)) {
-    peer.loadFrom(oldPeer);
-    oldEstablishedOn=oldPeer.getKeyEstablishedTime();
-  }
-  if (oldPeer != null) {
-    oldPeer.dropOutbound();
-    _introManager.remove(oldPeer);
-    _expireEvent.remove(oldPeer);
-  }
-  if ((oldPeer != null) && (_log.shouldLog(Log.WARN)))   _log.warn("Peer already connected: old=" + oldPeer + " new="+ peer,new Exception("dup"));
-  _activeThrottle.unchoke(peer.getRemotePeer());
-  markReachable(peer.getRemotePeer(),peer.isInbound());
-  _expireEvent.add(peer);
-  _introManager.add(peer);
-  if (oldEstablishedOn > 0)   _context.statManager().addRateData("udp.alreadyConnected",oldEstablishedOn,0);
-  if (needsRebuild())   rebuildExternalAddress();
-  if (getReachabilityStatus() != CommSystemFacade.STATUS_OK) {
-    _testEvent.forceRun();
-    _testEvent.reschedule(0);
-  }
-  return true;
 }
