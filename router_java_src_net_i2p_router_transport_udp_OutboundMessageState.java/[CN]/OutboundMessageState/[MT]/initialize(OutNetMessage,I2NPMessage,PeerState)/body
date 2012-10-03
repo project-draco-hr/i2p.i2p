@@ -1,13 +1,8 @@
 {
   _message=m;
   _peer=peer;
-  if (_messageBuf != null) {
-    _cache.release(_messageBuf);
-    _messageBuf=null;
-  }
-  _messageBuf=_cache.acquire();
   int size=msg.getRawMessageSize();
-  if (size > _messageBuf.getData().length)   throw new IllegalArgumentException("Size too large!  " + size + " in "+ msg);
+  acquireBuf(size);
   try {
     int len=msg.toRawByteArray(_messageBuf.getData());
     _messageBuf.setValid(len);
@@ -18,9 +13,7 @@
     return true;
   }
  catch (  IllegalStateException ise) {
-    _cache.release(_messageBuf);
-    _messageBuf=null;
-    _released=true;
+    releaseBuf();
     return false;
   }
 }

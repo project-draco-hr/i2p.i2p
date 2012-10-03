@@ -5,10 +5,12 @@
   long shortInactivityCutoff=now - _expireTimeout;
   long longInactivityCutoff=now - EXPIRE_TIMEOUT;
   long pingCutoff=now - (2 * 60 * 60* 1000);
-  long pingFirewallCutoff=now - (60 * 1000);
+  long pingFirewallCutoff=now - PING_FIREWALL_CUTOFF;
   boolean shouldPingFirewall=_reachabilityStatus != CommSystemFacade.STATUS_OK;
   boolean pingOneOnly=shouldPingFirewall && _externalListenPort == _endpoint.getListenPort();
+  boolean shortLoop=shouldPingFirewall;
   _expireBuffer.clear();
+  _runCount++;
   for (Iterator<PeerState> iter=_expirePeers.iterator(); iter.hasNext(); ) {
     PeerState peer=iter.next();
     long inactivityCutoff;
@@ -18,9 +20,10 @@
       _expireBuffer.add(peer);
       iter.remove();
     }
- else     if (shouldPingFirewall && peer.getLastSendTime() < pingFirewallCutoff && peer.getLastReceiveTime() < pingFirewallCutoff) {
+ else     if (shouldPingFirewall && ((_runCount ^ peer.hashCode()) & (SLICES - 1)) == 0 && peer.getLastSendOrPingTime() < pingFirewallCutoff && peer.getLastReceiveTime() < pingFirewallCutoff) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Pinging for firewall: " + peer);
       send(_destroyBuilder.buildPing(peer));
+      peer.setLastPingTime(now);
       if (pingOneOnly)       shouldPingFirewall=false;
     }
   }
@@ -29,5 +32,5 @@
     dropPeer(peer,false,"idle too long");
   }
   _expireBuffer.clear();
-  if (_alive)   schedule(30 * 1000);
+  if (_alive)   schedule(shortLoop ? SHORT_LOOP_TIME : LONG_LOOP_TIME);
 }
