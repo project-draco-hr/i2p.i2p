@@ -1,0 +1,32 @@
+{
+  _concurrentMessagesActive--;
+  if (_concurrentMessagesActive < 0)   _concurrentMessagesActive=0;
+  _consecutiveFailedSends=0;
+  if (numSends < 2) {
+    if (_context.random().nextInt(_concurrentMessagesAllowed) <= 0)     _concurrentMessagesAllowed++;
+    if (_sendWindowBytes <= _slowStartThreshold) {
+      _sendWindowBytes+=bytesACKed;
+    }
+ else {
+      float prob=((float)bytesACKed) / ((float)(_sendWindowBytes << 1));
+      float v=_context.random().nextFloat();
+      if (v < 0)       v=0 - v;
+      if (v <= prob)       _sendWindowBytes+=bytesACKed;
+    }
+  }
+ else {
+    int allow=_concurrentMessagesAllowed - 1;
+    if (allow < MIN_CONCURRENT_MSGS)     allow=MIN_CONCURRENT_MSGS;
+    _concurrentMessagesAllowed=allow;
+  }
+  if (_sendWindowBytes > MAX_SEND_WINDOW_BYTES)   _sendWindowBytes=MAX_SEND_WINDOW_BYTES;
+  _lastReceiveTime=_context.clock().now();
+  _lastSendFullyTime=_lastReceiveTime;
+  if (_sendWindowBytesRemaining + bytesACKed <= _sendWindowBytes)   _sendWindowBytesRemaining+=bytesACKed;
+ else   _sendWindowBytesRemaining=_sendWindowBytes;
+  _messagesSent++;
+  if (numSends < 2) {
+    recalculateTimeouts(lifetime);
+    adjustMTU();
+  }
+}
