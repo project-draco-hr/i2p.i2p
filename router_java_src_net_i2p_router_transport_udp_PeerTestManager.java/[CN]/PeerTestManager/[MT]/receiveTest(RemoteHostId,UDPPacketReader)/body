@@ -1,25 +1,33 @@
 {
-  _context.statManager().addRateData("udp.receiveTest",1,0);
+  _context.statManager().addRateData("udp.receiveTest",1);
+  byte[] fromIP=from.getIP();
+  int fromPort=from.getPort();
+  if (fromPort < 1024 || fromPort > 65535 || (!_transport.isValid(fromIP)) || _context.blocklist().isBlocklisted(fromIP)) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Invalid PeerTest address: " + Addresses.toString(fromIP,fromPort));
+    _context.statManager().addRateData("udp.testBadIP",1);
+    return;
+  }
   UDPPacketReader.PeerTestReader testInfo=reader.getPeerTestReader();
   byte testIP[]=null;
   int testPort=testInfo.readPort();
+  if (testInfo.readIPSize() > 0) {
+    testIP=new byte[testInfo.readIPSize()];
+    testInfo.readIP(testIP,0);
+  }
+  if ((testPort > 0 && (testPort < 1024 || testPort > 65535)) || (testIP != null && (Arrays.equals(testIP,_transport.getExternalIP()) || (!_transport.isValid(testIP)) || _context.blocklist().isBlocklisted(testIP)))) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Invalid address in PeerTest: " + Addresses.toString(testIP,testPort));
+    _context.statManager().addRateData("udp.testBadIP",1);
+    return;
+  }
   long nonce=testInfo.readNonce();
   PeerTestState test=_currentTest;
   if ((test != null) && (test.getNonce() == nonce)) {
     receiveTestReply(from,testInfo);
     return;
   }
-  if ((testInfo.readIPSize() > 0) && (testPort > 0)) {
-    testIP=new byte[testInfo.readIPSize()];
-    testInfo.readIP(testIP,0);
-  }
   PeerTestState state=_activeTests.get(Long.valueOf(nonce));
   if (state == null) {
-    if ((testPort > 0 && (testPort < 1024 || testPort > 65535)) || (testIP != null && !_transport.isValid(testIP))) {
-      if (_log.shouldLog(Log.WARN))       _log.warn("Invalid IP/Port rcvd in PeerTest: " + Addresses.toString(testIP,testPort));
-      return;
-    }
- else     if ((testIP == null) || (testPort <= 0)) {
+    if ((testIP == null) || (testPort <= 0)) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("test IP/port are blank coming from " + from + ", assuming we are Bob and they are alice");
       receiveFromAliceAsBob(from,testInfo,nonce,null);
     }
@@ -34,10 +42,10 @@
   }
  else {
     if (state.getOurRole() == PeerTestState.BOB) {
-      if (DataHelper.eq(from.getIP(),state.getAliceIP().getAddress()) && (from.getPort() == state.getAlicePort())) {
+      if (DataHelper.eq(fromIP,state.getAliceIP().getAddress()) && (fromPort == state.getAlicePort())) {
         receiveFromAliceAsBob(from,testInfo,nonce,state);
       }
- else       if (DataHelper.eq(from.getIP(),state.getCharlieIP().getAddress()) && (from.getPort() == state.getCharliePort())) {
+ else       if (DataHelper.eq(fromIP,state.getCharlieIP().getAddress()) && (fromPort == state.getCharliePort())) {
         receiveFromCharlieAsBob(from,state);
       }
  else {

@@ -1,6 +1,6 @@
 {
   if (_context.router().isHidden())   return;
-  _context.statManager().addRateData("udp.receiveRelayIntro",1,0);
+  _context.statManager().addRateData("udp.receiveRelayIntro",1);
   if (!_transport.allowConnection()) {
     if (_log.shouldLog(Log.WARN))     _log.warn("Dropping RelayIntro, over conn limit");
     return;
@@ -9,16 +9,19 @@
   byte ip[]=new byte[ipSize];
   reader.getRelayIntroReader().readIP(ip,0);
   int port=reader.getRelayIntroReader().readPort();
+  if ((!isValid(ip,port)) || (!isValid(bob.getIP(),bob.getPort()))) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Bad relay intro from " + bob + " for "+ Addresses.toString(ip,port));
+    _context.statManager().addRateData("udp.relayBadIP",1);
+    return;
+  }
   if (_log.shouldLog(Log.INFO))   _log.info("Receive relay intro from " + bob + " for "+ Addresses.toString(ip,port));
   InetAddress to=null;
   try {
-    if (!_transport.isValid(ip))     throw new UnknownHostException("non-public IP");
-    if (port < 1024 || port > 65535)     throw new UnknownHostException("bad port " + port);
-    if (Arrays.equals(ip,_transport.getExternalIP()))     throw new UnknownHostException("punch myself");
     to=InetAddress.getByAddress(ip);
   }
  catch (  UnknownHostException uhe) {
     if (_log.shouldLog(Log.WARN))     _log.warn("IP for alice to hole punch to is invalid",uhe);
+    _context.statManager().addRateData("udp.relayBadIP",1);
     return;
   }
   RemoteHostId alice=new RemoteHostId(ip,port);

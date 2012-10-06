@@ -9,11 +9,13 @@
   byte ip[]=new byte[sz];
   reader.getRelayResponseReader().readCharlieIP(ip,0);
   int port=reader.getRelayResponseReader().readCharliePort();
+  if ((!isValid(ip,port)) || (!isValid(bob.getIP(),bob.getPort()))) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Bad relay resp from " + bob + " for "+ Addresses.toString(ip,port));
+    _context.statManager().addRateData("udp.relayBadIP",1);
+    return;
+  }
   InetAddress addr=null;
   try {
-    if (!_transport.isValid(ip))     throw new UnknownHostException("non-public IP");
-    if (port < 1024 || port > 65535)     throw new UnknownHostException("bad port " + port);
-    if (Arrays.equals(ip,_transport.getExternalIP()))     throw new UnknownHostException("relay myself");
     addr=InetAddress.getByAddress(ip);
   }
  catch (  UnknownHostException uhe) {
