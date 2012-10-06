@@ -15,7 +15,11 @@
   }
   PeerTestState state=_activeTests.get(Long.valueOf(nonce));
   if (state == null) {
-    if ((testIP == null) || (testPort <= 0)) {
+    if ((testPort > 0 && (testPort < 1024 || testPort > 65535)) || (testIP != null && !_transport.isValid(testIP))) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Invalid IP/Port rcvd in PeerTest: " + Addresses.toString(testIP,testPort));
+      return;
+    }
+ else     if ((testIP == null) || (testPort <= 0)) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("test IP/port are blank coming from " + from + ", assuming we are Bob and they are alice");
       receiveFromAliceAsBob(from,testInfo,nonce,null);
     }
