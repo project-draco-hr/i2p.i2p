@@ -14,7 +14,7 @@
     testIP=new byte[testInfo.readIPSize()];
     testInfo.readIP(testIP,0);
   }
-  if ((testPort > 0 && (testPort < 1024 || testPort > 65535)) || (testIP != null && (Arrays.equals(testIP,_transport.getExternalIP()) || (!_transport.isValid(testIP)) || _context.blocklist().isBlocklisted(testIP)))) {
+  if ((testPort > 0 && (testPort < 1024 || testPort > 65535)) || (testIP != null && ((!_transport.isValid(testIP)) || _context.blocklist().isBlocklisted(testIP)))) {
     if (_log.shouldLog(Log.WARN))     _log.warn("Invalid address in PeerTest: " + Addresses.toString(testIP,testPort));
     _context.statManager().addRateData("udp.testBadIP",1);
     return;
@@ -23,6 +23,11 @@
   PeerTestState test=_currentTest;
   if ((test != null) && (test.getNonce() == nonce)) {
     receiveTestReply(from,testInfo);
+    return;
+  }
+  if (testIP != null && Arrays.equals(testIP,_transport.getExternalIP())) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Invalid address in PeerTest: " + Addresses.toString(testIP,testPort));
+    _context.statManager().addRateData("udp.testBadIP",1);
     return;
   }
   PeerTestState state=_activeTests.get(Long.valueOf(nonce));
