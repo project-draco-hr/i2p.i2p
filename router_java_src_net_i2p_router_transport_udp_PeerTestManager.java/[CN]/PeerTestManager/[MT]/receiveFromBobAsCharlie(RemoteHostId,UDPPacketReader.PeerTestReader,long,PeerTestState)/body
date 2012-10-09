@@ -1,11 +1,16 @@
 {
+  long now=_context.clock().now();
   boolean isNew=false;
   if (state == null) {
     isNew=true;
-    state=new PeerTestState();
-    state.setOurRole(PeerTestState.CHARLIE);
+    state=new PeerTestState(CHARLIE,nonce,now);
   }
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Receive test as charlie nonce " + nonce);
+ else {
+    if (state.getReceiveBobTime() > now - (RESEND_TIMEOUT / 2)) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Too soon, not retransmitting: " + state);
+      return;
+    }
+  }
   int sz=testInfo.readIPSize();
   byte aliceIPData[]=new byte[sz];
   try {
@@ -19,12 +24,10 @@
     state.setAliceIP(aliceIP);
     state.setAlicePort(alicePort);
     state.setAliceIntroKey(aliceIntroKey);
-    state.setNonce(nonce);
     state.setBobIP(bobIP);
     state.setBobPort(from.getPort());
-    state.setLastSendTime(_context.clock().now());
-    state.setOurRole(PeerTestState.CHARLIE);
-    state.setReceiveBobTime(_context.clock().now());
+    state.setLastSendTime(now);
+    state.setReceiveBobTime(now);
     PeerState bob=_transport.getPeerState(from);
     if (bob == null) {
       if (_log.shouldLog(Log.WARN))       _log.warn("Received from bob (" + from + ") who hasn't established a session with us, refusing to help him test "+ aliceIP+ ":"+ alicePort);
@@ -34,12 +37,11 @@
       state.setBobCipherKey(bob.getCurrentCipherKey());
       state.setBobMACKey(bob.getCurrentMACKey());
     }
-    state.incrementPacketsRelayed();
-    if (state.getPacketsRelayed() > MAX_RELAYED_PER_TEST) {
-      if (_log.shouldLog(Log.WARN))       _log.warn("Receive from bob (" + from + ") as charlie with alice @ "+ aliceIP+ ":"+ alicePort+ ", but we've already relayed too many packets to that test, so we're dropping it");
+    if (state.incrementPacketsRelayed() > MAX_RELAYED_PER_TEST_CHARLIE) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Too many, not retransmitting: " + state);
       return;
     }
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Receive from bob (" + from + ") as charlie, sending back to bob and sending to alice @ "+ aliceIP+ ":"+ alicePort);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Receive from Bob: " + state);
     if (isNew) {
       _activeTests.put(Long.valueOf(nonce),state);
       _context.simpleScheduler().addEvent(new RemoveTest(nonce),MAX_CHARLIE_LIFETIME);

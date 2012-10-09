@@ -18,7 +18,7 @@
       int testPort=testInfo.readPort();
       if (testPort == 0)       throw new UnknownHostException("port 0");
       test.setAlicePort(testPort);
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Receive test reply from bob @ " + from + " via our "+ test.getAlicePort()+ "/"+ test.getAlicePortFromCharlie());
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Receive test reply from Bob: " + test);
       if (test.getAlicePortFromCharlie() > 0)       testComplete(false);
     }
  catch (    UnknownHostException uhe) {
@@ -46,7 +46,7 @@
         testInfo.readIP(ip,0);
         InetAddress addr=InetAddress.getByAddress(ip);
         test.setAliceIPFromCharlie(addr);
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("Receive test reply from charlie @ " + test.getCharlieIP() + " via our "+ test.getAlicePort()+ "/"+ test.getAlicePortFromCharlie());
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Receive test reply from Charlie: " + test);
         if (test.getReceiveBobTime() > 0)         testComplete(true);
       }
  catch (      UnknownHostException uhe) {
@@ -55,9 +55,9 @@
       }
     }
  else {
-      if (test.getPacketsRelayed() > MAX_RELAYED_PER_TEST) {
+      if (test.incrementPacketsRelayed() > MAX_RELAYED_PER_TEST_ALICE) {
         testComplete(false);
-        if (_log.shouldLog(Log.WARN))         _log.warn("Received too many packets on the test: " + test);
+        if (_log.shouldLog(Log.WARN))         _log.warn("Sent too many packets on the test: " + test);
         return;
       }
       if (_log.shouldLog(Log.INFO) && charlieSession != null)       _log.info("Bob chose a charlie we last acked " + DataHelper.formatDuration(_context.clock().now() - charlieSession.getLastACKSend()) + " last sent "+ DataHelper.formatDuration(_context.clock().now() - charlieSession.getLastSendTime())+ " (bob: "+ _currentTest+ ", charlie: "+ from+ ")");
@@ -68,7 +68,7 @@
       try {
         test.setCharlieIP(InetAddress.getByAddress(from.getIP()));
         test.setCharliePort(from.getPort());
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("Receive test from charlie @ " + from);
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Receive test from Charlie: " + test);
         sendTestToCharlie();
       }
  catch (      UnknownHostException uhe) {

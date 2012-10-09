@@ -1,22 +1,24 @@
 {
   if (_currentTest != null) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("We are already running a test with bob = " + _currentTest.getBobIP() + ", aborting test with bob = "+ bobIP);
+    if (_log.shouldLog(Log.WARN))     _log.warn("We are already running a test: " + _currentTest + ", aborting test with bob = "+ bobIP);
     return;
   }
-  PeerTestState test=new PeerTestState();
-  test.setNonce(_context.random().nextLong(MAX_NONCE));
+  if (DataHelper.eq(bobIP.getAddress(),0,_transport.getExternalIP(),0,2)) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Not running test with Bob too close to us " + bobIP);
+    return;
+  }
+  PeerTestState test=new PeerTestState(ALICE,_context.random().nextLong(MAX_NONCE),_context.clock().now());
   test.setBobIP(bobIP);
   test.setBobPort(bobPort);
   test.setBobCipherKey(bobCipherKey);
   test.setBobMACKey(bobMACKey);
-  test.setBeginTime(_context.clock().now());
   test.setLastSendTime(test.getBeginTime());
-  test.setOurRole(PeerTestState.ALICE);
   _currentTest=test;
   _currentTestComplete=false;
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Running test with bob = " + bobIP + ":"+ bobPort+ " "+ test.getNonce());
-  while (_recentTests.size() > 16)   _recentTests.poll();
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Start new test: " + test);
+  while (_recentTests.size() > MAX_RECENT_TESTS)   _recentTests.poll();
   _recentTests.offer(Long.valueOf(test.getNonce()));
+  test.incrementPacketsRelayed();
   sendTestToBob();
-  _context.simpleScheduler().addEvent(new ContinueTest(),RESEND_TIMEOUT);
+  _context.simpleScheduler().addEvent(new ContinueTest(test.getNonce()),RESEND_TIMEOUT);
 }
