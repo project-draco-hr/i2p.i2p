@@ -1,48 +1,87 @@
 {
-  _context.statManager().addRateData("udp.receiveTest",1,0);
+  _context.statManager().addRateData("udp.receiveTest",1);
+  byte[] fromIP=from.getIP();
+  int fromPort=from.getPort();
+  if (fromPort < 1024 || fromPort > 65535 || (!_transport.isValid(fromIP)) || DataHelper.eq(fromIP,0,_transport.getExternalIP(),0,2) || _context.blocklist().isBlocklisted(fromIP)) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Invalid PeerTest address: " + Addresses.toString(fromIP,fromPort));
+    _context.statManager().addRateData("udp.testBadIP",1);
+    return;
+  }
   UDPPacketReader.PeerTestReader testInfo=reader.getPeerTestReader();
   byte testIP[]=null;
   int testPort=testInfo.readPort();
+  if (testInfo.readIPSize() > 0) {
+    testIP=new byte[testInfo.readIPSize()];
+    testInfo.readIP(testIP,0);
+  }
+  if ((testPort > 0 && (testPort < 1024 || testPort > 65535)) || (testIP != null && ((!_transport.isValid(testIP)) || _context.blocklist().isBlocklisted(testIP)))) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Invalid address in PeerTest: " + Addresses.toString(testIP,testPort));
+    _context.statManager().addRateData("udp.testBadIP",1);
+    return;
+  }
   long nonce=testInfo.readNonce();
   PeerTestState test=_currentTest;
   if ((test != null) && (test.getNonce() == nonce)) {
     receiveTestReply(from,testInfo);
     return;
   }
-  if ((testInfo.readIPSize() > 0) && (testPort > 0)) {
-    testIP=new byte[testInfo.readIPSize()];
-    testInfo.readIP(testIP,0);
+  if (_throttle.shouldThrottle(fromIP)) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("PeerTest throttle from " + Addresses.toString(fromIP,fromPort));
+    return;
   }
-  PeerTestState state=_activeTests.get(Long.valueOf(nonce));
+  if (testIP != null && _throttle.shouldThrottle(testIP)) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("PeerTest throttle to " + Addresses.toString(testIP,testPort));
+    return;
+  }
+  Long lNonce=Long.valueOf(nonce);
+  PeerTestState state=_activeTests.get(lNonce);
+  if (testIP != null && DataHelper.eq(testIP,0,_transport.getExternalIP(),0,2)) {
+    if (_recentTests.contains(lNonce)) {
+      if (_log.shouldLog(Log.INFO))       _log.info("Got delayed reply on nonce " + nonce + " from: "+ Addresses.toString(fromIP,fromPort));
+    }
+ else {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Nearby address in PeerTest: " + Addresses.toString(testIP,testPort) + " from: "+ Addresses.toString(fromIP,fromPort)+ " state? "+ state);
+      _context.statManager().addRateData("udp.testBadIP",1);
+    }
+    return;
+  }
   if (state == null) {
     if ((testIP == null) || (testPort <= 0)) {
+      if (_activeTests.size() >= MAX_ACTIVE_TESTS) {
+        if (_log.shouldLog(Log.WARN))         _log.warn("Too many active tests, droppping from Alice " + Addresses.toString(fromIP,fromPort));
+        return;
+      }
       if (_log.shouldLog(Log.DEBUG))       _log.debug("test IP/port are blank coming from " + from + ", assuming we are Bob and they are alice");
       receiveFromAliceAsBob(from,testInfo,nonce,null);
     }
  else {
-      if (_recentTests.contains(Long.valueOf(nonce))) {
+      if (_recentTests.contains(lNonce)) {
       }
  else {
+        if (_activeTests.size() >= MAX_ACTIVE_TESTS) {
+          if (_log.shouldLog(Log.WARN))           _log.warn("Too many active tests, droppping from Bob " + Addresses.toString(fromIP,fromPort));
+          return;
+        }
         if (_log.shouldLog(Log.DEBUG))         _log.debug("We are charlie, as the testIP/port is " + Addresses.toString(testIP,testPort) + " and the state is unknown for "+ nonce);
         receiveFromBobAsCharlie(from,testInfo,nonce,null);
       }
     }
   }
  else {
-    if (state.getOurRole() == PeerTestState.BOB) {
-      if (DataHelper.eq(from.getIP(),state.getAliceIP().getAddress()) && (from.getPort() == state.getAlicePort())) {
+    if (state.getOurRole() == BOB) {
+      if (DataHelper.eq(fromIP,state.getAliceIP().getAddress()) && (fromPort == state.getAlicePort())) {
         receiveFromAliceAsBob(from,testInfo,nonce,state);
       }
- else       if (DataHelper.eq(from.getIP(),state.getCharlieIP().getAddress()) && (from.getPort() == state.getCharliePort())) {
+ else       if (DataHelper.eq(fromIP,state.getCharlieIP().getAddress()) && (fromPort == state.getCharliePort())) {
         receiveFromCharlieAsBob(from,state);
       }
  else {
         if (_log.shouldLog(Log.WARN))         _log.warn("Received from a fourth party as bob!  alice: " + state.getAliceIP() + ", charlie: "+ state.getCharlieIP()+ ", dave: "+ from);
       }
     }
- else     if (state.getOurRole() == PeerTestState.CHARLIE) {
+ else     if (state.getOurRole() == CHARLIE) {
       if ((testIP == null) || (testPort <= 0)) {
-        receiveFromAliceAsCharlie(from,testInfo,nonce);
+        receiveFromAliceAsCharlie(from,testInfo,nonce,state);
       }
  else {
         receiveFromBobAsCharlie(from,testInfo,nonce,state);

@@ -1,20 +1,14 @@
 {
   _isShutdown=false;
   if (!_executor.isRunning()) {
-    I2PThread t=new I2PThread(_executor,"BuildExecutor");
-    t.setDaemon(true);
+    I2PThread t=new I2PThread(_executor,"BuildExecutor",true);
     t.start();
+    for (int i=1; i <= _numHandlerThreads; i++) {
+      I2PThread hThread=new I2PThread(_handler,"BuildHandler " + i + '/'+ _numHandlerThreads,true);
+      hThread.start();
+    }
   }
-  ExploratoryPeerSelector selector=new ExploratoryPeerSelector(_context);
-  TunnelPoolSettings inboundSettings=new TunnelPoolSettings();
-  inboundSettings.setIsExploratory(true);
-  inboundSettings.setIsInbound(true);
-  _inboundExploratory=new TunnelPool(_context,this,inboundSettings,selector);
   _inboundExploratory.startup();
-  TunnelPoolSettings outboundSettings=new TunnelPoolSettings();
-  outboundSettings.setIsExploratory(true);
-  outboundSettings.setIsInbound(false);
-  _outboundExploratory=new TunnelPool(_context,this,outboundSettings,selector);
   _context.simpleScheduler().addEvent(new DelayedStartup(_outboundExploratory),3 * 1000);
   _context.jobQueue().addJob(new BootstrapPool(_context,_inboundExploratory));
   _context.jobQueue().addJob(new BootstrapPool(_context,_outboundExploratory));

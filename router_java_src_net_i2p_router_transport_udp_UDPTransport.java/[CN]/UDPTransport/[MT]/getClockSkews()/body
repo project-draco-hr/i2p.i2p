@@ -1,12 +1,10 @@
 {
   Vector<Long> skews=new Vector();
-  Vector<PeerState> peers=new Vector();
-  peers.addAll(_peersByIdent.values());
-  boolean includeEverybody=_context.router().getUptime() < 10 * 60 * 1000 || peers.size() < 10;
+  boolean includeEverybody=_context.router().getUptime() < 10 * 60 * 1000 || _peersByIdent.size() < 10;
   long now=_context.clock().now();
-  for (Iterator<PeerState> iter=peers.iterator(); iter.hasNext(); ) {
-    PeerState peer=iter.next();
-    if ((!includeEverybody) && now - peer.getLastReceiveTime() > 15 * 60 * 1000)     continue;
+  for (  PeerState peer : _peersByIdent.values()) {
+    if ((!includeEverybody) && now - peer.getLastReceiveTime() > 5 * 60 * 1000)     continue;
+    if (peer.getRTT() > PeerState.INIT_RTT - 250)     continue;
     skews.addElement(Long.valueOf(peer.getClockSkew() / 1000));
   }
   if (_log.shouldLog(Log.DEBUG))   _log.debug("UDP transport returning " + skews.size() + " peer clock skews.");

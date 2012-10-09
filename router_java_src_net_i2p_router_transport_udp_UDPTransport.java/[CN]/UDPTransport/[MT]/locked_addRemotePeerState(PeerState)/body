@@ -1,0 +1,51 @@
+{
+  Hash remotePeer=peer.getRemotePeer();
+  long oldEstablishedOn=-1;
+  PeerState oldPeer=null;
+  if (remotePeer != null) {
+    oldPeer=_peersByIdent.put(remotePeer,peer);
+    if ((oldPeer != null) && (oldPeer != peer)) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Peer already connected (PBID): old=" + oldPeer + " new="+ peer);
+      peer.loadFrom(oldPeer);
+      oldEstablishedOn=oldPeer.getKeyEstablishedTime();
+    }
+  }
+  RemoteHostId remoteId=peer.getRemoteHostId();
+  if (oldPeer != null) {
+    oldPeer.dropOutbound();
+    _introManager.remove(oldPeer);
+    _expireEvent.remove(oldPeer);
+    RemoteHostId oldID=oldPeer.getRemoteHostId();
+    if (!remoteId.equals(oldID)) {
+      if (_log.shouldLog(Log.WARN))       _log.warn(remotePeer + " changed address FROM " + oldID+ " TO "+ remoteId);
+      PeerState oldPeer2=_peersByRemoteHost.remove(oldID);
+      if (oldPeer2 != oldPeer) {
+        oldPeer2.dropOutbound();
+        _introManager.remove(oldPeer2);
+        _expireEvent.remove(oldPeer2);
+      }
+    }
+  }
+  if (remoteId.getIP() == null && _log.shouldLog(Log.WARN))   _log.warn("Add indirect: " + peer);
+  PeerState oldPeer2=_peersByRemoteHost.put(remoteId,peer);
+  if (oldPeer2 != null && oldPeer2 != peer && oldPeer2 != oldPeer) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Peer already connected (PBRH): old=" + oldPeer2 + " new="+ peer);
+    peer.loadFrom(oldPeer2);
+    oldEstablishedOn=oldPeer2.getKeyEstablishedTime();
+    oldPeer2.dropOutbound();
+    _introManager.remove(oldPeer2);
+    _expireEvent.remove(oldPeer2);
+  }
+  if (_log.shouldLog(Log.WARN) && _peersByIdent.size() != _peersByRemoteHost.size())   _log.warn("Size Mismatch after add: " + peer + " byIDsz = "+ _peersByIdent.size()+ " byHostsz = "+ _peersByRemoteHost.size());
+  _activeThrottle.unchoke(peer.getRemotePeer());
+  markReachable(peer.getRemotePeer(),peer.isInbound());
+  _expireEvent.add(peer);
+  _introManager.add(peer);
+  if (oldEstablishedOn > 0)   _context.statManager().addRateData("udp.alreadyConnected",oldEstablishedOn,0);
+  if (needsRebuild())   rebuildExternalAddress();
+  if (getReachabilityStatus() != CommSystemFacade.STATUS_OK) {
+    _testEvent.forceRun();
+    _testEvent.reschedule(0);
+  }
+  return true;
+}

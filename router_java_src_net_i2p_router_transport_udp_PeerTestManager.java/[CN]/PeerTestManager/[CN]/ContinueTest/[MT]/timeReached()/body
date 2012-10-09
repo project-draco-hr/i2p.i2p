@@ -1,13 +1,19 @@
 {
 synchronized (PeerTestManager.this) {
     PeerTestState state=_currentTest;
-    if (state == null) {
+    if (state == null || state.getNonce() != _nonce) {
       return;
     }
  else     if (expired()) {
       testComplete(true);
     }
  else     if (_context.clock().now() - state.getLastSendTime() >= RESEND_TIMEOUT) {
+      int sent=state.incrementPacketsRelayed();
+      if (sent > MAX_RELAYED_PER_TEST_ALICE) {
+        testComplete(false);
+        if (_log.shouldLog(Log.WARN))         _log.warn("Sent too many packets: " + state);
+        return;
+      }
       if (state.getReceiveBobTime() <= 0) {
         sendTestToBob();
       }
@@ -17,7 +23,7 @@ synchronized (PeerTestManager.this) {
  else {
         sendTestToCharlie();
       }
-      _context.simpleScheduler().addEvent(ContinueTest.this,RESEND_TIMEOUT);
+      _context.simpleScheduler().addEvent(ContinueTest.this,RESEND_TIMEOUT + (sent * 1000));
     }
   }
 }

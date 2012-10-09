@@ -1,5 +1,5 @@
 {
-  _context.statManager().addRateData("udp.receiveTestReply",1,0);
+  _context.statManager().addRateData("udp.receiveTestReply",1);
   PeerTestState test=_currentTest;
   if (expired())   return;
   if (_currentTestComplete)   return;
@@ -15,12 +15,15 @@
       InetAddress addr=InetAddress.getByAddress(ip);
       test.setAliceIP(addr);
       test.setReceiveBobTime(_context.clock().now());
-      test.setAlicePort(testInfo.readPort());
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Receive test reply from bob @ " + from + " via our "+ test.getAlicePort()+ "/"+ test.getAlicePortFromCharlie());
+      int testPort=testInfo.readPort();
+      if (testPort == 0)       throw new UnknownHostException("port 0");
+      test.setAlicePort(testPort);
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Receive test reply from Bob: " + test);
       if (test.getAlicePortFromCharlie() > 0)       testComplete(false);
     }
  catch (    UnknownHostException uhe) {
       if (_log.shouldLog(Log.ERROR))       _log.error("Unable to get our IP (length " + ipSize + ") from bob's reply: "+ from+ ", "+ testInfo,uhe);
+      _context.statManager().addRateData("udp.testBadIP",1);
     }
   }
  else {
@@ -29,29 +32,32 @@
     if ((charlieSession != null) && ((charlieSession.getLastACKSend() > recentBegin) || (charlieSession.getLastSendTime() > recentBegin))) {
       if (_log.shouldLog(Log.WARN))       _log.warn("Bob chose a charlie we already have a session to, cancelling the test and rerunning (bob: " + _currentTest + ", charlie: "+ from+ ")");
       _currentTestComplete=true;
-      _context.statManager().addRateData("udp.statusKnownCharlie",1,0);
+      _context.statManager().addRateData("udp.statusKnownCharlie",1);
       honorStatus(CommSystemFacade.STATUS_UNKNOWN);
       _currentTest=null;
       return;
     }
     if (test.getReceiveCharlieTime() > 0) {
-      test.setAlicePortFromCharlie(testInfo.readPort());
-      byte ip[]=new byte[testInfo.readIPSize()];
-      testInfo.readIP(ip,0);
       try {
+        int testPort=testInfo.readPort();
+        if (testPort == 0)         throw new UnknownHostException("port 0");
+        test.setAlicePortFromCharlie(testPort);
+        byte ip[]=new byte[testInfo.readIPSize()];
+        testInfo.readIP(ip,0);
         InetAddress addr=InetAddress.getByAddress(ip);
         test.setAliceIPFromCharlie(addr);
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("Receive test reply from charlie @ " + test.getCharlieIP() + " via our "+ test.getAlicePort()+ "/"+ test.getAlicePortFromCharlie());
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Receive test reply from Charlie: " + test);
         if (test.getReceiveBobTime() > 0)         testComplete(true);
       }
  catch (      UnknownHostException uhe) {
         if (_log.shouldLog(Log.ERROR))         _log.error("Charlie @ " + from + " said we were an invalid IP address: "+ uhe.getMessage(),uhe);
+        _context.statManager().addRateData("udp.testBadIP",1);
       }
     }
  else {
-      if (test.getPacketsRelayed() > MAX_RELAYED_PER_TEST) {
+      if (test.incrementPacketsRelayed() > MAX_RELAYED_PER_TEST_ALICE) {
         testComplete(false);
-        if (_log.shouldLog(Log.WARN))         _log.warn("Received too many packets on the test: " + test);
+        if (_log.shouldLog(Log.WARN))         _log.warn("Sent too many packets on the test: " + test);
         return;
       }
       if (_log.shouldLog(Log.INFO) && charlieSession != null)       _log.info("Bob chose a charlie we last acked " + DataHelper.formatDuration(_context.clock().now() - charlieSession.getLastACKSend()) + " last sent "+ DataHelper.formatDuration(_context.clock().now() - charlieSession.getLastSendTime())+ " (bob: "+ _currentTest+ ", charlie: "+ from+ ")");
@@ -62,11 +68,12 @@
       try {
         test.setCharlieIP(InetAddress.getByAddress(from.getIP()));
         test.setCharliePort(from.getPort());
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("Receive test from charlie @ " + from);
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Receive test from Charlie: " + test);
         sendTestToCharlie();
       }
  catch (      UnknownHostException uhe) {
         if (_log.shouldLog(Log.WARN))         _log.warn("Charlie's IP is b0rked: " + from + ": "+ testInfo);
+        _context.statManager().addRateData("udp.testBadIP",1);
       }
     }
   }

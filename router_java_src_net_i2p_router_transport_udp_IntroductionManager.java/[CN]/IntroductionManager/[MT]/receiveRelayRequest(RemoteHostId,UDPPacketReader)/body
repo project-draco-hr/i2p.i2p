@@ -1,6 +1,18 @@
 {
   if (_context.router().isHidden())   return;
-  long tag=reader.getRelayRequestReader().readTag();
+  UDPPacketReader.RelayRequestReader rrReader=reader.getRelayRequestReader();
+  long tag=rrReader.readTag();
+  int ipSize=rrReader.readIPSize();
+  int port=rrReader.readPort();
+  if (!isValid(alice.getIP(),alice.getPort()) || ipSize != 0 || port != 0) {
+    if (_log.shouldLog(Log.WARN)) {
+      byte ip[]=new byte[ipSize];
+      rrReader.readIP(ip,0);
+      _log.warn("Bad relay req from " + alice + " for "+ Addresses.toString(ip,port));
+    }
+    _context.statManager().addRateData("udp.relayBadIP",1);
+    return;
+  }
   PeerState charlie=get(tag);
   if (charlie == null) {
     if (_log.shouldLog(Log.INFO))     _log.info("Receive relay request from " + alice + " with unknown tag");

@@ -42,7 +42,13 @@
   int knownPeers=Math.max(curPeers,snark.getTrackerSeenPeers());
   String rowClass=(row % 2 == 0 ? "snarkTorrentEven" : "snarkTorrentOdd");
   String statusString;
-  if (err != null) {
+  if (snark.isChecking()) {
+    statusString="<img alt=\"\" border=\"0\" src=\"" + _imgPath + "stalled.png\" title=\""+ _("Checking")+ "\"></td>"+ "<td class=\"snarkTorrentStatus "+ rowClass+ "\">"+ _("Checking");
+  }
+ else   if (snark.isAllocating()) {
+    statusString="<img alt=\"\" border=\"0\" src=\"" + _imgPath + "stalled.png\" title=\""+ _("Allocating")+ "\"></td>"+ "<td class=\"snarkTorrentStatus "+ rowClass+ "\">"+ _("Allocating");
+  }
+ else   if (err != null) {
     if (isRunning && curPeers > 0 && !showPeers)     statusString="<img alt=\"\" border=\"0\" src=\"" + _imgPath + "trackererror.png\" title=\""+ err+ "\"></td>"+ "<td class=\"snarkTorrentStatus "+ rowClass+ "\">"+ _("Tracker Error")+ ": <a href=\""+ uri+ "?p="+ Base64.encode(snark.getInfoHash())+ "\">"+ curPeers+ thinsp(noThinsp)+ ngettext("1 peer","{0} peers",knownPeers)+ "</a>";
  else     if (isRunning)     statusString="<img alt=\"\" border=\"0\" src=\"" + _imgPath + "trackererror.png\" title=\""+ err+ "\"></td>"+ "<td class=\"snarkTorrentStatus "+ rowClass+ "\">"+ _("Tracker Error")+ ": "+ curPeers+ thinsp(noThinsp)+ ngettext("1 peer","{0} peers",knownPeers);
  else {
@@ -141,7 +147,9 @@
   String parameters="&nonce=" + _nonce + "&torrent="+ Base64.encode(snark.getInfoHash());
   String b64=Base64.encode(snark.getInfoHash());
   if (showPeers)   parameters=parameters + "&p=1";
-  if (isRunning) {
+  if (snark.isChecking()) {
+  }
+ else   if (isRunning) {
     if (isDegraded)     out.write("<a href=\"/i2psnark/?action=Stop_" + b64 + "&amp;nonce="+ _nonce+ "\"><img title=\"");
  else     out.write("<input type=\"image\" name=\"action_Stop_" + b64 + "\" value=\"foo\" title=\"");
     out.write(_("Stop the torrent"));

@@ -1,11 +1,23 @@
 {
   _endpoint.clearOutbound();
   int howMany=_peersByIdent.size();
+  final int burst=8;
+  int pps=Math.max(48,(_context.bandwidthLimiter().getOutboundKBytesPerSecond() * 1000 / 4) / 48);
+  int burstps=pps / burst;
+  int toSleep=Math.max(8,(1000 / burstps));
+  int count=0;
   if (_log.shouldLog(Log.WARN))   _log.warn("Sending destroy to : " + howMany + " peers");
   for (  PeerState peer : _peersByIdent.values()) {
     sendDestroy(peer);
+    if ((++count) % burst == 0) {
+      try {
+        Thread.sleep(toSleep);
+      }
+ catch (      InterruptedException ie) {
+      }
+    }
   }
-  int toSleep=Math.min(howMany / 3,750);
+  toSleep=Math.min(howMany / 3,750);
   if (toSleep > 0) {
     try {
       Thread.sleep(toSleep);

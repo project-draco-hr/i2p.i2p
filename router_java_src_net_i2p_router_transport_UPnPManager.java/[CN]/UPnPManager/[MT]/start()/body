@@ -1,5 +1,22 @@
 {
   if (_log.shouldLog(Log.DEBUG))   _log.debug("UPnP Start");
-  if (!_isRunning)   _isRunning=_upnp.runPlugin();
-  if (!_isRunning)   _log.error("UPnP start failed - port conflict?");
+  if (!_isRunning) {
+    long b=_context.clock().now();
+    try {
+      _isRunning=_upnp.runPlugin();
+      if (_log.shouldLog(Log.INFO))       _log.info("UPnP runPlugin took " + (_context.clock().now() - b));
+    }
+ catch (    Exception e) {
+      _log.error("UPnP error, please report",e);
+    }
+  }
+  if (!_isRunning) {
+    Set<String> addrs=Addresses.getAddresses(true,false);
+    addrs.remove("0.0.0.0");
+    for (Iterator<String> iter=addrs.iterator(); iter.hasNext(); ) {
+      if (iter.next().startsWith("127."))       iter.remove();
+    }
+    if (addrs.isEmpty())     _log.logAlways(Log.WARN,"UPnP start failed - no network connection?");
+ else     _log.error("UPnP start failed - port conflict?");
+  }
 }

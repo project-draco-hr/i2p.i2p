@@ -16,28 +16,8 @@
     if (why != null)     buf.append(" cause: ").append(why);
     _log.info(buf.toString(),new Exception("Dropped by"));
   }
-  peer.dropOutbound();
-  peer.expireInboundMessages();
-  _introManager.remove(peer);
-  _fragments.dropPeer(peer);
-  PeerState altByIdent=null;
-  PeerState altByHost=null;
-  if (peer.getRemotePeer() != null) {
-    dropPeerCapacities(peer);
-    if (shouldShitlist) {
-      markUnreachable(peer.getRemotePeer());
-    }
-    long now=_context.clock().now();
-    _context.statManager().addRateData("udp.droppedPeer",now - peer.getLastReceiveTime(),now - peer.getKeyEstablishedTime());
-    altByIdent=_peersByIdent.remove(peer.getRemotePeer());
+synchronized (_addDropLock) {
+    locked_dropPeer(peer,shouldShitlist,why);
   }
-  RemoteHostId remoteId=peer.getRemoteHostId();
-  if (remoteId != null) {
-    altByHost=_peersByRemoteHost.remove(remoteId);
-  }
-  _activeThrottle.unchoke(peer.getRemotePeer());
-  _expireEvent.remove(peer);
   if (needsRebuild())   rebuildExternalAddress();
-  if ((altByIdent != null) && (peer != altByIdent))   dropPeer(altByIdent,shouldShitlist,"recurse");
-  if ((altByHost != null) && (peer != altByHost))   dropPeer(altByHost,shouldShitlist,"recurse");
 }

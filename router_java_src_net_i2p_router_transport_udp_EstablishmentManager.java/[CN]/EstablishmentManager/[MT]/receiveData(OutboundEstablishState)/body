@@ -9,7 +9,11 @@ synchronized (queued) {
       }
     }
   }
-  locked_admitQueued();
+  if (_outboundStates.size() < getMaxConcurrentEstablish() && !_queuedOutbound.isEmpty()) {
+synchronized (_queuedOutbound) {
+      locked_admitQueued();
+    }
+  }
   if (_log.shouldLog(Log.INFO))   _log.info("Outbound established completely!  yay: " + state);
   PeerState peer=handleCompletelyEstablished(state);
   notifyActivity();

@@ -2,7 +2,53 @@
   _state=27;
   boolean isValid=packet.validate(_transport.getIntroKey());
   if (!isValid) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("Cannot validate rcvd pkt (path): " + packet);
+    RemoteHostId remoteHost=packet.getRemoteHost();
+    boolean alreadyFailed;
+synchronized (_failCache) {
+      alreadyFailed=_failCache.get(remoteHost) != null;
+    }
+    if (!alreadyFailed) {
+      List<PeerState> peers=_transport.getPeerStatesByIP(remoteHost);
+      if (!peers.isEmpty()) {
+        StringBuilder buf=new StringBuilder(256);
+        buf.append("Established peers with this IP: ");
+        boolean foundSamePort=false;
+        PeerState state=null;
+        int newPort=remoteHost.getPort();
+        for (        PeerState ps : peers) {
+          boolean valid=false;
+          long now=_context.clock().now();
+          if (_log.shouldLog(Log.WARN))           buf.append(ps.getRemoteHostId().toString()).append(" last sent: ").append(now - ps.getLastSendTime()).append(" last rcvd: ").append(now - ps.getLastReceiveTime());
+          if (ps.getRemotePort() == newPort) {
+            foundSamePort=true;
+          }
+ else           if (packet.validate(ps.getCurrentMACKey())) {
+            packet.decrypt(ps.getCurrentCipherKey());
+            reader.initialize(packet);
+            if (_log.shouldLog(Log.WARN))             buf.append(" VALID type ").append(reader.readPayloadType()).append("; ");
+            valid=true;
+            if (state == null)             state=ps;
+          }
+ else {
+            if (_log.shouldLog(Log.WARN))             buf.append(" INVALID; ");
+          }
+        }
+        if (state != null && !foundSamePort) {
+          _transport.changePeerPort(state,newPort);
+          if (_log.shouldLog(Log.WARN)) {
+            buf.append(" CHANGED PORT TO ").append(newPort).append(" AND HANDLED");
+            _log.warn(buf.toString());
+          }
+          handlePacket(reader,packet,state,null,null,true);
+          return;
+        }
+        if (_log.shouldLog(Log.WARN))         _log.warn(buf.toString());
+      }
+synchronized (_failCache) {
+        _failCache.put(remoteHost,DUMMY);
+      }
+    }
+    if (_log.shouldLog(Log.WARN))     _log.warn("Cannot validate rcvd pkt (path) wasCached? " + alreadyFailed + ": "+ packet);
     _context.statManager().addRateData("udp.droppedInvalidEstablish",packet.getLifetime(),packet.getExpiration());
 switch (peerType) {
 case INBOUND_FALLBACK:

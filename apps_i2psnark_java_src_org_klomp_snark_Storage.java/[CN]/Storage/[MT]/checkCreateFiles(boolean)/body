@@ -1,85 +1,11 @@
 {
-  boolean resume=false;
-  _probablyComplete=true;
-  int need=metainfo.getPieces();
-  BitField bfield;
-  if (recheck) {
-    bfield=new BitField(need);
-  }
- else {
-    bfield=bitfield;
-  }
-  for (int i=0; i < rafs.length; i++) {
-    long length=RAFfile[i].length();
-    if (RAFfile[i].exists() && length == lengths[i]) {
-      if (listener != null)       listener.storageAllocated(this,length);
-      resume=true;
+synchronized (this) {
+    _isChecking=true;
+    try {
+      locked_checkCreateFiles(recheck);
     }
- else     if (length == 0) {
-      changed=true;
-synchronized (RAFlock[i]) {
-        allocateFile(i);
-        try {
-          closeRAF(i);
-        }
- catch (        IOException ioe) {
-        }
-      }
+  finally {
+      _isChecking=false;
     }
- else {
-      String msg="File '" + names[i] + "' exists, but has wrong length (expected "+ lengths[i]+ " but found "+ length+ ") - repairing corruption";
-      if (listener != null)       listener.addMessage(msg);
-      _log.error(msg);
-      changed=true;
-      resume=true;
-      _probablyComplete=false;
-synchronized (RAFlock[i]) {
-        checkRAF(i);
-        rafs[i].setLength(lengths[i]);
-        try {
-          closeRAF(i);
-        }
- catch (        IOException ioe) {
-        }
-      }
-    }
-  }
-  if (resume) {
-    byte[] piece=new byte[piece_size];
-    int file=0;
-    long fileEnd=lengths[0];
-    long pieceEnd=0;
-    for (int i=0; i < pieces; i++) {
-      int length=getUncheckedPiece(i,piece);
-      boolean correctHash=metainfo.checkPiece(i,piece,0,length);
-      pieceEnd+=length;
-      while (fileEnd <= pieceEnd) {
-synchronized (RAFlock[file]) {
-          try {
-            closeRAF(file);
-          }
- catch (          IOException ioe) {
-          }
-        }
-        if (++file >= rafs.length)         break;
-        fileEnd+=lengths[file];
-      }
-      if (correctHash) {
-        bfield.set(i);
-        need--;
-      }
-      if (listener != null)       listener.storageChecked(this,i,correctHash);
-    }
-  }
-  _probablyComplete=complete();
-  needed=need;
-  if (recheck && need > 0) {
-synchronized (bitfield) {
-      bitfield=bfield;
-    }
-  }
-  if (listener != null) {
-    listener.storageAllChecked(this);
-    if (needed <= 0)     listener.storageCompleted(this);
   }
 }

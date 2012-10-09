@@ -14,6 +14,7 @@
     }
   }
   if (trimmed > 0)   ctx.statManager().addRateData("i2ptunnel.httpNullWorkaround",trimmed,0);
+  long expire=ctx.clock().now() + TOTAL_HEADER_TIMEOUT;
   int i=0;
   while (true) {
     if (++i > MAX_HEADERS)     throw new IOException("Too many header lines - max " + MAX_HEADERS);
@@ -24,6 +25,7 @@
       return headers;
     }
  else {
+      if (ctx.clock().now() > expire)       throw new IOException("Headers took too long [" + buf.toString() + "]");
       int split=buf.indexOf(":");
       if (split <= 0)       throw new IOException("Invalid HTTP header, missing colon [" + buf.toString() + "]");
       String name=buf.substring(0,split).trim();
