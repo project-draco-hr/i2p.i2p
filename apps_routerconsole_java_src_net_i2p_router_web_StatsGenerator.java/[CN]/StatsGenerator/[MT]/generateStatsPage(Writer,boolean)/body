@@ -4,10 +4,10 @@
   buf.append("<select name=\"go\" onChange='location.href=this.value'>");
   out.write(buf.toString());
   buf.setLength(0);
-  Map groups=_context.statManager().getStatsByGroup();
-  for (Iterator iter=groups.entrySet().iterator(); iter.hasNext(); ) {
-    Map.Entry entry=(Map.Entry)iter.next();
-    String group=(String)entry.getKey();
+  Map<String,SortedSet<String>> unsorted=_context.statManager().getStatsByGroup();
+  Map<String,Set<String>> groups=new TreeMap(new AlphaComparator());
+  groups.putAll(unsorted);
+  for (  String group : groups.keySet()) {
     buf.append("<option value=\"#").append(group).append("\">");
     buf.append(_(group)).append("</option>\n");
   }
@@ -20,9 +20,9 @@
   buf.append(' ').append(_("These statistics are primarily used for development and debugging."));
   out.write(buf.toString());
   buf.setLength(0);
-  for (Iterator iter=groups.keySet().iterator(); iter.hasNext(); ) {
-    String group=(String)iter.next();
-    Set stats=(Set)groups.get(group);
+  for (  Map.Entry<String,Set<String>> entry : groups.entrySet()) {
+    String group=entry.getKey();
+    Set<String> stats=entry.getValue();
     buf.append("<h3><a name=\"");
     buf.append(group);
     buf.append("\">");
@@ -31,8 +31,7 @@
     buf.append("<ul>");
     out.write(buf.toString());
     buf.setLength(0);
-    for (Iterator statIter=stats.iterator(); statIter.hasNext(); ) {
-      String stat=(String)statIter.next();
+    for (    String stat : stats) {
       buf.append("<li><b><a name=\"");
       buf.append(stat);
       buf.append("\">");
