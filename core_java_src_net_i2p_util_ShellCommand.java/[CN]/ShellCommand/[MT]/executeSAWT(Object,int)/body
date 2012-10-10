@@ -1,17 +1,30 @@
 {
-  _commandThread=new CommandThread(this,shellCommand,CONSUME_OUTPUT);
-  _commandThread.start();
+  String name=null;
+  long begin=0;
+  if (DEBUG) {
+    if (shellCommand instanceof String) {
+      name=(String)shellCommand;
+    }
+ else     if (shellCommand instanceof String[]) {
+      String[] arr=(String[])shellCommand;
+      name=Arrays.toString(arr);
+    }
+    begin=System.currentTimeMillis();
+  }
+  Result result=new Result();
+  Thread commandThread=new CommandThread(shellCommand,CONSUME_OUTPUT,result);
+  commandThread.start();
   try {
     if (seconds > 0) {
-      _isTimerRunning=true;
-      wait(seconds * 1000);
-      _isTimerRunning=false;
-      if (!_commandCompleted)       return true;
+      commandThread.join(seconds * 1000);
+      if (commandThread.isAlive()) {
+        if (DEBUG)         System.out.println("ShellCommand gave up waiting for \"" + name + "\" after "+ seconds+ " seconds");
+        return true;
+      }
     }
   }
  catch (  InterruptedException e) {
   }
-  _isTimerRunning=false;
-  if (_commandSuccessful)   return true;
-  return false;
+  if (DEBUG)   System.out.println("ShellCommand returning " + result.commandSuccessful + " for \""+ name+ "\" after "+ (System.currentTimeMillis() - begin)+ " ms");
+  return result.commandSuccessful;
 }

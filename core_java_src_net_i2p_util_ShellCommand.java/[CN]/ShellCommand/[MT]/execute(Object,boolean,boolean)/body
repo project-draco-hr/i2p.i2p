@@ -1,43 +1,63 @@
 {
-  StreamConsumer processStderrConsumer;
-  StreamConsumer processStdoutConsumer;
-  StreamReader processStderrReader;
-  StreamWriter processStdinWriter;
-  StreamReader processStdoutReader;
+  Process process;
+  String name=null;
   try {
-    if (shellCommand instanceof String)     _process=Runtime.getRuntime().exec((String)shellCommand);
- else     if (shellCommand instanceof String[])     _process=Runtime.getRuntime().exec((String[])shellCommand);
- else     throw new ClassCastException("shell command must be a String or a String[]");
+    if (shellCommand instanceof String) {
+      name=(String)shellCommand;
+      if (DEBUG)       System.out.println("ShellCommand exec \"" + name + "\" consume? "+ consumeOutput+ " wait? "+ waitForExitStatus);
+      process=Runtime.getRuntime().exec(name);
+    }
+ else     if (shellCommand instanceof String[]) {
+      String[] arr=(String[])shellCommand;
+      if (DEBUG) {
+        name=Arrays.toString(arr);
+        System.out.println("ShellCommand exec \"" + name + "\" consume? "+ consumeOutput+ " wait? "+ waitForExitStatus);
+      }
+      process=Runtime.getRuntime().exec(arr);
+    }
+ else {
+      throw new ClassCastException("shell command must be a String or a String[]");
+    }
     if (consumeOutput) {
-      processStderrConsumer=new StreamConsumer(_process.getErrorStream());
+      Thread processStderrConsumer=new StreamConsumer(process.getErrorStream());
       processStderrConsumer.start();
-      processStdoutConsumer=new StreamConsumer(_process.getInputStream());
+      Thread processStdoutConsumer=new StreamConsumer(process.getInputStream());
       processStdoutConsumer.start();
     }
  else {
-      _errorStream=_process.getErrorStream();
-      _inputStream=_process.getInputStream();
-      _outputStream=_process.getOutputStream();
-      processStderrReader=new StreamReader(_errorStream);
+      _errorStream=process.getErrorStream();
+      _inputStream=process.getInputStream();
+      _outputStream=process.getOutputStream();
+      Thread processStderrReader=new StreamReader(_errorStream);
       processStderrReader.start();
-      processStdinWriter=new StreamWriter(_outputStream);
+      Thread processStdinWriter=new StreamWriter(_outputStream);
       processStdinWriter.start();
-      processStdoutReader=new StreamReader(_inputStream);
+      Thread processStdoutReader=new StreamReader(_inputStream);
       processStdoutReader.start();
     }
     if (waitForExitStatus) {
+      if (DEBUG)       System.out.println("ShellCommand waiting for \"" + name + '\"');
       try {
-        _process.waitFor();
+        process.waitFor();
       }
  catch (      Exception e) {
+        if (DEBUG) {
+          System.out.println("ShellCommand exception waiting for \"" + name + '\"');
+          e.printStackTrace();
+        }
         if (!consumeOutput)         killStreams();
         return false;
       }
       if (!consumeOutput)       killStreams();
-      if (_process.exitValue() > 0)       return false;
+      if (DEBUG)       System.out.println("ShellCommand exit value is " + process.exitValue() + " for \""+ name+ '\"');
+      if (process.exitValue() > 0)       return false;
     }
   }
  catch (  Exception e) {
+    if (DEBUG) {
+      System.out.println("ShellCommand execute exception for \"" + name + '\"');
+      e.printStackTrace();
+    }
     return false;
   }
   return true;
