@@ -1,17 +1,14 @@
 {
-  _commandThread=new CommandThread(this,shellCommand,NO_CONSUME_OUTPUT);
-  _commandThread.start();
+  Result result=new Result();
+  Thread commandThread=new CommandThread(shellCommand,NO_CONSUME_OUTPUT,result);
+  commandThread.start();
   try {
     if (seconds > 0) {
-      _isTimerRunning=true;
-      wait(seconds * 1000);
-      _isTimerRunning=false;
-      if (!_commandCompleted)       return true;
+      commandThread.join(seconds * 1000);
+      if (commandThread.isAlive())       return true;
     }
   }
  catch (  InterruptedException e) {
   }
-  _isTimerRunning=false;
-  if (_commandSuccessful)   return true;
-  return false;
+  return result.commandSuccessful;
 }
