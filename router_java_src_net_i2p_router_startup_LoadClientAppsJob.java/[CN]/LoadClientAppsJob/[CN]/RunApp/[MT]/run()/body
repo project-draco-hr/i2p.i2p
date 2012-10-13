@@ -1,8 +1,24 @@
 {
   try {
     Class cls=Class.forName(_className,true,_cl);
-    Method method=cls.getMethod("main",new Class[]{String[].class});
-    method.invoke(cls,new Object[]{_args});
+    if (isRouterApp(cls)) {
+      Constructor con=cls.getConstructor(RouterContext.class,ClientAppManager.class,String[].class);
+      RouterAppManager mgr=_ctx.clientAppManager();
+      Object[] conArgs=new Object[]{_ctx,_ctx.clientAppManager(),_args};
+      RouterApp app=(RouterApp)con.newInstance(conArgs);
+      mgr.addAndStart(app);
+    }
+ else     if (isClientApp(cls)) {
+      Constructor con=cls.getConstructor(I2PAppContext.class,ClientAppManager.class,String[].class);
+      RouterAppManager mgr=_ctx.clientAppManager();
+      Object[] conArgs=new Object[]{_ctx,_ctx.clientAppManager(),_args};
+      ClientApp app=(ClientApp)con.newInstance(conArgs);
+      mgr.addAndStart(app);
+    }
+ else {
+      Method method=cls.getMethod("main",new Class[]{String[].class});
+      method.invoke(cls,new Object[]{_args});
+    }
   }
  catch (  Throwable t) {
     _log.log(Log.CRIT,"Error starting up the client class " + _className,t);
