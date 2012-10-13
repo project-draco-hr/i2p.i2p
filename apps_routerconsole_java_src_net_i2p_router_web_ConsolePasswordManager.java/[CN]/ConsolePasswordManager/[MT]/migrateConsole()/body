@@ -3,8 +3,13 @@ synchronized (ConsolePasswordManager.class) {
     if (_context.getBooleanProperty(PROP_MIGRATED))     return true;
     String pw=_context.getProperty(PROP_CONSOLE_OLD);
     if (pw != null) {
-      if (pw.length() > 0)       saveMD5(PROP_CONSOLE_NEW,CONSOLE_USER,pw);
-      return _context.router().saveConfig(PROP_CONSOLE_OLD,null);
+      if (pw.length() > 0) {
+        pw=CONSOLE_USER + ':' + RouterConsoleRunner.JETTY_REALM+ ':'+ pw;
+        saveMD5(RouterConsoleRunner.PROP_CONSOLE_PW,CONSOLE_USER,pw);
+      }
+      Map toAdd=Collections.singletonMap(PROP_MIGRATED,"true");
+      List toDel=Collections.singletonList(PROP_CONSOLE_OLD);
+      return _context.router().saveConfig(toAdd,toDel);
     }
     return true;
   }
