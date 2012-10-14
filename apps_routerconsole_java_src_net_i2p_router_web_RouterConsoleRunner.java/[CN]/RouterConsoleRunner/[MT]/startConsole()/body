@@ -92,12 +92,19 @@
  catch (            IOException ioe) {
             }
           }
-          SelectChannelConnector lsnr=new SelectChannelConnector();
+          AbstractConnector lsnr;
+          if (SystemVersion.isJava6() && !SystemVersion.isGNU()) {
+            SelectChannelConnector slsnr=new SelectChannelConnector();
+            slsnr.setUseDirectBuffers(false);
+            lsnr=slsnr;
+          }
+ else {
+            lsnr=new SocketConnector();
+          }
           lsnr.setHost(host);
           lsnr.setPort(lport);
           lsnr.setMaxIdleTime(90 * 1000);
           lsnr.setName("ConsoleSocket");
-          lsnr.setUseDirectBuffers(false);
           connectors.add(lsnr);
           boundAddresses++;
         }
@@ -140,20 +147,32 @@
  catch (              IOException ioe) {
               }
             }
-            SslSelectChannelConnector ssll=new SslSelectChannelConnector();
+            AbstractConnector ssll;
+            if (SystemVersion.isJava6() && !SystemVersion.isGNU()) {
+              SslSelectChannelConnector sssll=new SslSelectChannelConnector();
+              sssll.setKeystore(keyStore.getAbsolutePath());
+              sssll.setPassword(ctx.getProperty(PROP_KEYSTORE_PASSWORD,DEFAULT_KEYSTORE_PASSWORD));
+              sssll.setKeyPassword(ctx.getProperty(PROP_KEY_PASSWORD,"thisWontWork"));
+              sssll.setUseDirectBuffers(false);
+              ssll=sssll;
+            }
+ else {
+              SslSocketConnector sssll=new SslSocketConnector();
+              sssll.setKeystore(keyStore.getAbsolutePath());
+              sssll.setPassword(ctx.getProperty(PROP_KEYSTORE_PASSWORD,DEFAULT_KEYSTORE_PASSWORD));
+              sssll.setKeyPassword(ctx.getProperty(PROP_KEY_PASSWORD,"thisWontWork"));
+              ssll=sssll;
+            }
             ssll.setHost(host);
             ssll.setPort(sslPort);
-            ssll.setKeystore(keyStore.getAbsolutePath());
-            ssll.setPassword(_context.getProperty(PROP_KEYSTORE_PASSWORD,DEFAULT_KEYSTORE_PASSWORD));
-            ssll.setKeyPassword(_context.getProperty(PROP_KEY_PASSWORD,"thisWontWork"));
             ssll.setMaxIdleTime(90 * 1000);
             ssll.setName("ConsoleSocket");
-            ssll.setUseDirectBuffers(false);
             connectors.add(ssll);
             boundAddresses++;
           }
  catch (          Exception e) {
             System.err.println("Unable to bind routerconsole to " + host + " port "+ sslPort+ " for SSL: "+ e);
+            if (SystemVersion.isGNU())             System.err.println("Probably because GNU classpath does not support Sun keystores");
             System.err.println("You may ignore this warning if the console is still available at https://localhost:" + sslPort);
           }
         }
