@@ -1,0 +1,34 @@
+{
+  String user=args.get("username");
+  String realm=args.get("realm");
+  String nonce=args.get("nonce");
+  String qop=args.get("qop");
+  String uri=args.get("uri");
+  String cnonce=args.get("cnonce");
+  String nc=args.get("nc");
+  String response=args.get("response");
+  if (user == null || realm == null || nonce == null || qop == null || uri == null || cnonce == null || nc == null || response == null) {
+    if (_log.shouldLog(Log.INFO))     _log.info("Bad digest request: " + DataHelper.toString(args));
+    return AuthResult.AUTH_BAD_REQ;
+  }
+  AuthResult check=verifyNonce(nonce);
+  if (check != AuthResult.AUTH_GOOD) {
+    if (_log.shouldLog(Log.INFO))     _log.info("Bad digest nonce: " + check + ' '+ DataHelper.toString(args));
+    return check;
+  }
+  String ha1=getTunnel().getClientOptions().getProperty(PROP_PW_PREFIX + user);
+  if (ha1 == null) {
+    if (_log.shouldLog(Log.INFO))     _log.info("Bad digest auth - no stored pw for user: " + user);
+    return AuthResult.AUTH_BAD;
+  }
+  String a2=method + ':' + uri;
+  String ha2=PasswordManager.md5Hex(a2);
+  String kd=ha1 + ':' + nonce+ ':'+ nc+ ':'+ cnonce+ ':'+ qop+ ':'+ ha2;
+  String hkd=PasswordManager.md5Hex(kd);
+  if (!response.equals(hkd)) {
+    if (_log.shouldLog(Log.INFO))     _log.info("Bad digest auth - user: " + user);
+    return AuthResult.AUTH_BAD;
+  }
+  if (_log.shouldLog(Log.INFO))   _log.info("Good digest auth - user: " + user);
+  return AuthResult.AUTH_GOOD;
+}
