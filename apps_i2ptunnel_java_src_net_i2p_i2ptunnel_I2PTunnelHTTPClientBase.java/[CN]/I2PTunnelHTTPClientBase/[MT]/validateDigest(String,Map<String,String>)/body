@@ -16,9 +16,9 @@
     if (_log.shouldLog(Log.INFO))     _log.info("Bad digest nonce: " + check + ' '+ DataHelper.toString(args));
     return check;
   }
-  String ha1=getTunnel().getClientOptions().getProperty(PROP_PW_PREFIX + user);
+  String ha1=getTunnel().getClientOptions().getProperty(PROP_PROXY_DIGEST_PREFIX + user + PROP_PROXY_DIGEST_SUFFIX);
   if (ha1 == null) {
-    if (_log.shouldLog(Log.INFO))     _log.info("Bad digest auth - no stored pw for user: " + user);
+    _log.logAlways(Log.WARN,"PROXY AUTH FAILURE: user " + user);
     return AuthResult.AUTH_BAD;
   }
   String a2=method + ':' + uri;
@@ -26,7 +26,8 @@
   String kd=ha1 + ':' + nonce+ ':'+ nc+ ':'+ cnonce+ ':'+ qop+ ':'+ ha2;
   String hkd=PasswordManager.md5Hex(kd);
   if (!response.equals(hkd)) {
-    if (_log.shouldLog(Log.INFO))     _log.info("Bad digest auth - user: " + user);
+    _log.logAlways(Log.WARN,"PROXY AUTH FAILURE: user " + user);
+    if (_log.shouldLog(Log.INFO))     _log.info("Bad digest auth: " + DataHelper.toString(args));
     return AuthResult.AUTH_BAD;
   }
   if (_log.shouldLog(Log.INFO))   _log.info("Good digest auth - user: " + user);

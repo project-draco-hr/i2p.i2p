@@ -1,17 +1,17 @@
 {
   String authRequired=getTunnel().getClientOptions().getProperty(PROP_AUTH);
-  if (authRequired == null)   return true;
+  if (authRequired == null)   return AuthResult.AUTH_GOOD;
   authRequired=authRequired.toLowerCase(Locale.US);
-  if (authRequired.equals("false"))   return true;
+  if (authRequired.equals("false"))   return AuthResult.AUTH_GOOD;
   if (s instanceof InternalSocket) {
     if (_log.shouldLog(Log.INFO))     _log.info(getPrefix(requestId) + "Internal access, no auth required");
-    return true;
+    return AuthResult.AUTH_GOOD;
   }
-  if (authorization == null)   return false;
+  if (authorization == null)   return AuthResult.AUTH_BAD;
   if (_log.shouldLog(Log.INFO))   _log.info(getPrefix(requestId) + "Auth: " + authorization);
   String authLC=authorization.toLowerCase(Locale.US);
-  if (authRequired.equals("true") || authRequired.equals("basic")) {
-    if (!authLC.startsWith("basic "))     return false;
+  if (authRequired.equals("true") || authRequired.equals(BASIC_AUTH)) {
+    if (!authLC.startsWith("basic "))     return AuthResult.AUTH_BAD;
     authorization=authorization.substring(6);
     byte[] decoded=Base64.decode(authorization.replace("/","~").replace("+","="));
     if (decoded != null) {
@@ -28,37 +28,34 @@
         if (configPW != null) {
           if (pw.equals(configPW)) {
             if (_log.shouldLog(Log.INFO))             _log.info(getPrefix(requestId) + "Good auth - user: " + user+ " pw: "+ pw);
-            return true;
-          }
- else {
-            if (_log.shouldLog(Log.WARN))             _log.warn(getPrefix(requestId) + "Bad auth, pw mismatch - user: " + user+ " pw: "+ pw+ " expected: "+ configPW);
+            return AuthResult.AUTH_GOOD;
           }
         }
- else {
-          if (_log.shouldLog(Log.WARN))           _log.warn(getPrefix(requestId) + "Bad auth, no stored pw for user: " + user+ " pw: "+ pw);
-        }
+        _log.logAlways(Log.WARN,"PROXY AUTH FAILURE: user " + user);
       }
  catch (      UnsupportedEncodingException uee) {
         _log.error(getPrefix(requestId) + "No UTF-8 support? B64: " + authorization,uee);
       }
 catch (      ArrayIndexOutOfBoundsException aioobe) {
         if (_log.shouldLog(Log.WARN))         _log.warn(getPrefix(requestId) + "Bad auth B64: " + authorization,aioobe);
+        return AuthResult.AUTH_BAD_REQ;
       }
+      return AuthResult.AUTH_BAD;
     }
  else {
       if (_log.shouldLog(Log.WARN))       _log.warn(getPrefix(requestId) + "Bad auth B64: " + authorization);
+      return AuthResult.AUTH_BAD_REQ;
     }
-    return false;
   }
- else   if (authRequired.equals("digest")) {
-    if (!authLC.startsWith("digest "))     return false;
+ else   if (authRequired.equals(DIGEST_AUTH)) {
+    if (!authLC.startsWith("digest "))     return AuthResult.AUTH_BAD;
     authorization=authorization.substring(7);
     Map<String,String> args=parseArgs(authorization);
     AuthResult rv=validateDigest(method,args);
-    return rv == AuthResult.AUTH_GOOD;
+    return rv;
   }
  else {
     _log.error("Unknown proxy authorization type configured: " + authRequired);
-    return true;
+    return AuthResult.AUTH_BAD_REQ;
   }
 }

@@ -92,12 +92,13 @@
       s.close();
       return;
     }
-    if (!authorize(s,requestId,method,authorization)) {
+    AuthResult result=authorize(s,requestId,method,authorization);
+    if (result != AuthResult.AUTH_GOOD) {
       if (_log.shouldLog(Log.WARN)) {
         if (authorization != null)         _log.warn(getPrefix(requestId) + "Auth failed, sending 407 again");
  else         _log.warn(getPrefix(requestId) + "Auth required, sending 407");
       }
-      out.write(getAuthError(false).getBytes());
+      out.write(getAuthError(result == AuthResult.AUTH_STALE).getBytes());
       s.close();
       return;
     }
