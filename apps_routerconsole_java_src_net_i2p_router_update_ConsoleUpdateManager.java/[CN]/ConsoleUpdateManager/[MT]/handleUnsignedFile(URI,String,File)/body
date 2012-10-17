@@ -15,9 +15,15 @@
     updFile.delete();
     String policy=_context.getProperty(ConfigUpdateHandler.PROP_UPDATE_POLICY);
     long modtime=0;
-    if (lastmod != null)     modtime=RFC822Date.parse822Date(lastmod);
+    if (lastmod != null) {
+      try {
+        modtime=Long.parseLong(lastmod);
+      }
+ catch (      NumberFormatException nfe) {
+      }
+    }
     if (modtime <= 0)     modtime=_context.clock().now();
-    _context.router().saveConfig(NewsHelper.PROP_LAST_UPDATE_TIME,"" + modtime);
+    _context.router().saveConfig(NewsHelper.PROP_LAST_UPDATE_TIME,Long.toString(modtime));
     if ("install".equals(policy)) {
       _log.log(Log.CRIT,"Update was downloaded, restarting to install it");
       updateStatus("<b>" + _("Update downloaded") + "</b><br>"+ _("Restarting"));
@@ -29,7 +35,8 @@
       buf.append("<b>").append(_("Update downloaded")).append("</b><br>");
       if (_context.hasWrapper())       buf.append(_("Click Restart to install"));
  else       buf.append(_("Click Shutdown and restart to install"));
-      buf.append(' ').append(_("Version {0}",lastmod));
+      String ver=(new SimpleDateFormat("dd-MMM HH:mm")).format(new Date(modtime)) + " UTC";
+      buf.append(' ').append(_("Version {0}",ver));
       updateStatus(buf.toString());
     }
   }
