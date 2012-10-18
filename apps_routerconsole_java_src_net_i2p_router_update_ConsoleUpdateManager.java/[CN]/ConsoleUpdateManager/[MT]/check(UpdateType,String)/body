@@ -6,8 +6,13 @@
   for (  RegisteredChecker r : _registeredCheckers) {
     if (r.type == type) {
       String current=getDownloadedOrInstalledVersion(type,id);
-      UpdateTask t=r.checker.check(type,r.method,id,current,5 * 60 * 1000);
-      if (t != null)       break;
+synchronized (_activeCheckers) {
+        UpdateTask t=r.checker.check(type,r.method,id,current,DEFAULT_CHECK_TIME);
+        if (t != null) {
+          _activeCheckers.add(t);
+          break;
+        }
+      }
     }
   }
 }

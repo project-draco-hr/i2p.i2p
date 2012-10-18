@@ -6,7 +6,11 @@
   for (  RegisteredChecker r : _registeredCheckers) {
     if (r.type == type) {
       String current=getDownloadedOrInstalledVersion(type,id);
-      UpdateTask t=r.checker.check(type,r.method,id,current,maxWait);
+      UpdateTask t;
+synchronized (_activeCheckers) {
+        t=r.checker.check(type,r.method,id,current,maxWait);
+        if (t != null)         _activeCheckers.add(t);
+      }
       if (t != null) {
 synchronized (t) {
           try {
