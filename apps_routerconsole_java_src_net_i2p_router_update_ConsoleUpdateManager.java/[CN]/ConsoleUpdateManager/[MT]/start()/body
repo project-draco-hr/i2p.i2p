@@ -1,28 +1,36 @@
 {
   notifyInstalled(NEWS,"",Long.toString(NewsHelper.lastUpdated(_context)));
   notifyInstalled(ROUTER_SIGNED,"",RouterVersion.VERSION);
-  (new NewsFetcher(_context,Collections.EMPTY_LIST)).checkForUpdates();
+  (new NewsFetcher(_context,this,Collections.EMPTY_LIST)).checkForUpdates();
   for (  String plugin : PluginStarter.getPlugins()) {
     Properties props=PluginStarter.pluginProperties(_context,plugin);
     String ver=props.getProperty("version");
     if (ver != null)     notifyInstalled(PLUGIN,plugin,ver);
   }
   _context.registerUpdateManager(this);
-  DummyHandler dh=new DummyHandler(_context);
+  DummyHandler dh=new DummyHandler(_context,this);
   register((Checker)dh,TYPE_DUMMY,HTTP,0);
   register((Updater)dh,TYPE_DUMMY,HTTP,0);
-  Checker c=new NewsHandler(_context);
+  Checker c=new NewsHandler(_context,this);
   register(c,NEWS,HTTP,0);
   register(c,ROUTER_SIGNED,HTTP,0);
-  Updater u=new UpdateHandler(_context);
+  Updater u=new UpdateHandler(_context,this);
   register(u,ROUTER_SIGNED,HTTP,0);
-  UnsignedUpdateHandler uuh=new UnsignedUpdateHandler(_context);
+  UnsignedUpdateHandler uuh=new UnsignedUpdateHandler(_context,this);
   register((Checker)uuh,ROUTER_UNSIGNED,HTTP,0);
   register((Updater)uuh,ROUTER_UNSIGNED,HTTP,0);
-  PluginUpdateHandler puh=new PluginUpdateHandler(_context);
+  String newVersion=_context.getProperty(PROP_UNSIGNED_AVAILABLE);
+  if (newVersion != null) {
+    List<URI> updateSources=uuh.getUpdateSources();
+    if (uuh != null) {
+      VersionAvailable newVA=new VersionAvailable(newVersion,"",HTTP,updateSources);
+      _available.put(new UpdateItem(ROUTER_UNSIGNED,""),newVA);
+    }
+  }
+  PluginUpdateHandler puh=new PluginUpdateHandler(_context,this);
   register((Checker)puh,PLUGIN,HTTP,0);
   register((Checker)puh,PLUGIN_INSTALL,HTTP,0);
   register((Updater)puh,PLUGIN_INSTALL,HTTP,0);
-  new NewsTimerTask(_context);
+  new NewsTimerTask(_context,this);
   _context.simpleScheduler().addPeriodicEvent(new TaskCleaner(),TASK_CLEANER_TIME);
 }
