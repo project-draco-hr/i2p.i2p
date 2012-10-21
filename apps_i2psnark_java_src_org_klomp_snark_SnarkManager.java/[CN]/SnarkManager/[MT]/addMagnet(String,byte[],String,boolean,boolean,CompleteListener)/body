@@ -1,0 +1,26 @@
+{
+  Snark torrent=new Snark(_util,name,ih,trackerURL,listener,_peerCoordinatorSet,_connectionAcceptor,false,getDataDir().getPath());
+synchronized (_snarks) {
+    Snark snark=getTorrentByInfoHash(ih);
+    if (snark != null) {
+      addMessage(_("Torrent with this info hash is already running: {0}",snark.getBaseName()));
+      return null;
+    }
+    _magnets.add(name);
+    if (updateStatus)     saveMagnetStatus(ih);
+    _snarks.put(name,torrent);
+  }
+  if (autoStart) {
+    torrent.startTorrent();
+    addMessage(_("Fetching {0}",name));
+    DHT dht=_util.getDHT();
+    boolean shouldWarn=_util.connected() && _util.getOpenTrackers().isEmpty() && ((!_util.shouldUseDHT()) || dht == null || dht.size() <= 0);
+    if (shouldWarn) {
+      addMessage(_("Open trackers are disabled and we have no DHT peers. " + "Fetch of {0} may not succeed until you start another torrent, enable open trackers, or enable DHT.",name));
+    }
+  }
+ else {
+    addMessage(_("Adding {0}",name));
+  }
+  return torrent;
+}
