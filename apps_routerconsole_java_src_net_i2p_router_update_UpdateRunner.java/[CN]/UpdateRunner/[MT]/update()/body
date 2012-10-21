@@ -4,12 +4,10 @@
   int proxyPort=ConfigUpdateHandler.proxyPort(_context);
   if (_urls.isEmpty()) {
     updateStatus("<b>Update source list is empty, cannot download update</b>");
-    _log.log(Log.CRIT,"Update source list is empty - cannot download update");
+    _log.error("Update source list is empty - cannot download update");
     _mgr.notifyTaskFailed(this,"",null);
     return;
   }
-  ByteArrayOutputStream baos=null;
-  if (shouldProxy)   baos=new ByteArrayOutputStream(TrustedUpdate.HEADER_BYTES);
   for (  URI uri : _urls) {
     _currentURI=uri;
     String updateURL=uri.toString();
@@ -17,9 +15,9 @@
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Selected update URL: " + updateURL);
     if (shouldProxy) {
       _isPartial=true;
-      baos.reset();
+      _baos.reset();
       try {
-        _get=new PartialEepGet(_context,proxyHost,proxyPort,baos,updateURL,TrustedUpdate.HEADER_BYTES);
+        _get=new PartialEepGet(_context,proxyHost,proxyPort,_baos,updateURL,TrustedUpdate.HEADER_BYTES);
         _get.addStatusListener(UpdateRunner.this);
         _get.fetch(CONNECT_TIMEOUT);
       }
