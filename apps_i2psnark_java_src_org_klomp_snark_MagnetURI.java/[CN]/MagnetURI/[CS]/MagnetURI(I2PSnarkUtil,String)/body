@@ -1,0 +1,42 @@
+{
+  String ihash;
+  String name;
+  String trackerURL=null;
+  if (url.startsWith(MAGNET)) {
+    String xt=getParam("xt",url);
+    if (xt == null || !xt.startsWith("urn:btih:"))     throw new IllegalArgumentException();
+    ihash=xt.substring("urn:btih:".length());
+    trackerURL=getTrackerParam(url);
+    name=util.getString("Magnet") + ' ' + ihash;
+    String dn=getParam("dn",url);
+    if (dn != null)     name+=" (" + Storage.filterName(dn) + ')';
+  }
+ else   if (url.startsWith(MAGGOT)) {
+    ihash=url.substring(MAGGOT.length()).trim();
+    int col=ihash.indexOf(':');
+    if (col >= 0)     ihash=ihash.substring(0,col);
+    name=util.getString("Magnet") + ' ' + ihash;
+  }
+ else {
+    throw new IllegalArgumentException();
+  }
+  byte[] ih=null;
+  if (ihash.length() == 32) {
+    ih=Base32.decode(ihash);
+  }
+ else   if (ihash.length() == 40) {
+    ih=new byte[20];
+    try {
+      for (int i=0; i < 20; i++) {
+        ih[i]=(byte)(Integer.parseInt(ihash.substring(i * 2,(i * 2) + 2),16) & 0xff);
+      }
+    }
+ catch (    NumberFormatException nfe) {
+      ih=null;
+    }
+  }
+  if (ih == null || ih.length != 20)   throw new IllegalArgumentException();
+  _ih=ih;
+  _name=name;
+  _tracker=trackerURL;
+}
