@@ -1,12 +1,16 @@
 {
   StringBuilder buf=new StringBuilder(512);
   String status=NewsHelper.getUpdateStatus();
+  boolean needSpace=false;
   if (status.length() > 0) {
     buf.append("<h4>").append(status).append("</h4>\n");
+    needSpace=true;
   }
   String dver=NewsHelper.updateVersionDownloaded();
   if (dver == null)   dver=NewsHelper.unsignedVersionDownloaded();
   if (dver != null && !NewsHelper.isUpdateInProgress() && !_context.router().gracefulShutdownInProgress()) {
+    if (needSpace)     buf.append("<hr>");
+ else     needSpace=true;
     buf.append("<h4><b>").append(_("Update downloaded")).append("<br>");
     if (_context.hasWrapper())     buf.append(_("Click Restart to install"));
  else     buf.append(_("Click Shutdown and restart to install"));
@@ -14,6 +18,7 @@
     buf.append("</b></h4>");
   }
   if ((updateAvailable() || unsignedUpdateAvailable()) && !NewsHelper.isUpdateInProgress() && !_context.router().gracefulShutdownInProgress()&& _context.portMapper().getPort(PortMapper.SVC_HTTP_PROXY) > 0 && getAction() == null && getUpdateNonce() == null) {
+    if (needSpace)     buf.append("<hr>");
     long nonce=_context.random().nextLong();
     String prev=System.getProperty("net.i2p.router.web.UpdateHandler.nonce");
     if (prev != null)     System.setProperty("net.i2p.router.web.UpdateHandler.noncePrev",prev);
