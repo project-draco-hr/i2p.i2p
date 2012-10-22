@@ -4,8 +4,17 @@
     String updateURL=uri.toString();
     try {
       MagnetURI magnet=new MagnetURI(_smgr.util(),updateURL);
-      String name=magnet.getName();
       byte[] ih=magnet.getInfoHash();
+      _snark=_smgr.getTorrentByInfoHash(ih);
+      if (_snark != null) {
+        if (_snark.getMetaInfo() != null) {
+          _hasMetaInfo=true;
+          Storage storage=_snark.getStorage();
+          if (storage != null && storage.complete())           processComplete(_snark);
+        }
+        break;
+      }
+      String name=magnet.getName();
       String trackerURL=magnet.getTrackerURL();
       if (trackerURL == null && !_smgr.util().shouldUseDHT() && !_smgr.util().shouldUseOpenTrackers()) {
         _umgr.notifyAttemptFailed(this,"No tracker, no DHT, no OT",null);
