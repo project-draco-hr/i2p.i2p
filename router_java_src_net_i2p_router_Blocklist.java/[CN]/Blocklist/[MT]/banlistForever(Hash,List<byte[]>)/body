@@ -1,0 +1,46 @@
+{
+  String file=_context.getProperty(PROP_BLOCKLIST_FILE,BLOCKLIST_FILE_DEFAULT);
+  File BLFile=new File(file);
+  if (!BLFile.isAbsolute())   BLFile=new File(_context.getConfigDir(),file);
+  if (BLFile == null || (!BLFile.exists()) || BLFile.length() <= 0) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Blocklist file not found: " + file);
+    return;
+  }
+  for (Iterator<byte[]> iter=ips.iterator(); iter.hasNext(); ) {
+    byte ip[]=iter.next();
+    int ipint=toInt(ip);
+    FileInputStream in=null;
+    try {
+      in=new FileInputStream(BLFile);
+      BufferedReader br=new BufferedReader(new InputStreamReader(in,"UTF-8"));
+      String buf=null;
+      while ((buf=br.readLine()) != null) {
+        Entry e=parse(buf,false);
+        if (e == null || e.peer != null) {
+          continue;
+        }
+        if (match(ipint,toEntry(e.ip1,e.ip2))) {
+          try {
+            in.close();
+          }
+ catch (          IOException ioe) {
+          }
+          String reason=_x("IP banned by blocklist.txt entry {0}");
+          if (_log.shouldLog(Log.WARN))           _log.warn("Banlisting " + peer + " "+ reason);
+          _context.banlist().banlistRouterForever(peer,reason,buf.toString());
+          return;
+        }
+      }
+    }
+ catch (    IOException ioe) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Error reading the BLFile",ioe);
+    }
+ finally {
+      if (in != null)       try {
+        in.close();
+      }
+ catch (      IOException ioe) {
+      }
+    }
+  }
+}
