@@ -23,6 +23,33 @@
     for (    String p : _booleanProxyOpts)     config.setProperty("option." + p,"" + _booleanOptions.contains(p));
     if (_proxyList != null)     config.setProperty("proxyList",_proxyList);
   }
+  if ("httpclient".equals(_type) || "connectclient".equals(_type)) {
+    String puser="option." + I2PTunnelHTTPClientBase.PROP_USER;
+    String user=config.getProperty(puser);
+    String ppw="option." + I2PTunnelHTTPClientBase.PROP_PW;
+    String pw=config.getProperty(ppw);
+    if (user != null && pw != null && user.length() > 0 && pw.length() > 0) {
+      String pmd5="option." + I2PTunnelHTTPClientBase.PROP_PROXY_DIGEST_PREFIX + user+ I2PTunnelHTTPClientBase.PROP_PROXY_DIGEST_SUFFIX;
+      if (config.getProperty(pmd5) == null) {
+        String realm=_type.equals("httpclient") ? I2PTunnelHTTPClient.AUTH_REALM : I2PTunnelConnectClient.AUTH_REALM;
+        String hex=PasswordManager.md5Hex(realm,user,pw);
+        if (hex != null) {
+          config.setProperty(pmd5,hex);
+          config.remove(puser);
+          config.remove(ppw);
+        }
+      }
+    }
+    String auth=_otherOptions.get(I2PTunnelHTTPClientBase.PROP_AUTH);
+    if (auth != null && !auth.equals("false")) {
+      if (_newProxyUser != null && _newProxyPW != null && _newProxyUser.length() > 0 && _newProxyPW.length() > 0) {
+        String pmd5="option." + I2PTunnelHTTPClientBase.PROP_PROXY_DIGEST_PREFIX + _newProxyUser+ I2PTunnelHTTPClientBase.PROP_PROXY_DIGEST_SUFFIX;
+        String realm=_type.equals("httpclient") ? I2PTunnelHTTPClient.AUTH_REALM : I2PTunnelConnectClient.AUTH_REALM;
+        String hex=PasswordManager.md5Hex(realm,_newProxyUser,_newProxyPW);
+        if (hex != null)         config.setProperty(pmd5,hex);
+      }
+    }
+  }
   if ("ircclient".equals(_type) || "client".equals(_type) || "streamrclient".equals(_type)) {
     if (_targetDestination != null)     config.setProperty("targetDestination",_targetDestination);
   }

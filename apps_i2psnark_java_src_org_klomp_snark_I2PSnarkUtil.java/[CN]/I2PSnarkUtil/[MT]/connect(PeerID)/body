@@ -5,15 +5,15 @@
   if (addr == null)   throw new IOException("Null address");
   if (addr.equals(getMyDestination()))   throw new IOException("Attempt to connect to myself");
   Hash dest=addr.calculateHash();
-  if (_shitlist.contains(dest))   throw new IOException("Not trying to contact " + dest.toBase64() + ", as they are shitlisted");
+  if (_banlist.contains(dest))   throw new IOException("Not trying to contact " + dest.toBase64() + ", as they are banlisted");
   try {
     I2PSocket rv=_manager.connect(addr);
-    if (rv != null)     _shitlist.remove(dest);
+    if (rv != null)     _banlist.remove(dest);
     return rv;
   }
  catch (  I2PException ie) {
-    _shitlist.add(dest);
-    _context.simpleScheduler().addEvent(new Unshitlist(dest),10 * 60 * 1000);
+    _banlist.add(dest);
+    _context.simpleScheduler().addEvent(new Unbanlist(dest),10 * 60 * 1000);
     throw new IOException("Unable to reach the peer " + peer + ": "+ ie.getMessage());
   }
 }

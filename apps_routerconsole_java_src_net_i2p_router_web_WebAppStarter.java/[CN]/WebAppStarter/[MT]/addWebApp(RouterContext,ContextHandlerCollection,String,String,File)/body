@@ -1,0 +1,33 @@
+{
+  try {
+    stopWebApp(appName);
+  }
+ catch (  Throwable t) {
+  }
+  long newmod=(new File(warPath)).lastModified();
+  if (newmod <= 0)   throw new IOException("Web app " + warPath + " does not exist");
+  Long oldmod=warModTimes.get(warPath);
+  if (oldmod == null) {
+    warModTimes.put(warPath,new Long(newmod));
+  }
+ else   if (oldmod.longValue() < newmod) {
+    File warTmpDir=new SecureDirectory(ctx.getTempDir(),"war-copy-" + appName + ctx.random().nextInt());
+    warTmpDir.mkdir();
+    String tmpPath=(new File(warTmpDir,appName + ".war")).getAbsolutePath();
+    if (!FileUtil.copy(warPath,tmpPath,true))     throw new IOException("Web app failed copy from " + warPath + " to "+ tmpPath);
+    warPath=tmpPath;
+  }
+  WebAppContext wac=new WebAppContext(warPath,"/" + appName);
+  tmpdir.mkdir();
+  wac.setTempDirectory(tmpdir);
+  wac.setExtractWAR(false);
+  RouterConsoleRunner.initialize(ctx,wac);
+  String[] classNames=wac.getConfigurationClasses();
+  String[] newClassNames=new String[classNames.length + 1];
+  for (int j=0; j < classNames.length; j++)   newClassNames[j]=classNames[j];
+  newClassNames[classNames.length]=WebAppConfiguration.class.getName();
+  wac.setConfigurationClasses(newClassNames);
+  server.addHandler(wac);
+  server.mapContexts();
+  return wac;
+}

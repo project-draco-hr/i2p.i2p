@@ -335,9 +335,7 @@
           continue;
         }
  else         if (lowercaseLine.startsWith("proxy-authorization: ")) {
-          if (lowercaseLine.startsWith("proxy-authorization: basic ")) {
-            authorization=line.substring(27);
-          }
+          authorization=line.substring(21);
           line=null;
           continue;
         }
@@ -402,7 +400,8 @@
     if (_log.shouldLog(Log.DEBUG)) {
       _log.debug(getPrefix(requestId) + "Destination: " + destination);
     }
-    if (!authorize(s,requestId,authorization)) {
+    AuthResult result=authorize(s,requestId,method,authorization);
+    if (result != AuthResult.AUTH_GOOD) {
       if (_log.shouldLog(Log.WARN)) {
         if (authorization != null) {
           _log.warn(getPrefix(requestId) + "Auth failed, sending 407 again");
@@ -411,7 +410,7 @@
           _log.warn(getPrefix(requestId) + "Auth required, sending 407");
         }
       }
-      out.write(getErrorPage("auth",ERR_AUTH));
+      out.write(getAuthError(result == AuthResult.AUTH_STALE).getBytes());
       writeFooter(out);
       s.close();
       return;

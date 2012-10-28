@@ -4,35 +4,35 @@
     SimpleRequest req=(SimpleRequest)_pendingOutboundRequests.get(i);
     long waited=now() - req.getRequestTime();
     if (req.getAborted()) {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Aborting outbound request to " + req.getRequestName() + " (total "+ req.getTotalOutboundRequested()+ " bytes, waited "+ waited+ "ms) pending "+ _pendingOutboundRequests.size());
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Aborting outbound request to " + req + " waited "+ waited+ "ms) pending "+ _pendingOutboundRequests.size());
       _pendingOutboundRequests.remove(i);
       i--;
       continue;
     }
     if (req.getAllocationsSinceWait() > 0) {
-      if (_log.shouldLog(Log.WARN))       _log.warn("multiple allocations since wait... ntcp shouldn't do this: " + req.getRequestName());
+      if (_log.shouldLog(Log.WARN))       _log.warn("multiple allocations since wait... ntcp shouldn't do this: " + req);
       continue;
     }
-    int requested=req.getPendingOutboundRequested();
+    int requested=req.getPendingRequested();
     int avo=_availableOutbound.get();
     int allocated;
     if (avo >= requested)     allocated=requested;
  else     allocated=avo;
     _availableOutbound.addAndGet(0 - allocated);
     _totalAllocatedOutboundBytes.addAndGet(allocated);
-    req.allocateBytes(0,allocated);
+    req.allocateBytes(allocated);
     satisfied.add(req);
-    if (req.getPendingOutboundRequested() > 0) {
+    if (req.getPendingRequested() > 0) {
       if (req.attachment() != null) {
-        if (_log.shouldLog(Log.INFO))         _log.info("Allocating " + allocated + " bytes outbound as a partial grant to "+ req.getRequestName()+ " (wanted "+ req.getTotalOutboundRequested()+ " bytes, waited "+ waited+ "ms) pending "+ _pendingOutboundRequests.size()+ ", longest waited "+ locked_getLongestOutboundWait()+ " out");
+        if (_log.shouldLog(Log.INFO))         _log.info("Allocating " + allocated + " bytes outbound as a partial grant to "+ req+ " waited "+ waited+ "ms) pending "+ _pendingOutboundRequests.size()+ ", longest waited "+ locked_getLongestOutboundWait()+ " out");
       }
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Allocating " + allocated + " bytes outbound as a partial grant to "+ req.getRequestName()+ " (wanted "+ req.getTotalOutboundRequested()+ " bytes, waited "+ waited+ "ms) pending "+ _pendingOutboundRequests.size()+ ", longest waited "+ locked_getLongestOutboundWait()+ " out");
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Allocating " + allocated + " bytes outbound as a partial grant to "+ req+ " waited "+ waited+ "ms) pending "+ _pendingOutboundRequests.size()+ ", longest waited "+ locked_getLongestOutboundWait()+ " out");
     }
  else {
       if (req.attachment() != null) {
-        if (_log.shouldLog(Log.INFO))         _log.info("Allocating " + allocated + " bytes outbound to finish the partial grant to "+ req.getRequestName()+ " (total "+ req.getTotalOutboundRequested()+ " bytes, waited "+ waited+ "ms) pending "+ _pendingOutboundRequests.size()+ ", longest waited "+ locked_getLongestOutboundWait()+ " out)");
+        if (_log.shouldLog(Log.INFO))         _log.info("Allocating " + allocated + " bytes outbound to finish the partial grant to "+ req+ " waited "+ waited+ "ms) pending "+ _pendingOutboundRequests.size()+ ", longest waited "+ locked_getLongestOutboundWait()+ " out)");
       }
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Allocating " + allocated + " bytes outbound to finish the partial grant to "+ req.getRequestName()+ " (total "+ req.getTotalOutboundRequested()+ " bytes, waited "+ waited+ "ms) pending "+ _pendingOutboundRequests.size()+ ", longest waited "+ locked_getLongestOutboundWait()+ " out)");
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Allocating " + allocated + " bytes outbound to finish the partial grant to "+ req+ " waited "+ waited+ "ms) pending "+ _pendingOutboundRequests.size()+ ", longest waited "+ locked_getLongestOutboundWait()+ " out)");
       _pendingOutboundRequests.remove(i);
       i--;
       if (waited > 10)       _context.statManager().addRateData("bwLimiter.outboundDelayedTime",waited,waited);

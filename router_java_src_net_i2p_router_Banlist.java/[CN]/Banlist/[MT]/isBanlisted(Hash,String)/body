@@ -1,0 +1,26 @@
+{
+  boolean rv=false;
+  boolean unbanlist=false;
+  Entry entry=_entries.get(peer);
+  if (entry == null) {
+    rv=false;
+  }
+ else   if (entry.expireOn <= _context.clock().now()) {
+    _entries.remove(peer);
+    unbanlist=true;
+    rv=false;
+  }
+ else   if (entry.transports == null) {
+    rv=true;
+  }
+ else {
+    rv=entry.transports.contains(transport);
+  }
+  if (unbanlist) {
+    PeerProfile prof=_context.profileOrganizer().getProfile(peer);
+    if (prof != null)     prof.unbanlist();
+    _context.messageHistory().unbanlist(peer);
+    if (_log.shouldLog(Log.INFO))     _log.info("Unbanlisting router (expired) " + peer.toBase64());
+  }
+  return rv;
+}

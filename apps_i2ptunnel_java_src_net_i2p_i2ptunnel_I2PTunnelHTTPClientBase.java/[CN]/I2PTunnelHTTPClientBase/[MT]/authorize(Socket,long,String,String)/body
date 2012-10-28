@@ -1,0 +1,61 @@
+{
+  String authRequired=getTunnel().getClientOptions().getProperty(PROP_AUTH);
+  if (authRequired == null)   return AuthResult.AUTH_GOOD;
+  authRequired=authRequired.toLowerCase(Locale.US);
+  if (authRequired.equals("false"))   return AuthResult.AUTH_GOOD;
+  if (s instanceof InternalSocket) {
+    if (_log.shouldLog(Log.INFO))     _log.info(getPrefix(requestId) + "Internal access, no auth required");
+    return AuthResult.AUTH_GOOD;
+  }
+  if (authorization == null)   return AuthResult.AUTH_BAD;
+  if (_log.shouldLog(Log.INFO))   _log.info(getPrefix(requestId) + "Auth: " + authorization);
+  String authLC=authorization.toLowerCase(Locale.US);
+  if (authRequired.equals("true") || authRequired.equals(BASIC_AUTH)) {
+    if (!authLC.startsWith("basic "))     return AuthResult.AUTH_BAD;
+    authorization=authorization.substring(6);
+    byte[] decoded=Base64.decode(authorization.replace("/","~").replace("+","="));
+    if (decoded != null) {
+      try {
+        String dec=new String(decoded,"UTF-8");
+        String[] parts=dec.split(":");
+        String user=parts[0];
+        String pw=parts[1];
+        String configPW=getTunnel().getClientOptions().getProperty(PROP_PW_PREFIX + user);
+        if (configPW == null) {
+          String configUser=getTunnel().getClientOptions().getProperty(PROP_USER);
+          if (user.equals(configUser))           configPW=getTunnel().getClientOptions().getProperty(PROP_PW);
+        }
+        if (configPW != null) {
+          if (pw.equals(configPW)) {
+            if (_log.shouldLog(Log.INFO))             _log.info(getPrefix(requestId) + "Good auth - user: " + user+ " pw: "+ pw);
+            return AuthResult.AUTH_GOOD;
+          }
+        }
+        _log.logAlways(Log.WARN,"PROXY AUTH FAILURE: user " + user);
+      }
+ catch (      UnsupportedEncodingException uee) {
+        _log.error(getPrefix(requestId) + "No UTF-8 support? B64: " + authorization,uee);
+      }
+catch (      ArrayIndexOutOfBoundsException aioobe) {
+        if (_log.shouldLog(Log.WARN))         _log.warn(getPrefix(requestId) + "Bad auth B64: " + authorization,aioobe);
+        return AuthResult.AUTH_BAD_REQ;
+      }
+      return AuthResult.AUTH_BAD;
+    }
+ else {
+      if (_log.shouldLog(Log.WARN))       _log.warn(getPrefix(requestId) + "Bad auth B64: " + authorization);
+      return AuthResult.AUTH_BAD_REQ;
+    }
+  }
+ else   if (authRequired.equals(DIGEST_AUTH)) {
+    if (!authLC.startsWith("digest "))     return AuthResult.AUTH_BAD;
+    authorization=authorization.substring(7);
+    Map<String,String> args=parseArgs(authorization);
+    AuthResult rv=validateDigest(method,args);
+    return rv;
+  }
+ else {
+    _log.error("Unknown proxy authorization type configured: " + authRequired);
+    return AuthResult.AUTH_BAD_REQ;
+  }
+}

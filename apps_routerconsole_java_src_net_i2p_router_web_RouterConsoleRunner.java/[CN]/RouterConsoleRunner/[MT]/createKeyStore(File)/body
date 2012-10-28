@@ -1,9 +1,8 @@
 {
-  I2PAppContext ctx=I2PAppContext.getGlobalContext();
   byte[] rand=new byte[30];
-  ctx.random().nextBytes(rand);
+  _context.random().nextBytes(rand);
   String keyPassword=Base32.encode(rand);
-  ctx.random().nextBytes(rand);
+  _context.random().nextBytes(rand);
   String cname=Base32.encode(rand) + ".console.i2p.net";
   String keytool=(new File(System.getProperty("java.home"),"bin/keytool")).getAbsolutePath();
   String[] args=new String[]{keytool,"-genkey","-storetype",KeyStore.getDefaultType(),"-keystore",ks.getAbsolutePath(),"-storepass",DEFAULT_KEYSTORE_PASSWORD,"-alias","console","-dname","CN=" + cname + ",OU=Console,O=I2P Anonymous Network,L=XX,ST=XX,C=XX","-validity","3652","-keyalg","DSA","-keysize","1024","-keypass",keyPassword};
@@ -13,11 +12,10 @@
     if (success) {
       SecureFileOutputStream.setPerms(ks);
       try {
-        RouterContext rctx=(RouterContext)ctx;
         Map<String,String> changes=new HashMap();
         changes.put(PROP_KEYSTORE_PASSWORD,DEFAULT_KEYSTORE_PASSWORD);
         changes.put(PROP_KEY_PASSWORD,keyPassword);
-        rctx.router().saveConfig(changes,null);
+        _context.router().saveConfig(changes,null);
       }
  catch (      Exception e) {
       }
@@ -33,7 +31,7 @@
       buf.append('"').append(args[i]).append("\" ");
     }
     System.err.println(buf.toString());
-    System.err.println("This is for the Sun/Oracle keytool, others may be incompatible.\n" + "If you create the keystore manually, you must add " + PROP_KEYSTORE_PASSWORD + " and "+ PROP_KEY_PASSWORD+ " to "+ (new File(ctx.getConfigDir(),"router.config")).getAbsolutePath());
+    System.err.println("This is for the Sun/Oracle keytool, others may be incompatible.\n" + "If you create the keystore manually, you must add " + PROP_KEYSTORE_PASSWORD + " and "+ PROP_KEY_PASSWORD+ " to "+ (new File(_context.getConfigDir(),"router.config")).getAbsolutePath());
   }
   return success;
 }

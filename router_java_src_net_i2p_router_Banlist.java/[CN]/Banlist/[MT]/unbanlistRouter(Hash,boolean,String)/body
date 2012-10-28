@@ -1,0 +1,22 @@
+{
+  if (peer == null)   return;
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Calling unbanlistRouter " + peer.toBase64() + (transport != null ? "/" + transport : ""));
+  boolean fully=false;
+  Entry e=_entries.remove(peer);
+  if ((e == null) || (e.transports == null) || (transport == null)|| (e.transports.size() <= 1)) {
+    fully=true;
+  }
+ else {
+    e.transports.remove(transport);
+    if (e.transports.isEmpty())     fully=true;
+ else     _entries.put(peer,e);
+  }
+  if (fully) {
+    if (realUnbanlist) {
+      PeerProfile prof=_context.profileOrganizer().getProfile(peer);
+      if (prof != null)       prof.unbanlist();
+    }
+    _context.messageHistory().unbanlist(peer);
+    if (_log.shouldLog(Log.INFO) && e != null)     _log.info("Unbanlisting router " + peer.toBase64() + (transport != null ? "/" + transport : ""));
+  }
+}

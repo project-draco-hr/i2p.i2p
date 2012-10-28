@@ -1,0 +1,47 @@
+{
+  SecurityHandler sec=new SecurityHandler();
+  List<ConstraintMapping> constraints=new ArrayList(4);
+  ConsolePasswordManager mgr=new ConsolePasswordManager(ctx);
+  boolean enable=ctx.getBooleanProperty(PROP_PW_ENABLE);
+  if (enable) {
+    Map<String,String> userpw=mgr.getMD5(PROP_CONSOLE_PW);
+    if (userpw.isEmpty()) {
+      enable=false;
+      ctx.router().saveConfig(PROP_CONSOLE_PW,"false");
+    }
+ else {
+      HashUserRealm realm=new HashUserRealm(JETTY_REALM);
+      sec.setUserRealm(realm);
+      sec.setAuthenticator(authenticator);
+      for (      Map.Entry<String,String> e : userpw.entrySet()) {
+        String user=e.getKey();
+        String pw=e.getValue();
+        realm.put(user,MD5.__TYPE + pw);
+        realm.addUserToRole(user,JETTY_ROLE);
+        Constraint constraint=new Constraint(user,JETTY_ROLE);
+        constraint.setAuthenticate(true);
+        ConstraintMapping cm=new ConstraintMapping();
+        cm.setConstraint(constraint);
+        cm.setPathSpec("/");
+        constraints.add(cm);
+      }
+    }
+  }
+  Constraint sc=new Constraint();
+  sc.setName("No trace");
+  ConstraintMapping cm=new ConstraintMapping();
+  cm.setMethod("TRACE");
+  cm.setConstraint(sc);
+  cm.setPathSpec("/");
+  constraints.add(cm);
+  sc=new Constraint();
+  sc.setName("No options");
+  cm=new ConstraintMapping();
+  cm.setMethod("OPTIONS");
+  cm.setConstraint(sc);
+  cm.setPathSpec("/");
+  constraints.add(cm);
+  ConstraintMapping cmarr[]=constraints.toArray(new ConstraintMapping[constraints.size()]);
+  sec.setConstraintMappings(cmarr);
+  context.setSecurityHandler(sec);
+}
