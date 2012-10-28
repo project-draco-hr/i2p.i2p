@@ -30,10 +30,10 @@
     if (_verified) {
       InetAddress addr=this._con.getChannel().socket().getInetAddress();
       byte[] ip=(addr == null) ? null : addr.getAddress();
-      if (_context.shitlist().isShitlistedForever(alice.calculateHash())) {
-        if (_log.shouldLog(Log.WARN))         _log.warn("Dropping inbound connection from permanently shitlisted peer: " + alice.calculateHash().toBase64());
+      if (_context.banlist().isBanlistedForever(alice.calculateHash())) {
+        if (_log.shouldLog(Log.WARN))         _log.warn("Dropping inbound connection from permanently banlisted peer: " + alice.calculateHash().toBase64());
         if (ip != null)         _context.blocklist().add(ip);
-        fail("Peer is shitlisted forever: " + alice.calculateHash().toBase64());
+        fail("Peer is banlisted forever: " + alice.calculateHash().toBase64());
         return;
       }
       if (ip != null)       _transport.setIP(alice.calculateHash(),ip);
@@ -47,7 +47,7 @@
  else       if (diff >= Router.CLOCK_FUDGE_FACTOR) {
         _context.statManager().addRateData("ntcp.invalidInboundSkew",diff,0);
         _transport.markReachable(alice.calculateHash(),true);
-        _context.shitlist().shitlistRouter(DataHelper.formatDuration(diff),alice.calculateHash(),_x("Excessive clock skew: {0}"));
+        _context.banlist().banlistRouter(DataHelper.formatDuration(diff),alice.calculateHash(),_x("Excessive clock skew: {0}"));
         _transport.setLastBadSkew(tsA - _tsB);
         fail("Clocks too skewed (" + diff + " ms)",null,true);
         return;

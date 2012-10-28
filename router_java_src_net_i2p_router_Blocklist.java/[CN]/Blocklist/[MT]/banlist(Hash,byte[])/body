@@ -1,0 +1,15 @@
+{
+  String reason=_x("IP banned by blocklist.txt entry {0}");
+  _context.banlist().banlistRouterForever(peer,reason,Addresses.toString(ip));
+  if (!_context.getBooleanPropertyDefaultTrue(PROP_BLOCKLIST_DETAIL))   return;
+  boolean shouldRunJob;
+  int number;
+synchronized (_inProcess) {
+    number=_inProcess.size();
+    shouldRunJob=_inProcess.add(peer);
+  }
+  if (!shouldRunJob)   return;
+  Job job=new BanlistJob(peer,getAddresses(peer));
+  if (number > 0)   job.getTiming().setStartAfter(_context.clock().now() + (30 * 1000l * number));
+  _context.jobQueue().addJob(job);
+}
