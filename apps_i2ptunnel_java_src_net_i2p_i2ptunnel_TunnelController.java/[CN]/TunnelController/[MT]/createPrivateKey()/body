@@ -20,8 +20,17 @@
     Destination dest=client.createDestination(fos);
     String destStr=dest.toBase64();
     log("Private key created and saved in " + keyFile.getAbsolutePath());
+    log("You should backup this file in a secure place.");
     log("New destination: " + destStr);
     log("Base32: " + Base32.encode(dest.calculateHash().getData()) + ".b32.i2p");
+    File backupDir=new SecureFile(I2PAppContext.getGlobalContext().getConfigDir(),KEY_BACKUP_DIR);
+    if (backupDir.exists() || backupDir.mkdir()) {
+      String name=keyFile.getName();
+      if (name.endsWith(".dat"))       name=name.substring(0,name.length() - 4);
+      name+="-" + I2PAppContext.getGlobalContext().clock().now() + ".dat";
+      File backup=new File(backupDir,name);
+      if (FileUtil.copy(keyFile,backup,false,true))       log("Private key backup saved to " + backup.getAbsolutePath());
+    }
   }
  catch (  I2PException ie) {
     if (_log.shouldLog(Log.ERROR))     _log.error("Error creating new destination",ie);
