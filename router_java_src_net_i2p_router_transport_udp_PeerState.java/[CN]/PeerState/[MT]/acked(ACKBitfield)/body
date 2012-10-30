@@ -31,14 +31,14 @@ synchronized (_outboundMessages) {
     int bits=bitfield.fragmentCount();
     int numACKed=0;
     for (int i=0; i < bits; i++)     if (bitfield.received(i))     numACKed++;
-    _context.statManager().addRateData("udp.partialACKReceived",numACKed,state.getLifetime());
+    _context.statManager().addRateData("udp.partialACKReceived",numACKed);
     if (_log.shouldLog(Log.INFO))     _log.info("Received partial ack of " + state.getMessageId() + " by "+ _remotePeer+ " after "+ state.getLifetime()+ " and "+ numSends+ " sends: "+ bitfield+ ": completely removed? "+ isComplete+ ": "+ state);
     if (isComplete) {
-      _context.statManager().addRateData("udp.sendConfirmTime",state.getLifetime(),state.getLifetime());
-      if (state.getFragmentCount() > 1)       _context.statManager().addRateData("udp.sendConfirmFragments",state.getFragmentCount(),state.getLifetime());
-      if (numSends > 1)       _context.statManager().addRateData("udp.sendConfirmVolley",numSends,state.getFragmentCount());
+      _context.statManager().addRateData("udp.sendConfirmTime",state.getLifetime());
+      if (state.getFragmentCount() > 1)       _context.statManager().addRateData("udp.sendConfirmFragments",state.getFragmentCount());
+      _context.statManager().addRateData("udp.sendConfirmVolley",numSends);
       _transport.succeeded(state);
-      messageACKed(state.getFragmentCount() * state.getFragmentSize(),state.getLifetime(),0);
+      messageACKed(state.getMessageSize(),state.getLifetime(),numSends);
       state.releaseResources();
     }
  else {
