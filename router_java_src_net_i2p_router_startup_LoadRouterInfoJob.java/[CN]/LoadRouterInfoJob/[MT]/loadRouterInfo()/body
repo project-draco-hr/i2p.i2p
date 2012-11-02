@@ -6,11 +6,11 @@
   if (rif.exists())   _infoExists=true;
   File rkf=new File(getContext().getRouterDir(),keyFilename);
   if (rkf.exists())   _keysExist=true;
-  FileInputStream fis1=null;
-  FileInputStream fis2=null;
+  InputStream fis1=null;
+  InputStream fis2=null;
   try {
     if (_infoExists && _keysExist) {
-      fis1=new FileInputStream(rif);
+      fis1=new BufferedInputStream(new FileInputStream(rif));
       info=new RouterInfo();
       info.readBytes(fis1);
       if (!info.isValid())       throw new DataFormatException("Our RouterInfo has a bad signature");
@@ -18,7 +18,7 @@
       _us=info;
     }
     if (_keysExist) {
-      fis2=new FileInputStream(rkf);
+      fis2=new BufferedInputStream(new FileInputStream(rkf));
       PrivateKey privkey=new PrivateKey();
       privkey.readBytes(fis2);
       SigningPrivateKey signingPrivKey=new SigningPrivateKey();
@@ -27,10 +27,7 @@
       pubkey.readBytes(fis2);
       SigningPublicKey signingPubKey=new SigningPublicKey();
       signingPubKey.readBytes(fis2);
-      getContext().keyManager().setPrivateKey(privkey);
-      getContext().keyManager().setSigningPrivateKey(signingPrivKey);
-      getContext().keyManager().setPublicKey(pubkey);
-      getContext().keyManager().setSigningPublicKey(signingPubKey);
+      getContext().keyManager().setKeys(pubkey,privkey,signingPubKey,signingPrivKey);
     }
   }
  catch (  IOException ioe) {
