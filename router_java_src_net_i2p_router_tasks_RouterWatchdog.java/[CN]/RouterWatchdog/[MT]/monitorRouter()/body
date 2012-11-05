@@ -1,10 +1,15 @@
 {
   boolean ok=verifyJobQueueLiveliness();
   long netErrors=0;
-  RateStat rs=_context.statManager().getRate("udp.sendException");
-  if (rs != null) {
-    Rate r=rs.getRate(60 * 1000);
-    if (r != null)     netErrors=r.getLastEventCount();
+  if (_context.commSystem().getReachabilityStatus() == CommSystemFacade.STATUS_DISCONNECTED) {
+    netErrors=10;
+  }
+ else {
+    RateStat rs=_context.statManager().getRate("udp.sendException");
+    if (rs != null) {
+      Rate r=rs.getRate(60 * 1000);
+      if (r != null)       netErrors=r.getLastEventCount();
+    }
   }
   ok=ok && (verifyClientLiveliness() || netErrors >= 5);
   if (ok) {

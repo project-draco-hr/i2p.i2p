@@ -2,10 +2,11 @@
   super.setContextId(contextId);
   _log=_context.logManager().getLog(ConfigStatsHelper.class);
   _stats=new ArrayList();
-  Map groups=_context.statManager().getStatsByGroup();
-  for (Iterator iter=groups.values().iterator(); iter.hasNext(); ) {
-    Set stats=(Set)iter.next();
-    for (Iterator statIter=stats.iterator(); statIter.hasNext(); )     _stats.add(statIter.next());
+  Map<String,SortedSet<String>> unsorted=_context.statManager().getStatsByGroup();
+  Map<String,Set<String>> groups=new TreeMap(new AlphaComparator());
+  groups.putAll(unsorted);
+  for (  Set<String> stats : groups.values()) {
+    _stats.addAll(stats);
   }
   _filter=_context.statManager().getStatFilter();
   if (_filter == null)   _filter="";

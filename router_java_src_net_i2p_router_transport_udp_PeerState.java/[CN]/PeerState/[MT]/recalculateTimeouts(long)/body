@@ -1,11 +1,6 @@
 {
   _rttDeviation=_rttDeviation + (int)(0.25d * (Math.abs(lifetime - _rtt) - _rttDeviation));
-  float scale=0.1f;
-  if (_sendBps > 0)   scale=lifetime / ((float)lifetime + (float)_sendBps);
-  if (scale < 0.001f)   scale=0.001f;
+  float scale=RTT_DAMPENING;
   _rtt=(int)(_rtt * (1.0f - scale) + (scale) * lifetime);
-  _rto=_rtt + (_rttDeviation << 2);
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Recalculating timeouts w/ lifetime=" + lifetime + ": rtt="+ _rtt+ " rttDev="+ _rttDeviation+ " rto="+ _rto);
-  if (_rto < minRTO())   _rto=minRTO();
- else   if (_rto > MAX_RTO)   _rto=MAX_RTO;
+  _rto=Math.min(MAX_RTO,Math.max(minRTO(),_rtt + (_rttDeviation << 2)));
 }

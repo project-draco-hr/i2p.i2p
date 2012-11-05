@@ -1,0 +1,14 @@
+{
+  String pfx=realm;
+  if (user != null && user.length() > 0)   pfx+='.' + user;
+  String shash=_context.getProperty(pfx + PROP_SHASH);
+  if (shash == null)   return false;
+  byte[] shashBytes=Base64.decode(shash);
+  if (shashBytes == null || shashBytes.length != SHASH_LENGTH)   return false;
+  byte[] salt=new byte[SALT_LENGTH];
+  byte[] hash=new byte[SessionKey.KEYSIZE_BYTES];
+  System.arraycopy(shashBytes,0,salt,0,SALT_LENGTH);
+  System.arraycopy(shashBytes,SALT_LENGTH,hash,0,SessionKey.KEYSIZE_BYTES);
+  byte[] pwHash=_context.keyGenerator().generateSessionKey(salt,DataHelper.getUTF8(pw)).getData();
+  return DataHelper.eq(hash,pwHash);
+}

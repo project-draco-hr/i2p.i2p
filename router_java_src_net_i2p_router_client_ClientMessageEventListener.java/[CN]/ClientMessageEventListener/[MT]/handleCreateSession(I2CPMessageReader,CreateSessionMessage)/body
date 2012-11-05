@@ -8,25 +8,22 @@
     _runner.disconnectClient("Invalid signature on CreateSessionMessage");
     return;
   }
-  if (_enforceAuth && _context.getBooleanProperty("i2cp.auth")) {
-    String configUser=_context.getProperty("i2cp.username");
-    String configPW=_context.getProperty("i2cp.password");
-    if (configUser != null && configPW != null) {
-      Properties props=in.getOptions();
-      String user=props.getProperty("i2cp.username");
-      String pw=props.getProperty("i2cp.password");
-      if (user == null || pw == null) {
-        _log.error("I2CP auth failed for client: " + props.getProperty("inbound.nickname"));
-        _runner.disconnectClient("Authorization required to create session, specify i2cp.username and i2cp.password in session options");
-        return;
-      }
-      if ((!user.equals(configUser)) || (!pw.equals(configPW))) {
-        _log.error("I2CP auth failed for client: " + props.getProperty("inbound.nickname") + " user: "+ user);
-        _runner.disconnectClient("Authorization failed for Create Session, user = " + user);
-        return;
-      }
-      if (_log.shouldLog(Log.INFO))       _log.info("I2CP auth success for client: " + props.getProperty("inbound.nickname") + " user: "+ user);
+  if (_enforceAuth && _context.getBooleanProperty(PROP_AUTH)) {
+    Properties props=in.getOptions();
+    String user=props.getProperty("i2cp.username");
+    String pw=props.getProperty("i2cp.password");
+    if (user == null || user.length() == 0 || pw == null || pw.length() == 0) {
+      _log.error("I2CP auth failed for client: " + props.getProperty("inbound.nickname"));
+      _runner.disconnectClient("Authorization required to create session, specify i2cp.username and i2cp.password in session options");
+      return;
     }
+    PasswordManager mgr=new PasswordManager(_context);
+    if (!mgr.checkHash(PROP_AUTH,user,pw)) {
+      _log.error("I2CP auth failed for client: " + props.getProperty("inbound.nickname") + " user: "+ user);
+      _runner.disconnectClient("Authorization failed for Create Session, user = " + user);
+      return;
+    }
+    if (_log.shouldLog(Log.INFO))     _log.info("I2CP auth success for client: " + props.getProperty("inbound.nickname") + " user: "+ user);
   }
   SessionId sessionId=new SessionId();
   sessionId.setSessionId(getNextSessionId());

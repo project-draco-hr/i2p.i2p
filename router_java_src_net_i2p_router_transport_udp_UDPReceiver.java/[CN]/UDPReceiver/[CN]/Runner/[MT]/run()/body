@@ -1,5 +1,4 @@
 {
-  FIFOBandwidthLimiter.Request req=_context.bandwidthLimiter().createRequest();
   while (_keepRunning) {
     UDPPacket packet=UDPPacket.acquire(_context,true);
     if (_isAndroid)     packet.getPacket().setLength(UDPPacket.MAX_PACKET_SIZE);
@@ -17,13 +16,12 @@
         throw new IOException("packet too large! truncated and dropped from: " + packet.getRemoteHost());
       }
       if (size > 0) {
-        req=_context.bandwidthLimiter().requestInbound(size,"UDP receiver");
-        while (req.getPendingInboundRequested() > 0)         req.waitForNextAllocation();
-        int queued=receive(packet);
-        _context.statManager().addRateData("udp.receivePacketSize",size,queued);
+        FIFOBandwidthLimiter.Request req=_context.bandwidthLimiter().requestInbound(size,"UDP receiver");
+        while (req.getPendingRequested() > 0)         req.waitForNextAllocation();
+        receive(packet);
       }
  else {
-        _context.statManager().addRateData("udp.receiveHolePunch",1,0);
+        _context.statManager().addRateData("udp.receiveHolePunch",1);
         if (_log.shouldLog(Log.INFO))         _log.info("Received a 0 byte udp packet from " + packet.getPacket().getAddress() + ":"+ packet.getPacket().getPort());
         packet.release();
       }

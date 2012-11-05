@@ -1,15 +1,17 @@
 {
-  if (metainfo == null || storage == null)   return true;
-  int piece=pp.getPiece();
-  if (halted) {
-    _log.info("Got while-halted piece " + piece + "/"+ metainfo.getPieces()+ " from "+ peer+ " for "+ metainfo.getName());
+  if (metainfo == null || storage == null || storage.isChecking() || halted) {
+    pp.release();
     return true;
   }
+  int piece=pp.getPiece();
 synchronized (wantedPieces) {
     Piece p=new Piece(piece);
     if (!wantedPieces.contains(p)) {
       _log.info("Got unwanted piece " + piece + "/"+ metainfo.getPieces()+ " from "+ peer+ " for "+ metainfo.getName());
-      if (storage.getBitField().get(piece))       return true;
+      if (storage.getBitField().get(piece)) {
+        pp.release();
+        return true;
+      }
     }
     try {
       if (storage.putPiece(pp)) {

@@ -21,12 +21,12 @@ synchronized (_outboundMessages) {
   if (state != null) {
     int numSends=state.getMaxSends();
     if (_log.shouldLog(Log.INFO))     _log.info("Received ack of " + messageId + " by "+ _remotePeer+ " after "+ state.getLifetime()+ " and "+ numSends+ " sends");
-    _context.statManager().addRateData("udp.sendConfirmTime",state.getLifetime(),state.getLifetime());
-    if (state.getFragmentCount() > 1)     _context.statManager().addRateData("udp.sendConfirmFragments",state.getFragmentCount(),state.getLifetime());
-    if (numSends > 1)     _context.statManager().addRateData("udp.sendConfirmVolley",numSends,state.getFragmentCount());
+    _context.statManager().addRateData("udp.sendConfirmTime",state.getLifetime());
+    if (state.getFragmentCount() > 1)     _context.statManager().addRateData("udp.sendConfirmFragments",state.getFragmentCount());
+    _context.statManager().addRateData("udp.sendConfirmVolley",numSends);
     _transport.succeeded(state);
     int numFragments=state.getFragmentCount();
-    messageACKed(numFragments * state.getFragmentSize(),state.getLifetime(),numSends);
+    messageACKed(state.getMessageSize(),state.getLifetime(),numSends);
     state.releaseResources();
   }
  else {

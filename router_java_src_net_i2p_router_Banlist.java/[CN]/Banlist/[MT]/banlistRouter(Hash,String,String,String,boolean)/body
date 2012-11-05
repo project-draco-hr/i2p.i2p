@@ -1,0 +1,60 @@
+{
+  if (peer == null) {
+    _log.error("wtf, why did we try to banlist null?",new Exception("banfaced"));
+    return false;
+  }
+  if (_context.routerHash().equals(peer)) {
+    _log.error("wtf, why did we try to banlist ourselves?",new Exception("banfaced"));
+    return false;
+  }
+  boolean wasAlready=false;
+  if (_log.shouldLog(Log.INFO))   _log.info("Banlisting router " + peer.toBase64() + ((transport != null) ? " on transport " + transport : ""),new Exception("Banlist cause: " + reason));
+  Entry e=new Entry();
+  if (forever) {
+    e.expireOn=_context.clock().now() + BANLIST_DURATION_FOREVER;
+  }
+ else   if (transport != null) {
+    e.expireOn=_context.clock().now() + BANLIST_DURATION_PARTIAL;
+  }
+ else {
+    long period=BANLIST_DURATION_MS + _context.random().nextLong(BANLIST_DURATION_MS / 4);
+    PeerProfile prof=_context.profileOrganizer().getProfile(peer);
+    if (prof != null) {
+      period=BANLIST_DURATION_MS << prof.incrementBanlists();
+      period+=_context.random().nextLong(period);
+    }
+    if (period > BANLIST_DURATION_MAX)     period=BANLIST_DURATION_MAX;
+    e.expireOn=_context.clock().now() + period;
+  }
+  e.cause=reason;
+  e.causeCode=reasonCode;
+  e.transports=null;
+  if (transport != null) {
+    e.transports=new ConcurrentHashSet(2);
+    e.transports.add(transport);
+  }
+  Entry old=_entries.get(peer);
+  if (old != null) {
+    wasAlready=true;
+    if (old.expireOn > e.expireOn) {
+      e.expireOn=old.expireOn;
+      e.cause=old.cause;
+      e.causeCode=old.causeCode;
+    }
+    if (e.transports != null) {
+      if (old.transports != null)       e.transports.addAll(old.transports);
+ else {
+        e.transports=null;
+        e.cause=reason;
+        e.causeCode=reasonCode;
+      }
+    }
+  }
+  _entries.put(peer,e);
+  if (transport == null) {
+    _context.netDb().fail(peer);
+    _context.tunnelManager().fail(peer);
+  }
+  if (!wasAlready)   _context.messageHistory().banlist(peer,reason);
+  return wasAlready;
+}

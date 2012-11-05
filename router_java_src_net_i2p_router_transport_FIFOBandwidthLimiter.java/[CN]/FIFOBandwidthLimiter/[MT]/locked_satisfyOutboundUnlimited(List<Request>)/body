@@ -1,12 +1,12 @@
 {
   while (!_pendingOutboundRequests.isEmpty()) {
     SimpleRequest req=(SimpleRequest)_pendingOutboundRequests.remove(0);
-    int allocated=req.getPendingOutboundRequested();
+    int allocated=req.getPendingRequested();
     _totalAllocatedOutboundBytes.addAndGet(allocated);
-    req.allocateBytes(0,allocated);
+    req.allocateBytes(allocated);
     satisfied.add(req);
     long waited=now() - req.getRequestTime();
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Granting outbound request " + req.getRequestName() + " fully for "+ req.getTotalOutboundRequested()+ " bytes (waited "+ waited+ "ms) pending "+ _pendingOutboundRequests.size()+ ", longest waited "+ locked_getLongestOutboundWait()+ " out");
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Granting outbound request " + req + " fully (waited "+ waited+ "ms) pending "+ _pendingOutboundRequests.size()+ ", longest waited "+ locked_getLongestOutboundWait()+ " out");
     if (waited > 10)     _context.statManager().addRateData("bwLimiter.outboundDelayedTime",waited,waited);
   }
 }

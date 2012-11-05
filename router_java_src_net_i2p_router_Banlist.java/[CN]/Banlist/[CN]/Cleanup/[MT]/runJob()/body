@@ -1,0 +1,22 @@
+{
+  _toUnbanlist.clear();
+  long now=getContext().clock().now();
+  try {
+    for (Iterator iter=_entries.entrySet().iterator(); iter.hasNext(); ) {
+      Map.Entry<Hash,Entry> e=(Map.Entry)iter.next();
+      if (e.getValue().expireOn <= now) {
+        iter.remove();
+        _toUnbanlist.add(e.getKey());
+      }
+    }
+  }
+ catch (  IllegalStateException ise) {
+  }
+  for (  Hash peer : _toUnbanlist) {
+    PeerProfile prof=_context.profileOrganizer().getProfile(peer);
+    if (prof != null)     prof.unbanlist();
+    _context.messageHistory().unbanlist(peer);
+    if (_log.shouldLog(Log.INFO))     _log.info("Unbanlisting router (expired) " + peer.toBase64());
+  }
+  requeue(30 * 1000);
+}
