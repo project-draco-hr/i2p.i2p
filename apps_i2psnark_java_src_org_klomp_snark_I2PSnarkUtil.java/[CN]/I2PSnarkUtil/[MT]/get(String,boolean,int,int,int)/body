@@ -1,0 +1,27 @@
+{
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Fetching [" + url + "] to memory");
+  String fetchURL=url;
+  if (rewrite)   fetchURL=rewriteAnnounce(url);
+  int timeout;
+  if (retries < 0) {
+    if (!connected())     return null;
+    timeout=EEPGET_CONNECT_TIMEOUT_SHORT;
+    retries=0;
+  }
+ else {
+    timeout=EEPGET_CONNECT_TIMEOUT;
+    if (!connected()) {
+      if (!connect())       return null;
+    }
+  }
+  ByteArrayOutputStream out=new ByteArrayOutputStream(initialSize);
+  EepGet get=new I2PSocketEepGet(_context,_manager,retries,-1,maxSize,null,out,fetchURL);
+  if (get.fetch(timeout)) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Fetch successful [" + url + "]: size="+ out.size());
+    return out.toByteArray();
+  }
+ else {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Fetch failed [" + url + "]");
+    return null;
+  }
+}

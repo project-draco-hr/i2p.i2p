@@ -1,0 +1,32 @@
+{
+  int rv=0;
+  if (coordinator.needOutboundPeers() && (meta == null || !meta.isPrivate()) && !stop) {
+    Set<PeerID> pids=coordinator.getPEXPeers();
+    if (!pids.isEmpty()) {
+      if (_log.shouldLog(Log.INFO))       _log.info("Got " + pids.size() + " from PEX");
+      List<Peer> peers=new ArrayList(pids.size());
+      for (      PeerID pID : pids) {
+        peers.add(new Peer(pID,snark.getID(),snark.getInfoHash(),snark.getMetaInfo()));
+      }
+      Random r=_util.getContext().random();
+      Collections.shuffle(peers,r);
+      Iterator<Peer> it=peers.iterator();
+      while ((!stop) && it.hasNext() && coordinator.needOutboundPeers()) {
+        Peer cur=it.next();
+        if (coordinator.addPeer(cur) && it.hasNext()) {
+          int delay=r.nextInt(DELAY_RAND) + DELAY_MIN;
+          try {
+            Thread.sleep(delay);
+          }
+ catch (          InterruptedException ie) {
+          }
+        }
+      }
+      rv=pids.size();
+    }
+  }
+ else {
+    if (_log.shouldLog(Log.INFO))     _log.info("Not getting PEX peers");
+  }
+  return rv;
+}

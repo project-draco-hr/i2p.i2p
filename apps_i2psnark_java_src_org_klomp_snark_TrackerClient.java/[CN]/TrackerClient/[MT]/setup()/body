@@ -5,20 +5,20 @@
   if (primary != null) {
     if (isValidAnnounce(primary)) {
       trackers.add(new Tracker(primary,true));
-      _log.debug("Announce: [" + primary + "] infoHash: "+ infoHash);
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Announce: [" + primary + "] infoHash: "+ infoHash);
     }
  else {
-      _log.warn("Skipping invalid or non-i2p announce: " + primary);
+      if (_log.shouldLog(Log.WARN))       _log.warn("Skipping invalid or non-i2p announce: " + primary);
     }
   }
  else {
     _log.warn("No primary announce");
     primary="";
   }
-  List tlist=_util.getOpenTrackers();
-  if (tlist != null && (meta == null || !meta.isPrivate())) {
+  if (meta == null || !meta.isPrivate()) {
+    List<String> tlist=_util.getOpenTrackers();
     for (int i=0; i < tlist.size(); i++) {
-      String url=(String)tlist.get(i);
+      String url=tlist.get(i);
       if (!isValidAnnounce(url)) {
         _log.error("Bad announce URL: [" + url + "]");
         continue;
@@ -37,8 +37,31 @@
       if (primary.startsWith("http://" + dest))       continue;
       if (primary.startsWith("http://i2p/" + dest))       continue;
       trackers.add(new Tracker(url,primary.equals("")));
-      _log.debug("Additional announce: [" + url + "] for infoHash: "+ infoHash);
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Additional announce: [" + url + "] for infoHash: "+ infoHash);
     }
+  }
+  if (trackers.isEmpty() && (meta == null || !meta.isPrivate())) {
+    List<String> tlist=_util.getBackupTrackers();
+    for (int i=0; i < tlist.size(); i++) {
+      String url=tlist.get(i);
+      if (!isValidAnnounce(url)) {
+        _log.error("Bad announce URL: [" + url + "]");
+        continue;
+      }
+      int slash=url.indexOf('/',7);
+      if (slash <= 7) {
+        _log.error("Bad announce URL: [" + url + "]");
+        continue;
+      }
+      String dest=_util.lookup(url.substring(7,slash));
+      if (dest == null) {
+        _log.error("Announce host unknown: [" + url.substring(7,slash) + "]");
+        continue;
+      }
+      backupTrackers.add(new Tracker(url,false));
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Backup announce: [" + url + "] for infoHash: "+ infoHash);
+    }
+    if (backupTrackers.isEmpty())     backupTrackers.add(new Tracker(DEFAULT_BACKUP_TRACKER,false));
   }
   this.completed=coordinator.getLeft() == 0;
 }
