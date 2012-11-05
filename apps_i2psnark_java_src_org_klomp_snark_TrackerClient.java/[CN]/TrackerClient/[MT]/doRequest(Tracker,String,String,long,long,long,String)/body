@@ -9,32 +9,22 @@
   buf.append("&compact=1");
   if (!event.equals(NO_EVENT))   buf.append("&event=").append(event);
   buf.append("&numwant=");
-  if (left == 0 || event.equals(STOPPED_EVENT) || !coordinator.needOutboundPeers())   buf.append('0');
+  boolean small=left == 0 || event.equals(STOPPED_EVENT) || !coordinator.needOutboundPeers();
+  if (small)   buf.append('0');
  else   buf.append(_util.getMaxConnections());
   String s=buf.toString();
   if (_log.shouldLog(Log.INFO))   _log.info("Sending TrackerClient request: " + s);
   tr.lastRequestTime=System.currentTimeMillis();
   boolean fast=_fastUnannounce && event.equals(STOPPED_EVENT);
-  File fetched=_util.get(s,true,fast ? -1 : 0);
+  byte[] fetched=_util.get(s,true,fast ? -1 : 0,small ? 128 : 1024,small ? 1024 : 8 * 1024);
   if (fetched == null) {
     throw new IOException("Error fetching " + s);
   }
-  InputStream in=null;
-  try {
-    in=new FileInputStream(fetched);
-    TrackerInfo info=new TrackerInfo(in,snark.getID(),snark.getInfoHash(),snark.getMetaInfo(),_util);
-    if (_log.shouldLog(Log.INFO))     _log.info("TrackerClient response: " + info);
-    String failure=info.getFailureReason();
-    if (failure != null)     throw new IOException(failure);
-    tr.interval=Math.max(MIN_TRACKER_ANNOUNCE_INTERVAL,info.getInterval() * 1000l);
-    return info;
-  }
-  finally {
-    if (in != null)     try {
-      in.close();
-    }
- catch (    IOException ioe) {
-    }
-    fetched.delete();
-  }
+  InputStream in=new ByteArrayInputStream(fetched);
+  TrackerInfo info=new TrackerInfo(in,snark.getID(),snark.getInfoHash(),snark.getMetaInfo(),_util);
+  if (_log.shouldLog(Log.INFO))   _log.info("TrackerClient response: " + info);
+  String failure=info.getFailureReason();
+  if (failure != null)   throw new IOException(failure);
+  tr.interval=Math.max(MIN_TRACKER_ANNOUNCE_INTERVAL,info.getInterval() * 1000l);
+  return info;
 }

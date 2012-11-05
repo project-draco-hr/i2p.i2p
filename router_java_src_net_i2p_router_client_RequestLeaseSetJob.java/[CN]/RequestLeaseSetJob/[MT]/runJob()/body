@@ -12,15 +12,13 @@
   }
   try {
     _runner.doSend(msg);
-    getContext().jobQueue().addJob(new CheckLeaseRequestStatus(getContext(),_requestState));
-    return;
+    getContext().jobQueue().addJob(new CheckLeaseRequestStatus());
   }
  catch (  I2CPMessageException ime) {
     getContext().statManager().addRateData("client.requestLeaseSetDropped",1,0);
     _log.error("Error sending I2CP message requesting the lease set",ime);
     _requestState.setIsSuccessful(false);
-    _runner.setLeaseRequest(null);
-    _runner.disconnectClient("I2CP error requesting leaseSet");
-    return;
+    if (_requestState.getOnFailed() != null)     RequestLeaseSetJob.this.getContext().jobQueue().addJob(_requestState.getOnFailed());
+    _runner.failLeaseRequest(_requestState);
   }
 }

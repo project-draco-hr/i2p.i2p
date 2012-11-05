@@ -2,17 +2,22 @@
   if (!_isRunning)   return;
   long now=_context.clock().now();
   if (_log.shouldLog(Log.DEBUG))   _log.debug("KRPC cleaner starting with " + _blacklist.size() + " in blacklist, "+ _outgoingTokens.size()+ " sent Tokens, "+ _incomingTokens.size()+ " rcvd Tokens");
+  int cnt=0;
+  long expire=now - MAX_TOKEN_AGE;
   for (Iterator<Token> iter=_outgoingTokens.keySet().iterator(); iter.hasNext(); ) {
     Token tok=iter.next();
-    if (tok.lastSeen() < now - MAX_TOKEN_AGE)     iter.remove();
+    if (tok.lastSeen() < expire || cnt >= MAX_OUTBOUND_TOKENS)     iter.remove();
+ else     cnt++;
   }
+  expire=now - MAX_INBOUND_TOKEN_AGE;
   for (Iterator<Token> iter=_incomingTokens.values().iterator(); iter.hasNext(); ) {
     Token tok=iter.next();
-    if (tok.lastSeen() < now - MAX_INBOUND_TOKEN_AGE)     iter.remove();
+    if (tok.lastSeen() < expire)     iter.remove();
   }
+  expire=now - BLACKLIST_CLEAN_TIME;
   for (Iterator<NID> iter=_blacklist.iterator(); iter.hasNext(); ) {
     NID nid=iter.next();
-    if (now > nid.lastSeen() + BLACKLIST_CLEAN_TIME)     iter.remove();
+    if (nid.lastSeen() < expire)     iter.remove();
   }
   if (_log.shouldLog(Log.DEBUG))   _log.debug("KRPC cleaner done, now with " + _blacklist.size() + " in blacklist, "+ _outgoingTokens.size()+ " sent Tokens, "+ _incomingTokens.size()+ " rcvd Tokens, "+ _knownNodes.size()+ " known peers, "+ _sentQueries.size()+ " queries awaiting response");
   schedule(CLEAN_TIME);
