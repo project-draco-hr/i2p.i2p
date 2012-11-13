@@ -19,6 +19,7 @@
     String userAgent=null;
     String authorization=null;
     int remotePort=0;
+    String referer=null;
     while ((line=reader.readLine(method)) != null) {
       line=line.trim();
       if (_log.shouldLog(Log.DEBUG)) {
@@ -318,9 +319,12 @@
           line=null;
           continue;
         }
- else         if (lowercaseLine.startsWith("referer: ") && !Boolean.parseBoolean(getTunnel().getClientOptions().getProperty(PROP_REFERER))) {
-          line=null;
-          continue;
+ else         if (lowercaseLine.startsWith("referer: ")) {
+          referer=line.substring(9);
+          if (!Boolean.parseBoolean(getTunnel().getClientOptions().getProperty(PROP_REFERER))) {
+            line=null;
+            continue;
+          }
         }
  else         if (lowercaseLine.startsWith("via: ") && !Boolean.parseBoolean(getTunnel().getClientOptions().getProperty(PROP_VIA))) {
           line=null;
@@ -490,7 +494,7 @@
       return;
     }
     if (ahelperNew && "GET".equals(method) && (userAgent == null || !userAgent.startsWith("Wget"))&& !Boolean.parseBoolean(getTunnel().getClientOptions().getProperty(PROP_DISABLE_HELPER))) {
-      writeHelperSaveForm(out,destination,ahelperKey,targetRequest);
+      writeHelperSaveForm(out,destination,ahelperKey,targetRequest,referer);
       s.close();
       return;
     }
