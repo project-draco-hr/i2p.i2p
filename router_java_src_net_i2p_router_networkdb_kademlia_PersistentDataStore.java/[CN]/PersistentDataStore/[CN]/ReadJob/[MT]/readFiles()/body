@@ -2,8 +2,7 @@
   int routerCount=0;
   File routerInfoFiles[]=_dbDir.listFiles(RouterInfoFilter.getInstance());
   if (routerInfoFiles != null) {
-    routerCount+=routerInfoFiles.length;
-    if (routerInfoFiles.length > 5)     _alreadyWarned=false;
+    routerCount=routerInfoFiles.length;
     for (int i=0; i < routerInfoFiles.length; i++) {
       if (!_context.router().isAlive())       break;
       Hash key=getRouterInfoHash(routerInfoFiles[i].getName());
@@ -12,9 +11,14 @@
       }
     }
   }
-  if (!_alreadyWarned) {
-    _facade.reseedChecker().checkReseed(routerCount);
-    _alreadyWarned=true;
+  if (!_initialized) {
+    if (_facade.reseedChecker().checkReseed(routerCount))     _lastReseed=_context.clock().now();
     _initialized=true;
+  }
+ else   if (_lastReseed < _context.clock().now() - MIN_RESEED_INTERVAL) {
+    int count=Math.min(routerCount,size());
+    if (count < MIN_ROUTERS) {
+      if (_facade.reseedChecker().checkReseed(count))       _lastReseed=_context.clock().now();
+    }
   }
 }
