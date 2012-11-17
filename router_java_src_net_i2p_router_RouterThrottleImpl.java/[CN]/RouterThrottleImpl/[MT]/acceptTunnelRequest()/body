@@ -8,8 +8,7 @@
     setTunnelStatus(_x("Rejecting tunnels: Starting up"));
     return TunnelHistory.TUNNEL_REJECT_BANDWIDTH;
   }
-  RateAverages ra=RATE_AVERAGES.get();
-  ra.reset();
+  RateAverages ra=RateAverages.getTemp();
   RateStat rs=_context.statManager().getRate("transport.sendProcessingTime");
   Rate r=null;
   if (rs != null)   r=rs.getRate(60 * 1000);
@@ -81,11 +80,7 @@
   double messagesPerTunnel=DEFAULT_MESSAGES_PER_TUNNEL_ESTIMATE;
   if (rs != null) {
     r=rs.getRate(60 * 1000);
-    if (r != null) {
-      ra.reset();
-      r.computeAverages(ra,true);
-      messagesPerTunnel=ra.getAverage();
-    }
+    if (r != null)     messagesPerTunnel=r.computeAverages(ra,true).getAverage();
   }
   if (messagesPerTunnel < DEFAULT_MESSAGES_PER_TUNNEL_ESTIMATE)   messagesPerTunnel=DEFAULT_MESSAGES_PER_TUNNEL_ESTIMATE;
   double bytesAllocated=messagesPerTunnel * numTunnels * PREPROCESSED_SIZE;
