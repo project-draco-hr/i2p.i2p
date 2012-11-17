@@ -8,28 +8,17 @@
     setTunnelStatus(_x("Rejecting tunnels: Starting up"));
     return TunnelHistory.TUNNEL_REJECT_BANDWIDTH;
   }
+  RateAverages ra=RATE_AVERAGES.get();
+  ra.reset();
   RateStat rs=_context.statManager().getRate("transport.sendProcessingTime");
   Rate r=null;
   if (rs != null)   r=rs.getRate(60 * 1000);
   if (r != null) {
-    long current=r.getCurrentEventCount();
-    long last=r.getLastEventCount();
-    long total=current + last;
-    double avgSendProcessingTime=0;
-    double currentSendProcessingTime=0;
-    double lastSendProcessingTime=0;
-    if (total > 0) {
-      if (current > 0)       currentSendProcessingTime=r.getCurrentTotalValue() / current;
-      if (last > 0)       lastSendProcessingTime=r.getLastTotalValue() / last;
-      avgSendProcessingTime=(r.getCurrentTotalValue() + r.getLastTotalValue()) / total;
-    }
- else {
-      avgSendProcessingTime=r.getAverageValue();
-    }
+    r.computeAverages(ra);
     int maxProcessingTime=_context.getProperty(PROP_MAX_PROCESSINGTIME,DEFAULT_MAX_PROCESSINGTIME);
-    if ((avgSendProcessingTime > maxProcessingTime * 0.9 || currentSendProcessingTime > maxProcessingTime || lastSendProcessingTime > maxProcessingTime)) {
+    if ((ra.getAverage() > maxProcessingTime * 0.9 || ra.getCurrent() > maxProcessingTime || ra.getLast() > maxProcessingTime)) {
       if (_log.shouldLog(Log.WARN)) {
-        _log.warn("Refusing tunnel request due to sendProcessingTime " + ((int)currentSendProcessingTime) + " / "+ ((int)lastSendProcessingTime)+ " / "+ ((int)avgSendProcessingTime)+ " / "+ maxProcessingTime+ " current/last/avg/max ms");
+        _log.warn("Refusing tunnel request due to sendProcessingTime " + ((int)ra.getCurrent()) + " / "+ ((int)ra.getLast())+ " / "+ ((int)ra.getAverage())+ " / "+ maxProcessingTime+ " current/last/avg/max ms");
       }
       setTunnelStatus(_x("Rejecting tunnels: High message delay"));
       return TunnelHistory.TUNNEL_REJECT_BANDWIDTH;
