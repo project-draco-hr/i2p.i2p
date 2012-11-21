@@ -10,7 +10,6 @@
   _server.setGracefulShutdown(1000);
   try {
     ThreadPool ctp=new CustomThreadPoolExecutor();
-    ctp.prestartAllCoreThreads();
     _server.setThreadPool(ctp);
   }
  catch (  Throwable t) {
@@ -22,7 +21,7 @@
   }
   HandlerCollection hColl=new HandlerCollection();
   ContextHandlerCollection chColl=new ContextHandlerCollection();
-  _server.addHandler(hColl);
+  _server.setHandler(hColl);
   hColl.addHandler(chColl);
   hColl.addHandler(new DefaultHandler());
   String log=_context.getProperty("routerconsole.log");
@@ -54,7 +53,7 @@
     }
   }
   if (!_webAppsDir.endsWith("/"))   _webAppsDir+='/';
-  WebAppContext rootWebApp=null;
+  HandlerWrapper rootWebApp=null;
   ServletHandler rootServletHandler=null;
   List<Connector> connectors=new ArrayList(4);
   try {
@@ -186,15 +185,11 @@
       System.err.println("Unable to bind routerconsole to any address on port " + _listenPort + (sslPort > 0 ? (" or SSL port " + sslPort) : ""));
       return;
     }
-    rootWebApp=new LocaleWebAppHandler(_context,"/",_webAppsDir + ROUTERCONSOLE + ".war");
     File tmpdir=new SecureDirectory(workDir,ROUTERCONSOLE + "-" + (_listenPort != null ? _listenPort : _sslListenPort));
     tmpdir.mkdir();
-    rootWebApp.setTempDirectory(tmpdir);
-    rootWebApp.setExtractWAR(false);
-    rootWebApp.setSessionHandler(new SessionHandler());
     rootServletHandler=new ServletHandler();
-    rootWebApp.setServletHandler(rootServletHandler);
-    initialize(_context,rootWebApp);
+    rootWebApp=new LocaleWebAppHandler(_context,"/",_webAppsDir + ROUTERCONSOLE + ".war",tmpdir,rootServletHandler);
+    initialize(_context,(WebAppContext)(rootWebApp.getHandler()));
     chColl.addHandler(rootWebApp);
   }
  catch (  Exception ioe) {
