@@ -112,11 +112,12 @@ buf.append("</td><td align=\"center\">");
 if (_context.banlist().isBanlisted(peer)) buf.append(_("Banned"));
 if (prof.getIsFailing()) buf.append(' ').append(_("Failing"));
 if (_context.commSystem().wasUnreachable(peer)) buf.append(' ').append(_("Unreachable"));
+RateAverages ra=RateAverages.getTemp();
 Rate failed=prof.getTunnelHistory().getFailedRate().getRate(30 * 60 * 1000);
-long fails=failed.getCurrentEventCount() + failed.getLastEventCount();
+long fails=failed.computeAverages(ra,false).getTotalEventCount();
 if (fails > 0) {
 Rate accepted=prof.getTunnelCreateResponseTime().getRate(30 * 60 * 1000);
-long total=fails + accepted.getCurrentEventCount() + accepted.getLastEventCount();
+long total=fails + accepted.computeAverages(ra,false).getTotalEventCount();
 if (total / fails <= 10) buf.append(' ').append(fails).append('/').append(total).append(' ').append(_("Test Fails"));
 }
 buf.append("&nbsp;</td>");
@@ -148,6 +149,7 @@ buf.append("<th class=\"smallhead\">").append(_("Last Bad Store")).append("</th>
 buf.append("<th class=\"smallhead\">").append(_("1h Fail Rate")).append("</th>");
 buf.append("<th class=\"smallhead\">").append(_("1d Fail Rate")).append("</th>");
 buf.append("</tr>");
+RateAverages ra=RateAverages.getTemp();
 for (Iterator<PeerProfile> iter=integratedPeers.iterator(); iter.hasNext(); ) {
 PeerProfile prof=iter.next();
 Hash peer=prof.getPeer();
@@ -167,9 +169,9 @@ time=now - prof.getLastSendSuccessful();
 buf.append("<td align=\"right\">").append(DataHelper.formatDuration2(time)).append("</td>");
 time=now - prof.getLastSendFailed();
 buf.append("<td align=\"right\">").append(DataHelper.formatDuration2(time)).append("</td>");
-buf.append("<td align=\"right\">").append(avg(prof,10 * 60 * 1000l)).append("</td>");
-buf.append("<td align=\"right\">").append(avg(prof,60 * 60 * 1000l)).append("</td>");
-buf.append("<td align=\"right\">").append(avg(prof,24 * 60 * 60* 1000l)).append("</td>");
+buf.append("<td align=\"right\">").append(avg(prof,10 * 60 * 1000l,ra)).append("</td>");
+buf.append("<td align=\"right\">").append(avg(prof,60 * 60 * 1000l,ra)).append("</td>");
+buf.append("<td align=\"right\">").append(avg(prof,24 * 60 * 60* 1000l,ra)).append("</td>");
 DBHistory dbh=prof.getDBHistory();
 if (dbh != null) {
 time=now - dbh.getLastLookupSuccessful();
@@ -180,8 +182,8 @@ time=now - dbh.getLastStoreSuccessful();
 buf.append("<td align=\"right\">").append(DataHelper.formatDuration2(time)).append("</td>");
 time=now - dbh.getLastStoreFailed();
 buf.append("<td align=\"right\">").append(DataHelper.formatDuration2(time)).append("</td>");
-buf.append("<td align=\"right\">").append(davg(dbh,60 * 60 * 1000l)).append("</td>");
-buf.append("<td align=\"right\">").append(davg(dbh,24 * 60 * 60* 1000l)).append("</td>");
+buf.append("<td align=\"right\">").append(davg(dbh,60 * 60 * 1000l,ra)).append("</td>");
+buf.append("<td align=\"right\">").append(davg(dbh,24 * 60 * 60* 1000l,ra)).append("</td>");
 }
  else {
 for (int i=0; i < 6; i++) buf.append("<td align=\"right\">").append(_(NA));
