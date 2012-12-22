@@ -2,9 +2,10 @@
   String primary=null;
   if (meta != null)   primary=meta.getAnnounce();
  else   if (additionalTrackerURL != null)   primary=additionalTrackerURL;
+  Set<Hash> trackerHashes=new HashSet(8);
   if (primary != null) {
-    if (isValidAnnounce(primary)) {
-      trackers.add(new Tracker(primary,true));
+    if (isNewValidTracker(trackerHashes,primary)) {
+      trackers.add(new TCTracker(primary,true));
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Announce: [" + primary + "] infoHash: "+ infoHash);
     }
  else {
@@ -13,30 +14,25 @@
   }
  else {
     _log.warn("No primary announce");
-    primary="";
+  }
+  if (meta != null && !meta.isPrivate()) {
+    List<List<String>> list=meta.getAnnounceList();
+    if (list != null) {
+      for (      List<String> llist : list) {
+        for (        String url : llist) {
+          if (!isNewValidTracker(trackerHashes,url))           continue;
+          trackers.add(new TCTracker(url,trackers.isEmpty()));
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("Additional announce (list): [" + url + "] for infoHash: "+ infoHash);
+        }
+      }
+    }
   }
   if (meta == null || !meta.isPrivate()) {
     List<String> tlist=_util.getOpenTrackers();
     for (int i=0; i < tlist.size(); i++) {
       String url=tlist.get(i);
-      if (!isValidAnnounce(url)) {
-        _log.error("Bad announce URL: [" + url + "]");
-        continue;
-      }
-      int slash=url.indexOf('/',7);
-      if (slash <= 7) {
-        _log.error("Bad announce URL: [" + url + "]");
-        continue;
-      }
-      if (primary.startsWith(url.substring(0,slash)))       continue;
-      String dest=_util.lookup(url.substring(7,slash));
-      if (dest == null) {
-        _log.error("Announce host unknown: [" + url.substring(7,slash) + "]");
-        continue;
-      }
-      if (primary.startsWith("http://" + dest))       continue;
-      if (primary.startsWith("http://i2p/" + dest))       continue;
-      trackers.add(new Tracker(url,primary.equals("")));
+      if (!isNewValidTracker(trackerHashes,url))       continue;
+      trackers.add(new TCTracker(url,trackers.isEmpty()));
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Additional announce: [" + url + "] for infoHash: "+ infoHash);
     }
   }
@@ -44,24 +40,13 @@
     List<String> tlist=_util.getBackupTrackers();
     for (int i=0; i < tlist.size(); i++) {
       String url=tlist.get(i);
-      if (!isValidAnnounce(url)) {
-        _log.error("Bad announce URL: [" + url + "]");
-        continue;
-      }
-      int slash=url.indexOf('/',7);
-      if (slash <= 7) {
-        _log.error("Bad announce URL: [" + url + "]");
-        continue;
-      }
-      String dest=_util.lookup(url.substring(7,slash));
-      if (dest == null) {
-        _log.error("Announce host unknown: [" + url.substring(7,slash) + "]");
-        continue;
-      }
-      backupTrackers.add(new Tracker(url,false));
+      if (!isNewValidTracker(trackerHashes,url))       continue;
+      backupTrackers.add(new TCTracker(url,false));
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Backup announce: [" + url + "] for infoHash: "+ infoHash);
     }
-    if (backupTrackers.isEmpty())     backupTrackers.add(new Tracker(DEFAULT_BACKUP_TRACKER,false));
+    if (backupTrackers.isEmpty()) {
+      backupTrackers.add(new TCTracker(DEFAULT_BACKUP_TRACKER,false));
+    }
   }
   this.completed=coordinator.getLeft() == 0;
 }
