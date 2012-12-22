@@ -175,13 +175,45 @@
     if (baseData != null && baseData.trim().length() > 0) {
       File baseFile=new File(_manager.getDataDir(),baseData);
       String announceURL=req.getParameter("announceURL");
-      if (announceURL == null || announceURL.length() <= 0)       _manager.addMessage(_("Error creating torrent - you must select a tracker"));
- else       if (baseFile.exists()) {
-        _lastAnnounceURL=announceURL;
+      if (baseFile.exists()) {
         if (announceURL.equals("none"))         announceURL=null;
+        _lastAnnounceURL=announceURL;
+        List<String> backupURLs=new ArrayList();
+        Enumeration e=req.getParameterNames();
+        while (e.hasMoreElements()) {
+          Object o=e.nextElement();
+          if (!(o instanceof String))           continue;
+          String k=(String)o;
+          if (k.startsWith("backup_")) {
+            String url=k.substring(7);
+            if (!url.equals(announceURL))             backupURLs.add(url);
+          }
+        }
+        List<List<String>> announceList=null;
+        if (!backupURLs.isEmpty()) {
+          if (announceURL == null) {
+            _manager.addMessage(_("Error - Cannot include alternate trackers without a primary tracker"));
+            return;
+          }
+          backupURLs.add(0,announceURL);
+          boolean hasPrivate=false;
+          boolean hasPublic=false;
+          for (          String url : backupURLs) {
+            if (_manager.getPrivateTrackers().contains(announceURL))             hasPrivate=true;
+ else             hasPublic=true;
+          }
+          if (hasPrivate && hasPublic) {
+            _manager.addMessage(_("Error - Cannot mix private and public trackers in a torrent"));
+            return;
+          }
+          announceList=new ArrayList(backupURLs.size());
+          for (          String url : backupURLs) {
+            announceList.add(Collections.singletonList(url));
+          }
+        }
         try {
           boolean isPrivate=_manager.getPrivateTrackers().contains(announceURL);
-          Storage s=new Storage(_manager.util(),baseFile,announceURL,isPrivate,null);
+          Storage s=new Storage(_manager.util(),baseFile,announceURL,announceList,isPrivate,null);
           s.close();
           MetaInfo info=s.getMetaInfo();
           File torrentFile=new File(_manager.getDataDir(),s.getBaseName() + ".torrent");
