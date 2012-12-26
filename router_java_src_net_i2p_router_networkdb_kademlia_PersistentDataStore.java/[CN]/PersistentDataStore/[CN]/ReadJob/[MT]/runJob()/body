@@ -1,11 +1,22 @@
 {
+  long now=getContext().clock().now();
   long lastMod=_dbDir.lastModified();
-  if (lastMod > _lastModified || size() < MIN_ROUTERS + 10) {
-    _lastModified=lastMod;
+  boolean shouldScan=lastMod > _lastModified || size() < MIN_ROUTERS + 10;
+  if (!shouldScan && !_flat) {
+    for (int j=0; j < B64.length(); j++) {
+      File subdir=new File(_dbDir,DIR_PREFIX + B64.charAt(j));
+      if (subdir.lastModified() > _lastModified) {
+        shouldScan=true;
+        break;
+      }
+    }
+  }
+  if (shouldScan) {
     _log.info("Rereading new files");
 synchronized (_dbDir) {
       readFiles();
     }
+    _lastModified=now;
   }
   requeue(READ_DELAY);
 }
