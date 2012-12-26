@@ -1,17 +1,3 @@
 {
-  if (_finished)   return;
-  _finished=true;
-  long sendTime=getContext().clock().now() - _start;
-  if (_log.shouldLog(Log.WARN))   _log.warn(getJobId() + ": Failed to send the message " + _clientMessageId+ " to "+ _toString+ " out "+ _outTunnel+ " in "+ _lease+ " ack "+ _inTunnel+ " after "+ sendTime+ "ms");
-  long messageDelay=getContext().throttle().getMessageDelay();
-  long tunnelLag=getContext().throttle().getTunnelLag();
-  long inboundDelta=(long)getContext().throttle().getInboundRateDelta();
-  getContext().statManager().addRateData("client.timeoutCongestionTunnel",tunnelLag,1);
-  getContext().statManager().addRateData("client.timeoutCongestionMessage",messageDelay,1);
-  getContext().statManager().addRateData("client.timeoutCongestionInbound",inboundDelta,1);
-  clearCaches();
-  getContext().messageHistory().sendPayloadMessage(_clientMessageId.getMessageId(),false,sendTime);
-  getContext().clientManager().messageDeliveryStatusUpdate(_from,_clientMessageId,false);
-  getContext().statManager().updateFrequency("client.sendMessageFailFrequency");
-  _clove=null;
+  dieFatal(MessageStatusMessage.STATUS_SEND_GUARANTEED_FAILURE);
 }
