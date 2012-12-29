@@ -2,10 +2,16 @@
   if (_log.shouldLog(Log.INFO))   _log.info("Joining as OBEP: " + cfg);
   TunnelId recvId=cfg.getReceiveTunnel();
   OutboundTunnelEndpoint endpoint=new OutboundTunnelEndpoint(_context,cfg,new HopProcessor(_context,cfg,_validator));
-  _outboundEndpoints.put(recvId,endpoint);
-  _participatingConfig.put(recvId,cfg);
+synchronized (_joinParticipantLock) {
+    if (_participatingConfig.putIfAbsent(recvId,cfg) != null)     return false;
+    if (_outboundEndpoints.putIfAbsent(recvId,endpoint) != null) {
+      _participatingConfig.remove(recvId);
+      return false;
+    }
+  }
   _context.messageHistory().tunnelJoined("outboundEndpoint",cfg);
   _context.statManager().addRateData("tunnel.joinOutboundEndpoint",1);
   if (cfg.getExpiration() > _lastParticipatingExpiration)   _lastParticipatingExpiration=cfg.getExpiration();
   _leaveJob.add(cfg);
+  return true;
 }
