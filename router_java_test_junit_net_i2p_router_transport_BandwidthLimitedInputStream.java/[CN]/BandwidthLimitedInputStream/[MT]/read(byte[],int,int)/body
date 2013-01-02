@@ -1,9 +1,9 @@
 {
   int read=in.read(dest,off,len);
   if (read == -1)   return -1;
-  if (_pullFromOutbound)   _currentRequest=_context.bandwidthLimiter().requestOutbound(read,_peerSource);
+  if (_pullFromOutbound)   _currentRequest=_context.bandwidthLimiter().requestOutbound(read,0,_peerSource);
  else   _currentRequest=_context.bandwidthLimiter().requestInbound(read,_peerSource);
-  while ((_currentRequest.getPendingInboundRequested() > 0) || (_currentRequest.getPendingOutboundRequested() > 0)) {
+  while (_currentRequest.getPendingRequested() > 0) {
     _currentRequest.waitForNextAllocation();
     if (_currentRequest.getAborted()) {
       if (_log.shouldLog(Log.WARN))       _log.warn("Request aborted while trying to read " + len + " (actually read "+ read+ ")");
