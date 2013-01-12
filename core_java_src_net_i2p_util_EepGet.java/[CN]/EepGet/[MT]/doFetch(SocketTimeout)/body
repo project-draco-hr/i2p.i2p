@@ -27,8 +27,8 @@
     if (_log.shouldLog(Log.INFO))     _log.info("Redirecting to " + _redirectLocation);
     _bytesRemaining=-1;
     _redirectLocation=null;
-    _etag=null;
-    _lastModified=null;
+    _etag=_etagOrig;
+    _lastModified=_lastModifiedOrig;
     _contentType=null;
     _encodingChunked=false;
     sendRequest(timeout);
@@ -107,7 +107,12 @@
   if (timeout != null)   timeout.cancel();
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Done transferring " + _bytesTransferred + " (ok? "+ !_transferFailed+ ")");
   if (_transferFailed) {
-    for (int i=0; i < _listeners.size(); i++)     _listeners.get(i).attemptFailed(_url,_bytesTransferred,_bytesRemaining,_currentAttempt,_numRetries,new Exception("Attempt failed"));
+    if (!_listeners.isEmpty()) {
+      Exception e=new IOException("Attempt failed " + _responseCode);
+      for (int i=0; i < _listeners.size(); i++) {
+        _listeners.get(i).attemptFailed(_url,_bytesTransferred,_bytesRemaining,_currentAttempt,_numRetries,e);
+      }
+    }
   }
  else   if ((_minSize > 0) && (_alreadyTransferred < _minSize)) {
     throw new IOException("Bytes transferred " + _alreadyTransferred + " violates minimum of "+ _minSize+ " bytes");
