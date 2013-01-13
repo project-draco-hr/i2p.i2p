@@ -1,13 +1,16 @@
 {
-  if ((getSessionId() == null) || (getDestination() == null) || (getPayload() == null)|| (getNonce() <= 0))   throw new I2CPMessageException("Unable to write out the message as there is not enough data");
-  int len=2 + getDestination().size() + getPayload().getSize()+ 4+ 4+ DataHelper.DATE_LENGTH;
+  if (_sessionId == null)   throw new I2CPMessageException("No session ID");
+  if (_destination == null)   throw new I2CPMessageException("No dest");
+  if (_payload == null)   throw new I2CPMessageException("No payload");
+  if (_nonce < 0)   throw new I2CPMessageException("No nonce");
+  int len=2 + _destination.size() + _payload.getSize()+ 4+ 4+ DataHelper.DATE_LENGTH;
   try {
     DataHelper.writeLong(out,4,len);
-    DataHelper.writeLong(out,1,getType());
-    getSessionId().writeBytes(out);
-    getDestination().writeBytes(out);
-    getPayload().writeBytes(out);
-    DataHelper.writeLong(out,4,getNonce());
+    DataHelper.writeLong(out,1,MESSAGE_TYPE);
+    _sessionId.writeBytes(out);
+    _destination.writeBytes(out);
+    _payload.writeBytes(out);
+    DataHelper.writeLong(out,4,_nonce);
     _daf.writeBytes(out);
   }
  catch (  DataFormatException dfe) {

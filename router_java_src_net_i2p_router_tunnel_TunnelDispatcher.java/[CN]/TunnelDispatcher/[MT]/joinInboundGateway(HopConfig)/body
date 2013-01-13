@@ -5,10 +5,16 @@
   TunnelGateway.Receiver receiver=new InboundGatewayReceiver(_context,cfg);
   TunnelGateway gw=new ThrottledPumpedTunnelGateway(_context,preproc,sender,receiver,_pumper,cfg);
   TunnelId recvId=cfg.getReceiveTunnel();
-  _inboundGateways.put(recvId,gw);
-  _participatingConfig.put(recvId,cfg);
+synchronized (_joinParticipantLock) {
+    if (_participatingConfig.putIfAbsent(recvId,cfg) != null)     return false;
+    if (_inboundGateways.putIfAbsent(recvId,gw) != null) {
+      _participatingConfig.remove(recvId);
+      return false;
+    }
+  }
   _context.messageHistory().tunnelJoined("inboundGateway",cfg);
   _context.statManager().addRateData("tunnel.joinInboundGateway",1);
   if (cfg.getExpiration() > _lastParticipatingExpiration)   _lastParticipatingExpiration=cfg.getExpiration();
   _leaveJob.add(cfg);
+  return true;
 }

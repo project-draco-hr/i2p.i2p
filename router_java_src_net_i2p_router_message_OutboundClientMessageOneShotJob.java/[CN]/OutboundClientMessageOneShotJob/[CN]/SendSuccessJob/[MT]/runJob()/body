@@ -1,6 +1,5 @@
 {
-  if (_finished)   return;
-  _finished=true;
+  if (_finished.getAndSet(true))   return;
   long sendTime=getContext().clock().now() - _start;
   if (_log.shouldLog(Log.INFO))   _log.info(OutboundClientMessageOneShotJob.this.getJobId() + ": SUCCESS!  msg " + _clientMessageId+ " acked by DSM after "+ sendTime+ "ms");
   if (_key != null && _tags != null && _leaseSet != null) {
@@ -9,7 +8,7 @@
   }
   long dataMsgId=_cloveId;
   getContext().messageHistory().sendPayloadMessage(dataMsgId,true,sendTime);
-  getContext().clientManager().messageDeliveryStatusUpdate(_from,_clientMessageId,true);
+  getContext().clientManager().messageDeliveryStatusUpdate(_from,_clientMessageId,MessageStatusMessage.STATUS_SEND_GUARANTEED_SUCCESS);
   int size=_clientMessageSize;
   getContext().statManager().addRateData("client.sendAckTime",sendTime,0);
   getContext().statManager().addRateData("client.sendMessageSize",_clientMessageSize,sendTime);

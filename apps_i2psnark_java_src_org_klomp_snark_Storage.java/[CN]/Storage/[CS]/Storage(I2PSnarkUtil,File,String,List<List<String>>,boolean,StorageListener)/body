@@ -1,0 +1,42 @@
+{
+  _util=util;
+  _log=util.getContext().logManager().getLog(Storage.class);
+  this.listener=listener;
+  getFiles(baseFile);
+  long total=0;
+  ArrayList<Long> lengthsList=new ArrayList();
+  for (int i=0; i < lengths.length; i++) {
+    long length=lengths[i];
+    total+=length;
+    lengthsList.add(Long.valueOf(length));
+  }
+  if (total <= 0)   throw new IOException("Torrent contains no data");
+  if (total > MAX_TOTAL_SIZE)   throw new IOException("Torrent too big (" + total + " bytes), max is "+ MAX_TOTAL_SIZE);
+  int pc_size=MIN_PIECE_SIZE;
+  int pcs=(int)((total - 1) / pc_size) + 1;
+  while (pcs > MAX_PIECES && pc_size < MAX_PIECE_SIZE) {
+    pc_size*=2;
+    pcs=(int)((total - 1) / pc_size) + 1;
+  }
+  piece_size=pc_size;
+  pieces=pcs;
+  total_length=total;
+  bitfield=new BitField(pieces);
+  needed=0;
+  List<List<String>> files=new ArrayList();
+  for (int i=0; i < names.length; i++) {
+    List<String> file=new ArrayList();
+    StringTokenizer st=new StringTokenizer(names[i],File.separator);
+    while (st.hasMoreTokens()) {
+      String part=st.nextToken();
+      file.add(part);
+    }
+    files.add(file);
+  }
+  if (files.size() == 1) {
+    files=null;
+    lengthsList=null;
+  }
+  byte[] piece_hashes=fast_digestCreate();
+  metainfo=new MetaInfo(announce,baseFile.getName(),null,files,lengthsList,piece_size,piece_hashes,total,privateTorrent,announce_list);
+}

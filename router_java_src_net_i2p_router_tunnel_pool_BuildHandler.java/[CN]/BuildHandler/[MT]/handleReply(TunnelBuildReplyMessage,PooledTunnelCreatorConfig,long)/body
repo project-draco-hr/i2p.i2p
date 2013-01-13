@@ -21,10 +21,10 @@
       if (ri != null)       bwTier=ri.getBandwidthTier();
  else       if (_log.shouldLog(Log.WARN))       _log.warn("Failed detecting bwTier, null routerInfo for: " + peer);
       if (howBad == 0) {
-        _context.statManager().addRateData("tunnel.tierAgree" + bwTier,1,0);
+        _context.statManager().addRateData("tunnel.tierAgree" + bwTier,1);
       }
  else {
-        _context.statManager().addRateData("tunnel.tierReject" + bwTier,1,0);
+        _context.statManager().addRateData("tunnel.tierReject" + bwTier,1);
       }
       if (_log.shouldLog(Log.INFO))       _log.info(msg.getUniqueId() + ": Peer " + peer+ " replied with status "+ howBad);
       if (howBad == 0) {
@@ -34,43 +34,50 @@
         allAgree=false;
 switch (howBad) {
 case TunnelHistory.TUNNEL_REJECT_BANDWIDTH:
-          _context.statManager().addRateData("tunnel.receiveRejectionBandwidth",1,0);
+          _context.statManager().addRateData("tunnel.receiveRejectionBandwidth",1);
         break;
 case TunnelHistory.TUNNEL_REJECT_TRANSIENT_OVERLOAD:
-      _context.statManager().addRateData("tunnel.receiveRejectionTransient",1,0);
+      _context.statManager().addRateData("tunnel.receiveRejectionTransient",1);
     break;
 case TunnelHistory.TUNNEL_REJECT_PROBABALISTIC_REJECT:
-  _context.statManager().addRateData("tunnel.receiveRejectionProbabalistic",1,0);
+  _context.statManager().addRateData("tunnel.receiveRejectionProbabalistic",1);
 break;
 case TunnelHistory.TUNNEL_REJECT_CRIT:
 default :
-_context.statManager().addRateData("tunnel.receiveRejectionCritical",1,0);
+_context.statManager().addRateData("tunnel.receiveRejectionCritical",1);
 }
 _context.profileManager().tunnelRejected(peer,rtt,howBad);
 _context.messageHistory().tunnelParticipantRejected(peer,"peer rejected after " + rtt + " with "+ howBad+ ": "+ cfg.toString());
 }
 }
 if (allAgree) {
-if (cfg.isInbound()) _context.tunnelDispatcher().joinInbound(cfg);
- else _context.tunnelDispatcher().joinOutbound(cfg);
+boolean success;
+if (cfg.isInbound()) success=_context.tunnelDispatcher().joinInbound(cfg);
+ else success=_context.tunnelDispatcher().joinOutbound(cfg);
+if (!success) {
+_context.statManager().addRateData("tunnel.ownDupID",1);
+_exec.buildComplete(cfg,cfg.getTunnelPool());
+if (_log.shouldLog(Log.WARN)) _log.warn("Dup ID for our own tunnel " + cfg);
+return;
+}
 cfg.getTunnelPool().addTunnel(cfg);
 _exec.buildComplete(cfg,cfg.getTunnelPool());
 _exec.buildSuccessful(cfg);
 ExpireJob expireJob=new ExpireJob(_context,cfg,cfg.getTunnelPool());
 cfg.setExpireJob(expireJob);
 _context.jobQueue().addJob(expireJob);
-if (cfg.getDestination() == null) _context.statManager().addRateData("tunnel.buildExploratorySuccess",rtt,rtt);
- else _context.statManager().addRateData("tunnel.buildClientSuccess",rtt,rtt);
+if (cfg.getDestination() == null) _context.statManager().addRateData("tunnel.buildExploratorySuccess",rtt);
+ else _context.statManager().addRateData("tunnel.buildClientSuccess",rtt);
 }
  else {
 _exec.buildComplete(cfg,cfg.getTunnelPool());
-if (cfg.getDestination() == null) _context.statManager().addRateData("tunnel.buildExploratoryReject",rtt,rtt);
- else _context.statManager().addRateData("tunnel.buildClientReject",rtt,rtt);
+if (cfg.getDestination() == null) _context.statManager().addRateData("tunnel.buildExploratoryReject",rtt);
+ else _context.statManager().addRateData("tunnel.buildClientReject",rtt);
 }
 }
  else {
 if (_log.shouldLog(Log.WARN)) _log.warn(msg.getUniqueId() + ": Tunnel reply could not be decrypted for tunnel " + cfg);
-_context.statManager().addRateData("tunnel.corruptBuildReply",1,0);
+_context.statManager().addRateData("tunnel.corruptBuildReply",1);
 _exec.buildComplete(cfg,cfg.getTunnelPool());
 }
 }

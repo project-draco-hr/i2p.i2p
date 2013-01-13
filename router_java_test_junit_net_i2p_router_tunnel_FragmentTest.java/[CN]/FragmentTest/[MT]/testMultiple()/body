@@ -1,5 +1,5 @@
 {
-  TunnelGateway.Pending pending=createPending(2048,false,false);
+  PendingGatewayMessage pending=createPending(2048,false,false);
   ArrayList messages=new ArrayList();
   messages.add(pending);
   TunnelGateway.QueuePreprocessor pre=createPreprocessor(_context);
@@ -8,14 +8,10 @@
   FragmentHandler handler=new FragmentHandler(_context,handleReceiver);
   ReceiverImpl receiver=new ReceiverImpl(handler,0);
   byte msg[]=pending.getData();
-  boolean keepGoing=true;
-  while (keepGoing) {
-    keepGoing=pre.preprocessQueue(messages,new SenderImpl(),receiver);
-    if (keepGoing)     try {
-      Thread.sleep(100);
-    }
- catch (    InterruptedException ie) {
-    }
+  try {
+    pre.preprocessQueue(messages,new SenderImpl(),receiver);
+    fail("should have thrown IAE");
   }
-  assertTrue(handleReceiver.receivedOk());
+ catch (  IllegalArgumentException expected) {
+  }
 }

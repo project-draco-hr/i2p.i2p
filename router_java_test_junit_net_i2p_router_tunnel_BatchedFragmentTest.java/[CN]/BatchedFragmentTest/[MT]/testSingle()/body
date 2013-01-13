@@ -1,0 +1,21 @@
+{
+  PendingGatewayMessage pending=createPending(949,false,false);
+  ArrayList messages=new ArrayList();
+  messages.add(pending);
+  TunnelGateway.QueuePreprocessor pre=createPreprocessor(_context);
+  SenderImpl sender=new SenderImpl();
+  DefragmentedReceiverImpl handleReceiver=new DefragmentedReceiverImpl(pending.getData());
+  FragmentHandler handler=new FragmentHandler(_context,handleReceiver);
+  ReceiverImpl receiver=new ReceiverImpl(handler,0);
+  byte msg[]=pending.getData();
+  boolean keepGoing=true;
+  while (keepGoing) {
+    keepGoing=pre.preprocessQueue(messages,new SenderImpl(),receiver);
+    if (keepGoing)     try {
+      Thread.sleep(100);
+    }
+ catch (    InterruptedException ie) {
+    }
+  }
+  assertTrue(handleReceiver.receivedOk());
+}

@@ -30,7 +30,12 @@ synchronized (_currentlyBuilding) {
  else {
         if ((allowed > 0) && (!wanted.isEmpty())) {
           Collections.shuffle(wanted,_context.random());
-          Collections.sort(wanted,new TunnelPoolComparator());
+          try {
+            Collections.sort(wanted,new TunnelPoolComparator());
+          }
+ catch (          IllegalArgumentException iae) {
+            continue;
+          }
           if (allowed > 2)           allowed=2;
           for (int i=0; (i < allowed) && (!wanted.isEmpty()); i++) {
             TunnelPool pool=wanted.remove(0);
@@ -63,8 +68,6 @@ synchronized (_currentlyBuilding) {
  catch (        InterruptedException ie) {
         }
       }
-      wanted.clear();
-      pools.clear();
     }
  catch (    RuntimeException e) {
       _log.log(Log.CRIT,"B0rked in the tunnel builder",e);
@@ -74,6 +77,8 @@ synchronized (_currentlyBuilding) {
  catch (      InterruptedException ie) {
       }
     }
+    wanted.clear();
+    pools.clear();
   }
   if (_log.shouldLog(Log.WARN))   _log.warn("Done building");
   _isRunning=false;

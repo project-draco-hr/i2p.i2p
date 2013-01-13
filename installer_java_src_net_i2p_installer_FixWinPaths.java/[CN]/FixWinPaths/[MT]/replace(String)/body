@@ -1,0 +1,49 @@
+{
+  if (!file.contains("wrapper.conf"))   return;
+  String wConf=file;
+  String wConfTemp=wConf + ".tmp";
+  BufferedReader br=null;
+  BufferedWriter bw=null;
+  try {
+    br=new BufferedReader(new InputStreamReader(new FileInputStream(wConf),"UTF-8"));
+    bw=new BufferedWriter(new OutputStreamWriter(new FileOutputStream(wConfTemp),"UTF-8"));
+    String line;
+    while ((line=br.readLine()) != null) {
+      if (line.startsWith("wrapper.logfile="))       line="wrapper.logfile=%appdata%\\i2p\\wrapper.log";
+ else       if (line.startsWith("#wrapper.java.pidfile="))       line="#wrapper.java.pidfile=%appdata%\\i2p\\routerjvm.pid";
+ else       if (line.startsWith("#wrapper.pidfile="))       line="#wrapper.pidfile=%appdata%\\i2p\\i2p.pid";
+      if (line.contains("\\i2p/"))       line=line.replace("\\i2p/","\\i2p\\");
+      if (line.contains("lib/"))       line=line.replace("lib/","lib\\");
+      if (line.contains("\\/"))       line=line.replace("\\/","\\");
+      if (line.contains("logs/log-router"))       line=line.replace("logs/log-router","logs\\log-router");
+      bw.write(line);
+      bw.newLine();
+    }
+  }
+ catch (  IOException e) {
+    return;
+  }
+ finally {
+    try {
+      if (br != null)       br.close();
+    }
+ catch (    IOException e) {
+    }
+    try {
+      if (bw != null)       bw.close();
+    }
+ catch (    IOException e) {
+    }
+  }
+  boolean successful=false;
+  File oldFile=new File(wConf);
+  File newFile=new File(wConfTemp);
+  successful=oldFile.delete();
+  if (successful) {
+    successful=newFile.renameTo(oldFile);
+    if (!successful) {
+      System.err.println("ERROR: Problem processing " + wConf);
+      System.exit(1);
+    }
+  }
+}

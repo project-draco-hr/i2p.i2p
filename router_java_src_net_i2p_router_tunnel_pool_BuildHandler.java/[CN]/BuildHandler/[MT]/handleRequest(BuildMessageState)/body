@@ -4,13 +4,13 @@
   if (timeSinceReceived > (BuildRequestor.REQUEST_TIMEOUT * 3)) {
     _context.throttle().setTunnelStatus(_x("Dropping tunnel requests: Overloaded"));
     if (_log.shouldLog(Log.WARN))     _log.warn("Not even trying to handle/decrypt the request " + state.msg.getUniqueId() + ", since we received it a long time ago: "+ timeSinceReceived);
-    _context.statManager().addRateData("tunnel.dropLoadDelay",timeSinceReceived,0);
+    _context.statManager().addRateData("tunnel.dropLoadDelay",timeSinceReceived);
     return -1;
   }
   long beforeDecrypt=System.currentTimeMillis();
   BuildRequestRecord req=_processor.decrypt(_context,state.msg,_context.routerHash(),_context.keyManager().getPrivateKey());
   long decryptTime=System.currentTimeMillis() - beforeDecrypt;
-  _context.statManager().addRateData("tunnel.decryptRequestTime",decryptTime,decryptTime);
+  _context.statManager().addRateData("tunnel.decryptRequestTime",decryptTime);
   if (decryptTime > 500 && _log.shouldLog(Log.WARN))   _log.warn("Took too long to decrypt the request: " + decryptTime + " for message "+ state.msg.getUniqueId()+ " received "+ (timeSinceReceived + decryptTime)+ " ago");
   if (req == null) {
     if (_log.shouldLog(Log.WARN))     _log.warn("The request " + state.msg.getUniqueId() + " could not be decrypted");

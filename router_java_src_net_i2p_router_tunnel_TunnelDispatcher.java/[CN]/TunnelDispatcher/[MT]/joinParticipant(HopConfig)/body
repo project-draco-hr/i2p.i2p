@@ -2,10 +2,16 @@
   if (_log.shouldLog(Log.INFO))   _log.info("Joining as participant: " + cfg);
   TunnelId recvId=cfg.getReceiveTunnel();
   TunnelParticipant participant=new TunnelParticipant(_context,cfg,new HopProcessor(_context,cfg,_validator));
-  _participants.put(recvId,participant);
-  _participatingConfig.put(recvId,cfg);
+synchronized (_joinParticipantLock) {
+    if (_participatingConfig.putIfAbsent(recvId,cfg) != null)     return false;
+    if (_participants.putIfAbsent(recvId,participant) != null) {
+      _participatingConfig.remove(recvId);
+      return false;
+    }
+  }
   _context.messageHistory().tunnelJoined("participant",cfg);
   _context.statManager().addRateData("tunnel.joinParticipant",1);
   if (cfg.getExpiration() > _lastParticipatingExpiration)   _lastParticipatingExpiration=cfg.getExpiration();
   _leaveJob.add(cfg);
+  return true;
 }

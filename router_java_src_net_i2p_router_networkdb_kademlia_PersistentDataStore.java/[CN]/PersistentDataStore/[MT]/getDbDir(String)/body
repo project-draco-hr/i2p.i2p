@@ -7,5 +7,16 @@
   if (!f.isDirectory())   throw new IOException("DB directory [" + f.getAbsolutePath() + "] is not a directory!");
   if (!f.canRead())   throw new IOException("DB directory [" + f.getAbsolutePath() + "] is not readable!");
   if (!f.canWrite())   throw new IOException("DB directory [" + f.getAbsolutePath() + "] is not writable!");
+  if (_flat) {
+    unmigrate(f);
+  }
+ else {
+    for (int j=0; j < B64.length(); j++) {
+      File subdir=new SecureDirectory(f,DIR_PREFIX + B64.charAt(j));
+      if (!subdir.exists())       subdir.mkdir();
+    }
+    File routerInfoFiles[]=f.listFiles(RouterInfoFilter.getInstance());
+    if (routerInfoFiles != null)     migrate(f,routerInfoFiles);
+  }
   return f;
 }

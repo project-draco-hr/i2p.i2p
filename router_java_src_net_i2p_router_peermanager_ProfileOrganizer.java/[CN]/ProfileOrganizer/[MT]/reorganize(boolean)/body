@@ -12,6 +12,23 @@
  else     _currentExpireTime=Math.min(_currentExpireTime + ADJUST_EXPIRE_TIME,MAX_EXPIRE_TIME);
     expireOlderThan=_context.clock().now() - _currentExpireTime;
   }
+  if (shouldCoalesce) {
+    getReadLock();
+    try {
+      for (Iterator<PeerProfile> iter=_strictCapacityOrder.iterator(); iter.hasNext(); ) {
+        PeerProfile prof=iter.next();
+        if ((expireOlderThan > 0) && (prof.getLastSendSuccessful() <= expireOlderThan)) {
+          continue;
+        }
+        long coalesceStart=System.currentTimeMillis();
+        prof.coalesceOnly();
+        coalesceTime+=(int)(System.currentTimeMillis() - coalesceStart);
+      }
+    }
+  finally {
+      releaseReadLock();
+    }
+  }
   if (!getWriteLock())   return;
   long start=System.currentTimeMillis();
   try {
@@ -24,11 +41,7 @@
         expiredCount++;
         continue;
       }
-      if (shouldCoalesce) {
-        long coalesceStart=System.currentTimeMillis();
-        prof.coalesceStats();
-        coalesceTime+=(int)(System.currentTimeMillis() - coalesceStart);
-      }
+      prof.updateValues();
       reordered.add(prof);
       profileCount++;
     }

@@ -1,20 +1,24 @@
 {
   if (_log.shouldLog(Log.INFO))   _log.info("Outbound built successfully: " + cfg);
+  TunnelGateway gw;
   if (cfg.getLength() > 1) {
     TunnelGateway.QueuePreprocessor preproc=createPreprocessor(cfg);
     TunnelGateway.Sender sender=new OutboundSender(_context,cfg);
     TunnelGateway.Receiver receiver=new OutboundReceiver(_context,cfg);
-    TunnelGateway gw=new PumpedTunnelGateway(_context,preproc,sender,receiver,_pumper);
-    TunnelId outId=cfg.getConfig(0).getSendTunnel();
-    _outboundGateways.put(outId,gw);
+    gw=new PumpedTunnelGateway(_context,preproc,sender,receiver,_pumper);
+  }
+ else {
+    gw=new TunnelGatewayZeroHop(_context,cfg);
+  }
+  TunnelId outId=cfg.getConfig(0).getSendTunnel();
+  if (_outboundGateways.putIfAbsent(outId,gw) != null)   return false;
+  if (cfg.getLength() > 1) {
     _context.statManager().addRateData("tunnel.joinOutboundGateway",1);
     _context.messageHistory().tunnelJoined("outbound",cfg);
   }
  else {
-    TunnelGatewayZeroHop gw=new TunnelGatewayZeroHop(_context,cfg);
-    TunnelId outId=cfg.getConfig(0).getSendTunnel();
-    _outboundGateways.put(outId,gw);
     _context.statManager().addRateData("tunnel.joinOutboundGatewayZeroHop",1);
     _context.messageHistory().tunnelJoined("outboundZeroHop",cfg);
   }
+  return true;
 }

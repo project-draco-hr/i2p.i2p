@@ -1,8 +1,8 @@
 {
-  if (_finished)   return;
+  if (_finished.get())   return;
   long now=getContext().clock().now();
   if (now >= _overallExpiration) {
-    dieFatal();
+    dieFatal(MessageStatusMessage.STATUS_SEND_FAILURE_EXPIRED);
     return;
   }
   _outTunnel=selectOutboundTunnel(_to);
@@ -35,7 +35,7 @@
   }
   boolean ok=buildClove();
   if (!ok) {
-    dieFatal();
+    dieFatal(MessageStatusMessage.STATUS_SEND_FAILURE_UNSUPPORTED_ENCRYPTION);
     return;
   }
   long msgExpiration=_overallExpiration;
@@ -44,7 +44,7 @@
   if (msg == null) {
     if (_log.shouldLog(Log.WARN))     _log.warn(getJobId() + ": Unable to create the garlic message (no tunnels left or too lagged) to " + _toString);
     getContext().statManager().addRateData("client.dispatchNoTunnels",now - _start,0);
-    dieFatal();
+    dieFatal(MessageStatusMessage.STATUS_SEND_FAILURE_NO_TUNNELS);
     return;
   }
   SendSuccessJob onReply=null;
@@ -69,7 +69,7 @@
  else {
     if (_log.shouldLog(Log.WARN))     _log.warn(getJobId() + ": Could not find any outbound tunnels to send the payload through... this might take a while");
     getContext().statManager().addRateData("client.dispatchNoTunnels",now - _start,0);
-    dieFatal();
+    dieFatal(MessageStatusMessage.STATUS_SEND_FAILURE_NO_TUNNELS);
   }
   _clove=null;
   getContext().statManager().addRateData("client.dispatchPrepareTime",now - _start,0);

@@ -39,8 +39,15 @@
  else {
         String base=URIUtil.addPaths(req.getRequestURI(),"/");
         String listing=getListHTML(resource,base,true,method.equals("POST") ? req.getParameterMap() : null);
-        if (listing != null)         resp.getWriter().write(listing);
- else         resp.sendError(404);
+        if (method.equals("POST")) {
+          sendRedirect(req,resp,"");
+        }
+ else         if (listing != null) {
+          resp.getWriter().write(listing);
+        }
+ else {
+          resp.sendError(404);
+        }
       }
     }
  else {
@@ -55,6 +62,8 @@
   if (nonce != null) {
     if (nonce.equals(String.valueOf(_nonce)))     processRequest(req);
  else     _manager.addMessage("Please retry form submission (bad nonce)");
+    sendRedirect(req,resp,peerString);
+    return;
   }
   PrintWriter out=resp.getWriter();
   out.write(DOCTYPE + "<html>\n" + "<head><link rel=\"shortcut icon\" href=\""+ _themePath+ "favicon.ico\">\n"+ "<title>");
