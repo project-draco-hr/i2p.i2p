@@ -1,0 +1,29 @@
+{
+  String servletpath=request.getServletPath();
+  String pathInfo=request.getPathInfo();
+  String pathInContext=addPaths(servletpath,pathInfo);
+  try {
+    HttpContent content=getContent(pathInContext);
+    if (content == null) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Not found: " + pathInContext);
+      response.sendError(404);
+    }
+ else {
+      if (passConditionalHeaders(request,response,content)) {
+        if (_log.shouldLog(Log.INFO))         _log.info("Sending: " + content);
+        sendData(request,response,content);
+      }
+ else {
+        if (_log.shouldLog(Log.INFO))         _log.info("Not modified: " + content);
+      }
+    }
+  }
+ catch (  IllegalArgumentException e) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Error sending " + pathInContext,e);
+    if (!response.isCommitted())     response.sendError(500,e.getMessage());
+  }
+catch (  IOException e) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Error sending " + pathInContext + ": "+ e);
+    throw e;
+  }
+}

@@ -4,7 +4,7 @@
     ls=r.list();
     Arrays.sort(ls,Collator.getInstance());
   }
-  String title=URIUtil.decodePath(base);
+  String title=decodePath(base);
   if (title.startsWith("/i2psnark/"))   title=title.substring("/i2psnark/".length());
   String torrentName;
   int slash=title.indexOf('/');
@@ -97,12 +97,12 @@
   if (showPriority)   buf.append("<th class=\"headerpriority\">").append("<img border=\"0\" src=\"" + _imgPath + "priority.png\" title=\"").append(_("Priority")).append("\" alt=\"").append(_("Priority")).append("\"></th>\n");
   buf.append("</tr>\n</thead>\n");
   buf.append("<tr><td colspan=\"" + (showPriority ? '5' : '4') + "\" class=\"ParentDir\"><A HREF=\"");
-  buf.append(URIUtil.addPaths(base,"../"));
+  buf.append(addPaths(base,"../"));
   buf.append("\"><img alt=\"\" border=\"0\" src=\"" + _imgPath + "up.png\"> ").append(_("Up to higher level directory")).append("</A></td></tr>\n");
   boolean showSaveButton=false;
   for (int i=0; i < ls.length; i++) {
-    String encoded=URIUtil.encodePath(ls[i]);
-    Resource item=r.addPath(ls[i]);
+    String encoded=encodePath(ls[i]);
+    File item=new File(r,ls[i]);
     String rowClass=(i % 2 == 0 ? "snarkTorrentEven" : "snarkTorrentOdd");
     buf.append("<TR class=\"").append(rowClass).append("\">");
     boolean complete=false;
@@ -120,7 +120,7 @@
  else {
         Storage storage=snark.getStorage();
         try {
-          File f=item.getFile();
+          File f=item;
           if (f != null) {
             long remaining=storage.remaining(f.getCanonicalPath());
             if (remaining < 0) {
@@ -148,8 +148,8 @@
         }
       }
     }
-    String path=URIUtil.addPaths(base,encoded);
-    if (item.isDirectory() && !path.endsWith("/"))     path=URIUtil.addPaths(path,"/");
+    String path=addPaths(base,encoded);
+    if (item.isDirectory() && !path.endsWith("/"))     path=addPaths(path,"/");
     String icon=toIcon(item);
     buf.append("<TD class=\"snarkFileIcon ").append(rowClass).append("\">");
     if (complete) {
@@ -176,7 +176,7 @@
     buf.append("</TD>");
     if (showPriority) {
       buf.append("<td class=\"priority\">");
-      File f=item.getFile();
+      File f=item;
       if ((!complete) && (!item.isDirectory()) && f != null) {
         int pri=snark.getStorage().getPriority(f.getCanonicalPath());
         buf.append("<input type=\"radio\" value=\"5\" name=\"pri.").append(f.getCanonicalPath()).append("\" ");
