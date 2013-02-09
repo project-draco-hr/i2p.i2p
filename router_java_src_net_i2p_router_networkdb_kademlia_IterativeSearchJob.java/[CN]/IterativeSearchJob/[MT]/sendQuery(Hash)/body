@@ -17,7 +17,16 @@
   if (_log.shouldLog(Log.INFO))   _log.info(getJobId() + ": Iterative search for " + _key+ " to "+ peer);
   long now=getContext().clock().now();
   _sentTime.put(peer,Long.valueOf(now));
-  getContext().tunnelDispatcher().dispatchOutbound(dlm,outTunnel.getSendTunnelId(0),peer);
+  I2NPMessage outMsg=null;
+  if (_isLease) {
+    RouterInfo ri=getContext().netDb().lookupRouterInfoLocally(peer);
+    if (ri != null) {
+      outMsg=MessageWrapper.wrap(getContext(),dlm,ri);
+      if (_log.shouldLog(Log.DEBUG))       _log.debug(getJobId() + ": Encrypted DLM for " + _key+ " to "+ peer);
+    }
+  }
+  if (outMsg == null)   outMsg=dlm;
+  getContext().tunnelDispatcher().dispatchOutbound(outMsg,outTunnel.getSendTunnelId(0),peer);
   Job j=new IterativeTimeoutJob(getContext(),peer,this);
   long expire=Math.min(_expiration,now + SINGLE_SEARCH_TIME);
   j.getTiming().setStartAfter(expire);

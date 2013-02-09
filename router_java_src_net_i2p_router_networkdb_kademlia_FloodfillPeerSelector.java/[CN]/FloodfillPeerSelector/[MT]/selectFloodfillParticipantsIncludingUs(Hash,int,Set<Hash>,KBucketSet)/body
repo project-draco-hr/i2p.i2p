@@ -18,14 +18,24 @@
       }
     }
   }
-  int limit=Math.max(8,howMany);
+  int limit=Math.max(5,howMany);
   limit=Math.min(limit,ffs.size());
+  Set<Integer> maskedIPs=new HashSet(limit + 4);
   for (int i=0; found < howMany && i < limit; i++) {
     Hash entry=sorted.first();
-    sorted.remove(entry);
     if (entry == null)     break;
+    sorted.remove(entry);
     RouterInfo info=_context.netDb().lookupRouterInfoLocally(entry);
-    if (info != null && now - info.getPublished() > 3 * 60 * 60* 1000) {
+    Set<Integer> entryIPs=maskedIPSet(entry,info,2);
+    boolean sameIP=false;
+    for (    Integer ip : entryIPs) {
+      if (!maskedIPs.add(ip))       sameIP=true;
+    }
+    if (sameIP) {
+      badff.add(entry);
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Same /16: " + entry);
+    }
+ else     if (info != null && now - info.getPublished() > 3 * 60 * 60* 1000) {
       badff.add(entry);
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Old: " + entry);
     }
