@@ -1,0 +1,20 @@
+{
+  try {
+    if (!request.getMethod().equals("HEAD")) {
+      long ifmsl=request.getDateHeader("If-Modified-Since");
+      if (ifmsl != -1) {
+        if (content.getLastModified() / 1000 <= ifmsl / 1000) {
+          response.reset();
+          response.setStatus(304);
+          response.flushBuffer();
+          return false;
+        }
+      }
+    }
+  }
+ catch (  IllegalArgumentException iae) {
+    if (!response.isCommitted())     response.sendError(400,iae.getMessage());
+    throw iae;
+  }
+  return true;
+}

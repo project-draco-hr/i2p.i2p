@@ -1,0 +1,27 @@
+{
+  InputStream in=null;
+  try {
+    in=content.getInputStream();
+  }
+ catch (  IOException e) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Not found: " + content);
+    response.sendError(404);
+    return;
+  }
+  OutputStream out=null;
+  try {
+    out=response.getOutputStream();
+  }
+ catch (  IllegalStateException e) {
+    out=new WriterOutputStream(response.getWriter());
+  }
+  long content_length=content.getContentLength();
+  writeHeaders(response,content,content_length);
+  if (content_length >= 0 && request.getMethod().equals("HEAD")) {
+    if (_log.shouldLog(Log.INFO))     _log.info("HEAD: " + content);
+  }
+ else {
+    copy(in,out);
+  }
+  return;
+}

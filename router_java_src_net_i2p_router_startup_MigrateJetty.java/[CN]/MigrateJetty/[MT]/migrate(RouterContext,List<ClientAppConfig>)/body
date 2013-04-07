@@ -2,10 +2,10 @@
   boolean shouldSave=false;
   for (int i=0; i < apps.size(); i++) {
     ClientAppConfig app=apps.get(i);
-    if (!app.className.equals(OLD_CLASS))     continue;
-    String client="client application " + i + " ["+ app.clientName+ "] from Jetty 5 "+ OLD_CLASS+ " to Jetty 6 "+ NEW_CLASS;
-    if (!hasJetty6()) {
-      System.err.println("WARNING: Jetty 6 unavailable, cannot migrate " + client);
+    if (!(app.className.equals(OLD_CLASS) || app.className.equals(OLD_CLASS_6)))     continue;
+    String client="client application " + i + " ["+ app.clientName+ "] from Jetty 5/6 "+ app.className+ " to Jetty 7 "+ NEW_CLASS;
+    if (!hasLatestJetty()) {
+      System.err.println("WARNING: Jetty 7 unavailable, cannot migrate " + client);
       continue;
     }
     if (app.args == null)     continue;
@@ -26,8 +26,8 @@
       System.err.println("WARNING: Failed to copy XML file " + xmlFile + " to "+ backup+ ", cannot migrate "+ client);
       continue;
     }
-    File baseEep=new File(ctx.getBaseDir(),JETTY6_TEMPLATE_DIR);
-    if (!baseEep.exists())     baseEep=new File(ctx.getBaseDir(),JETTY6_TEMPLATE_PKGDIR);
+    File baseEep=new File(ctx.getBaseDir(),JETTY_TEMPLATE_DIR);
+    if (!baseEep.exists())     baseEep=new File(ctx.getBaseDir(),JETTY_TEMPLATE_PKGDIR);
     if (baseEep.equals(eepsite)) {
       System.err.println("Eepsite in non-split directory " + eepsite + ", cannot migrate "+ client);
       continue;
@@ -59,12 +59,12 @@
   }
   if (shouldSave) {
     File cfgFile=ClientAppConfig.configFile(ctx);
-    File backup=new File(cfgFile.getAbsolutePath() + ".jetty5");
+    File backup=new File(cfgFile.getAbsolutePath() + ".jetty6");
     if (backup.exists())     backup=new File(cfgFile.getAbsolutePath() + ctx.random().nextInt());
     boolean ok=WorkingDir.copyFile(cfgFile,backup);
     if (ok) {
       ClientAppConfig.writeClientAppConfig(ctx,apps);
-      System.err.println("WARNING: Migrated clients config file " + cfgFile + " from Jetty 5 "+ OLD_CLASS+ " to Jetty 6 "+ NEW_CLASS+ "\n"+ "Your old clients config file was saved as "+ backup);
+      System.err.println("WARNING: Migrated clients config file " + cfgFile + " from Jetty 5/6 "+ OLD_CLASS+ '/'+ OLD_CLASS_6+ " to Jetty 7 "+ NEW_CLASS+ "\n"+ "Your old clients config file was saved as "+ backup);
     }
   }
 }
