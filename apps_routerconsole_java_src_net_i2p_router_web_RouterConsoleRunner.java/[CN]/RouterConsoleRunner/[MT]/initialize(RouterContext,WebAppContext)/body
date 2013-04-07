@@ -1,5 +1,5 @@
 {
-  SecurityHandler sec=new SecurityHandler();
+  ConstraintSecurityHandler sec=new ConstraintSecurityHandler();
   List<ConstraintMapping> constraints=new ArrayList(4);
   ConsolePasswordManager mgr=new ConsolePasswordManager(ctx);
   boolean enable=ctx.getBooleanProperty(PROP_PW_ENABLE);
@@ -10,14 +10,13 @@
       ctx.router().saveConfig(PROP_CONSOLE_PW,"false");
     }
  else {
-      HashUserRealm realm=new HashUserRealm(JETTY_REALM);
-      sec.setUserRealm(realm);
+      HashLoginService realm=new HashLoginService(JETTY_REALM);
+      sec.setLoginService(realm);
       sec.setAuthenticator(authenticator);
       for (      Map.Entry<String,String> e : userpw.entrySet()) {
         String user=e.getKey();
         String pw=e.getValue();
-        realm.put(user,MD5.__TYPE + pw);
-        realm.addUserToRole(user,JETTY_ROLE);
+        realm.putUser(user,Credential.getCredential(MD5.__TYPE + pw),new String[]{JETTY_ROLE});
         Constraint constraint=new Constraint(user,JETTY_ROLE);
         constraint.setAuthenticate(true);
         ConstraintMapping cm=new ConstraintMapping();

@@ -1,0 +1,25 @@
+{
+  _context=ctx;
+  _session=session;
+  _log=ctx.logManager().getLog(KRPC.class);
+  _tracker=new DHTTracker(ctx);
+  _sentQueries=new ConcurrentHashMap();
+  _outgoingTokens=new ConcurrentHashMap();
+  _incomingTokens=new ConcurrentHashMap();
+  _blacklist=new ConcurrentHashSet();
+  _qPort=2555 + ctx.random().nextInt(61111);
+  _rPort=_qPort + 1;
+  if (SECURE_NID) {
+    _myNID=NodeInfo.generateNID(session.getMyDestination().calculateHash(),_qPort,_context.random());
+    _myID=_myNID.getData();
+  }
+ else {
+    _myID=new byte[NID.HASH_LENGTH];
+    ctx.random().nextBytes(_myID);
+    _myNID=new NID(_myID);
+  }
+  _myNodeInfo=new NodeInfo(_myNID,session.getMyDestination(),_qPort);
+  _dhtFile=new File(ctx.getConfigDir(),baseName + DHT_FILE_SUFFIX);
+  _knownNodes=new DHTNodes(ctx,_myNID);
+  start();
+}
