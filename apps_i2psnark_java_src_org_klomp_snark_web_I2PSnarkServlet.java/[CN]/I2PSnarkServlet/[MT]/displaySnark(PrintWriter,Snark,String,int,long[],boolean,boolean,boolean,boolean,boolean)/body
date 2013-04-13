@@ -1,4 +1,19 @@
 {
+  long uploaded=snark.getUploaded();
+  stats[0]+=snark.getDownloaded();
+  stats[1]+=uploaded;
+  long downBps=snark.getDownloadRate();
+  long upBps=snark.getUploadRate();
+  boolean isRunning=!snark.isStopped();
+  if (isRunning) {
+    stats[2]+=downBps;
+    stats[3]+=upBps;
+  }
+  int curPeers=snark.getPeerCount();
+  stats[4]+=curPeers;
+  long total=snark.getTotalLength();
+  if (total > 0)   stats[5]+=total;
+  if (statsOnly)   return;
   String filename=snark.getName();
   if (snark.getMetaInfo() != null) {
     File f=new File(filename);
@@ -14,31 +29,17 @@
       filename=start + "&hellip;";
     }
   }
-  long total=snark.getTotalLength();
   long remaining=snark.getRemainingLength();
   if (remaining > total)   remaining=total;
   long needed=snark.getNeededLength();
   if (needed > total)   needed=total;
-  long downBps=snark.getDownloadRate();
-  long upBps=snark.getUploadRate();
   long remainingSeconds;
   if (downBps > 0 && needed > 0)   remainingSeconds=needed / downBps;
  else   remainingSeconds=-1;
-  boolean isRunning=!snark.isStopped();
-  long uploaded=snark.getUploaded();
-  stats[0]+=snark.getDownloaded();
-  stats[1]+=uploaded;
-  if (isRunning) {
-    stats[2]+=downBps;
-    stats[3]+=upBps;
-  }
-  stats[5]+=total;
   MetaInfo meta=snark.getMetaInfo();
   boolean isValid=meta != null;
   boolean isMultiFile=isValid && meta.getFiles() != null;
   String err=snark.getTrackerProblems();
-  int curPeers=snark.getPeerCount();
-  stats[4]+=curPeers;
   int knownPeers=Math.max(curPeers,snark.getTrackerSeenPeers());
   String rowClass=(row % 2 == 0 ? "snarkTorrentEven" : "snarkTorrentOdd");
   String statusString;
