@@ -2,19 +2,31 @@
   try {
     if (StatSummarizer.isDisabled())     return "";
     if (_stat == null) {
-      _out.write("No stat");
+      _out.write("No stat specified");
       return "";
     }
-    List<Rate> rates=StatSummarizer.instance().parseSpecs(_stat);
-    if (rates.size() != 1) {
-      _out.write("Graphs not enabled for " + _stat);
-      return "";
+    long period;
+    String name, displayName;
+    if (_stat.equals("bw.combined")) {
+      period=60000;
+      name=_stat;
+      displayName=_("Bandwidth usage");
     }
-    Rate r=rates.get(0);
+ else {
+      List<Rate> rates=StatSummarizer.instance().parseSpecs(_stat);
+      if (rates.size() != 1) {
+        _out.write("Graphs not enabled for " + _stat);
+        return "";
+      }
+      Rate r=rates.get(0);
+      period=r.getPeriod();
+      name=r.getRateStat().getName();
+      displayName=name;
+    }
     _out.write("<h3>");
-    _out.write(_("{0} for {1}",r.getRateStat().getName(),DataHelper.formatDuration2(_periodCount * r.getPeriod())));
-    if (_end > 0)     _out.write(' ' + _("ending {0} ago",DataHelper.formatDuration2(_end * r.getPeriod())));
-    _out.write("</h3><img class=\"statimage\" border=\"0\"" + " src=\"viewstat.jsp?stat=" + r.getRateStat().getName() + "&amp;showEvents="+ _showEvents+ "&amp;period="+ r.getPeriod()+ "&amp;periodCount="+ _periodCount+ "&amp;end="+ _end+ "&amp;width="+ _width+ "&amp;height="+ _height+ "\"><p>\n");
+    _out.write(_("{0} for {1}",displayName,DataHelper.formatDuration2(_periodCount * period)));
+    if (_end > 0)     _out.write(' ' + _("ending {0} ago",DataHelper.formatDuration2(_end * period)));
+    _out.write("</h3><img class=\"statimage\" border=\"0\"" + " src=\"viewstat.jsp?stat=" + name + "&amp;showEvents="+ _showEvents+ "&amp;period="+ period+ "&amp;periodCount="+ _periodCount+ "&amp;end="+ _end+ "&amp;width="+ _width+ "&amp;height="+ _height+ "\"><p>\n");
     if (_width < MAX_X && _height < MAX_Y) {
       _out.write(link(_stat,_showEvents,_periodCount,_end,_width * 3 / 2,_height * 3 / 2));
       _out.write(_("Larger"));
@@ -72,7 +84,7 @@
     }
     _out.write("<br>");
     _out.write(link(_stat,!_showEvents,_periodCount,_end,_width,_height));
-    _out.write(_showEvents ? _("Plot averages") : _("plot events"));
+    if (!_stat.equals("bw.combined"))     _out.write(_showEvents ? _("Plot averages") : _("plot events"));
     _out.write("</a>");
     _out.write("</p><p><i>" + _("All times are UTC.") + "</i></p>\n");
   }
