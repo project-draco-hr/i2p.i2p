@@ -125,6 +125,9 @@
     if (sslPort > 0) {
       File keyStore=new File(_context.getConfigDir(),"keystore/console.ks");
       if (verifyKeyStore(keyStore)) {
+        SslContextFactory sslFactory=new SslContextFactory(keyStore.getAbsolutePath());
+        sslFactory.setKeyStorePassword(_context.getProperty(PROP_KEYSTORE_PASSWORD,DEFAULT_KEYSTORE_PASSWORD));
+        sslFactory.setKeyManagerPassword(_context.getProperty(PROP_KEY_PASSWORD,"thisWontWork"));
         StringTokenizer tok=new StringTokenizer(_sslListenHost," ,");
         while (tok.hasMoreTokens()) {
           String host=tok.nextToken().trim();
@@ -147,18 +150,12 @@
             }
             AbstractConnector ssll;
             if (SystemVersion.isJava6() && !SystemVersion.isGNU()) {
-              SslSelectChannelConnector sssll=new SslSelectChannelConnector();
-              sssll.setKeystore(keyStore.getAbsolutePath());
-              sssll.setPassword(_context.getProperty(PROP_KEYSTORE_PASSWORD,DEFAULT_KEYSTORE_PASSWORD));
-              sssll.setKeyPassword(_context.getProperty(PROP_KEY_PASSWORD,"thisWontWork"));
+              SslSelectChannelConnector sssll=new SslSelectChannelConnector(sslFactory);
               sssll.setUseDirectBuffers(false);
               ssll=sssll;
             }
  else {
-              SslSocketConnector sssll=new SslSocketConnector();
-              sssll.setKeystore(keyStore.getAbsolutePath());
-              sssll.setPassword(_context.getProperty(PROP_KEYSTORE_PASSWORD,DEFAULT_KEYSTORE_PASSWORD));
-              sssll.setKeyPassword(_context.getProperty(PROP_KEY_PASSWORD,"thisWontWork"));
+              SslSocketConnector sssll=new SslSocketConnector(sslFactory);
               ssll=sssll;
             }
             ssll.setHost(host);
