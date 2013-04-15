@@ -1,5 +1,6 @@
 {
   boolean changed=false;
+  boolean interruptMonitor=false;
   if (upLimit != null) {
     int limit=_util.getMaxUploaders();
     try {
@@ -63,6 +64,41 @@
       }
     }
  catch (    NumberFormatException nfe) {
+    }
+  }
+  if (pageSize != null) {
+    try {
+      int size=Integer.parseInt(pageSize);
+      if (size <= 0)       size=999999;
+      if (size != getPageSize() && size >= 5) {
+        changed=true;
+        pageSize=Integer.toString(size);
+        _config.setProperty(PROP_PAGE_SIZE,pageSize);
+        addMessage(_("Page size changed to {0}",pageSize));
+      }
+    }
+ catch (    NumberFormatException nfe) {
+    }
+  }
+  if (dataDir != null && !dataDir.equals(getDataDir().getAbsolutePath())) {
+    File dd=new File(dataDir);
+    if (!dd.isAbsolute()) {
+      addMessage(_("Data directory must be an absolute path") + ": " + dataDir);
+    }
+ else     if (!dd.exists()) {
+      addMessage(_("Data directory does not exist") + ": " + dataDir);
+    }
+ else     if (!dd.isDirectory()) {
+      addMessage(_("Not a directory") + ": " + dataDir);
+    }
+ else     if (!dd.canRead()) {
+      addMessage(_("Unreadable") + ": " + dataDir);
+    }
+ else {
+      changed=true;
+      interruptMonitor=true;
+      _config.setProperty(PROP_DIR,dataDir);
+      addMessage(_("Data directory changed to {0}",dataDir));
     }
   }
   int oldI2CPPort=_util.getI2CPPort();
@@ -182,6 +218,7 @@
   }
   if (changed) {
     saveConfig();
+    if (interruptMonitor)     _monitor.interrupt();
   }
  else {
     addMessage(_("Configuration unchanged."));
