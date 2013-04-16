@@ -1,22 +1,19 @@
 {
+  _log=I2PAppContext.getGlobalContext().logManager().getLog(SAMBridge.class);
+  _mgr=null;
+  _args=new String[]{listenHost,Integer.toString(listenPort)};
+  _listenHost=listenHost;
+  _listenPort=listenPort;
   persistFilename=persistFile;
   nameToPrivKeys=new HashMap<String,String>(8);
   loadKeys();
   try {
-    if ((listenHost != null) && !("0.0.0.0".equals(listenHost))) {
-      serverSocket=ServerSocketChannel.open();
-      serverSocket.socket().bind(new InetSocketAddress(listenHost,listenPort));
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("SAM bridge listening on " + listenHost + ":"+ listenPort);
-    }
- else {
-      serverSocket=ServerSocketChannel.open();
-      serverSocket.socket().bind(new InetSocketAddress(listenPort));
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("SAM bridge listening on 0.0.0.0:" + listenPort);
-    }
+    openSocket();
   }
- catch (  Exception e) {
+ catch (  IOException e) {
     if (_log.shouldLog(Log.ERROR))     _log.error("Error starting SAM bridge on " + (listenHost == null ? "0.0.0.0" : listenHost) + ":"+ listenPort,e);
     throw new RuntimeException(e);
   }
   this.i2cpProps=i2cpProps;
+  _state=INITIALIZED;
 }
