@@ -5,5 +5,23 @@
     return;
   }
   ClientAppConfig ca=clients.get(i);
-  addFormNotice(_("Client") + ' ' + _(ca.clientName)+ ' '+ _("stopped")+ '.');
+  ClientApp clientApp=_context.clientAppManager().getClientApp(ca.className,LoadClientAppsJob.parseArgs(ca.args));
+  if (clientApp != null && clientApp.getState() == ClientAppState.RUNNING) {
+    try {
+      clientApp.shutdown(null);
+      addFormNotice(_("Client {0} stopped",ca.clientName));
+      try {
+        Thread.sleep(1000);
+      }
+ catch (      InterruptedException ie) {
+      }
+    }
+ catch (    Throwable t) {
+      addFormError("Cannot stop client " + ca.className + ": "+ t);
+      _log.error("Error stopping client " + ca.className,t);
+    }
+  }
+ else {
+    addFormError("Cannot stop client " + i + ": "+ ca.className);
+  }
 }
