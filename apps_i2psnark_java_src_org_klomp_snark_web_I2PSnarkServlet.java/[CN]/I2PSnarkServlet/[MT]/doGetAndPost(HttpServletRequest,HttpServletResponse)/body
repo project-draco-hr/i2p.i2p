@@ -1,0 +1,132 @@
+{
+  String method=req.getMethod();
+  _themePath="/themes/snark/" + _manager.getTheme() + '/';
+  _imgPath=_themePath + "images/";
+  String path=req.getServletPath();
+  resp.setHeader("X-Frame-Options","SAMEORIGIN");
+  String peerParam=req.getParameter("p");
+  String stParam=req.getParameter("st");
+  String peerString;
+  if (peerParam == null || (!_manager.util().connected()) || peerParam.replaceAll("[a-zA-Z0-9~=-]","").length() > 0) {
+    peerString="";
+  }
+ else {
+    peerString="?p=" + peerParam;
+  }
+  if (stParam != null && !stParam.equals("0")) {
+    if (peerString.length() > 0)     peerString+="&amp;st=" + stParam;
+ else     peerString="?st=" + stParam;
+  }
+  if ("/.ajax/xhr1.html".equals(path)) {
+    resp.setCharacterEncoding("UTF-8");
+    resp.setContentType("text/html; charset=UTF-8");
+    PrintWriter out=resp.getWriter();
+    writeMessages(out,false,peerString);
+    writeTorrents(out,req);
+    return;
+  }
+  boolean isConfigure="/configure".equals(path);
+  if (!(path == null || path.equals("/") || path.equals("/index.jsp") || path.equals("/index.html") || path.equals("/_post") || isConfigure)) {
+    if (path.endsWith("/")) {
+      String pathInfo=req.getPathInfo();
+      String pathInContext=addPaths(path,pathInfo);
+      req.setCharacterEncoding("UTF-8");
+      resp.setCharacterEncoding("UTF-8");
+      resp.setContentType("text/html; charset=UTF-8");
+      File resource=getResource(pathInContext);
+      if (resource == null) {
+        resp.sendError(404);
+      }
+ else {
+        String base=addPaths(req.getRequestURI(),"/");
+        String listing=getListHTML(resource,base,true,method.equals("POST") ? req.getParameterMap() : null);
+        if (method.equals("POST")) {
+          sendRedirect(req,resp,"");
+        }
+ else         if (listing != null) {
+          resp.getWriter().write(listing);
+        }
+ else {
+          resp.sendError(404);
+        }
+      }
+    }
+ else {
+      if (method.equals("GET") || method.equals("HEAD"))       super.doGet(req,resp);
+ else       if (method.equals("POST"))       super.doPost(req,resp);
+ else       resp.sendError(405);
+    }
+    return;
+  }
+  req.setCharacterEncoding("UTF-8");
+  resp.setCharacterEncoding("UTF-8");
+  resp.setContentType("text/html; charset=UTF-8");
+  String nonce=req.getParameter("nonce");
+  if (nonce != null) {
+    if (nonce.equals(String.valueOf(_nonce)))     processRequest(req);
+ else     _manager.addMessage("Please retry form submission (bad nonce)");
+    sendRedirect(req,resp,peerString);
+    return;
+  }
+  PrintWriter out=resp.getWriter();
+  out.write(DOCTYPE + "<html>\n" + "<head><link rel=\"shortcut icon\" href=\""+ _themePath+ "favicon.ico\">\n"+ "<title>");
+  out.write(_("I2PSnark - Anonymous BitTorrent Client"));
+  if ("2".equals(peerParam))   out.write(" | Debug Mode");
+  out.write("</title>\n");
+  int delay=0;
+  if (!isConfigure) {
+    delay=_manager.getRefreshDelaySeconds();
+    if (delay > 0) {
+      out.write("<script src=\"/js/ajax.js\" type=\"text/javascript\"></script>\n" + "<script type=\"text/javascript\">\n" + "var failMessage = \"<div class=\\\"routerdown\\\"><b>" + _("Router is down") + "<\\/b><\\/div>\";\n"+ "function requestAjax1() { ajax(\""+ _contextPath+ "/.ajax/xhr1.html"+ peerString+ "\", \"mainsection\", "+ (delay * 1000)+ "); }\n"+ "function initAjax() { setTimeout(requestAjax1, "+ (delay * 1000)+ ");  }\n"+ "</script>\n");
+    }
+  }
+  out.write(HEADER_A + _themePath + HEADER_B+ "</head>\n");
+  if (isConfigure || delay <= 0)   out.write("<body>");
+ else   out.write("<body onload=\"initAjax()\">");
+  out.write("<center>");
+  List<Tracker> sortedTrackers=null;
+  if (isConfigure) {
+    out.write("<div class=\"snarknavbar\"><a href=\"" + _contextPath + "/\" title=\"");
+    out.write(_("Torrents"));
+    out.write("\" class=\"snarkRefresh\">");
+    out.write("<img alt=\"\" border=\"0\" src=\"" + _imgPath + "arrow_refresh.png\">&nbsp;&nbsp;");
+    if (_contextName.equals(DEFAULT_NAME))     out.write(_("I2PSnark"));
+ else     out.write(_contextName);
+    out.write("</a>");
+  }
+ else {
+    out.write("<div class=\"snarknavbar\"><a href=\"" + _contextPath + '/'+ peerString+ "\" title=\"");
+    out.write(_("Refresh page"));
+    out.write("\" class=\"snarkRefresh\">");
+    out.write("<img alt=\"\" border=\"0\" src=\"" + _imgPath + "arrow_refresh.png\">&nbsp;&nbsp;");
+    if (_contextName.equals(DEFAULT_NAME))     out.write(_("I2PSnark"));
+ else     out.write(_contextName);
+    out.write("</a> <a href=\"http://forum.i2p/viewforum.php?f=21\" class=\"snarkRefresh\" target=\"_blank\">");
+    out.write(_("Forum"));
+    out.write("</a>\n");
+    sortedTrackers=_manager.getSortedTrackers();
+    for (    Tracker t : sortedTrackers) {
+      if (t.baseURL == null || !t.baseURL.startsWith("http"))       continue;
+      out.write(" <a href=\"" + t.baseURL + "\" class=\"snarkRefresh\" target=\"_blank\">"+ t.name+ "</a>");
+    }
+  }
+  out.write("</div>\n");
+  String newURL=req.getParameter("newURL");
+  if (newURL != null && newURL.trim().length() > 0 && req.getMethod().equals("GET"))   _manager.addMessage(_("Click \"Add torrent\" button to fetch torrent"));
+  out.write("<div class=\"page\"><div id=\"mainsection\" class=\"mainsection\">");
+  writeMessages(out,isConfigure,peerString);
+  if (isConfigure) {
+    out.write("<div class=\"logshim\"></div></div>\n");
+    writeConfigForm(out,req);
+    writeTrackerForm(out,req);
+  }
+ else {
+    writeTorrents(out,req);
+    out.write("</div><div id=\"lowersection\">\n");
+    writeAddForm(out,req);
+    writeSeedForm(out,req,sortedTrackers);
+    writeConfigLink(out);
+    out.write("</div>\n");
+  }
+  out.write(FOOTER);
+}

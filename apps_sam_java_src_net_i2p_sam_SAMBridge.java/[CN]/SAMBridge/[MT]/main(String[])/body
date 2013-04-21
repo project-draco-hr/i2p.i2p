@@ -1,50 +1,17 @@
 {
-  String keyfile=DEFAULT_SAM_KEYFILE;
-  int port=SAM_LISTENPORT;
-  String host=DEFAULT_TCP_HOST;
-  Properties opts=null;
-  if (args.length > 0) {
-    try {
-      opts=parseOptions(args,0);
-      keyfile=args[0];
-      int portIndex=1;
-      try {
-        if (args.length > portIndex)         port=Integer.parseInt(args[portIndex]);
-      }
- catch (      NumberFormatException nfe) {
-        host=args[portIndex];
-        portIndex++;
-        try {
-          if (args.length > portIndex)           port=Integer.parseInt(args[portIndex]);
-        }
- catch (        NumberFormatException nfe1) {
-          try {
-            port=Integer.parseInt(opts.getProperty(SAMBridge.PROP_TCP_PORT,SAMBridge.DEFAULT_TCP_PORT));
-            host=opts.getProperty(SAMBridge.PROP_TCP_HOST,SAMBridge.DEFAULT_TCP_HOST);
-          }
- catch (          NumberFormatException e) {
-            usage();
-            return;
-          }
-        }
-      }
-    }
- catch (    HelpRequested e) {
-      usage();
-      return;
-    }
+  try {
+    Options options=getOptions(args);
+    SAMBridge bridge=new SAMBridge(options.host,options.port,options.opts,options.keyFile);
+    bridge.startThread();
   }
-  SAMBridge bridge=new SAMBridge(host,port,opts,keyfile);
-  I2PAppThread t=new I2PAppThread(bridge,"SAMListener");
-  if (Boolean.parseBoolean(System.getProperty("sam.shutdownOnOOM"))) {
-    t.addOOMEventThreadListener(new I2PAppThread.OOMEventListener(){
-      public void outOfMemory(      OutOfMemoryError err){
-        err.printStackTrace();
-        System.err.println("OOMed, die die die");
-        System.exit(-1);
-      }
-    }
-);
+ catch (  RuntimeException e) {
+    e.printStackTrace();
+    usage();
+    throw e;
   }
-  t.start();
+catch (  Exception e) {
+    e.printStackTrace();
+    usage();
+    throw new RuntimeException(e);
+  }
 }

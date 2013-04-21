@@ -5,30 +5,20 @@
   curIndex+=Hash.HASH_LENGTH;
   _fromHash=Hash.create(data,curIndex);
   curIndex+=Hash.HASH_LENGTH;
-  boolean tunnelSpecified=false;
-switch (data[curIndex]) {
-case DataHelper.BOOLEAN_TRUE:
-    tunnelSpecified=true;
-  break;
-case DataHelper.BOOLEAN_FALSE:
-tunnelSpecified=false;
-break;
-default :
-throw new I2NPMessageException("Tunnel must be explicitly specified (or not)");
-}
-curIndex++;
-if (tunnelSpecified) {
-_replyTunnel=new TunnelId(DataHelper.fromLong(data,curIndex,4));
-curIndex+=4;
-}
-int numPeers=(int)DataHelper.fromLong(data,curIndex,2);
-curIndex+=2;
-if ((numPeers < 0) || (numPeers > MAX_NUM_PEERS)) throw new I2NPMessageException("Invalid number of peers - " + numPeers);
-List<Hash> peers=new ArrayList(numPeers);
-for (int i=0; i < numPeers; i++) {
-Hash p=Hash.create(data,curIndex);
-curIndex+=Hash.HASH_LENGTH;
-peers.add(p);
-}
-_dontIncludePeers=peers;
+  boolean tunnelSpecified=(data[curIndex] & 0x01) != 0;
+  curIndex++;
+  if (tunnelSpecified) {
+    _replyTunnel=new TunnelId(DataHelper.fromLong(data,curIndex,4));
+    curIndex+=4;
+  }
+  int numPeers=(int)DataHelper.fromLong(data,curIndex,2);
+  curIndex+=2;
+  if ((numPeers < 0) || (numPeers > MAX_NUM_PEERS))   throw new I2NPMessageException("Invalid number of peers - " + numPeers);
+  List<Hash> peers=new ArrayList(numPeers);
+  for (int i=0; i < numPeers; i++) {
+    Hash p=Hash.create(data,curIndex);
+    curIndex+=Hash.HASH_LENGTH;
+    peers.add(p);
+  }
+  _dontIncludePeers=peers;
 }

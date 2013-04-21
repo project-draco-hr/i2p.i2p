@@ -1,5 +1,7 @@
 {
   if (serverSocket == null)   return;
+  changeState(RUNNING);
+  if (_mgr != null)   _mgr.register(this);
   try {
     while (acceptConnections) {
       SocketChannel s=serverSocket.accept();
@@ -53,9 +55,12 @@ catch (          Exception ee) {
       }
       new I2PAppThread(new HelloHandler(s,this),"HelloHandler").start();
     }
+    changeState(STOPPING);
   }
  catch (  Exception e) {
-    if (_log.shouldLog(Log.ERROR))     _log.error("Unexpected error while listening for connections",e);
+    if (acceptConnections)     _log.error("Unexpected error while listening for connections",e);
+ else     e=null;
+    changeState(STOPPING,e);
   }
  finally {
     try {
@@ -64,5 +69,6 @@ catch (          Exception ee) {
     }
  catch (    IOException e) {
     }
+    changeState(STOPPED);
   }
 }

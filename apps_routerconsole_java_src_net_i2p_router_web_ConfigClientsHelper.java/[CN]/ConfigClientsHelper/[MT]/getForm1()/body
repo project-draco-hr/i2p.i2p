@@ -5,7 +5,19 @@
   List<ClientAppConfig> clients=ClientAppConfig.getClientApps(_context);
   for (int cur=0; cur < clients.size(); cur++) {
     ClientAppConfig ca=clients.get(cur);
-    renderForm(buf,"" + cur,ca.clientName,false,!ca.disabled,false,ca.className + ((ca.args != null) ? " " + ca.args : ""),("" + cur).equals(_edit),true,false,false,true,ca.disabled);
+    boolean isConsole=ca.className.equals("net.i2p.router.web.RouterConsoleRunner");
+    boolean showStart;
+    boolean showStop;
+    if (isConsole) {
+      showStart=false;
+      showStop=false;
+    }
+ else {
+      ClientApp clientApp=_context.clientAppManager().getClientApp(ca.className,LoadClientAppsJob.parseArgs(ca.args));
+      showStart=clientApp == null;
+      showStop=clientApp != null && clientApp.getState() == ClientAppState.RUNNING;
+    }
+    renderForm(buf,"" + cur,ca.clientName,false,!ca.disabled,false,ca.className + ((ca.args != null) ? " " + ca.args : ""),("" + cur).equals(_edit),!showStop,false,showStop,true,showStart);
   }
   if ("new".equals(_edit))   renderForm(buf,"" + clients.size(),"",false,false,false,"",true,false,false,false,false,false);
   buf.append("</table>\n");

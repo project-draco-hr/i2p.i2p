@@ -4,13 +4,11 @@
   if (!workDirRemoved)   System.err.println("ERROR: Unable to remove Jetty temporary work directory");
   boolean workDirCreated=workDir.mkdirs();
   if (!workDirCreated)   System.err.println("ERROR: Unable to create Jetty temporary work directory");
-  System.setProperty("org.mortbay.log.class","net.i2p.jetty.I2PLogger");
   System.setProperty("jetty.class.path",_context.getBaseDir() + "/lib/routerconsole.jar");
   _server=new Server();
   _server.setGracefulShutdown(1000);
   try {
     ThreadPool ctp=new CustomThreadPoolExecutor();
-    ctp.prestartAllCoreThreads();
     _server.setThreadPool(ctp);
   }
  catch (  Throwable t) {
@@ -22,7 +20,7 @@
   }
   HandlerCollection hColl=new HandlerCollection();
   ContextHandlerCollection chColl=new ContextHandlerCollection();
-  _server.addHandler(hColl);
+  _server.setHandler(hColl);
   hColl.addHandler(chColl);
   hColl.addHandler(new DefaultHandler());
   String log=_context.getProperty("routerconsole.log");
@@ -54,7 +52,7 @@
     }
   }
   if (!_webAppsDir.endsWith("/"))   _webAppsDir+='/';
-  WebAppContext rootWebApp=null;
+  HandlerWrapper rootWebApp=null;
   ServletHandler rootServletHandler=null;
   List<Connector> connectors=new ArrayList(4);
   try {
@@ -127,6 +125,9 @@
     if (sslPort > 0) {
       File keyStore=new File(_context.getConfigDir(),"keystore/console.ks");
       if (verifyKeyStore(keyStore)) {
+        SslContextFactory sslFactory=new SslContextFactory(keyStore.getAbsolutePath());
+        sslFactory.setKeyStorePassword(_context.getProperty(PROP_KEYSTORE_PASSWORD,DEFAULT_KEYSTORE_PASSWORD));
+        sslFactory.setKeyManagerPassword(_context.getProperty(PROP_KEY_PASSWORD,"thisWontWork"));
         StringTokenizer tok=new StringTokenizer(_sslListenHost," ,");
         while (tok.hasMoreTokens()) {
           String host=tok.nextToken().trim();
@@ -149,18 +150,12 @@
             }
             AbstractConnector ssll;
             if (SystemVersion.isJava6() && !SystemVersion.isGNU()) {
-              SslSelectChannelConnector sssll=new SslSelectChannelConnector();
-              sssll.setKeystore(keyStore.getAbsolutePath());
-              sssll.setPassword(_context.getProperty(PROP_KEYSTORE_PASSWORD,DEFAULT_KEYSTORE_PASSWORD));
-              sssll.setKeyPassword(_context.getProperty(PROP_KEY_PASSWORD,"thisWontWork"));
+              SslSelectChannelConnector sssll=new SslSelectChannelConnector(sslFactory);
               sssll.setUseDirectBuffers(false);
               ssll=sssll;
             }
  else {
-              SslSocketConnector sssll=new SslSocketConnector();
-              sssll.setKeystore(keyStore.getAbsolutePath());
-              sssll.setPassword(_context.getProperty(PROP_KEYSTORE_PASSWORD,DEFAULT_KEYSTORE_PASSWORD));
-              sssll.setKeyPassword(_context.getProperty(PROP_KEY_PASSWORD,"thisWontWork"));
+              SslSocketConnector sssll=new SslSocketConnector(sslFactory);
               ssll=sssll;
             }
             ssll.setHost(host);
@@ -186,20 +181,17 @@
       System.err.println("Unable to bind routerconsole to any address on port " + _listenPort + (sslPort > 0 ? (" or SSL port " + sslPort) : ""));
       return;
     }
-    rootWebApp=new LocaleWebAppHandler(_context,"/",_webAppsDir + ROUTERCONSOLE + ".war");
     File tmpdir=new SecureDirectory(workDir,ROUTERCONSOLE + "-" + (_listenPort != null ? _listenPort : _sslListenPort));
     tmpdir.mkdir();
-    rootWebApp.setTempDirectory(tmpdir);
-    rootWebApp.setExtractWAR(false);
-    rootWebApp.setSessionHandler(new SessionHandler());
     rootServletHandler=new ServletHandler();
-    rootWebApp.setServletHandler(rootServletHandler);
-    initialize(_context,rootWebApp);
+    rootWebApp=new LocaleWebAppHandler(_context,"/",_webAppsDir + ROUTERCONSOLE + ".war",tmpdir,rootServletHandler);
+    initialize(_context,(WebAppContext)(rootWebApp.getHandler()));
     chColl.addHandler(rootWebApp);
   }
  catch (  Exception ioe) {
     ioe.printStackTrace();
   }
+  Resource.setDefaultUseCaches(false);
   try {
     _server.start();
   }
@@ -258,6 +250,7 @@
         }
       }
       changeState(RUNNING);
+      if (_mgr != null)       _mgr.register(this);
     }
   }
  else {
