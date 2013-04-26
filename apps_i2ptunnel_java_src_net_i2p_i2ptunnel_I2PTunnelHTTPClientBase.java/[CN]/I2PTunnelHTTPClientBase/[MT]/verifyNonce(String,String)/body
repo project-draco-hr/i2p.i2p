@@ -1,13 +1,25 @@
 {
+  if (_nonceCleanCounter.incrementAndGet() % 16 == 0)   cleanNonces();
   byte[] n=Base64.decode(b64);
   if (n == null || n.length != NONCE_BYTES)   return AuthResult.AUTH_BAD;
   long now=_context.clock().now();
   long stamp=DataHelper.fromLong(n,0,DataHelper.DATE_LENGTH);
-  if (now - stamp > MAX_NONCE_AGE)   return AuthResult.AUTH_STALE;
+  if (now - stamp > MAX_NONCE_AGE) {
+    _nonces.remove(b64);
+    return AuthResult.AUTH_STALE;
+  }
+  NonceInfo info=_nonces.get(b64);
+  if (info == null)   return AuthResult.AUTH_STALE;
   byte[] b=new byte[DataHelper.DATE_LENGTH + PROXYNONCE_BYTES];
   System.arraycopy(n,0,b,0,DataHelper.DATE_LENGTH);
   System.arraycopy(_proxyNonce,0,b,DataHelper.DATE_LENGTH,PROXYNONCE_BYTES);
   byte[] md5=PasswordManager.md5Sum(b);
   if (!DataHelper.eq(md5,0,n,DataHelper.DATE_LENGTH,MD5_BYTES))   return AuthResult.AUTH_BAD;
-  return AuthResult.AUTH_GOOD;
+  try {
+    int nc=Integer.parseInt(ncs,16);
+    return info.isValid(nc);
+  }
+ catch (  NumberFormatException nfe) {
+    return AuthResult.AUTH_BAD;
+  }
 }
