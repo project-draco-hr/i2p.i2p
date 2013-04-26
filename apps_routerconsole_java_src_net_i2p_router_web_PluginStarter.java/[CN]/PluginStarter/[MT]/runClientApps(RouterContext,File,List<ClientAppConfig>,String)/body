@@ -3,7 +3,7 @@
   String pluginName=pluginDir.getName();
   if (!pluginThreadGroups.containsKey(pluginName))   pluginThreadGroups.put(pluginName,new ThreadGroup(pluginName));
   ThreadGroup pluginThreadGroup=pluginThreadGroups.get(pluginName);
-  if (action.equals("start"))   pluginJobs.put(pluginName,new ConcurrentHashSet<Job>());
+  if (action.equals("start"))   _pendingPluginClients.put(pluginName,new ConcurrentHashSet<SimpleTimer2.TimedEvent>());
   for (  ClientAppConfig app : apps) {
     if (action.equals("start") && app.disabled)     continue;
     String argVal[];
@@ -55,17 +55,20 @@
         LoadClientAppsJob.testClient(app.className,cl);
       }
  catch (      ClassNotFoundException ex) {
-        if (app.delay > 1) {
-          Thread.sleep(2000);
-        }
+        try {
+          if (app.delay > 1) {
+            Thread.sleep(2000);
+          }
  else {
-          Thread.sleep(1000);
+            Thread.sleep(1000);
+          }
         }
+ catch (        InterruptedException ie) {
+        }
+        LoadClientAppsJob.testClient(app.className,cl);
       }
-      LoadClientAppsJob.testClient(app.className,cl);
-      Job job=new LoadClientAppsJob.DelayedRunClient(ctx,app.className,app.clientName,argVal,app.delay,pluginThreadGroup,cl);
-      ctx.jobQueue().addJob(job);
-      pluginJobs.get(pluginName).add(job);
+      SimpleTimer2.TimedEvent evt=new TrackedDelayedClient(pluginName,ctx.simpleTimer2(),ctx,app.className,app.clientName,argVal,pluginThreadGroup,cl);
+      evt.schedule(app.delay);
     }
   }
 }
