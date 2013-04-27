@@ -1,18 +1,30 @@
 {
-  long uploaded=coordinator.getUploaded();
-  long downloaded=coordinator.getDownloaded();
   long left=coordinator.getLeft();
-  String event;
+  boolean newlyCompleted;
   if (!completed && left == 0) {
     completed=true;
-    event=COMPLETED_EVENT;
+    newlyCompleted=true;
   }
- else   event=NO_EVENT;
+ else {
+    newlyCompleted=false;
+  }
   int maxSeenPeers=0;
   for (  TCTracker tr : trckrs) {
-    if ((!stop) && (!tr.stop) && (completed || coordinator.needOutboundPeers() || !tr.started)&& (event.equals(COMPLETED_EVENT) || System.currentTimeMillis() > tr.lastRequestTime + tr.interval)) {
+    if ((!stop) && (!tr.stop) && (completed || coordinator.needOutboundPeers() || !tr.started)&& (newlyCompleted || System.currentTimeMillis() > tr.lastRequestTime + tr.interval)) {
       try {
-        if (!tr.started)         event=STARTED_EVENT;
+        long uploaded=coordinator.getUploaded();
+        long downloaded=coordinator.getDownloaded();
+        left=coordinator.getLeft();
+        String event;
+        if (!tr.started) {
+          event=STARTED_EVENT;
+        }
+ else         if (newlyCompleted) {
+          event=COMPLETED_EVENT;
+        }
+ else {
+          event=NO_EVENT;
+        }
         TrackerInfo info=doRequest(tr,infoHash,peerID,uploaded,downloaded,left,event);
         snark.setTrackerProblems(null);
         tr.trackerProblems=null;
