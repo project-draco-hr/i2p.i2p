@@ -182,8 +182,11 @@
     out.write(":&nbsp;");
     out.write(ngettext("1 torrent","{0} torrents",total));
     out.write(", ");
-    out.write(DataHelper.formatSize2(stats[5]) + "B, ");
-    out.write(ngettext("1 connected peer","{0} connected peers",(int)stats[4]));
+    out.write(DataHelper.formatSize2(stats[5]) + "B");
+    if (_manager.util().connected() && total > 0) {
+      out.write(", ");
+      out.write(ngettext("1 connected peer","{0} connected peers",(int)stats[4]));
+    }
     DHT dht=_manager.util().getDHT();
     if (dht != null) {
       int dhts=dht.size();
@@ -194,7 +197,7 @@
       if (showDebug)       out.write(dht.renderStatusHTML());
     }
     out.write("</th>\n");
-    if (_manager.util().connected()) {
+    if (_manager.util().connected() && total > 0) {
       out.write("    <th align=\"right\">" + formatSize(stats[0]) + "</th>\n"+ "    <th align=\"right\">"+ formatSize(stats[1])+ "</th>\n"+ "    <th align=\"right\">"+ formatSize(stats[2])+ "ps</th>\n"+ "    <th align=\"right\">"+ formatSize(stats[3])+ "ps</th>\n"+ "    <th></th>");
     }
  else {
@@ -204,4 +207,5 @@
   }
   out.write("</table>");
   if (isForm)   out.write("</form>\n");
+  return start == 0;
 }
