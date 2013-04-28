@@ -16,12 +16,28 @@
     out=new WriterOutputStream(response.getWriter());
   }
   long content_length=content.getContentLength();
-  writeHeaders(response,content,content_length);
-  if (content_length >= 0 && request.getMethod().equals("HEAD")) {
-    if (_log.shouldLog(Log.INFO))     _log.info("HEAD: " + content);
-  }
+  Enumeration reqRanges=request.getHeaders("Range");
+  if (reqRanges == null || !reqRanges.hasMoreElements()) {
+    writeHeaders(response,content,content_length);
+    if (content_length >= 0 && request.getMethod().equals("HEAD")) {
+      if (_log.shouldLog(Log.INFO))       _log.info("HEAD: " + content);
+    }
  else {
-    copy(in,out);
+      copy(in,out);
+    }
+    return;
   }
-  return;
+  List<InclusiveByteRange> ranges=InclusiveByteRange.satisfiableRanges(reqRanges,content_length);
+  if (ranges == null || ranges.size() != 1) {
+    writeHeaders(response,content,content_length);
+    response.setStatus(416);
+    response.setHeader("Content-Range",InclusiveByteRange.to416HeaderRangeString(content_length));
+    return;
+  }
+  InclusiveByteRange singleSatisfiableRange=ranges.get(0);
+  long singleLength=singleSatisfiableRange.getSize(content_length);
+  writeHeaders(response,content,singleLength);
+  response.setStatus(206);
+  response.setHeader("Content-Range",singleSatisfiableRange.toHeaderRangeString(content_length));
+  copy(in,singleSatisfiableRange.getFirst(content_length),out,singleLength);
 }
