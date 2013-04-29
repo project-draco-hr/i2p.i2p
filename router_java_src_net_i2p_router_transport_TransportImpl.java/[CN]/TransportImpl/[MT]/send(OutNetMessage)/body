@@ -3,16 +3,12 @@
     if (_log.shouldLog(Log.ERROR))     _log.error("Error - bad message enqueued [target is null]: " + msg,new Exception("Added by"));
     return;
   }
-  boolean duplicate=false;
-synchronized (_sendPool) {
-    if (_sendPool.contains(msg))     duplicate=true;
- else     _sendPool.add(msg);
+  try {
+    _sendPool.put(msg);
   }
-  if (duplicate) {
-    if (_log.shouldLog(Log.ERROR))     _log.error("Message already is in the queue?  wtf.  msg = " + msg,new Exception("wtf, requeued?"));
+ catch (  InterruptedException ie) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Interrupted during send " + msg);
+    return;
   }
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Message added to send pool");
-  msg.timestamp("send on " + getStyle());
   outboundMessageReady();
-  if (_log.shouldLog(Log.INFO))   _log.debug("OutboundMessageReady called");
 }
