@@ -1,14 +1,16 @@
 {
-  Map<String,RouterAddress> addresses=_manager.getAddresses();
+  List<RouterAddress> addresses=new ArrayList(_manager.getAddresses());
+  Transport ntcp=_manager.getTransport(NTCPTransport.STYLE);
+  boolean hasNTCP=ntcp != null && ntcp.hasCurrentAddress();
   boolean newCreated=false;
-  if (!addresses.containsKey(NTCPTransport.STYLE)) {
+  if (!hasNTCP) {
     RouterAddress addr=createNTCPAddress(_context);
     if (_log.shouldLog(Log.INFO))     _log.info("NTCP address: " + addr);
     if (addr != null) {
-      addresses.put(NTCPTransport.STYLE,addr);
+      addresses.add(addr);
       newCreated=true;
     }
   }
   if (_log.shouldLog(Log.INFO))   _log.info("Creating addresses: " + addresses + " isNew? "+ newCreated,new Exception("creator"));
-  return new HashSet(addresses.values());
+  return addresses;
 }
