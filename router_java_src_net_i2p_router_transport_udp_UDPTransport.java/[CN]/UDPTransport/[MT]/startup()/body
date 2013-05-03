@@ -2,7 +2,10 @@
   _fragments.shutdown();
   if (_pusher != null)   _pusher.shutdown();
   if (_handler != null)   _handler.shutdown();
-  if (_endpoint != null)   _endpoint.shutdown();
+  for (  UDPEndpoint endpoint : _endpoints) {
+    endpoint.shutdown();
+    _endpoints.remove(endpoint);
+  }
   if (_establisher != null)   _establisher.shutdown();
   if (_refiller != null)   _refiller.shutdown();
   _inboundFragments.shutdown();
@@ -46,26 +49,42 @@
   }
   if (bindToAddr != null && _log.shouldLog(Log.WARN))   _log.warn("Binding only to " + bindToAddr);
   if (_log.shouldLog(Log.INFO))   _log.info("Binding to the port: " + port);
-  if (_endpoint == null) {
-    _endpoint=new UDPEndpoint(_context,this,port,bindToAddr);
+  if (_endpoints.isEmpty()) {
+    UDPEndpoint endpoint=new UDPEndpoint(_context,this,port,bindToAddr);
+    _endpoints.add(endpoint);
   }
  else {
-    _endpoint.setListenPort(port);
+    for (    UDPEndpoint endpoint : _endpoints) {
+      if (endpoint.isIPv4()) {
+        endpoint.setListenPort(port);
+        break;
+      }
+    }
   }
   setMTU(bindToAddr);
   if (_establisher == null)   _establisher=new EstablishmentManager(_context,this);
   if (_testManager == null)   _testManager=new PeerTestManager(_context,this);
-  if (_handler == null)   _handler=new PacketHandler(_context,this,_endpoint,_establisher,_inboundFragments,_testManager,_introManager);
+  if (_handler == null)   _handler=new PacketHandler(_context,this,_establisher,_inboundFragments,_testManager,_introManager);
   if (USE_PRIORITY && _refiller == null)   _refiller=new OutboundRefiller(_context,_fragments,_outboundMessages);
-  _endpoint.startup();
-  int newPort=_endpoint.getListenPort();
-  _externalListenPort=newPort;
-  if (newPort <= 0) {
+  int newPort=-1;
+  for (  UDPEndpoint endpoint : _endpoints) {
+    try {
+      endpoint.startup();
+      if (newPort < 0 && endpoint.isIPv4()) {
+        newPort=endpoint.getListenPort();
+        _externalListenPort=newPort;
+      }
+    }
+ catch (    SocketException se) {
+      _endpoints.remove(endpoint);
+    }
+  }
+  if (_endpoints.isEmpty()) {
     _log.log(Log.CRIT,"Unable to open UDP port");
     setReachabilityStatus(CommSystemFacade.STATUS_HOSED);
     return;
   }
-  if (newPort != port || newPort != oldIPort || newPort != oldEPort) {
+  if (newPort > 0 && (newPort != port || newPort != oldIPort || newPort != oldEPort)) {
     Map<String,String> changes=new HashMap();
     changes.put(PROP_INTERNAL_PORT,Integer.toString(newPort));
     changes.put(PROP_EXTERNAL_PORT,Integer.toString(newPort));
@@ -75,7 +94,7 @@
   _handler.startup();
   _fragments.startup();
   _inboundFragments.startup();
-  _pusher=new PacketPusher(_context,_fragments,_endpoint.getSender());
+  _pusher=new PacketPusher(_context,_fragments,_endpoints);
   _pusher.startup();
   if (USE_PRIORITY)   _refiller.startup();
   _expireEvent.setIsAlive(true);

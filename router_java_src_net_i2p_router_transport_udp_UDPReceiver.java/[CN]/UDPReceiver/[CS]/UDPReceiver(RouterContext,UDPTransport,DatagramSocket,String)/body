@@ -3,12 +3,10 @@
   _log=ctx.logManager().getLog(UDPReceiver.class);
   _id=++__id;
   _name=name;
-  long maxMemory=Runtime.getRuntime().maxMemory();
-  if (maxMemory == Long.MAX_VALUE)   maxMemory=96 * 1024 * 1024l;
-  int qsize=(int)Math.max(MIN_QUEUE_SIZE,Math.min(MAX_QUEUE_SIZE,maxMemory / (2 * 1024 * 1024)));
-  _inboundQueue=new CoDelBlockingQueue(ctx,"UDP-Receiver",qsize);
   _socket=socket;
   _transport=transport;
+  _handler=transport.getPacketHandler();
+  if (_handler == null)   throw new IllegalStateException();
   _runner=new Runner();
   _context.statManager().createRateStat("udp.receiveHolePunch","How often we receive a NAT hole punch","udp",UDPTransport.RATES);
   _context.statManager().createRateStat("udp.ignorePacketFromDroplist","Packet lifetime for those dropped on the drop list","udp",UDPTransport.RATES);
