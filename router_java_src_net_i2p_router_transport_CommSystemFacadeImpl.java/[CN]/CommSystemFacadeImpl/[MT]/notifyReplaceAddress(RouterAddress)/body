@@ -1,5 +1,5 @@
 {
-  if (UDPAddr == null)   return;
+  if (udpAddr == null)   return;
   NTCPTransport t=(NTCPTransport)_manager.getTransport(NTCPTransport.STYLE);
   if (t == null)   return;
   RouterAddress oldAddr=t.getCurrentAddress();
@@ -22,11 +22,16 @@
     nport=cport;
   }
  else   if (_context.getBooleanPropertyDefaultTrue(PROP_I2NP_NTCP_AUTO_PORT)) {
-    nport=UDPAddr.getOption(UDPAddress.PROP_PORT);
+    Transport udp=_manager.getTransport(UDPTransport.STYLE);
+    if (udp != null) {
+      int udpIntPort=udp.getRequestedPort();
+      if (udpIntPort > 0)       nport=Integer.toString(udpIntPort);
+    }
+    if (nport == null)     nport=udpAddr.getOption(UDPAddress.PROP_PORT);
   }
   if (_log.shouldLog(Log.INFO))   _log.info("old: " + oport + " config: "+ cport+ " new: "+ nport);
   if (nport == null || nport.length() <= 0)   return;
-  if (oport == null || !oport.equals(nport)) {
+  if (oport == null) {
     newProps.setProperty(NTCPAddress.PROP_PORT,nport);
     changed=true;
   }
@@ -39,7 +44,7 @@
   if (udp != null)   status=udp.getReachabilityStatus();
   if (_log.shouldLog(Log.INFO))   _log.info("old: " + ohost + " config: "+ name+ " auto: "+ enabled+ " status: "+ status);
   if (enabled.equals("always") || (Boolean.parseBoolean(enabled) && status == STATUS_OK)) {
-    String nhost=UDPAddr.getOption(UDPAddress.PROP_HOST);
+    String nhost=udpAddr.getOption(UDPAddress.PROP_HOST);
     if (_log.shouldLog(Log.INFO))     _log.info("old: " + ohost + " config: "+ name+ " new: "+ nhost);
     if (nhost == null || nhost.length() <= 0)     return;
     if (ohost == null || !ohost.equalsIgnoreCase(nhost)) {
