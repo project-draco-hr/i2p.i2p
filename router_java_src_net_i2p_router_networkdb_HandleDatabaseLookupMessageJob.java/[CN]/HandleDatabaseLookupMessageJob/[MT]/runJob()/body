@@ -10,39 +10,40 @@
     }
     return;
   }
-  LeaseSet ls=getContext().netDb().lookupLeaseSetLocally(_message.getSearchKey());
-  if (ls != null) {
+  DatabaseEntry dbe=getContext().netDb().lookupLocally(_message.getSearchKey());
+  if (dbe != null && dbe.getType() == DatabaseEntry.KEY_TYPE_LEASESET) {
+    LeaseSet ls=(LeaseSet)dbe;
     boolean isLocal=getContext().clientManager().isLocal(ls.getDestination());
     boolean shouldPublishLocal=isLocal && getContext().clientManager().shouldPublishLeaseSet(_message.getSearchKey());
     if (ls.getReceivedAsPublished()) {
-      if (_log.shouldLog(Log.INFO))       _log.info("We have the published LS " + _message.getSearchKey().toBase64() + ", answering query");
+      if (_log.shouldLog(Log.INFO))       _log.info("We have the published LS " + _message.getSearchKey() + ", answering query");
       getContext().statManager().addRateData("netDb.lookupsMatchedReceivedPublished",1,0);
       sendData(_message.getSearchKey(),ls,fromKey,_message.getReplyTunnel());
     }
  else     if (shouldPublishLocal && answerAllQueries()) {
       Set<Hash> closestHashes=getContext().netDb().findNearestRouters(_message.getSearchKey(),CLOSENESS_THRESHOLD,null);
       if (weAreClosest(closestHashes)) {
-        if (_log.shouldLog(Log.INFO))         _log.info("We have local LS " + _message.getSearchKey().toBase64() + ", answering query, in our keyspace");
+        if (_log.shouldLog(Log.INFO))         _log.info("We have local LS " + _message.getSearchKey() + ", answering query, in our keyspace");
         getContext().statManager().addRateData("netDb.lookupsMatchedLocalClosest",1,0);
         sendData(_message.getSearchKey(),ls,fromKey,_message.getReplyTunnel());
       }
  else {
-        if (_log.shouldLog(Log.INFO))         _log.info("We have local LS " + _message.getSearchKey().toBase64() + ", NOT answering query, out of our keyspace");
+        if (_log.shouldLog(Log.INFO))         _log.info("We have local LS " + _message.getSearchKey() + ", NOT answering query, out of our keyspace");
         getContext().statManager().addRateData("netDb.lookupsMatchedLocalNotClosest",1,0);
         Set<Hash> routerHashSet=getNearestRouters();
         sendClosest(_message.getSearchKey(),routerHashSet,fromKey,_message.getReplyTunnel());
       }
     }
  else {
-      if (_log.shouldLog(Log.INFO))       _log.info("We have LS " + _message.getSearchKey().toBase64() + ", NOT answering query - local? "+ isLocal+ " shouldPublish? "+ shouldPublishLocal+ " RAP? "+ ls.getReceivedAsPublished()+ " RAR? "+ ls.getReceivedAsReply());
+      if (_log.shouldLog(Log.INFO))       _log.info("We have LS " + _message.getSearchKey() + ", NOT answering query - local? "+ isLocal+ " shouldPublish? "+ shouldPublishLocal+ " RAP? "+ ls.getReceivedAsPublished()+ " RAR? "+ ls.getReceivedAsReply());
       getContext().statManager().addRateData("netDb.lookupsMatchedRemoteNotClosest",1,0);
       Set<Hash> routerHashSet=getNearestRouters();
       sendClosest(_message.getSearchKey(),routerHashSet,fromKey,_message.getReplyTunnel());
     }
   }
- else {
-    RouterInfo info=getContext().netDb().lookupRouterInfoLocally(_message.getSearchKey());
-    if ((info != null) && (info.isCurrent(EXPIRE_DELAY))) {
+ else   if (dbe != null && dbe.getType() == DatabaseEntry.KEY_TYPE_ROUTERINFO) {
+    RouterInfo info=(RouterInfo)dbe;
+    if (info.isCurrent(EXPIRE_DELAY)) {
       if ((info.getIdentity().isHidden()) || (isUnreachable(info) && !publishUnreachable())) {
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Not answering a query for a netDb peer who isn't reachable");
         Set<Hash> us=new HashSet<Hash>(1);
@@ -50,14 +51,19 @@
         sendClosest(_message.getSearchKey(),us,fromKey,_message.getReplyTunnel());
       }
  else {
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("We do have key " + _message.getSearchKey().toBase64() + " locally as a router info.  sending to "+ fromKey.toBase64());
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("We do have key " + _message.getSearchKey() + " locally as a router info.  sending to "+ fromKey);
         sendData(_message.getSearchKey(),info,fromKey,_message.getReplyTunnel());
       }
     }
  else {
       Set<Hash> routerHashSet=getNearestRouters();
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("We do not have key " + _message.getSearchKey().toBase64() + " locally.  sending back "+ routerHashSet.size()+ " peers to "+ fromKey.toBase64());
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Expired " + _message.getSearchKey() + " locally.  sending back "+ routerHashSet.size()+ " peers to "+ fromKey);
       sendClosest(_message.getSearchKey(),routerHashSet,fromKey,_message.getReplyTunnel());
     }
+  }
+ else {
+    Set<Hash> routerHashSet=getNearestRouters();
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("We do not have key " + _message.getSearchKey() + " locally.  sending back "+ routerHashSet.size()+ " peers to "+ fromKey);
+    sendClosest(_message.getSearchKey(),routerHashSet,fromKey,_message.getReplyTunnel());
   }
 }
