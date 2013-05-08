@@ -1,8 +1,8 @@
 {
   if (_needsRebuild)   return true;
   if (_context.router().isHidden())   return false;
+  RouterAddress addr=getCurrentAddress(false);
   if (introducersRequired()) {
-    RouterAddress addr=_externalAddress;
     UDPAddress ua=new UDPAddress(addr);
     int valid=0;
     for (int i=0; i < ua.getIntroducerCount(); i++) {
@@ -25,26 +25,20 @@
     }
   }
  else {
-    boolean rv=(_externalListenHost == null) || (_externalListenPort <= 0);
+    byte[] externalListenHost=addr != null ? addr.getIP() : null;
+    int externalListenPort=addr != null ? addr.getPort() : -1;
+    boolean rv=(externalListenHost == null) || (externalListenPort <= 0);
     if (!rv) {
-      RouterAddress addr=_externalAddress;
-      UDPAddress ua=new UDPAddress(addr);
-      if (ua.getIntroducerCount() > 0)       rv=true;
+      if (addr.getOption("ihost0") != null)       rv=true;
     }
-    if (_log.shouldLog(Log.INFO)) {
-      if (rv) {
-        _log.info("Need to initialize our direct SSU info (" + _externalListenHost + ":"+ _externalListenPort+ ")");
-      }
+    if (rv) {
+      if (_log.shouldLog(Log.INFO))       _log.info("Need to initialize our direct SSU info (" + Addresses.toString(externalListenHost,externalListenPort) + ')');
+    }
+ else     if (addr.getPort() <= 0 || addr.getHost() == null) {
+      if (_log.shouldLog(Log.INFO))       _log.info("Our direct SSU info is initialized, but not used in our address yet");
+      rv=true;
+    }
  else {
-        RouterAddress addr=_externalAddress;
-        UDPAddress ua=new UDPAddress(addr);
-        if ((ua.getPort() <= 0) || (ua.getHost() == null)) {
-          _log.info("Our direct SSU info is initialized, but not used in our address yet");
-          rv=true;
-        }
- else {
-        }
-      }
     }
     return rv;
   }

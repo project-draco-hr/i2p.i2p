@@ -2,23 +2,17 @@
   boolean fixedPort=getIsPortFixed();
   boolean updated=false;
   boolean fireTest=false;
-  if (_log.shouldLog(Log.INFO))   _log.info("Change address? status = " + _reachabilityStatus + " diff = "+ (_context.clock().now() - _reachabilityStatusLastUpdated)+ " old = "+ _externalListenHost+ ':'+ _externalListenPort+ " new = "+ Addresses.toString(ourIP,ourPort));
+  boolean isIPv6=ourIP.length == 16;
+  RouterAddress current=getCurrentAddress(isIPv6);
+  byte[] externalListenHost=current != null ? current.getIP() : null;
+  int externalListenPort=current != null ? current.getPort() : getRequestedPort(isIPv6);
+  if (_log.shouldLog(Log.INFO))   _log.info("Change address? status = " + _reachabilityStatus + " diff = "+ (_context.clock().now() - _reachabilityStatusLastUpdated)+ " old = "+ Addresses.toString(externalListenHost,externalListenPort)+ " new = "+ Addresses.toString(ourIP,ourPort));
+  if ((fixedPort && externalListenPort > 0) || ourPort <= 0)   ourPort=externalListenPort;
 synchronized (this) {
-    if ((_externalListenHost == null) || (!eq(_externalListenHost.getAddress(),_externalListenPort,ourIP,ourPort))) {
-      try {
-        _externalListenHost=InetAddress.getByAddress(ourIP);
-        if (ourPort >= MIN_EXTERNAL_PORT && ourPort <= MAX_EXTERNAL_PORT && !fixedPort)         _externalListenPort=ourPort;
-        if (_log.shouldLog(Log.WARN))         _log.warn("Trying to change our external address to " + Addresses.toString(ourIP,_externalListenPort));
-        if (_externalListenPort > 0) {
-          rebuildExternalAddress();
-          replaceAddress(_externalAddress);
-          updated=true;
-        }
-      }
- catch (      UnknownHostException uhe) {
-        _externalListenHost=null;
-        if (_log.shouldLog(Log.WARN))         _log.warn("Error trying to change our external address to " + Addresses.toString(ourIP,ourPort),uhe);
-      }
+    if (ourPort > 0 && !eq(externalListenHost,externalListenPort,ourIP,ourPort)) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Trying to change our external address to " + Addresses.toString(ourIP,ourPort));
+      RouterAddress newAddr=rebuildExternalAddress(ourIP,ourPort,true);
+      updated=newAddr != null;
     }
  else {
       if (_log.shouldLog(Log.INFO))       _log.info("Same address as the current one");
@@ -30,10 +24,11 @@ synchronized (this) {
  else   if (updated) {
     _context.statManager().addRateData("udp.addressUpdated",1);
     Map<String,String> changes=new HashMap();
-    if (!fixedPort)     changes.put(PROP_EXTERNAL_PORT,Integer.toString(ourPort));
-    _context.commSystem().queueLookup(ourIP);
+    if (ourIP.length == 4 && !fixedPort)     changes.put(PROP_EXTERNAL_PORT,Integer.toString(ourPort));
+    if (ourIP.length == 4)     _context.commSystem().queueLookup(ourIP);
     String oldIP=_context.getProperty(PROP_IP);
-    if (!_externalListenHost.getHostAddress().equals(oldIP)) {
+    String newIP=Addresses.toString(ourIP);
+    if (ourIP.length == 4 && !newIP.equals(oldIP)) {
       long lastChanged=0;
       long now=_context.clock().now();
       String lcs=_context.getProperty(PROP_IP_CHANGE);
@@ -44,7 +39,7 @@ synchronized (this) {
  catch (        NumberFormatException nfe) {
         }
       }
-      changes.put(PROP_IP,_externalListenHost.getHostAddress());
+      changes.put(PROP_IP,newIP);
       changes.put(PROP_IP_CHANGE,Long.toString(now));
       _context.router().saveConfig(changes,null);
       if (oldIP != null && System.getProperty("wrapper.version") != null && _context.getBooleanProperty(PROP_LAPTOP_MODE) && now - lastChanged > 10 * 60 * 1000 && _context.router().getUptime() < 10 * 60 * 1000) {
@@ -53,7 +48,7 @@ synchronized (this) {
         _context.router().shutdown(Router.EXIT_HARD_RESTART);
       }
     }
- else     if (!fixedPort) {
+ else     if (ourIP.length == 4 && !fixedPort) {
       _context.router().saveConfig(changes,null);
     }
     _context.router().rebuildRouterInfo();
