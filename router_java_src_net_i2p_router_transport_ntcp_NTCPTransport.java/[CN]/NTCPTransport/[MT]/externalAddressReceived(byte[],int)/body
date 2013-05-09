@@ -1,0 +1,89 @@
+{
+  RouterAddress oldAddr=getCurrentAddress(false);
+  if (_log.shouldLog(Log.INFO))   _log.info("Changing NTCP Address? was " + oldAddr);
+  OrderedProperties newProps=new OrderedProperties();
+  int cost;
+  if (oldAddr == null) {
+    cost=NTCPAddress.DEFAULT_COST;
+  }
+ else {
+    cost=oldAddr.getCost();
+    newProps.putAll(oldAddr.getOptionsMap());
+  }
+  RouterAddress newAddr=new RouterAddress(STYLE,newProps,cost);
+  boolean changed=false;
+  String oport=newProps.getProperty(NTCPAddress.PROP_PORT);
+  String nport=null;
+  String cport=_context.getProperty(PROP_I2NP_NTCP_PORT);
+  if (cport != null && cport.length() > 0) {
+    nport=cport;
+  }
+ else   if (_context.getBooleanPropertyDefaultTrue(PROP_I2NP_NTCP_AUTO_PORT)) {
+    if (port > 0)     nport=Integer.toString(port);
+  }
+  if (_log.shouldLog(Log.INFO))   _log.info("old: " + oport + " config: "+ cport+ " new: "+ nport);
+  if (nport == null || nport.length() <= 0)   return;
+  if (oport == null) {
+    newProps.setProperty(NTCPAddress.PROP_PORT,nport);
+    changed=true;
+  }
+  String ohost=newProps.getProperty(NTCPAddress.PROP_HOST);
+  String enabled=_context.getProperty(PROP_I2NP_NTCP_AUTO_IP,"true").toLowerCase(Locale.US);
+  String name=_context.getProperty(PROP_I2NP_NTCP_HOSTNAME);
+  if (name != null && name.length() > 0)   enabled="false";
+  boolean ssuOK=ip != null;
+  if (_log.shouldLog(Log.INFO))   _log.info("old: " + ohost + " config: "+ name+ " auto: "+ enabled+ " ssuOK? "+ ssuOK);
+  if (enabled.equals("always") || (Boolean.parseBoolean(enabled) && ssuOK)) {
+    String nhost=Addresses.toString(ip);
+    if (_log.shouldLog(Log.INFO))     _log.info("old: " + ohost + " config: "+ name+ " new: "+ nhost);
+    if (nhost == null || nhost.length() <= 0)     return;
+    if (ohost == null || !ohost.equalsIgnoreCase(nhost)) {
+      newProps.setProperty(NTCPAddress.PROP_HOST,nhost);
+      changed=true;
+    }
+  }
+ else   if (enabled.equals("false") && name != null && name.length() > 0 && !name.equals(ohost) && nport != null) {
+    if (_log.shouldLog(Log.INFO))     _log.info("old: " + ohost + " config: "+ name+ " new: "+ name);
+    newProps.setProperty(NTCPAddress.PROP_HOST,name);
+    changed=true;
+  }
+ else   if (ohost == null || ohost.length() <= 0) {
+    return;
+  }
+ else   if (Boolean.parseBoolean(enabled) && !ssuOK) {
+    if (_log.shouldLog(Log.INFO))     _log.info("old: " + ohost + " config: "+ name+ " new: null");
+    newAddr=null;
+    changed=true;
+  }
+  if (!changed) {
+    if (oldAddr != null) {
+      int oldCost=oldAddr.getCost();
+      int newCost=NTCPAddress.DEFAULT_COST;
+      if (TransportImpl.ADJUST_COST && !haveCapacity())       newCost++;
+      if (newCost != oldCost) {
+        oldAddr.setCost(newCost);
+        if (_log.shouldLog(Log.WARN))         _log.warn("Changing NTCP cost from " + oldCost + " to "+ newCost);
+      }
+ else {
+        _log.info("No change to NTCP Address");
+      }
+    }
+ else {
+      _log.info("No change to NTCP Address");
+    }
+    return;
+  }
+  _log.warn("Halting NTCP to change address");
+  stopListening();
+  if (newAddr != null)   newAddr.setOptions(newProps);
+  while (isAlive()) {
+    try {
+      Thread.sleep(5 * 1000);
+    }
+ catch (    InterruptedException ie) {
+    }
+  }
+  restartListening(newAddr);
+  _log.warn("Changed NTCP Address and started up, address is now " + newAddr);
+  return;
+}
