@@ -11,9 +11,9 @@
   _inboundFragments.shutdown();
   _introManager.reset();
   UDPPacket.clearCache();
+  if (_log.shouldLog(Log.WARN))   _log.warn("Starting SSU transport listening");
   _introKey=new SessionKey(new byte[SessionKey.KEYSIZE_BYTES]);
   System.arraycopy(_context.routerHash().getData(),0,_introKey.getData(),0,SessionKey.KEYSIZE_BYTES);
-  rebuildExternalAddress();
   String bindTo=_context.getProperty(PROP_BIND_INTERFACE);
   if (bindTo == null) {
     String fixedHost=_context.getProperty(PROP_EXTERNAL_HOST);
@@ -32,9 +32,7 @@
       bindToAddr=InetAddress.getByName(bindTo);
     }
  catch (    UnknownHostException uhe) {
-      _log.log(Log.CRIT,"Invalid SSU bind interface specified [" + bindTo + "]",uhe);
-      setReachabilityStatus(CommSystemFacade.STATUS_HOSED);
-      return;
+      _log.error("Invalid SSU bind interface specified [" + bindTo + "]",uhe);
     }
   }
   int port;
@@ -96,4 +94,10 @@
   _expireEvent.setIsAlive(true);
   _testEvent.setIsAlive(true);
   _testEvent.reschedule(10 * 1000);
+  if (newPort > 0 && bindToAddr == null) {
+    for (    InetAddress ia : getSavedLocalAddresses()) {
+      rebuildExternalAddress(ia.getHostAddress(),newPort,false);
+    }
+  }
+  rebuildExternalAddress(false);
 }
