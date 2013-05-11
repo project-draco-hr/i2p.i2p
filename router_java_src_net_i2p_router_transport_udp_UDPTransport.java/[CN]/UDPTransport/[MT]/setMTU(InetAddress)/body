@@ -3,12 +3,20 @@
   if (p != null) {
     try {
       _mtu=MTU.rectify(Integer.parseInt(p));
-      return;
+      _mtu_ipv6=Math.max(_mtu,PeerState.MIN_IPV6_MTU);
+      return _mtu;
     }
  catch (    NumberFormatException nfe) {
     }
   }
   int mtu=MTU.getMTU(addr);
-  if (mtu <= 0)   mtu=PeerState.LARGE_MTU;
-  _mtu=mtu;
+  if (addr != null && addr.getAddress().length == 16) {
+    if (mtu <= 0)     mtu=PeerState.MIN_IPV6_MTU;
+    _mtu_ipv6=mtu;
+  }
+ else {
+    if (mtu <= 0)     mtu=PeerState.LARGE_MTU;
+    _mtu=mtu;
+  }
+  return mtu;
 }

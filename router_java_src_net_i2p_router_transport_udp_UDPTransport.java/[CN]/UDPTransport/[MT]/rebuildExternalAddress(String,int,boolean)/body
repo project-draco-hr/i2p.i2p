@@ -24,7 +24,20 @@
   }
   if (introducersRequired)   options.setProperty(UDPAddress.PROP_CAPACITY,"" + UDPAddress.CAPACITY_TESTING);
  else   options.setProperty(UDPAddress.PROP_CAPACITY,"" + UDPAddress.CAPACITY_TESTING + UDPAddress.CAPACITY_INTRODUCER);
-  if (_mtu < PeerState.LARGE_MTU)   options.setProperty(UDPAddress.PROP_MTU,Integer.toString(_mtu));
+  int mtu;
+  if (host == null) {
+    mtu=_mtu;
+  }
+ else {
+    try {
+      InetAddress ia=InetAddress.getByName(host);
+      mtu=setMTU(ia);
+    }
+ catch (    UnknownHostException uhe) {
+      mtu=_mtu;
+    }
+  }
+  if (mtu < PeerState.LARGE_MTU)   options.setProperty(UDPAddress.PROP_MTU,Integer.toString(mtu));
   if (directIncluded || introducersIncluded) {
     if (_introKey != null)     options.setProperty(UDPAddress.PROP_INTRO_KEY,_introKey.toBase64());
     int cost=DEFAULT_COST;
