@@ -1,7 +1,8 @@
 {
   OutNetMessage msg=getNextMessage();
   if (msg != null) {
-    RouterIdentity ident=msg.getTarget().getIdentity();
+    RouterInfo target=msg.getTarget();
+    RouterIdentity ident=target.getIdentity();
     Hash ih=ident.calculateHash();
     NTCPConnection con=null;
     boolean isNew=false;
@@ -9,7 +10,7 @@ synchronized (_conLock) {
       con=_conByIdent.get(ih);
       if (con == null) {
         isNew=true;
-        RouterAddress addr=msg.getTarget().getTargetAddress(STYLE);
+        RouterAddress addr=getTargetAddress(target);
         if (addr != null) {
           NTCPAddress naddr=new NTCPAddress(addr);
           con=new NTCPConnection(_context,this,ident,naddr);
@@ -17,7 +18,7 @@ synchronized (_conLock) {
           _conByIdent.put(ih,con);
         }
  else {
-          _log.error("we bid on a peer who doesn't have an ntcp address? " + msg.getTarget());
+          _log.error("we bid on a peer who doesn't have an ntcp address? " + target);
           return;
         }
       }

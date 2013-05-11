@@ -1,8 +1,8 @@
 {
-  String[] ls=null;
+  File[] ls=null;
   if (r.isDirectory()) {
-    ls=r.list();
-    Arrays.sort(ls,Collator.getInstance());
+    ls=r.listFiles();
+    Arrays.sort(ls,new ListingComparator());
   }
   String title=decodePath(base);
   String cpath=_contextPath + '/';
@@ -49,7 +49,7 @@
       }
       List<List<String>> alist=meta.getAnnounceList();
       if (alist != null) {
-        buf.append("<tr><td><b>");
+        buf.append("<tr><td>" + "<img alt=\"\" border=\"0\" src=\"").append(_imgPath).append("details.png\"> <b>");
         buf.append(_("Tracker List")).append(":</b> ");
         for (        List<String> alist2 : alist) {
           buf.append('[');
@@ -105,8 +105,8 @@
   buf.append("\"><img alt=\"\" border=\"0\" src=\"" + _imgPath + "up.png\"> ").append(_("Up to higher level directory")).append("</A></td></tr>\n");
   boolean showSaveButton=false;
   for (int i=0; i < ls.length; i++) {
-    String encoded=encodePath(ls[i]);
-    File item=new File(r,ls[i]);
+    String encoded=encodePath(ls[i].getName());
+    File item=ls[i];
     String rowClass=(i % 2 == 0 ? "snarkTorrentEven" : "snarkTorrentOdd");
     buf.append("<TR class=\"").append(rowClass).append("\">");
     boolean complete=false;
@@ -114,7 +114,6 @@
     long length=item.length();
     if (item.isDirectory()) {
       complete=true;
-      status=toImg("tick") + ' ' + _("Directory");
     }
  else {
       if (snark == null || snark.getStorage() == null) {
@@ -171,7 +170,7 @@
     }
     buf.append("</TD><TD class=\"snarkFileName ").append(rowClass).append("\">");
     if (complete)     buf.append("<a href=\"").append(path).append("\">");
-    buf.append(ls[i]);
+    buf.append(item.getName());
     if (complete)     buf.append("</a>");
     buf.append("</TD><TD ALIGN=right class=\"").append(rowClass).append(" snarkFileSize\">");
     if (!item.isDirectory())     buf.append(DataHelper.formatSize2(length)).append('B');
