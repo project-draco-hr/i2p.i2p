@@ -11,23 +11,40 @@
   }
  catch (  InterruptedException ie) {
   }
+  PacketBuilder builder=new PacketBuilder(_context,null);
+  InetAddress localhost=null;
+  try {
+    localhost=InetAddress.getLocalHost();
+  }
+ catch (  UnknownHostException uhe) {
+    _log.error("die",uhe);
+    System.exit(0);
+  }
   _log.debug("Beginning to write");
-  for (int curPacket=0; curPacket < 10000; curPacket++) {
+  for (int curPacket=0; curPacket < 2000; curPacket++) {
     byte data[]=new byte[1024];
     _context.random().nextBytes(data);
     int curPeer=(curPacket % _endpoints.length);
     if (_endpoints[curPeer] == _endpoint)     curPeer++;
     if (curPeer >= _endpoints.length)     curPeer=0;
-    short priority=1;
-    long expiration=-1;
-    UDPPacket packet=UDPPacket.acquire(_context,true);
-    if (true)     throw new RuntimeException("fixme");
-    packet.getPacket().setLength(1024);
+    UDPPacket packet=builder.buildPacket(data,localhost,_endpoints[curPeer].getListenPort());
     int outstanding=_sentNotReceived.size() + 1;
     _sentNotReceived.add(new ByteArray(data,0,1024));
     _log.debug("Sending packet " + curPacket + " with outstanding "+ outstanding);
-    _endpoint.send(packet);
+    try {
+      _endpoint.send(packet);
+    }
+ catch (    Exception e) {
+      _log.error("die",e);
+      break;
+    }
+    try {
+      Thread.sleep(3);
+    }
+ catch (    InterruptedException ie) {
+    }
   }
+  _log.debug("Done sending packets");
   try {
     Thread.sleep(10 * 1000);
   }
