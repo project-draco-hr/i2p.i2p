@@ -2,7 +2,7 @@
   _context.statManager().addRateData("udp.receiveTest",1);
   byte[] fromIP=from.getIP();
   int fromPort=from.getPort();
-  if (fromPort < 1024 || fromPort > 65535 || (!_transport.isValid(fromIP)) || DataHelper.eq(fromIP,0,_transport.getExternalIP(),0,2) || _context.blocklist().isBlocklisted(fromIP)) {
+  if (fromPort < 1024 || fromPort > 65535 || (!_transport.isValid(fromIP)) || _transport.isTooClose(fromIP) || _context.blocklist().isBlocklisted(fromIP)) {
     if (_log.shouldLog(Log.WARN))     _log.warn("Invalid PeerTest address: " + Addresses.toString(fromIP,fromPort));
     _context.statManager().addRateData("udp.testBadIP",1);
     return;
@@ -35,7 +35,7 @@
   }
   Long lNonce=Long.valueOf(nonce);
   PeerTestState state=_activeTests.get(lNonce);
-  if (testIP != null && DataHelper.eq(testIP,0,_transport.getExternalIP(),0,2)) {
+  if (testIP != null && _transport.isTooClose(testIP)) {
     if (_recentTests.contains(lNonce)) {
       if (_log.shouldLog(Log.INFO))       _log.info("Got delayed reply on nonce " + nonce + " from: "+ Addresses.toString(fromIP,fromPort));
     }
