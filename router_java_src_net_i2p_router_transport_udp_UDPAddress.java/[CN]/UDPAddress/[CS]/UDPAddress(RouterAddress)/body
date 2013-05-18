@@ -13,27 +13,30 @@
  catch (  NumberFormatException nfe) {
   }
   String key=addr.getOption(PROP_INTRO_KEY);
-  if (key != null)   _introKey=Base64.decode(key.trim());
-  for (int i=MAX_INTRODUCERS; i >= 0; i--) {
-    String host=addr.getOption(PROP_INTRO_HOST_PREFIX + i);
+  if (key != null) {
+    byte[] ik=Base64.decode(key.trim());
+    if (ik != null && ik.length == SessionKey.KEYSIZE_BYTES)     _introKey=ik;
+  }
+  for (int i=MAX_INTRODUCERS - 1; i >= 0; i--) {
+    String host=addr.getOption(PROP_INTRO_HOST[i]);
     if (host == null)     continue;
-    String port=addr.getOption(PROP_INTRO_PORT_PREFIX + i);
+    String port=addr.getOption(PROP_INTRO_PORT[i]);
     if (port == null)     continue;
-    String k=addr.getOption(PROP_INTRO_KEY_PREFIX + i);
+    String k=addr.getOption(PROP_INTRO_IKEY[i]);
     if (k == null)     continue;
     byte ikey[]=Base64.decode(k);
     if ((ikey == null) || (ikey.length != SessionKey.KEYSIZE_BYTES))     continue;
-    String t=addr.getOption(PROP_INTRO_TAG_PREFIX + i);
+    String t=addr.getOption(PROP_INTRO_TAG[i]);
     if (t == null)     continue;
-    int p=-1;
+    int p;
     try {
       p=Integer.parseInt(port);
-      if (p <= 0 || p > 65535)       continue;
+      if (p < UDPTransport.MIN_PEER_PORT || p > 65535)       continue;
     }
  catch (    NumberFormatException nfe) {
       continue;
     }
-    long tag=-1;
+    long tag;
     try {
       tag=Long.parseLong(t);
       if (tag <= 0)       continue;
