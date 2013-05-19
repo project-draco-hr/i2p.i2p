@@ -4,7 +4,7 @@
   OrderedProperties newProps=new OrderedProperties();
   int cost;
   if (oldAddr == null) {
-    cost=DEFAULT_COST;
+    cost=getDefaultCost(ip != null && ip.length == 16);
   }
  else {
     cost=oldAddr.getCost();
@@ -58,20 +58,21 @@
   if (!changed) {
     if (oldAddr != null) {
       int oldCost=oldAddr.getCost();
-      int newCost=DEFAULT_COST;
-      if (TransportImpl.ADJUST_COST && !haveCapacity())       newCost++;
+      int newCost=getDefaultCost(ohost != null && ohost.contains(":"));
+      if (ADJUST_COST && !haveCapacity())       newCost+=CONGESTION_COST_ADJUSTMENT;
       if (newCost != oldCost) {
-        oldAddr.setCost(newCost);
+        newAddr.setCost(newCost);
         if (_log.shouldLog(Log.WARN))         _log.warn("Changing NTCP cost from " + oldCost + " to "+ newCost);
       }
  else {
         _log.info("No change to NTCP Address");
+        return;
       }
     }
  else {
       _log.info("No change to NTCP Address");
+      return;
     }
-    return;
   }
   restartListening(newAddr);
   if (_log.shouldLog(Log.WARN))   _log.warn("Updating NTCP Address with " + newAddr);

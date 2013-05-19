@@ -41,7 +41,13 @@
   if (directIncluded || introducersIncluded) {
     if (_introKey != null)     options.setProperty(UDPAddress.PROP_INTRO_KEY,_introKey.toBase64());
     int cost=DEFAULT_COST;
-    if (ADJUST_COST && !haveCapacity(91))     cost++;
+    if (ADJUST_COST && !haveCapacity(91))     cost+=CONGESTION_COST_ADJUSTMENT;
+    if (introducersIncluded)     cost+=2;
+    if (isIPv6) {
+      TransportUtil.IPv6Config config=getIPv6Config();
+      if (config == IPV6_PREFERRED)       cost--;
+ else       if (config == IPV6_NOT_PREFERRED)       cost++;
+    }
     RouterAddress addr=new RouterAddress(STYLE,options,cost);
     RouterAddress current=getCurrentAddress(isIPv6);
     boolean wantsRebuild=!addr.deepEquals(current);
