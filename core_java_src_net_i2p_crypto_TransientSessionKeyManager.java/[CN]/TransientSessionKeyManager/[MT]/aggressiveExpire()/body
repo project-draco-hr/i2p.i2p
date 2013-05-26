@@ -2,26 +2,18 @@
   int removed=0;
   int remaining=0;
   long now=_context.clock().now();
-  StringBuilder buf=null;
-  if (_log.shouldLog(Log.DEBUG)) {
-    buf=new StringBuilder(128);
-    buf.append("Expiring inbound: ");
-  }
 synchronized (_inboundTagSets) {
-    for (Iterator<SessionTag> iter=_inboundTagSets.keySet().iterator(); iter.hasNext(); ) {
-      SessionTag tag=iter.next();
-      TagSet ts=_inboundTagSets.get(tag);
-      long age=now - ts.getDate();
-      if (age > SESSION_LIFETIME_MAX_MS) {
+    for (Iterator<TagSet> iter=_inboundTagSets.values().iterator(); iter.hasNext(); ) {
+      TagSet ts=iter.next();
+      if (ts.getDate() <= now) {
         iter.remove();
         removed++;
-        if (buf != null)         buf.append(tag).append(" @ age ").append(DataHelper.formatDuration(age));
       }
     }
     remaining=_inboundTagSets.size();
   }
   _context.statManager().addRateData("crypto.sessionTagsRemaining",remaining,0);
-  if ((buf != null) && (removed > 0))   _log.debug(buf.toString());
+  if (removed > 0 && _log.shouldLog(Log.DEBUG))   _log.debug("Expired inbound: " + removed);
 synchronized (_outboundSessions) {
     for (Iterator<OutboundSession> iter=_outboundSessions.values().iterator(); iter.hasNext(); ) {
       OutboundSession sess=iter.next();

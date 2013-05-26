@@ -5,7 +5,8 @@
   curIndex+=Hash.HASH_LENGTH;
   _fromHash=Hash.create(data,curIndex);
   curIndex+=Hash.HASH_LENGTH;
-  boolean tunnelSpecified=(data[curIndex] & 0x01) != 0;
+  boolean tunnelSpecified=(data[curIndex] & FLAG_TUNNEL) != 0;
+  boolean replyKeySpecified=(data[curIndex] & FLAG_ENCRYPT) != 0;
   curIndex++;
   if (tunnelSpecified) {
     _replyTunnel=new TunnelId(DataHelper.fromLong(data,curIndex,4));
@@ -21,4 +22,13 @@
     peers.add(p);
   }
   _dontIncludePeers=peers;
+  if (replyKeySpecified) {
+    byte[] rk=new byte[SessionKey.KEYSIZE_BYTES];
+    System.arraycopy(data,curIndex,rk,0,SessionKey.KEYSIZE_BYTES);
+    _replyKey=new SessionKey(rk);
+    curIndex+=SessionKey.KEYSIZE_BYTES;
+    byte[] rt=new byte[SessionTag.BYTE_LENGTH];
+    System.arraycopy(data,curIndex,rt,0,SessionTag.BYTE_LENGTH);
+    _replyTag=new SessionTag(rt);
+  }
 }
