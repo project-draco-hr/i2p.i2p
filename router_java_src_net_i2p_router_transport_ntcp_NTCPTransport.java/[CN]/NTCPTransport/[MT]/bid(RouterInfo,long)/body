@@ -18,26 +18,10 @@
     if (_log.shouldLog(Log.DEBUG))     _log.debug("fast bid when trying to send to " + peer + " as its already established");
     return _fastBid;
   }
-  RouterAddress addr=toAddress.getTargetAddress(STYLE);
+  RouterAddress addr=getTargetAddress(toAddress);
   if (addr == null) {
     markUnreachable(peer);
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("no bid when trying to send to " + peer + " as they don't have an ntcp address");
     return null;
-  }
-  byte[] ip=addr.getIP();
-  if ((addr.getPort() < MIN_PEER_PORT) || (ip == null)) {
-    _context.statManager().addRateData("ntcp.connectFailedInvalidPort",1);
-    markUnreachable(peer);
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("no bid when trying to send to " + peer + " as they don't have a valid ntcp address");
-    return null;
-  }
-  if (!isPubliclyRoutable(ip)) {
-    if (!_context.getProperty("i2np.ntcp.allowLocal","false").equals("true")) {
-      _context.statManager().addRateData("ntcp.bidRejectedLocalAddress",1);
-      markUnreachable(peer);
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("no bid when trying to send to " + peer + " as they have a private ntcp address");
-      return null;
-    }
   }
   if (!allowConnection()) {
     if (_log.shouldLog(Log.WARN))     _log.warn("no bid when trying to send to " + peer + ", max connection limit reached");
