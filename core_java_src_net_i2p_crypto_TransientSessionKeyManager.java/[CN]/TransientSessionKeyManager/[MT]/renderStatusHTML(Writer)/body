@@ -3,10 +3,12 @@
   buf.append("<h2>Inbound sessions</h2>" + "<table>");
   Set<TagSet> inbound=getInboundTagSets();
   Map<SessionKey,Set<TagSet>> inboundSets=new HashMap(inbound.size());
-  for (Iterator<TagSet> iter=inbound.iterator(); iter.hasNext(); ) {
-    TagSet ts=iter.next();
-    if (!inboundSets.containsKey(ts.getAssociatedKey()))     inboundSets.put(ts.getAssociatedKey(),new HashSet());
+  for (  TagSet ts : inbound) {
     Set<TagSet> sets=inboundSets.get(ts.getAssociatedKey());
+    if (sets == null) {
+      sets=new HashSet();
+      inboundSets.put(ts.getAssociatedKey(),sets);
+    }
     sets.add(ts);
   }
   int total=0;
@@ -20,7 +22,10 @@
       TagSet ts=siter.next();
       int size=ts.getTags().size();
       total+=size;
-      buf.append("<li><b>ID: ").append(ts.getID()).append(" Received:</b> ").append(DataHelper.formatDuration2(now - ts.getDate())).append(" ago with ");
+      buf.append("<li><b>ID: ").append(ts.getID());
+      long expires=ts.getDate() - now;
+      if (expires > 0)       buf.append(" Expires in:</b> ").append(DataHelper.formatDuration2(expires)).append(" with ");
+ else       buf.append(" Expired:</b> ").append(DataHelper.formatDuration2(0 - expires)).append(" ago with ");
       buf.append(size).append('/').append(ts.getOriginalSize()).append(" tags remaining</li>");
     }
     buf.append("</ul></td></tr>\n");
