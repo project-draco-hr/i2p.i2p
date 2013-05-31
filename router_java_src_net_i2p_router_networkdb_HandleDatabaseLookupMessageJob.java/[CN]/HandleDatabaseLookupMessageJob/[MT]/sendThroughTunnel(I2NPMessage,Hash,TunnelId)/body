@@ -7,12 +7,16 @@
     getContext().tunnelDispatcher().dispatch(m);
   }
  else {
-    SessionKey replyKey=_message.getReplyKey();
-    if (replyKey != null) {
-      message=MessageWrapper.wrap(getContext(),message,replyKey,_message.getReplyTag());
-      if (message == null) {
-        _log.error("Encryption error");
-        return;
+    if (!_replyKeyConsumed) {
+      SessionKey replyKey=_message.getReplyKey();
+      if (replyKey != null) {
+        if (_log.shouldLog(Log.INFO))         _log.info("Sending encrypted reply to " + toPeer + ' '+ replyKey+ ' '+ _message.getReplyTag());
+        message=MessageWrapper.wrap(getContext(),message,replyKey,_message.getReplyTag());
+        if (message == null) {
+          _log.error("Encryption error");
+          return;
+        }
+        _replyKeyConsumed=true;
       }
     }
     TunnelGatewayMessage m=new TunnelGatewayMessage(getContext());
