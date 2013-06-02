@@ -9,19 +9,17 @@
   _log.log(Log.CRIT,"TOO MANY SESSION TAGS! Starting cleanup, overage = " + overage);
   List<TagSet> removed=new ArrayList(toRemove);
 synchronized (_inboundTagSets) {
-    for (Iterator<TagSet> iter=_inboundTagSets.values().iterator(); iter.hasNext(); ) {
-      TagSet set=iter.next();
+    for (    TagSet set : _inboundTagSets.values()) {
       int size=set.getTags().size();
       if (size > 1000)       absurd++;
       if (size > 100)       large++;
-      if (now - set.getDate() > SESSION_LIFETIME_MAX_MS)       old++;
- else       if (now - set.getDate() < 1 * 60 * 1000)       recent++;
-      if ((removed.size() < (toRemove)) || (now - set.getDate() > SESSION_LIFETIME_MAX_MS))       removed.add(set);
+      if (now >= set.getDate())       old++;
+ else       if (set.getDate() - now > 10 * 60 * 1000)       recent++;
+      if ((removed.size() < (toRemove)) || (now >= set.getDate()))       removed.add(set);
     }
     for (int i=0; i < removed.size(); i++) {
       TagSet cur=removed.get(i);
-      for (Iterator<SessionTag> iter=cur.getTags().iterator(); iter.hasNext(); ) {
-        SessionTag tag=iter.next();
+      for (      SessionTag tag : cur.getTags()) {
         _inboundTagSets.remove(tag);
         tags++;
       }

@@ -6,10 +6,15 @@
   System.arraycopy(_fromHash.getData(),0,out,curIndex,Hash.HASH_LENGTH);
   curIndex+=Hash.HASH_LENGTH;
   if (_replyTunnel != null) {
-    out[curIndex++]=0x01;
+    byte flag=FLAG_TUNNEL;
+    if (_replyKey != null)     flag|=FLAG_ENCRYPT;
+    out[curIndex++]=flag;
     byte id[]=DataHelper.toLong(4,_replyTunnel.getTunnelId());
     System.arraycopy(id,0,out,curIndex,4);
     curIndex+=4;
+  }
+ else   if (_replyKey != null) {
+    out[curIndex++]=FLAG_ENCRYPT;
   }
  else {
     out[curIndex++]=0x00;
@@ -28,6 +33,12 @@
       System.arraycopy(peer.getData(),0,out,curIndex,Hash.HASH_LENGTH);
       curIndex+=Hash.HASH_LENGTH;
     }
+  }
+  if (_replyKey != null) {
+    System.arraycopy(_replyKey.getData(),0,out,curIndex,SessionKey.KEYSIZE_BYTES);
+    curIndex+=SessionKey.KEYSIZE_BYTES;
+    System.arraycopy(_replyTag.getData(),0,out,curIndex,SessionTag.BYTE_LENGTH);
+    curIndex+=SessionTag.BYTE_LENGTH;
   }
   return curIndex;
 }
