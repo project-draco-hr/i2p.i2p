@@ -4,63 +4,57 @@ case DeliveryInstructions.DELIVERY_MODE_LOCAL:
     if (_log.shouldLog(Log.DEBUG))     _log.debug("local delivery instructions for clove: " + data.getClass().getName());
   if (data instanceof GarlicMessage) {
     _receiver.receive((GarlicMessage)data);
-    return;
+  }
+ else   if (data instanceof DatabaseStoreMessage) {
+    DatabaseStoreMessage dsm=(DatabaseStoreMessage)data;
+    try {
+      if (dsm.getEntry().getType() == DatabaseEntry.KEY_TYPE_LEASESET) {
+        LeaseSet ls=(LeaseSet)dsm.getEntry();
+        LeaseSet old=_context.netDb().store(dsm.getKey(),ls);
+        if (old != null && old.getReceivedAsPublished())         ls.setReceivedAsPublished(true);
+        if (_log.shouldLog(Log.INFO))         _log.info("Storing LS for: " + dsm.getKey() + " sent to: "+ _client);
+      }
+ else {
+        if (_client != null) {
+          _context.statManager().addRateData("tunnel.dropDangerousClientTunnelMessage",1,DatabaseStoreMessage.MESSAGE_TYPE);
+          _log.error("Dropped dangerous message down a tunnel for " + _client + ": "+ dsm,new Exception("cause"));
+          return;
+        }
+        _context.netDb().store(dsm.getKey(),(RouterInfo)dsm.getEntry());
+      }
+    }
+ catch (    IllegalArgumentException iae) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Bad store attempt",iae);
+    }
+  }
+ else   if (data instanceof DataMessage) {
+    _context.statManager().addRateData("tunnel.handleLoadClove",1,0);
+    data=null;
+  }
+ else   if (_client != null && data.getType() != DeliveryStatusMessage.MESSAGE_TYPE) {
+    _context.statManager().addRateData("tunnel.dropDangerousClientTunnelMessage",1,data.getType());
+    _log.error("Dropped dangerous message down a tunnel for " + _client + ": "+ data,new Exception("cause"));
   }
  else {
-    if (data instanceof DatabaseStoreMessage) {
-      DatabaseStoreMessage dsm=(DatabaseStoreMessage)data;
-      try {
-        if (dsm.getEntry().getType() == DatabaseEntry.KEY_TYPE_LEASESET) {
-          LeaseSet ls=(LeaseSet)dsm.getEntry();
-          LeaseSet old=_context.netDb().store(dsm.getKey(),ls);
-          if (old != null && old.getReceivedAsPublished())           ls.setReceivedAsPublished(true);
-          if (_log.shouldLog(Log.INFO))           _log.info("Storing LS for: " + dsm.getKey() + " sent to: "+ _client);
-        }
- else {
-          if (_client != null) {
-            _context.statManager().addRateData("tunnel.dropDangerousClientTunnelMessage",1,DatabaseStoreMessage.MESSAGE_TYPE);
-            _log.error("Dropped dangerous message down a tunnel for " + _client.toBase64() + ": "+ dsm,new Exception("cause"));
-            return;
-          }
-          _context.netDb().store(dsm.getKey(),(RouterInfo)dsm.getEntry());
-        }
-      }
- catch (      IllegalArgumentException iae) {
-        if (_log.shouldLog(Log.WARN))         _log.warn("Bad store attempt",iae);
-      }
-    }
- else     if (data instanceof DataMessage) {
-      _context.statManager().addRateData("tunnel.handleLoadClove",1,0);
-      data=null;
-    }
- else {
-      if ((_client != null) && (data.getType() != DeliveryStatusMessage.MESSAGE_TYPE)) {
-        _context.statManager().addRateData("tunnel.dropDangerousClientTunnelMessage",1,data.getType());
-        _log.error("Dropped dangerous message down a tunnel for " + _client.toBase64() + ": "+ data,new Exception("cause"));
-        return;
-      }
- else {
-        _context.inNetMessagePool().add(data,null,null);
-      }
-    }
-    return;
+    _context.inNetMessagePool().add(data,null,null);
   }
+return;
 case DeliveryInstructions.DELIVERY_MODE_DESTINATION:
 if (!(data instanceof DataMessage)) {
-  if (_log.shouldLog(Log.ERROR))   _log.error("cant send a " + data.getClass().getName() + " to a destination");
+if (_log.shouldLog(Log.ERROR)) _log.error("cant send a " + data.getClass().getName() + " to a destination");
 }
  else if ((_client != null) && (_client.equals(instructions.getDestination()))) {
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("data message came down a tunnel for " + _client.toBase64().substring(0,4));
-  DataMessage dm=(DataMessage)data;
-  Payload payload=new Payload();
-  payload.setEncryptedData(dm.getData());
-  ClientMessage m=new ClientMessage();
-  m.setDestinationHash(_client);
-  m.setPayload(payload);
-  _context.clientManager().messageReceived(m);
+if (_log.shouldLog(Log.DEBUG)) _log.debug("data message came down a tunnel for " + _client);
+DataMessage dm=(DataMessage)data;
+Payload payload=new Payload();
+payload.setEncryptedData(dm.getData());
+ClientMessage m=new ClientMessage();
+m.setDestinationHash(_client);
+m.setPayload(payload);
+_context.clientManager().messageReceived(m);
 }
  else {
-  if (_log.shouldLog(Log.ERROR))   _log.error("this data message came down a tunnel for " + (_client == null ? "no one" : _client.toBase64().substring(0,4)) + " but targetted "+ instructions.getDestination().toBase64().substring(0,4));
+if (_log.shouldLog(Log.ERROR)) _log.error("this data message came down a tunnel for " + (_client == null ? "no one" : _client) + " but targetted "+ instructions.getDestination());
 }
 return;
 case DeliveryInstructions.DELIVERY_MODE_ROUTER:
