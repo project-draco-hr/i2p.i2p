@@ -1,21 +1,28 @@
 {
-  log.info("magic bytes " + magicBytes);
-  log.info("fileLen " + fileLen);
-  log.info("freeListStart " + freeListStart);
-  log.info("mounted " + mounted);
-  log.info("spanSize " + spanSize);
-  log.info("Metaindex");
-  log.info("Checking meta index in blockfile " + file);
+  if (log.shouldLog(Log.INFO)) {
+    log.info("magic bytes " + magicBytes);
+    log.info("fileLen " + fileLen);
+    log.info("freeListStart " + freeListStart);
+    log.info("mounted " + mounted);
+    log.info("spanSize " + spanSize);
+    log.info("Metaindex");
+    log.info("Checking meta index in blockfile " + file);
+  }
   boolean rv=metaIndex.bslck(fix,true);
-  if (rv)   log.warn("Repaired meta index in blockfile " + file);
- else   log.info("No errors in meta index in blockfile " + file);
+  if (rv) {
+    if (log.shouldLog(Log.WARN))     log.warn("Repaired meta index in blockfile " + file);
+  }
+ else {
+    if (log.shouldLog(Log.INFO))     log.info("No errors in meta index in blockfile " + file);
+  }
   int items=0;
   for (SkipIterator iter=metaIndex.iterator(); iter.hasNext(); ) {
     String slname=(String)iter.nextKey();
     Integer page=(Integer)iter.next();
-    log.info("List " + slname + " page "+ page);
+    if (log.shouldLog(Log.INFO))     log.info("List " + slname + " page "+ page);
     try {
-      BSkipList bsl=getIndex(slname,new UTF8StringBytes(),new IdentityBytes());
+      Serializer keyser=slname.equals("%%__REVERSE__%%") ? new IntBytes() : new UTF8StringBytes();
+      BSkipList bsl=getIndex(slname,keyser,new IdentityBytes());
       if (bsl == null) {
         log.error("Can't find list? " + slname);
         continue;
@@ -27,5 +34,17 @@
     }
   }
   log.info("Checked meta index and " + items + " skiplists");
+  if (freeListStart != 0) {
+    try {
+      if (flb == null)       flb=new FreeListBlock(file,freeListStart);
+      flb.flbck(true);
+    }
+ catch (    IOException ioe) {
+      log.error("Free list error",ioe);
+    }
+  }
+ else {
+    if (log.shouldLog(Log.INFO))     log.info("No freelist");
+  }
   return rv;
 }
