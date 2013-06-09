@@ -1,0 +1,37 @@
+{
+  long now=_context.clock().now();
+  boolean upLongEnough=_context.router().getUptime() > 60 * 60 * 1000;
+  long adjustedExpiration;
+  if (FloodfillNetworkDatabaseFacade.floodfillEnabled(_context))   adjustedExpiration=ROUTER_INFO_EXPIRATION_FLOODFILL;
+ else   adjustedExpiration=Math.min(ROUTER_INFO_EXPIRATION,ROUTER_INFO_EXPIRATION_MIN + ((ROUTER_INFO_EXPIRATION - ROUTER_INFO_EXPIRATION_MIN) * MIN_ROUTERS / (_kb.size() + 1)));
+  if (upLongEnough && !routerInfo.isCurrent(adjustedExpiration)) {
+    long age=_context.clock().now() - routerInfo.getPublished();
+    int existing=_kb.size();
+    if (existing >= MIN_REMAINING_ROUTERS) {
+      if (_log.shouldLog(Log.INFO))       _log.info("Not storing expired RI " + routerInfo.getIdentity().getHash(),new Exception("Rejecting store"));
+      return "Peer expired " + DataHelper.formatDuration(age) + " ago";
+    }
+ else {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Even though the peer is old, we have only " + existing + " peers left "+ routerInfo);
+    }
+  }
+  if (routerInfo.getPublished() > now + 2 * Router.CLOCK_FUDGE_FACTOR) {
+    long age=routerInfo.getPublished() - _context.clock().now();
+    if (_log.shouldLog(Log.INFO))     _log.info("Peer " + routerInfo.getIdentity().getHash() + " published their routerInfo in the future?! ["+ new Date(routerInfo.getPublished())+ "]",new Exception("Rejecting store"));
+    return "Peer published " + DataHelper.formatDuration(age) + " in the future?!";
+  }
+  if (upLongEnough && (routerInfo.getPublished() < now - 2 * 24 * 60* 60* 1000l)) {
+    long age=_context.clock().now() - routerInfo.getPublished();
+    return "Peer published " + DataHelper.formatDuration(age) + " ago";
+  }
+  if (upLongEnough && !routerInfo.isCurrent(ROUTER_INFO_EXPIRATION_SHORT)) {
+    if (routerInfo.getAddresses().isEmpty())     return "Peer published > 75m ago with no addresses";
+    if (routerInfo.getCapabilities().indexOf(Router.CAPABILITY_UNREACHABLE) >= 0)     return "Peer published > 75m ago and thinks it is unreachable";
+    RouterAddress ra=routerInfo.getTargetAddress("SSU");
+    if (ra != null) {
+      if (ra.getOption("ihost0") != null)       return "Peer published > 75m ago with SSU Introducers";
+      if (routerInfo.getTargetAddress("NTCP") == null)       return "Peer published > 75m ago, SSU only without introducers";
+    }
+  }
+  return null;
+}

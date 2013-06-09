@@ -45,9 +45,10 @@
  else       buf.append(dest.toBase64().substring(0,6));
     }
     buf.append(")</b><br>\n");
-    long exp=ls.getEarliestLeaseDate() - now;
-    if (exp > 0)     buf.append(_("Expires in {0}",DataHelper.formatDuration2(exp))).append("<br>\n");
- else     buf.append(_("Expired {0} ago",DataHelper.formatDuration2(0 - exp))).append("<br>\n");
+    long exp=ls.getLatestLeaseDate() - now;
+    if (exp > 0)     buf.append(_("Expires in {0}",DataHelper.formatDuration2(exp)));
+ else     buf.append(_("Expired {0} ago",DataHelper.formatDuration2(0 - exp)));
+    buf.append("<br>\n");
     if (debug) {
       buf.append("RAP? " + ls.getReceivedAsPublished());
       buf.append(" RAR? " + ls.getReceivedAsReply());
@@ -61,9 +62,16 @@
       buf.append("Encryption Key: ").append(ls.getEncryptionKey().toBase64().substring(0,20)).append("...<br>");
     }
     for (int i=0; i < ls.getLeaseCount(); i++) {
-      buf.append(_("Lease")).append(' ').append(i + 1).append(": " + _("Gateway") + ' ');
-      buf.append(_context.commSystem().renderPeerHTML(ls.getLease(i).getGateway()));
-      buf.append(' ' + _("Tunnel") + ' ').append(ls.getLease(i).getTunnelId().getTunnelId()).append("<br>\n");
+      Lease lease=ls.getLease(i);
+      buf.append(_("Lease")).append(' ').append(i + 1).append(": ").append(_("Gateway")).append(' ');
+      buf.append(_context.commSystem().renderPeerHTML(lease.getGateway()));
+      buf.append(' ').append(_("Tunnel")).append(' ').append(lease.getTunnelId().getTunnelId()).append(' ');
+      if (debug) {
+        long exl=lease.getEndDate().getTime() - now;
+        if (exl > 0)         buf.append(_("Expires in {0}",DataHelper.formatDuration2(exl)));
+ else         buf.append(_("Expired {0} ago",DataHelper.formatDuration2(0 - exl)));
+      }
+      buf.append("<br>\n");
     }
     buf.append("<hr>\n");
     out.write(buf.toString());

@@ -1,53 +1,16 @@
 {
-  long now=_context.clock().now();
-  boolean upLongEnough=_context.router().getUptime() > 60 * 60 * 1000;
-  long adjustedExpiration;
-  if (FloodfillNetworkDatabaseFacade.floodfillEnabled(_context))   adjustedExpiration=ROUTER_INFO_EXPIRATION_FLOODFILL;
- else   adjustedExpiration=Math.min(ROUTER_INFO_EXPIRATION,ROUTER_INFO_EXPIRATION_MIN + ((ROUTER_INFO_EXPIRATION - ROUTER_INFO_EXPIRATION_MIN) * MIN_ROUTERS / (_kb.size() + 1)));
   if (!key.equals(routerInfo.getIdentity().getHash())) {
     if (_log.shouldLog(Log.WARN))     _log.warn("Invalid store attempt! key does not match routerInfo.identity!  key = " + key + ", router = "+ routerInfo);
-    return "Key does not match routerInfo.identity - " + key.toBase64();
+    return "Key does not match routerInfo.identity";
   }
- else   if (!routerInfo.isValid()) {
+  if (!routerInfo.isValid()) {
     if (_log.shouldLog(Log.WARN))     _log.warn("Invalid routerInfo signature!  forged router structure!  router = " + routerInfo);
-    return "Invalid routerInfo signature on " + key.toBase64();
+    return "Invalid routerInfo signature";
   }
- else   if (upLongEnough && !routerInfo.isCurrent(adjustedExpiration)) {
-    if (routerInfo.getNetworkId() != Router.NETWORK_ID) {
-      _context.banlist().banlistRouter(key,"Peer is not in our network");
-      return "Peer is not in our network (" + routerInfo.getNetworkId() + ", wants "+ Router.NETWORK_ID+ "): "+ routerInfo.calculateHash().toBase64();
-    }
-    long age=_context.clock().now() - routerInfo.getPublished();
-    int existing=_kb.size();
-    if (existing >= MIN_REMAINING_ROUTERS) {
-      if (_log.shouldLog(Log.INFO))       _log.info("Not storing expired router for " + key.toBase64(),new Exception("Rejecting store"));
-      return "Peer " + key.toBase64() + " expired "+ DataHelper.formatDuration(age)+ " ago";
-    }
- else {
-      if (_log.shouldLog(Log.WARN))       _log.warn("Even though the peer is old, we have only " + existing + " peers left (curPeer: "+ key.toBase64()+ " published on "+ new Date(routerInfo.getPublished()));
-    }
+  if (routerInfo.getNetworkId() != Router.NETWORK_ID) {
+    _context.banlist().banlistRouter(key,"Not in our network");
+    if (_log.shouldLog(Log.WARN))     _log.warn("Bad network: " + routerInfo);
+    return "Not in our network";
   }
- else   if (routerInfo.getPublished() > now + 2 * Router.CLOCK_FUDGE_FACTOR) {
-    long age=routerInfo.getPublished() - _context.clock().now();
-    if (_log.shouldLog(Log.INFO))     _log.info("Peer " + key.toBase64() + " published their routerInfo in the future?! ["+ new Date(routerInfo.getPublished())+ "]",new Exception("Rejecting store"));
-    return "Peer " + key.toBase64() + " published "+ DataHelper.formatDuration(age)+ " in the future?!";
-  }
- else   if (_enforceNetId && (routerInfo.getNetworkId() != Router.NETWORK_ID)) {
-    String rv="Peer " + key.toBase64() + " is from another network, not accepting it (id="+ routerInfo.getNetworkId()+ ", want "+ Router.NETWORK_ID+ ")";
-    return rv;
-  }
- else   if (upLongEnough && (routerInfo.getPublished() < now - 2 * 24 * 60* 60* 1000l)) {
-    long age=_context.clock().now() - routerInfo.getPublished();
-    return "Peer " + key.toBase64() + " published "+ DataHelper.formatDuration(age)+ " ago";
-  }
- else   if (upLongEnough && !routerInfo.isCurrent(ROUTER_INFO_EXPIRATION_SHORT)) {
-    if (routerInfo.getAddresses().isEmpty())     return "Peer " + key.toBase64() + " published > 75m ago with no addresses";
-    if (routerInfo.getCapabilities().indexOf(Router.CAPABILITY_UNREACHABLE) >= 0)     return "Peer " + key.toBase64() + " published > 75m ago and thinks it is unreachable";
-    RouterAddress ra=routerInfo.getTargetAddress("SSU");
-    if (ra != null) {
-      if (ra.getOption("ihost0") != null)       return "Peer " + key.toBase64() + " published > 75m ago with SSU Introducers";
-      if (routerInfo.getTargetAddress("NTCP") == null)       return "Peer " + key.toBase64() + " published > 75m ago, SSU only without introducers";
-    }
-  }
-  return null;
+  return validate(routerInfo);
 }
