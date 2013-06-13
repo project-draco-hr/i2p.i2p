@@ -1,47 +1,57 @@
 {
-  if ((args == null) || (args.length <= 1)) {
+  if ((args == null) || (args.length < 1)) {
     usage();
     return;
   }
-  _defaultContext=new I2PAppContext(getEnv(args[0]));
-  _log=_defaultContext.logManager().getLog(MultiRouter.class);
-  try {
-    Thread.sleep(5 * 1000);
+  Scanner scan=new Scanner(args[0]);
+  if (!scan.hasNextInt()) {
+    usage();
+    return;
   }
- catch (  InterruptedException ie) {
+  nbrRouters=scan.nextInt();
+  if (nbrRouters < 0) {
+    usage();
+    return;
   }
+  _out=System.out;
+  buildClientProps(0);
+  _defaultContext=new I2PAppContext(buildRouterProps(0));
   _defaultContext.clock().setOffset(0);
   Runtime.getRuntime().addShutdownHook(new Thread(){
     @Override public void run(){
-      Thread.currentThread().setName("Router* Shutdown");
+      _out.println("Shutting down in a few moments..");
+      for (      Router r : _routers) {
+        r.shutdown(-1);
+      }
       try {
-        Thread.sleep(120 * 1000);
+        Thread.sleep(1500);
       }
  catch (      InterruptedException ie) {
       }
-      Runtime.getRuntime().halt(-1);
+      Runtime.getRuntime().halt(0);
     }
   }
 );
-  for (int i=1; i < args.length; i++) {
-    Router router=new Router(getEnv(args[i]));
+  for (int i=0; i < nbrRouters; i++) {
+    Router router=new Router(buildRouterProps(i));
     router.setKillVMOnEnd(false);
     _routers.add(router);
-    _log.info("Router " + i + " created from "+ args[i]);
+    _out.println("Router " + i + " was created");
   }
-  for (int i=0; i < _routers.size(); i++) {
-    Router r=(Router)_routers.get(i);
+  for (int i=0; i < nbrRouters; i++) {
+    Router r=_routers.get(i);
     long offset=r.getContext().random().nextLong(Router.CLOCK_FUDGE_FACTOR / 2);
     if (r.getContext().random().nextBoolean())     offset=0 - offset;
     r.getContext().clock().setOffset(offset,true);
     r.runRouter();
-    _log.info("Router " + i + " started with clock offset "+ offset);
-    try {
-      Thread.sleep(2 * 1000 + new java.util.Random().nextInt(2) * 1000);
-    }
- catch (    InterruptedException ie) {
-    }
+    _out.println("Router " + i + " was started with time offset "+ offset);
   }
-  _log.info("All " + _routers.size() + " routers started up");
+  _out.println("All routers have been started");
+  try {
+    Thread.sleep(1000);
+  }
+ catch (  InterruptedException ie) {
+  }
+  internalReseed();
   waitForCompletion();
 }
