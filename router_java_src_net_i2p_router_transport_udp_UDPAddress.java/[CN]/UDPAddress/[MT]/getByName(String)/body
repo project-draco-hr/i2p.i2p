@@ -1,0 +1,22 @@
+{
+  if (host == null)   return null;
+  InetAddress rv;
+synchronized (_inetAddressCache) {
+    rv=_inetAddressCache.get(host);
+  }
+  if (rv == null) {
+    try {
+      boolean isIPv4=host.replaceAll("[0-9\\.]","").length() == 0;
+      if (isIPv4 && host.replaceAll("[0-9]","").length() != 3)       return null;
+      rv=InetAddress.getByName(host);
+      if (isIPv4 || host.replaceAll("[0-9a-fA-F:]","").length() == 0) {
+synchronized (_inetAddressCache) {
+          _inetAddressCache.put(host,rv);
+        }
+      }
+    }
+ catch (    UnknownHostException uhe) {
+    }
+  }
+  return rv;
+}

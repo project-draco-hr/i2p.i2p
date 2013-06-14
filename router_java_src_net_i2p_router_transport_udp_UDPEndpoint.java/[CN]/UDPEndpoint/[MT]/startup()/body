@@ -4,10 +4,13 @@
   _socket=getSocket();
   if (_socket == null) {
     _log.log(Log.CRIT,"UDP Unable to open a port");
-    return;
+    throw new SocketException("SSU Unable to bind to a port on " + _bindAddress);
   }
-  _sender=new UDPSender(_context,_socket,"UDPSender");
-  _receiver=new UDPReceiver(_context,_transport,_socket,"UDPReceiver");
+  int count=_counter.incrementAndGet();
+  _sender=new UDPSender(_context,_socket,"UDPSender " + count);
   _sender.startup();
-  _receiver.startup();
+  if (_transport != null) {
+    _receiver=new UDPReceiver(_context,_transport,_socket,"UDPReceiver " + count);
+    _receiver.startup();
+  }
 }

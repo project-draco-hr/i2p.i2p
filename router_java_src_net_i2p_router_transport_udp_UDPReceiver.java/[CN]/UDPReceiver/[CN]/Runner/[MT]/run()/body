@@ -15,7 +15,10 @@
       if (size >= UDPPacket.MAX_PACKET_SIZE) {
         throw new IOException("packet too large! truncated and dropped from: " + packet.getRemoteHost());
       }
-      if (size > 0) {
+      if (_context.commSystem().isDummy()) {
+        packet.release();
+      }
+ else       if (size > 0) {
         FIFOBandwidthLimiter.Request req=_context.bandwidthLimiter().requestInbound(size,"UDP receiver");
         while (req.getPendingRequested() > 0)         req.waitForNextAllocation();
         receive(packet);

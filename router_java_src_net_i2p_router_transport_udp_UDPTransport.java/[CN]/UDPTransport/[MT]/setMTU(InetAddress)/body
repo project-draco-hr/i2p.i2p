@@ -2,13 +2,22 @@
   String p=_context.getProperty(PROP_DEFAULT_MTU);
   if (p != null) {
     try {
-      _mtu=MTU.rectify(Integer.parseInt(p));
-      return;
+      int pmtu=Integer.parseInt(p);
+      _mtu=MTU.rectify(false,pmtu);
+      _mtu_ipv6=MTU.rectify(true,pmtu);
+      return _mtu;
     }
  catch (    NumberFormatException nfe) {
     }
   }
   int mtu=MTU.getMTU(addr);
-  if (mtu <= 0)   mtu=PeerState.LARGE_MTU;
-  _mtu=mtu;
+  if (addr != null && addr.getAddress().length == 16) {
+    if (mtu <= 0)     mtu=PeerState.MIN_IPV6_MTU;
+    _mtu_ipv6=mtu;
+  }
+ else {
+    if (mtu <= 0)     mtu=PeerState.LARGE_MTU;
+    _mtu=mtu;
+  }
+  return mtu;
 }

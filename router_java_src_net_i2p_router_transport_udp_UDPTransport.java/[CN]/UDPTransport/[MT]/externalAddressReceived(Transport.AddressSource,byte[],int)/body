@@ -1,0 +1,37 @@
+{
+  if (_log.shouldLog(Log.WARN))   _log.warn("Received address: " + Addresses.toString(ip,port) + " from: "+ source);
+  if (ip == null)   return;
+  if (source == SOURCE_INTERFACE && ip.length == 16) {
+    _haveIPv6Address=true;
+  }
+  if (explicitAddressSpecified())   return;
+  String sources=_context.getProperty(PROP_SOURCES,DEFAULT_SOURCES);
+  if (!sources.contains(source.toConfigString()))   return;
+  if (!isValid(ip)) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Invalid address: " + Addresses.toString(ip,port) + " from: "+ source);
+    return;
+  }
+  if (!isAlive()) {
+    if (source == SOURCE_INTERFACE || source == SOURCE_UPNP) {
+      try {
+        InetAddress ia=InetAddress.getByAddress(ip);
+        saveLocalAddress(ia);
+      }
+ catch (      UnknownHostException uhe) {
+      }
+    }
+    return;
+  }
+  if (source == SOURCE_INTERFACE) {
+    if (ip.length == 4) {
+      if (gotIPv4Addr)       return;
+ else       gotIPv4Addr=true;
+    }
+ else     if (ip.length == 16) {
+      if (gotIPv6Addr)       return;
+ else       gotIPv6Addr=true;
+    }
+  }
+  boolean changed=changeAddress(ip,port);
+  if (changed && ip.length == 4 && source == SOURCE_INTERFACE)   setReachabilityStatus(CommSystemFacade.STATUS_OK);
+}

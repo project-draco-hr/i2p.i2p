@@ -1,0 +1,39 @@
+{
+  String[] rv=new String[search.length];
+  int idx=0;
+  long start=System.currentTimeMillis();
+  InputStream in=null;
+  try {
+    in=new GZIPInputStream(new BufferedInputStream(new FileInputStream(geoFile)));
+    byte[] magic=new byte[MAGIC.length()];
+    DataHelper.read(in,magic);
+    if (!DataHelper.eq(magic,DataHelper.getASCII(MAGIC)))     throw new IOException("Not a IPv6 geoip data file");
+    in.skip(HEADER_LEN - MAGIC.length());
+    byte[] buf=new byte[18];
+    while (DataHelper.read(in,buf) == 18 && idx < search.length) {
+      long ip1=readLong(buf,0);
+      long ip2=readLong(buf,8);
+      while (idx < search.length && search[idx].longValue() < ip1) {
+        idx++;
+      }
+      while (idx < search.length && search[idx].longValue() >= ip1 && search[idx].longValue() <= ip2) {
+        String lc=new String(buf,16,2,"ISO-8859-1");
+        String cached=codeCache.get(lc);
+        if (cached == null)         cached=lc;
+        rv[idx++]=cached;
+      }
+    }
+  }
+ catch (  IOException ioe) {
+    if (log.shouldLog(Log.ERROR))     log.error("Error reading the geoFile",ioe);
+  }
+ finally {
+    if (in != null)     try {
+      in.close();
+    }
+ catch (    IOException ioe) {
+    }
+  }
+  if (log.shouldLog(Log.INFO))   log.info("GeoIPv6 processing finished, time: " + (System.currentTimeMillis() - start));
+  return rv;
+}
