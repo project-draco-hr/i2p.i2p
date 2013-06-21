@@ -1,7 +1,9 @@
 {
   verifyNotReleased();
-  Arrays.fill(_ivBuf,(byte)0);
   System.arraycopy(_data,MAC_SIZE,_ivBuf,0,IV_SIZE);
   int len=_packet.getLength();
-  _context.aes().decrypt(_data,_packet.getOffset() + MAC_SIZE + IV_SIZE,_data,_packet.getOffset() + MAC_SIZE + IV_SIZE,cipherKey,_ivBuf,len - MAC_SIZE - IV_SIZE);
+  int rem=len & 0x0f;
+  if (rem != 0)   len-=rem;
+  int off=_packet.getOffset() + MAC_SIZE + IV_SIZE;
+  _context.aes().decrypt(_data,off,_data,off,cipherKey,_ivBuf,len - MAC_SIZE - IV_SIZE);
 }
