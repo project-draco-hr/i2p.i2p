@@ -1,6 +1,7 @@
 {
   UDPPacket packet=buildPacketHeader(SESSION_CONFIRMED_FLAG_BYTE);
-  byte data[]=packet.getPacket().getData();
+  DatagramPacket pkt=packet.getPacket();
+  byte data[]=pkt.getData();
   int off=HEADER_SIZE;
   InetAddress to=null;
   try {
@@ -26,19 +27,20 @@
   if (fragmentNum == numFragments - 1) {
     DataHelper.toLong(data,off,4,state.getSentSignedOnTime());
     off+=4;
-    int paddingRequired=0;
-    if ((off + Signature.SIGNATURE_BYTES) % 16 != 0)     paddingRequired+=16 - ((off + Signature.SIGNATURE_BYTES) % 16);
-    for (int i=0; i < paddingRequired; i++) {
-      data[off]=(byte)_context.random().nextInt(255);
-      off++;
+    int mod=(off + Signature.SIGNATURE_BYTES) & 0x0f;
+    if (mod != 0) {
+      int paddingRequired=16 - mod;
+      _context.random().nextBytes(data,off,paddingRequired);
+      off+=paddingRequired;
     }
     System.arraycopy(state.getSentSignature().getData(),0,data,off,Signature.SIGNATURE_BYTES);
     off+=Signature.SIGNATURE_BYTES;
   }
  else {
-    if ((off % 16) != 0)     off+=16 - (off % 16);
+    off=pad1(data,off);
   }
-  packet.getPacket().setLength(off);
+  off=pad2(data,off);
+  pkt.setLength(off);
   authenticate(packet,state.getCipherKey(),state.getMACKey());
   setTo(packet,to,state.getSentPort());
   packet.setMessageType(TYPE_CONF);

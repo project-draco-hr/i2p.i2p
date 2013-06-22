@@ -1,6 +1,7 @@
 {
   UDPPacket packet=buildPacketHeader(PEER_TEST_FLAG_BYTE);
-  byte data[]=packet.getPacket().getData();
+  DatagramPacket pkt=packet.getPacket();
+  byte data[]=pkt.getData();
   int off=HEADER_SIZE;
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Sending peer test " + nonce + " to Bob");
   DataHelper.toLong(data,off,4,nonce);
@@ -11,8 +12,9 @@
   off+=2;
   System.arraycopy(aliceIntroKey.getData(),0,data,off,SessionKey.KEYSIZE_BYTES);
   off+=SessionKey.KEYSIZE_BYTES;
-  if ((off % 16) != 0)   off+=16 - (off % 16);
-  packet.getPacket().setLength(off);
+  off=pad1(data,off);
+  off=pad2(data,off);
+  pkt.setLength(off);
   authenticate(packet,toCipherKey,toMACKey);
   setTo(packet,toIP,toPort);
   packet.setMessageType(TYPE_TFA);

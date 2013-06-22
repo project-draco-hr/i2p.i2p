@@ -1,6 +1,7 @@
 {
   UDPPacket packet=buildPacketHeader(SESSION_CREATED_FLAG_BYTE);
-  byte data[]=packet.getPacket().getData();
+  DatagramPacket pkt=packet.getPacket();
+  byte data[]=pkt.getData();
   int off=HEADER_SIZE;
   InetAddress to=null;
   try {
@@ -54,13 +55,9 @@
   int encrWrite=Signature.SIGNATURE_BYTES + 8;
   int sigBegin=off - encrWrite;
   _context.aes().encrypt(data,sigBegin,data,sigBegin,state.getCipherKey(),iv,encrWrite);
-  int rem=off & 0x0f;
-  if (rem != 0) {
-    int pad=16 - rem;
-    _context.random().nextBytes(data,off,pad);
-    off+=pad;
-  }
-  packet.getPacket().setLength(off);
+  off=pad1(data,off);
+  off=pad2(data,off);
+  pkt.setLength(off);
   authenticate(packet,ourIntroKey,ourIntroKey,iv);
   setTo(packet,to,state.getSentPort());
   SimpleByteCache.release(iv);

@@ -1,6 +1,7 @@
 {
   UDPPacket packet=buildPacketHeader((byte)(UDPPacket.PAYLOAD_TYPE_DATA << 4));
-  byte data[]=packet.getPacket().getData();
+  DatagramPacket pkt=packet.getPacket();
+  byte data[]=pkt.getData();
   int off=HEADER_SIZE;
   StringBuilder msg=null;
   if (_log.shouldLog(Log.INFO)) {
@@ -106,13 +107,9 @@
     _log.error("Sending zero-size fragment " + fragment + " of "+ state+ " for "+ peer);
   }
   off+=dataSize;
-  int mod=off % 16;
-  if (mod > 0) {
-    int padSize=16 - mod;
-    _context.random().nextBytes(data,off,padSize);
-    off+=padSize;
-  }
-  packet.getPacket().setLength(off);
+  off=pad1(data,off);
+  off=pad2(data,off,currentMTU);
+  pkt.setLength(off);
   authenticate(packet,peer.getCurrentCipherKey(),peer.getCurrentMACKey());
   setTo(packet,peer.getRemoteIPAddress(),peer.getRemotePort());
   if (_log.shouldLog(Log.INFO)) {

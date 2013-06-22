@@ -1,8 +1,11 @@
 {
   UDPPacket packet=buildPacketHeader((byte)(UDPPacket.PAYLOAD_TYPE_SESSION_DESTROY << 4));
   int off=HEADER_SIZE;
-  if ((off % 16) != 0)   off+=16 - (off % 16);
-  packet.getPacket().setLength(off);
+  DatagramPacket pkt=packet.getPacket();
+  byte data[]=pkt.getData();
+  off=pad1(data,off);
+  off=pad2(data,off);
+  pkt.setLength(off);
   authenticate(packet,cipherKey,macKey);
   setTo(packet,addr,port);
   return packet;
