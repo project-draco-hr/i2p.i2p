@@ -1,0 +1,23 @@
+{
+  if (_log.shouldLog(Log.WARN))   _log.warn("Received address: " + Addresses.toString(ip,port) + " from: "+ source);
+  if (ip != null && !isPubliclyRoutable(ip)) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Invalid address: " + Addresses.toString(ip,port) + " from: "+ source);
+    return;
+  }
+  if (!isAlive()) {
+    if (source == SOURCE_INTERFACE || source == SOURCE_UPNP) {
+      try {
+        InetAddress ia=InetAddress.getByAddress(ip);
+        saveLocalAddress(ia);
+      }
+ catch (      UnknownHostException uhe) {
+      }
+    }
+ else     if (source == SOURCE_CONFIG) {
+      _ssuPort=port;
+    }
+    return;
+  }
+  if (source != SOURCE_SSU)   return;
+  externalAddressReceived(ip,port);
+}

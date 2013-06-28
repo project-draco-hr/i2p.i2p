@@ -1,5 +1,6 @@
 {
-  boolean isValid=isValid(ourIP) && ((ourPort >= MIN_EXTERNAL_PORT && ourPort <= MAX_EXTERNAL_PORT) || ourPort == _externalListenPort || _externalListenPort <= 0);
+  if (ourIP.length != 4)   return;
+  boolean isValid=isValid(ourIP) && (ourPort >= MIN_EXTERNAL_PORT && ourPort <= MAX_EXTERNAL_PORT);
   boolean explicitSpecified=explicitAddressSpecified();
   boolean inboundRecent=_lastInboundReceivedOn + ALLOW_IP_CHANGE_INTERVAL > System.currentTimeMillis();
   if (_log.shouldLog(Log.INFO))   _log.info("External address received: " + Addresses.toString(ourIP,ourPort) + " from "+ from+ ", isValid? "+ isValid+ ", explicitSpecified? "+ explicitSpecified+ ", receivedInboundRecent? "+ inboundRecent+ " status "+ _reachabilityStatus);
@@ -11,20 +12,29 @@
     markUnreachable(from);
     return;
   }
- else   if (inboundRecent && _externalListenPort > 0 && _externalListenHost != null) {
+  RouterAddress addr=getCurrentAddress(false);
+  if (inboundRecent && addr != null && addr.getPort() > 0 && addr.getHost() != null) {
     if (_log.shouldLog(Log.INFO))     _log.info("Ignoring IP address suggestion, since we have received an inbound con recently");
   }
- else   if (from.equals(_lastFrom) || !eq(_lastOurIP,_lastOurPort,ourIP,ourPort)) {
-    _lastFrom=from;
-    _lastOurIP=ourIP;
-    _lastOurPort=ourPort;
-    if (_log.shouldLog(Log.INFO))     _log.info("The router " + from + " told us we have a new IP - "+ Addresses.toString(ourIP,ourPort)+ ".  Wait until somebody else tells us the same thing.");
-  }
  else {
-    if (_log.shouldLog(Log.INFO))     _log.info(from + " and " + _lastFrom+ " agree we have a new IP - "+ Addresses.toString(ourIP,ourPort)+ ".  Changing address.");
-    _lastFrom=from;
-    _lastOurIP=ourIP;
-    _lastOurPort=ourPort;
-    changeAddress(ourIP,ourPort);
+    boolean changeIt=false;
+synchronized (this) {
+      if (from.equals(_lastFrom) || !eq(_lastOurIP,_lastOurPort,ourIP,ourPort)) {
+        _lastFrom=from;
+        _lastOurIP=ourIP;
+        _lastOurPort=ourPort;
+        if (_log.shouldLog(Log.INFO))         _log.info("The router " + from + " told us we have a new IP - "+ Addresses.toString(ourIP,ourPort)+ ".  Wait until somebody else tells us the same thing.");
+      }
+ else {
+        _lastFrom=from;
+        _lastOurIP=ourIP;
+        _lastOurPort=ourPort;
+        changeIt=true;
+      }
+    }
+    if (changeIt) {
+      if (_log.shouldLog(Log.INFO))       _log.info(from + " and " + _lastFrom+ " agree we have a new IP - "+ Addresses.toString(ourIP,ourPort)+ ".  Changing address.");
+      changeAddress(ourIP,ourPort);
+    }
   }
 }
