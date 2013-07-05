@@ -1,12 +1,12 @@
 {
-  if (_closed)   throw new IOException("Already closed");
+  if (_closed.get())   throw new IOException("Already closed");
   if (_log.shouldLog(Log.DEBUG))   _log.debug("write(b[], " + off + ", "+ len+ ") ");
   int cur=off;
   int remaining=len;
   long begin=_context.clock().now();
   while (remaining > 0) {
     WriteStatus ws=null;
-    if (_closed)     throw new IOException("closed underneath us");
+    if (_closed.get())     throw new IOException("closed underneath us");
 synchronized (_dataLock) {
       if (_buf == null)       throw new IOException("closed (buffer went away)");
       if (_valid + remaining < _buf.length) {
@@ -31,7 +31,6 @@ synchronized (_dataLock) {
         _written+=_valid;
         _valid=0;
         throwAnyError();
-        _lastFlushed=_context.clock().now();
         locked_updateBufferSize();
       }
     }
