@@ -1,5 +1,11 @@
 {
-  _isDestroyed=true;
+  if (!_isDestroyed.compareAndSet(false,true)) {
+    if (_log.shouldLog(Log.WARN)) {
+      String log="over-destroying manager " + getName();
+      _log.log(Log.WARN,log,new Exception("check stack trace"));
+    }
+    return;
+  }
   _connectionManager.setAllowIncomingConnections(false);
   _connectionManager.shutdown();
   if ((_session != null) && (!_session.isClosed())) {
@@ -9,6 +15,10 @@
  catch (    I2PSessionException ise) {
       _log.warn("Unable to destroy the session",ise);
     }
-    if (pcapWriter != null)     pcapWriter.flush();
+    PcapWriter pcap=null;
+synchronized (_pcapInitLock) {
+      pcap=pcapWriter;
+    }
+    if (pcap != null)     pcap.flush();
   }
 }
