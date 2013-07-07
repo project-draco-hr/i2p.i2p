@@ -1,8 +1,16 @@
 {
-  int cnt=++_nackCount;
+  final int cnt=_nackCount.incrementAndGet();
   SimpleTimer2.TimedEvent evt=_resendEvent;
   if (cnt >= Connection.FAST_RETRANSMIT_THRESHOLD && evt != null && (!_retransmitted) && (_numSends == 1 || _lastSend < _context.clock().now() + 4 * 1000)) {
     _retransmitted=true;
     evt.reschedule(0);
+    if (_log.shouldLog(Log.DEBUG)) {
+      final String log=String.format("%s nacks and retransmits. Criteria: nacks=%d, retransmitted=%b," + " numSends=%d, lastSend=%d, now=%d",toString(),cnt,_retransmitted,_numSends,_lastSend,_context.clock().now());
+      _log.debug(log);
+    }
+  }
+ else   if (_log.shouldLog(Log.DEBUG)) {
+    final String log=String.format("%s nack but no retransmit.  Criteria: nacks=%d, retransmitted=%b," + " numSends=%d, lastSend=%d, now=%d",toString(),cnt,_retransmitted,_numSends,_lastSend,_context.clock().now());
+    _log.debug(log);
   }
 }
