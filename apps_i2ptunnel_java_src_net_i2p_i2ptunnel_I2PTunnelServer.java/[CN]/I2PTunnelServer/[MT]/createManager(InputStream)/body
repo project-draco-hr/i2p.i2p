@@ -1,0 +1,29 @@
+{
+  Properties props=new Properties();
+  props.putAll(getTunnel().getClientOptions());
+  int portNum=7654;
+  if (getTunnel().port != null) {
+    try {
+      portNum=Integer.parseInt(getTunnel().port);
+    }
+ catch (    NumberFormatException nfe) {
+      _log.error("Invalid port specified [" + getTunnel().port + "], reverting to "+ portNum);
+    }
+  }
+  try {
+    I2PSocketManager rv=I2PSocketManagerFactory.createDisconnectedManager(privData,getTunnel().host,portNum,props);
+    rv.setName("Server");
+    getTunnel().addSession(rv.getSession());
+    return rv;
+  }
+ catch (  I2PSessionException ise) {
+    throw new IllegalArgumentException("Can't create socket manager",ise);
+  }
+ finally {
+    try {
+      privData.close();
+    }
+ catch (    IOException ioe) {
+    }
+  }
+}

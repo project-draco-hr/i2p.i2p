@@ -1,0 +1,32 @@
+{
+  int retries=0;
+  while (sockMgr.getSession().isClosed()) {
+    try {
+      sockMgr.getSession().connect();
+    }
+ catch (    I2PSessionException ise) {
+      String portNum=getTunnel().port;
+      if (portNum == null)       portNum="7654";
+      String msg="Unable to connect to the router at " + getTunnel().host + ':'+ portNum+ " and build tunnels for the server at "+ remoteHost.getHostAddress()+ ':'+ remotePort;
+      if (++retries < MAX_RETRIES) {
+        msg+=", retrying in " + (RETRY_DELAY / 1000) + " seconds";
+        this.l.log(msg);
+        _log.error(msg);
+      }
+ else {
+        msg+=", giving up";
+        this.l.log(msg);
+        _log.log(Log.CRIT,msg,ise);
+        throw new IllegalArgumentException(msg,ise);
+      }
+      try {
+        Thread.sleep(RETRY_DELAY);
+      }
+ catch (      InterruptedException ie) {
+      }
+    }
+  }
+  l.log("Tunnels ready for server at " + remoteHost.getHostAddress() + ':'+ remotePort);
+  notifyEvent("openServerResult","ok");
+  open=true;
+}
