@@ -13,6 +13,8 @@
       theme=DEFAULT_THEME;
     }
   }
+  boolean forceMobileConsole=ctx.getBooleanProperty(RC_PROP_FORCE_MOBILE_CONSOLE);
+  boolean isMobile=(forceMobileConsole || isMobile(httpRequest.getHeader("User-Agent")));
   httpRequest.setCharacterEncoding("UTF-8");
   response.setCharacterEncoding("UTF-8");
   response.setHeader("X-Frame-Options","SAMEORIGIN");
@@ -28,6 +30,7 @@ synchronized (sessionObject) {
     sessionObject.showAttachment=null;
     sessionObject.themePath="/themes/susimail/" + theme + '/';
     sessionObject.imgPath=sessionObject.themePath + "images/";
+    sessionObject.isMobile=isMobile;
     processStateChangeButtons(sessionObject,request);
     if (sessionObject.state != STATE_AUTH)     processGenericButtons(sessionObject,request);
     if (sessionObject.state == STATE_LIST) {
@@ -57,7 +60,11 @@ synchronized (sessionObject) {
  else       if (sessionObject.state == STATE_LIST)       subtitle=ngettext("1 Message","{0} Messages",sessionObject.mailbox.getNumMails());
  else       if (sessionObject.state == STATE_SHOW)       subtitle=_("Show Message");
       response.setContentType("text/html");
-      out.println("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\">\n<html>\n" + "<head>\n" + "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">\n"+ "<title>susimail - " + subtitle + "</title>\n"+ "<link rel=\"stylesheet\" type=\"text/css\" href=\""+ sessionObject.themePath+ "susimail.css\">\n"+ "</head>\n<body>\n"+ "<div class=\"page\"><p><img src=\""+ sessionObject.imgPath+ "susimail.png\" alt=\"Susimail\"><br>&nbsp;</p>\n"+ "<form method=\"POST\" enctype=\"multipart/form-data\" action=\""+ myself+ "\">");
+      out.println("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\">\n<html>\n" + "<head>\n" + "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">\n"+ "<title>susimail - " + subtitle + "</title>\n"+ "<link rel=\"stylesheet\" type=\"text/css\" href=\""+ sessionObject.themePath+ "susimail.css\">\n");
+      if (sessionObject.isMobile) {
+        out.println("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, maximum-scale=2.0, user-scalable=yes\" />\n" + "<link rel=\"stylesheet\" type=\"text/css\" href=\"" + sessionObject.themePath + "mobile.css\" />\n");
+      }
+      out.println("</head>\n<body>\n" + "<div class=\"page\"><p><img src=\"" + sessionObject.imgPath + "susimail.png\" alt=\"Susimail\"><br>&nbsp;</p>\n"+ "<form method=\"POST\" enctype=\"multipart/form-data\" action=\""+ myself+ "\">");
       if (sessionObject.error != null && sessionObject.error.length() > 0) {
         out.println("<p class=\"error\">" + sessionObject.error + "</p>");
       }
