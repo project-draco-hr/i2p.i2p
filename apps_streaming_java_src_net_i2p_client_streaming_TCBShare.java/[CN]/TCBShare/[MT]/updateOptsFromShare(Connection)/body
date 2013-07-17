@@ -5,7 +5,16 @@
   if (opts == null)   return;
   Entry e=_cache.get(dest);
   if (e == null || e.isExpired())   return;
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("From cache: " + con.getSession().getMyDestination().calculateHash().toBase64().substring(0,4) + '-'+ dest.calculateHash().toBase64().substring(0,4)+ " RTT: "+ e.getRTT()+ " wdw: "+ e.getWindowSize());
-  opts.setRTT(e.getRTT());
-  opts.setWindowSize(e.getWindowSize());
+  final int rtt, rttDev, wdw;
+synchronized (e) {
+    rtt=e.getRTT();
+    rttDev=e.getRTTDev();
+    wdw=e.getWindowSize();
+  }
+  if (_log.shouldLog(Log.DEBUG)) {
+    _log.debug("From cache: " + con.getSession().getMyDestination().calculateHash().toBase64().substring(0,4) + '-'+ dest.calculateHash().toBase64().substring(0,4)+ " RTT: "+ rtt+ " RTTDev: "+ rttDev+ " wdw: "+ wdw);
+  }
+  opts.setRTT(rtt);
+  opts.setRTTDev(rttDev);
+  opts.setWindowSize(wdw);
 }
