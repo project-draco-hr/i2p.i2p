@@ -11,9 +11,10 @@ case CLOSED:
 case OPENING:
   wasOpening=true;
 try {
-  _stateLock.wait();
+  _stateLock.wait(10 * 1000);
 }
  catch (InterruptedException ie) {
+  throw new I2PSessionException("Interrupted",ie);
 }
 break;
 case CLOSING:
@@ -49,8 +50,6 @@ InputStream in=new BufferedInputStream(_socket.getInputStream(),BUF_SIZE);
 _reader=new I2CPMessageReader(in,this);
 }
 }
-Thread notifier=new I2PAppThread(_availabilityNotifier,"ClientNotifier " + getPrefix(),true);
-notifier.start();
 if (_log.shouldLog(Log.DEBUG)) _log.debug(getPrefix() + "before startReading");
 _reader.startReading();
 if (_log.shouldLog(Log.DEBUG)) _log.debug(getPrefix() + "Before getDate");
@@ -59,53 +58,59 @@ if (_log.shouldLog(Log.DEBUG)) _log.debug(getPrefix() + "After getDate / begin w
 int waitcount=0;
 while (!_dateReceived) {
 if (waitcount++ > 30) {
-closeSocket();
 throw new IOException("No handshake received from the router");
 }
-try {
 synchronized (_dateReceivedLock) {
 _dateReceivedLock.wait(1000);
-}
-}
- catch (InterruptedException ie) {
 }
 }
 if (_log.shouldLog(Log.DEBUG)) _log.debug(getPrefix() + "After received a SetDate response");
 if (_log.shouldLog(Log.DEBUG)) _log.debug(getPrefix() + "Before producer.connect()");
 _producer.connect(this);
-if (_log.shouldLog(Log.DEBUG)) _log.debug(getPrefix() + "After  producer.connect()");
+if (_log.shouldLog(Log.DEBUG)) _log.debug(getPrefix() + "After producer.connect()");
 waitcount=0;
 while (_leaseSet == null) {
 if (waitcount++ > 5 * 60) {
-try {
-_producer.disconnect(this);
-}
- catch (I2PSessionException ipe) {
-}
-closeSocket();
 throw new IOException("No tunnels built after waiting 5 minutes. Your network connection may be down, or there is severe network congestion.");
 }
 synchronized (_leaseSetWait) {
-try {
 _leaseSetWait.wait(1000);
 }
- catch (InterruptedException ie) {
 }
-}
-}
+if (_log.shouldLog(Log.INFO)) {
 long connected=_context.clock().now();
-if (_log.shouldLog(Log.INFO)) _log.info(getPrefix() + "Lease set created with inbound tunnels after " + (connected - startConnect)+ "ms - ready to participate in the network!");
+_log.info(getPrefix() + "Lease set created with inbound tunnels after " + (connected - startConnect)+ "ms - ready to participate in the network!");
+}
+Thread notifier=new I2PAppThread(_availabilityNotifier,"ClientNotifier " + getPrefix(),true);
+notifier.start();
 startIdleMonitor();
 startVerifyUsage();
 success=true;
 }
- catch (UnknownHostException uhe) {
+ catch (InterruptedException ie) {
+throw new I2PSessionException("Interrupted",ie);
+}
+catch (UnknownHostException uhe) {
 throw new I2PSessionException(getPrefix() + "Cannot connect to the router on " + _hostname+ ':'+ _portNum,uhe);
 }
 catch (IOException ioe) {
 throw new I2PSessionException(getPrefix() + "Cannot connect to the router on " + _hostname+ ':'+ _portNum,ioe);
 }
  finally {
-changeState(success ? State.OPEN : State.CLOSED);
+if (success) {
+changeState(State.OPEN);
+}
+ else {
+_availabilityNotifier.stopNotifying();
+synchronized (_stateLock) {
+changeState(State.CLOSING);
+try {
+_producer.disconnect(this);
+}
+ catch (I2PSessionException ipe) {
+}
+closeSocket();
+}
+}
 }
 }
