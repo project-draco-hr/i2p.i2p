@@ -1,8 +1,16 @@
 {
-  _rttDev=_rttDev + (int)(0.25d * (Math.abs(measuredValue - _rtt) - _rttDev));
-  int smoothed=(int)(RTT_DAMPENING * _rtt + (1 - RTT_DAMPENING) * measuredValue);
-  _rto=smoothed + (_rttDev << 2);
-  if (_rto < Connection.MIN_RESEND_DELAY)   _rto=(int)Connection.MIN_RESEND_DELAY;
- else   if (_rto > Connection.MAX_RESEND_DELAY)   _rto=(int)Connection.MAX_RESEND_DELAY;
-  setRTT(smoothed);
+switch (_initState) {
+case INIT:
+    _initState=AckInit.FIRST;
+  setRTT(measuredValue);
+_rttDev=_rtt / 2;
+break;
+case FIRST:
+_initState=AckInit.STEADY;
+case STEADY:
+_rttDev=(int)((1 - TCP_BETA) * _rttDev + TCP_BETA * Math.abs(measuredValue - _rtt));
+int smoothed=(int)((1 - TCP_ALPHA) * _rtt + TCP_ALPHA * measuredValue);
+setRTT(smoothed);
+}
+computeRTO();
 }
