@@ -1,11 +1,11 @@
 {
-  if (_closed) {
+  if (!_closed.compareAndSet(false,true)) {
 synchronized (_dataLock) {
       _dataLock.notifyAll();
     }
+    LogUtil.logCloseLoop(_log,"MOS");
     return;
   }
-  _closed=true;
   _flusher.cancel();
   flush(false);
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Output stream closed after writing " + _written);

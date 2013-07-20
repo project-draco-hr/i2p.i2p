@@ -46,14 +46,14 @@ synchronized (_outboundPackets) {
         _outboundPackets.remove(Long.valueOf(p.getSequenceNum()));
         _ackedPackets++;
         if (p.getNumSends() > 1) {
-          _activeResends--;
+          _activeResends.decrementAndGet();
           if (_log.shouldLog(Log.DEBUG))           _log.debug("Active resend of " + p + " successful, # active left: "+ _activeResends);
         }
       }
     }
-    if ((_outboundPackets.isEmpty()) && (_activeResends != 0)) {
+    if ((_outboundPackets.isEmpty()) && (_activeResends.get() != 0)) {
       if (_log.shouldLog(Log.INFO))       _log.info("All outbound packets acked, clearing " + _activeResends);
-      _activeResends=0;
+      _activeResends.set(0);
     }
     _outboundPackets.notifyAll();
   }

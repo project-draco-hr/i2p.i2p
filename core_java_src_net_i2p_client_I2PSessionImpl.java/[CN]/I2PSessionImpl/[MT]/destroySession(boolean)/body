@@ -1,16 +1,9 @@
 {
-  while (_opening) {
-synchronized (_openingWait) {
-      try {
-        _openingWait.wait(1000);
-      }
- catch (      InterruptedException ie) {
-      }
-    }
+synchronized (_stateLock) {
+    if (_state == State.CLOSING || _state == State.CLOSED)     return;
+    changeState(State.CLOSING);
   }
-  if (_closed)   return;
   if (_log.shouldLog(Log.INFO))   _log.info(getPrefix() + "Destroy the session",new Exception("DestroySession()"));
-  _closing=true;
   if (sendDisconnect && _producer != null) {
     try {
       _producer.disconnect(this);
@@ -20,8 +13,6 @@ synchronized (_openingWait) {
     }
   }
   if (_availabilityNotifier != null)   _availabilityNotifier.stopNotifying();
-  _closed=true;
-  _closing=false;
   closeSocket();
   if (_sessionListener != null)   _sessionListener.disconnected(this);
 }

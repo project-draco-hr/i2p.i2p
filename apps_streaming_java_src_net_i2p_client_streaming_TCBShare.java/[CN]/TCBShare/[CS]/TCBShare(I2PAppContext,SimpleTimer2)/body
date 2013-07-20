@@ -1,7 +1,16 @@
 {
   _context=ctx;
   _log=ctx.logManager().getLog(TCBShare.class);
-  _cache=new ConcurrentHashMap(4);
+  final Properties props=ctx.getProperties();
+  _rttDampening=getDouble(props,RTT_DAMP_PROP,RTT_DAMPENING);
+  _wdwDampening=getDouble(props,WDW_DAMP_PROP,WDW_DAMPENING);
+  _rttDevDampening=getDouble(props,RTTDEV_DAMP_PROP,RTTDEV_DAMPENING);
+  _cache=new ConcurrentHashMap<Destination,Entry>(4);
   _cleaner=new CleanEvent(timer);
   _cleaner.schedule(CLEAN_TIME);
+  if (_log.shouldLog(Log.DEBUG)) {
+    String log="Creating TCBCache with rttDamp=%s, rttDevDamp=%s, wdwDamp=%s, " + "expire=%d, clean=%d";
+    log=String.format(log,_rttDampening,_rttDevDampening,_wdwDampening,EXPIRE_TIME,CLEAN_TIME);
+    _log.debug(log);
+  }
 }
