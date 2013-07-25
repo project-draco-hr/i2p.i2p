@@ -42,8 +42,8 @@ catch (      IllegalArgumentException iae) {
       SelectionKey key=con.getChannel().register(_selector,SelectionKey.OP_CONNECT);
       key.attach(con);
       con.setKey(key);
+      RouterAddress naddr=con.getRemoteAddress();
       try {
-        RouterAddress naddr=con.getRemoteAddress();
         if (naddr.getPort() <= 0)         throw new IOException("Invalid NTCP address: " + naddr);
         InetSocketAddress saddr=new InetSocketAddress(naddr.getHost(),naddr.getPort());
         boolean connected=con.getChannel().connect(saddr);
@@ -53,7 +53,7 @@ catch (      IllegalArgumentException iae) {
         }
       }
  catch (      IOException ioe) {
-        if (_log.shouldLog(Log.WARN))         _log.warn("error connecting",ioe);
+        if (_log.shouldLog(Log.WARN))         _log.warn("error connecting to " + Addresses.toString(naddr.getIP(),naddr.getPort()),ioe);
         _context.statManager().addRateData("ntcp.connectFailedIOE",1);
         _transport.markUnreachable(con.getRemotePeer().calculateHash());
         con.close(true);

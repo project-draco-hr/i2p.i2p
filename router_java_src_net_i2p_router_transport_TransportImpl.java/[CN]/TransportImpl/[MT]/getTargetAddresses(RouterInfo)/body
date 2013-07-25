@@ -1,15 +1,15 @@
 {
   List<RouterAddress> rv=target.getTargetAddresses(getStyle());
-  if (rv.size() > 1) {
-    Collections.shuffle(rv,_context.random());
-    TransportUtil.IPv6Config config=getIPv6Config();
-    int adj;
+  if (rv.isEmpty())   return rv;
+  if (rv.size() > 1)   Collections.shuffle(rv,_context.random());
+  TransportUtil.IPv6Config config=getIPv6Config();
+  int adj;
 switch (config) {
 case IPV6_DISABLED:
-      adj=10;
-    break;
+    adj=10;
+  break;
 case IPV6_NOT_PREFERRED:
-  adj=1;
+adj=1;
 break;
 default :
 case IPV6_ENABLED:
@@ -20,9 +20,12 @@ adj=-1;
 break;
 case IPV6_ONLY:
 adj=-10;
+for (Iterator<RouterAddress> iter=rv.iterator(); iter.hasNext(); ) {
+byte[] ip=iter.next().getIP();
+if (ip != null && ip.length == 4) iter.remove();
+}
 break;
 }
-Collections.sort(rv,new AddrComparator(adj));
-}
+if (rv.size() > 1) Collections.sort(rv,new AddrComparator(adj));
 return rv;
 }
