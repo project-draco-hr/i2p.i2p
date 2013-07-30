@@ -3,9 +3,14 @@
   _pool=pool;
   _cfg=cfg;
   long expire=cfg.getExpiration();
-  _dropAfter=expire + Router.CLOCK_FUDGE_FACTOR;
-  if (_pool.getSettings().isInbound())   expire-=IB_EARLY_EXPIRE + ctx.random().nextLong(IB_EARLY_EXPIRE);
- else   expire-=OB_EARLY_EXPIRE + ctx.random().nextLong(OB_EARLY_EXPIRE);
+  if (_pool.getSettings().isInbound()) {
+    _dropAfter=expire + (2 * Router.CLOCK_FUDGE_FACTOR);
+    expire-=IB_EARLY_EXPIRE + ctx.random().nextLong(IB_EARLY_EXPIRE);
+  }
+ else {
+    _dropAfter=expire + Router.CLOCK_FUDGE_FACTOR;
+    expire-=OB_EARLY_EXPIRE + ctx.random().nextLong(OB_EARLY_EXPIRE);
+  }
   cfg.setExpiration(expire);
   getTiming().setStartAfter(expire);
 }
