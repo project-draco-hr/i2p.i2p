@@ -6,18 +6,23 @@
   if (opts == null)   return;
   int old=-1;
   int oldw=-1;
+  int oldDev=-1;
   Entry e=_cache.get(dest);
   if (e == null || e.isExpired()) {
-    e=new Entry(opts.getRTT(),opts.getWindowSize());
+    e=new Entry(opts.getRTT(),opts.getWindowSize(),opts.getRTTDev());
     _cache.put(dest,e);
   }
  else {
 synchronized (e) {
       old=e.getRTT();
       oldw=e.getWindowSize();
+      oldDev=e.getRTTDev();
       e.setRTT(opts.getRTT());
       e.setWindowSize(opts.getWindowSize());
+      e.setRTTDev(opts.getRTTDev());
     }
   }
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("To cache: " + con.getSession().getMyDestination().calculateHash().toBase64().substring(0,4) + '-'+ dest.calculateHash().toBase64().substring(0,4)+ " old: "+ old+ " con: "+ opts.getRTT()+ " new: "+ e.getRTT()+ " oldw: "+ oldw+ " conw: "+ opts.getWindowSize()+ " neww: "+ e.getWindowSize());
+  if (_log.shouldLog(Log.DEBUG)) {
+    _log.debug("To cache: " + con.getSession().getMyDestination().calculateHash().toBase64().substring(0,4) + '-'+ dest.calculateHash().toBase64().substring(0,4)+ " old: "+ old+ " con: "+ opts.getRTT()+ " new: "+ e.getRTT()+ " oldDev: "+ oldDev+ " conDev: "+ opts.getRTTDev()+ " newDev: "+ e.getRTTDev()+ " oldw: "+ oldw+ " conw: "+ opts.getWindowSize()+ " neww: "+ e.getWindowSize());
+  }
 }
