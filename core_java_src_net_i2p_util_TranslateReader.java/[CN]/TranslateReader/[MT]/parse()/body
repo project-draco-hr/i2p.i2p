@@ -1,0 +1,113 @@
+{
+  while (true) {
+    int c=in.read();
+    if (c >= 0)     pushit((char)c);
+switch (c) {
+case -1:
+case '\r':
+case '\n':
+      return flushit();
+case '_':
+switch (_state) {
+case START:
+      _state=S.UNDER;
+    break;
+case BACK:
+  _state=S.QUOTE;
+case QUOTE:
+_argBuf.append((char)c);
+break;
+default :
+return flushit();
+}
+break;
+case '(':
+switch (_state) {
+case UNDER:
+_args.clear();
+_state=S.LPAREN;
+break;
+case BACK:
+_state=S.QUOTE;
+case QUOTE:
+_argBuf.append((char)c);
+break;
+default :
+return flushit();
+}
+break;
+case '"':
+switch (_state) {
+case LPAREN:
+if (_args.size() >= MAX_ARGS) return flushit();
+_argBuf.setLength(0);
+_state=S.QUOTE;
+break;
+case BACK:
+_argBuf.append((char)c);
+_state=S.QUOTE;
+break;
+case QUOTE:
+_args.add(_argBuf.toString());
+_state=S.LPAREN;
+break;
+default :
+return flushit();
+}
+break;
+case '\\':
+switch (_state) {
+case QUOTE:
+_state=S.BACK;
+break;
+case BACK:
+_argBuf.append((char)c);
+_state=S.QUOTE;
+break;
+default :
+return flushit();
+}
+break;
+case ' ':
+case '\t':
+case ',':
+switch (_state) {
+case BACK:
+_state=S.QUOTE;
+case QUOTE:
+_argBuf.append((char)c);
+break;
+case LPAREN:
+break;
+default :
+return flushit();
+}
+break;
+case ')':
+switch (_state) {
+case BACK:
+_state=S.QUOTE;
+case QUOTE:
+_argBuf.append((char)c);
+break;
+case LPAREN:
+translate();
+return popit();
+default :
+return flushit();
+}
+break;
+default :
+switch (_state) {
+case BACK:
+_state=S.QUOTE;
+case QUOTE:
+_argBuf.append((char)c);
+break;
+default :
+return flushit();
+}
+break;
+}
+}
+}

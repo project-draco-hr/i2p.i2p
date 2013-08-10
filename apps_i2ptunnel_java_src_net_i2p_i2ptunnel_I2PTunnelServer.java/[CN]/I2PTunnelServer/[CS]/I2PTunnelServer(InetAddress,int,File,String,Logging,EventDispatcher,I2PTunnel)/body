@@ -1,14 +1,19 @@
 {
   super("Server at " + host + ':'+ port,notifyThis,tunnel);
   _log=tunnel.getContext().logManager().getLog(getClass());
+  this.l=l;
+  this.remoteHost=host;
+  this.remotePort=port;
+  _usePool=getUsePool();
   FileInputStream fis=null;
   try {
     fis=new FileInputStream(privkey);
-    init(host,port,fis,privkeyname,l);
+    sockMgr=createManager(fis);
   }
  catch (  IOException ioe) {
-    _log.error("Error starting server",ioe);
+    _log.error("Cannot read private key data for " + privkeyname,ioe);
     notifyEvent("openServerResult","error");
+    throw new IllegalArgumentException("Error starting server",ioe);
   }
  finally {
     if (fis != null)     try {

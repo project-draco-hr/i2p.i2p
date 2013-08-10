@@ -1,0 +1,37 @@
+{
+  _context=ctx;
+  _log=ctx.logManager().getLog(PacketHandler.class);
+  _transport=transport;
+  _establisher=establisher;
+  _inbound=inbound;
+  _testManager=testManager;
+  _introManager=introManager;
+  _failCache=new LHMCache(24);
+  long maxMemory=Runtime.getRuntime().maxMemory();
+  if (maxMemory == Long.MAX_VALUE)   maxMemory=96 * 1024 * 1024l;
+  int qsize=(int)Math.max(MIN_QUEUE_SIZE,Math.min(MAX_QUEUE_SIZE,maxMemory / (2 * 1024 * 1024)));
+  _inboundQueue=new CoDelBlockingQueue(ctx,"UDP-Receiver",qsize);
+  int num_handlers;
+  if (maxMemory < 32 * 1024 * 1024)   num_handlers=1;
+ else   if (maxMemory < 64 * 1024 * 1024)   num_handlers=2;
+ else   num_handlers=Math.max(MIN_NUM_HANDLERS,Math.min(MAX_NUM_HANDLERS,ctx.bandwidthLimiter().getInboundKBytesPerSecond() / 20));
+  _handlers=new Handler[num_handlers];
+  for (int i=0; i < num_handlers; i++) {
+    _handlers[i]=new Handler();
+  }
+  _context.statManager().createRateStat("udp.handleTime","How long it takes to handle a received packet after its been pulled off the queue","udp",UDPTransport.RATES);
+  _context.statManager().createRateStat("udp.queueTime","How long after a packet is received can we begin handling it","udp",UDPTransport.RATES);
+  _context.statManager().createRateStat("udp.receivePacketSkew","How long ago after the packet was sent did we receive it","udp",UDPTransport.RATES);
+  _context.statManager().createRateStat("udp.droppedInvalidUnkown","How old the packet we dropped due to invalidity (unkown type) was","udp",UDPTransport.RATES);
+  _context.statManager().createRateStat("udp.droppedInvalidReestablish","How old the packet we dropped due to invalidity (doesn't use existing key, not an establishment) was","udp",UDPTransport.RATES);
+  _context.statManager().createRateStat("udp.droppedInvalidEstablish","How old the packet we dropped due to invalidity (establishment, bad key) was","udp",UDPTransport.RATES);
+  _context.statManager().createRateStat("udp.droppedInvalidEstablish.inbound","How old the packet we dropped due to invalidity (even though we have an active inbound establishment with the peer) was","udp",UDPTransport.RATES);
+  _context.statManager().createRateStat("udp.droppedInvalidEstablish.outbound","How old the packet we dropped due to invalidity (even though we have an active outbound establishment with the peer) was","udp",UDPTransport.RATES);
+  _context.statManager().createRateStat("udp.droppedInvalidEstablish.new","How old the packet we dropped due to invalidity (even though we do not have any active establishment with the peer) was","udp",UDPTransport.RATES);
+  _context.statManager().createRateStat("udp.droppedInvalidInboundEstablish","How old the packet we dropped due to invalidity (inbound establishment, bad key) was","udp",UDPTransport.RATES);
+  _context.statManager().createRateStat("udp.droppedInvalidSkew","How skewed the packet we dropped due to invalidity (valid except bad skew) was","udp",UDPTransport.RATES);
+  _context.statManager().createRateStat("udp.receivePacketSize.dataKnown","Packet size of the given inbound packet type (period is the packet's lifetime)","udp",UDPTransport.RATES);
+  _context.statManager().createRateStat("udp.receivePacketSize.dataKnownAck","Packet size of the given inbound packet type (period is the packet's lifetime)","udp",UDPTransport.RATES);
+  _context.statManager().createRateStat("udp.receivePacketSize.dataUnknown","Packet size of the given inbound packet type (period is the packet's lifetime)","udp",UDPTransport.RATES);
+  _context.statManager().createRateStat("udp.receivePacketSize.dataUnknownAck","Packet size of the given inbound packet type (period is the packet's lifetime)","udp",UDPTransport.RATES);
+}

@@ -1,10 +1,19 @@
 {
   boolean enableUDP=_context.getBooleanPropertyDefaultTrue(PROP_ENABLE_UDP);
+  Transport udp=null;
   if (enableUDP) {
-    UDPTransport udp=new UDPTransport(_context,_dhThread);
+    udp=new UDPTransport(_context,_dhThread);
     addTransport(udp);
     initializeAddress(udp);
   }
-  if (isNTCPEnabled(_context))   addTransport(new NTCPTransport(_context,_dhThread));
+  if (isNTCPEnabled(_context)) {
+    Transport ntcp=new NTCPTransport(_context,_dhThread);
+    addTransport(ntcp);
+    initializeAddress(ntcp);
+    if (udp != null) {
+      int port=udp.getRequestedPort();
+      if (port > 0)       ntcp.externalAddressReceived(SOURCE_CONFIG,null,port);
+    }
+  }
   if (_transports.isEmpty())   _log.log(Log.CRIT,"No transports are enabled");
 }

@@ -1,0 +1,26 @@
+{
+  if (reply.getRecordCount() != recordOrder.size()) {
+    log.error("Corrupted build reply, expected " + recordOrder.size() + " records, got "+ reply.getRecordCount());
+    return null;
+  }
+  int rv[]=new int[reply.getRecordCount()];
+  for (int i=0; i < rv.length; i++) {
+    int hop=recordOrder.get(i).intValue();
+    if (BuildMessageGenerator.isBlank(cfg,hop)) {
+      if (log.shouldLog(Log.DEBUG))       log.debug(reply.getUniqueId() + ": no need to decrypt record " + i+ "/"+ hop+ ", as its out of range: "+ cfg);
+      rv[i]=0;
+    }
+ else {
+      int ok=decryptRecord(reply,cfg,i,hop);
+      if (ok == -1) {
+        if (log.shouldLog(Log.WARN))         log.warn(reply.getUniqueId() + ": decrypt record " + i+ "/"+ hop+ " was not ok: "+ cfg);
+        return null;
+      }
+ else {
+        if (log.shouldLog(Log.DEBUG))         log.debug(reply.getUniqueId() + ": decrypt record " + i+ "/"+ hop+ " was ok: "+ ok+ " for "+ cfg);
+      }
+      rv[i]=ok;
+    }
+  }
+  return rv;
+}

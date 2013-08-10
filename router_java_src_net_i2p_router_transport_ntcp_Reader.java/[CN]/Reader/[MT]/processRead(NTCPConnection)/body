@@ -1,19 +1,13 @@
 {
-  if (con.isClosed())   return;
   ByteBuffer buf=null;
-  while (!con.isClosed() && !con.isEstablished() && ((buf=con.getNextReadBuf()) != null)) {
+  while (true) {
+synchronized (con) {
+      if (con.isClosed())       return;
+      if (con.isEstablished())       break;
+    }
+    if ((buf=con.getNextReadBuf()) == null)     return;
     EstablishState est=con.getEstablishState();
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Processing read buffer as an establishment for " + con + " with ["+ est+ "]");
-    if (est == null) {
-      EventPumper.releaseBuf(buf);
-      if (!con.isEstablished()) {
-        throw new RuntimeException("connection was not established, yet the establish state is null for " + con);
-      }
- else {
-        _log.error("no establishment state but " + con + " is established... race?");
-        break;
-      }
-    }
     if (est.isComplete()) {
       _log.error("establishment state [" + est + "] is complete, yet the connection isn't established? "+ con.isEstablished()+ " (inbound? "+ con.isInbound()+ " "+ con+ ")");
       EventPumper.releaseBuf(buf);
@@ -29,7 +23,6 @@
     }
     if (est.isComplete() && est.getExtraBytes() != null)     con.recvEncryptedI2NP(ByteBuffer.wrap(est.getExtraBytes()));
   }
-  if (!con.isEstablished())   return;
   while (!con.isClosed() && (buf=con.getNextReadBuf()) != null) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Processing read buffer as part of an i2np message (" + buf.remaining() + " bytes)");
     con.recvEncryptedI2NP(buf);

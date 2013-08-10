@@ -2,14 +2,15 @@
   SessionKey key=new SessionKey();
   BigInteger exchangedKey=publicPeerValue.modPow(myPrivateValue,CryptoConstants.elgp);
   byte buf[]=exchangedKey.toByteArray();
-  byte val[]=new byte[32];
-  if (buf.length < val.length) {
-    System.arraycopy(buf,0,val,0,buf.length);
-    byte remaining[]=SHA256Generator.getInstance().calculateHash(val).getData();
+  byte val[]=new byte[SessionKey.KEYSIZE_BYTES];
+  if (buf.length < 2 * SessionKey.KEYSIZE_BYTES) {
+    System.arraycopy(buf,0,val,0,Math.min(buf.length,SessionKey.KEYSIZE_BYTES));
+    byte remaining[]=new byte[SessionKey.KEYSIZE_BYTES];
+    SHA256Generator.getInstance().calculateHash(buf,0,buf.length,remaining,0);
     _extraExchangedBytes.setData(remaining);
   }
  else {
-    System.arraycopy(buf,0,val,0,val.length);
+    System.arraycopy(buf,0,val,0,SessionKey.KEYSIZE_BYTES);
     RandomSource.getInstance().harvester().feedEntropy("DH",buf,val.length,buf.length - val.length);
     byte remaining[]=new byte[buf.length - val.length];
     System.arraycopy(buf,val.length,remaining,0,remaining.length);

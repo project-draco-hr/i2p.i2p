@@ -1,7 +1,26 @@
 {
-  if (_pumper.isAlive())   return _myAddress != null ? _myAddress.toRouterAddress() : null;
+  if (_pumper.isAlive())   return;
   if (_log.shouldLog(Log.WARN))   _log.warn("Starting ntcp transport listening");
   startIt();
-  configureLocalAddress();
-  return bindAddress();
+  RouterAddress addr=configureLocalAddress();
+  int port;
+  if (addr != null)   port=addr.getPort();
+ else   port=_ssuPort;
+  RouterAddress myAddress=bindAddress(port);
+  if (myAddress != null) {
+    replaceAddress(myAddress);
+  }
+ else   if (addr != null) {
+    replaceAddress(addr);
+  }
+ else   if (port > 0) {
+    for (    InetAddress ia : getSavedLocalAddresses()) {
+      OrderedProperties props=new OrderedProperties();
+      props.setProperty(RouterAddress.PROP_HOST,ia.getHostAddress());
+      props.setProperty(RouterAddress.PROP_PORT,Integer.toString(port));
+      int cost=getDefaultCost(ia instanceof Inet6Address);
+      myAddress=new RouterAddress(STYLE,props,cost);
+      replaceAddress(myAddress);
+    }
+  }
 }

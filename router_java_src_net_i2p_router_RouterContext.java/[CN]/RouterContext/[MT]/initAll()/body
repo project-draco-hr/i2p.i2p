@@ -1,24 +1,30 @@
 {
   if (_initialized)   throw new IllegalStateException();
-  if (getBooleanProperty("i2p.dummyClientFacade"))   System.err.println("i2p.dummyClientFacade currently unsupported");
-  _clientManagerFacade=new ClientManagerFacadeImpl(this);
+  if (!getBooleanProperty("i2p.dummyClientFacade")) {
+    ClientManagerFacadeImpl cmfi=new ClientManagerFacadeImpl(this);
+    _clientManagerFacade=cmfi;
+    _internalClientManager=cmfi;
+  }
+ else {
+    _clientManagerFacade=new DummyClientManagerFacade(this);
+  }
   _clientMessagePool=new ClientMessagePool(this);
   _jobQueue=new JobQueue(this);
   _inNetMessagePool=new InNetMessagePool(this);
   _outNetMessagePool=new OutNetMessagePool(this);
   _messageHistory=new MessageHistory(this);
   _messageRegistry=new OutboundMessageRegistry(this);
-  if ("false".equals(getProperty("i2p.dummyNetDb","false")))   _netDb=new FloodfillNetworkDatabaseFacade(this);
+  if (!getBooleanProperty("i2p.dummyNetDb"))   _netDb=new FloodfillNetworkDatabaseFacade(this);
  else   _netDb=new DummyNetworkDatabaseFacade(this);
   _keyManager=new KeyManager(this);
-  if ("false".equals(getProperty("i2p.vmCommSystem","false")))   _commSystem=new CommSystemFacadeImpl(this);
+  if (!getBooleanProperty("i2p.vmCommSystem"))   _commSystem=new CommSystemFacadeImpl(this);
  else   _commSystem=new VMCommSystem(this);
   _profileOrganizer=new ProfileOrganizer(this);
-  if ("false".equals(getProperty("i2p.dummyPeerManager","false")))   _peerManagerFacade=new PeerManagerFacadeImpl(this);
+  if (!getBooleanProperty("i2p.dummyPeerManager"))   _peerManagerFacade=new PeerManagerFacadeImpl(this);
  else   _peerManagerFacade=new DummyPeerManagerFacade();
   _profileManager=new ProfileManagerImpl(this);
   _bandwidthLimiter=new FIFOBandwidthLimiter(this);
-  if ("false".equals(getProperty("i2p.dummyTunnelManager","false")))   _tunnelManager=new TunnelPoolManager(this);
+  if (!getBooleanProperty("i2p.dummyTunnelManager"))   _tunnelManager=new TunnelPoolManager(this);
  else   _tunnelManager=new DummyTunnelManagerFacade();
   _tunnelDispatcher=new TunnelDispatcher(this);
   _statPublisher=new StatisticsManager(this);

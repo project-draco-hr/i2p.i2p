@@ -1,0 +1,55 @@
+{
+  RouterAddress myAddress=null;
+  if (port > 0) {
+    InetAddress bindToAddr=null;
+    String bindTo=_context.getProperty(PROP_BIND_INTERFACE);
+    if (bindTo == null) {
+      bindTo=getFixedHost();
+    }
+    if (bindTo != null) {
+      try {
+        bindToAddr=InetAddress.getByName(bindTo);
+      }
+ catch (      UnknownHostException uhe) {
+        _log.error("Invalid NTCP bind interface specified [" + bindTo + "]",uhe);
+      }
+    }
+    try {
+      InetSocketAddress addr;
+      if (bindToAddr == null) {
+        addr=new InetSocketAddress(port);
+      }
+ else {
+        addr=new InetSocketAddress(bindToAddr,port);
+        if (_log.shouldLog(Log.WARN))         _log.warn("Binding only to " + bindToAddr);
+        OrderedProperties props=new OrderedProperties();
+        props.setProperty(RouterAddress.PROP_HOST,bindTo);
+        props.setProperty(RouterAddress.PROP_PORT,Integer.toString(port));
+        int cost=getDefaultCost(false);
+        myAddress=new RouterAddress(STYLE,props,cost);
+      }
+      if (!_endpoints.isEmpty()) {
+        if (_endpoints.contains(addr) || (bindToAddr != null && _endpoints.contains(new InetSocketAddress(port)))) {
+          if (_log.shouldLog(Log.WARN))           _log.warn("Already listening on " + addr);
+          return null;
+        }
+        stopWaitAndRestart();
+      }
+      if (port < 1024)       _log.logAlways(Log.WARN,"Specified NTCP port is " + port + ", ports lower than 1024 not recommended");
+      ServerSocketChannel chan=ServerSocketChannel.open();
+      chan.configureBlocking(false);
+      chan.socket().bind(addr);
+      _endpoints.add(addr);
+      if (_log.shouldLog(Log.INFO))       _log.info("Listening on " + addr);
+      _pumper.register(chan);
+    }
+ catch (    IOException ioe) {
+      _log.error("Error listening",ioe);
+      myAddress=null;
+    }
+  }
+ else {
+    if (_log.shouldLog(Log.INFO))     _log.info("Outbound NTCP connections only - no listener configured");
+  }
+  return myAddress;
+}

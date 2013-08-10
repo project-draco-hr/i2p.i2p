@@ -1,5 +1,5 @@
 {
-  TreeSet peers=new TreeSet(getComparator(sortFlags));
+  TreeSet<NTCPConnection> peers=new TreeSet(getComparator(sortFlags));
   peers.addAll(_conByIdent.values());
   long offsetTotal=0;
   float bpsSend=0;
@@ -11,16 +11,18 @@
   buf.append("<h3 id=\"ntcpcon\">").append(_("NTCP connections")).append(": ").append(peers.size());
   buf.append(". ").append(_("Limit")).append(": ").append(getMaxConnections());
   buf.append(". ").append(_("Timeout")).append(": ").append(DataHelper.formatDuration2(_pumper.getIdleTimeout()));
-  buf.append(".</h3>\n" + "<table>\n" + "<tr><th><a href=\"#def.peer\">").append(_("Peer")).append("</a></th>" + "<th>").append(_("Dir")).append("</th>" + "<th align=\"right\"><a href=\"#def.idle\">").append(_("Idle")).append("</a></th>" + "<th align=\"right\"><a href=\"#def.rate\">").append(_("In/Out")).append("</a></th>" + "<th align=\"right\"><a href=\"#def.up\">").append(_("Up")).append("</a></th>" + "<th align=\"right\"><a href=\"#def.skew\">").append(_("Skew")).append("</a></th>" + "<th align=\"right\"><a href=\"#def.send\">").append(_("TX")).append("</a></th>" + "<th align=\"right\"><a href=\"#def.recv\">").append(_("RX")).append("</a></th>" + "<th>").append(_("Out Queue")).append("</th>" + "<th>").append(_("Backlogged?")).append("</th>" + " </tr>\n");
+  buf.append(".</h3>\n" + "<table>\n" + "<tr><th><a href=\"#def.peer\">").append(_("Peer")).append("</a></th>" + "<th>").append(_("Dir")).append("</th>" + "<th>").append(_("IPv6")).append("</th>" + "<th align=\"right\"><a href=\"#def.idle\">").append(_("Idle")).append("</a></th>" + "<th align=\"right\"><a href=\"#def.rate\">").append(_("In/Out")).append("</a></th>" + "<th align=\"right\"><a href=\"#def.up\">").append(_("Up")).append("</a></th>" + "<th align=\"right\"><a href=\"#def.skew\">").append(_("Skew")).append("</a></th>" + "<th align=\"right\"><a href=\"#def.send\">").append(_("TX")).append("</a></th>" + "<th align=\"right\"><a href=\"#def.recv\">").append(_("RX")).append("</a></th>" + "<th>").append(_("Out Queue")).append("</th>" + "<th>").append(_("Backlogged?")).append("</th>" + " </tr>\n");
   out.write(buf.toString());
   buf.setLength(0);
-  for (Iterator iter=peers.iterator(); iter.hasNext(); ) {
-    NTCPConnection con=(NTCPConnection)iter.next();
+  for (  NTCPConnection con : peers) {
     buf.append("<tr><td class=\"cells\" align=\"left\" nowrap>");
     buf.append(_context.commSystem().renderPeerHTML(con.getRemotePeer().calculateHash()));
     buf.append("</td><td class=\"cells\" align=\"center\">");
     if (con.isInbound())     buf.append("<img src=\"/themes/console/images/inbound.png\" alt=\"Inbound\" title=\"").append(_("Inbound")).append("\"/>");
  else     buf.append("<img src=\"/themes/console/images/outbound.png\" alt=\"Outbound\" title=\"").append(_("Outbound")).append("\"/>");
+    buf.append("</td><td class=\"cells\" align=\"center\">");
+    if (con.isIPv6())     buf.append("&#x2713;");
+ else     buf.append("&nbsp;");
     buf.append("</td><td class=\"cells\" align=\"right\">");
     buf.append(DataHelper.formatDuration2(con.getTimeSinceReceive()));
     buf.append(THINSP).append(DataHelper.formatDuration2(con.getTimeSinceSend()));
@@ -60,8 +62,8 @@
     buf.setLength(0);
   }
   if (!peers.isEmpty()) {
-    buf.append("<tr class=\"tablefooter\"><td align=\"center\"><b>").append(peers.size()).append(' ').append(_("peers")).append("</b></td><td>&nbsp;</td><td>&nbsp;");
-    buf.append("</td><td align=\"center\"><b>").append(formatRate(bpsRecv / 1024)).append(THINSP).append(formatRate(bpsSend / 1024)).append("</b>");
+    buf.append("<tr class=\"tablefooter\"><td colspan=\"4\" align=\"left\"><b>").append(ngettext("{0} peer","{0} peers",peers.size()));
+    buf.append("</b></td><td align=\"center\"><b>").append(formatRate(bpsRecv / 1024)).append(THINSP).append(formatRate(bpsSend / 1024)).append("</b>");
     buf.append("</td><td align=\"center\"><b>").append(DataHelper.formatDuration2(totalUptime / peers.size()));
     buf.append("</b></td><td align=\"center\"><b>").append(DataHelper.formatDuration2(offsetTotal * 1000 / peers.size()));
     buf.append("</b></td><td align=\"center\"><b>").append(totalSend).append("</b></td><td align=\"center\"><b>").append(totalRecv);

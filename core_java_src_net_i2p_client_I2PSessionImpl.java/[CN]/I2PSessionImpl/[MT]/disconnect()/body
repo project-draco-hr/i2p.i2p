@@ -1,5 +1,8 @@
 {
-  if (_closed || _closing)   return;
+synchronized (_stateLock) {
+    if (_state == State.CLOSING || _state == State.CLOSED)     return;
+    changeState(State.CLOSING);
+  }
   if (_log.shouldLog(Log.DEBUG))   _log.debug(getPrefix() + "Disconnect() called",new Exception("Disconnect"));
   if (shouldReconnect()) {
     if (reconnect()) {
@@ -8,8 +11,8 @@
     }
     if (_log.shouldLog(Log.ERROR))     _log.error(getPrefix() + "I2CP reconnection failed");
   }
-  if (_log.shouldLog(Log.ERROR))   _log.error(getPrefix() + "Disconned from the router, and not trying to reconnect further.  I hope you're not hoping anything else will happen");
+  if (_log.shouldLog(Log.ERROR))   _log.error(getPrefix() + "Disconned from the router, and not trying to reconnect");
   if (_sessionListener != null)   _sessionListener.disconnected(this);
-  _closed=true;
   closeSocket();
+  changeState(State.CLOSED);
 }

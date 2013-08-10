@@ -1,0 +1,46 @@
+{
+  DigestInputStream in=null;
+  OutputStream out=null;
+  boolean rv=false;
+  try {
+    MessageDigest md=SHA1.getInstance();
+    in=new DigestInputStream(new BufferedInputStream(new FileInputStream(_file)),md);
+    if (!_headerVerified)     verifyHeader(in);
+ else     skip(in,getContentOffset());
+    if (_signerPubkey == null)     throw new IOException("unknown signer: " + _signer);
+    out=new FileOutputStream(migrateTo);
+    byte[] buf=new byte[16 * 1024];
+    long tot=0;
+    while (tot < _contentLength) {
+      int read=in.read(buf,0,(int)Math.min(buf.length,_contentLength - tot));
+      if (read < 0)       throw new EOFException();
+      out.write(buf,0,read);
+      tot+=read;
+    }
+    byte[] sha=md.digest();
+    in.on(false);
+    Signature signature=new Signature();
+    signature.readBytes(in);
+    SHA1Hash hash=new SHA1Hash(sha);
+    rv=_context.dsa().verifySignature(signature,hash,_signerPubkey);
+  }
+ catch (  DataFormatException dfe) {
+    IOException ioe=new IOException("foo");
+    ioe.initCause(dfe);
+    throw ioe;
+  }
+ finally {
+    if (in != null)     try {
+      in.close();
+    }
+ catch (    IOException ioe) {
+    }
+    if (out != null)     try {
+      out.close();
+    }
+ catch (    IOException ioe) {
+    }
+    if (!rv)     migrateTo.delete();
+  }
+  return rv;
+}

@@ -1,0 +1,50 @@
+{
+  byte[] magic=new byte[MAGIC.length];
+  DataHelper.read(in,magic);
+  if (!DataHelper.eq(magic,MAGIC))   throw new IOException("Not an su3 file");
+  skip(in,1);
+  int foo=in.read();
+  if (foo != FILE_VERSION)   throw new IOException("bad file version");
+  skip(in,1);
+  int sigType=in.read();
+  if (sigType != SIG_DSA_160)   throw new IOException("bad sig type");
+  _signerLength=(int)DataHelper.readLong(in,2);
+  if (_signerLength != Signature.SIGNATURE_BYTES)   throw new IOException("bad sig length");
+  skip(in,1);
+  int _versionLength=in.read();
+  if (_versionLength < MIN_VERSION_BYTES)   throw new IOException("bad version length");
+  skip(in,1);
+  int signerLen=in.read();
+  if (signerLen <= 0)   throw new IOException("bad signer length");
+  _contentLength=DataHelper.readLong(in,8);
+  if (_contentLength <= 0)   throw new IOException("bad content length");
+  skip(in,1);
+  foo=in.read();
+  if (foo != TYPE_ZIP)   throw new IOException("bad type");
+  skip(in,1);
+  _contentType=in.read();
+  if (_contentType < CONTENT_ROUTER || _contentType > CONTENT_RESEED)   throw new IOException("bad content type");
+  skip(in,12);
+  byte[] data=new byte[_versionLength];
+  int bytesRead=DataHelper.read(in,data);
+  if (bytesRead != _versionLength)   throw new EOFException();
+  int zbyte;
+  for (zbyte=0; zbyte < _versionLength; zbyte++) {
+    if (data[zbyte] == 0x00)     break;
+  }
+  _version=new String(data,0,zbyte,"UTF-8");
+  data=new byte[signerLen];
+  bytesRead=DataHelper.read(in,data);
+  if (bytesRead != signerLen)   throw new EOFException();
+  _signer=DataHelper.getUTF8(data);
+  if (_trustedKeys != null) {
+    for (    Map.Entry<SigningPublicKey,String> e : _trustedKeys.entrySet()) {
+      if (e.getValue().equals(_signer)) {
+        _signerPubkey=e.getKey();
+        break;
+      }
+    }
+    if (_signerPubkey == null)     throw new IOException("unknown signer: " + _signer);
+  }
+  _headerVerified=true;
+}
