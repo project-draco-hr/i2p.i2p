@@ -1,4 +1,5 @@
 {
+  boolean sent=false;
   if (_con.getLastSendTime() <= _created) {
     if (_con.getResetReceived() || _con.getResetSent()) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Ack dup on " + _con + ", but we have been reset");
@@ -6,8 +7,10 @@
     }
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Last sent was a while ago, and we want to ack a dup on " + _con);
     _con.ackImmediately();
+    sent=true;
   }
  else {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Ack dup on " + _con + ", but we have sent ("+ (_con.getLastSendTime() - _created)+ ")");
   }
+  _context.statManager().getRate("stream.ack.dup.sent").addData(sent ? 1 : 0);
 }
