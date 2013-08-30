@@ -6,6 +6,7 @@
     Hash ih=ident.calculateHash();
     NTCPConnection con=null;
     boolean isNew=false;
+    boolean fail=false;
 synchronized (_conLock) {
       con=_conByIdent.get(ih);
       if (con == null) {
@@ -17,10 +18,14 @@ synchronized (_conLock) {
           _conByIdent.put(ih,con);
         }
  else {
-          _log.error("we bid on a peer who doesn't have an ntcp address? " + target);
-          return;
+          fail=true;
         }
       }
+    }
+    if (fail) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("we bid on a peer who doesn't have an ntcp address? " + target);
+      afterSend(msg,false);
+      return;
     }
     if (isNew) {
       con.enqueueInfoMessage();
