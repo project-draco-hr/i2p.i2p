@@ -10,12 +10,12 @@
     int highestRTT=-1;
     for (int i=0; i < acked.size(); i++) {
       PacketLocal p=acked.get(i);
-      if (p.getAckTime() > highestRTT) {
-        highestRTT=p.getAckTime();
-      }
-      _context.statManager().addRateData("stream.sendsBeforeAck",p.getNumSends(),p.getAckTime());
-      if (p.getNumSends() > 1)       numResends++;
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Packet acked after " + p.getAckTime() + "ms: "+ p);
+      final int numSends=p.getNumSends();
+      final int ackTime=p.getAckTime();
+      if (numSends > 1)       numResends++;
+ else       if (ackTime > highestRTT)       highestRTT=ackTime;
+      _context.statManager().addRateData("stream.sendsBeforeAck",numSends,ackTime);
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Packet acked after " + ackTime + "ms: "+ p);
     }
     if (highestRTT > 0) {
       int oldrtt=con.getOptions().getRTT();
