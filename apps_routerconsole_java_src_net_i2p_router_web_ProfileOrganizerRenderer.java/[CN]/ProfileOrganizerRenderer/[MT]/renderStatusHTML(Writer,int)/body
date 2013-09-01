@@ -3,16 +3,18 @@
   Set<Hash> peers=_organizer.selectAllPeers();
   long now=_context.clock().now();
   long hideBefore=now - 90 * 60 * 1000;
-  TreeSet<PeerProfile> order=new TreeSet(_comparator);
-  TreeSet<PeerProfile> integratedPeers=new TreeSet(_comparator);
+  Set<PeerProfile> order=new TreeSet(mode == 2 ? new HashComparator() : new ProfileComparator());
   int older=0;
   int standard=0;
   for (Iterator<Hash> iter=peers.iterator(); iter.hasNext(); ) {
     Hash peer=iter.next();
     if (_organizer.getUs().equals(peer))     continue;
     PeerProfile prof=_organizer.getProfile(peer);
-    RouterInfo info=_context.netDb().lookupRouterInfoLocally(peer);
-    if (info != null && info.getCapabilities().indexOf("f") >= 0)     integratedPeers.add(prof);
+    if (mode == 2) {
+      RouterInfo info=_context.netDb().lookupRouterInfoLocally(peer);
+      if (info != null && info.getCapabilities().indexOf("f") >= 0)       order.add(prof);
+      continue;
+    }
     if (prof.getLastSendSuccessful() <= hideBefore) {
       older++;
       continue;
@@ -150,7 +152,7 @@ buf.append("<th class=\"smallhead\">").append(_("1h Fail Rate")).append("</th>")
 buf.append("<th class=\"smallhead\">").append(_("1d Fail Rate")).append("</th>");
 buf.append("</tr>");
 RateAverages ra=RateAverages.getTemp();
-for (Iterator<PeerProfile> iter=integratedPeers.iterator(); iter.hasNext(); ) {
+for (Iterator<PeerProfile> iter=order.iterator(); iter.hasNext(); ) {
 PeerProfile prof=iter.next();
 Hash peer=prof.getPeer();
 buf.append("<tr><td align=\"center\" nowrap>");
