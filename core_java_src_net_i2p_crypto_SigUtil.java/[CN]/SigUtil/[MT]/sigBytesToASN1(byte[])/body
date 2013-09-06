@@ -1,0 +1,30 @@
+{
+  int len=sig.length;
+  int sublen=len / 2;
+  byte[] tmp=new byte[sublen];
+  System.arraycopy(sig,0,tmp,0,sublen);
+  BigInteger r=new BigInteger(1,tmp);
+  byte[] rb=r.toByteArray();
+  if (rb.length > 127)   throw new IllegalArgumentException("FIXME R length > 127");
+  System.arraycopy(sig,sublen,tmp,0,sublen);
+  BigInteger s=new BigInteger(1,tmp);
+  byte[] sb=s.toByteArray();
+  if (sb.length > 127)   throw new IllegalArgumentException("FIXME S length > 127");
+  int seqlen=rb.length + sb.length + 4;
+  if (seqlen > 255)   throw new IllegalArgumentException("FIXME seq length > 255");
+  int totlen=seqlen + 2;
+  if (seqlen > 127)   totlen++;
+  byte[] rv=new byte[totlen];
+  int idx=0;
+  rv[idx++]=0x30;
+  if (seqlen > 127)   rv[idx++]=(byte)0x81;
+  rv[idx++]=(byte)seqlen;
+  rv[idx++]=0x02;
+  rv[idx++]=(byte)rb.length;
+  System.arraycopy(rb,0,rv,idx,rb.length);
+  idx+=rb.length;
+  rv[idx++]=0x02;
+  rv[idx++]=(byte)sb.length;
+  System.arraycopy(sb,0,rv,idx,sb.length);
+  return rv;
+}

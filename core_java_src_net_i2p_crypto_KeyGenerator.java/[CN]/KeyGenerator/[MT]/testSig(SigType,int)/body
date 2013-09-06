@@ -1,0 +1,16 @@
+{
+  byte src[]=new byte[512];
+  long time=0;
+  SimpleDataStructure keys[]=KeyGenerator.getInstance().generateSigningKeys(type);
+  for (int i=0; i < runs; i++) {
+    RandomSource.getInstance().nextBytes(src);
+    long start=System.nanoTime();
+    Signature sig=DSAEngine.getInstance().sign(src,(SigningPrivateKey)keys[1]);
+    boolean ok=DSAEngine.getInstance().verifySignature(sig,src,(SigningPublicKey)keys[0]);
+    long end=System.nanoTime();
+    time+=end - start;
+    if (!ok)     throw new GeneralSecurityException(type + " V(S(data)) fail");
+  }
+  time/=1000 * 1000;
+  System.out.println("Signing Keygen " + runs + " times: "+ time+ " ms = "+ (((double)time) / runs)+ " each");
+}

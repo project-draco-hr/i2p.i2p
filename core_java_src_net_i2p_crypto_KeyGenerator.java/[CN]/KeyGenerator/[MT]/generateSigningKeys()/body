@@ -8,9 +8,12 @@
   BigInteger y=CryptoConstants.dsag.modPow(x,CryptoConstants.dsap);
   keys[0]=new SigningPublicKey();
   keys[1]=new SigningPrivateKey();
-  byte k0[]=padBuffer(y.toByteArray(),SigningPublicKey.KEYSIZE_BYTES);
-  byte k1[]=padBuffer(x.toByteArray(),SigningPrivateKey.KEYSIZE_BYTES);
-  keys[0].setData(k0);
-  keys[1].setData(k1);
+  try {
+    keys[0].setData(SigUtil.rectify(y,SigningPublicKey.KEYSIZE_BYTES));
+    keys[1].setData(SigUtil.rectify(x,SigningPrivateKey.KEYSIZE_BYTES));
+  }
+ catch (  InvalidKeyException ike) {
+    throw new IllegalStateException(ike);
+  }
   return keys;
 }

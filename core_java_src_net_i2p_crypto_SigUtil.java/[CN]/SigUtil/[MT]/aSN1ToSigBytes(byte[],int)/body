@@ -1,0 +1,24 @@
+{
+  if (asn[0] != 0x30)   throw new SignatureException("asn[0] = " + (asn[0] & 0xff));
+  int idx=2;
+  if ((asn[1] & 0x80) != 0)   idx+=asn[1] & 0x7f;
+  if (asn[idx] != 0x02)   throw new SignatureException("asn[2] = " + (asn[idx] & 0xff));
+  byte[] rv=new byte[len];
+  int sublen=len / 2;
+  int rlen=asn[++idx];
+  if ((rlen & 0x80) != 0)   throw new SignatureException("FIXME R length > 127");
+  if ((asn[++idx] & 0x80) != 0)   throw new SignatureException("R is negative");
+  if (rlen > sublen + 1)   throw new SignatureException("R too big " + rlen);
+  if (rlen == sublen + 1)   System.arraycopy(asn,idx + 1,rv,0,sublen);
+ else   System.arraycopy(asn,idx,rv,sublen - rlen,rlen);
+  idx+=rlen;
+  int slenloc=idx + 1;
+  if (asn[idx] != 0x02)   throw new SignatureException("asn[s] = " + (asn[idx] & 0xff));
+  int slen=asn[slenloc];
+  if ((slen & 0x80) != 0)   throw new SignatureException("FIXME S length > 127");
+  if ((asn[slenloc + 1] & 0x80) != 0)   throw new SignatureException("S is negative");
+  if (slen > sublen + 1)   throw new SignatureException("S too big " + slen);
+  if (slen == sublen + 1)   System.arraycopy(asn,slenloc + 2,rv,sublen,sublen);
+ else   System.arraycopy(asn,slenloc + 1,rv,len - slen,slen);
+  return rv;
+}
