@@ -4,14 +4,15 @@
   boolean ok=false;
   try {
     in=new BufferedInputStream(new FileInputStream(content));
-    MessageDigest md=SHA1.getInstance();
+    SigType sigType=privkey.getType();
+    MessageDigest md=sigType.getDigestInstance();
     out=new DigestOutputStream(new BufferedOutputStream(new FileOutputStream(_file)),md);
     out.write(MAGIC);
     out.write((byte)0);
     out.write((byte)FILE_VERSION);
     out.write((byte)0);
-    out.write((byte)SIG_DSA_160);
-    DataHelper.writeLong(out,2,Signature.SIGNATURE_BYTES);
+    out.write((byte)sigType.getCode());
+    DataHelper.writeLong(out,2,sigType.getSigLen());
     out.write((byte)0);
     byte[] verBytes=DataHelper.getUTF8(version);
     if (verBytes.length == 0 || verBytes.length > 255)     throw new IllegalArgumentException("bad version length");
@@ -43,7 +44,8 @@
     }
     byte[] sha=md.digest();
     out.on(false);
-    SHA1Hash hash=new SHA1Hash(sha);
+    SimpleDataStructure hash=sigType.getHashInstance();
+    hash.setData(sha);
     Signature signature=_context.dsa().sign(hash,privkey);
     signature.writeBytes(out);
     ok=true;

@@ -6,10 +6,11 @@
   int foo=in.read();
   if (foo != FILE_VERSION)   throw new IOException("bad file version");
   skip(in,1);
-  int sigType=in.read();
-  if (sigType != SIG_DSA_160)   throw new IOException("bad sig type");
+  int sigTypeCode=in.read();
+  _sigType=SigType.getByCode(sigTypeCode);
+  if (_sigType == null)   throw new IOException("unknown sig type: " + sigTypeCode);
   _signerLength=(int)DataHelper.readLong(in,2);
-  if (_signerLength != Signature.SIGNATURE_BYTES)   throw new IOException("bad sig length");
+  if (_signerLength != _sigType.getSigLen())   throw new IOException("bad sig length");
   skip(in,1);
   int _versionLength=in.read();
   if (_versionLength < MIN_VERSION_BYTES)   throw new IOException("bad version length");

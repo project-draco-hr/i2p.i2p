@@ -3,7 +3,7 @@
   OutputStream out=null;
   boolean rv=false;
   try {
-    MessageDigest md=SHA1.getInstance();
+    MessageDigest md=_sigType.getDigestInstance();
     in=new DigestInputStream(new BufferedInputStream(new FileInputStream(_file)),md);
     if (!_headerVerified)     verifyHeader(in);
  else     skip(in,getContentOffset());
@@ -19,9 +19,10 @@
     }
     byte[] sha=md.digest();
     in.on(false);
-    Signature signature=new Signature();
+    Signature signature=new Signature(_sigType);
     signature.readBytes(in);
-    SHA1Hash hash=new SHA1Hash(sha);
+    SimpleDataStructure hash=_sigType.getHashInstance();
+    hash.setData(sha);
     rv=_context.dsa().verifySignature(signature,hash,_signerPubkey);
   }
  catch (  DataFormatException dfe) {
