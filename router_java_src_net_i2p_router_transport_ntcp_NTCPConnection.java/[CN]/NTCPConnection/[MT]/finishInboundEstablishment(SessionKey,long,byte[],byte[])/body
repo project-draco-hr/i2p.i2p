@@ -1,11 +1,8 @@
 {
-  _sessionKey=key;
-  _clockSkew=clockSkew;
-  _prevWriteEnd=prevWriteEnd;
-  System.arraycopy(prevReadEnd,prevReadEnd.length - BLOCK_SIZE,_prevReadBlock,0,BLOCK_SIZE);
-  _establishedOn=System.currentTimeMillis();
-  _transport.inboundEstablished(this);
-  _nextMetaTime=System.currentTimeMillis() + (META_FREQUENCY / 2) + _context.random().nextInt(META_FREQUENCY);
-  _nextInfoTime=System.currentTimeMillis() + (INFO_FREQUENCY / 2) + _context.random().nextInt(INFO_FREQUENCY);
-  _establishState=EstablishState.VERIFIED;
+  NTCPConnection toClose=locked_finishInboundEstablishment(key,clockSkew,prevWriteEnd,prevReadEnd);
+  if (toClose != null) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Old connection closed: " + toClose + " replaced by "+ this);
+    _context.statManager().addRateData("ntcp.inboundEstablishedDuplicate",toClose.getUptime());
+    toClose.close();
+  }
 }

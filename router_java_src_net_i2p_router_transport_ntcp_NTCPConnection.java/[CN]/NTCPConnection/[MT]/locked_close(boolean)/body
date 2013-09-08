@@ -1,0 +1,41 @@
+{
+  if (_log.shouldLog(Log.INFO))   _log.info("Closing connection " + toString(),new Exception("cause"));
+  _closed=true;
+  if (_chan != null)   try {
+    _chan.close();
+  }
+ catch (  IOException ioe) {
+  }
+  if (_conKey != null)   _conKey.cancel();
+  _establishState=EstablishState.VERIFIED;
+  NTCPConnection old=_transport.removeCon(this);
+  _transport.getReader().connectionClosed(this);
+  _transport.getWriter().connectionClosed(this);
+  for (  FIFOBandwidthLimiter.Request req : _bwInRequests) {
+    req.abort();
+  }
+  _bwInRequests.clear();
+  for (  FIFOBandwidthLimiter.Request req : _bwOutRequests) {
+    req.abort();
+  }
+  _bwOutRequests.clear();
+  _writeBufs.clear();
+  ByteBuffer bb;
+  while ((bb=_readBufs.poll()) != null) {
+    EventPumper.releaseBuf(bb);
+  }
+  List<OutNetMessage> pending=new ArrayList();
+  _outbound.drainTo(pending);
+  for (  OutNetMessage msg : pending) {
+    Object buf=msg.releasePreparationBuffer();
+    if (buf != null)     releaseBuf((PrepBuffer)buf);
+    _transport.afterSend(msg,false,allowRequeue,msg.getLifetime());
+  }
+  OutNetMessage msg=_currentOutbound;
+  if (msg != null) {
+    Object buf=msg.releasePreparationBuffer();
+    if (buf != null)     releaseBuf((PrepBuffer)buf);
+    _transport.afterSend(msg,false,allowRequeue,msg.getLifetime());
+  }
+  return old;
+}
