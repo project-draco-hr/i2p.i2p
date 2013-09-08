@@ -1,15 +1,25 @@
 {
+  File pubFile=new File(publicKeyFile);
+  File privFile=new File(privateKeyFile);
+  if (pubFile.exists()) {
+    System.out.println("Error: Not overwriting file " + publicKeyFile);
+    return false;
+  }
+  if (privFile.exists()) {
+    System.out.println("Error: Not overwriting file " + privateKeyFile);
+    return false;
+  }
   FileOutputStream fileOutputStream=null;
   I2PAppContext context=I2PAppContext.getGlobalContext();
   try {
     Object signingKeypair[]=context.keyGenerator().generateSigningKeypair();
     SigningPublicKey signingPublicKey=(SigningPublicKey)signingKeypair[0];
     SigningPrivateKey signingPrivateKey=(SigningPrivateKey)signingKeypair[1];
-    fileOutputStream=new FileOutputStream(publicKeyFile);
+    fileOutputStream=new SecureFileOutputStream(pubFile);
     signingPublicKey.writeBytes(fileOutputStream);
     fileOutputStream.close();
     fileOutputStream=null;
-    fileOutputStream=new FileOutputStream(privateKeyFile);
+    fileOutputStream=new SecureFileOutputStream(privFile);
     signingPrivateKey.writeBytes(fileOutputStream);
     System.out.println("\r\nPrivate key written to: " + privateKeyFile);
     System.out.println("Public key written to: " + publicKeyFile);
