@@ -1,0 +1,13 @@
+{
+  SigType type=signature.getType();
+  if (type != verifyingKey.getType())   throw new IllegalArgumentException("type mismatch sig=" + type + " key="+ verifyingKey.getType());
+  int hashlen=hash.length();
+  if (type.getHashLen() != hashlen)   throw new IllegalArgumentException("type mismatch hash=" + hash.getClass() + " key="+ type);
+  if (type == SigType.DSA_SHA1)   throw new UnsupportedOperationException();
+  java.security.Signature jsig=java.security.Signature.getInstance("NONEwithECDSA");
+  PublicKey pubKey=SigUtil.toJavaECKey(verifyingKey);
+  jsig.initVerify(pubKey);
+  jsig.update(hash.getData());
+  boolean rv=jsig.verify(SigUtil.toJavaSig(signature));
+  return rv;
+}

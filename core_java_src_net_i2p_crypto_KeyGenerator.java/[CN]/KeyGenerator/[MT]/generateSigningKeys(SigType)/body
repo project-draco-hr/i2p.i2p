@@ -1,0 +1,39 @@
+{
+  if (type == SigType.DSA_SHA1)   return generateSigningKeys();
+  KeyPairGenerator kpg=KeyPairGenerator.getInstance("EC");
+  KeyPair kp;
+  try {
+    kpg.initialize(type.getParams(),_context.random());
+    kp=kpg.generateKeyPair();
+  }
+ catch (  ProviderException pe) {
+    Log log=_context.logManager().getLog(KeyGenerator.class);
+    String pname=kpg.getProvider().getName();
+    if ("BC".equals(pname)) {
+      if (log.shouldLog(Log.WARN))       log.warn("BC KPG failed",pe);
+      throw new GeneralSecurityException("BC KPG",pe);
+    }
+    if (!ECConstants.isBCAvailable())     throw new GeneralSecurityException(pname + " KPG",pe);
+    if (log.shouldLog(Log.WARN))     log.warn(pname + " KPG failed, trying BC",pe);
+    try {
+      kpg=KeyPairGenerator.getInstance("EC","BC");
+      kpg.initialize(type.getParams(),_context.random());
+      kp=kpg.generateKeyPair();
+    }
+ catch (    ProviderException pe2) {
+      if (log.shouldLog(Log.WARN))       log.warn("BC KPG failed too",pe2);
+      throw new GeneralSecurityException(pname + " KPG",pe);
+    }
+catch (    GeneralSecurityException gse) {
+      if (log.shouldLog(Log.WARN))       log.warn("BC KPG failed too",gse);
+      gse.printStackTrace();
+      throw new GeneralSecurityException(pname + " KPG",pe);
+    }
+  }
+  ECPublicKey pubkey=(ECPublicKey)kp.getPublic();
+  ECPrivateKey privkey=(ECPrivateKey)kp.getPrivate();
+  SimpleDataStructure[] keys=new SimpleDataStructure[2];
+  keys[0]=SigUtil.fromJavaKey(pubkey,type);
+  keys[1]=SigUtil.fromJavaKey(privkey,type);
+  return keys;
+}
