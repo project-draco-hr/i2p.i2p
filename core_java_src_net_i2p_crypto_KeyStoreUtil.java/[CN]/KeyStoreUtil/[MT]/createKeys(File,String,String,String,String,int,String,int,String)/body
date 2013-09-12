@@ -1,0 +1,30 @@
+{
+  if (!ks.exists()) {
+    File dir=ks.getParentFile();
+    if (!dir.exists()) {
+      File sdir=new SecureDirectory(dir.getAbsolutePath());
+      if (!sdir.mkdir()) {
+        error("Can't create directory " + dir,null);
+        return false;
+      }
+    }
+  }
+  String keytool=(new File(System.getProperty("java.home"),"bin/keytool")).getAbsolutePath();
+  String[] args=new String[]{keytool,"-genkey","-storetype",KeyStore.getDefaultType(),"-keystore",ks.getAbsolutePath(),"-storepass",ksPW,"-alias",alias,"-dname","CN=" + cname + ",OU="+ ou+ ",O=I2P Anonymous Network,L=XX,ST=XX,C=XX","-validity",Integer.toString(validDays),"-keyalg",keyAlg,"-keysize","1024","-keypass",keyPW};
+  boolean success=(new ShellCommand()).executeSilentAndWaitTimed(args,30);
+  if (success) {
+    success=ks.exists();
+  }
+  if (success) {
+    SecureFileOutputStream.setPerms(ks);
+    info("Created self-signed certificate for " + cname + " in keystore: "+ ks.getAbsolutePath());
+  }
+ else {
+    StringBuilder buf=new StringBuilder(256);
+    for (int i=0; i < args.length; i++) {
+      buf.append('"').append(args[i]).append("\" ");
+    }
+    error("Failed to create SSL keystore using command line:" + buf,null);
+  }
+  return success;
+}

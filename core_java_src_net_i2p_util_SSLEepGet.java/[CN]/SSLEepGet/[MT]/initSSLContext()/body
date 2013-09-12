@@ -1,58 +1,27 @@
 {
-  KeyStore ks;
-  try {
-    ks=KeyStore.getInstance(KeyStore.getDefaultType());
-  }
- catch (  GeneralSecurityException gse) {
-    _log.error("Key Store init error",gse);
+  KeyStore ks=KeyStoreUtil.loadSystemKeyStore();
+  if (ks == null) {
+    _log.error("Key Store init error");
     return null;
   }
-  boolean success=false;
-  String override=System.getProperty("javax.net.ssl.keyStore");
-  if (override != null)   success=loadCerts(new File(override),ks);
-  if (!success) {
-    if (_isAndroid) {
-      success=loadCerts(new File(System.getProperty("java.home"),"etc/security/cacerts.bks"),ks);
-    }
- else {
-      success=loadCerts(new File(System.getProperty("java.home"),"lib/security/jssecacerts"),ks);
-      if (!success)       success=loadCerts(new File(System.getProperty("java.home"),"lib/security/cacerts"),ks);
-    }
-  }
-  if (!success) {
-    try {
-      ks.load(null,"changeit".toCharArray());
-    }
- catch (    Exception e) {
-    }
-    _log.error("All key store loads failed, will only load local certificates");
-  }
- else   if (_log.shouldLog(Log.INFO)) {
-    int count=0;
-    try {
-      for (Enumeration<String> e=ks.aliases(); e.hasMoreElements(); ) {
-        String alias=e.nextElement();
-        if (ks.isCertificateEntry(alias))         count++;
-      }
-    }
- catch (    Exception foo) {
-    }
+  if (_log.shouldLog(Log.INFO)) {
+    int count=KeyStoreUtil.countCerts(ks);
     _log.info("Loaded " + count + " default trusted certificates");
   }
   File dir=new File(_context.getBaseDir(),"certificates");
-  int adds=addCerts(dir,ks);
+  int adds=KeyStoreUtil.addCerts(dir,ks);
   int totalAdds=adds;
   if (adds > 0 && _log.shouldLog(Log.INFO))   _log.info("Loaded " + adds + " trusted certificates from "+ dir.getAbsolutePath());
   if (!_context.getBaseDir().getAbsolutePath().equals(_context.getConfigDir().getAbsolutePath())) {
     dir=new File(_context.getConfigDir(),"certificates");
-    adds=addCerts(dir,ks);
+    adds=KeyStoreUtil.addCerts(dir,ks);
     totalAdds+=adds;
     if (adds > 0 && _log.shouldLog(Log.INFO))     _log.info("Loaded " + adds + " trusted certificates from "+ dir.getAbsolutePath());
   }
   dir=new File(System.getProperty("user.dir"));
   if (!_context.getBaseDir().getAbsolutePath().equals(dir.getAbsolutePath())) {
     dir=new File(_context.getConfigDir(),"certificates");
-    adds=addCerts(dir,ks);
+    adds=KeyStoreUtil.addCerts(dir,ks);
     totalAdds+=adds;
     if (adds > 0 && _log.shouldLog(Log.INFO))     _log.info("Loaded " + adds + " trusted certificates from "+ dir.getAbsolutePath());
   }
