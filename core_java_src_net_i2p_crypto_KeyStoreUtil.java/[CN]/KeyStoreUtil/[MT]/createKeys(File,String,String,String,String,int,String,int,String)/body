@@ -1,7 +1,19 @@
 {
-  if (!ks.exists()) {
+  if (ks.exists()) {
+    try {
+      if (getCert(ks,ksPW,alias) != null) {
+        error("Not overwriting key " + alias + ", already exists in "+ ks,null);
+        return false;
+      }
+    }
+ catch (    Exception e) {
+      error("Not overwriting key \"" + alias + "\", already exists in "+ ks,e);
+      return false;
+    }
+  }
+ else {
     File dir=ks.getParentFile();
-    if (!dir.exists()) {
+    if (dir != null && !dir.exists()) {
       File sdir=new SecureDirectory(dir.getAbsolutePath());
       if (!sdir.mkdir()) {
         error("Can't create directory " + dir,null);
@@ -24,7 +36,7 @@
     for (int i=0; i < args.length; i++) {
       buf.append('"').append(args[i]).append("\" ");
     }
-    error("Failed to create SSL keystore using command line:" + buf,null);
+    error("Failed to create SSL keystore using command line: " + buf,null);
   }
   return success;
 }
