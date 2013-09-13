@@ -5,8 +5,7 @@
   skip(in,1);
   int foo=in.read();
   if (foo != FILE_VERSION)   throw new IOException("bad file version");
-  skip(in,1);
-  int sigTypeCode=in.read();
+  int sigTypeCode=(int)DataHelper.readLong(in,2);
   _sigType=SigType.getByCode(sigTypeCode);
   if (_sigType == null)   throw new IOException("unknown sig type: " + sigTypeCode);
   _signerLength=(int)DataHelper.readLong(in,2);
@@ -23,8 +22,9 @@
   foo=in.read();
   if (foo != TYPE_ZIP)   throw new IOException("bad type");
   skip(in,1);
-  _contentType=in.read();
-  if (_contentType < CONTENT_ROUTER || _contentType > CONTENT_RESEED)   throw new IOException("bad content type");
+  int cType=in.read();
+  _contentType=BY_CODE.get(Integer.valueOf(cType));
+  if (_contentType == null)   throw new IOException("unknown content type " + cType);
   skip(in,12);
   byte[] data=new byte[_versionLength];
   int bytesRead=DataHelper.read(in,data);
@@ -38,24 +38,14 @@
   bytesRead=DataHelper.read(in,data);
   if (bytesRead != signerLen)   throw new EOFException();
   _signer=DataHelper.getUTF8(data);
-  if (_trustedKeys != null) {
-    for (    Map.Entry<SigningPublicKey,String> e : _trustedKeys.entrySet()) {
-      if (e.getValue().equals(_signer)) {
-        _signerPubkey=e.getKey();
-        break;
-      }
-    }
+  KeyRing ring=new DirKeyRing(new File(_context.getBaseDir(),"certificates"));
+  try {
+    _signerPubkey=ring.getKey(_signer,_contentType.getName(),_sigType);
   }
- else {
-    KeyRing ring=new DirKeyRing(new File("su3keyring"));
-    try {
-      _signerPubkey=ring.getKey(_signer,"default",_sigType);
-    }
- catch (    GeneralSecurityException gse) {
-      IOException ioe=new IOException("keystore error");
-      ioe.initCause(gse);
-      throw ioe;
-    }
+ catch (  GeneralSecurityException gse) {
+    IOException ioe=new IOException("keystore error");
+    ioe.initCause(gse);
+    throw ioe;
   }
   if (_signerPubkey == null)   throw new IOException("unknown signer: " + _signer);
   _headerVerified=true;

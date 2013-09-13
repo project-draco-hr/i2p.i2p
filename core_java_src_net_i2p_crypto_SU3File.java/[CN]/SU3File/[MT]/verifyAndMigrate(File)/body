@@ -22,13 +22,13 @@
     if (!_headerVerified)     verifyHeader(in);
  else     skip(in,getContentOffset());
     if (_signerPubkey == null)     throw new IOException("unknown signer: " + _signer);
-    out=new FileOutputStream(migrateTo);
+    if (migrateTo != null)     out=new FileOutputStream(migrateTo);
     byte[] buf=new byte[16 * 1024];
     long tot=0;
     while (tot < _contentLength) {
       int read=in.read(buf,0,(int)Math.min(buf.length,_contentLength - tot));
       if (read < 0)       throw new EOFException();
-      out.write(buf,0,read);
+      if (migrateTo != null)       out.write(buf,0,read);
       tot+=read;
     }
     byte[] sha=md.digest();
@@ -55,7 +55,7 @@
     }
  catch (    IOException ioe) {
     }
-    if (!rv)     migrateTo.delete();
+    if (migrateTo != null && !rv)     migrateTo.delete();
   }
   return rv;
 }
