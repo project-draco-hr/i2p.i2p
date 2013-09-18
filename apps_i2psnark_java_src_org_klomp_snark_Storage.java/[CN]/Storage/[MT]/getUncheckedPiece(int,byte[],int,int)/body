@@ -1,25 +1,26 @@
 {
   long start=((long)piece * (long)piece_size) + off;
   int i=0;
-  long raflen=lengths[i];
+  long raflen=_torrentFiles.get(i).length;
   while (start > raflen) {
     i++;
     start-=raflen;
-    raflen=lengths[i];
+    raflen=_torrentFiles.get(i).length;
   }
   int read=0;
   while (read < length) {
     int need=length - read;
     int len=(start + need < raflen) ? need : (int)(raflen - start);
-synchronized (RAFlock[i]) {
-      checkRAF(i);
-      rafs[i].seek(start);
-      rafs[i].readFully(bs,read,len);
+    TorrentFile tf=_torrentFiles.get(i);
+synchronized (tf) {
+      RandomAccessFile raf=tf.checkRAF();
+      raf.seek(start);
+      raf.readFully(bs,read,len);
     }
     read+=len;
     if (need - len > 0) {
       i++;
-      raflen=lengths[i];
+      raflen=_torrentFiles.get(i).length;
       start=0;
     }
   }

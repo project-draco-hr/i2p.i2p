@@ -4,25 +4,16 @@
   if (areFilesPublic)   base=new File(rootDir,filterName(metainfo.getName()));
  else   base=new SecureFile(rootDir,filterName(metainfo.getName()));
   boolean useSavedBitField=savedTime > 0 && savedBitField != null;
+  if (!_torrentFiles.isEmpty())   throw new IllegalStateException();
   List<List<String>> files=metainfo.getFiles();
   if (files == null) {
     if (_log.shouldLog(Log.INFO))     _log.info("Creating/Checking file: " + base);
     if (!base.createNewFile() && !base.exists())     throw new IOException("Could not create file " + base);
-    lengths=new long[1];
-    rafs=new RandomAccessFile[1];
-    names=new String[1];
-    RAFlock=new Object[1];
-    RAFtime=new long[1];
-    RAFfile=new File[1];
-    isSparse=new boolean[1];
-    lengths[0]=metainfo.getTotalLength();
-    RAFlock[0]=new Object();
-    RAFfile[0]=base;
+    _torrentFiles.add(new TorrentFile(base,base,metainfo.getTotalLength()));
     if (useSavedBitField) {
       long lm=base.lastModified();
       if (lm <= 0 || lm > savedTime)       useSavedBitField=false;
     }
-    names[0]=base.getName();
   }
  else {
     if (_log.shouldLog(Log.INFO))     _log.info("Creating/Checking directory: " + base);
@@ -30,18 +21,11 @@
     List<Long> ls=metainfo.getLengths();
     int size=files.size();
     long total=0;
-    lengths=new long[size];
-    rafs=new RandomAccessFile[size];
-    names=new String[size];
-    RAFlock=new Object[size];
-    RAFtime=new long[size];
-    RAFfile=new File[size];
-    isSparse=new boolean[size];
     for (int i=0; i < size; i++) {
       List<String> path=files.get(i);
       File f=createFileFromNames(base,path,areFilesPublic);
       for (int j=0; j < i; j++) {
-        if (f.equals(RAFfile[j])) {
+        if (f.equals(_torrentFiles.get(j).RAFfile)) {
           path=new ArrayList(path);
           int last=path.size() - 1;
           String lastPath=path.get(last);
@@ -53,15 +37,13 @@
           j=0;
         }
       }
-      lengths[i]=ls.get(i).longValue();
-      RAFlock[i]=new Object();
-      RAFfile[i]=f;
-      total+=lengths[i];
+      long len=ls.get(i).longValue();
+      _torrentFiles.add(new TorrentFile(base,f,len));
+      total+=len;
       if (useSavedBitField) {
         long lm=f.lastModified();
         if (lm <= 0 || lm > savedTime)         useSavedBitField=false;
       }
-      names[i]=f.getName();
     }
     long metalength=metainfo.getTotalLength();
     if (total != metalength)     throw new IOException("File lengths do not add up " + total + " != "+ metalength);
@@ -80,7 +62,6 @@
     if (_log.shouldLog(Log.INFO))     _log.info("Torrent is complete");
   }
  else {
-    if (files != null)     priorities=new int[files.size()];
     if (_log.shouldLog(Log.INFO))     _log.info("Still need " + needed + " out of "+ metainfo.getPieces()+ " pieces");
   }
 }

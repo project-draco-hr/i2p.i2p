@@ -11,11 +11,11 @@ synchronized (bitfield) {
     }
     long start=(long)piece * (long)piece_size;
     int i=0;
-    long raflen=lengths[i];
+    long raflen=_torrentFiles.get(i).length;
     while (start > raflen) {
       i++;
       start-=raflen;
-      raflen=lengths[i];
+      raflen=_torrentFiles.get(i).length;
     }
     int written=0;
     int off=0;
@@ -23,19 +23,25 @@ synchronized (bitfield) {
     while (written < length) {
       int need=length - written;
       int len=(start + need < raflen) ? need : (int)(raflen - start);
-synchronized (RAFlock[i]) {
-        checkRAF(i);
-        if (isSparse[i]) {
-          if (priorities == null || priorities[i] >= 0)           balloonFile(i);
- else           isSparse[i]=false;
+      TorrentFile tf=_torrentFiles.get(i);
+synchronized (tf) {
+        RandomAccessFile raf=tf.checkRAF();
+        if (tf.isSparse) {
+          if (tf.priority >= 0) {
+            if (_log.shouldLog(Log.INFO))             _log.info("Ballooning " + tf);
+            tf.balloonFile();
+          }
+ else {
+            tf.isSparse=false;
+          }
         }
-        rafs[i].seek(start);
-        pp.write(rafs[i],off + written,len);
+        raf.seek(start);
+        pp.write(raf,off + written,len);
       }
       written+=len;
       if (need - len > 0) {
         i++;
-        raflen=lengths[i];
+        raflen=tf.length;
         start=0;
       }
     }

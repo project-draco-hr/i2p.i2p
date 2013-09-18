@@ -9,35 +9,35 @@
  else {
     bfield=bitfield;
   }
-  for (int i=0; i < rafs.length; i++) {
-    long length=RAFfile[i].length();
-    if (RAFfile[i].exists() && length == lengths[i]) {
+  for (  TorrentFile tf : _torrentFiles) {
+    long length=tf.RAFfile.length();
+    if (tf.RAFfile.exists() && length == tf.length) {
       if (listener != null)       listener.storageAllocated(this,length);
       resume=true;
     }
  else     if (length == 0) {
       changed=true;
-synchronized (RAFlock[i]) {
-        allocateFile(i);
+synchronized (tf) {
+        allocateFile(tf);
         try {
-          closeRAF(i);
+          tf.closeRAF();
         }
  catch (        IOException ioe) {
         }
       }
     }
  else {
-      String msg="File '" + names[i] + "' exists, but has wrong length (expected "+ lengths[i]+ " but found "+ length+ ") - repairing corruption";
+      String msg="File '" + tf.name + "' exists, but has wrong length (expected "+ tf.length+ " but found "+ length+ ") - repairing corruption";
       if (listener != null)       listener.addMessage(msg);
       _log.error(msg);
       changed=true;
       resume=true;
       _probablyComplete=false;
-synchronized (RAFlock[i]) {
-        checkRAF(i);
-        rafs[i].setLength(lengths[i]);
+synchronized (tf) {
+        RandomAccessFile raf=tf.checkRAF();
+        raf.setLength(tf.length);
         try {
-          closeRAF(i);
+          tf.closeRAF();
         }
  catch (        IOException ioe) {
         }
@@ -47,22 +47,23 @@ synchronized (RAFlock[i]) {
   if (resume) {
     byte[] piece=new byte[piece_size];
     int file=0;
-    long fileEnd=lengths[0];
+    long fileEnd=_torrentFiles.get(0).length;
     long pieceEnd=0;
     for (int i=0; i < pieces; i++) {
       int length=getUncheckedPiece(i,piece);
       boolean correctHash=metainfo.checkPiece(i,piece,0,length);
       pieceEnd+=length;
       while (fileEnd <= pieceEnd) {
-synchronized (RAFlock[file]) {
+        TorrentFile tf=_torrentFiles.get(file);
+synchronized (tf) {
           try {
-            closeRAF(file);
+            tf.closeRAF();
           }
  catch (          IOException ioe) {
           }
         }
-        if (++file >= rafs.length)         break;
-        fileEnd+=lengths[file];
+        if (++file >= _torrentFiles.size())         break;
+        fileEnd+=tf.length;
       }
       if (correctHash) {
         bfield.set(i);

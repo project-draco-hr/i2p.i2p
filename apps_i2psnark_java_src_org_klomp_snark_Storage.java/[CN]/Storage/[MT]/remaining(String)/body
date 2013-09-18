@@ -1,7 +1,7 @@
 {
   long bytes=0;
-  for (int i=0; i < rafs.length; i++) {
-    File f=RAFfile[i];
+  for (  TorrentFile tf : _torrentFiles) {
+    File f=tf.RAFfile;
     String canonical=null;
     if (f != null) {
       try {
@@ -15,10 +15,10 @@
       if (complete())       return 0;
       int psz=piece_size;
       long start=bytes;
-      long end=start + lengths[i];
+      long end=start + tf.length;
       int pc=(int)(bytes / psz);
       long rv=0;
-      if (!bitfield.get(pc))       rv=Math.min(psz - (start % psz),lengths[i]);
+      if (!bitfield.get(pc))       rv=Math.min(psz - (start % psz),tf.length);
       for (int j=pc + 1; (((long)j) * psz) < end && j < pieces; j++) {
         if (!bitfield.get(j)) {
           if (((long)(j + 1)) * psz < end)           rv+=psz;
@@ -27,7 +27,7 @@
       }
       return rv;
     }
-    bytes+=lengths[i];
+    bytes+=tf.length;
   }
   return -1;
 }
