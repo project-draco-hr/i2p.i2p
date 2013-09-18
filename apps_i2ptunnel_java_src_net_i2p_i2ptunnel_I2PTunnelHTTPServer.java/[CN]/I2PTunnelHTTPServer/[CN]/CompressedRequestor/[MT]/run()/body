@@ -9,8 +9,12 @@
     if (_log.shouldLog(Log.INFO))     _log.info("request headers: " + _headers);
     serverout.write(_headers.getBytes());
     browserin=_browser.getInputStream();
-    I2PAppThread sender=new I2PAppThread(new Sender(serverout,browserin,"server: browser to server",_log),Thread.currentThread().getName() + "hcs");
-    sender.start();
+    if ((!(_headers.startsWith("GET ") || _headers.startsWith("HEAD "))) || browserin.available() > 0) {
+      I2PAppThread sender=new I2PAppThread(new Sender(serverout,browserin,"server: browser to server",_log),Thread.currentThread().getName() + "hcs");
+      sender.start();
+    }
+ else {
+    }
     browserout=_browser.getOutputStream();
     try {
       serverin=new BufferedInputStream(_webserver.getInputStream(),BUF_SIZE);
