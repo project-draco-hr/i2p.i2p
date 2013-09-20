@@ -17,7 +17,18 @@
     buf.append(' ').append(_("Version {0}",dver));
     buf.append("</b></h4>");
   }
-  if ((updateAvailable() || unsignedUpdateAvailable()) && !NewsHelper.isUpdateInProgress() && !_context.router().gracefulShutdownInProgress()&& _context.portMapper().getPort(PortMapper.SVC_HTTP_PROXY) > 0 && getAction() == null && getUpdateNonce() == null) {
+  boolean avail=updateAvailable();
+  boolean unsignedAvail=unsignedUpdateAvailable();
+  String constraint=avail ? NewsHelper.updateConstraint() : null;
+  if (avail && constraint != null && !NewsHelper.isUpdateInProgress() && !_context.router().gracefulShutdownInProgress()) {
+    if (needSpace)     buf.append("<hr>");
+ else     needSpace=true;
+    buf.append("<h4><b>").append(_("Update available")).append(":<br>");
+    buf.append(_("Version {0}",getUpdateVersion())).append("<br>");
+    buf.append(constraint).append("</h4>");
+    avail=false;
+  }
+  if ((avail || unsignedAvail) && !NewsHelper.isUpdateInProgress() && !_context.router().gracefulShutdownInProgress()&& _context.portMapper().getPort(PortMapper.SVC_HTTP_PROXY) > 0 && getAction() == null && getUpdateNonce() == null) {
     if (needSpace)     buf.append("<hr>");
     long nonce=_context.random().nextLong();
     String prev=System.getProperty("net.i2p.router.web.UpdateHandler.nonce");
@@ -26,10 +37,10 @@
     String uri=getRequestURI();
     buf.append("<form action=\"").append(uri).append("\" method=\"POST\">\n");
     buf.append("<input type=\"hidden\" name=\"updateNonce\" value=\"").append(nonce).append("\" >\n");
-    if (updateAvailable()) {
+    if (avail) {
       buf.append("<button type=\"submit\" class=\"download\" name=\"updateAction\" value=\"signed\" >").append(_("Download {0} Update",getUpdateVersion())).append("</button><br>\n");
     }
-    if (unsignedUpdateAvailable()) {
+    if (unsignedAvail) {
       buf.append("<button type=\"submit\" class=\"download\" name=\"updateAction\" value=\"Unsigned\" >").append(_("Download Unsigned<br>Update {0}",getUnsignedUpdateVersion())).append("</button><br>\n");
     }
     buf.append("</form>\n");

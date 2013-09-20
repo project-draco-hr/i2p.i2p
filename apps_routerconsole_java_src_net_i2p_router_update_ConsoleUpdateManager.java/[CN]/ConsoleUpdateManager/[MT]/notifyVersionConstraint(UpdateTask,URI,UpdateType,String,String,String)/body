@@ -1,0 +1,23 @@
+{
+  UpdateItem ui=new UpdateItem(type,id);
+  Version old=_installed.get(ui);
+  VersionAvailable newVA=new VersionAvailable(newVersion,message);
+  if (_log.shouldLog(Log.INFO))   _log.info("notifyVersionConstraint " + ui + ' '+ newVA+ " old: "+ old);
+  if (old != null && old.compareTo(newVA) >= 0) {
+    if (_log.shouldLog(Log.WARN))     _log.warn(ui.toString() + ' ' + old+ " already installed");
+    return;
+  }
+  old=_downloaded.get(ui);
+  if (old != null && old.compareTo(newVA) >= 0) {
+    if (_log.shouldLog(Log.WARN))     _log.warn(ui.toString() + ' ' + old+ " already downloaded");
+    return;
+  }
+  VersionAvailable oldVA=_available.get(ui);
+  if (oldVA != null) {
+    if (_log.shouldLog(Log.WARN))     _log.warn(ui.toString() + ' ' + oldVA+ " already available");
+    if (oldVA.compareTo(newVA) >= 0)     return;
+    if (oldVA.constraint == null)     return;
+  }
+  if (_log.shouldLog(Log.INFO))   _log.info(ui.toString() + ' ' + newVA+ " now available");
+  _available.put(ui,newVA);
+}
