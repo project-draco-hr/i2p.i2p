@@ -14,6 +14,19 @@
           if (TrustedUpdate.needsUpdate(RouterVersion.VERSION,ver)) {
             if (_log.shouldLog(Log.DEBUG))             _log.debug("Our version is out of date, update!");
             Map<UpdateMethod,List<URI>> sourceMap=new HashMap(4);
+            if (ConfigUpdateHandler.USE_SU3_UPDATE) {
+              sourceMap.put(HTTP,_mgr.getUpdateURLs(ROUTER_SIGNED_SU3,"",HTTP));
+              String murl=args.get(SU3_KEY);
+              if (murl != null) {
+                List<URI> uris=tokenize(murl);
+                if (!uris.isEmpty()) {
+                  Collections.shuffle(uris,_context.random());
+                  sourceMap.put(TORRENT,uris);
+                }
+              }
+              _mgr.notifyVersionAvailable(this,_currentURI,ROUTER_SIGNED_SU3,"",sourceMap,ver,"");
+              sourceMap.clear();
+            }
             sourceMap.put(HTTP,_mgr.getUpdateURLs(ROUTER_SIGNED,"",HTTP));
             String key=FileUtil.isPack200Supported() ? SU2_KEY : SUD_KEY;
             String murl=args.get(key);
