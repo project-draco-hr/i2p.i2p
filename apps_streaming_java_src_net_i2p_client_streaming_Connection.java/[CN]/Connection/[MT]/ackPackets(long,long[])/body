@@ -15,35 +15,38 @@
   }
   List<PacketLocal> acked=null;
 synchronized (_outboundPackets) {
-    for (    Map.Entry<Long,PacketLocal> e : _outboundPackets.entrySet()) {
-      long id=e.getKey().longValue();
-      if (id <= ackThrough) {
-        boolean nacked=false;
-        if (nacks != null) {
-          for (int i=0; i < nacks.length; i++) {
-            if (nacks[i] == id) {
-              nacked=true;
-              PacketLocal nackedPacket=e.getValue();
-              nackedPacket.incrementNACKs();
-              break;
+    if (!_outboundPackets.isEmpty()) {
+      for (Iterator<Map.Entry<Long,PacketLocal>> iter=_outboundPackets.entrySet().iterator(); iter.hasNext(); ) {
+        Map.Entry<Long,PacketLocal> e=iter.next();
+        long id=e.getKey().longValue();
+        if (id <= ackThrough) {
+          boolean nacked=false;
+          if (nacks != null) {
+            for (int i=0; i < nacks.length; i++) {
+              if (nacks[i] == id) {
+                nacked=true;
+                PacketLocal nackedPacket=e.getValue();
+                nackedPacket.incrementNACKs();
+                break;
+              }
             }
           }
+          if (!nacked) {
+            if (acked == null)             acked=new ArrayList(8);
+            PacketLocal ackedPacket=e.getValue();
+            ackedPacket.ackReceived();
+            acked.add(ackedPacket);
+            iter.remove();
+          }
         }
-        if (!nacked) {
-          if (acked == null)           acked=new ArrayList(1);
-          PacketLocal ackedPacket=e.getValue();
-          ackedPacket.ackReceived();
-          acked.add(ackedPacket);
-        }
-      }
  else {
-        break;
+          break;
+        }
       }
     }
     if (acked != null) {
       for (int i=0; i < acked.size(); i++) {
         PacketLocal p=acked.get(i);
-        _outboundPackets.remove(Long.valueOf(p.getSequenceNum()));
         _ackedPackets++;
         if (p.getNumSends() > 1) {
           _activeResends.decrementAndGet();

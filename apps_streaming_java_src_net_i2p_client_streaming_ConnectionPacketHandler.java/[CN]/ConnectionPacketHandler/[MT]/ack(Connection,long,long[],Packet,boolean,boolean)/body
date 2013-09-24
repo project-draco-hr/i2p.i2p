@@ -15,14 +15,20 @@
       if (numSends > 1)       numResends++;
  else       if (ackTime > highestRTT)       highestRTT=ackTime;
       _context.statManager().addRateData("stream.sendsBeforeAck",numSends,ackTime);
+      if (p.isFlagSet(Packet.FLAG_CLOSE))       con.ourCloseAcked();
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Packet acked after " + ackTime + "ms: "+ p);
     }
     if (highestRTT > 0) {
-      int oldrtt=con.getOptions().getRTT();
-      int oldrto=con.getOptions().getRTO();
-      int olddev=con.getOptions().getRTTDev();
-      con.getOptions().updateRTT(highestRTT);
-      if (_log.shouldLog(Log.INFO))       _log.info("acked: " + acked.size() + " highestRTT: "+ highestRTT+ " RTT: "+ oldrtt+ " -> "+ con.getOptions().getRTT()+ " RTO: "+ oldrto+ " -> "+ con.getOptions().getRTO()+ " Dev: "+ olddev+ " -> "+ con.getOptions().getRTTDev());
+      if (_log.shouldLog(Log.INFO)) {
+        int oldrtt=con.getOptions().getRTT();
+        int oldrto=con.getOptions().getRTO();
+        int olddev=con.getOptions().getRTTDev();
+        con.getOptions().updateRTT(highestRTT);
+        _log.info("acked: " + acked.size() + " highestRTT: "+ highestRTT+ " RTT: "+ oldrtt+ " -> "+ con.getOptions().getRTT()+ " RTO: "+ oldrto+ " -> "+ con.getOptions().getRTO()+ " Dev: "+ olddev+ " -> "+ con.getOptions().getRTTDev());
+      }
+ else {
+        con.getOptions().updateRTT(highestRTT);
+      }
       if (firstAck) {
         if (con.isInbound())         _context.statManager().addRateData("stream.con.initialRTT.in",highestRTT,0);
  else         _context.statManager().addRateData("stream.con.initialRTT.out",highestRTT,0);
