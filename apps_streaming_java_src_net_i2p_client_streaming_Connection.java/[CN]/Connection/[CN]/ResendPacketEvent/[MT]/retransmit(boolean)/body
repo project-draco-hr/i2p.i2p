@@ -1,7 +1,6 @@
 {
   if (_packet.getAckTime() > 0)   return false;
-  if (_resetSentOn.get() > 0 || _resetReceived.get() || !_connected) {
-    if (_log.shouldLog(Log.WARN) && (_resetSentOn.get() <= 0) && (!_resetReceived.get()))     _log.warn("??? no resets but not connected: " + _packet);
+  if (_resetSentOn.get() > 0 || _resetReceived.get() || _finalDisconnect.get()) {
     _packet.cancelled();
     return false;
   }
@@ -40,9 +39,14 @@ synchronized (_outboundPackets) {
     }
     int numSends=_packet.getNumSends() + 1;
     if (numSends - 1 > _options.getMaxResends()) {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Too many resends");
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Disconnecting, too many resends of " + _packet);
       _packet.cancelled();
       disconnect(false);
+    }
+ else     if (numSends >= 3 && _packet.isFlagSet(Packet.FLAG_CLOSE) && _packet.getPayloadSize() <= 0 && _outboundPackets.size() <= 1 && getCloseReceivedOn() > 0) {
+      if (_log.shouldLog(Log.INFO))       _log.info("Too many CLOSE resends, disconnecting: " + Connection.this.toString());
+      _packet.cancelled();
+      disconnect(true);
     }
  else {
       long rto=_options.getRTO();

@@ -6,10 +6,10 @@
     packet.releasePayload();
     return;
   }
+  final long seqNum=packet.getSequenceNum();
   if (con.getHardDisconnected()) {
-    if ((packet.getSequenceNum() > 0) || (packet.getPayloadSize() > 0) || (packet.isFlagSet(Packet.FLAG_SYNCHRONIZE | Packet.FLAG_CLOSE))) {
+    if ((seqNum > 0) || (packet.getPayloadSize() > 0) || (packet.isFlagSet(Packet.FLAG_SYNCHRONIZE | Packet.FLAG_CLOSE))) {
       if (_log.shouldLog(Log.WARN))       _log.warn("Received a data packet after hard disconnect: " + packet + " on "+ con);
-      con.sendReset();
       con.disconnect(false);
     }
  else {
@@ -18,12 +18,8 @@
     packet.releasePayload();
     return;
   }
-  if ((con.getCloseSentOn() > 0) && (con.getUnackedPacketsSent() <= 0) && (packet.getSequenceNum() > 0)&& (packet.getPayloadSize() > 0)) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("Received new data when we've sent them data and all of our data is acked: " + packet + " on "+ con+ "");
-    con.sendReset();
-    con.disconnect(false);
-    packet.releasePayload();
-    return;
+  if ((con.getCloseSentOn() > 0) && (con.getUnackedPacketsSent() <= 0) && (seqNum > 0)&& (packet.getPayloadSize() > 0)) {
+    if (_log.shouldLog(Log.INFO))     _log.info("Received new data when we've sent them data and all of our data is acked: " + packet + " on "+ con+ "");
   }
   if (packet.isFlagSet(Packet.FLAG_MAX_PACKET_SIZE_INCLUDED)) {
     int size=packet.getOptionalMaxSize();
@@ -47,7 +43,7 @@
     long ready=con.getInputStream().getHighestReadyBockId();
     int available=con.getOptions().getInboundBufferSize() - con.getInputStream().getTotalReadySize();
     int allowedBlocks=available / con.getOptions().getMaxMessageSize();
-    if (packet.getSequenceNum() > ready + allowedBlocks) {
+    if (seqNum > ready + allowedBlocks) {
       if (_log.shouldLog(Log.WARN))       _log.warn("Inbound buffer exceeded on connection " + con + " ("+ ready+ "/"+ (ready + allowedBlocks)+ "/"+ available+ ": dropping "+ packet);
       ack(con,packet.getAckThrough(),packet.getNacks(),null,false,choke);
       con.getOptions().setChoke(61 * 1000);
@@ -58,18 +54,21 @@
   }
   con.getOptions().setChoke(0);
   _context.statManager().addRateData("stream.con.receiveMessageSize",packet.getPayloadSize(),0);
-  boolean isNew=false;
   boolean allowAck=true;
-  if ((!packet.isFlagSet(Packet.FLAG_SYNCHRONIZE)) && (packet.getReceiveStreamId() <= 0))   allowAck=false;
-  if (allowAck) {
-    isNew=con.getInputStream().messageReceived(packet.getSequenceNum(),packet.getPayload());
+  final boolean isSYN=packet.isFlagSet(Packet.FLAG_SYNCHRONIZE);
+  if ((!isSYN) && (packet.getReceiveStreamId() <= 0))   allowAck=false;
+  boolean isNew;
+  if (seqNum > 0 || isSYN)   isNew=con.getInputStream().messageReceived(seqNum,packet.getPayload());
+ else   isNew=false;
+  if (!allowAck)   isNew=false;
+  if (_log.shouldLog(Log.DEBUG)) {
+    String type;
+    if (!allowAck)     type="Non-SYN before SYN";
+ else     if (isNew)     type="New";
+ else     if (packet.getPayloadSize() <= 0)     type="Ack-only";
+ else     type="Dup";
+    _log.debug(type + " IB pkt: " + packet+ " on "+ con);
   }
- else {
-    con.getInputStream().notifyActivity();
-    isNew=false;
-  }
-  if (_log.shouldLog(Log.DEBUG))   _log.debug((isNew ? "New" : "Dup or ack-only") + " inbound packet on " + con+ ": "+ packet);
-  if (packet.isFlagSet(Packet.FLAG_CLOSE) && packet.isFlagSet(Packet.FLAG_SIGNATURE_INCLUDED))   con.closeReceived();
   boolean fastAck=false;
   boolean ackOnly=false;
   if (isNew) {
@@ -87,7 +86,7 @@
     }
   }
  else {
-    if ((packet.getSequenceNum() > 0) || (packet.getPayloadSize() > 0) || (packet.isFlagSet(Packet.FLAG_SYNCHRONIZE))) {
+    if ((seqNum > 0) || (packet.getPayloadSize() > 0) || isSYN) {
       _context.statManager().addRateData("stream.con.receiveDuplicateSize",packet.getPayloadSize(),0);
       con.incrementDupMessagesReceived(1);
       final long now=_context.clock().now();
@@ -107,7 +106,7 @@
       }
     }
  else {
-      if (packet.isFlagSet(Packet.FLAG_SYNCHRONIZE)) {
+      if (isSYN) {
         con.setNextSendTime(_context.clock().now() + con.getOptions().getSendAckDelay());
       }
  else {
@@ -116,7 +115,7 @@
       }
     }
   }
-  if (packet.isFlagSet(Packet.FLAG_SYNCHRONIZE) && (packet.getSendStreamId() <= 0)) {
+  if (isSYN && (packet.getSendStreamId() <= 0)) {
   }
  else {
     fastAck=ack(con,packet.getAckThrough(),packet.getNacks(),packet,isNew,choke);
@@ -139,5 +138,8 @@
   if (ackOnly || !isNew) {
     packet.releasePayload();
   }
-  if (isNew && packet.isFlagSet(Packet.FLAG_CLOSE) && packet.isFlagSet(Packet.FLAG_SIGNATURE_INCLUDED))   con.updateShareOpts();
+  if (packet.isFlagSet(Packet.FLAG_CLOSE) && packet.isFlagSet(Packet.FLAG_SIGNATURE_INCLUDED)) {
+    con.closeReceived();
+    if (isNew)     con.updateShareOpts();
+  }
 }

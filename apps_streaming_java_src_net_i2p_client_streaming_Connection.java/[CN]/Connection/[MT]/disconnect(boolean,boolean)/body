@@ -1,23 +1,42 @@
 {
+  if (!_connected.compareAndSet(true,false)) {
+    return;
+  }
 synchronized (_connectLock) {
     _connectLock.notifyAll();
   }
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Disconnecting " + toString(),new Exception("discon"));
-  if (!cleanDisconnect) {
-    _hardDisconnected=true;
-    if (_log.shouldLog(Log.WARN))     _log.warn("Hard disconnecting and sending a reset on " + toString(),new Exception("cause"));
-    sendReset();
+  if (_closeReceivedOn.get() <= 0) {
+    _inputStream.closeReceived();
   }
-  if (cleanDisconnect && _connected) {
+  if (cleanDisconnect) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Clean disconnecting, remove? " + removeFromConMgr + ": "+ toString(),new Exception("discon"));
     _outputStream.closeInternal();
-    _inputStream.close();
   }
  else {
-    if (_connected)     doClose();
-    killOutstandingPackets();
+    _hardDisconnected=true;
+    if (_inputStream.getHighestBlockId() >= 0 && !getResetReceived()) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Hard disconnecting and sending reset, remove? " + removeFromConMgr + " on "+ toString(),new Exception("cause"));
+      sendReset();
+    }
+ else {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Hard disconnecting, remove? " + removeFromConMgr + " on "+ toString(),new Exception("cause"));
+    }
+    _outputStream.streamErrorOccurred(new IOException("Hard disconnect"));
   }
   if (removeFromConMgr) {
-    scheduleDisconnectEvent();
+    if (!cleanDisconnect) {
+      disconnectComplete();
+    }
+ else {
+      long cro=_closeReceivedOn.get();
+      long cso=_closeSentOn.get();
+      if (cro > 0 && cro < cso && getUnackedPacketsSent() <= 0) {
+        if (_log.shouldLog(Log.INFO))         _log.info("Rcv close -> send close -> last acked, skip TIME-WAIT for " + toString());
+        disconnectComplete();
+      }
+ else {
+        scheduleDisconnectEvent();
+      }
+    }
   }
-  _connected=false;
 }

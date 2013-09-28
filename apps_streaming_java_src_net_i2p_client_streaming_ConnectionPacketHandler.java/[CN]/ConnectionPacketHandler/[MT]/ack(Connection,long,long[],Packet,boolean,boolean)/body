@@ -5,6 +5,7 @@
   List<PacketLocal> acked=null;
   if ((packet != null) && (packet.getSendStreamId() > 0) && (packet.getReceiveStreamId() > 0)&& (con != null)&& (con.getSendStreamId() > 0)&& (con.getReceiveStreamId() > 0)&& (packet.getSendStreamId() != Packet.STREAM_ID_UNKNOWN)&& (packet.getReceiveStreamId() != Packet.STREAM_ID_UNKNOWN)&& (con.getSendStreamId() != Packet.STREAM_ID_UNKNOWN)&& (con.getReceiveStreamId() != Packet.STREAM_ID_UNKNOWN))   acked=con.ackPackets(ackThrough,nacks);
  else   return false;
+  boolean lastPacketAcked=false;
   if ((acked != null) && (!acked.isEmpty())) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug(acked.size() + " of our packets acked with " + packet);
     int highestRTT=-1;
@@ -15,7 +16,6 @@
       if (numSends > 1)       numResends++;
  else       if (ackTime > highestRTT)       highestRTT=ackTime;
       _context.statManager().addRateData("stream.sendsBeforeAck",numSends,ackTime);
-      if (p.isFlagSet(Packet.FLAG_CLOSE))       con.ourCloseAcked();
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Packet acked after " + ackTime + "ms: "+ p);
     }
     if (highestRTT > 0) {
@@ -35,6 +35,9 @@
       }
     }
     _context.statManager().addRateData("stream.con.packetsAckedPerMessageReceived",acked.size(),highestRTT);
+    if (con.getCloseSentOn() > 0 && con.getUnackedPacketsSent() <= 0)     lastPacketAcked=true;
   }
-  return adjustWindow(con,isNew,packet.getSequenceNum(),numResends,(acked != null ? acked.size() : 0),choke);
+  boolean rv=adjustWindow(con,isNew,packet.getSequenceNum(),numResends,(acked != null ? acked.size() : 0),choke);
+  if (lastPacketAcked)   con.notifyLastPacketAcked();
+  return rv;
 }

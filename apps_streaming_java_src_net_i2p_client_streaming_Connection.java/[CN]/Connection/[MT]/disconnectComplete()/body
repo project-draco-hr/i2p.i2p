@@ -1,5 +1,6 @@
 {
-  _connected=false;
+  if (!_finalDisconnect.compareAndSet(false,true))   return;
+  _connected.set(false);
   I2PSocketFull s=_socket;
   if (s != null) {
     s.destroy2();
@@ -8,10 +9,8 @@
   _outputStream.destroy();
   _receiver.destroy();
   _activityTimer.cancel();
-  _inputStream.streamErrorOccurred(new IOException("disconnected!"));
-  if (_disconnectScheduledOn.compareAndSet(0,_context.clock().now())) {
-    if (_log.shouldLog(Log.INFO))     _log.info("Connection disconnect complete from dead, drop the con " + toString());
-    _connectionManager.removeConnection(this);
-  }
+  _inputStream.streamErrorOccurred(DISCON_IOE);
+  if (_log.shouldLog(Log.INFO))   _log.info("Connection disconnect complete: " + toString());
+  _connectionManager.removeConnection(this);
   killOutstandingPackets();
 }
