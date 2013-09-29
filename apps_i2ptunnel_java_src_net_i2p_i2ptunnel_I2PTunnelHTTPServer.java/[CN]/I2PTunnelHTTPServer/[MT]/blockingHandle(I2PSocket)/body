@@ -1,12 +1,12 @@
 {
   if (_log.shouldLog(Log.INFO))   _log.info("Incoming connection to '" + toString() + "' port "+ socket.getLocalPort()+ " from: "+ socket.getPeerDestination().calculateHash()+ " port "+ socket.getPort());
-  long afterAccept=getTunnel().getContext().clock().now();
-  long afterSocket=-1;
   try {
+    long afterAccept=getTunnel().getContext().clock().now();
     socket.setReadTimeout(HEADER_TIMEOUT);
     InputStream in=socket.getInputStream();
     StringBuilder command=new StringBuilder(128);
     Map<String,List<String>> headers=readHeaders(in,command,CLIENT_SKIPHEADERS,getTunnel().getContext());
+    long afterHeaders=getTunnel().getContext().clock().now();
     addEntry(headers,HASH_HEADER,socket.getPeerDestination().calculateHash().toBase64());
     addEntry(headers,DEST32_HEADER,Base32.encode(socket.getPeerDestination().calculateHash().getData()) + ".b32.i2p");
     addEntry(headers,DEST64_HEADER,socket.getPeerDestination().toBase64());
@@ -28,7 +28,7 @@
     setEntry(headers,"Accept-encoding","");
     socket.setReadTimeout(readTimeout);
     Socket s=new Socket(remoteHost,remotePort);
-    afterSocket=getTunnel().getContext().clock().now();
+    long afterSocket=getTunnel().getContext().clock().now();
     boolean allowGZIP=true;
     if (opts != null) {
       String val=opts.getProperty("i2ptunnel.gzip");
@@ -50,7 +50,7 @@
     long afterHandle=getTunnel().getContext().clock().now();
     long timeToHandle=afterHandle - afterAccept;
     getTunnel().getContext().statManager().addRateData("i2ptunnel.httpserver.blockingHandleTime",timeToHandle,0);
-    if ((timeToHandle > 1000) && (_log.shouldLog(Log.WARN)))     _log.warn("Took a while to handle the request for " + remoteHost + ':'+ remotePort+ " ["+ timeToHandle+ ", socket create: "+ (afterSocket - afterAccept)+ "]");
+    if ((timeToHandle > 1000) && (_log.shouldLog(Log.WARN)))     _log.warn("Took a while to handle the request for " + remoteHost + ':'+ remotePort+ " ["+ timeToHandle+ ", read headers: "+ (afterHeaders - afterAccept)+ ", socket create: "+ (afterSocket - afterHeaders)+ ", start runners: "+ (afterHandle - afterSocket)+ "]");
   }
  catch (  SocketException ex) {
     try {
