@@ -3,13 +3,13 @@
   RouterInfo info=null;
   String keyFilename=getContext().getProperty(Router.PROP_KEYS_FILENAME,Router.PROP_KEYS_FILENAME_DEFAULT);
   File rif=new File(getContext().getRouterDir(),routerInfoFile);
-  if (rif.exists())   _infoExists=true;
+  boolean infoExists=rif.exists();
   File rkf=new File(getContext().getRouterDir(),keyFilename);
-  if (rkf.exists())   _keysExist=true;
+  boolean keysExist=rkf.exists();
   InputStream fis1=null;
   InputStream fis2=null;
   try {
-    if (_infoExists && _keysExist) {
+    if (infoExists && keysExist) {
       fis1=new BufferedInputStream(new FileInputStream(rif));
       info=new RouterInfo();
       info.readBytes(fis1);
@@ -17,16 +17,28 @@
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Reading in routerInfo from " + rif.getAbsolutePath() + " and it has "+ info.getAddresses().size()+ " addresses");
       _us=info;
     }
-    if (_keysExist) {
+    if (keysExist) {
       fis2=new BufferedInputStream(new FileInputStream(rkf));
       PrivateKey privkey=new PrivateKey();
       privkey.readBytes(fis2);
       if (shouldRebuild(privkey)) {
         _us=null;
+        if (fis1 != null) {
+          try {
+            fis1.close();
+          }
+ catch (          IOException ioe) {
+          }
+          fis1=null;
+        }
+        try {
+          fis2.close();
+        }
+ catch (        IOException ioe) {
+        }
+        fis2=null;
         rif.delete();
         rkf.delete();
-        _infoExists=false;
-        _keysExist=false;
         return;
       }
       SigningPrivateKey signingPrivKey=new SigningPrivateKey();
@@ -41,18 +53,46 @@
  catch (  IOException ioe) {
     _log.log(Log.CRIT,"Error reading the router info from " + rif.getAbsolutePath() + " and the keys from "+ rkf.getAbsolutePath(),ioe);
     _us=null;
+    if (fis1 != null) {
+      try {
+        fis1.close();
+      }
+ catch (      IOException ioe2) {
+      }
+      fis1=null;
+    }
+    if (fis2 != null) {
+      try {
+        fis2.close();
+      }
+ catch (      IOException ioe2) {
+      }
+      fis2=null;
+    }
     rif.delete();
     rkf.delete();
-    _infoExists=false;
-    _keysExist=false;
   }
 catch (  DataFormatException dfe) {
     _log.log(Log.CRIT,"Corrupt router info or keys at " + rif.getAbsolutePath() + " / "+ rkf.getAbsolutePath(),dfe);
     _us=null;
+    if (fis1 != null) {
+      try {
+        fis1.close();
+      }
+ catch (      IOException ioe) {
+      }
+      fis1=null;
+    }
+    if (fis2 != null) {
+      try {
+        fis2.close();
+      }
+ catch (      IOException ioe) {
+      }
+      fis2=null;
+    }
     rif.delete();
     rkf.delete();
-    _infoExists=false;
-    _keysExist=false;
   }
  finally {
     if (fis1 != null)     try {
