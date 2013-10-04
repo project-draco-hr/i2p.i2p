@@ -1,10 +1,25 @@
 {
   if (_util.connected()) {
+    boolean torrentRunning=false;
     boolean hasPeers=false;
     for (    PeerCoordinator pc : _pcs) {
-      if (pc.getPeers() > 0) {
-        hasPeers=true;
-        break;
+      if (!pc.halted()) {
+        torrentRunning=true;
+        if (pc.getPeers() > 0) {
+          hasPeers=true;
+          break;
+        }
+      }
+    }
+    if (torrentRunning) {
+      _consecNotRunning=0;
+    }
+ else {
+      if (_consecNotRunning++ >= MAX_CONSEC_NOT_RUNNING) {
+        if (_log.shouldLog(Log.WARN))         _log.warn("Closing tunnels on idle");
+        _util.disconnect();
+        schedule(3 * CHECK_TIME);
+        return;
       }
     }
     if (hasPeers) {
@@ -19,6 +34,7 @@
  else {
     _isIdle=false;
     _consec=0;
+    _consecNotRunning=0;
   }
   schedule(CHECK_TIME);
 }
