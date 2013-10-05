@@ -16,19 +16,27 @@
       }
       continue;
     }
-    InboundMessageState state=null;
+    InboundMessageState state;
     boolean messageComplete=false;
     boolean messageExpired=false;
-    boolean fragmentOK=false;
+    boolean fragmentOK;
     boolean partialACK=false;
 synchronized (messages) {
       boolean isNew=false;
       state=messages.get(messageId);
       if (state == null) {
-        state=new InboundMessageState(_context,mid,fromPeer);
+        try {
+          state=new InboundMessageState(_context,mid,fromPeer,data,i);
+        }
+ catch (        DataFormatException dfe) {
+          break;
+        }
         isNew=true;
+        fragmentOK=true;
       }
-      fragmentOK=state.receiveFragment(data,i);
+ else {
+        fragmentOK=state.receiveFragment(data,i);
+      }
       if (state.isComplete()) {
         messageComplete=true;
         if (!isNew)         messages.remove(messageId);
