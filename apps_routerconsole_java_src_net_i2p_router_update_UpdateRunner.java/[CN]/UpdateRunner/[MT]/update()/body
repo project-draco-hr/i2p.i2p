@@ -5,8 +5,14 @@
   boolean isSSL=false;
   if (_method == HTTP) {
     shouldProxy=_context.getProperty(ConfigUpdateHandler.PROP_SHOULD_PROXY,ConfigUpdateHandler.DEFAULT_SHOULD_PROXY);
-    proxyHost=_context.getProperty(ConfigUpdateHandler.PROP_PROXY_HOST,ConfigUpdateHandler.DEFAULT_PROXY_HOST);
-    proxyPort=ConfigUpdateHandler.proxyPort(_context);
+    if (shouldProxy) {
+      proxyHost=_context.getProperty(ConfigUpdateHandler.PROP_PROXY_HOST,ConfigUpdateHandler.DEFAULT_PROXY_HOST);
+      proxyPort=ConfigUpdateHandler.proxyPort(_context);
+    }
+ else {
+      proxyHost=null;
+      proxyPort=0;
+    }
   }
  else   if (_method == HTTP_CLEARNET) {
     shouldProxy=false;
@@ -37,6 +43,7 @@
     }
     updateStatus("<b>" + _("Updating from {0}",linkify(updateURL)) + "</b>");
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Selected update URL: " + updateURL);
+    _newVersion=null;
     if (!isSSL) {
       _isPartial=true;
       _baos.reset();
