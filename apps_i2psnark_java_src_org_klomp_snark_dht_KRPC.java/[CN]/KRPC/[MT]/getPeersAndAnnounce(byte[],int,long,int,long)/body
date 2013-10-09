@@ -7,9 +7,11 @@
   long endTime=_context.clock().now() + maxWait;
   int maxNodes=30;
   List<NodeInfo> nodes=_knownNodes.findClosest(iHash,maxNodes);
-  SortedSet<NodeInfo> toTry=new TreeSet(new NodeInfoComparator(iHash));
+  NodeInfoComparator comp=new NodeInfoComparator(iHash);
+  SortedSet<NodeInfo> toTry=new TreeSet(comp);
+  SortedSet<NodeInfo> heardFrom=new TreeSet(comp);
   toTry.addAll(nodes);
-  Set<NodeInfo> tried=new HashSet();
+  SortedSet<NodeInfo> tried=new TreeSet(comp);
   if (_log.shouldLog(Log.INFO))   _log.info("Starting getPeers for " + iHash + " (b64: "+ new NID(ih)+ ") "+ " with "+ nodes.size()+ " to try");
   for (int i=0; i < maxNodes; i++) {
     if (!_isRunning)     break;
@@ -41,6 +43,7 @@ synchronized (waiter) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Got pong");
     }
  else     if (replyType == REPLY_PEERS) {
+      heardFrom.add(waiter.getSentTo());
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Got peers");
       List<Hash> reply=(List<Hash>)waiter.getReplyObject();
       if (!reply.isEmpty()) {
@@ -48,11 +51,12 @@ synchronized (waiter) {
           Hash h=reply.get(j);
           if (!h.equals(_myNodeInfo.getHash()))           rv.add(h);
         }
-        if (_log.shouldLog(Log.INFO))         _log.info("Finished get Peers, got " + reply.size() + " from DHT, returning "+ rv.size());
-        return rv;
       }
+      if (_log.shouldLog(Log.INFO))       _log.info("Finished get Peers, got " + reply.size() + " from DHT, returning "+ rv.size());
+      break;
     }
  else     if (replyType == REPLY_NODES) {
+      heardFrom.add(waiter.getSentTo());
       List<NodeInfo> reply=(List<NodeInfo>)waiter.getReplyObject();
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Got " + reply.size() + " nodes");
       for (      NodeInfo ni : reply) {
@@ -66,7 +70,35 @@ synchronized (waiter) {
       if (_log.shouldLog(Log.INFO))       _log.info("Got unexpected reply " + replyType + ": "+ waiter.getReplyObject());
     }
     if (_context.clock().now() > endTime)     break;
+    if (!toTry.isEmpty() && !heardFrom.isEmpty() && comp.compare(toTry.first(),heardFrom.first()) >= 0) {
+      if (_log.shouldLog(Log.INFO))       _log.info("Finished get Peers, nothing closer to try after " + (i + 1));
+      break;
+    }
   }
-  if (_log.shouldLog(Log.INFO))   _log.info("Finished get Peers, " + rv.size() + " from local and none from DHT");
+  if (!heardFrom.isEmpty()) {
+    announce(ih);
+    int annCnt=0;
+    long start=_context.clock().now();
+    for (Iterator<NodeInfo> iter=heardFrom.iterator(); iter.hasNext() && annCnt < annMax && _isRunning; ) {
+      NodeInfo annTo=iter.next();
+      if (_log.shouldLog(Log.INFO))       _log.info("Announcing to closest from get peers: " + annTo);
+      long toWait=annMaxWait > 0 ? Math.min(annMaxWait,60 * 1000) : 0;
+      if (announce(ih,annTo,toWait))       annCnt++;
+      if (annMaxWait > 0) {
+        annMaxWait-=_context.clock().now() - start;
+        if (annMaxWait < 1000)         break;
+      }
+    }
+  }
+ else {
+    if (_log.shouldLog(Log.INFO))     _log.info("Announcing to closest in kbuckets after get peers failed");
+    announce(ih,annMax,annMaxWait);
+  }
+  if (_log.shouldLog(Log.INFO)) {
+    _log.info("Finished get Peers, returning " + rv.size());
+    _log.info("Tried: " + tried);
+    _log.info("Heard from: " + heardFrom);
+    _log.info("Not tried: " + toTry);
+  }
   return rv;
 }
