@@ -1,20 +1,21 @@
 {
   int rv=0;
   DHT dht=_util.getDHT();
-  if (dht != null && (meta == null || !meta.isPrivate()) && (!stop) && _util.getContext().clock().now() > lastDHTAnnounce + MIN_DHT_ANNOUNCE_INTERVAL) {
+  if (dht != null && (meta == null || !meta.isPrivate()) && (!stop) && (meta == null || _util.getContext().clock().now() > lastDHTAnnounce + MIN_DHT_ANNOUNCE_INTERVAL)) {
     int numwant;
     if (!coordinator.needOutboundPeers())     numwant=1;
  else     numwant=_util.getMaxConnections();
-    Collection<Hash> hashes=dht.getPeers(snark.getInfoHash(),numwant,2 * 60 * 1000);
+    Collection<Hash> hashes=dht.getPeers(snark.getInfoHash(),numwant,5 * 60 * 1000);
     if (!hashes.isEmpty()) {
       runStarted=true;
-      lastDHTAnnounce=_util.getContext().clock().now();
       rv=hashes.size();
     }
     if (_log.shouldLog(Log.INFO))     _log.info("Got " + hashes + " from DHT");
     if (!stop) {
       int good=dht.announce(snark.getInfoHash(),1,5 * 60 * 1000);
       if (_log.shouldLog(Log.INFO))       _log.info("Sent " + good + " good announces to DHT");
+      if (good > 0)       lastDHTAnnounce=_util.getContext().clock().now();
+ else       lastDHTAnnounce=0;
     }
     if ((!stop) && !hashes.isEmpty()) {
       List<Peer> peers=new ArrayList(hashes.size());

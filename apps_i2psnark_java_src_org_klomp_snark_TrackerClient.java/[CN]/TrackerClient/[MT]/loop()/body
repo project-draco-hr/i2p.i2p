@@ -7,12 +7,19 @@
       }
       DHT dht=_util.getDHT();
       if (dht != null && (meta == null || !meta.isPrivate()))       dht.announce(snark.getInfoHash());
+      int oldSeenPeers=snark.getTrackerSeenPeers();
       int maxSeenPeers=0;
-      if (!trackers.isEmpty())       maxSeenPeers=getPeersFromTrackers(trackers);
+      if (!trackers.isEmpty()) {
+        maxSeenPeers=getPeersFromTrackers(trackers);
+        if (maxSeenPeers > oldSeenPeers)         snark.setTrackerSeenPeers(maxSeenPeers);
+      }
       int p=getPeersFromPEX();
       if (p > maxSeenPeers)       maxSeenPeers=p;
       p=getPeersFromDHT();
-      if (p > maxSeenPeers)       maxSeenPeers=p;
+      if (p > maxSeenPeers) {
+        maxSeenPeers=p;
+        if (maxSeenPeers > oldSeenPeers)         snark.setTrackerSeenPeers(maxSeenPeers);
+      }
       if (trackers.isEmpty() && !backupTrackers.isEmpty() && dht != null && dht.size() < 16) {
         p=getPeersFromTrackers(backupTrackers);
         if (p > maxSeenPeers)         maxSeenPeers=p;
