@@ -12,7 +12,14 @@ synchronized (_dataLock) {
   long afterBuild=System.currentTimeMillis();
   if ((afterBuild - before > 1000) && (_log.shouldLog(Log.DEBUG)))   _log.debug("Took " + (afterBuild - before) + "ms to build a packet?  "+ ws);
   if (blocking && ws != null) {
-    ws.waitForAccept(_writeTimeout);
+    try {
+      ws.waitForAccept(_writeTimeout);
+    }
+ catch (    InterruptedException ie) {
+      IOException ioe2=new InterruptedIOException("Interrupted flush");
+      ioe2.initCause(ie);
+      throw ioe2;
+    }
     if (ws.writeFailed())     throw new IOException("Flush available failed");
  else     if (!ws.writeAccepted())     throw new InterruptedIOException("Flush available timed out (" + _writeTimeout + "ms)");
   }

@@ -36,7 +36,14 @@ synchronized (_dataLock) {
     }
     if (ws != null) {
       if (_log.shouldLog(Log.INFO))       _log.info("Waiting " + _writeTimeout + "ms for accept of "+ ws);
-      ws.waitForAccept(_writeTimeout);
+      try {
+        ws.waitForAccept(_writeTimeout);
+      }
+ catch (      InterruptedException ie) {
+        IOException ioe2=new InterruptedIOException("Interrupted write");
+        ioe2.initCause(ie);
+        throw ioe2;
+      }
       if (!ws.writeAccepted()) {
         if (_log.shouldLog(Log.WARN))         _log.warn("Write not accepted of " + ws);
         if (_writeTimeout > 0)         throw new InterruptedIOException("Write not accepted within timeout: " + ws);

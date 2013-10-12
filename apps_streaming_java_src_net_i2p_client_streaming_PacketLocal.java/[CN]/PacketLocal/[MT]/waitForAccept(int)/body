@@ -1,16 +1,22 @@
 {
   long before=_context.clock().now();
-  int queued=_connection.getUnackedPacketsSent();
-  int window=_connection.getOptions().getWindowSize();
-  boolean accepted=_connection.packetSendChoke(maxWaitMs);
-  long after=_context.clock().now();
-  if (accepted) {
-    _acceptedOn=after;
+  boolean accepted=false;
+  try {
+    accepted=_connection.packetSendChoke(maxWaitMs);
   }
+  finally {
+    if (accepted) {
+      _acceptedOn=_context.clock().now();
+    }
  else {
-    _acceptedOn=-1;
-    releasePayload();
+      _acceptedOn=-1;
+      releasePayload();
+    }
+    if ((_acceptedOn - before > 1000) && (_log.shouldLog(Log.DEBUG))) {
+      int queued=_connection.getUnackedPacketsSent();
+      int window=_connection.getOptions().getWindowSize();
+      int afterQueued=_connection.getUnackedPacketsSent();
+      _log.debug("Took " + (_acceptedOn - before) + "ms to get "+ (accepted ? "accepted" : "rejected")+ (_cancelledOn > 0 ? " and CANCELLED" : "")+ ", queued behind "+ queued+ " with a window size of "+ window+ ", finally accepted with "+ afterQueued+ " queued: "+ toString());
+    }
   }
-  int afterQueued=_connection.getUnackedPacketsSent();
-  if ((after - before > 1000) && (_log.shouldLog(Log.DEBUG)))   _log.debug("Took " + (after - before) + "ms to get "+ (accepted ? "accepted" : "rejected")+ (_cancelledOn > 0 ? " and CANCELLED" : "")+ ", queued behind "+ queued+ " with a window size of "+ window+ ", finally accepted with "+ afterQueued+ " queued: "+ toString());
 }

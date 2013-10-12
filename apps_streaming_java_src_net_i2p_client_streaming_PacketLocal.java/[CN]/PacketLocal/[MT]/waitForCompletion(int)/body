@@ -1,20 +1,20 @@
 {
   long expiration=_context.clock().now() + maxWaitMs;
-  while (true) {
-    long timeRemaining=expiration - _context.clock().now();
-    if ((timeRemaining <= 0) && (maxWaitMs > 0))     break;
-    try {
+  try {
+    while (true) {
+      long timeRemaining=expiration - _context.clock().now();
+      if ((timeRemaining <= 0) && (maxWaitMs > 0))       break;
 synchronized (this) {
         if (_ackOn > 0)         break;
-        if (_cancelledOn > 0)         break;
-        if (!_connection.getIsConnected())         break;
+        if (!_connection.getIsConnected())         throw new IOException("disconnected");
+        if (_cancelledOn > 0)         throw new IOException("cancelled");
         if (timeRemaining > 60 * 1000)         timeRemaining=60 * 1000;
  else         if (timeRemaining <= 0)         timeRemaining=10 * 1000;
         wait(timeRemaining);
       }
     }
- catch (    InterruptedException ie) {
-    }
   }
-  if (!writeSuccessful())   releasePayload();
+  finally {
+    if (!writeSuccessful())     releasePayload();
+  }
 }
