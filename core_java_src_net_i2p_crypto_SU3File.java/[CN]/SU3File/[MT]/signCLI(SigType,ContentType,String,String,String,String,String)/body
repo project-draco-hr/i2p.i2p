@@ -1,0 +1,30 @@
+{
+  try {
+    String keypw="";
+    while (keypw.length() < 6) {
+      System.out.print("Enter password for key \"" + signerName + "\": ");
+      keypw=DataHelper.readLine(System.in).trim();
+      if (keypw.length() > 0 && keypw.length() < 6)       System.out.println("Key password must be at least 6 characters");
+    }
+    File pkfile=new File(privateKeyFile);
+    PrivateKey pk=KeyStoreUtil.getPrivateKey(pkfile,KeyStoreUtil.DEFAULT_KEYSTORE_PASSWORD,signerName,keypw);
+    if (pk == null) {
+      System.out.println("Private key for " + signerName + " not found in keystore "+ privateKeyFile);
+      return false;
+    }
+    SU3File file=new SU3File(signedFile);
+    file.write(new File(inputFile),ctype.getCode(),version,signerName,pk,type);
+    System.out.println("Input file '" + inputFile + "' signed and written to '"+ signedFile+ "'");
+    return true;
+  }
+ catch (  GeneralSecurityException gse) {
+    System.out.println("Error signing input file '" + inputFile + "'");
+    gse.printStackTrace();
+    return false;
+  }
+catch (  IOException ioe) {
+    System.out.println("Error signing input file '" + inputFile + "'");
+    ioe.printStackTrace();
+    return false;
+  }
+}

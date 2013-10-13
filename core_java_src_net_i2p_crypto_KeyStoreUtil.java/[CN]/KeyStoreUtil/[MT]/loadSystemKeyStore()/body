@@ -1,0 +1,31 @@
+{
+  KeyStore ks;
+  try {
+    ks=KeyStore.getInstance(KeyStore.getDefaultType());
+  }
+ catch (  GeneralSecurityException gse) {
+    error("Key Store init error",gse);
+    return null;
+  }
+  boolean success=false;
+  String override=System.getProperty("javax.net.ssl.keyStore");
+  if (override != null)   success=loadCerts(new File(override),ks);
+  if (!success) {
+    if (SystemVersion.isAndroid()) {
+      success=loadCerts(new File(System.getProperty("java.home"),"etc/security/cacerts.bks"),ks);
+    }
+ else {
+      success=loadCerts(new File(System.getProperty("java.home"),"lib/security/jssecacerts"),ks);
+      if (!success)       success=loadCerts(new File(System.getProperty("java.home"),"lib/security/cacerts"),ks);
+    }
+  }
+  if (!success) {
+    try {
+      ks.load(null,DEFAULT_KEYSTORE_PASSWORD.toCharArray());
+    }
+ catch (    Exception e) {
+    }
+    error("All key store loads failed, will only load local certificates",null);
+  }
+  return ks;
+}

@@ -1,26 +1,3 @@
 {
-  String url=uri.toString();
-  updateStatus("<b>" + _("Update downloaded") + "</b>");
-  TrustedUpdate up=new TrustedUpdate(_context);
-  File to=new File(_context.getRouterDir(),Router.UPDATE_FILE);
-  String err=up.migrateVerified(RouterVersion.VERSION,f,to);
-  if (err == null) {
-    String policy=_context.getProperty(ConfigUpdateHandler.PROP_UPDATE_POLICY);
-    long modtime=_context.clock().now();
-    _context.router().saveConfig(NewsHelper.PROP_LAST_UPDATE_TIME,Long.toString(modtime));
-    if ("install".equals(policy)) {
-      _log.log(Log.CRIT,"Update was VERIFIED, restarting to install it");
-      updateStatus("<b>" + _("Update verified") + "</b><br>"+ _("Restarting"));
-      restart();
-    }
- else {
-      _log.log(Log.CRIT,"Update was VERIFIED, will be installed at next restart");
-      updateStatus("");
-    }
-  }
- else {
-    _log.log(Log.CRIT,err + " from " + url);
-    updateStatus("<b>" + err + ' '+ _("from {0}",linkify(url))+ " </b>");
-  }
-  return err == null;
+  return handleRouterFile(uri,actualVersion,f,false);
 }

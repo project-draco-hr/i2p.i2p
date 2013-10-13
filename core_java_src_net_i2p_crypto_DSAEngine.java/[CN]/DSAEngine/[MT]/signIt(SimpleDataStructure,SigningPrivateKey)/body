@@ -1,5 +1,6 @@
 {
   if ((signingKey == null) || (hash == null))   return null;
+  if (signingKey.getType() != SigType.DSA_SHA1)   throw new IllegalArgumentException("Bad key type " + signingKey.getType());
   long start=_context.clock().now();
   Signature sig=new Signature();
   BigInteger k;
@@ -29,8 +30,11 @@
       out[i]=rbytes[i + 1];
     }
   }
+ else   if (rbytes.length > 21) {
+    _log.error("Bad R length " + rbytes.length);
+    return null;
+  }
  else {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Using short rbytes.length [" + rbytes.length + "]");
     for (int i=0; i < rbytes.length; i++)     out[i + 20 - rbytes.length]=rbytes[i];
   }
   if (sbytes.length == 20) {
@@ -43,8 +47,11 @@
       out[i + 20]=sbytes[i + 1];
     }
   }
+ else   if (sbytes.length > 21) {
+    _log.error("Bad S length " + sbytes.length);
+    return null;
+  }
  else {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Using short sbytes.length [" + sbytes.length + "]");
     for (int i=0; i < sbytes.length; i++)     out[i + 20 + 20 - sbytes.length]=sbytes[i];
   }
   sig.setData(out);

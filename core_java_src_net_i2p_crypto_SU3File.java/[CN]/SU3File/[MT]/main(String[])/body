@@ -1,20 +1,51 @@
 {
   boolean ok=false;
+  List<String> a=new ArrayList(Arrays.asList(args));
   try {
-    if ("showversion".equals(args[0])) {
-      ok=showVersionCLI(args[1]);
+    String stype=null;
+    String ctype=null;
+    Iterator<String> iter=a.iterator();
+    String cmd=iter.next();
+    iter.remove();
+    for (; iter.hasNext(); ) {
+      String arg=iter.next();
+      if (arg.equals("-t")) {
+        iter.remove();
+        stype=iter.next();
+        iter.remove();
+      }
+ else       if (arg.equals("-c")) {
+        iter.remove();
+        ctype=iter.next();
+        iter.remove();
+      }
     }
- else     if ("sign".equals(args[0])) {
-      ok=signCLI(args[1],args[2],args[3],args[4],args[5]);
+    if ("showversion".equals(cmd)) {
+      ok=showVersionCLI(a.get(0));
     }
- else     if ("verifysig".equals(args[0])) {
-      ok=verifySigCLI(args[1]);
+ else     if ("sign".equals(cmd)) {
+      Properties props=new Properties();
+      props.setProperty("prng.bufferSize","16384");
+      new I2PAppContext(props);
+      ok=signCLI(stype,ctype,a.get(0),a.get(1),a.get(2),a.get(3),a.get(4));
+    }
+ else     if ("verifysig".equals(cmd)) {
+      ok=verifySigCLI(a.get(0));
+    }
+ else     if ("keygen".equals(cmd)) {
+      ok=genKeysCLI(stype,a.get(0),a.get(1),a.get(2));
+    }
+ else     if ("extract".equals(cmd)) {
+      ok=extractCLI(a.get(0),a.get(1));
     }
  else {
       showUsageCLI();
     }
   }
- catch (  ArrayIndexOutOfBoundsException aioobe) {
+ catch (  NoSuchElementException nsee) {
+    showUsageCLI();
+  }
+catch (  IndexOutOfBoundsException ioobe) {
     showUsageCLI();
   }
   if (!ok)   System.exit(1);

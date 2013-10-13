@@ -1,0 +1,31 @@
+{
+  OutputStream os=null;
+  try {
+    byte[] buf=cert.getEncoded();
+    os=new SecureFileOutputStream(file);
+    PrintWriter wr=new PrintWriter(os);
+    wr.println("-----BEGIN CERTIFICATE-----");
+    String b64=Base64.encode(buf,true);
+    for (int i=0; i < b64.length(); i+=LINE_LENGTH) {
+      wr.println(b64.substring(i,Math.min(i + LINE_LENGTH,b64.length())));
+    }
+    wr.println("-----END CERTIFICATE-----");
+    wr.flush();
+    return true;
+  }
+ catch (  CertificateEncodingException cee) {
+    error("Error writing X509 Certificate " + file.getAbsolutePath(),cee);
+    return false;
+  }
+catch (  IOException ioe) {
+    error("Error writing X509 Certificate " + file.getAbsolutePath(),ioe);
+    return false;
+  }
+ finally {
+    try {
+      if (os != null)       os.close();
+    }
+ catch (    IOException foo) {
+    }
+  }
+}

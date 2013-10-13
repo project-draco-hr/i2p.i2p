@@ -1,27 +1,42 @@
 {
-  DigestInputStream in=null;
+  InputStream in=null;
   OutputStream out=null;
   boolean rv=false;
   try {
-    MessageDigest md=SHA1.getInstance();
-    in=new DigestInputStream(new BufferedInputStream(new FileInputStream(_file)),md);
+    in=new BufferedInputStream(new FileInputStream(_file));
+    in.mark(10);
+    byte[] magic=new byte[MAGIC.length];
+    DataHelper.read(in,magic);
+    if (!DataHelper.eq(magic,MAGIC))     throw new IOException("Not an su3 file");
+    skip(in,1);
+    int foo=in.read();
+    if (foo != FILE_VERSION)     throw new IOException("bad file version");
+    skip(in,1);
+    int sigTypeCode=in.read();
+    _sigType=SigType.getByCode(sigTypeCode);
+    if (_sigType == null)     throw new IOException("unknown sig type: " + sigTypeCode);
+    in.reset();
+    MessageDigest md=_sigType.getDigestInstance();
+    DigestInputStream din=new DigestInputStream(in,md);
+    in=din;
     if (!_headerVerified)     verifyHeader(in);
  else     skip(in,getContentOffset());
     if (_signerPubkey == null)     throw new IOException("unknown signer: " + _signer);
-    out=new FileOutputStream(migrateTo);
+    if (migrateTo != null)     out=new FileOutputStream(migrateTo);
     byte[] buf=new byte[16 * 1024];
     long tot=0;
     while (tot < _contentLength) {
       int read=in.read(buf,0,(int)Math.min(buf.length,_contentLength - tot));
       if (read < 0)       throw new EOFException();
-      out.write(buf,0,read);
+      if (migrateTo != null)       out.write(buf,0,read);
       tot+=read;
     }
     byte[] sha=md.digest();
-    in.on(false);
-    Signature signature=new Signature();
+    din.on(false);
+    Signature signature=new Signature(_sigType);
     signature.readBytes(in);
-    SHA1Hash hash=new SHA1Hash(sha);
+    SimpleDataStructure hash=_sigType.getHashInstance();
+    hash.setData(sha);
     rv=_context.dsa().verifySignature(signature,hash,_signerPubkey);
   }
  catch (  DataFormatException dfe) {
@@ -40,7 +55,7 @@
     }
  catch (    IOException ioe) {
     }
-    if (!rv)     migrateTo.delete();
+    if (migrateTo != null && !rv)     migrateTo.delete();
   }
   return rv;
 }

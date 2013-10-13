@@ -1,16 +1,10 @@
 {
-  byte[] rand=new byte[30];
-  _context.random().nextBytes(rand);
-  String keyPassword=Base32.encode(rand);
-  _context.random().nextBytes(rand);
-  String cname=Base32.encode(rand) + ".i2cp.i2p.net";
-  String keytool=(new File(System.getProperty("java.home"),"bin/keytool")).getAbsolutePath();
-  String[] args=new String[]{keytool,"-genkey","-storetype",KeyStore.getDefaultType(),"-keystore",ks.getAbsolutePath(),"-storepass",DEFAULT_KEYSTORE_PASSWORD,"-alias",KEY_ALIAS,"-dname","CN=" + cname + ",OU=I2CP,O=I2P Anonymous Network,L=XX,ST=XX,C=XX","-validity","3652","-keyalg","DSA","-keysize","1024","-keypass",keyPassword};
-  boolean success=(new ShellCommand()).executeSilentAndWaitTimed(args,30);
+  String keyPassword=KeyStoreUtil.randomString();
+  String cname=KeyStoreUtil.randomString() + ".i2cp.i2p.net";
+  boolean success=KeyStoreUtil.createKeys(ks,KEY_ALIAS,cname,"I2CP",keyPassword);
   if (success) {
     success=ks.exists();
     if (success) {
-      SecureFileOutputStream.setPerms(ks);
       Map<String,String> changes=new HashMap();
       changes.put(PROP_KEYSTORE_PASSWORD,DEFAULT_KEYSTORE_PASSWORD);
       changes.put(PROP_KEY_PASSWORD,keyPassword);
@@ -21,13 +15,7 @@
     _log.logAlways(Log.INFO,"Created self-signed certificate for " + cname + " in keystore: "+ ks.getAbsolutePath()+ "\n"+ "The certificate name was generated randomly, and is not associated with your "+ "IP address, host name, router identity, or destination keys.");
   }
  else {
-    _log.error("Failed to create I2CP SSL keystore using command line:");
-    StringBuilder buf=new StringBuilder(256);
-    for (int i=0; i < args.length; i++) {
-      buf.append('"').append(args[i]).append("\" ");
-    }
-    _log.error(buf.toString());
-    _log.error("This is for the Sun/Oracle keytool, others may be incompatible.\n" + "If you create the keystore manually, you must add " + PROP_KEYSTORE_PASSWORD + " and "+ PROP_KEY_PASSWORD+ " to "+ (new File(_context.getConfigDir(),"router.config")).getAbsolutePath());
+    _log.error("Failed to create I2CP SSL keystore.\n" + "This is for the Sun/Oracle keytool, others may be incompatible.\n" + "If you create the keystore manually, you must add " + PROP_KEYSTORE_PASSWORD + " and "+ PROP_KEY_PASSWORD+ " to "+ (new File(_context.getConfigDir(),"router.config")).getAbsolutePath());
   }
   return success;
 }

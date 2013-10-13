@@ -1,7 +1,33 @@
 {
-  boolean shouldProxy=Boolean.valueOf(_context.getProperty(ConfigUpdateHandler.PROP_SHOULD_PROXY,ConfigUpdateHandler.DEFAULT_SHOULD_PROXY)).booleanValue();
-  String proxyHost=_context.getProperty(ConfigUpdateHandler.PROP_PROXY_HOST,ConfigUpdateHandler.DEFAULT_PROXY_HOST);
-  int proxyPort=ConfigUpdateHandler.proxyPort(_context);
+  boolean shouldProxy;
+  String proxyHost;
+  int proxyPort;
+  boolean isSSL=false;
+  if (_method == HTTP) {
+    shouldProxy=_context.getProperty(ConfigUpdateHandler.PROP_SHOULD_PROXY,ConfigUpdateHandler.DEFAULT_SHOULD_PROXY);
+    if (shouldProxy) {
+      proxyHost=_context.getProperty(ConfigUpdateHandler.PROP_PROXY_HOST,ConfigUpdateHandler.DEFAULT_PROXY_HOST);
+      proxyPort=ConfigUpdateHandler.proxyPort(_context);
+    }
+ else {
+      proxyHost=null;
+      proxyPort=0;
+    }
+  }
+ else   if (_method == HTTP_CLEARNET) {
+    shouldProxy=false;
+    proxyHost=null;
+    proxyPort=0;
+  }
+ else   if (_method == HTTPS_CLEARNET) {
+    shouldProxy=false;
+    proxyHost=null;
+    proxyPort=0;
+    isSSL=true;
+  }
+ else {
+    throw new IllegalArgumentException();
+  }
   if (_urls.isEmpty()) {
     updateStatus("<b>Update source list is empty, cannot download update</b>");
     _log.error("Update source list is empty - cannot download update");
@@ -11,9 +37,14 @@
   for (  URI uri : _urls) {
     _currentURI=uri;
     String updateURL=uri.toString();
+    if ((_method == HTTP && !"http".equals(uri.getScheme())) || (_method == HTTP_CLEARNET && !"http".equals(uri.getScheme())) || (_method == HTTPS_CLEARNET && !"https".equals(uri.getScheme()))|| uri.getHost() == null || (_method != HTTP && uri.getHost().toLowerCase(Locale.US).endsWith(".i2p"))) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Bad update URI " + uri + " for method "+ _method);
+      continue;
+    }
     updateStatus("<b>" + _("Updating from {0}",linkify(updateURL)) + "</b>");
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Selected update URL: " + updateURL);
-    if (shouldProxy) {
+    _newVersion=null;
+    if (!isSSL) {
       _isPartial=true;
       _baos.reset();
       try {
@@ -28,6 +59,7 @@
     }
     try {
       if (shouldProxy)       _get=new EepGet(_context,proxyHost,proxyPort,40,_updateFile,updateURL,false);
+ else       if (isSSL)       _get=new SSLEepGet(_context,_updateFile,updateURL);
  else       _get=new EepGet(_context,1,_updateFile,updateURL,false);
       _get.addStatusListener(UpdateRunner.this);
       _get.fetch(CONNECT_TIMEOUT,-1,shouldProxy ? INACTIVITY_TIMEOUT : NOPROXY_INACTIVITY_TIMEOUT);

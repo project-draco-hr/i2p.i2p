@@ -1,0 +1,40 @@
+{
+  File pubFile=new File(publicKeyFile);
+  if (pubFile.exists()) {
+    System.out.println("Error: Not overwriting file " + publicKeyFile);
+    return false;
+  }
+  File ksFile=new File(privateKeyFile);
+  String keypw="";
+  try {
+    while (alias.length() == 0) {
+      System.out.print("Enter key name (example@mail.i2p): ");
+      alias=DataHelper.readLine(System.in).trim();
+    }
+    while (keypw.length() < 6) {
+      System.out.print("Enter new key password: ");
+      keypw=DataHelper.readLine(System.in).trim();
+      if (keypw.length() > 0 && keypw.length() < 6)       System.out.println("Key password must be at least 6 characters");
+    }
+  }
+ catch (  IOException ioe) {
+    return false;
+  }
+  int keylen=type.getPubkeyLen() * 8;
+  if (type.getBaseAlgorithm() == SigAlgo.EC) {
+    keylen/=2;
+    if (keylen == 528)     keylen=521;
+  }
+  boolean success=KeyStoreUtil.createKeys(ksFile,KeyStoreUtil.DEFAULT_KEYSTORE_PASSWORD,alias,alias,"I2P",3652,type.getBaseAlgorithm().getName(),keylen,keypw);
+  if (!success) {
+    System.err.println("Error creating keys for " + alias);
+    return false;
+  }
+  File outfile=new File(publicKeyFile);
+  success=KeyStoreUtil.exportCert(ksFile,KeyStoreUtil.DEFAULT_KEYSTORE_PASSWORD,alias,outfile);
+  if (!success) {
+    System.err.println("Error writing public key for " + alias + " to "+ outfile);
+    return false;
+  }
+  return true;
+}
