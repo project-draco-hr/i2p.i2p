@@ -1,0 +1,43 @@
+{
+  Log log=context.logManager().getLog(I2PSSLSocketFactory.class);
+  KeyStore ks;
+  if (loadSystemCerts) {
+    ks=KeyStoreUtil.loadSystemKeyStore();
+    if (ks == null)     throw new GeneralSecurityException("Key Store init error");
+  }
+ else {
+    try {
+      ks=KeyStore.getInstance(KeyStore.getDefaultType());
+      ks.load(null,"".toCharArray());
+    }
+ catch (    IOException ioe) {
+      throw new GeneralSecurityException("Key Store init error",ioe);
+    }
+  }
+  File dir=new File(context.getConfigDir(),relativeCertPath);
+  int adds=KeyStoreUtil.addCerts(dir,ks);
+  int totalAdds=adds;
+  if (adds > 0) {
+    if (log.shouldLog(Log.INFO))     log.info("Loaded " + adds + " trusted certificates from "+ dir.getAbsolutePath());
+  }
+  File dir2=new File(context.getBaseDir(),relativeCertPath);
+  if (!dir.getAbsolutePath().equals(dir2.getAbsolutePath())) {
+    adds=KeyStoreUtil.addCerts(dir2,ks);
+    totalAdds+=adds;
+    if (adds > 0) {
+      if (log.shouldLog(Log.INFO))       log.info("Loaded " + adds + " trusted certificates from "+ dir.getAbsolutePath());
+    }
+  }
+  if (totalAdds > 0 || loadSystemCerts) {
+    if (log.shouldLog(Log.INFO))     log.info("Loaded total of " + totalAdds + " new trusted certificates");
+  }
+ else {
+    String msg="No trusted certificates loaded (looked in " + dir.getAbsolutePath() + (dir.getAbsolutePath().equals(dir2.getAbsolutePath()) ? "" : (" and " + dir2.getAbsolutePath()))+ ", SSL connections will fail. "+ "Copy the cert in "+ relativeCertPath+ " from the router to the directory.";
+    throw new GeneralSecurityException(msg);
+  }
+  SSLContext sslc=SSLContext.getInstance("TLS");
+  TrustManagerFactory tmf=TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+  tmf.init(ks);
+  sslc.init(null,tmf.getTrustManagers(),context.random());
+  return sslc.getSocketFactory();
+}

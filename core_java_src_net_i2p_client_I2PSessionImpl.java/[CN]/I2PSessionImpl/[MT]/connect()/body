@@ -40,8 +40,20 @@ _queue=mgr.connect();
 _reader=new QueuedI2CPMessageReader(_queue,this);
 }
  else {
-if (Boolean.parseBoolean(_options.getProperty(PROP_ENABLE_SSL))) _socket=I2CPSSLSocketFactory.createSocket(_context,_hostname,_portNum);
- else _socket=new Socket(_hostname,_portNum);
+if (Boolean.parseBoolean(_options.getProperty(PROP_ENABLE_SSL))) {
+try {
+I2PSSLSocketFactory fact=new I2PSSLSocketFactory(_context,false,"certificates/i2cp");
+_socket=fact.createSocket(_hostname,_portNum);
+}
+ catch (GeneralSecurityException gse) {
+IOException ioe=new IOException("SSL Fail");
+ioe.initCause(gse);
+throw ioe;
+}
+}
+ else {
+_socket=new Socket(_hostname,_portNum);
+}
 OutputStream out=_socket.getOutputStream();
 out.write(I2PClient.PROTOCOL_BYTE);
 out.flush();

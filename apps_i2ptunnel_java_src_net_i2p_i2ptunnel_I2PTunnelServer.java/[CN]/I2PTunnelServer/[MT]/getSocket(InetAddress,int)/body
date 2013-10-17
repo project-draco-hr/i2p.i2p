@@ -1,0 +1,21 @@
+{
+  String opt=getTunnel().getClientOptions().getProperty(PROP_USE_SSL);
+  if (Boolean.parseBoolean(opt)) {
+synchronized (sslLock) {
+      if (_sslFactory == null) {
+        try {
+          _sslFactory=new I2PSSLSocketFactory(getTunnel().getContext(),true,"certificates/i2ptunnel");
+        }
+ catch (        GeneralSecurityException gse) {
+          IOException ioe=new IOException("SSL Fail");
+          ioe.initCause(gse);
+          throw ioe;
+        }
+      }
+    }
+    return _sslFactory.createSocket(remoteHost,remotePort);
+  }
+ else {
+    return new Socket(remoteHost,remotePort);
+  }
+}
