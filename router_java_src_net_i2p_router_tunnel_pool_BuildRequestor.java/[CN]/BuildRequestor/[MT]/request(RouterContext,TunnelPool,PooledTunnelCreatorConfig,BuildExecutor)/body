@@ -46,18 +46,14 @@
   }
  else {
     if (log.shouldLog(Log.INFO))     log.info("Sending the tunnel build request directly to " + cfg.getPeer(1) + " for "+ cfg+ " waiting for the reply of "+ cfg.getReplyMessageId()+ " with msgId="+ msg.getUniqueId());
-    OutNetMessage outMsg=new OutNetMessage(ctx);
     msg.setMessageExpiration(ctx.clock().now() + BUILD_MSG_TIMEOUT + ctx.random().nextLong(20 * 1000));
-    outMsg.setExpiration(ctx.clock().now() + FIRST_HOP_TIMEOUT);
-    outMsg.setMessage(msg);
-    outMsg.setPriority(PRIORITY);
     RouterInfo peer=ctx.netDb().lookupRouterInfoLocally(cfg.getPeer(1));
     if (peer == null) {
       if (log.shouldLog(Log.WARN))       log.warn("Could not find the next hop to send the outbound request to: " + cfg);
       exec.buildComplete(cfg,pool);
       return;
     }
-    outMsg.setTarget(peer);
+    OutNetMessage outMsg=new OutNetMessage(ctx,msg,ctx.clock().now() + FIRST_HOP_TIMEOUT,PRIORITY,peer);
     outMsg.setOnFailedSendJob(new TunnelBuildFirstHopFailJob(ctx,pool,cfg,exec));
     ctx.outNetMessagePool().add(outMsg);
   }
