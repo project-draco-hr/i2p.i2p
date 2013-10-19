@@ -1,6 +1,7 @@
 {
   HashMap<String,List<String>> headers=new HashMap<String,List<String>>();
   StringBuilder buf=new StringBuilder(128);
+  long expire=ctx.clock().now() + TOTAL_HEADER_TIMEOUT;
   boolean ok=DataHelper.readLine(in,command);
   if (!ok)   throw new IOException("EOF reached while reading the HTTP command [" + command.toString() + "]");
   int trimmed=0;
@@ -14,7 +15,6 @@
     }
   }
   if (trimmed > 0)   ctx.statManager().addRateData("i2ptunnel.httpNullWorkaround",trimmed,0);
-  long expire=ctx.clock().now() + TOTAL_HEADER_TIMEOUT;
   int i=0;
   while (true) {
     if (++i > MAX_HEADERS)     throw new IOException("Too many header lines - max " + MAX_HEADERS);
