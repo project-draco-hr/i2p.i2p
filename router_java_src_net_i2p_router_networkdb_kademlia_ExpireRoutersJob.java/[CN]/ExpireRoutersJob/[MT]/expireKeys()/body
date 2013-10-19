@@ -1,0 +1,23 @@
+{
+  Set<Hash> keys=_facade.getAllRouters();
+  keys.remove(getContext().routerHash());
+  int removed=0;
+  for (  Hash key : keys) {
+    if (!getContext().commSystem().isEstablished(key)) {
+      DatabaseEntry e=_facade.lookupLocallyWithoutValidation(key);
+      if (e != null && e.getType() == DatabaseEntry.KEY_TYPE_ROUTERINFO) {
+        try {
+          if (_facade.validate((RouterInfo)e) != null) {
+            _facade.dropAfterLookupFailed(key);
+            removed++;
+          }
+        }
+ catch (        IllegalArgumentException iae) {
+          _facade.dropAfterLookupFailed(key);
+          removed++;
+        }
+      }
+    }
+  }
+  return removed;
+}
