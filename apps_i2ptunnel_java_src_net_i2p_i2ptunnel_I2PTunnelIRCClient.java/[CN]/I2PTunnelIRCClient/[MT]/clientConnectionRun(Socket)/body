@@ -1,9 +1,13 @@
 {
   if (_log.shouldLog(Log.INFO))   _log.info("New connection local addr is: " + s.getLocalAddress() + " from: "+ s.getInetAddress());
-  Destination clientDest=pickDestination();
   I2PSocket i2ps=null;
+  I2PSocketAddress addr=pickDestination();
   try {
-    i2ps=createI2PSocket(clientDest);
+    if (addr == null)     throw new UnknownHostException("No valid destination configured");
+    Destination clientDest=addr.getAddress();
+    if (clientDest == null)     throw new UnknownHostException("Could not resolve " + addr.getHostName());
+    int port=addr.getPort();
+    i2ps=createI2PSocket(clientDest,port);
     i2ps.setReadTimeout(readTimeout);
     StringBuffer expectedPong=new StringBuffer();
     DCCHelper dcc=_dccEnabled ? new DCC(s.getLocalAddress().getAddress()) : null;
@@ -12,17 +16,15 @@
     Thread out=new I2PAppThread(new IrcOutboundFilter(s,i2ps,expectedPong,_log,dcc),"IRC Client " + __clientId + " out",true);
     out.start();
   }
- catch (  I2PException ex) {
-    if (_log.shouldLog(Log.ERROR))     _log.error("Error connecting",ex);
-    closeSocket(s);
-    if (i2ps != null) {
-synchronized (sockLock) {
-        mySockets.remove(sockLock);
-      }
-    }
-  }
-catch (  Exception ex) {
+ catch (  Exception ex) {
     if (_log.shouldLog(Log.WARN))     _log.warn("Error connecting",ex);
+    try {
+      String name=addr != null ? addr.getHostName() : "undefined";
+      String msg=":" + name + " 499 you :"+ ex+ "\r\n";
+      s.getOutputStream().write(DataHelper.getUTF8(msg));
+    }
+ catch (    IOException ioe) {
+    }
     closeSocket(s);
     if (i2ps != null) {
 synchronized (sockLock) {

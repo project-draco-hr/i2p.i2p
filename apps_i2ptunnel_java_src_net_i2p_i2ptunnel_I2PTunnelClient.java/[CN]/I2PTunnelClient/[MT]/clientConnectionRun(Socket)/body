@@ -1,8 +1,12 @@
 {
-  Destination destN=pickDestination();
   I2PSocket i2ps=null;
   try {
-    i2ps=createI2PSocket(destN);
+    I2PSocketAddress addr=pickDestination();
+    if (addr == null)     throw new UnknownHostException("No valid destination configured");
+    Destination clientDest=addr.getAddress();
+    if (clientDest == null)     throw new UnknownHostException("Could not resolve " + addr.getHostName());
+    int port=addr.getPort();
+    i2ps=createI2PSocket(clientDest,port);
     i2ps.setReadTimeout(readTimeout);
     new I2PTunnelRunner(s,i2ps,sockLock,null,mySockets);
   }

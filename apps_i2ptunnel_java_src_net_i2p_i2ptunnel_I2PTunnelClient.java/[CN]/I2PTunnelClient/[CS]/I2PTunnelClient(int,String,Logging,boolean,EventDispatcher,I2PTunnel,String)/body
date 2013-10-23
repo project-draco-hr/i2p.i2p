@@ -1,18 +1,13 @@
 {
   super(localPort,ownDest,l,notifyThis,"Standard client on " + tunnel.listenHost + ':'+ localPort,tunnel,pkf);
+  _addrs=new ArrayList(1);
   if (waitEventValue("openBaseClientResult").equals("error")) {
     notifyEvent("openClientResult","error");
     return;
   }
-  StringTokenizer tok=new StringTokenizer(destinations,", ");
   dests=new ArrayList(1);
-  while (tok.hasMoreTokens()) {
-    String destination=tok.nextToken();
-    Destination destN=_context.namingService().lookup(destination);
-    if (destN == null)     l.log("Could not resolve " + destination);
- else     dests.add(destN);
-  }
-  if (dests.isEmpty()) {
+  buildAddresses(destinations);
+  if (_addrs.isEmpty()) {
     l.log("No valid target destinations found");
     notifyEvent("openClientResult","error");
     throw new IllegalArgumentException("No valid target destinations found");
