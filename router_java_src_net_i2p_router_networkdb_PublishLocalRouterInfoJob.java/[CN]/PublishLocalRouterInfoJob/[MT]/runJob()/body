@@ -1,4 +1,11 @@
 {
+  long last=getContext().netDb().getLastRouterInfoPublishTime();
+  long now=getContext().clock().now();
+  if (last + MIN_PUBLISH_DELAY > now) {
+    long delay=getDelay();
+    requeue(last + delay);
+    return;
+  }
   RouterInfo ri=new RouterInfo(getContext().router().getRouterInfo());
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Old routerInfo contains " + ri.getAddresses().size() + " addresses and "+ ri.getOptionsMap().size()+ " options");
   Properties stats=getContext().statPublisher().publishStatistics();
@@ -29,7 +36,8 @@
     _log.error("Error signing the updated local router info!",dfe);
   }
   if (_notFirstTime) {
-    requeue((PUBLISH_DELAY * 3 / 4) + getContext().random().nextInt((int)PUBLISH_DELAY / 2));
+    long delay=getDelay();
+    requeue(delay);
   }
  else {
     requeue(FIRST_TIME_DELAY);
