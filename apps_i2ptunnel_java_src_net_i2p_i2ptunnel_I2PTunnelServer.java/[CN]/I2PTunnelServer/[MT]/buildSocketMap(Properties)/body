@@ -1,0 +1,25 @@
+{
+  _socketMap.clear();
+  for (  Map.Entry e : props.entrySet()) {
+    String key=(String)e.getKey();
+    if (key.startsWith("targetForPort.")) {
+      key=key.substring("targetForPort.".length());
+      try {
+        int myPort=Integer.parseInt(key);
+        String host=(String)e.getValue();
+        int colon=host.indexOf(":");
+        int port=Integer.parseInt(host.substring(colon + 1));
+        host=host.substring(0,colon);
+        InetSocketAddress isa=new InetSocketAddress(host,port);
+        if (isa.isUnresolved())         l.log("Warning - cannot resolve address for port " + key + ": "+ host);
+        _socketMap.put(Integer.valueOf(myPort),isa);
+      }
+ catch (      NumberFormatException nfe) {
+        l.log("Bad socket spec for port " + key + ": "+ e.getValue());
+      }
+catch (      IndexOutOfBoundsException ioobe) {
+        l.log("Bad socket spec for port " + key + ": "+ e.getValue());
+      }
+    }
+  }
+}
