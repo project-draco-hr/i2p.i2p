@@ -2,11 +2,14 @@
   FileOutputStream fos=null;
   try {
     fos=new SecureFileOutputStream(_pingFile);
-    fos.write(("" + System.currentTimeMillis()).getBytes());
+    fos.write(Long.toString(System.currentTimeMillis()).getBytes());
   }
  catch (  IOException ioe) {
-    System.err.println("Error writing to ping file");
-    ioe.printStackTrace();
+    if (!_errorLogged) {
+      Log log=_router.getContext().logManager().getLog(MarkLiveliness.class);
+      log.logAlways(Log.WARN,"Error writing to ping file " + _pingFile + ": "+ ioe);
+      _errorLogged=true;
+    }
   }
  finally {
     if (fos != null)     try {
