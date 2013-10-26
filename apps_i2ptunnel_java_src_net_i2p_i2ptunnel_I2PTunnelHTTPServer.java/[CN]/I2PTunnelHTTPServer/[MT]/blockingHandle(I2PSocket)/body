@@ -1,5 +1,6 @@
 {
-  if (_log.shouldLog(Log.INFO))   _log.info("Incoming connection to '" + toString() + "' port "+ socket.getLocalPort()+ " from: "+ socket.getPeerDestination().calculateHash()+ " port "+ socket.getPort());
+  Hash peerHash=socket.getPeerDestination().calculateHash();
+  if (_log.shouldLog(Log.INFO))   _log.info("Incoming connection to '" + toString() + "' port "+ socket.getLocalPort()+ " from: "+ peerHash+ " port "+ socket.getPort());
   try {
     long afterAccept=getTunnel().getContext().clock().now();
     socket.setReadTimeout(HEADER_TIMEOUT);
@@ -7,8 +8,24 @@
     StringBuilder command=new StringBuilder(128);
     Map<String,List<String>> headers=readHeaders(in,command,CLIENT_SKIPHEADERS,getTunnel().getContext());
     long afterHeaders=getTunnel().getContext().clock().now();
-    addEntry(headers,HASH_HEADER,socket.getPeerDestination().calculateHash().toBase64());
-    addEntry(headers,DEST32_HEADER,Base32.encode(socket.getPeerDestination().calculateHash().getData()) + ".b32.i2p");
+    if (_postThrottler != null && command.length() >= 5 && command.substring(0,5).toUpperCase(Locale.US).equals("POST ")) {
+      if (_postThrottler.shouldThrottle(peerHash)) {
+        if (_log.shouldLog(Log.WARN))         _log.warn("Refusing POST since peer is throttled: " + peerHash.toBase64());
+        try {
+          socket.getOutputStream().write(ERR_DENIED);
+        }
+ catch (        IOException ioe) {
+        }
+        try {
+          socket.close();
+        }
+ catch (        IOException ioe) {
+        }
+        return;
+      }
+    }
+    addEntry(headers,HASH_HEADER,peerHash.toBase64());
+    addEntry(headers,DEST32_HEADER,Base32.encode(peerHash.getData()) + ".b32.i2p");
     addEntry(headers,DEST64_HEADER,socket.getPeerDestination().toBase64());
     Properties opts=getTunnel().getClientOptions();
     String spoofHost;

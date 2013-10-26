@@ -1,0 +1,35 @@
+{
+  if (_totalMax > 0) {
+    if (_totalThrottleUntil > 0) {
+      if (_totalThrottleUntil > Clock.getInstance().now())       return true;
+      _totalThrottleUntil=0;
+    }
+  }
+  if (_max > 0) {
+    Record rec=_peers.get(h);
+    if (rec != null) {
+      if (rec.getUntil() > 0)       return true;
+      rec.increment();
+      long now=Clock.getInstance().now();
+      if (rec.countSince(now - _checkPeriod) > _max) {
+        long until=now + _throttlePeriod;
+        String date=_fmt.format(new Date(until));
+        _log.logAlways(Log.WARN,"Throttling " + _action + " until "+ date+ " after exceeding max of "+ _max+ " in "+ DataHelper.formatDuration(_checkPeriod)+ ": "+ h.toBase64());
+        rec.ban(until);
+        return true;
+      }
+    }
+ else {
+      _peers.put(h,new Record());
+    }
+  }
+  if (_totalMax > 0 && ++_currentTotal > _totalMax) {
+    if (_totalThrottleUntil == 0) {
+      _totalThrottleUntil=Clock.getInstance().now() + _totalThrottlePeriod;
+      String date=_fmt.format(new Date(_totalThrottleUntil));
+      _log.logAlways(Log.WARN,"*** Throttling " + _action + " from ALL peers until "+ date+ " after exceeding max of "+ _max+ " in "+ DataHelper.formatDuration(_checkPeriod));
+    }
+    return true;
+  }
+  return false;
+}
