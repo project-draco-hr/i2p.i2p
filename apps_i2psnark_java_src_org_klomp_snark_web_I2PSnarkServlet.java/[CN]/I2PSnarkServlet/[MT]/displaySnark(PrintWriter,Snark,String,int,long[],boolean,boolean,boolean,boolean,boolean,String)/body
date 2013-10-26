@@ -14,19 +14,11 @@
   long total=snark.getTotalLength();
   if (total > 0)   stats[5]+=total;
   if (statsOnly)   return;
-  String filename=snark.getName();
-  if (snark.getMetaInfo() != null) {
-    File f=new File(filename);
-    filename=f.getName();
-  }
-  int i=filename.lastIndexOf(".torrent");
-  if (i > 0)   filename=filename.substring(0,i);
-  String fullFilename=filename;
-  if (filename.length() > MAX_DISPLAYED_FILENAME_LENGTH) {
-    String start=filename.substring(0,MAX_DISPLAYED_FILENAME_LENGTH);
+  String basename=snark.getBaseName();
+  if (basename.length() > MAX_DISPLAYED_FILENAME_LENGTH) {
+    String start=basename.substring(0,MAX_DISPLAYED_FILENAME_LENGTH);
     if (start.indexOf(" ") < 0 && start.indexOf("-") < 0) {
-      fullFilename=filename;
-      filename=start + "&hellip;";
+      basename=start + "&hellip;";
     }
   }
   long remaining=snark.getRemainingLength();
@@ -95,7 +87,7 @@
     String trackerLink=getTrackerLink(meta.getAnnounce(),snark.getInfoHash());
     if (trackerLink != null)     out.write(trackerLink);
   }
-  String encodedBaseName=urlEncode(snark.getBaseName());
+  String encodedBaseName=urlEncode(basename);
   out.write("</td>\n<td>");
   if (isValid) {
     StringBuilder buf=new StringBuilder(128);
@@ -125,7 +117,7 @@
     buf.append("\">");
     out.write(buf.toString());
   }
-  out.write(filename);
+  out.write(basename);
   if (remaining == 0 || isMultiFile)   out.write("</a>");
   out.write("<td align=\"right\" class=\"snarkTorrentETA\">");
   if (isRunning && remainingSeconds > 0 && !snark.isChecking())   out.write(DataHelper.formatDuration2(Math.max(remainingSeconds,10) * 1000));
@@ -171,7 +163,7 @@
  else       out.write("<input type=\"image\" name=\"action_Remove_" + b64 + "\" value=\"foo\" title=\"");
       out.write(_("Remove the torrent from the active list, deleting the .torrent file"));
       out.write("\" onclick=\"if (!confirm('");
-      out.write(_("Are you sure you want to delete the file \\''{0}.torrent\\'' (downloaded data will not be deleted) ?",fullFilename));
+      out.write(_("Are you sure you want to delete the file \\''{0}.torrent\\'' (downloaded data will not be deleted) ?",basename));
       out.write("')) { return false; }\"");
       out.write(" src=\"" + _imgPath + "remove.png\" alt=\"");
       out.write(_("Remove"));
@@ -182,7 +174,7 @@
  else     out.write("<input type=\"image\" name=\"action_Delete_" + b64 + "\" value=\"foo\" title=\"");
     out.write(_("Delete the .torrent file and the associated data file(s)"));
     out.write("\" onclick=\"if (!confirm('");
-    out.write(_("Are you sure you want to delete the torrent \\''{0}\\'' and all downloaded data?",fullFilename));
+    out.write(_("Are you sure you want to delete the torrent \\''{0}\\'' and all downloaded data?",basename));
     out.write("')) { return false; }\"");
     out.write(" src=\"" + _imgPath + "delete.png\" alt=\"");
     out.write(_("Delete"));
