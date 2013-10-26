@@ -3,17 +3,21 @@
   if (tun != null) {
     Properties opts=getOptions(tun);
     if (opts == null)     return "";
-    StringBuilder buf=new StringBuilder(64);
-    int i=0;
     boolean isMD5Proxy="httpclient".equals(tun.getType()) || "connectclient".equals(tun.getType());
-    for (Iterator iter=opts.keySet().iterator(); iter.hasNext(); ) {
-      String key=(String)iter.next();
+    Map<String,String> sorted=new TreeMap();
+    for (    Map.Entry e : opts.entrySet()) {
+      String key=(String)e.getKey();
       if (_noShowSet.contains(key))       continue;
       if ((!isMD5Proxy) && _nonProxyNoShowSet.contains(key))       continue;
-      String val=opts.getProperty(key);
-      if (i != 0)       buf.append(' ');
-      buf.append(key).append('=').append(val);
-      i++;
+      sorted.put(key,(String)e.getValue());
+    }
+    if (sorted.isEmpty())     return "";
+    StringBuilder buf=new StringBuilder(64);
+    boolean space=false;
+    for (    Map.Entry<String,String> e : sorted.entrySet()) {
+      if (space)       buf.append(' ');
+ else       space=true;
+      buf.append(e.getKey()).append('=').append(e.getValue());
     }
     return buf.toString();
   }
