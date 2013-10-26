@@ -2,14 +2,11 @@
   if (matches.size() < howMany) {
     int orig=matches.size();
     int needed=howMany - orig;
-    int start=0;
     List selected=new ArrayList(needed);
     getReadLock();
     try {
-      start=_context.random().nextInt(_notFailingPeersList.size());
-      for (int i=0; i < _notFailingPeersList.size() && selected.size() < needed; i++) {
-        int curIndex=(i + start) % _notFailingPeersList.size();
-        Hash cur=_notFailingPeersList.get(curIndex);
+      for (Iterator<Hash> iter=new RandomIterator(_notFailingPeersList); (selected.size() < needed) && iter.hasNext(); ) {
+        Hash cur=iter.next();
         if (matches.contains(cur) || (exclude != null && exclude.contains(cur))) {
           if (_log.shouldLog(Log.DEBUG))           _log.debug("matched? " + matches.contains(cur) + " exclude: "+ exclude+ " cur="+ cur.toBase64());
           continue;
@@ -26,7 +23,7 @@
   finally {
       releaseReadLock();
     }
-    if (_log.shouldLog(Log.INFO))     _log.info("Selecting all not failing (strict? " + onlyNotFailing + " start="+ start+ ") found "+ selected.size()+ " new peers: "+ selected+ " all="+ _notFailingPeersList.size()+ " strict="+ _strictCapacityOrder.size());
+    if (_log.shouldLog(Log.INFO))     _log.info("Selecting all not failing (strict? " + onlyNotFailing + ") found "+ selected.size()+ " new peers: "+ selected+ " all="+ _notFailingPeersList.size()+ " strict="+ _strictCapacityOrder.size());
     matches.addAll(selected);
   }
   if (matches.size() < howMany) {
