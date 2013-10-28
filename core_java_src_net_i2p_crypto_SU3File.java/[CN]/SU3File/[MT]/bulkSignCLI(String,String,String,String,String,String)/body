@@ -1,0 +1,36 @@
+{
+  File d=new File(dir);
+  if (!d.isDirectory()) {
+    System.out.println("Directory does not exist: " + d);
+    return false;
+  }
+  File[] files=d.listFiles();
+  if (files == null || files.length == 0) {
+    System.out.println("No zip files found in " + d);
+    return false;
+  }
+  String keypw="";
+  try {
+    while (keypw.length() < 6) {
+      System.out.print("Enter password for key \"" + signerName + "\": ");
+      keypw=DataHelper.readLine(System.in).trim();
+      if (keypw.length() > 0 && keypw.length() < 6)       System.out.println("Key password must be at least 6 characters");
+    }
+  }
+ catch (  IOException ioe) {
+    System.out.println("Error asking for password");
+    ioe.printStackTrace();
+    return false;
+  }
+  int success=0;
+  for (  File in : files) {
+    String inputFile=in.getPath();
+    if (!inputFile.endsWith(".zip"))     continue;
+    String signedFile=inputFile.substring(0,inputFile.length() - 4) + ".su3";
+    boolean rv=signCLI(stype,ctype,inputFile,signedFile,privateKeyFile,version,signerName,keypw);
+    if (!rv)     return false;
+    success++;
+  }
+  if (success == 0)   System.out.println("No files processed in " + d);
+  return success > 0;
+}
