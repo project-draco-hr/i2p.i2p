@@ -2,42 +2,62 @@
 switch (instructions.getDeliveryMode()) {
 case DeliveryInstructions.DELIVERY_MODE_LOCAL:
     if (_log.shouldLog(Log.DEBUG))     _log.debug("local delivery instructions for clove: " + data.getClass().getName());
-  if (data instanceof GarlicMessage) {
-    _receiver.receive((GarlicMessage)data);
-  }
- else   if (data instanceof DatabaseStoreMessage) {
-    DatabaseStoreMessage dsm=(DatabaseStoreMessage)data;
-    try {
-      if (dsm.getEntry().getType() == DatabaseEntry.KEY_TYPE_LEASESET) {
+  int type=data.getType();
+if (type == GarlicMessage.MESSAGE_TYPE) {
+  _receiver.receive((GarlicMessage)data);
+}
+ else if (type == DatabaseStoreMessage.MESSAGE_TYPE) {
+  DatabaseStoreMessage dsm=(DatabaseStoreMessage)data;
+  try {
+    if (dsm.getEntry().getType() == DatabaseEntry.KEY_TYPE_LEASESET) {
+      if (dsm.getKey().equals(_client)) {
+        dsm.setReplyToken(0);
+        dsm.setReplyTunnel(null);
+        dsm.setReplyGateway(null);
+        _context.inNetMessagePool().add(dsm,null,null);
+      }
+ else {
         LeaseSet ls=(LeaseSet)dsm.getEntry();
         LeaseSet old=_context.netDb().store(dsm.getKey(),ls);
         if (old != null && old.getReceivedAsPublished())         ls.setReceivedAsPublished(true);
         if (_log.shouldLog(Log.INFO))         _log.info("Storing LS for: " + dsm.getKey() + " sent to: "+ _client);
       }
+    }
  else {
-        if (_client != null) {
-          _context.statManager().addRateData("tunnel.dropDangerousClientTunnelMessage",1,DatabaseStoreMessage.MESSAGE_TYPE);
-          _log.error("Dropped dangerous message down a tunnel for " + _client + ": "+ dsm,new Exception("cause"));
-          return;
-        }
-        _context.netDb().store(dsm.getKey(),(RouterInfo)dsm.getEntry());
+      if (_client != null) {
+        _context.statManager().addRateData("tunnel.dropDangerousClientTunnelMessage",1,DatabaseStoreMessage.MESSAGE_TYPE);
+        _log.error("Dropped dangerous message down a tunnel for " + _client + ": "+ dsm,new Exception("cause"));
+        return;
       }
-    }
- catch (    IllegalArgumentException iae) {
-      if (_log.shouldLog(Log.WARN))       _log.warn("Bad store attempt",iae);
+      _context.netDb().store(dsm.getKey(),(RouterInfo)dsm.getEntry());
     }
   }
- else   if (data instanceof DataMessage) {
-    _context.statManager().addRateData("tunnel.handleLoadClove",1,0);
-    data=null;
+ catch (  IllegalArgumentException iae) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Bad store attempt",iae);
   }
- else   if (_client != null && data.getType() != DeliveryStatusMessage.MESSAGE_TYPE) {
-    _context.statManager().addRateData("tunnel.dropDangerousClientTunnelMessage",1,data.getType());
-    _log.error("Dropped dangerous message down a tunnel for " + _client + ": "+ data,new Exception("cause"));
+}
+ else if (_client != null && type == DatabaseSearchReplyMessage.MESSAGE_TYPE && _client.equals(((DatabaseSearchReplyMessage)data).getSearchKey())) {
+  DatabaseSearchReplyMessage orig=(DatabaseSearchReplyMessage)data;
+  if (orig.getNumReplies() > 0) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Removing replies from a garlic DSRM down a tunnel for " + _client + ": "+ data);
+    DatabaseSearchReplyMessage newMsg=new DatabaseSearchReplyMessage(_context);
+    newMsg.setFromHash(orig.getFromHash());
+    newMsg.setSearchKey(orig.getSearchKey());
+    orig=newMsg;
   }
+  _context.inNetMessagePool().add(orig,null,null);
+}
+ else if (type == DataMessage.MESSAGE_TYPE) {
+  _context.statManager().addRateData("tunnel.handleLoadClove",1,0);
+  data=null;
+}
+ else if (_client != null && type != DeliveryStatusMessage.MESSAGE_TYPE) {
+  _context.statManager().addRateData("tunnel.dropDangerousClientTunnelMessage",1,data.getType());
+  _log.error("Dropped dangerous message down a tunnel for " + _client + ": "+ data,new Exception("cause"));
+}
  else {
-    _context.inNetMessagePool().add(data,null,null);
-  }
+  _context.inNetMessagePool().add(data,null,null);
+}
 return;
 case DeliveryInstructions.DELIVERY_MODE_DESTINATION:
 if (!(data instanceof DataMessage)) {
