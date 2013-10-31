@@ -1,6 +1,16 @@
 {
-  if (haveCapacity(33))   _expireTimeout=Math.min(_expireTimeout + 15 * 1000,EXPIRE_TIMEOUT);
- else   _expireTimeout=Math.max(_expireTimeout - 45 * 1000,MIN_EXPIRE_TIMEOUT);
+  if (haveCapacity(60)) {
+    long inc;
+    if (_lastLoopShort)     inc=EXPIRE_INCREMENT * SHORT_LOOP_TIME / LONG_LOOP_TIME;
+ else     inc=EXPIRE_INCREMENT;
+    _expireTimeout=Math.min(_expireTimeout + inc,EXPIRE_TIMEOUT);
+  }
+ else {
+    long dec;
+    if (_lastLoopShort)     dec=EXPIRE_DECREMENT * SHORT_LOOP_TIME / LONG_LOOP_TIME;
+ else     dec=EXPIRE_DECREMENT;
+    _expireTimeout=Math.max(_expireTimeout - dec,MIN_EXPIRE_TIMEOUT);
+  }
   long now=_context.clock().now();
   long shortInactivityCutoff=now - _expireTimeout;
   long longInactivityCutoff=now - EXPIRE_TIMEOUT;
@@ -10,6 +20,7 @@
   int currentListenPort=getListenPort(false);
   boolean pingOneOnly=shouldPingFirewall && getExternalPort(false) == currentListenPort;
   boolean shortLoop=shouldPingFirewall;
+  _lastLoopShort=shortLoop;
   _expireBuffer.clear();
   _runCount++;
   for (Iterator<PeerState> iter=_expirePeers.iterator(); iter.hasNext(); ) {
@@ -28,10 +39,13 @@
       if (pingOneOnly)       shouldPingFirewall=false;
     }
   }
-  for (  PeerState peer : _expireBuffer) {
-    sendDestroy(peer);
-    dropPeer(peer,false,"idle too long");
+  if (!_expireBuffer.isEmpty()) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Expiring " + _expireBuffer.size() + " peers");
+    for (    PeerState peer : _expireBuffer) {
+      sendDestroy(peer);
+      dropPeer(peer,false,"idle too long");
+    }
+    _expireBuffer.clear();
   }
-  _expireBuffer.clear();
   if (_alive)   schedule(shortLoop ? SHORT_LOOP_TIME : LONG_LOOP_TIME);
 }
