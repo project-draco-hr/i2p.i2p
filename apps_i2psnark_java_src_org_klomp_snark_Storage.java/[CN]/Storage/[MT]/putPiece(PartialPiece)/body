@@ -24,18 +24,25 @@ synchronized (bitfield) {
       int len=(start + need < raflen) ? need : (int)(raflen - start);
       TorrentFile tf=_torrentFiles.get(i);
 synchronized (tf) {
-        RandomAccessFile raf=tf.checkRAF();
-        if (tf.isSparse) {
-          if (tf.priority >= 0) {
-            if (_log.shouldLog(Log.INFO))             _log.info("Ballooning " + tf);
-            tf.balloonFile();
-          }
+        try {
+          RandomAccessFile raf=tf.checkRAF();
+          if (tf.isSparse) {
+            if (tf.priority >= 0) {
+              if (_log.shouldLog(Log.INFO))               _log.info("Ballooning " + tf);
+              tf.balloonFile();
+            }
  else {
-            tf.isSparse=false;
+              tf.isSparse=false;
+            }
           }
+          raf.seek(start);
+          pp.write(raf,written,len);
         }
-        raf.seek(start);
-        pp.write(raf,written,len);
+ catch (        IOException ioe) {
+          IOException ioe2=new IOException("Error writing " + tf.RAFfile.getAbsolutePath());
+          ioe2.initCause(ioe);
+          throw ioe2;
+        }
       }
       written+=len;
       if (need - len > 0) {

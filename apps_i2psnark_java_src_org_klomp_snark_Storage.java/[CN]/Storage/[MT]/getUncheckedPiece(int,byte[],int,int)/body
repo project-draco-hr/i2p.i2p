@@ -13,9 +13,16 @@
     int len=(start + need < raflen) ? need : (int)(raflen - start);
     TorrentFile tf=_torrentFiles.get(i);
 synchronized (tf) {
-      RandomAccessFile raf=tf.checkRAF();
-      raf.seek(start);
-      raf.readFully(bs,read,len);
+      try {
+        RandomAccessFile raf=tf.checkRAF();
+        raf.seek(start);
+        raf.readFully(bs,read,len);
+      }
+ catch (      IOException ioe) {
+        IOException ioe2=new IOException("Error reading " + tf.RAFfile.getAbsolutePath());
+        ioe2.initCause(ioe);
+        throw ioe2;
+      }
     }
     read+=len;
     if (need - len > 0) {
