@@ -14,14 +14,26 @@
   exclude.add(ctx.routerHash());
   HashSet matches=new HashSet(length);
   boolean exploreHighCap=shouldPickHighCap();
-  if (settings.isInbound() && ctx.router().isHidden())   ctx.profileOrganizer().selectFastPeers(length,exclude,matches);
- else   if (exploreHighCap)   ctx.profileOrganizer().selectHighCapacityPeers(length,exclude,matches);
- else   if (ctx.commSystem().haveHighOutboundCapacity())   ctx.profileOrganizer().selectNotFailingPeers(length,exclude,matches,false);
- else   ctx.profileOrganizer().selectActiveNotFailingPeers(length,exclude,matches);
-  if (l.shouldLog(Log.DEBUG))   l.debug("profileOrganizer.selectNotFailing(" + length + ") found "+ matches);
+  if (settings.isInbound() && ctx.router().isHidden()) {
+    if (l.shouldLog(Log.INFO))     l.info("EPS SFP " + length + (settings.isInbound() ? " IB" : " OB")+ " exclude "+ exclude.size());
+    ctx.profileOrganizer().selectFastPeers(length,exclude,matches);
+  }
+ else   if (exploreHighCap) {
+    if (l.shouldLog(Log.INFO))     l.info("EPS SHCP " + length + (settings.isInbound() ? " IB" : " OB")+ " exclude "+ exclude.size());
+    ctx.profileOrganizer().selectHighCapacityPeers(length,exclude,matches);
+  }
+ else   if (ctx.commSystem().haveHighOutboundCapacity()) {
+    if (l.shouldLog(Log.INFO))     l.info("EPS SNFP " + length + (settings.isInbound() ? " IB" : " OB")+ " exclude "+ exclude.size());
+    ctx.profileOrganizer().selectNotFailingPeers(length,exclude,matches,false);
+  }
+ else {
+    if (l.shouldLog(Log.INFO))     l.info("EPS SANFP " + length + (settings.isInbound() ? " IB" : " OB")+ " exclude "+ exclude.size());
+    ctx.profileOrganizer().selectActiveNotFailingPeers(length,exclude,matches);
+  }
   matches.remove(ctx.routerHash());
   ArrayList<Hash> rv=new ArrayList(matches);
   if (rv.size() > 1)   orderPeers(rv,settings.getRandomKey());
+  if (l.shouldLog(Log.DEBUG))   l.debug("EPS got " + rv.size() + ": "+ DataHelper.toString(rv));
   if (settings.isInbound())   rv.add(0,ctx.routerHash());
  else   rv.add(ctx.routerHash());
   return rv;
