@@ -1,5 +1,17 @@
 {
-  if (_wasUnreachableEntries.contains(peer))   return true;
+  long now=_context.clock().now();
+synchronized (_wasUnreachableEntries) {
+    Long when=_wasUnreachableEntries.get(peer);
+    if (when != null) {
+      if (when.longValue() + WAS_UNREACHABLE_PERIOD < now) {
+        _unreachableEntries.remove(peer);
+        return false;
+      }
+ else {
+        return true;
+      }
+    }
+  }
   RouterInfo ri=_context.netDb().lookupRouterInfoLocally(peer);
   if (ri == null)   return false;
   return null == ri.getTargetAddress(this.getStyle());
