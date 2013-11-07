@@ -1,19 +1,20 @@
 {
   Hash key=Hash.create(h);
   Destination rv=null;
+  I2PClient client=new I2PSimpleClient();
+  Properties opts=new Properties();
+  String s=ctx.getProperty(I2PClient.PROP_TCP_HOST);
+  if (s != null)   opts.put(I2PClient.PROP_TCP_HOST,s);
+  s=ctx.getProperty(I2PClient.PROP_TCP_PORT);
+  if (s != null)   opts.put(I2PClient.PROP_TCP_PORT,s);
+  I2PSession session=null;
   try {
-    I2PClient client=new I2PSimpleClient();
-    Properties opts=new Properties();
-    String s=ctx.getProperty(I2PClient.PROP_TCP_HOST);
-    if (s != null)     opts.put(I2PClient.PROP_TCP_HOST,s);
-    s=ctx.getProperty(I2PClient.PROP_TCP_PORT);
-    if (s != null)     opts.put(I2PClient.PROP_TCP_PORT,s);
-    I2PSession session=client.createSession(null,opts);
+    session=client.createSession(null,opts);
     session.connect();
     rv=session.lookupDest(key,DEFAULT_TIMEOUT);
-    session.destroySession();
   }
- catch (  I2PSessionException ise) {
+  finally {
+    if (session != null)     session.destroySession();
   }
   return rv;
 }
