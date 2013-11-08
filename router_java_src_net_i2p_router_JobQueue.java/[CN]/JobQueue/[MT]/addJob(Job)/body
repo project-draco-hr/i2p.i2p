@@ -1,8 +1,13 @@
 {
   if (job == null || !_alive)   return;
-  long numReady=0;
+  long numReady;
   boolean alreadyExists=false;
   boolean dropped=false;
+  long now=_context.clock().now();
+  long start=job.getTiming().getStartAfter();
+  if (start > now + 3 * 24 * 60* 60* 1000L) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Scheduling job far in the future: " + (new Date(start)) + ' '+ job);
+  }
 synchronized (_jobLock) {
     if (_readyJobs.contains(job))     alreadyExists=true;
     numReady=_readyJobs.size();
@@ -16,14 +21,14 @@ synchronized (_jobLock) {
     }
  else {
       if (!alreadyExists) {
-        if (job.getTiming().getStartAfter() <= _context.clock().now()) {
-          job.getTiming().setStartAfter(_context.clock().now());
+        if (start <= now) {
+          job.getTiming().setStartAfter(now);
           if (job instanceof JobImpl)           ((JobImpl)job).madeReady();
           _readyJobs.offer(job);
         }
  else {
           _timedJobs.add(job);
-          if (job.getTiming().getStartAfter() < _nextPumperRun)           _jobLock.notifyAll();
+          if (start < _nextPumperRun)           _jobLock.notifyAll();
         }
       }
     }
