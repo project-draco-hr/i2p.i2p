@@ -14,6 +14,8 @@
       try {
         long uploaded=coordinator.getUploaded();
         long downloaded=coordinator.getDownloaded();
+        long len=snark.getTotalLength();
+        if (len > 0 && downloaded > len)         downloaded=len;
         left=coordinator.getLeft();
         String event;
         if (!tr.started) {
@@ -35,7 +37,7 @@
         tr.started=true;
         tr.seenPeers=info.getPeerCount();
         if (snark.getTrackerSeenPeers() < tr.seenPeers)         snark.setTrackerSeenPeers(tr.seenPeers);
-        if (completed && tr.isPrimary && snark.isAutoStoppable()&& !snark.isChecking()&& info.getSeedCount() > 100 && coordinator.getPeerCount() <= 0 && _util.getContext().clock().now() > _startedOn + 2 * 60 * 60* 1000 && uploaded >= 2 * snark.getTotalLength()) {
+        if (completed && tr.isPrimary && snark.isAutoStoppable()&& !snark.isChecking()&& info.getSeedCount() > 100 && coordinator.getPeerCount() <= 0 && _util.getContext().clock().now() > _startedOn + 2 * 60 * 60* 1000 && snark.getTotalLength() > 0 && uploaded >= 2 * snark.getTotalLength()) {
           if (_log.shouldLog(Log.WARN))           _log.warn("Auto stopping " + snark.getBaseName());
           snark.setAutoStoppable(false);
           snark.stopTorrent();
