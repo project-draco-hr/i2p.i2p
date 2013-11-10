@@ -18,19 +18,20 @@ _log.debug("trying to connect to TCP port 0?  Dropping!");
 sendRequestReply(Reply.CONNECTION_REFUSED,InetAddress.getByName("127.0.0.1"),0,out);
 throw new SOCKSException("Invalid port number in request");
 }
-connHostName=new String("");
+StringBuilder builder=new StringBuilder();
 boolean alreadyWarned=false;
 for (int i=0; i < 4; ++i) {
 int octet=in.readByte() & 0xff;
-connHostName+=Integer.toString(octet);
+builder.append(Integer.toString(octet));
 if (i != 3) {
-connHostName+=".";
+builder.append(".");
 if (octet != 0 && !alreadyWarned) {
 _log.warn("IPV4 address type in request: " + connHostName + ". Is your client secure?");
 alreadyWarned=true;
 }
 }
 }
+connHostName=builder.toString();
 String mappedDomainName=getMappedDomainNameForIP(connHostName);
 if (mappedDomainName != null) {
 _log.debug("IPV4 address " + connHostName + " was mapped to domain name "+ mappedDomainName);

@@ -1,22 +1,51 @@
 {
+  String udn=dev.getUDN();
+  if (udn == null)   udn="???";
+  String name=dev.getFriendlyName();
+  if (name == null)   name="???";
 synchronized (lock) {
     if (isDisabled) {
-      if (_log.shouldLog(Log.WARN))       _log.warn("Plugin has been disabled previously, ignoring new device.");
+      if (_log.shouldLog(Log.WARN))       _log.warn("Plugin has been disabled previously, ignoring " + name + " UDN: "+ udn);
+      _otherUDNs.put(udn,name);
       return;
     }
   }
   if (!ROUTER_DEVICE.equals(dev.getDeviceType()) || !dev.isRootDevice()) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("UP&P non-IGD device found, ignoring : " + dev.getFriendlyName());
+    if (_log.shouldLog(Log.WARN))     _log.warn("UP&P non-IGD device found, ignoring " + name);
+synchronized (lock) {
+      _otherUDNs.put(udn,name);
+    }
     return;
   }
  else   if (isNATPresent()) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("UP&P ignoring additional IGD device found: " + dev.getFriendlyName() + " UDN: "+ dev.getUDN());
+    _log.logAlways(Log.WARN,"UP&P ignoring additional device " + name + " UDN: "+ udn);
+synchronized (lock) {
+      _otherUDNs.put(udn,name);
+    }
     return;
   }
-  if (_log.shouldLog(Log.WARN))   _log.warn("UP&P IGD found : " + dev.getFriendlyName() + " UDN: "+ dev.getUDN()+ " lease time: "+ dev.getLeaseTime());
-synchronized (lock) {
-    _router=dev;
+  boolean ignore=false;
+  String toIgnore=_context.getProperty(PROP_IGNORE);
+  if (toIgnore != null) {
+    String[] ignores=toIgnore.split("[,; \r\n\t]");
+    for (int i=0; i < ignores.length; i++) {
+      if (ignores[i].equals(udn)) {
+        ignore=true;
+        _log.logAlways(Log.WARN,"Ignoring by config: " + name + " UDN: "+ udn);
+        break;
+      }
+    }
   }
+synchronized (lock) {
+    if (ignore) {
+      _otherUDNs.put(udn,name);
+      return;
+    }
+ else {
+      _router=dev;
+    }
+  }
+  if (_log.shouldLog(Log.WARN))   _log.warn("UP&P IGD found : " + name + " UDN: "+ udn+ " lease time: "+ dev.getLeaseTime());
   discoverService();
 synchronized (lock) {
     if (_service == null) {
