@@ -1,0 +1,21 @@
+{
+  if (length <= 0 || length > MAX_FRAGMENT_SIZE) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Length is impossible (" + length + ") for messageId "+ _messageId);
+    return false;
+  }
+  if (offset + length > payload.length) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Length is impossible (" + length + "/"+ offset+ " out of "+ payload.length+ ") for messageId "+ _messageId);
+    return false;
+  }
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Receive message " + _messageId + " with "+ length+ " bytes (last? "+ isLast+ ") targetting "+ toRouter+ " / "+ toTunnel+ " offset="+ offset);
+  ByteArray ba=_cache.acquire();
+  System.arraycopy(payload,offset,ba.getData(),0,length);
+  ba.setValid(length);
+  ba.setOffset(0);
+  _fragments[0]=ba;
+  _lastReceived=_lastReceived || isLast;
+  _toRouter=toRouter;
+  _toTunnel=toTunnel;
+  if (_highFragmentNum < 0)   _highFragmentNum=0;
+  return true;
+}
