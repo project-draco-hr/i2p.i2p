@@ -3,10 +3,10 @@
   if (!shouldAccept)   return false;
   long now=_context.clock().now();
   if (_currentLookupPeriod + LOOKUP_THROTTLE_PERIOD > now) {
-    _currentLookupCount++;
-    if (_currentLookupCount >= LOOKUP_THROTTLE_MAX) {
-      _context.statManager().addRateData("router.throttleNetDbDoS",_currentLookupCount,0);
-      int rand=_context.random().nextInt(_currentLookupCount);
+    int cnt=_currentLookupCount.incrementAndGet();
+    if (cnt >= LOOKUP_THROTTLE_MAX) {
+      _context.statManager().addRateData("router.throttleNetDbDoS",cnt,0);
+      int rand=_context.random().nextInt(cnt);
       if (rand > LOOKUP_THROTTLE_MAX) {
         return false;
       }
@@ -20,7 +20,7 @@
   }
  else {
     _currentLookupPeriod=now;
-    _currentLookupCount=1;
+    _currentLookupCount.set(1);
     return true;
   }
 }

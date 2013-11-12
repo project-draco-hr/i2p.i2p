@@ -21,7 +21,7 @@
   }
   _out=getContext().messageRegistry().registerPending(_replySelector,_onReply,_onTimeout,_timeoutMs);
   int count=0;
-  for (int i=0; _lookupsRemaining < CONCURRENT_SEARCHES && i < floodfillPeers.size(); i++) {
+  for (int i=0; _lookupsRemaining.get() < CONCURRENT_SEARCHES && i < floodfillPeers.size(); i++) {
     Hash peer=floodfillPeers.get(i);
     if (peer.equals(getContext().routerHash()))     continue;
     DatabaseLookupMessage dlm=new DatabaseLookupMessage(getContext(),true);
@@ -42,7 +42,7 @@ synchronized (_unheardFrom) {
     if (_log.shouldLog(Log.INFO))     _log.info(getJobId() + ": Floodfill search for " + _key+ " to "+ peer);
     getContext().tunnelDispatcher().dispatchOutbound(dlm,outTunnel.getSendTunnelId(0),peer);
     count++;
-    _lookupsRemaining++;
+    _lookupsRemaining.incrementAndGet();
   }
   if (count <= 0) {
     if (_log.shouldLog(Log.INFO))     _log.info(getJobId() + ": Floodfill search for " + _key+ " had no peers to send to");
