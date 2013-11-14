@@ -8,32 +8,21 @@ if (type == GarlicMessage.MESSAGE_TYPE) {
 }
  else if (type == DatabaseStoreMessage.MESSAGE_TYPE) {
   DatabaseStoreMessage dsm=(DatabaseStoreMessage)data;
-  try {
-    if (dsm.getEntry().getType() == DatabaseEntry.KEY_TYPE_LEASESET) {
-      if (dsm.getKey().equals(_client)) {
-        dsm.setReplyToken(0);
-        dsm.setReplyTunnel(null);
-        dsm.setReplyGateway(null);
-        _context.inNetMessagePool().add(dsm,null,null);
-      }
- else {
-        LeaseSet ls=(LeaseSet)dsm.getEntry();
-        LeaseSet old=_context.netDb().store(dsm.getKey(),ls);
-        if (old != null && old.getReceivedAsPublished())         ls.setReceivedAsPublished(true);
-        if (_log.shouldLog(Log.INFO))         _log.info("Storing LS for: " + dsm.getKey() + " sent to: "+ _client);
-      }
-    }
- else {
-      if (_client != null) {
-        _context.statManager().addRateData("tunnel.dropDangerousClientTunnelMessage",1,DatabaseStoreMessage.MESSAGE_TYPE);
-        _log.error("Dropped dangerous message down a tunnel for " + _client + ": "+ dsm,new Exception("cause"));
-        return;
-      }
-      _context.netDb().store(dsm.getKey(),(RouterInfo)dsm.getEntry());
-    }
+  dsm.setReplyToken(0);
+  dsm.setReplyTunnel(null);
+  dsm.setReplyGateway(null);
+  if (dsm.getEntry().getType() == DatabaseEntry.KEY_TYPE_LEASESET) {
+    if (_log.shouldLog(Log.INFO))     _log.info("Storing garlic LS down tunnel for: " + dsm.getKey() + " sent to: "+ _client);
+    _context.inNetMessagePool().add(dsm,null,null);
   }
- catch (  IllegalArgumentException iae) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("Bad store attempt",iae);
+ else {
+    if (_client != null) {
+      _context.statManager().addRateData("tunnel.dropDangerousClientTunnelMessage",1,DatabaseStoreMessage.MESSAGE_TYPE);
+      _log.error("Dropped dangerous message down a tunnel for " + _client + ": "+ dsm,new Exception("cause"));
+      return;
+    }
+    if (_log.shouldLog(Log.INFO))     _log.info("Storing garlic RI down tunnel for: " + dsm.getKey() + " sent to: "+ _client);
+    _context.inNetMessagePool().add(dsm,null,null);
   }
 }
  else if (_client != null && type == DatabaseSearchReplyMessage.MESSAGE_TYPE && _client.equals(((DatabaseSearchReplyMessage)data).getSearchKey())) {
