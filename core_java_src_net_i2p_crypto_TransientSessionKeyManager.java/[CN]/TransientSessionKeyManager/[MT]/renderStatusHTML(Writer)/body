@@ -2,11 +2,11 @@
   StringBuilder buf=new StringBuilder(1024);
   buf.append("<h2>Inbound sessions</h2>" + "<table>");
   Set<TagSet> inbound=getInboundTagSets();
-  Map<SessionKey,Set<TagSet>> inboundSets=new HashMap(inbound.size());
+  Map<SessionKey,Set<TagSet>> inboundSets=new HashMap<SessionKey,Set<TagSet>>(inbound.size());
   for (  TagSet ts : inbound) {
     Set<TagSet> sets=inboundSets.get(ts.getAssociatedKey());
     if (sets == null) {
-      sets=new HashSet();
+      sets=new HashSet<TagSet>();
       inboundSets.put(ts.getAssociatedKey(),sets);
     }
     sets.add(ts);
@@ -15,7 +15,7 @@
   long now=_context.clock().now();
   for (  Map.Entry<SessionKey,Set<TagSet>> e : inboundSets.entrySet()) {
     SessionKey skey=e.getKey();
-    Set<TagSet> sets=new TreeSet(new TagSetComparator());
+    Set<TagSet> sets=new TreeSet<TagSet>(new TagSetComparator());
     sets.addAll(e.getValue());
     buf.append("<tr><td><b>Session key</b>: ").append(skey.toBase64()).append("</td>" + "<td><b># Sets:</b> ").append(sets.size()).append("</td></tr>" + "<tr><td colspan=\"2\"><ul>");
     for (Iterator<TagSet> siter=sets.iterator(); siter.hasNext(); ) {
@@ -38,7 +38,7 @@
   Set<OutboundSession> outbound=getOutboundSessions();
   for (Iterator<OutboundSession> iter=outbound.iterator(); iter.hasNext(); ) {
     OutboundSession sess=iter.next();
-    Set<TagSet> sets=new TreeSet(new TagSetComparator());
+    Set<TagSet> sets=new TreeSet<TagSet>(new TagSetComparator());
     sets.addAll(sess.getTagSets());
     buf.append("<tr><td><b>Target public key:</b> ").append(toString(sess.getTarget())).append("<br>" + "<b>Established:</b> ").append(DataHelper.formatDuration2(now - sess.getEstablishedDate())).append(" ago<br>" + "<b>Ack Received?</b> ").append(sess.getAckReceived()).append("<br>" + "<b>Last Used:</b> ").append(DataHelper.formatDuration2(now - sess.getLastUsedDate())).append(" ago<br>" + "<b>Session key:</b> ").append(sess.getCurrentKey().toBase64()).append("</td>" + "<td><b># Sets:</b> ").append(sess.getTagSets().size()).append("</td></tr>" + "<tr><td colspan=\"2\"><ul>");
     for (Iterator<TagSet> siter=sets.iterator(); siter.hasNext(); ) {
