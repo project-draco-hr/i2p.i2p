@@ -14,7 +14,13 @@
   dlm.setMessageExpiration(getContext().clock().now() + SINGLE_SEARCH_MSG_TIME);
   dlm.setReplyTunnel(replyTunnel.getReceiveTunnelId(0));
   dlm.setSearchKey(_key);
-  if (_log.shouldLog(Log.INFO))   _log.info(getJobId() + ": Iterative search for " + _key+ " to "+ peer);
+  if (_log.shouldLog(Log.INFO)) {
+    int tries;
+synchronized (this) {
+      tries=_unheardFrom.size() + _failedPeers.size();
+    }
+    _log.info(getJobId() + ": ISJ try " + tries+ " for "+ _key+ " to "+ peer);
+  }
   long now=getContext().clock().now();
   _sentTime.put(peer,Long.valueOf(now));
   I2NPMessage outMsg=null;
@@ -27,6 +33,10 @@
         dlm.setReplySession(sess.key,sess.tag);
       }
       outMsg=MessageWrapper.wrap(getContext(),dlm,ri);
+      if (_dead) {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug(getJobId() + ": aborting send, finished while wrapping msg to " + peer);
+        return;
+      }
       if (_log.shouldLog(Log.DEBUG))       _log.debug(getJobId() + ": Encrypted DLM for " + _key+ " to "+ peer);
     }
   }
