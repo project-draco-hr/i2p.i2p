@@ -1,80 +1,10 @@
 {
-  while (!stop) {
-    if (socketChanged) {
-      socketChanged=false;
-    }
-    while ((serverSocket == null) && (!stop)) {
-      serverSocket=_util.getServerSocket();
-      if (serverSocket == null)       try {
-        Thread.sleep(10 * 1000);
-      }
- catch (      InterruptedException ie) {
-      }
-    }
-    if (stop)     break;
-    try {
-      I2PSocket socket=serverSocket.accept();
-      if (socket == null) {
-        if (socketChanged) {
-          continue;
-        }
- else {
-          I2PServerSocket ss=_util.getServerSocket();
-          if (ss != serverSocket) {
-            serverSocket=ss;
-            socketChanged=true;
-          }
-        }
-      }
- else {
-        if (socket.getPeerDestination().equals(_util.getMyDestination())) {
-          _log.error("Incoming connection from myself");
-          try {
-            socket.close();
-          }
- catch (          IOException ioe) {
-          }
-          continue;
-        }
-        Hash h=socket.getPeerDestination().calculateHash();
-        if (socket.getLocalPort() == 80) {
-          _badCounter.increment(h);
-          if (_log.shouldLog(Log.WARN))           _log.error("Dropping incoming HTTP from " + h);
-          try {
-            socket.close();
-          }
- catch (          IOException ioe) {
-          }
-          continue;
-        }
-        int bad=_badCounter.count(h);
-        if (bad >= MAX_BAD) {
-          if (_log.shouldLog(Log.WARN))           _log.warn("Rejecting connection from " + h + " after "+ bad+ " failures, max is "+ MAX_BAD);
-          try {
-            socket.close();
-          }
- catch (          IOException ioe) {
-          }
-          continue;
-        }
-        Thread t=new I2PAppThread(new Handler(socket),"I2PSnark incoming connection");
-        t.start();
-      }
-    }
- catch (    I2PException ioe) {
-      if (!socketChanged) {
-        _log.error("Error while accepting",ioe);
-        stop=true;
-      }
-    }
-catch (    IOException ioe) {
-      _log.error("Error while accepting",ioe);
-      stop=true;
-    }
-  }
   try {
-    if (serverSocket != null)     serverSocket.close();
+    run2();
   }
- catch (  I2PException ignored) {
+  finally {
+synchronized (this) {
+      thread=null;
+    }
   }
 }

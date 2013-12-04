@@ -1,0 +1,81 @@
+{
+  while (!stop) {
+    I2PServerSocket serverSocket=_util.getServerSocket();
+    while ((serverSocket == null) && (!stop)) {
+      if (!(_util.isConnecting() || _util.connected())) {
+        stop=true;
+        break;
+      }
+      try {
+        Thread.sleep(10 * 1000);
+      }
+ catch (      InterruptedException ie) {
+      }
+      serverSocket=_util.getServerSocket();
+    }
+    if (stop)     break;
+    try {
+      I2PSocket socket=serverSocket.accept();
+      if (socket == null) {
+        continue;
+      }
+ else {
+        if (socket.getPeerDestination().equals(_util.getMyDestination())) {
+          _log.error("Incoming connection from myself");
+          try {
+            socket.close();
+          }
+ catch (          IOException ioe) {
+          }
+          continue;
+        }
+        Hash h=socket.getPeerDestination().calculateHash();
+        if (socket.getLocalPort() == 80) {
+          _badCounter.increment(h);
+          if (_log.shouldLog(Log.WARN))           _log.error("Dropping incoming HTTP from " + h);
+          try {
+            socket.close();
+          }
+ catch (          IOException ioe) {
+          }
+          continue;
+        }
+        int bad=_badCounter.count(h);
+        if (bad >= MAX_BAD) {
+          if (_log.shouldLog(Log.WARN))           _log.warn("Rejecting connection from " + h + " after "+ bad+ " failures, max is "+ MAX_BAD);
+          try {
+            socket.close();
+          }
+ catch (          IOException ioe) {
+          }
+          continue;
+        }
+        Thread t=new I2PAppThread(new Handler(socket),"I2PSnark incoming connection");
+        t.start();
+      }
+    }
+ catch (    I2PException ioe) {
+      int level=stop ? Log.WARN : Log.ERROR;
+      if (_log.shouldLog(level))       _log.log(level,"Error while accepting",ioe);
+synchronized (this) {
+        if (!stop) {
+          locked_halt();
+          thread=null;
+          stop=true;
+        }
+      }
+    }
+catch (    IOException ioe) {
+      int level=stop ? Log.WARN : Log.ERROR;
+      if (_log.shouldLog(level))       _log.log(level,"Error while accepting",ioe);
+synchronized (this) {
+        if (!stop) {
+          locked_halt();
+          thread=null;
+          stop=true;
+        }
+      }
+    }
+  }
+  if (_log.shouldLog(Log.WARN))   _log.warn("ConnectionAcceptor closed");
+}
