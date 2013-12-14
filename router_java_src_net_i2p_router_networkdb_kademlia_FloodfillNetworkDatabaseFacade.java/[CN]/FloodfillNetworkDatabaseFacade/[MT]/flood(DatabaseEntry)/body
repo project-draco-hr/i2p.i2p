@@ -3,6 +3,19 @@
   Hash rkey=_context.routingKeyGenerator().getRoutingKey(key);
   FloodfillPeerSelector sel=(FloodfillPeerSelector)getPeerSelector();
   List<Hash> peers=sel.selectFloodfillParticipants(rkey,MAX_TO_FLOOD,getKBuckets());
+  long until=_context.routingKeyGenerator().getTimeTillMidnight();
+  if (until < NEXT_RKEY_LS_ADVANCE_TIME || (ds.getType() == DatabaseEntry.KEY_TYPE_ROUTERINFO && until < NEXT_RKEY_RI_ADVANCE_TIME)) {
+    Hash nkey=_context.routingKeyGenerator().getNextRoutingKey(key);
+    List<Hash> nextPeers=sel.selectFloodfillParticipants(nkey,NEXT_FLOOD_QTY,getKBuckets());
+    int i=0;
+    for (    Hash h : nextPeers) {
+      if (!peers.contains(h)) {
+        peers.add(h);
+        i++;
+      }
+    }
+    if (i > 0 && _log.shouldLog(Log.INFO))     _log.info("Flooding the entry for " + key + " to "+ i+ " more, just before midnight");
+  }
   int flooded=0;
   for (int i=0; i < peers.size(); i++) {
     Hash peer=peers.get(i);
