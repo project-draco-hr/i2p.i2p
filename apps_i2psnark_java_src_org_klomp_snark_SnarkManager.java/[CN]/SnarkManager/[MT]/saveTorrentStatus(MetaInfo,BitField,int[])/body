@@ -1,40 +1,5 @@
 {
-  byte[] ih=metainfo.getInfoHash();
-  String infohash=Base64.encode(ih);
-  infohash=infohash.replace('=','$');
-  String now="" + System.currentTimeMillis();
-  String bfs;
-  if (bitfield.complete()) {
-    bfs=".";
+synchronized (_configLock) {
+    locked_saveTorrentStatus(metainfo,bitfield,priorities);
   }
- else {
-    byte[] bf=bitfield.getFieldBytes();
-    bfs=Base64.encode(bf);
-  }
-  _config.setProperty(PROP_META_PREFIX + infohash + PROP_META_BITFIELD_SUFFIX,now + "," + bfs);
-  String prop=PROP_META_PREFIX + infohash + PROP_META_PRIORITY_SUFFIX;
-  if (priorities != null) {
-    boolean nonzero=false;
-    for (int i=0; i < priorities.length; i++) {
-      if (priorities[i] != 0) {
-        nonzero=true;
-        break;
-      }
-    }
-    if (nonzero) {
-      StringBuilder buf=new StringBuilder(2 * priorities.length);
-      for (int i=0; i < priorities.length; i++) {
-        if (priorities[i] != 0)         buf.append(Integer.toString(priorities[i]));
-        if (i != priorities.length - 1)         buf.append(',');
-      }
-      _config.setProperty(prop,buf.toString());
-    }
- else {
-      _config.remove(prop);
-    }
-  }
- else {
-    _config.remove(prop);
-  }
-  saveConfig();
 }

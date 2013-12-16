@@ -1,0 +1,46 @@
+{
+  byte[] ih=metainfo.getInfoHash();
+  String bfs;
+  if (bitfield.complete()) {
+    bfs=".";
+  }
+ else {
+    byte[] bf=bitfield.getFieldBytes();
+    bfs=Base64.encode(bf);
+  }
+  Properties config=getConfig(ih);
+  config.setProperty(PROP_META_STAMP,Long.toString(System.currentTimeMillis()));
+  config.setProperty(PROP_META_BITFIELD,bfs);
+  if (priorities != null) {
+    boolean nonzero=false;
+    for (int i=0; i < priorities.length; i++) {
+      if (priorities[i] != 0) {
+        nonzero=true;
+        break;
+      }
+    }
+    if (nonzero) {
+      StringBuilder buf=new StringBuilder(2 * priorities.length);
+      for (int i=0; i < priorities.length; i++) {
+        if (priorities[i] != 0)         buf.append(Integer.toString(priorities[i]));
+        if (i != priorities.length - 1)         buf.append(',');
+      }
+      config.setProperty(PROP_META_PRIORITY,buf.toString());
+    }
+ else {
+      config.remove(PROP_META_PRIORITY);
+    }
+  }
+ else {
+    config.remove(PROP_META_PRIORITY);
+  }
+  File conf=configFile(_configDir,ih);
+  File subdir=conf.getParentFile();
+  if (!subdir.exists())   subdir.mkdirs();
+  try {
+    DataHelper.storeProps(config,conf);
+  }
+ catch (  IOException ioe) {
+    _log.error("Unable to save the config to " + conf);
+  }
+}
