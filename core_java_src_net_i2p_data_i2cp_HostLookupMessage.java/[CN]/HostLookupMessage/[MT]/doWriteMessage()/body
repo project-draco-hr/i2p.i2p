@@ -1,0 +1,30 @@
+{
+  int len;
+  if (_lookupType == LOOKUP_HASH) {
+    if (_hash == null)     throw new I2CPMessageException("Unable to write out the message as there is not enough data");
+    len=9 + Hash.HASH_LENGTH;
+  }
+ else   if (_lookupType == LOOKUP_HOST) {
+    if (_host == null)     throw new I2CPMessageException("Unable to write out the message as there is not enough data");
+    len=10 + _host.length();
+  }
+ else {
+    throw new I2CPMessageException("bad type");
+  }
+  ByteArrayOutputStream os=new ByteArrayOutputStream(len);
+  try {
+    DataHelper.writeLong(os,4,_reqID);
+    DataHelper.writeLong(os,4,_timeout);
+    DataHelper.writeLong(os,1,_lookupType);
+    if (_lookupType == LOOKUP_HASH) {
+      _hash.writeBytes(os);
+    }
+ else {
+      DataHelper.writeString(os,_host);
+    }
+  }
+ catch (  DataFormatException dfe) {
+    throw new I2CPMessageException("bad data",dfe);
+  }
+  return os.toByteArray();
+}

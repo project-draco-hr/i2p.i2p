@@ -1,6 +1,15 @@
 {
   if (_runner.isDead())   return;
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Message received: \n" + message);
+  int type=message.getType();
+  if (!_authorized) {
+    boolean strict=_context.getBooleanProperty(PROP_AUTH_STRICT);
+    if ((strict && type != GetDateMessage.MESSAGE_TYPE) || (type != CreateSessionMessage.MESSAGE_TYPE && type != GetDateMessage.MESSAGE_TYPE && type != DestLookupMessage.MESSAGE_TYPE && type != GetBandwidthLimitsMessage.MESSAGE_TYPE)) {
+      _log.error("Received message type " + type + " without required authentication");
+      _runner.disconnectClient("Authorization required");
+      return;
+    }
+  }
 switch (message.getType()) {
 case GetDateMessage.MESSAGE_TYPE:
     handleGetDate((GetDateMessage)message);
@@ -31,6 +40,9 @@ handleDestroySession((DestroySessionMessage)message);
 break;
 case DestLookupMessage.MESSAGE_TYPE:
 handleDestLookup((DestLookupMessage)message);
+break;
+case HostLookupMessage.MESSAGE_TYPE:
+handleHostLookup((HostLookupMessage)message);
 break;
 case ReconfigureSessionMessage.MESSAGE_TYPE:
 handleReconfigureSession((ReconfigureSessionMessage)message);

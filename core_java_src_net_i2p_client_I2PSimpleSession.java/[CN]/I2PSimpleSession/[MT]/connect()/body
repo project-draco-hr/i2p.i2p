@@ -8,6 +8,7 @@ synchronized (_stateLock) {
         if (mgr == null)         throw new I2PSessionException("Router is not ready for connections");
         _queue=mgr.connect();
         _reader=new QueuedI2CPMessageReader(_queue,this);
+        _reader.startReading();
       }
  else {
         if (Boolean.parseBoolean(getOptions().getProperty(PROP_ENABLE_SSL))) {
@@ -28,14 +29,40 @@ synchronized (_stateLock) {
         out.write(I2PClient.PROTOCOL_BYTE);
         out.flush();
         _writer=new ClientWriterRunner(out,this);
+        _writer.startWriting();
         InputStream in=new BufferedInputStream(_socket.getInputStream(),BUF_SIZE);
         _reader=new I2CPMessageReader(in,this);
+        _reader.startReading();
       }
     }
-    _reader.startReading();
+    if (!_context.isRouterContext()) {
+      Properties opts=getOptions();
+      if ((!opts.containsKey(PROP_USER)) && (!opts.containsKey(PROP_PW))) {
+        String configUser=_context.getProperty(PROP_USER);
+        String configPW=_context.getProperty(PROP_PW);
+        if (configUser != null && configPW != null) {
+          opts.setProperty(PROP_USER,configUser);
+          opts.setProperty(PROP_PW,configPW);
+        }
+      }
+      if (opts.containsKey(PROP_USER) && opts.containsKey(PROP_PW)) {
+        Properties auth=new OrderedProperties();
+        auth.setProperty(PROP_USER,opts.getProperty(PROP_USER));
+        auth.setProperty(PROP_PW,opts.getProperty(PROP_PW));
+        sendMessage(new GetDateMessage(CoreVersion.VERSION,auth));
+      }
+ else {
+        sendMessage(new GetDateMessage(CoreVersion.VERSION));
+      }
+      waitForDate();
+    }
     success=true;
+    if (_log.shouldLog(Log.INFO))     _log.info(getPrefix() + " simple session connected");
   }
- catch (  UnknownHostException uhe) {
+ catch (  InterruptedException ie) {
+    throw new I2PSessionException("Interrupted",ie);
+  }
+catch (  UnknownHostException uhe) {
     throw new I2PSessionException(getPrefix() + "Cannot connect to the router on " + _hostname+ ':'+ _portNum,uhe);
   }
 catch (  IOException ioe) {

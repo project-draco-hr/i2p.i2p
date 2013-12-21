@@ -1,0 +1,27 @@
+{
+  if (_authorized)   return true;
+  if (_enforceAuth && _context.getBooleanProperty(PROP_AUTH)) {
+    String user=null;
+    String pw=null;
+    if (props != null) {
+      user=props.getProperty("i2cp.username");
+      pw=props.getProperty("i2cp.password");
+    }
+    if (user == null || user.length() == 0 || pw == null || pw.length() == 0) {
+      _log.error("I2CP auth failed");
+      _runner.disconnectClient("Authorization required, specify i2cp.username and i2cp.password in options");
+      _authorized=false;
+      return false;
+    }
+    PasswordManager mgr=new PasswordManager(_context);
+    if (!mgr.checkHash(PROP_AUTH,user,pw)) {
+      _log.error("I2CP auth failed user: " + user);
+      _runner.disconnectClient("Authorization failed, user = " + user);
+      _authorized=false;
+      return false;
+    }
+    if (_log.shouldLog(Log.INFO))     _log.info("I2CP auth success user: " + user);
+  }
+  _authorized=true;
+  return true;
+}

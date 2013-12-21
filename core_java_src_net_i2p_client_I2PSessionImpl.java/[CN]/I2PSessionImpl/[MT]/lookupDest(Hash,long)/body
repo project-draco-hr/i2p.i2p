@@ -3,11 +3,30 @@ synchronized (_lookupCache) {
     Destination rv=_lookupCache.get(h);
     if (rv != null)     return rv;
   }
-  if (isClosed())   return null;
-  LookupWaiter waiter=new LookupWaiter(h);
+  if (isClosed()) {
+    if (_log.shouldLog(Log.INFO))     _log.info("Session closed, cannot lookup " + h);
+    return null;
+  }
+  LookupWaiter waiter;
+  long nonce;
+  if (_routerSupportsHostLookup) {
+    nonce=_lookupID.incrementAndGet() & 0x7fffffff;
+    waiter=new LookupWaiter(h,nonce);
+  }
+ else {
+    nonce=0;
+    waiter=new LookupWaiter(h);
+  }
   _pendingLookups.offer(waiter);
   try {
-    sendMessage(new DestLookupMessage(h));
+    if (_routerSupportsHostLookup) {
+      if (_log.shouldLog(Log.INFO))       _log.info("Sending HostLookup for " + h);
+      sendMessage(new HostLookupMessage(h,nonce,maxWait));
+    }
+ else {
+      if (_log.shouldLog(Log.INFO))       _log.info("Sending DestLookup for " + h);
+      sendMessage(new DestLookupMessage(h));
+    }
     try {
 synchronized (waiter) {
         waiter.wait(maxWait);
