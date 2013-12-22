@@ -109,35 +109,29 @@
  else               _manager.addMessage(_("Data file could not be deleted: {0}",f.getAbsolutePath()));
               break;
             }
-            for (int i=0; i < files.size(); i++) {
-              File df=Storage.getFileFromNames(f,files.get(i));
+            Storage storage=snark.getStorage();
+            if (storage == null)             break;
+            for (            File df : storage.getFiles()) {
               if (df.delete()) {
               }
  else {
                 _manager.addMessage(_("Data file could not be deleted: {0}",df.getAbsolutePath()));
               }
             }
-            Set<File> dirs=new TreeSet<File>(Collections.reverseOrder());
-            for (            List<String> list : files) {
-              for (int i=1; i < list.size(); i++) {
-                dirs.add(Storage.getFileFromNames(f,list.subList(0,i)));
-              }
-            }
+            Set<File> dirs=storage.getDirectories();
+            if (_log.shouldLog(Log.INFO))             _log.info("Dirs to delete: " + DataHelper.toString(dirs));
+            boolean ok=false;
             for (            File df : dirs) {
               if (df.delete()) {
+                ok=true;
               }
  else {
+                ok=false;
                 _manager.addMessage(_("Directory could not be deleted: {0}",df.getAbsolutePath()));
                 if (_log.shouldLog(Log.WARN))                 _log.warn("Could not delete dir " + df);
               }
             }
-            if (f.delete()) {
-              _manager.addMessage(_("Directory deleted: {0}",f.getAbsolutePath()));
-            }
- else {
-              _manager.addMessage(_("Directory could not be deleted: {0}",f.getAbsolutePath()));
-              if (_log.shouldLog(Log.WARN))               _log.warn("Could not delete dir " + f);
-            }
+            if (ok)             _manager.addMessage(_("Directory deleted: {0}",storage.getBase()));
             break;
           }
         }

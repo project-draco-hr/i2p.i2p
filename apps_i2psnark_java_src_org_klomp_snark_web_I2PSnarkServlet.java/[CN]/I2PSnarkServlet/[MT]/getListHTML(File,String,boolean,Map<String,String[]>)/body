@@ -129,6 +129,7 @@
     boolean complete=false;
     String status="";
     long length=item.length();
+    int priority=0;
     if (item.isDirectory()) {
       complete=true;
     }
@@ -139,27 +140,21 @@
       }
  else {
         Storage storage=snark.getStorage();
-        try {
-          File f=item;
-          long remaining=storage.remaining(f.getCanonicalPath());
-          if (remaining < 0) {
-            complete=true;
-            status=toImg("cancel") + ' ' + _("File not found in torrent?");
-          }
- else           if (remaining == 0 || length <= 0) {
-            complete=true;
-            status=toImg("tick") + ' ' + _("Complete");
-          }
- else {
-            int priority=storage.getPriority(f.getCanonicalPath());
-            if (priority < 0)             status=toImg("cancel");
- else             if (priority == 0)             status=toImg("clock");
- else             status=toImg("clock_red");
-            status+=" " + (100 * (length - remaining) / length) + "% "+ _("complete")+ " ("+ DataHelper.formatSize2(remaining)+ "B "+ _("remaining")+ ")";
-          }
+        long remaining=storage.remaining(item);
+        if (remaining < 0) {
+          complete=true;
+          status=toImg("cancel") + ' ' + _("File not found in torrent?");
         }
- catch (        IOException ioe) {
-          status="Not a file? " + ioe;
+ else         if (remaining == 0 || length <= 0) {
+          complete=true;
+          status=toImg("tick") + ' ' + _("Complete");
+        }
+ else {
+          priority=storage.getPriority(item);
+          if (priority < 0)           status=toImg("cancel");
+ else           if (priority == 0)           status=toImg("clock");
+ else           status=toImg("clock_red");
+          status+=" " + (100 * (length - remaining) / length) + "% "+ _("complete")+ " ("+ DataHelper.formatSize2(remaining)+ "B "+ _("remaining")+ ")";
         }
       }
     }
@@ -191,17 +186,15 @@
     buf.append("</TD>");
     if (showPriority) {
       buf.append("<td class=\"priority\">");
-      File f=item;
       if ((!complete) && (!item.isDirectory())) {
-        int pri=snark.getStorage().getPriority(f.getCanonicalPath());
-        buf.append("<input type=\"radio\" value=\"5\" name=\"pri.").append(f.getCanonicalPath()).append("\" ");
-        if (pri > 0)         buf.append("checked=\"true\"");
+        buf.append("<input type=\"radio\" value=\"5\" name=\"pri.").append(item).append("\" ");
+        if (priority > 0)         buf.append("checked=\"true\"");
         buf.append('>').append(_("High"));
-        buf.append("<input type=\"radio\" value=\"0\" name=\"pri.").append(f.getCanonicalPath()).append("\" ");
-        if (pri == 0)         buf.append("checked=\"true\"");
+        buf.append("<input type=\"radio\" value=\"0\" name=\"pri.").append(item).append("\" ");
+        if (priority == 0)         buf.append("checked=\"true\"");
         buf.append('>').append(_("Normal"));
-        buf.append("<input type=\"radio\" value=\"-9\" name=\"pri.").append(f.getCanonicalPath()).append("\" ");
-        if (pri < 0)         buf.append("checked=\"true\"");
+        buf.append("<input type=\"radio\" value=\"-9\" name=\"pri.").append(item).append("\" ");
+        if (priority < 0)         buf.append("checked=\"true\"");
         buf.append('>').append(_("Skip"));
         showSaveButton=true;
       }
