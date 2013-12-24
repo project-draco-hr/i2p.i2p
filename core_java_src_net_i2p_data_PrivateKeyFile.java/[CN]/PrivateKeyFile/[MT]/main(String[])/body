@@ -1,5 +1,5 @@
 {
-  if (args.length == 0) {
+  if (args.length == 0 || (args[0].startsWith("-") && args.length == 1) || (args[0].equals("-t") && args.length != 3)) {
     System.err.println("Usage: PrivateKeyFile filename (generates if nonexistent, then prints)");
     System.err.println("       PrivateKeyFile -h filename (generates if nonexistent, adds hashcash cert)");
     System.err.println("       PrivateKeyFile -h effort filename (specify HashCash effort instead of default " + HASH_EFFORT + ")");
@@ -7,12 +7,13 @@
     System.err.println("       PrivateKeyFile -s filename signwithdestfile (generates if nonexistent, adds cert signed by 2nd dest)");
     System.err.println("       PrivateKeyFile -u filename (changes to unknown cert)");
     System.err.println("       PrivateKeyFile -x filename (changes to hidden cert)");
+    System.err.println("       PrivateKeyFile -t sigtype filename (changes to KeyCertificate of the given sig type");
     return;
   }
   I2PClient client=I2PClientFactory.createClient();
   int filearg=0;
   if (args.length > 1) {
-    if (args.length >= 2 && args[0].equals("-h"))     filearg=args.length - 1;
+    if (args.length >= 2 && (args[0].equals("-h") || args[0].equals("-t")))     filearg=args.length - 1;
  else     filearg=1;
   }
   try {
@@ -48,9 +49,15 @@
       pkf.setSignedCert(pkf2);
       System.out.println("New destination with signed cert is:");
     }
+ else     if (args.length == 3 && args[0].equals("-t")) {
+      SigType type=SigType.parseSigType(args[1]);
+      if (type == null)       throw new IllegalArgumentException("Signature type " + args[1] + " is not supported");
+      pkf.setKeyCert(type);
+      System.out.println("New destination with key cert is:");
+    }
     System.out.println(pkf);
     pkf.write();
-    verifySignature(d);
+    verifySignature(pkf.getDestination());
   }
  catch (  Exception e) {
     e.printStackTrace();

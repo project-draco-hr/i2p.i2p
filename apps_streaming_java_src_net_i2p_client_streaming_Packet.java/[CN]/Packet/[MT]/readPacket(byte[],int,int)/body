@@ -58,11 +58,31 @@ catch (    DataFormatException dfe) {
     cur+=2;
   }
   if (isFlagSet(FLAG_SIGNATURE_INCLUDED)) {
-    Signature optionSignature=new Signature();
-    byte buf[]=new byte[Signature.SIGNATURE_BYTES];
-    System.arraycopy(buffer,cur,buf,0,Signature.SIGNATURE_BYTES);
+    Signature optionSignature;
+    Destination from=getOptionalFrom();
+    if (from != null) {
+      optionSignature=new Signature(from.getSigningPublicKey().getType());
+    }
+ else {
+      int siglen=payloadBegin - cur;
+      SigType type=null;
+      for (      SigType t : SigType.values()) {
+        if (t.getSigLen() == siglen) {
+          type=t;
+          break;
+        }
+      }
+      if (type == null) {
+        if (siglen < Signature.SIGNATURE_BYTES)         throw new IllegalArgumentException("unknown sig type len=" + siglen);
+        type=SigType.DSA_SHA1;
+        siglen=Signature.SIGNATURE_BYTES;
+      }
+      optionSignature=new Signature(type);
+    }
+    byte buf[]=new byte[optionSignature.length()];
+    System.arraycopy(buffer,cur,buf,0,buf.length);
     optionSignature.setData(buf);
     setOptionalSignature(optionSignature);
-    cur+=Signature.SIGNATURE_BYTES;
+    cur+=buf.length;
   }
 }

@@ -1,14 +1,40 @@
 {
   Destination d=new Destination();
-  d.setCertificate(cert);
   Object keypair[]=KeyGenerator.getInstance().generatePKIKeypair();
   PublicKey publicKey=(PublicKey)keypair[0];
   PrivateKey privateKey=(PrivateKey)keypair[1];
-  Object signingKeys[]=KeyGenerator.getInstance().generateSigningKeypair();
+  SimpleDataStructure signingKeys[];
+  if (cert.getCertificateType() == Certificate.CERTIFICATE_TYPE_KEY) {
+    KeyCertificate kcert=cert.toKeyCertificate();
+    SigType type=kcert.getSigType();
+    try {
+      signingKeys=KeyGenerator.getInstance().generateSigningKeys(type);
+    }
+ catch (    GeneralSecurityException gse) {
+      throw new I2PException("keygen fail",gse);
+    }
+  }
+ else {
+    signingKeys=KeyGenerator.getInstance().generateSigningKeys();
+  }
   SigningPublicKey signingPubKey=(SigningPublicKey)signingKeys[0];
   SigningPrivateKey signingPrivKey=(SigningPrivateKey)signingKeys[1];
   d.setPublicKey(publicKey);
   d.setSigningPublicKey(signingPubKey);
+  if (cert.getCertificateType() == Certificate.CERTIFICATE_TYPE_KEY) {
+    KeyCertificate kcert=cert.toKeyCertificate();
+    SigType type=kcert.getSigType();
+    int len=type.getPubkeyLen();
+    if (len < 128) {
+      byte[] pad=new byte[128 - len];
+      RandomSource.getInstance().nextBytes(pad);
+      d.setPadding(pad);
+    }
+ else     if (len > 128) {
+      System.arraycopy(signingPubKey.getData(),128,kcert.getPayload(),KeyCertificate.HEADER_LENGTH,len - 128);
+    }
+  }
+  d.setCertificate(cert);
   d.writeBytes(destKeyStream);
   privateKey.writeBytes(destKeyStream);
   signingPrivKey.writeBytes(destKeyStream);
