@@ -17,7 +17,14 @@
   FileOutputStream fos=null;
   try {
     fos=new SecureFileOutputStream(keyFile);
-    Destination dest=client.createDestination(fos);
+    SigType stype=I2PClient.DEFAULT_SIGTYPE;
+    String st=_config.getProperty("option." + I2PClient.PROP_SIGTYPE);
+    if (st != null) {
+      SigType type=SigType.parseSigType(st);
+      if (type != null)       stype=type;
+ else       log("Unsupported sig type " + st);
+    }
+    Destination dest=client.createDestination(fos,stype);
     String destStr=dest.toBase64();
     log("Private key created and saved in " + keyFile.getAbsolutePath());
     log("You should backup this file in a secure place.");

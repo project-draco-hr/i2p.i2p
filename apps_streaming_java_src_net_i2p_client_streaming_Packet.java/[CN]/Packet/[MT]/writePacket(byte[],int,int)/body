@@ -29,7 +29,9 @@
   if (isFlagSet(FLAG_FROM_INCLUDED))   optionSize+=_optionFrom.size();
   if (isFlagSet(FLAG_MAX_PACKET_SIZE_INCLUDED))   optionSize+=2;
   if (isFlagSet(FLAG_SIGNATURE_INCLUDED)) {
-    optionSize+=_optionSignature.length();
+    if (fakeSigLen > 0)     optionSize+=fakeSigLen;
+ else     if (_optionSignature != null)     optionSize+=_optionSignature.length();
+ else     throw new IllegalStateException();
   }
   DataHelper.toLong(buffer,cur,2,optionSize);
   cur+=2;
@@ -45,9 +47,14 @@
     cur+=2;
   }
   if (isFlagSet(FLAG_SIGNATURE_INCLUDED)) {
-    if (includeSig)     System.arraycopy(_optionSignature.getData(),0,buffer,cur,_optionSignature.length());
- else     Arrays.fill(buffer,cur,cur + _optionSignature.length(),(byte)0x0);
-    cur+=_optionSignature.length();
+    if (fakeSigLen == 0) {
+      System.arraycopy(_optionSignature.getData(),0,buffer,cur,_optionSignature.length());
+      cur+=_optionSignature.length();
+    }
+ else {
+      Arrays.fill(buffer,cur,cur + fakeSigLen,(byte)0x0);
+      cur+=fakeSigLen;
+    }
   }
   if (_payload != null) {
     try {
