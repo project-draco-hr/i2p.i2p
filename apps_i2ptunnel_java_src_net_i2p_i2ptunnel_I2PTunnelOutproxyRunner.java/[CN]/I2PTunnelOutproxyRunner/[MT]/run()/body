@@ -1,0 +1,58 @@
+{
+  try {
+    InputStream in=getSocketIn();
+    OutputStream out=getSocketOut();
+    InputStream i2pin=i2ps.getInputStream();
+    OutputStream i2pout=i2ps.getOutputStream();
+    if (initialI2PData != null) {
+      i2pout.write(initialI2PData);
+      i2pout.flush();
+    }
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Initial data " + (initialI2PData != null ? initialI2PData.length : 0) + " written to the outproxy, starting forwarders");
+    if (!(s instanceof InternalSocket))     in=new BufferedInputStream(in,2 * NETWORK_BUFFER_SIZE);
+    Thread t1=new StreamForwarder(in,i2pout,true);
+    Thread t2=new StreamForwarder(i2pin,out,false);
+synchronized (finishLock) {
+      while (!finished) {
+        finishLock.wait();
+      }
+    }
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("At least one forwarder completed, closing and joining");
+    if (onTimeout != null) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("runner has a timeout job, totalReceived = " + totalReceived + " totalSent = "+ totalSent+ " job = "+ onTimeout);
+      if (totalReceived <= 0)       onTimeout.run();
+    }
+    close(out,in,i2pout,i2pin,s,i2ps,t1,t2);
+  }
+ catch (  InterruptedException ex) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Interrupted",ex);
+  }
+catch (  SSLException she) {
+    _log.error("SSL error",she);
+  }
+catch (  IOException ex) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Error forwarding",ex);
+  }
+catch (  IllegalStateException ise) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("gnu?",ise);
+  }
+catch (  Exception e) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Internal error",e);
+  }
+ finally {
+    try {
+      if (s != null)       s.close();
+    }
+ catch (    IOException ex) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Could not close java socket",ex);
+    }
+    if (i2ps != null) {
+      try {
+        i2ps.close();
+      }
+ catch (      IOException ex) {
+        if (_log.shouldLog(Log.WARN))         _log.warn("Could not close Socket",ex);
+      }
+    }
+  }
+}

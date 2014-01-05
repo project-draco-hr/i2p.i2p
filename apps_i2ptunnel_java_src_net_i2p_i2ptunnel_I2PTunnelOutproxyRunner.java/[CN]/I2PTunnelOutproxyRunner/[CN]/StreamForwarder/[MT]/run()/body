@@ -1,0 +1,66 @@
+{
+  String from="todo";
+  String to="todo";
+  if (_log.shouldLog(Log.DEBUG)) {
+    _log.debug(direction + ": Forwarding between " + from+ " and "+ to);
+  }
+  ByteArray ba=_cache.acquire();
+  byte[] buffer=ba.getData();
+  try {
+    int len;
+    while ((len=in.read(buffer)) != -1) {
+      out.write(buffer,0,len);
+      if (_toI2P)       totalSent+=len;
+ else       totalReceived+=len;
+      if (len > 0)       updateActivity();
+      if (in.available() == 0) {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug(direction + ": " + len+ " bytes flushed through "+ (_toI2P ? "to " : "from ")+ "outproxy");
+        try {
+          Thread.sleep(I2PTunnel.PACKET_DELAY);
+        }
+ catch (        InterruptedException e) {
+          e.printStackTrace();
+        }
+        if (in.available() <= 0)         out.flush();
+      }
+    }
+  }
+ catch (  SocketException ex) {
+synchronized (finishLock) {
+      if (!finished) {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug(direction + ": Socket closed - error reading and writing",ex);
+      }
+    }
+  }
+catch (  InterruptedIOException ex) {
+    if (_log.shouldLog(Log.WARN))     _log.warn(direction + ": Closing connection due to timeout (error: \"" + ex.getMessage()+ "\")");
+  }
+catch (  IOException ex) {
+    if (!finished) {
+      if (_log.shouldLog(Log.WARN))       _log.warn(direction + ": Error forwarding",ex);
+    }
+  }
+ finally {
+    _cache.release(ba);
+    if (_log.shouldLog(Log.INFO)) {
+      _log.info(direction + ": done forwarding between " + from+ " and "+ to);
+    }
+    try {
+      in.close();
+    }
+ catch (    IOException ex) {
+      if (_log.shouldLog(Log.WARN))       _log.warn(direction + ": Error closing input stream",ex);
+    }
+    try {
+      if (!(onTimeout != null && (!_toI2P) && totalReceived <= 0))       out.close();
+ else       if (_log.shouldLog(Log.INFO))       _log.info(direction + ": not closing so we can write the error message");
+    }
+ catch (    IOException ioe) {
+      if (_log.shouldLog(Log.WARN))       _log.warn(direction + ": Error flushing to close",ioe);
+    }
+synchronized (finishLock) {
+      finished=true;
+      finishLock.notifyAll();
+    }
+  }
+}
