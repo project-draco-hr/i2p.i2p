@@ -2,6 +2,8 @@
   OutputStream out=null;
   String targetRequest=null;
   boolean usingWWWProxy=false;
+  boolean usingOutproxy=false;
+  Outproxy outproxy=null;
   boolean usingInternalServer=false;
   String internalPath=null;
   String internalRawQuery=null;
@@ -250,33 +252,43 @@
           return;
         }
  else         if (host.contains(".") || host.startsWith("[")) {
-          if (port >= 0) {
-            host=host + ':' + port;
+          if (Boolean.parseBoolean(getTunnel().getClientOptions().getProperty(PROP_OUTPROXY)) && (outproxy=_context.outproxy()) != null) {
+            int rPort=requestURI.getPort();
+            if (rPort > 0)             remotePort=rPort;
+ else             remotePort=80;
+            usingOutproxy=true;
+            targetRequest=requestURI.toASCIIString();
+            if (_log.shouldLog(Log.DEBUG))             _log.debug(getPrefix(requestId) + " [" + host+ "]: outproxy!");
           }
-          if (_log.shouldLog(Log.DEBUG)) {
-            _log.debug("Before selecting outproxy for " + host);
-          }
-          currentProxy=selectProxy();
-          if (_log.shouldLog(Log.DEBUG)) {
-            _log.debug("After selecting outproxy for " + host + ": "+ currentProxy);
-          }
-          if (currentProxy == null) {
-            if (_log.shouldLog(Log.WARN)) {
-              _log.warn(getPrefix(requestId) + "Host wants to be outproxied, but we dont have any!");
+ else {
+            if (port >= 0) {
+              host=host + ':' + port;
             }
-            l.log("No HTTP outproxy found for the request.");
-            if (out != null) {
-              out.write(getErrorPage("noproxy",_ERR_NO_OUTPROXY));
-              writeFooter(out);
+            if (_log.shouldLog(Log.DEBUG)) {
+              _log.debug("Before selecting outproxy for " + host);
             }
-            s.close();
-            return;
-          }
-          destination=currentProxy;
-          usingWWWProxy=true;
-          targetRequest=requestURI.toASCIIString();
-          if (_log.shouldLog(Log.DEBUG)) {
-            _log.debug(getPrefix(requestId) + " [" + host+ "]: wwwProxy!");
+            currentProxy=selectProxy();
+            if (_log.shouldLog(Log.DEBUG)) {
+              _log.debug("After selecting outproxy for " + host + ": "+ currentProxy);
+            }
+            if (currentProxy == null) {
+              if (_log.shouldLog(Log.WARN)) {
+                _log.warn(getPrefix(requestId) + "Host wants to be outproxied, but we dont have any!");
+              }
+              l.log("No HTTP outproxy found for the request.");
+              if (out != null) {
+                out.write(getErrorPage("noproxy",_ERR_NO_OUTPROXY));
+                writeFooter(out);
+              }
+              s.close();
+              return;
+            }
+            destination=currentProxy;
+            usingWWWProxy=true;
+            targetRequest=requestURI.toASCIIString();
+            if (_log.shouldLog(Log.DEBUG)) {
+              _log.debug(getPrefix(requestId) + " [" + host+ "]: wwwProxy!");
+            }
           }
         }
  else {
@@ -290,7 +302,7 @@
           s.close();
           return;
         }
-        boolean isValid=usingWWWProxy || usingInternalServer || isSupportedAddress(host,protocol);
+        boolean isValid=usingOutproxy || usingWWWProxy || usingInternalServer|| isSupportedAddress(host,protocol);
         if (!isValid) {
           if (_log.shouldLog(Log.INFO)) {
             _log.info(getPrefix(requestId) + "notValid(" + host+ ")");
@@ -307,7 +319,7 @@
         }
       }
  else {
-        if (lowercaseLine.startsWith("host: ") && !usingWWWProxy) {
+        if (lowercaseLine.startsWith("host: ") && !usingWWWProxy && !usingOutproxy) {
           line="Host: " + host;
           if (_log.shouldLog(Log.INFO)) {
             _log.info(getPrefix(requestId) + "Setting host = " + host);
@@ -364,7 +376,7 @@
         }
         if (!shout) {
           if (!Boolean.parseBoolean(getTunnel().getClientOptions().getProperty(PROP_USER_AGENT))) {
-            if (usingWWWProxy) {
+            if (usingWWWProxy || usingOutproxy) {
               newRequest.append("User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.2.6) Gecko/20100625 Firefox/3.6.6\r\n");
             }
  else {
@@ -393,7 +405,7 @@
     if (_log.shouldLog(Log.DEBUG)) {
       _log.debug(getPrefix(requestId) + "NewRequest header: [" + newRequest.toString()+ "]");
     }
-    if (method == null || destination == null) {
+    if (method == null || (destination == null && !usingOutproxy)) {
       if (out != null) {
         if (protocol != null && "http".equals(protocol.toLowerCase(Locale.US))) {
           out.write(getErrorPage("denied",ERR_REQUEST_DENIED));
@@ -432,6 +444,13 @@
         LocalHTTPServer.serveLocalFile(out,method,internalPath,internalRawQuery,_proxyNonce);
       }
       s.close();
+      return;
+    }
+    if (usingOutproxy) {
+      Socket outSocket=outproxy.connect(host,remotePort);
+      byte[] data=newRequest.toString().getBytes("ISO-8859-1");
+      Runnable onTimeout=new OnTimeout(s,s.getOutputStream(),targetRequest,usingWWWProxy,currentProxy,requestId);
+      new I2PTunnelOutproxyRunner(s,outSocket,sockLock,data,onTimeout);
       return;
     }
     Destination clientDest=null;
