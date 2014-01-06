@@ -50,6 +50,10 @@
           }
           request="http://" + subRequest;
         }
+        method=params[0];
+        if (method.toUpperCase(Locale.US).equals("CONNECT")) {
+          request="https://" + request + '/';
+        }
         URI requestURI;
         try {
           requestURI=new URI(request);
@@ -77,12 +81,11 @@
           s.close();
           return;
         }
-        method=params[0];
         String protocolVersion=params[2];
         protocol=requestURI.getScheme();
         host=requestURI.getHost();
         if (protocol == null || host == null) {
-          _log.warn("Null protocol or host: " + request);
+          _log.warn("Null protocol or host: " + request + ' '+ protocol+ ' '+ host);
           method=null;
           break;
         }
@@ -132,6 +135,9 @@
           int rPort=requestURI.getPort();
           if (rPort > 0) {
             remotePort=rPort;
+          }
+ else           if ("https".equals(protocol) || method.toUpperCase(Locale.US).equals("CONNECT")) {
+            remotePort=443;
           }
  else {
             remotePort=80;
@@ -252,15 +258,23 @@
           return;
         }
  else         if (host.contains(".") || host.startsWith("[")) {
-          if (Boolean.parseBoolean(getTunnel().getClientOptions().getProperty(PROP_OUTPROXY)) && (outproxy=_context.outproxy()) != null) {
-            int rPort=requestURI.getPort();
-            if (rPort > 0)             remotePort=rPort;
- else             remotePort=80;
-            usingOutproxy=true;
-            targetRequest=requestURI.toASCIIString();
-            if (_log.shouldLog(Log.DEBUG))             _log.debug(getPrefix(requestId) + " [" + host+ "]: outproxy!");
+          if (Boolean.parseBoolean(getTunnel().getClientOptions().getProperty(PROP_OUTPROXY))) {
+            ClientAppManager mgr=_context.clientAppManager();
+            if (mgr != null) {
+              ClientApp op=mgr.getRegisteredApp(Outproxy.NAME);
+              if (op != null) {
+                outproxy=(Outproxy)op;
+                int rPort=requestURI.getPort();
+                if (rPort > 0)                 remotePort=rPort;
+ else                 if ("https".equals(protocol) || method.toUpperCase(Locale.US).equals("CONNECT"))                 remotePort=443;
+ else                 remotePort=80;
+                usingOutproxy=true;
+                targetRequest=requestURI.toASCIIString();
+                if (_log.shouldLog(Log.DEBUG))                 _log.debug(getPrefix(requestId) + " [" + host+ "]: outproxy!");
+              }
+            }
           }
- else {
+          if (!usingOutproxy) {
             if (port >= 0) {
               host=host + ':' + port;
             }
@@ -448,9 +462,18 @@
     }
     if (usingOutproxy) {
       Socket outSocket=outproxy.connect(host,remotePort);
-      byte[] data=newRequest.toString().getBytes("ISO-8859-1");
       Runnable onTimeout=new OnTimeout(s,s.getOutputStream(),targetRequest,usingWWWProxy,currentProxy,requestId);
-      new I2PTunnelOutproxyRunner(s,outSocket,sockLock,data,onTimeout);
+      byte[] data;
+      byte[] response;
+      if (method.toUpperCase(Locale.US).equals("CONNECT")) {
+        data=null;
+        response=I2PTunnelConnectClient.SUCCESS_RESPONSE;
+      }
+ else {
+        data=newRequest.toString().getBytes("ISO-8859-1");
+        response=null;
+      }
+      new I2PTunnelOutproxyRunner(s,outSocket,sockLock,data,response,onTimeout);
       return;
     }
     Destination clientDest=null;
@@ -535,9 +558,24 @@
     I2PSocketOptions sktOpts=getDefaultOptions(opts);
     if (remotePort > 0)     sktOpts.setPort(remotePort);
     I2PSocket i2ps=createI2PSocket(clientDest,sktOpts);
-    byte[] data=newRequest.toString().getBytes("ISO-8859-1");
     Runnable onTimeout=new OnTimeout(s,s.getOutputStream(),targetRequest,usingWWWProxy,currentProxy,requestId);
-    new I2PTunnelHTTPClientRunner(s,i2ps,sockLock,data,mySockets,onTimeout);
+    if (method.toUpperCase(Locale.US).equals("CONNECT")) {
+      byte[] data;
+      byte[] response;
+      if (usingWWWProxy) {
+        data=newRequest.toString().getBytes("ISO-8859-1");
+        response=null;
+      }
+ else {
+        data=null;
+        response=I2PTunnelConnectClient.SUCCESS_RESPONSE;
+      }
+      new I2PTunnelRunner(s,i2ps,sockLock,data,response,mySockets,onTimeout);
+    }
+ else {
+      byte[] data=newRequest.toString().getBytes("ISO-8859-1");
+      new I2PTunnelHTTPClientRunner(s,i2ps,sockLock,data,mySockets,onTimeout);
+    }
   }
  catch (  SocketException ex) {
     if (_log.shouldLog(Log.INFO)) {
