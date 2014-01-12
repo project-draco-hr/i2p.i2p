@@ -1,0 +1,23 @@
+{
+  if (key == null)   throw new IllegalArgumentException("searchin for nothin, eh?");
+  boolean isNew=false;
+  FloodSearchJob searchJob=null;
+synchronized (_activeFloodQueries) {
+    searchJob=_activeFloodQueries.get(key);
+    if (searchJob == null) {
+      searchJob=new IterativeSearchJob(_context,this,key,onFindJob,onFailedLookupJob,(int)timeoutMs,isLease,fromLocalDest);
+      _activeFloodQueries.put(key,searchJob);
+      isNew=true;
+    }
+  }
+  if (isNew) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("this is the first search for that key, fire off the FloodSearchJob");
+    _context.jobQueue().addJob(searchJob);
+  }
+ else {
+    if (_log.shouldLog(Log.INFO))     _log.info("Deferring flood search for " + key.toBase64() + " with "+ _activeFloodQueries.size()+ " in progress");
+    searchJob.addDeferred(onFindJob,onFailedLookupJob,timeoutMs,isLease);
+    _context.statManager().addRateData("netDb.lookupDeferred",1,searchJob.getExpiration() - _context.clock().now());
+  }
+  return null;
+}
