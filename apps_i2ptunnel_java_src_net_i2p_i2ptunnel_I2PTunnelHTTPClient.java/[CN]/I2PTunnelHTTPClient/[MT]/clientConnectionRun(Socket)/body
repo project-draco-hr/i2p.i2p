@@ -2,7 +2,7 @@
   OutputStream out=null;
   String targetRequest=null;
   boolean usingWWWProxy=false;
-  boolean usingOutproxy=false;
+  boolean usingInternalOutproxy=false;
   Outproxy outproxy=null;
   boolean usingInternalServer=false;
   String internalPath=null;
@@ -268,13 +268,13 @@
                 if (rPort > 0)                 remotePort=rPort;
  else                 if ("https".equals(protocol) || method.toUpperCase(Locale.US).equals("CONNECT"))                 remotePort=443;
  else                 remotePort=80;
-                usingOutproxy=true;
+                usingInternalOutproxy=true;
                 targetRequest=requestURI.toASCIIString();
                 if (_log.shouldLog(Log.DEBUG))                 _log.debug(getPrefix(requestId) + " [" + host+ "]: outproxy!");
               }
             }
           }
-          if (!usingOutproxy) {
+          if (!usingInternalOutproxy) {
             if (port >= 0) {
               host=host + ':' + port;
             }
@@ -290,7 +290,7 @@
               if (_log.shouldLog(Log.WARN)) {
                 _log.warn(getPrefix(requestId) + "Host wants to be outproxied, but we dont have any!");
               }
-              l.log("No HTTP outproxy found for the request.");
+              l.log("No outproxy found for the request.");
               if (out != null) {
                 out.write(getErrorPage("noproxy",_ERR_NO_OUTPROXY));
                 writeFooter(out);
@@ -317,7 +317,7 @@
           s.close();
           return;
         }
-        boolean isValid=usingOutproxy || usingWWWProxy || usingInternalServer|| isSupportedAddress(host,protocol);
+        boolean isValid=usingInternalOutproxy || usingWWWProxy || usingInternalServer|| isSupportedAddress(host,protocol);
         if (!isValid) {
           if (_log.shouldLog(Log.INFO)) {
             _log.info(getPrefix(requestId) + "notValid(" + host+ ")");
@@ -326,7 +326,12 @@
           destination=null;
           break;
         }
-        line=method + ' ' + requestURI.toASCIIString()+ ' '+ protocolVersion;
+        if (method.toUpperCase(Locale.US).equals("CONNECT")) {
+          line=method + ' ' + requestURI.getHost()+ ':'+ requestURI.getPort()+ ' '+ protocolVersion;
+        }
+ else {
+          line=method + ' ' + requestURI.toASCIIString()+ ' '+ protocolVersion;
+        }
         if (_log.shouldLog(Log.DEBUG)) {
           _log.debug(getPrefix(requestId) + "NEWREQ: \"" + line+ "\"");
           _log.debug(getPrefix(requestId) + "HOST  : \"" + host+ "\"");
@@ -334,7 +339,7 @@
         }
       }
  else {
-        if (lowercaseLine.startsWith("host: ") && !usingWWWProxy && !usingOutproxy) {
+        if (lowercaseLine.startsWith("host: ") && !usingWWWProxy && !usingInternalOutproxy) {
           line="Host: " + host;
           if (_log.shouldLog(Log.INFO)) {
             _log.info(getPrefix(requestId) + "Setting host = " + host);
@@ -385,13 +390,13 @@
         if (ok != null) {
           gzip=Boolean.parseBoolean(ok);
         }
-        if (gzip && !usingInternalServer) {
+        if (gzip && !usingInternalServer && !method.toUpperCase(Locale.US).equals("CONNECT")) {
           newRequest.append("Accept-Encoding: \r\n");
-          newRequest.append("X-Accept-Encoding: x-i2p-gzip;q=1.0, identity;q=0.5, deflate;q=0, gzip;q=0, *;q=0\r\n");
+          if (!usingInternalOutproxy)           newRequest.append("X-Accept-Encoding: x-i2p-gzip;q=1.0, identity;q=0.5, deflate;q=0, gzip;q=0, *;q=0\r\n");
         }
-        if (!shout) {
+        if (!shout && !method.toUpperCase(Locale.US).equals("CONNECT")) {
           if (!Boolean.parseBoolean(getTunnel().getClientOptions().getProperty(PROP_USER_AGENT))) {
-            if (usingWWWProxy || usingOutproxy) {
+            if (usingWWWProxy || usingInternalOutproxy) {
               newRequest.append("User-Agent: Mozilla/5.0 (Windows; U; Windows NT 5.1; en-US; rv:1.9.2.6) Gecko/20100625 Firefox/3.6.6\r\n");
             }
  else {
@@ -420,7 +425,7 @@
     if (_log.shouldLog(Log.DEBUG)) {
       _log.debug(getPrefix(requestId) + "NewRequest header: [" + newRequest.toString()+ "]");
     }
-    if (method == null || (destination == null && !usingOutproxy)) {
+    if (method == null || (destination == null && !usingInternalOutproxy)) {
       if (out != null) {
         if (protocol != null && "http".equals(protocol.toLowerCase(Locale.US))) {
           out.write(getErrorPage("denied",ERR_REQUEST_DENIED));
@@ -461,7 +466,7 @@
       s.close();
       return;
     }
-    if (usingOutproxy) {
+    if (usingInternalOutproxy) {
       Socket outSocket=outproxy.connect(host,remotePort);
       Runnable onTimeout=new OnTimeout(s,s.getOutputStream(),targetRequest,usingWWWProxy,currentProxy,requestId);
       byte[] data;
