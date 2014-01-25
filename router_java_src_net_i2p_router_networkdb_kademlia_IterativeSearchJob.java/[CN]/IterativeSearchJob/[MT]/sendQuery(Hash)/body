@@ -1,7 +1,21 @@
 {
   DatabaseLookupMessage dlm=new DatabaseLookupMessage(getContext(),true);
-  TunnelInfo replyTunnel=getContext().tunnelManager().selectInboundExploratoryTunnel(peer);
-  TunnelInfo outTunnel=getContext().tunnelManager().selectOutboundExploratoryTunnel(peer);
+  TunnelManagerFacade tm=getContext().tunnelManager();
+  TunnelInfo outTunnel;
+  TunnelInfo replyTunnel;
+  boolean isClientReplyTunnel;
+  if (_fromLocalDest != null) {
+    outTunnel=tm.selectOutboundTunnel(_fromLocalDest,peer);
+    if (outTunnel == null)     outTunnel=tm.selectOutboundExploratoryTunnel(peer);
+    replyTunnel=tm.selectInboundTunnel(_fromLocalDest,peer);
+    isClientReplyTunnel=replyTunnel != null;
+    if (!isClientReplyTunnel)     replyTunnel=tm.selectInboundExploratoryTunnel(peer);
+  }
+ else {
+    outTunnel=tm.selectOutboundExploratoryTunnel(peer);
+    replyTunnel=tm.selectInboundExploratoryTunnel(peer);
+    isClientReplyTunnel=false;
+  }
   if ((replyTunnel == null) || (outTunnel == null)) {
     failed();
     return;
@@ -19,7 +33,7 @@
 synchronized (this) {
       tries=_unheardFrom.size() + _failedPeers.size();
     }
-    _log.info(getJobId() + ": ISJ try " + tries+ " for "+ _key+ " to "+ peer);
+    _log.info(getJobId() + ": ISJ try " + tries+ " for "+ (_isLease ? "LS " : "RI ")+ _key+ " to "+ peer+ " reply via client tunnel? "+ isClientReplyTunnel);
   }
   long now=getContext().clock().now();
   _sentTime.put(peer,Long.valueOf(now));
@@ -28,9 +42,13 @@ synchronized (this) {
     RouterInfo ri=getContext().netDb().lookupRouterInfoLocally(peer);
     if (ri != null) {
       if (DatabaseLookupMessage.supportsEncryptedReplies(ri)) {
-        MessageWrapper.OneTimeSession sess=MessageWrapper.generateSession(getContext());
-        if (_log.shouldLog(Log.INFO))         _log.info(getJobId() + ": Requesting encrypted reply from " + peer+ ' '+ sess.key+ ' '+ sess.tag);
-        dlm.setReplySession(sess.key,sess.tag);
+        MessageWrapper.OneTimeSession sess;
+        if (isClientReplyTunnel)         sess=MessageWrapper.generateSession(getContext(),_fromLocalDest);
+ else         sess=MessageWrapper.generateSession(getContext());
+        if (sess != null) {
+          if (_log.shouldLog(Log.INFO))           _log.info(getJobId() + ": Requesting encrypted reply from " + peer+ ' '+ sess.key+ ' '+ sess.tag);
+          dlm.setReplySession(sess.key,sess.tag);
+        }
       }
       outMsg=MessageWrapper.wrap(getContext(),dlm,ri);
       if (_dead) {

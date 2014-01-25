@@ -1,0 +1,11 @@
+{
+  super(ctx,facade,key,onFind,onFailed,timeoutMs,isLease);
+  _timeoutMs=Math.min(timeoutMs,MAX_SEARCH_TIME);
+  _expiration=_timeoutMs + ctx.clock().now();
+  _rkey=ctx.routingKeyGenerator().getRoutingKey(key);
+  _toTry=new TreeSet<Hash>(new XORComparator<Hash>(_rkey));
+  _unheardFrom=new HashSet<Hash>(CONCURRENT_SEARCHES);
+  _failedPeers=new HashSet<Hash>(TOTAL_SEARCH_LIMIT);
+  _sentTime=new ConcurrentHashMap<Hash,Long>(TOTAL_SEARCH_LIMIT);
+  _fromLocalDest=fromLocalDest;
+}

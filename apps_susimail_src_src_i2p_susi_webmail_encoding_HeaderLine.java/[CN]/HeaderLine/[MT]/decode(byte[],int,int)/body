@@ -5,6 +5,7 @@
   if (end > in.length)   throw new DecodingException("Index out of bound.");
   boolean linebreak=false;
   boolean lastCharWasQuoted=false;
+  int lastSkip=0;
   while (length-- > 0) {
     byte c=in[offset++];
     if (c == '=') {
@@ -59,12 +60,21 @@
       if (c != ' ' && c != '\t') {
         out[written++]='\r';
         out[written++]='\n';
+        lastSkip=0;
       }
  else {
         if (!lastCharWasQuoted)         out[written++]=' ';
+        int skipped=1;
         while (length > 0 && (in[offset] == ' ' || in[offset] == '\t')) {
+          if (lastSkip > 0 && skipped >= lastSkip) {
+            break;
+          }
           offset++;
           length--;
+          skipped++;
+        }
+        if (lastSkip == 0 && skipped > 0) {
+          lastSkip=skipped;
         }
         continue;
       }
@@ -75,6 +85,7 @@
   if (linebreak) {
     out[written++]='\r';
     out[written++]='\n';
+    lastSkip=0;
   }
   ReadBuffer readBuffer=new ReadBuffer();
   readBuffer.content=out;

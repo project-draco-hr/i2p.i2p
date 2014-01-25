@@ -1,0 +1,74 @@
+{
+  try {
+    int port=0;
+    InetAddress host=null;
+    this.lock=lock;
+    this.tg=null;
+    this.database=database;
+    this.info=info;
+    this._log=_log;
+    lives=new AtomicBoolean(false);
+    this.database.getWriteLock();
+    this.info.getWriteLock();
+    this.info.add("STARTING",Boolean.valueOf(true));
+    this.info.releaseWriteLock();
+    this.database.releaseWriteLock();
+    this.database.getReadLock();
+    this.info.getReadLock();
+    N=this.info.get("NICKNAME").toString();
+    prikey=new ByteArrayInputStream((byte[])info.get("KEYS"));
+    Properties R=(Properties)info.get("PROPERTIES");
+    Properties Q=new Properties();
+    Lifted.copyProperties(R,Q);
+    this.database.releaseReadLock();
+    this.info.releaseReadLock();
+    this.database.getReadLock();
+    this.info.getReadLock();
+    this.go_out=info.exists("OUTPORT");
+    this.come_in=info.exists("INPORT");
+    if (this.come_in) {
+      port=Integer.parseInt(info.get("INPORT").toString());
+      host=InetAddress.getByName(info.get("INHOST").toString());
+    }
+    this.database.releaseReadLock();
+    this.info.releaseReadLock();
+    String i2cpHost=Q.getProperty(I2PClient.PROP_TCP_HOST,"127.0.0.1");
+    int i2cpPort=7654;
+    String i2cpPortStr=Q.getProperty(I2PClient.PROP_TCP_PORT,"7654");
+    try {
+      i2cpPort=Integer.parseInt(i2cpPortStr);
+    }
+ catch (    NumberFormatException nfe) {
+      throw new IllegalArgumentException("Invalid I2CP port specified [" + i2cpPortStr + "]");
+    }
+    if (this.come_in) {
+      this.listener=new ServerSocket(port,backlog,host);
+    }
+    socketManager=I2PSocketManagerFactory.createManager(prikey,i2cpHost,i2cpPort,Q);
+  }
+ catch (  IOException e) {
+    this.database.getWriteLock();
+    this.info.getWriteLock();
+    this.info.add("STARTING",Boolean.valueOf(false));
+    this.info.releaseWriteLock();
+    this.database.releaseWriteLock();
+    throw new IOException(e.toString());
+  }
+catch (  RuntimeException e) {
+    this.database.getWriteLock();
+    this.info.getWriteLock();
+    this.info.add("STARTING",Boolean.valueOf(false));
+    this.info.releaseWriteLock();
+    this.database.releaseWriteLock();
+    throw new RuntimeException(e);
+  }
+catch (  Exception e) {
+    this.database.getWriteLock();
+    this.info.getWriteLock();
+    this.info.add("STARTING",Boolean.valueOf(false));
+    this.info.releaseWriteLock();
+    this.database.releaseWriteLock();
+    e.printStackTrace();
+    throw new RuntimeException(e);
+  }
+}
