@@ -1,0 +1,46 @@
+{
+  if (name.length() == 0)   return null;
+  if (name.length() >= 516) {
+    try {
+      return new Destination(name);
+    }
+ catch (    DataFormatException dfe) {
+      return null;
+    }
+  }
+  if (name.length() >= 256 && !_context.isRouterContext())   return null;
+synchronized (_lookupCache) {
+    Destination rv=_lookupCache.get(name);
+    if (rv != null)     return rv;
+  }
+  if (isClosed()) {
+    if (_log.shouldLog(Log.INFO))     _log.info("Session closed, cannot lookup " + name);
+    return null;
+  }
+  if (!_routerSupportsHostLookup) {
+    if (name.length() == 60 && name.toLowerCase(Locale.US).endsWith(".b32.i2p"))     return lookupDest(Hash.create(Base32.decode(name.toLowerCase(Locale.US).substring(0,52))),maxWait);
+    if (_log.shouldLog(Log.WARN))     _log.warn("Router does not support HostLookup for " + name);
+    return null;
+  }
+  int nonce=_lookupID.incrementAndGet() & 0x7fffffff;
+  LookupWaiter waiter=new LookupWaiter(name,nonce);
+  _pendingLookups.offer(waiter);
+  try {
+    if (_log.shouldLog(Log.INFO))     _log.info("Sending HostLookup for " + name);
+    SessionId id=_sessionId;
+    if (id == null)     id=new SessionId(65535);
+    sendMessage(new HostLookupMessage(id,name,nonce,maxWait));
+    try {
+synchronized (waiter) {
+        waiter.wait(maxWait);
+      }
+    }
+ catch (    InterruptedException ie) {
+      throw new I2PSessionException("Interrupted",ie);
+    }
+  }
+  finally {
+    _pendingLookups.remove(waiter);
+  }
+  return waiter.destination;
+}

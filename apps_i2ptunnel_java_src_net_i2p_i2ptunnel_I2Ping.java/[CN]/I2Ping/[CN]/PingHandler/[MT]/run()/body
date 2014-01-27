@@ -1,20 +1,17 @@
 {
   try {
-    Destination dest=I2PAppContext.getGlobalContext().namingService().lookup(destination);
+    Destination dest=lookup(destination);
     if (dest == null) {
-synchronized (lock) {
-        l.log("Unresolvable: " + destination + "");
-      }
+      l.log("Unresolvable: " + destination);
       return;
     }
     int pass=0;
     int fail=0;
     long totalTime=0;
-    int cnt=countPing ? CPING_COUNT : PING_COUNT;
     StringBuilder pingResults=new StringBuilder(2 * cnt + destination.length() + 3);
     for (int i=0; i < cnt; i++) {
       boolean sent;
-      sent=ping(dest);
+      sent=ping(dest,timeout);
       if (countPing) {
         if (!sent) {
           pingResults.append(i).append(" ");
@@ -48,9 +45,7 @@ synchronized (lock) {
       pingResults.append("and ").append(fail).append(" lost for destination: ");
     }
     pingResults.append("  ").append(destination);
-synchronized (lock) {
-      l.log(pingResults.toString());
-    }
+    l.log(pingResults.toString());
   }
  catch (  I2PException ex) {
     _log.error("Error pinging " + destination,ex);

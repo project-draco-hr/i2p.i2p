@@ -1,10 +1,12 @@
 {
+  State oldState;
 synchronized (_stateLock) {
     if (_state == State.CLOSING || _state == State.CLOSED)     return;
+    oldState=_state;
     changeState(State.CLOSING);
   }
   if (_log.shouldLog(Log.DEBUG))   _log.debug(getPrefix() + "Disconnect() called",new Exception("Disconnect"));
-  if (shouldReconnect()) {
+  if (oldState != State.OPENING && shouldReconnect()) {
     if (reconnect()) {
       if (_log.shouldLog(Log.INFO))       _log.info(getPrefix() + "I2CP reconnection successful");
       return;

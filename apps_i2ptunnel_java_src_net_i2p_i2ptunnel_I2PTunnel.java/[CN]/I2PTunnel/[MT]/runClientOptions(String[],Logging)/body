@@ -1,12 +1,43 @@
 {
-  _clientOptions.clear();
-  if (args != null) {
-    for (int i=0; i < args.length; i++) {
+  if (args != null && args.length > 0) {
+    int i=0;
+    if (args[0].equals("-a")) {
+      i++;
+    }
+ else     if (args[0].equals("-c")) {
+      _clientOptions.clear();
+      l.log("Client options cleared");
+      return;
+    }
+ else     if (args[0].equals("-x")) {
+      i++;
+      for (; i < args.length; i++) {
+        if (_clientOptions.remove(args[i]) != null)         l.log("Removed " + args[i]);
+      }
+      return;
+    }
+ else {
+      _clientOptions.clear();
+    }
+    for (; i < args.length; i++) {
       int index=args[i].indexOf('=');
       if (index <= 0)       continue;
       String key=args[i].substring(0,index);
       String val=args[i].substring(index + 1);
       _clientOptions.setProperty(key,val);
+    }
+  }
+ else {
+    l.log("Usage:");
+    l.log("  clientoptions [key=value ]*     // sets current options");
+    l.log("  clientoptions -a [key=value ]*  // adds to current options");
+    l.log("  clientoptions -c                // clears current options");
+    l.log("  clientoptions -x [key ]*        // removes listed options");
+    l.log("Current options:");
+    Properties p=new OrderedProperties();
+    p.putAll(_clientOptions);
+    for (    Map.Entry<Object,Object> e : p.entrySet()) {
+      l.log("  [" + e.getKey() + "] = ["+ e.getValue()+ ']');
     }
   }
   notifyEvent("clientoptions_onResult","ok");

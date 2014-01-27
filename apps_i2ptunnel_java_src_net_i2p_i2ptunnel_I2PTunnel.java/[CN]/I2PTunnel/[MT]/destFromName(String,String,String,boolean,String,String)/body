@@ -1,0 +1,80 @@
+{
+  if ((name == null) || (name.trim().length() <= 0))   throw new DataFormatException("Empty destination provided");
+  I2PAppContext ctx=I2PAppContext.getGlobalContext();
+  Log log=ctx.logManager().getLog(I2PTunnel.class);
+  if (name.startsWith("file:")) {
+    Destination result=new Destination();
+    byte content[]=null;
+    FileInputStream in=null;
+    try {
+      in=new FileInputStream(name.substring("file:".length()));
+      byte buf[]=new byte[1024];
+      int read=DataHelper.read(in,buf);
+      content=new byte[read];
+      System.arraycopy(buf,0,content,0,read);
+    }
+ catch (    IOException ioe) {
+      System.out.println(ioe.getMessage());
+      return null;
+    }
+ finally {
+      if (in != null)       try {
+        in.close();
+      }
+ catch (      IOException io) {
+      }
+    }
+    try {
+      result.fromByteArray(content);
+      return result;
+    }
+ catch (    Exception ex) {
+      if (log.shouldLog(Log.INFO))       log.info("File is not a binary destination - trying base64");
+      try {
+        byte decoded[]=Base64.decode(new String(content));
+        result.fromByteArray(decoded);
+        return result;
+      }
+ catch (      DataFormatException dfe) {
+        if (log.shouldLog(Log.WARN))         log.warn("File is not a base64 destination either - failing!");
+        return null;
+      }
+    }
+  }
+ else {
+    name=name.trim();
+    NamingService inst=ctx.namingService();
+    boolean b32=name.length() == 60 && name.toLowerCase(Locale.US).endsWith(".b32.i2p");
+    Destination d=null;
+    if (ctx.isRouterContext() || !b32) {
+      d=inst.lookup(name);
+      if (d != null || ctx.isRouterContext() || name.length() >= 516)       return d;
+    }
+    I2PClient client=new I2PSimpleClient();
+    Properties opts=new Properties();
+    if (i2cpHost != null)     opts.put(I2PClient.PROP_TCP_HOST,i2cpHost);
+    if (i2cpPort != null)     opts.put(I2PClient.PROP_TCP_PORT,i2cpPort);
+    opts.put("i2cp.SSL",Boolean.toString(isSSL));
+    if (user != null)     opts.put("i2cp.username",user);
+    if (pw != null)     opts.put("i2cp.password",pw);
+    I2PSession session=null;
+    try {
+      session=client.createSession(null,opts);
+      session.connect();
+      d=session.lookupDest(name);
+    }
+ catch (    I2PSessionException ise) {
+      if (log.shouldLog(Log.WARN))       log.warn("Lookup via router failed",ise);
+    }
+ finally {
+      if (session != null) {
+        try {
+          session.destroySession();
+        }
+ catch (        I2PSessionException ise) {
+        }
+      }
+    }
+    return d;
+  }
+}

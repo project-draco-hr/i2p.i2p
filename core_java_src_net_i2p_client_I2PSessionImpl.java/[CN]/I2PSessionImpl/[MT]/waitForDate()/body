@@ -1,0 +1,15 @@
+{
+  if (_log.shouldLog(Log.DEBUG))   _log.debug(getPrefix() + "After getDate / begin waiting for a response");
+  int waitcount=0;
+  while (true) {
+    if (waitcount++ > 30) {
+      throw new IOException("No handshake received from the router");
+    }
+synchronized (_stateLock) {
+      if (_state == State.GOTDATE)       break;
+      if (_state != State.OPENING)       throw new IOException("Socket closed");
+      _stateLock.wait(1000);
+    }
+  }
+  if (_log.shouldLog(Log.DEBUG))   _log.debug(getPrefix() + "After received a SetDate response");
+}

@@ -9,6 +9,7 @@ case CLOSED:
       loop=false;
     break;
 case OPENING:
+case GOTDATE:
   wasOpening=true;
 try {
   _stateLock.wait(10 * 1000);
@@ -58,6 +59,7 @@ OutputStream out=_socket.getOutputStream();
 out.write(I2PClient.PROTOCOL_BYTE);
 out.flush();
 _writer=new ClientWriterRunner(out,this);
+_writer.startWriting();
 InputStream in=new BufferedInputStream(_socket.getInputStream(),BUF_SIZE);
 _reader=new I2CPMessageReader(in,this);
 }
@@ -65,22 +67,18 @@ _reader=new I2CPMessageReader(in,this);
 if (_log.shouldLog(Log.DEBUG)) _log.debug(getPrefix() + "before startReading");
 _reader.startReading();
 if (_log.shouldLog(Log.DEBUG)) _log.debug(getPrefix() + "Before getDate");
-sendMessage(new GetDateMessage(CoreVersion.VERSION));
-if (_log.shouldLog(Log.DEBUG)) _log.debug(getPrefix() + "After getDate / begin waiting for a response");
-int waitcount=0;
-while (!_dateReceived) {
-if (waitcount++ > 30) {
-throw new IOException("No handshake received from the router");
+Properties auth=null;
+if ((!_context.isRouterContext()) && _options.containsKey(PROP_USER) && _options.containsKey(PROP_PW)) {
+auth=new OrderedProperties();
+auth.setProperty(PROP_USER,_options.getProperty(PROP_USER));
+auth.setProperty(PROP_PW,_options.getProperty(PROP_PW));
 }
-synchronized (_dateReceivedLock) {
-_dateReceivedLock.wait(1000);
-}
-}
-if (_log.shouldLog(Log.DEBUG)) _log.debug(getPrefix() + "After received a SetDate response");
+sendMessage(new GetDateMessage(CoreVersion.VERSION,auth));
+waitForDate();
 if (_log.shouldLog(Log.DEBUG)) _log.debug(getPrefix() + "Before producer.connect()");
 _producer.connect(this);
 if (_log.shouldLog(Log.DEBUG)) _log.debug(getPrefix() + "After producer.connect()");
-waitcount=0;
+int waitcount=0;
 while (_leaseSet == null) {
 if (waitcount++ > 5 * 60) {
 throw new IOException("No tunnels built after waiting 5 minutes. Your network connection may be down, or there is severe network congestion.");
