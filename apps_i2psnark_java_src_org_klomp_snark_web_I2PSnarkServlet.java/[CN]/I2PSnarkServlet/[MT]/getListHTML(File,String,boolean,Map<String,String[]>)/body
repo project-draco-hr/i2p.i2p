@@ -1,9 +1,4 @@
 {
-  File[] ls=null;
-  if (r.isDirectory()) {
-    ls=r.listFiles();
-    Arrays.sort(ls,new ListingComparator());
-  }
   String title=decodePath(base);
   String cpath=_contextPath + '/';
   if (title.startsWith(cpath))   title=title.substring(cpath.length());
@@ -33,7 +28,7 @@
  else   buf.append(_contextName);
   buf.append("</a></div></center>\n");
   if (parent)   buf.append("<div class=\"page\"><div class=\"mainsection\">");
-  boolean showPriority=ls != null && snark != null && snark.getStorage() != null && !snark.getStorage().complete();
+  boolean showPriority=snark != null && snark.getStorage() != null && !snark.getStorage().complete() && r.isDirectory();
   if (showPriority) {
     buf.append("<form action=\"").append(base).append("\" method=\"POST\">\n");
     buf.append("<input type=\"hidden\" name=\"nonce\" value=\"").append(_nonce).append("\" >\n");
@@ -44,6 +39,7 @@
     String fullPath=snark.getName();
     String baseName=urlEncode((new File(fullPath)).getName());
     buf.append("<tr><td>").append("<img alt=\"\" border=\"0\" src=\"").append(_imgPath).append("file.png\" >&nbsp;<b>").append(_("Torrent file")).append(":</b> <a href=\"").append(_contextPath).append('/').append(baseName).append("\">").append(fullPath).append("</a></td></tr>\n");
+    buf.append("<tr><td>").append("<img alt=\"\" border=\"0\" src=\"").append(_imgPath).append("file.png\" >&nbsp;<b>").append(_("Data location")).append(":</b> ").append(urlEncode(snark.getStorage().getBase().getPath())).append("</td></tr>\n");
     MetaInfo meta=snark.getMetaInfo();
     if (meta != null) {
       String announce=meta.getAnnounce();
@@ -115,6 +111,15 @@
     buf.append("<tr><th>Not found<br>resource=\"").append(r.toString()).append("\"<br>base=\"").append(base).append("\"<br>torrent=\"").append(torrentName).append("\"</th></tr>\n");
   }
   buf.append("</table>\n");
+  if (snark != null && !r.exists()) {
+    buf.append("<p>Does not exist<br>resource=\"").append(r.toString()).append("\"<br>base=\"").append(base).append("\"<br>torrent=\"").append(torrentName).append("\"</p></div></div></BODY></HTML>");
+    return buf.toString();
+  }
+  File[] ls=null;
+  if (r.isDirectory()) {
+    ls=r.listFiles();
+    Arrays.sort(ls,new ListingComparator());
+  }
   if (ls == null) {
     buf.append("</div></div></BODY></HTML>");
     return buf.toString();
