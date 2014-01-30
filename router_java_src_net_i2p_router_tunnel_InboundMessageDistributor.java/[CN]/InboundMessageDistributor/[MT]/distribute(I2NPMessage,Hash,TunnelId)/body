@@ -11,11 +11,21 @@
       msg=newMsg;
     }
   }
- else   if ((_client != null) && (type == DatabaseStoreMessage.MESSAGE_TYPE) && (((DatabaseStoreMessage)msg).getEntry().getType() == DatabaseEntry.KEY_TYPE_ROUTERINFO)) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("Dropping DSM down a tunnel for " + _client + ": "+ msg);
-    return;
+ else   if ((_client != null) && (type == DatabaseStoreMessage.MESSAGE_TYPE)) {
+    DatabaseStoreMessage dsm=(DatabaseStoreMessage)msg;
+    if (dsm.getEntry().getType() == DatabaseEntry.KEY_TYPE_ROUTERINFO) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Dropping DSM down a tunnel for " + _client + ": "+ msg);
+      return;
+    }
+ else     if (dsm.getReplyToken() != 0) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Dropping LS DSM w/ reply token down a tunnel for " + _client + ": "+ msg);
+      return;
+    }
+ else {
+      ((LeaseSet)dsm.getEntry()).setReceivedAsReply();
+    }
   }
- else   if ((_client != null) && (type != DeliveryStatusMessage.MESSAGE_TYPE) && (type != GarlicMessage.MESSAGE_TYPE)&& ((type != DatabaseStoreMessage.MESSAGE_TYPE) || (((DatabaseStoreMessage)msg).getReplyToken() != 0))&& (type != TunnelBuildReplyMessage.MESSAGE_TYPE)&& (type != VariableTunnelBuildReplyMessage.MESSAGE_TYPE)) {
+ else   if ((_client != null) && (type != DeliveryStatusMessage.MESSAGE_TYPE) && (type != GarlicMessage.MESSAGE_TYPE)&& (type != TunnelBuildReplyMessage.MESSAGE_TYPE)&& (type != VariableTunnelBuildReplyMessage.MESSAGE_TYPE)) {
     _context.statManager().addRateData("tunnel.dropDangerousClientTunnelMessage",1,type);
     _log.error("Dropped dangerous message down a tunnel for " + _client + ": "+ msg,new Exception("cause"));
     return;
