@@ -1,50 +1,49 @@
 {
   if (!shouldRead())   return;
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Reading " + _routerFile);
+  InputStream fis=null;
+  boolean corrupt=false;
   try {
-    InputStream fis=null;
-    boolean corrupt=false;
-    try {
-      fis=new FileInputStream(_routerFile);
-      fis=new BufferedInputStream(fis);
-      RouterInfo ri=new RouterInfo();
-      ri.readBytes(fis,true);
-      if (ri.getNetworkId() != Router.NETWORK_ID) {
-        corrupt=true;
-        if (_log.shouldLog(Log.ERROR))         _log.error("The router " + ri.getIdentity().calculateHash().toBase64() + " is from a different network");
-      }
- else       if (!ri.getIdentity().calculateHash().equals(_key)) {
-        corrupt=true;
-        _log.error(ri.getIdentity().calculateHash() + " does not match " + _key+ " from "+ _routerFile);
-      }
- else       if (ri.getPublished() <= _knownDate) {
-        if (_log.shouldLog(Log.WARN))         _log.warn("Skipping since netdb newer than " + _routerFile);
-      }
- else {
-        try {
-          _facade.store(ri.getIdentity().getHash(),ri,false);
-          getContext().profileManager().heardAbout(ri.getIdentity().getHash(),ri.getPublished());
-        }
- catch (        IllegalArgumentException iae) {
-          if (_log.shouldLog(Log.INFO))           _log.info("Refused locally loaded routerInfo - deleting",iae);
-          corrupt=true;
-        }
-      }
-    }
- catch (    DataFormatException dfe) {
-      if (_log.shouldLog(Log.INFO))       _log.info("Error reading the routerInfo from " + _routerFile.getName(),dfe);
+    fis=new FileInputStream(_routerFile);
+    fis=new BufferedInputStream(fis);
+    RouterInfo ri=new RouterInfo();
+    ri.readBytes(fis,true);
+    if (ri.getNetworkId() != Router.NETWORK_ID) {
       corrupt=true;
+      if (_log.shouldLog(Log.ERROR))       _log.error("The router " + ri.getIdentity().calculateHash().toBase64() + " is from a different network");
     }
- finally {
-      if (fis != null)       try {
-        fis.close();
+ else     if (!ri.getIdentity().calculateHash().equals(_key)) {
+      corrupt=true;
+      _log.error(ri.getIdentity().calculateHash() + " does not match " + _key+ " from "+ _routerFile);
+    }
+ else     if (ri.getPublished() <= _knownDate) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Skipping since netdb newer than " + _routerFile);
+    }
+ else {
+      try {
+        _facade.store(ri.getIdentity().getHash(),ri,false);
+        getContext().profileManager().heardAbout(ri.getIdentity().getHash(),ri.getPublished());
       }
- catch (      IOException ioe) {
+ catch (      IllegalArgumentException iae) {
+        if (_log.shouldLog(Log.INFO))         _log.info("Refused locally loaded routerInfo - deleting",iae);
+        corrupt=true;
       }
     }
-    if (corrupt)     _routerFile.delete();
   }
- catch (  IOException ioe) {
+ catch (  DataFormatException dfe) {
+    if (_log.shouldLog(Log.INFO))     _log.info("Error reading the routerInfo from " + _routerFile.getName(),dfe);
+    corrupt=true;
+  }
+catch (  IOException ioe) {
     if (_log.shouldLog(Log.INFO))     _log.info("Unable to read the router reference in " + _routerFile.getName(),ioe);
+    corrupt=true;
   }
+ finally {
+    if (fis != null)     try {
+      fis.close();
+    }
+ catch (    IOException ioe) {
+    }
+  }
+  if (corrupt)   _routerFile.delete();
 }
