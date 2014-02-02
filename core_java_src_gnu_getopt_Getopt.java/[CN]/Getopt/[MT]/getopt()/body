@@ -1,0 +1,148 @@
+{
+  optarg=null;
+  if (endparse == true)   return (-1);
+  if ((nextchar == null) || (nextchar.equals(""))) {
+    if (last_nonopt > optind)     last_nonopt=optind;
+    if (first_nonopt > optind)     first_nonopt=optind;
+    if (ordering == PERMUTE) {
+      if ((first_nonopt != last_nonopt) && (last_nonopt != optind))       exchange(argv);
+ else       if (last_nonopt != optind)       first_nonopt=optind;
+      while ((optind < argv.length) && (argv[optind].equals("") || (argv[optind].charAt(0) != '-') || argv[optind].equals("-"))) {
+        optind++;
+      }
+      last_nonopt=optind;
+    }
+    if ((optind != argv.length) && argv[optind].equals("--")) {
+      optind++;
+      if ((first_nonopt != last_nonopt) && (last_nonopt != optind))       exchange(argv);
+ else       if (first_nonopt == last_nonopt)       first_nonopt=optind;
+      last_nonopt=argv.length;
+      optind=argv.length;
+    }
+    if (optind == argv.length) {
+      if (first_nonopt != last_nonopt)       optind=first_nonopt;
+      return (-1);
+    }
+    if (argv[optind].equals("") || (argv[optind].charAt(0) != '-') || argv[optind].equals("-")) {
+      if (ordering == REQUIRE_ORDER)       return (-1);
+      optarg=argv[optind++];
+      return (1);
+    }
+    if (argv[optind].startsWith("--"))     nextchar=argv[optind].substring(2);
+ else     nextchar=argv[optind].substring(1);
+  }
+  if ((long_options != null) && (argv[optind].startsWith("--") || (long_only && ((argv[optind].length() > 2) || (optstring.indexOf(argv[optind].charAt(1)) == -1))))) {
+    int c=checkLongOption();
+    if (longopt_handled)     return (c);
+    if (!long_only || argv[optind].startsWith("--") || (optstring.indexOf(nextchar.charAt(0)) == -1)) {
+      if (opterr) {
+        if (argv[optind].startsWith("--")) {
+          Object[] msgArgs={progname,nextchar};
+          System.err.println(MessageFormat.format(_messages.getString("getopt.unrecognized"),msgArgs));
+        }
+ else {
+          Object[] msgArgs={progname,new Character(argv[optind].charAt(0)).toString(),nextchar};
+          System.err.println(MessageFormat.format(_messages.getString("getopt.unrecognized2"),msgArgs));
+        }
+      }
+      nextchar="";
+      ++optind;
+      optopt=0;
+      return ('?');
+    }
+  }
+  int c=nextchar.charAt(0);
+  if (nextchar.length() > 1)   nextchar=nextchar.substring(1);
+ else   nextchar="";
+  String temp=null;
+  if (optstring.indexOf(c) != -1)   temp=optstring.substring(optstring.indexOf(c));
+  if (nextchar.equals(""))   ++optind;
+  if ((temp == null) || (c == ':')) {
+    if (opterr) {
+      if (posixly_correct) {
+        Object[] msgArgs={progname,new Character((char)c).toString()};
+        System.err.println(MessageFormat.format(_messages.getString("getopt.illegal"),msgArgs));
+      }
+ else {
+        Object[] msgArgs={progname,new Character((char)c).toString()};
+        System.err.println(MessageFormat.format(_messages.getString("getopt.invalid"),msgArgs));
+      }
+    }
+    optopt=c;
+    return ('?');
+  }
+  if ((temp.charAt(0) == 'W') && (temp.length() > 1) && (temp.charAt(1) == ';')) {
+    if (!nextchar.equals("")) {
+      optarg=nextchar;
+    }
+ else     if (optind == argv.length) {
+      if (opterr) {
+        Object[] msgArgs={progname,new Character((char)c).toString()};
+        System.err.println(MessageFormat.format(_messages.getString("getopt.requires2"),msgArgs));
+      }
+      optopt=c;
+      if (optstring.charAt(0) == ':')       return (':');
+ else       return ('?');
+    }
+ else {
+      nextchar=argv[optind];
+      optarg=argv[optind];
+    }
+    c=checkLongOption();
+    if (longopt_handled)     return (c);
+ else {
+      nextchar=null;
+      ++optind;
+      return ('W');
+    }
+  }
+  if ((temp.length() > 1) && (temp.charAt(1) == ':')) {
+    if ((temp.length() > 2) && (temp.charAt(2) == ':')) {
+      if (!nextchar.equals("")) {
+        optarg=nextchar;
+        ++optind;
+      }
+ else {
+        optarg=null;
+      }
+      nextchar=null;
+    }
+ else {
+      if (!nextchar.equals("")) {
+        optarg=nextchar;
+        ++optind;
+      }
+ else       if (optind == argv.length) {
+        if (opterr) {
+          Object[] msgArgs={progname,new Character((char)c).toString()};
+          System.err.println(MessageFormat.format(_messages.getString("getopt.requires2"),msgArgs));
+        }
+        optopt=c;
+        if (optstring.charAt(0) == ':')         return (':');
+ else         return ('?');
+      }
+ else {
+        optarg=argv[optind];
+        ++optind;
+        if ((posixly_correct) && optarg.equals("--")) {
+          if (optind == argv.length) {
+            if (opterr) {
+              Object[] msgArgs={progname,new Character((char)c).toString()};
+              System.err.println(MessageFormat.format(_messages.getString("getopt.requires2"),msgArgs));
+            }
+            optopt=c;
+            if (optstring.charAt(0) == ':')             return (':');
+ else             return ('?');
+          }
+          optarg=argv[optind];
+          ++optind;
+          first_nonopt=optind;
+          last_nonopt=argv.length;
+          endparse=true;
+        }
+      }
+      nextchar=null;
+    }
+  }
+  return (c);
+}
