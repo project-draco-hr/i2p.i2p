@@ -1,0 +1,24 @@
+{
+  Destination dest=ping.getOptionalFrom();
+  if (dest == null)   return false;
+  if (con == null) {
+    String why=shouldRejectConnection(ping);
+    if (why != null) {
+      if ((!_defaultOptions.getDisableRejectLogging()) || _log.shouldLog(Log.WARN))       _log.logAlways(Log.WARN,"Dropping ping since peer is " + why + ": "+ dest.calculateHash());
+      return false;
+    }
+  }
+ else {
+    if (!dest.equals(con.getRemotePeer())) {
+      _log.logAlways(Log.WARN,"Dropping ping from " + con.getRemotePeer().calculateHash() + " to "+ dest.calculateHash());
+      return false;
+    }
+  }
+  PacketLocal pong=new PacketLocal(_context,dest);
+  pong.setFlag(Packet.FLAG_ECHO | Packet.FLAG_NO_ACK);
+  pong.setReceiveStreamId(ping.getSendStreamId());
+  pong.setLocalPort(ping.getLocalPort());
+  pong.setRemotePort(ping.getRemotePort());
+  _outboundQueue.enqueue(pong);
+  return true;
+}
