@@ -32,6 +32,7 @@ _bytesRemaining=0;
 _keepFetching=false;
 _notModified=true;
 return;
+case 401:
 case 403:
 case 404:
 case 409:
@@ -46,6 +47,13 @@ if (_out == null) {
 if (_outputStream != null) _out=_outputStream;
  else _out=new FileOutputStream(_outputFile,true);
 }
+break;
+case 407:
+_alreadyTransferred=0;
+if (_authState != null) rcOk=!_authState.authSent;
+ else rcOk=false;
+redirect=rcOk;
+_keepFetching=rcOk;
 break;
 case 416:
 _bytesRemaining=0;
@@ -112,11 +120,12 @@ buf.setLength(0);
 key=null;
 increment(lookahead,cur);
 if (isEndOfHeaders(lookahead)) {
-if (!rcOk) throw new IOException("Invalid HTTP response code: " + _responseCode);
+if (!rcOk) throw new IOException("Invalid HTTP response code: " + _responseCode + ' '+ _responseText);
 if (_encodingChunked) {
 _bytesRemaining=readChunkLength();
 }
 if (!redirect) _redirectLocation=null;
+ else if (_responseCode == 407) _redirectLocation=_actualURL;
 return;
 }
 break;

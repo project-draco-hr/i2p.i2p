@@ -1,0 +1,38 @@
+{
+  Map<String,String> rv=new HashMap<String,String>(12);
+  String realm=args.get("realm");
+  String nonce=args.get("nonce");
+  String qop=args.get("qop");
+  String opaque=args.get("opaque");
+  if (realm == null || nonce == null) {
+    if (_log.shouldLog(Log.INFO))     _log.info("Bad digest request: " + DataHelper.toString(args));
+    throw new IOException("Bad auth response");
+  }
+  rv.put("username",'"' + username + '"');
+  rv.put("realm",'"' + realm + '"');
+  rv.put("nonce",'"' + nonce + '"');
+  rv.put("uri",'"' + uri + '"');
+  if (opaque != null)   rv.put("opaque",'"' + opaque + '"');
+  String kdMiddle;
+  if ("auth".equals(qop)) {
+    rv.put("qop","\"auth\"");
+    if (cnonce == null) {
+      byte[] rand=new byte[5];
+      _context.random().nextBytes(rand);
+      cnonce=Base32.encode(rand);
+    }
+    rv.put("cnonce",'"' + cnonce + '"');
+    String nc=lc8hex(++nonceCount);
+    rv.put("nc",nc);
+    kdMiddle=':' + nc + ':'+ cnonce+ ':'+ qop;
+  }
+ else {
+    kdMiddle="";
+  }
+  String ha1=PasswordManager.md5Hex(username + ':' + realm+ ':'+ password);
+  String a2=method + ':' + uri;
+  String ha2=PasswordManager.md5Hex(a2);
+  String kd=ha1 + ':' + nonce+ kdMiddle+ ':'+ ha2;
+  rv.put("response",'"' + PasswordManager.md5Hex(kd) + '"');
+  return rv;
+}

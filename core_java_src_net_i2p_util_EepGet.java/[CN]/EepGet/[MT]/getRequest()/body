@@ -20,11 +20,12 @@
     if (query != null)     urlToSend+='?' + query;
   }
   if (post) {
-    buf.append("POST ").append(urlToSend).append(" HTTP/1.1\r\n");
+    buf.append("POST ");
   }
  else {
-    buf.append("GET ").append(urlToSend).append(" HTTP/1.1\r\n");
+    buf.append("GET ");
   }
+  buf.append(urlToSend).append(" HTTP/1.1\r\n");
   buf.append("Host: ").append(host);
   if (port >= 0)   buf.append(':').append(port);
   buf.append("\r\n");
@@ -58,6 +59,12 @@
     }
   }
   if (!uaOverridden)   buf.append("User-Agent: " + USER_AGENT + "\r\n");
+  if (_authState != null && _shouldProxy && _authState.authMode != AUTH_MODE.NONE) {
+    buf.append("Proxy-Authorization: ");
+    String method=post ? "POST" : "GET";
+    buf.append(_authState.getAuthHeader(method,urlToSend));
+    buf.append("\r\n");
+  }
   buf.append("Connection: close\r\n\r\n");
   if (post)   buf.append(_postData);
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Request: [" + buf.toString() + "]");
