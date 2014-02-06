@@ -7,7 +7,6 @@
   long inactivityTimeout=INACTIVITY_TIMEOUT;
   String etag=null;
   String saveAs=null;
-  String url=null;
   List<String> extra=null;
   String username=null;
   String password=null;
@@ -52,12 +51,18 @@ case 'l':
 lineLen=Integer.parseInt(g.getOptarg());
 break;
 case 'h':
-if (extra == null) extra=new ArrayList<String>(2);
 String a=g.getOptarg();
-String key=a.substring(0,a.indexOf('='));
-String val=a.substring(a.indexOf('=') + 1);
+int eq=a.indexOf('=');
+if (eq > 0) {
+if (extra == null) extra=new ArrayList<String>(2);
+String key=a.substring(0,eq);
+String val=a.substring(eq + 1);
 extra.add(key);
 extra.add(val);
+}
+ else {
+error=true;
+}
 break;
 case 'u':
 username=g.getOptarg();
@@ -77,12 +82,11 @@ break;
 e.printStackTrace();
 error=true;
 }
-int remaining=args.length - g.getOptind();
-if (error || remaining != 1) {
+if (error || args.length - g.getOptind() != 1) {
 usage();
 System.exit(1);
 }
-url=args[g.getOptind()];
+String url=args[g.getOptind()];
 if (saveAs == null) saveAs=suggestName(url);
 EepGet get=new EepGet(I2PAppContext.getGlobalContext(),true,proxyHost,proxyPort,numRetries,saveAs,url,true,etag);
 if (extra != null) {
