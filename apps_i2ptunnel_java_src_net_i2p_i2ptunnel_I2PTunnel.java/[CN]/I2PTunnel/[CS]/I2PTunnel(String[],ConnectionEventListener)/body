@@ -11,73 +11,114 @@
   boolean checkRunByE=true;
   boolean cli=true;
   boolean dontDie=true;
-  for (int i=0; i < args.length; i++) {
-    if (args[i].equals("-die")) {
+  boolean error=false;
+  List<String> eargs=null;
+  Getopt g=new Getopt("i2ptunnel",args,"d::n:c::w::e:h::",longopts);
+  int c;
+  while ((c=g.getopt()) != -1) {
+switch (c) {
+case 'd':
       dontDie=false;
-      gui=false;
-      cli=false;
-      checkRunByE=false;
-    }
- else     if (args[i].equals("-nogui")) {
-      gui=false;
-      _log.warn(getPrefix() + "The `-nogui' option of I2PTunnel is deprecated.\n" + "Use `-cli', `-nocli' (aka `-wait') or `-die' instead.");
-    }
- else     if (args[i].equals("-cli")) {
-      gui=false;
-      cli=true;
-      checkRunByE=false;
-    }
- else     if (args[i].equals("-nocli") || args[i].equals("-wait")) {
-      gui=false;
-      cli=false;
-      checkRunByE=false;
-    }
- else     if (args[i].equals("-e")) {
-      runCommand(args[i + 1],this);
-      i++;
-      if (checkRunByE) {
-        checkRunByE=false;
-        cli=false;
-      }
-    }
- else     if (new File(args[i]).exists()) {
-      runCommand("run " + args[i],this);
-    }
+    gui=false;
+  cli=false;
+checkRunByE=false;
+break;
+case 'n':
+String a=g.getOptarg();
+if (a.startsWith("oc")) {
+gui=false;
+cli=false;
+checkRunByE=false;
+break;
+}
+ else if (a.startsWith("og")) {
+}
  else {
-      System.out.println("Unknown parameter " + args[i]);
-    }
-  }
-  if (gui) {
-    new I2PTunnelGUI(this);
-  }
- else   if (cli) {
-    try {
-      System.out.println("Enter 'help' for help.");
-      BufferedReader r=new BufferedReader(new InputStreamReader(System.in));
-      while (true) {
-        System.out.print("I2PTunnel> ");
-        String cmd=r.readLine();
-        if (cmd == null)         break;
-        if (cmd.length() <= 0)         continue;
-        try {
-          runCommand(cmd,this);
-        }
- catch (        Throwable t) {
-          t.printStackTrace();
-        }
-      }
-    }
- catch (    IOException ex) {
-      ex.printStackTrace();
-    }
-  }
-  while (dontDie) {
+error=true;
+break;
+}
+case NOGUI:
+gui=false;
+if (_log.shouldLog(Log.WARN)) _log.warn(getPrefix() + "The `-nogui' option of I2PTunnel is deprecated.\n" + "Use `-cli', `-nocli' (aka `-wait') or `-die' instead.");
+case 'c':
+gui=false;
+cli=true;
+checkRunByE=false;
+break;
+case 'w':
+gui=false;
+cli=false;
+checkRunByE=false;
+break;
+case 'e':
+if (eargs == null) eargs=new ArrayList<String>(4);
+eargs.add(g.getOptarg());
+if (checkRunByE) {
+checkRunByE=false;
+cli=false;
+}
+break;
+case 'h':
+case '?':
+case ':':
+default :
+error=true;
+}
+}
+int remaining=args.length - g.getOptind();
+if (error || remaining > 1) {
+System.err.println(usage());
+throw new IllegalArgumentException();
+}
+if (eargs != null) {
+for (String arg : eargs) {
+runCommand(arg,this);
+}
+}
+if (remaining == 1) {
+String f=args[g.getOptind()];
+File file=new File(f);
+if (!file.exists()) {
+System.err.println(usage());
+throw new IllegalArgumentException("Command file does not exist: " + f);
+}
+runCommand("run " + f,this);
+}
+if (gui) {
+new I2PTunnelGUI(this);
+}
+ else if (cli) {
+try {
+System.out.println("Enter 'help' for help.");
+BufferedReader r=new BufferedReader(new InputStreamReader(System.in));
+while (true) {
+System.out.print("I2PTunnel> ");
+String cmd=r.readLine();
+if (cmd == null) break;
+if (cmd.length() <= 0) continue;
+try {
+runCommand(cmd,this);
+}
+ catch (Throwable t) {
+t.printStackTrace();
+}
+}
+}
+ catch (IOException ex) {
+ex.printStackTrace();
+}
+}
+ else if (eargs == null && remaining == 0 && dontDie) {
+System.err.println(usage());
+throw new IllegalArgumentException("Waiting for nothing! Specify gui, cli, command, command file, or die");
+}
+while (dontDie) {
 synchronized (this) {
-      try {
-        wait();
-      }
- catch (      InterruptedException ie) {
-      }
-    }
-  }
+try {
+wait();
+}
+ catch (InterruptedException ie) {
+}
+}
+}
 }
