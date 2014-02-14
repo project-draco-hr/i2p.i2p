@@ -10,16 +10,27 @@
   }
   Properties inProps=in.getOptions();
   if (!checkAuth(inProps))   return;
-  SessionId sessionId=new SessionId();
-  sessionId.setSessionId(getNextSessionId());
-  _runner.setSessionId(sessionId);
-  sendStatusMessage(SessionStatusMessage.STATUS_CREATED);
+  SessionId id=_runner.getSessionId();
+  if (id != null) {
+    _runner.disconnectClient("Already have session " + id);
+    return;
+  }
   SessionConfig cfg=new SessionConfig(in.getDestination());
   cfg.setSignature(in.getSignature());
   Properties props=new Properties();
   props.putAll(in.getOptions());
   cfg.setOptions(props);
-  _runner.sessionEstablished(cfg);
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("after sessionEstablished for " + _runner.getDestHash());
+  int status=_runner.sessionEstablished(cfg);
+  if (status != SessionStatusMessage.STATUS_CREATED) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Session establish failed: code = " + status);
+    String msg;
+    if (status == SessionStatusMessage.STATUS_INVALID)     msg="duplicate destination";
+ else     if (status == SessionStatusMessage.STATUS_REFUSED)     msg="session limit exceeded";
+ else     msg="unknown error";
+    _runner.disconnectClient(msg);
+    return;
+  }
+  sendStatusMessage(status);
+  if (_log.shouldLog(Log.INFO))   _log.info("Session " + _runner.getSessionId() + " established for "+ _runner.getDestHash());
   startCreateSessionJob();
 }

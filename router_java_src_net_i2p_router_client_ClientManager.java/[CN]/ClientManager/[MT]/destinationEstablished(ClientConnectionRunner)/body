@@ -4,16 +4,30 @@
 synchronized (_pendingRunners) {
     _pendingRunners.remove(runner);
   }
-  boolean fail=false;
+  int rv;
 synchronized (_runners) {
-    fail=_runnersByHash.containsKey(dest.calculateHash());
-    if (!fail) {
-      _runners.put(dest,runner);
-      _runnersByHash.put(dest.calculateHash(),runner);
+    boolean fail=_runnersByHash.containsKey(dest.calculateHash());
+    if (fail) {
+      rv=SessionStatusMessage.STATUS_INVALID;
+    }
+ else {
+      SessionId id=locked_getNextSessionId();
+      if (id != null) {
+        runner.setSessionId(id);
+        _runners.put(dest,runner);
+        _runnersByHash.put(dest.calculateHash(),runner);
+        rv=SessionStatusMessage.STATUS_CREATED;
+      }
+ else {
+        rv=SessionStatusMessage.STATUS_REFUSED;
+      }
     }
   }
-  if (fail) {
+  if (rv == SessionStatusMessage.STATUS_INVALID) {
     _log.log(Log.CRIT,"Client attempted to register duplicate destination " + dest.calculateHash().toBase64());
-    runner.disconnectClient("Duplicate destination");
   }
+ else   if (rv == SessionStatusMessage.STATUS_REFUSED) {
+    _log.error("Max sessions exceeded " + dest.calculateHash().toBase64());
+  }
+  return rv;
 }
