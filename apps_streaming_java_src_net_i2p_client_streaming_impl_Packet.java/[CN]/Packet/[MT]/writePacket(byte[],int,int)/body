@@ -1,0 +1,79 @@
+{
+  int cur=offset;
+  DataHelper.toLong(buffer,cur,4,(_sendStreamId >= 0 ? _sendStreamId : STREAM_ID_UNKNOWN));
+  cur+=4;
+  DataHelper.toLong(buffer,cur,4,(_receiveStreamId >= 0 ? _receiveStreamId : STREAM_ID_UNKNOWN));
+  cur+=4;
+  DataHelper.toLong(buffer,cur,4,_sequenceNum > 0 ? _sequenceNum : 0);
+  cur+=4;
+  DataHelper.toLong(buffer,cur,4,_ackThrough > 0 ? _ackThrough : 0);
+  cur+=4;
+  if (_nacks != null) {
+    DataHelper.toLong(buffer,cur,1,_nacks.length);
+    cur++;
+    for (int i=0; i < _nacks.length; i++) {
+      DataHelper.toLong(buffer,cur,4,_nacks[i]);
+      cur+=4;
+    }
+  }
+ else {
+    DataHelper.toLong(buffer,cur,1,0);
+    cur++;
+  }
+  DataHelper.toLong(buffer,cur,1,_resendDelay > 0 ? _resendDelay : 0);
+  cur++;
+  DataHelper.toLong(buffer,cur,2,_flags);
+  cur+=2;
+  int optionSize=0;
+  if (isFlagSet(FLAG_DELAY_REQUESTED))   optionSize+=2;
+  if (isFlagSet(FLAG_FROM_INCLUDED))   optionSize+=_optionFrom.size();
+  if (isFlagSet(FLAG_MAX_PACKET_SIZE_INCLUDED))   optionSize+=2;
+  if (isFlagSet(FLAG_SIGNATURE_INCLUDED)) {
+    if (fakeSigLen > 0)     optionSize+=fakeSigLen;
+ else     if (_optionSignature != null)     optionSize+=_optionSignature.length();
+ else     throw new IllegalStateException();
+  }
+  DataHelper.toLong(buffer,cur,2,optionSize);
+  cur+=2;
+  if (isFlagSet(FLAG_DELAY_REQUESTED)) {
+    DataHelper.toLong(buffer,cur,2,_optionDelay > 0 ? _optionDelay : 0);
+    cur+=2;
+  }
+  if (isFlagSet(FLAG_FROM_INCLUDED)) {
+    cur+=_optionFrom.writeBytes(buffer,cur);
+  }
+  if (isFlagSet(FLAG_MAX_PACKET_SIZE_INCLUDED)) {
+    DataHelper.toLong(buffer,cur,2,_optionMaxSize > 0 ? _optionMaxSize : DEFAULT_MAX_SIZE);
+    cur+=2;
+  }
+  if (isFlagSet(FLAG_SIGNATURE_INCLUDED)) {
+    if (fakeSigLen == 0) {
+      System.arraycopy(_optionSignature.getData(),0,buffer,cur,_optionSignature.length());
+      cur+=_optionSignature.length();
+    }
+ else {
+      Arrays.fill(buffer,cur,cur + fakeSigLen,(byte)0x0);
+      cur+=fakeSigLen;
+    }
+  }
+  if (_payload != null) {
+    try {
+      System.arraycopy(_payload.getData(),_payload.getOffset(),buffer,cur,_payload.getValid());
+    }
+ catch (    ArrayIndexOutOfBoundsException aioobe) {
+      String error="payload.length: " + _payload.getValid() + " buffer.length: "+ buffer.length+ " cur: "+ cur;
+      I2PAppContext context=I2PAppContext.getCurrentContext();
+      if (context != null) {
+        Log l=context.logManager().getLog(Packet.class);
+        l.log(Log.ERROR,error,aioobe);
+      }
+ else {
+        System.err.println(error);
+        aioobe.printStackTrace(System.out);
+      }
+      throw aioobe;
+    }
+    cur+=_payload.getValid();
+  }
+  return cur - offset;
+}

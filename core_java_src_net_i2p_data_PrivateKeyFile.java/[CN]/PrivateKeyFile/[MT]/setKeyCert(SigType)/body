@@ -1,0 +1,29 @@
+{
+  if (type == SigType.DSA_SHA1)   return setCertType(Certificate.CERTIFICATE_TYPE_NULL);
+  if (dest == null)   throw new IllegalArgumentException("Dest is null");
+  KeyCertificate c=new KeyCertificate(type);
+  SimpleDataStructure signingKeys[];
+  try {
+    signingKeys=KeyGenerator.getInstance().generateSigningKeys(type);
+  }
+ catch (  GeneralSecurityException gse) {
+    throw new RuntimeException("keygen fail",gse);
+  }
+  SigningPublicKey signingPubKey=(SigningPublicKey)signingKeys[0];
+  signingPrivKey=(SigningPrivateKey)signingKeys[1];
+  Destination newdest=new Destination();
+  newdest.setPublicKey(dest.getPublicKey());
+  newdest.setSigningPublicKey(signingPubKey);
+  int len=type.getPubkeyLen();
+  if (len < 128) {
+    byte[] pad=new byte[128 - len];
+    RandomSource.getInstance().nextBytes(pad);
+    newdest.setPadding(pad);
+  }
+ else   if (len > 128) {
+    System.arraycopy(signingPubKey.getData(),128,c.getPayload(),KeyCertificate.HEADER_LENGTH,len - 128);
+  }
+  newdest.setCertificate(c);
+  dest=newdest;
+  return c;
+}
