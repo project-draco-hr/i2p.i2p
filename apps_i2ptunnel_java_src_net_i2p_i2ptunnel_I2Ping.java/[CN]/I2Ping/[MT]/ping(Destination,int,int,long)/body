@@ -1,0 +1,24 @@
+{
+  try {
+synchronized (simulLock) {
+      while (simulPings >= MAX_SIMUL_PINGS) {
+        simulLock.wait();
+      }
+      simulPings++;
+      while (lastPingTime + PING_DISTANCE > System.currentTimeMillis()) {
+        Thread.sleep(PING_DISTANCE / 2);
+      }
+      lastPingTime=System.currentTimeMillis();
+    }
+    boolean sent=sockMgr.ping(dest,fromPort,toPort,timeout);
+synchronized (simulLock) {
+      simulPings--;
+      simulLock.notifyAll();
+    }
+    return sent;
+  }
+ catch (  InterruptedException ex) {
+    _log.error("Interrupted",ex);
+    return false;
+  }
+}

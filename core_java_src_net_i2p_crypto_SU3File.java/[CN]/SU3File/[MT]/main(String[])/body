@@ -1,58 +1,64 @@
 {
   boolean ok=false;
-  List<String> a=new ArrayList<String>(Arrays.asList(args));
   try {
     String stype=null;
     String ctype=null;
-    Iterator<String> iter=a.iterator();
-    String cmd=iter.next();
-    iter.remove();
-    for (; iter.hasNext(); ) {
-      String arg=iter.next();
-      if (arg.equals("-t")) {
-        iter.remove();
-        stype=iter.next();
-        iter.remove();
-      }
- else       if (arg.equals("-c")) {
-        iter.remove();
-        ctype=iter.next();
-        iter.remove();
-      }
-    }
-    if ("showversion".equals(cmd)) {
-      ok=showVersionCLI(a.get(0));
-    }
- else     if ("sign".equals(cmd)) {
-      Properties props=new Properties();
-      props.setProperty("prng.bufferSize","16384");
-      new I2PAppContext(props);
-      ok=signCLI(stype,ctype,a.get(0),a.get(1),a.get(2),a.get(3),a.get(4),"");
-    }
- else     if ("bulksign".equals(cmd)) {
-      Properties props=new Properties();
-      props.setProperty("prng.bufferSize","16384");
-      new I2PAppContext(props);
-      ok=bulkSignCLI(stype,ctype,a.get(0),a.get(1),a.get(2),a.get(3));
-    }
- else     if ("verifysig".equals(cmd)) {
-      ok=verifySigCLI(a.get(0));
-    }
- else     if ("keygen".equals(cmd)) {
-      ok=genKeysCLI(stype,a.get(0),a.get(1),a.get(2));
-    }
- else     if ("extract".equals(cmd)) {
-      ok=extractCLI(a.get(0),a.get(1));
-    }
+    boolean error=false;
+    Getopt g=new Getopt("SU3File",args,"t:c:");
+    int c;
+    while ((c=g.getopt()) != -1) {
+switch (c) {
+case 't':
+        stype=g.getOptarg();
+      break;
+case 'c':
+    ctype=g.getOptarg();
+  break;
+case '?':
+case ':':
+default :
+error=true;
+}
+}
+int idx=g.getOptind();
+String cmd=args[idx];
+List<String> a=new ArrayList<String>(Arrays.asList(args).subList(idx + 1,args.length));
+if (error) {
+showUsageCLI();
+}
+ else if ("showversion".equals(cmd)) {
+ok=showVersionCLI(a.get(0));
+}
+ else if ("sign".equals(cmd)) {
+Properties props=new Properties();
+props.setProperty("prng.bufferSize","16384");
+new I2PAppContext(props);
+ok=signCLI(stype,ctype,a.get(0),a.get(1),a.get(2),a.get(3),a.get(4),"");
+}
+ else if ("bulksign".equals(cmd)) {
+Properties props=new Properties();
+props.setProperty("prng.bufferSize","16384");
+new I2PAppContext(props);
+ok=bulkSignCLI(stype,ctype,a.get(0),a.get(1),a.get(2),a.get(3));
+}
+ else if ("verifysig".equals(cmd)) {
+ok=verifySigCLI(a.get(0));
+}
+ else if ("keygen".equals(cmd)) {
+ok=genKeysCLI(stype,a.get(0),a.get(1),a.get(2));
+}
+ else if ("extract".equals(cmd)) {
+ok=extractCLI(a.get(0),a.get(1));
+}
  else {
-      showUsageCLI();
-    }
-  }
- catch (  NoSuchElementException nsee) {
-    showUsageCLI();
-  }
-catch (  IndexOutOfBoundsException ioobe) {
-    showUsageCLI();
-  }
-  if (!ok)   System.exit(1);
+showUsageCLI();
+}
+}
+ catch (NoSuchElementException nsee) {
+showUsageCLI();
+}
+catch (IndexOutOfBoundsException ioobe) {
+showUsageCLI();
+}
+if (!ok) System.exit(1);
 }

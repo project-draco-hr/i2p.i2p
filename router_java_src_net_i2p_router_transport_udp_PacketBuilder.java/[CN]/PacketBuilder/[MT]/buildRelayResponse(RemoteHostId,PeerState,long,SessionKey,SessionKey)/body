@@ -1,0 +1,37 @@
+{
+  InetAddress aliceAddr=null;
+  try {
+    aliceAddr=InetAddress.getByAddress(alice.getIP());
+  }
+ catch (  UnknownHostException uhe) {
+    return null;
+  }
+  UDPPacket packet=buildPacketHeader(PEER_RELAY_RESPONSE_FLAG_BYTE);
+  DatagramPacket pkt=packet.getPacket();
+  byte data[]=pkt.getData();
+  int off=HEADER_SIZE;
+  if (_log.shouldLog(Log.INFO))   _log.info("Sending relay response to " + alice + " for "+ charlie+ " with key "+ cipherKey);
+  byte charlieIP[]=charlie.getRemoteIP();
+  DataHelper.toLong(data,off,1,charlieIP.length);
+  off++;
+  System.arraycopy(charlieIP,0,data,off,charlieIP.length);
+  off+=charlieIP.length;
+  DataHelper.toLong(data,off,2,charlie.getRemotePort());
+  off+=2;
+  byte aliceIP[]=alice.getIP();
+  DataHelper.toLong(data,off,1,aliceIP.length);
+  off++;
+  System.arraycopy(aliceIP,0,data,off,aliceIP.length);
+  off+=aliceIP.length;
+  DataHelper.toLong(data,off,2,alice.getPort());
+  off+=2;
+  DataHelper.toLong(data,off,4,nonce);
+  off+=4;
+  off=pad1(data,off);
+  off=pad2(data,off);
+  pkt.setLength(off);
+  authenticate(packet,cipherKey,macKey);
+  setTo(packet,aliceAddr,alice.getPort());
+  packet.setMessageType(TYPE_RESP);
+  return packet;
+}

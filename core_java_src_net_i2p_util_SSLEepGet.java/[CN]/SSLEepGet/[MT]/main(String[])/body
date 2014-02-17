@@ -1,41 +1,43 @@
 {
-  String url=null;
   boolean saveCerts=false;
+  boolean error=false;
+  Getopt g=new Getopt("ssleepget",args,"s");
   try {
-    for (int i=0; i < args.length; i++) {
-      if (args[i].equals("-s")) {
+    int c;
+    while ((c=g.getopt()) != -1) {
+switch (c) {
+case 's':
         saveCerts=true;
-      }
- else       if (args[i].startsWith("-")) {
-        usage();
-        return;
-      }
- else {
-        url=args[i];
-      }
-    }
-  }
- catch (  Exception e) {
-    e.printStackTrace();
-    usage();
-    return;
-  }
-  if (url == null) {
-    usage();
-    return;
-  }
-  String saveAs=suggestName(url);
-  OutputStream out;
-  try {
-    out=new FileOutputStream(saveAs);
-  }
- catch (  IOException ioe) {
-    System.err.println("Failed to create output file " + saveAs);
-    return;
-  }
-  SSLEepGet get=new SSLEepGet(I2PAppContext.getGlobalContext(),out,url);
-  if (saveCerts)   get._saveCerts=true;
-  get._commandLine=true;
-  get.addStatusListener(get.new CLIStatusListener(1024,40));
-  if (!get.fetch(45 * 1000,-1,60 * 1000))   System.exit(1);
+      break;
+case '?':
+case ':':
+default :
+    error=true;
+  break;
+}
+}
+}
+ catch (Exception e) {
+e.printStackTrace();
+error=true;
+}
+if (error || args.length - g.getOptind() != 1) {
+usage();
+System.exit(1);
+}
+String url=args[g.getOptind()];
+String saveAs=suggestName(url);
+OutputStream out;
+try {
+out=new FileOutputStream(saveAs);
+}
+ catch (IOException ioe) {
+System.err.println("Failed to create output file " + saveAs);
+return;
+}
+SSLEepGet get=new SSLEepGet(I2PAppContext.getGlobalContext(),out,url);
+if (saveCerts) get._saveCerts=true;
+get._commandLine=true;
+get.addStatusListener(get.new CLIStatusListener(1024,40));
+if (!get.fetch(45 * 1000,-1,60 * 1000)) System.exit(1);
 }

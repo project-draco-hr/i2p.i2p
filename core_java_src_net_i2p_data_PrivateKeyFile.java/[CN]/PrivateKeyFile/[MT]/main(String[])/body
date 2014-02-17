@@ -1,58 +1,88 @@
 {
-  if (args.length == 0) {
-    System.err.println("Usage: PrivateKeyFile filename (generates if nonexistent, then prints)");
-    System.err.println("       PrivateKeyFile -h filename (generates if nonexistent, adds hashcash cert)");
-    System.err.println("       PrivateKeyFile -h effort filename (specify HashCash effort instead of default " + HASH_EFFORT + ")");
-    System.err.println("       PrivateKeyFile -n filename (changes to null cert)");
-    System.err.println("       PrivateKeyFile -s filename signwithdestfile (generates if nonexistent, adds cert signed by 2nd dest)");
-    System.err.println("       PrivateKeyFile -u filename (changes to unknown cert)");
-    System.err.println("       PrivateKeyFile -x filename (changes to hidden cert)");
-    return;
-  }
-  I2PClient client=I2PClientFactory.createClient();
-  int filearg=0;
-  if (args.length > 1) {
-    if (args.length >= 2 && args[0].equals("-h"))     filearg=args.length - 1;
- else     filearg=1;
-  }
-  try {
-    File f=new File(args[filearg]);
-    PrivateKeyFile pkf=new PrivateKeyFile(f,client);
-    Destination d=pkf.createIfAbsent();
-    System.out.println("Original Destination:");
-    System.out.println(pkf);
-    verifySignature(d);
-    if (args.length == 1)     return;
-    if (args[0].equals("-n")) {
-      pkf.setCertType(Certificate.CERTIFICATE_TYPE_NULL);
-      System.out.println("New destination with null cert is:");
-    }
- else     if (args[0].equals("-u")) {
-      pkf.setCertType(99);
-      System.out.println("New destination with unknown cert is:");
-    }
- else     if (args[0].equals("-x")) {
-      pkf.setCertType(Certificate.CERTIFICATE_TYPE_HIDDEN);
-      System.out.println("New destination with hidden cert is:");
-    }
- else     if (args[0].equals("-h")) {
-      int hashEffort=HASH_EFFORT;
-      if (args.length == 3)       hashEffort=Integer.parseInt(args[1]);
-      System.out.println("Estimating hashcash generation time, stand by...");
-      System.out.println(estimateHashCashTime(hashEffort));
-      pkf.setHashCashCert(hashEffort);
-      System.out.println("New destination with hashcash cert is:");
-    }
- else     if (args.length == 3 && args[0].equals("-s")) {
-      PrivateKeyFile pkf2=new PrivateKeyFile(args[2]);
-      pkf.setSignedCert(pkf2);
-      System.out.println("New destination with signed cert is:");
-    }
-    System.out.println(pkf);
-    pkf.write();
-    verifySignature(d);
-  }
- catch (  Exception e) {
-    e.printStackTrace();
-  }
+  int hashEffort=HASH_EFFORT;
+  String stype=null;
+  int mode=0;
+  boolean error=false;
+  Getopt g=new Getopt("pkf",args,"t:nuxhse:");
+  int c;
+  while ((c=g.getopt()) != -1) {
+switch (c) {
+case 't':
+      stype=g.getOptarg();
+case 'n':
+case 'u':
+case 'x':
+case 'h':
+case 's':
+    if (mode == 0)     mode=c;
+ else     error=true;
+  break;
+case 'e':
+hashEffort=Integer.parseInt(g.getOptarg());
+break;
+case '?':
+case ':':
+default :
+error=true;
+break;
+}
+}
+int remaining=args.length - g.getOptind();
+int reqd=mode == 's' ? 2 : 1;
+if (error || remaining != reqd) {
+usage();
+System.exit(1);
+}
+String filearg=args[g.getOptind()];
+I2PClient client=I2PClientFactory.createClient();
+try {
+File f=new File(filearg);
+PrivateKeyFile pkf=new PrivateKeyFile(f,client);
+Destination d=pkf.createIfAbsent();
+System.out.println("Original Destination:");
+System.out.println(pkf);
+verifySignature(d);
+switch (mode) {
+case 0:
+break;
+case 'n':
+pkf.setCertType(Certificate.CERTIFICATE_TYPE_NULL);
+System.out.println("New destination with null cert is:");
+break;
+case 'u':
+pkf.setCertType(99);
+System.out.println("New destination with unknown cert is:");
+break;
+case 'x':
+pkf.setCertType(Certificate.CERTIFICATE_TYPE_HIDDEN);
+System.out.println("New destination with hidden cert is:");
+break;
+case 'h':
+System.out.println("Estimating hashcash generation time, stand by...");
+System.out.println(estimateHashCashTime(hashEffort));
+pkf.setHashCashCert(hashEffort);
+System.out.println("New destination with hashcash cert is:");
+break;
+case 's':
+PrivateKeyFile pkf2=new PrivateKeyFile(args[g.getOptind() + 1]);
+pkf.setSignedCert(pkf2);
+System.out.println("New destination with signed cert is:");
+case 't':
+SigType type=SigType.parseSigType(stype);
+if (type == null) throw new IllegalArgumentException("Signature type " + stype + " is not supported");
+pkf.setKeyCert(type);
+System.out.println("New destination with key cert is:");
+break;
+default :
+usage();
+return;
+}
+System.out.println(pkf);
+pkf.write();
+verifySignature(pkf.getDestination());
+}
+ catch (Exception e) {
+e.printStackTrace();
+System.exit(1);
+}
 }

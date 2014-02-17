@@ -1,0 +1,88 @@
+{
+  LongOpt pfound=null;
+  int nameend;
+  boolean ambig;
+  boolean exact;
+  longopt_handled=true;
+  ambig=false;
+  exact=false;
+  longind=-1;
+  nameend=nextchar.indexOf("=");
+  if (nameend == -1)   nameend=nextchar.length();
+  for (int i=0; i < long_options.length; i++) {
+    if (long_options[i].getName().startsWith(nextchar.substring(0,nameend))) {
+      if (long_options[i].getName().equals(nextchar.substring(0,nameend))) {
+        pfound=long_options[i];
+        longind=i;
+        exact=true;
+        break;
+      }
+ else       if (pfound == null) {
+        pfound=long_options[i];
+        longind=i;
+      }
+ else {
+        ambig=true;
+      }
+    }
+  }
+  if (ambig && !exact) {
+    if (opterr) {
+      Object[] msgArgs={progname,argv[optind]};
+      System.err.println(MessageFormat.format(_messages.getString("getopt.ambigious"),msgArgs));
+    }
+    nextchar="";
+    optopt=0;
+    ++optind;
+    return ('?');
+  }
+  if (pfound != null) {
+    ++optind;
+    if (nameend != nextchar.length()) {
+      if (pfound.has_arg != LongOpt.NO_ARGUMENT) {
+        if (nextchar.substring(nameend).length() > 1)         optarg=nextchar.substring(nameend + 1);
+ else         optarg="";
+      }
+ else {
+        if (opterr) {
+          if (argv[optind - 1].startsWith("--")) {
+            Object[] msgArgs={progname,pfound.name};
+            System.err.println(MessageFormat.format(_messages.getString("getopt.arguments1"),msgArgs));
+          }
+ else {
+            Object[] msgArgs={progname,new Character(argv[optind - 1].charAt(0)).toString(),pfound.name};
+            System.err.println(MessageFormat.format(_messages.getString("getopt.arguments2"),msgArgs));
+          }
+        }
+        nextchar="";
+        optopt=pfound.val;
+        return ('?');
+      }
+    }
+ else     if (pfound.has_arg == LongOpt.REQUIRED_ARGUMENT) {
+      if (optind < argv.length) {
+        optarg=argv[optind];
+        ++optind;
+      }
+ else {
+        if (opterr) {
+          Object[] msgArgs={progname,argv[optind - 1]};
+          System.err.println(MessageFormat.format(_messages.getString("getopt.requires"),msgArgs));
+        }
+        nextchar="";
+        optopt=pfound.val;
+        if (optstring.charAt(0) == ':')         return (':');
+ else         return ('?');
+      }
+    }
+    nextchar="";
+    if (pfound.flag != null) {
+      pfound.flag.setLength(0);
+      pfound.flag.append(pfound.val);
+      return (0);
+    }
+    return (pfound.val);
+  }
+  longopt_handled=false;
+  return (0);
+}

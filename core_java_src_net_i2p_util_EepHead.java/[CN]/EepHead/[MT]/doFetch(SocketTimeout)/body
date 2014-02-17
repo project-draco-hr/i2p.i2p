@@ -20,9 +20,19 @@
       if (_redirectLocation.startsWith("/"))       _actualURL="http://" + url.getHost() + ":"+ url.getPort()+ _redirectLocation;
  else       _actualURL="http://" + url.getHost() + ":"+ url.getPort()+ "/"+ _redirectLocation;
     }
-    _redirects++;
-    if (_redirects > 5)     throw new IOException("Too many redirects: to " + _redirectLocation);
-    if (_log.shouldLog(Log.INFO))     _log.info("Redirecting to " + _redirectLocation);
+    AuthState as=_authState;
+    if (_responseCode == 407) {
+      if (!_shouldProxy)       throw new IOException("Proxy auth response from non-proxy");
+      if (as == null)       throw new IOException("Proxy requires authentication");
+      if (as.authSent)       throw new IOException("Proxy authentication failed");
+      if (_log.shouldLog(Log.INFO))       _log.info("Adding auth");
+    }
+ else {
+      _redirects++;
+      if (_redirects > 5)       throw new IOException("Too many redirects: to " + _redirectLocation);
+      if (_log.shouldLog(Log.INFO))       _log.info("Redirecting to " + _redirectLocation);
+      if (as != null)       as.authSent=false;
+    }
     _bytesRemaining=-1;
     _redirectLocation=null;
     _etag=null;

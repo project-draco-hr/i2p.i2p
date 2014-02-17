@@ -3,78 +3,77 @@
   int count=PING_COUNT;
   boolean countPing=false;
   boolean reportTimes=true;
-  while (true) {
-    if (cmd.startsWith("-t ")) {
-      cmd=cmd.substring(3);
-      int pos=cmd.indexOf(" ");
-      if (pos == -1) {
-        l.log("Syntax error");
-        return;
-      }
- else {
-        timeout=Long.parseLong(cmd.substring(0,pos));
-        if (timeout < 100)         timeout*=1000;
-        cmd=cmd.substring(pos + 1);
-      }
-    }
- else     if (cmd.startsWith("-m ")) {
-      cmd=cmd.substring(3);
-      int pos=cmd.indexOf(" ");
-      if (pos == -1) {
-        l.log("Syntax error");
-        return;
-      }
- else {
-        MAX_SIMUL_PINGS=Integer.parseInt(cmd.substring(0,pos));
-        cmd=cmd.substring(pos + 1);
-      }
-    }
- else     if (cmd.startsWith("-n ")) {
-      cmd=cmd.substring(3);
-      int pos=cmd.indexOf(" ");
-      if (pos == -1) {
-        l.log("Syntax error");
-        return;
-      }
- else {
-        count=Integer.parseInt(cmd.substring(0,pos));
-        cmd=cmd.substring(pos + 1);
-      }
-    }
- else     if (cmd.startsWith("-c ")) {
-      countPing=true;
-      count=CPING_COUNT;
-      cmd=cmd.substring(3);
-    }
- else     if (cmd.equals("-h")) {
-      cmd="-l hosts.txt";
-    }
- else     if (cmd.startsWith("-l ")) {
-      BufferedReader br=new BufferedReader(new FileReader(cmd.substring(3)));
-      String line;
-      List<PingHandler> pingHandlers=new ArrayList<PingHandler>();
-      int i=0;
-      while ((line=br.readLine()) != null) {
-        if (line.startsWith("#"))         continue;
-        if (line.startsWith(";"))         continue;
-        if (line.startsWith("!"))         continue;
-        if (line.indexOf("=") != -1) {
-          line=line.substring(0,line.indexOf("="));
-        }
-        PingHandler ph=new PingHandler(line,count,timeout,countPing,reportTimes);
-        ph.start();
-        pingHandlers.add(ph);
-        if (++i > 1)         reportTimes=false;
-      }
-      br.close();
-      for (      Thread t : pingHandlers)       t.join();
-      return;
-    }
- else {
-      Thread t=new PingHandler(cmd,count,timeout,countPing,reportTimes);
-      t.start();
-      t.join();
-      return;
-    }
-  }
+  String hostListFile=null;
+  int localPort=0;
+  int remotePort=0;
+  boolean error=false;
+  String[] argv=cmd.split(" ");
+  Getopt g=new Getopt("ping",argv,"t:m:n:chl:f:p:");
+  int c;
+  while ((c=g.getopt()) != -1) {
+switch (c) {
+case 't':
+      timeout=Long.parseLong(g.getOptarg());
+    if (timeout < 100)     timeout*=1000;
+  break;
+case 'm':
+MAX_SIMUL_PINGS=Integer.parseInt(g.getOptarg());
+break;
+case 'n':
+count=Integer.parseInt(g.getOptarg());
+break;
+case 'c':
+countPing=true;
+count=CPING_COUNT;
+break;
+case 'h':
+if (hostListFile != null) error=true;
+ else hostListFile="hosts.txt";
+break;
+case 'l':
+if (hostListFile != null) error=true;
+ else hostListFile=g.getOptarg();
+break;
+case 'f':
+localPort=Integer.parseInt(g.getOptarg());
+break;
+case 'p':
+remotePort=Integer.parseInt(g.getOptarg());
+break;
+case '?':
+case ':':
+default :
+error=true;
+}
+}
+int remaining=argv.length - g.getOptind();
+if (error || remaining > 1 || (remaining <= 0 && hostListFile == null) || (remaining > 0 && hostListFile != null)) {
+System.out.println(usage());
+return;
+}
+if (hostListFile != null) {
+BufferedReader br=new BufferedReader(new FileReader(hostListFile));
+String line;
+List<PingHandler> pingHandlers=new ArrayList<PingHandler>();
+int i=0;
+while ((line=br.readLine()) != null) {
+if (line.startsWith("#")) continue;
+if (line.startsWith(";")) continue;
+if (line.startsWith("!")) continue;
+if (line.indexOf("=") != -1) {
+line=line.substring(0,line.indexOf("="));
+}
+PingHandler ph=new PingHandler(line,count,localPort,remotePort,timeout,countPing,reportTimes);
+ph.start();
+pingHandlers.add(ph);
+if (++i > 1) reportTimes=false;
+}
+br.close();
+for (Thread t : pingHandlers) t.join();
+return;
+}
+String host=argv[g.getOptind()];
+Thread t=new PingHandler(host,count,localPort,remotePort,timeout,countPing,reportTimes);
+t.start();
+t.join();
 }
