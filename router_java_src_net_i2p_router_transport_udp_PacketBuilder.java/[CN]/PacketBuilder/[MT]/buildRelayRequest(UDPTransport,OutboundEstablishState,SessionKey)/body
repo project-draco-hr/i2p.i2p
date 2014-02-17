@@ -11,7 +11,26 @@
       if (_log.shouldLog(Log.WARN))       _log.warn("Cannot build a relay request to " + state.getRemoteIdentity().calculateHash() + ", as their UDP address is invalid: addr="+ addr+ " index="+ i);
       continue;
     }
-    rv.add(buildRelayRequest(iaddr,iport,ikey,tag,ourIntroKey,state.getIntroNonce(),true));
+    SessionKey cipherKey=null;
+    SessionKey macKey=null;
+    PeerState bobState=transport.getPeerState(Hash.create(ikey));
+    if (bobState == null) {
+      RemoteHostId rhid=new RemoteHostId(iaddr.getAddress(),iport);
+      bobState=transport.getPeerState(rhid);
+    }
+    if (bobState != null) {
+      cipherKey=bobState.getCurrentCipherKey();
+      macKey=bobState.getCurrentMACKey();
+    }
+    if (cipherKey == null || macKey == null) {
+      cipherKey=new SessionKey(ikey);
+      macKey=cipherKey;
+      if (_log.shouldLog(Log.INFO))       _log.info("Sending relay request (w/ intro key) to " + iaddr + ":"+ iport);
+    }
+ else {
+      if (_log.shouldLog(Log.INFO))       _log.info("Sending relay request (in-session) to " + iaddr + ":"+ iport);
+    }
+    rv.add(buildRelayRequest(iaddr,iport,cipherKey,macKey,tag,ourIntroKey,state.getIntroNonce()));
   }
   return rv;
 }

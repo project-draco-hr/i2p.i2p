@@ -12,6 +12,28 @@
     DataHelper.toLong(_validateBuf,off,2,payloadLength);
     off+=2;
     eq=_context.hmac().verify(macKey,_validateBuf,0,off,_data,_packet.getOffset(),MAC_SIZE);
+    if (!eq) {
+      Log log=_context.logManager().getLog(UDPPacket.class);
+      if (log.shouldLog(Log.INFO)) {
+        byte[] calc=new byte[32];
+        _context.hmac().calculate(macKey,_validateBuf,0,off,calc,0);
+        StringBuilder str=new StringBuilder(512);
+        str.append("Bad HMAC:\n\t");
+        str.append(_packet.getLength()).append(" byte pkt, ");
+        str.append(payloadLength).append(" byte payload");
+        str.append("\n\tFrom: ").append(getRemoteHost().toString());
+        str.append("\n\tIV:   ").append(Base64.encode(_validateBuf,payloadLength,IV_SIZE));
+        str.append("\n\tIV2:  ").append(Base64.encode(_data,MAC_SIZE,IV_SIZE));
+        str.append("\n\tGiven Len: ").append(DataHelper.fromLong(_validateBuf,payloadLength + IV_SIZE,2));
+        str.append("\n\tCalc HMAC: ").append(Base64.encode(calc,0,MAC_SIZE));
+        str.append("\n\tRead HMAC: ").append(Base64.encode(_data,_packet.getOffset(),MAC_SIZE));
+        str.append("\n\tUsing key: ").append(macKey.toBase64());
+        if (DataHelper.eq(macKey.getData(),0,((RouterContext)_context).routerHash().getData(),0,32))         str.append(" (Intro)");
+ else         str.append(" (Session)");
+        str.append("\n\tRaw:       ").append(Base64.encode(_data,_packet.getOffset(),_packet.getLength()));
+        log.info(str.toString(),new Exception());
+      }
+    }
   }
  else {
   }
