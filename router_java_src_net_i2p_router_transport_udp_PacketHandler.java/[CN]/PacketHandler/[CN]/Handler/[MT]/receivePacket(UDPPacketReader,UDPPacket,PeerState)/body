@@ -1,6 +1,6 @@
 {
   _state=17;
-  boolean isStray=false;
+  AuthType auth=AuthType.NONE;
   boolean isValid=packet.validate(state.getCurrentMACKey());
   if (!isValid) {
     _state=18;
@@ -13,7 +13,7 @@
         _state=20;
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Validation with existing con failed, but validation as reestablish/stray passed");
         packet.decrypt(_transport.getIntroKey());
-        isStray=true;
+        auth=AuthType.INTRO;
       }
  else {
         _state=21;
@@ -33,13 +33,15 @@
  else {
       _state=23;
       packet.decrypt(state.getNextCipherKey());
+      auth=AuthType.SESSION;
     }
   }
  else {
     _state=24;
     packet.decrypt(state.getCurrentCipherKey());
+    auth=AuthType.SESSION;
   }
   _state=25;
-  handlePacket(reader,packet,state,null,null,!isStray);
+  handlePacket(reader,packet,state,null,null,auth);
   _state=26;
 }
