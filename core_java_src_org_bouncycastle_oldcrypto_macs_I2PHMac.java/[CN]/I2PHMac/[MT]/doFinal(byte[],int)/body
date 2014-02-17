@@ -1,10 +1,16 @@
 {
   byte[] tmp=acquireTmp(digestSize);
-  digest.doFinal(tmp,0);
-  digest.update(outputPad,0,outputPad.length);
-  digest.update(tmp,0,tmp.length);
-  releaseTmp(tmp);
-  int len=digest.doFinal(out,outOff);
-  reset();
-  return len;
+  try {
+    digest.digest(tmp,0,digestSize);
+    digest.update(outputPad,0,outputPad.length);
+    digest.update(tmp,0,tmp.length);
+    return digest.digest(out,outOff,digestSize);
+  }
+ catch (  DigestException de) {
+    throw new IllegalArgumentException(de);
+  }
+ finally {
+    releaseTmp(tmp);
+    reset();
+  }
 }
