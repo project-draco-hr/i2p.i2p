@@ -8,6 +8,21 @@
     StringBuilder command=new StringBuilder(128);
     Map<String,List<String>> headers=readHeaders(in,command,CLIENT_SKIPHEADERS,getTunnel().getContext());
     long afterHeaders=getTunnel().getContext().clock().now();
+    Properties opts=getTunnel().getClientOptions();
+    if (Boolean.parseBoolean(opts.getProperty(OPT_REJECT_INPROXY)) && (headers.containsKey("X-Forwarded-For") || headers.containsKey("X-Forwarded-Server") || headers.containsKey("X-Forwarded-Host"))) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Refusing inproxy access: " + peerHash.toBase64());
+      try {
+        socket.getOutputStream().write(ERR_INPROXY);
+      }
+ catch (      IOException ioe) {
+      }
+      try {
+        socket.close();
+      }
+ catch (      IOException ioe) {
+      }
+      return;
+    }
     if (_postThrottler != null && command.length() >= 5 && command.substring(0,5).toUpperCase(Locale.US).equals("POST ")) {
       if (_postThrottler.shouldThrottle(peerHash)) {
         if (_log.shouldLog(Log.WARN))         _log.warn("Refusing POST since peer is throttled: " + peerHash.toBase64());
@@ -27,7 +42,6 @@
     addEntry(headers,HASH_HEADER,peerHash.toBase64());
     addEntry(headers,DEST32_HEADER,Base32.encode(peerHash.getData()) + ".b32.i2p");
     addEntry(headers,DEST64_HEADER,socket.getPeerDestination().toBase64());
-    Properties opts=getTunnel().getClientOptions();
     String spoofHost;
     int ourPort=socket.getLocalPort();
     if (ourPort != 80 && ourPort > 0 && ourPort <= 65535 && opts != null) {
