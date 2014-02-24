@@ -5,7 +5,7 @@
     RouterIdentity alice=new RouterIdentity();
     int sz=(int)DataHelper.fromLong(b,0,2);
     if ((sz <= 0) || (sz > b.length - 2 - 4- Signature.SIGNATURE_BYTES)) {
-      _context.statManager().addRateData("ntcp.invalidInboundSize",sz,0);
+      _context.statManager().addRateData("ntcp.invalidInboundSize",sz);
       fail("size is invalid",new Exception("size is " + sz));
       return;
     }
@@ -45,7 +45,7 @@
         if (diff != 0)         _log.logAlways(Log.WARN,"NTP failure, NTCP adjusting clock by " + DataHelper.formatDuration(diff));
       }
  else       if (diff >= Router.CLOCK_FUDGE_FACTOR) {
-        _context.statManager().addRateData("ntcp.invalidInboundSkew",diff,0);
+        _context.statManager().addRateData("ntcp.invalidInboundSkew",diff);
         _transport.markReachable(alice.calculateHash(),true);
         _context.banlist().banlistRouter(DataHelper.formatDuration(diff),alice.calculateHash(),_x("Excessive clock skew: {0}"));
         _transport.setLastBadSkew(tsA - _tsB);
@@ -64,16 +64,16 @@
       if (_log.shouldLog(Log.INFO))       _log.info(prefix() + "Verified remote peer as " + alice.calculateHash().toBase64());
     }
  else {
-      _context.statManager().addRateData("ntcp.invalidInboundSignature",1,0);
+      _context.statManager().addRateData("ntcp.invalidInboundSignature",1);
       fail("Peer verification failed - spoof of " + alice.calculateHash().toBase64() + "?");
     }
   }
  catch (  IOException ioe) {
-    _context.statManager().addRateData("ntcp.invalidInboundIOE",1,0);
+    _context.statManager().addRateData("ntcp.invalidInboundIOE",1);
     fail("Error verifying peer",ioe);
   }
 catch (  DataFormatException dfe) {
-    _context.statManager().addRateData("ntcp.invalidInboundDFE",1,0);
+    _context.statManager().addRateData("ntcp.invalidInboundDFE",1);
     fail("Error verifying peer",dfe);
   }
 catch (  NullPointerException npe) {

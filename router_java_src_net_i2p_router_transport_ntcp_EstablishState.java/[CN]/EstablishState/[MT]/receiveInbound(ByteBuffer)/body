@@ -3,13 +3,6 @@
   while (_received < _X.length && src.hasRemaining()) {
     byte c=src.get();
     _X[_received++]=c;
-    if (_received >= _X.length) {
-      if (isCheckInfo(_context,_context.routerHash(),_X)) {
-        _context.statManager().addRateData("ntcp.inboundCheckConnection",1,0);
-        fail("Incoming connection was a check connection");
-        return;
-      }
-    }
   }
   while (_received < _X.length + _hX_xor_bobIdentHash.length && src.hasRemaining()) {
     int i=_received - _X.length;
@@ -20,16 +13,19 @@
   if (_received >= _X.length + _hX_xor_bobIdentHash.length) {
     if (_dh.getSessionKey() == null) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug(prefix() + "Enough data for a DH received");
-      Hash hX=_context.sha().calculateHash(_X);
-      byte realXor[]=DataHelper.xor(hX.getData(),_context.routerHash().getData());
-      if (_log.shouldLog(Log.DEBUG)) {
-        _log.debug(prefix() + "hx = " + Base64.encode(hX.getData()));
-        _log.debug(prefix() + "bih=" + Base64.encode(_context.routerHash().getData()));
-        _log.debug(prefix() + "xor=" + Base64.encode(realXor));
-      }
+      byte[] realXor=SimpleByteCache.acquire(Hash.HASH_LENGTH);
+      _context.sha().calculateHash(_X,0,_X.length,realXor,0);
+      xor32(_context.routerHash().getData(),realXor);
       if (!DataHelper.eq(realXor,_hX_xor_bobIdentHash)) {
-        _context.statManager().addRateData("ntcp.invalidHXxorBIH",1,0);
+        SimpleByteCache.release(realXor);
+        _context.statManager().addRateData("ntcp.invalidHXxorBIH",1);
         fail("Invalid hX_xor");
+        return;
+      }
+      SimpleByteCache.release(realXor);
+      if (!_transport.isHXHIValid(_hX_xor_bobIdentHash)) {
+        _context.statManager().addRateData("ntcp.replayHXxorBIH",1);
+        fail("Replay hX_xor");
         return;
       }
       try {
@@ -41,20 +37,22 @@
         byte xy[]=new byte[_X.length + _Y.length];
         System.arraycopy(_X,0,xy,0,_X.length);
         System.arraycopy(_Y,0,xy,_X.length,_Y.length);
-        Hash hxy=_context.sha().calculateHash(xy);
+        byte[] hxy=SimpleByteCache.acquire(Hash.HASH_LENGTH);
+        _context.sha().calculateHash(xy,0,xy.length,hxy,0);
         _tsB=(_context.clock().now() + 500) / 1000l;
-        byte toEncrypt[]=new byte[hxy.getData().length + (4 + 12)];
-        System.arraycopy(hxy.getData(),0,toEncrypt,0,hxy.getData().length);
+        byte toEncrypt[]=new byte[hxy.length + (4 + 12)];
+        System.arraycopy(hxy,0,toEncrypt,0,hxy.length);
         byte tsB[]=DataHelper.toLong(4,_tsB);
-        System.arraycopy(tsB,0,toEncrypt,hxy.getData().length,tsB.length);
-        _context.random().nextBytes(toEncrypt,hxy.getData().length + 4,12);
+        System.arraycopy(tsB,0,toEncrypt,hxy.length,tsB.length);
+        _context.random().nextBytes(toEncrypt,hxy.length + 4,12);
         if (_log.shouldLog(Log.DEBUG)) {
-          _log.debug(prefix() + "h(x+y)=" + Base64.encode(hxy.getData()));
+          _log.debug(prefix() + "h(x+y)=" + Base64.encode(hxy));
           _log.debug(prefix() + "tsb=" + Base64.encode(tsB));
           _log.debug(prefix() + "unencrypted H(X+Y)+tsB+padding: " + Base64.encode(toEncrypt));
           _log.debug(prefix() + "encryption iv= " + Base64.encode(_Y,_Y.length - 16,16));
           _log.debug(prefix() + "encryption key= " + _dh.getSessionKey().toBase64());
         }
+        SimpleByteCache.release(hxy);
         _e_hXY_tsB=new byte[toEncrypt.length];
         _context.aes().encrypt(toEncrypt,0,_e_hXY_tsB,0,_dh.getSessionKey(),_Y,_Y.length - 16,toEncrypt.length);
         if (_log.shouldLog(Log.DEBUG))         _log.debug(prefix() + "encrypted H(X+Y)+tsB+padding: " + Base64.encode(_e_hXY_tsB));
@@ -65,7 +63,7 @@
         if (!src.hasRemaining())         return;
       }
  catch (      DHSessionKeyBuilder.InvalidPublicParameterException e) {
-        _context.statManager().addRateData("ntcp.invalidDH",1,0);
+        _context.statManager().addRateData("ntcp.invalidDH",1);
         fail("Invalid X",e);
         return;
       }

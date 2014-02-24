@@ -11,7 +11,7 @@
         _e_hXY_tsB=new byte[Hash.HASH_LENGTH + 4 + 12];
       }
  catch (      DHSessionKeyBuilder.InvalidPublicParameterException e) {
-        _context.statManager().addRateData("ntcp.invalidDH",1,0);
+        _context.statManager().addRateData("ntcp.invalidDH",1);
         fail("Invalid X",e);
         return;
       }
@@ -31,13 +31,15 @@
       byte XY[]=new byte[_X.length + _Y.length];
       System.arraycopy(_X,0,XY,0,_X.length);
       System.arraycopy(_Y,0,XY,_X.length,_Y.length);
-      Hash h=_context.sha().calculateHash(XY);
-      if (_log.shouldLog(Log.DEBUG))       _log.debug(prefix() + "h(XY)=" + h.toBase64());
-      if (!DataHelper.eq(h.getData(),0,hXY_tsB,0,Hash.HASH_LENGTH)) {
-        _context.statManager().addRateData("ntcp.invalidHXY",1,0);
+      byte[] h=SimpleByteCache.acquire(Hash.HASH_LENGTH);
+      _context.sha().calculateHash(XY,0,XY.length,h,0);
+      if (!DataHelper.eq(h,0,hXY_tsB,0,Hash.HASH_LENGTH)) {
+        SimpleByteCache.release(h);
+        _context.statManager().addRateData("ntcp.invalidHXY",1);
         fail("Invalid H(X+Y) - mitm attack attempted?");
         return;
       }
+      SimpleByteCache.release(h);
       _tsB=DataHelper.fromLong(hXY_tsB,Hash.HASH_LENGTH,4);
       _tsA=(_context.clock().now() + 500) / 1000;
       if (_log.shouldLog(Log.DEBUG))       _log.debug(prefix() + "h(X+Y) is correct, tsA-tsB=" + (_tsA - _tsB));
@@ -48,7 +50,7 @@
         if (diff != 0)         _log.logAlways(Log.WARN,"NTP failure, NTCP adjusting clock by " + DataHelper.formatDuration(diff));
       }
  else       if (diff >= Router.CLOCK_FUDGE_FACTOR) {
-        _context.statManager().addRateData("ntcp.invalidOutboundSkew",diff,0);
+        _context.statManager().addRateData("ntcp.invalidOutboundSkew",diff);
         _transport.markReachable(_con.getRemotePeer().calculateHash(),false);
         _context.banlist().banlistRouter(DataHelper.formatDuration(diff),_con.getRemotePeer().calculateHash(),_x("Excessive clock skew: {0}"));
         _transport.setLastBadSkew(_tsA - _tsB);
@@ -79,8 +81,6 @@
       System.arraycopy(sig.getData(),0,preEncrypt,2 + ident.length + 4+ padding,Signature.SIGNATURE_BYTES);
       _prevEncrypted=new byte[preEncrypt.length];
       _context.aes().encrypt(preEncrypt,0,_prevEncrypted,0,_dh.getSessionKey(),_hX_xor_bobIdentHash,_hX_xor_bobIdentHash.length - 16,preEncrypt.length);
-      if (_log.shouldLog(Log.DEBUG)) {
-      }
       _transport.getPumper().wantsWrite(_con,_prevEncrypted);
     }
   }
@@ -118,7 +118,7 @@
         voff+=4;
         _verified=_context.dsa().verifySignature(sig,toVerify,_con.getRemotePeer().getSigningPublicKey());
         if (!_verified) {
-          _context.statManager().addRateData("ntcp.invalidSignature",1,0);
+          _context.statManager().addRateData("ntcp.invalidSignature",1);
           fail("Signature was invalid - attempt to spoof " + _con.getRemotePeer().calculateHash().toBase64() + "?");
         }
  else {
