@@ -1,8 +1,9 @@
 {
   long exp=messageBody.getMessageExpiration();
-  if (_log.shouldLog(Log.INFO))   _log.info("Received inbound " + " with id " + messageBody.getUniqueId() + " expiring on "+ exp+ " of type "+ messageBody.getClass().getSimpleName());
+  if (_log.shouldLog(Log.INFO))   _log.info("Rcvd" + " ID " + messageBody.getUniqueId() + " exp. "+ new Date(exp)+ " type "+ messageBody.getClass().getSimpleName());
+  int type=messageBody.getType();
   String invalidReason=null;
-  if (messageBody instanceof TunnelDataMessage) {
+  if (type == TunnelDataMessage.MESSAGE_TYPE) {
     invalidReason=_context.messageValidator().validateMessage(exp);
   }
  else {
@@ -21,7 +22,6 @@
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Message received [" + messageBody.getUniqueId() + " expiring on "+ exp+ "] is NOT a duplicate or exipired");
   }
   boolean jobFound=false;
-  int type=messageBody.getType();
   boolean allowMatches=true;
   if (type == TunnelGatewayMessage.MESSAGE_TYPE) {
     shortCircuitTunnelGateway(messageBody);
@@ -34,7 +34,7 @@
  else {
     if ((type > 0) && (type < _handlerJobBuilders.length)) {
       HandlerJobBuilder builder=_handlerJobBuilders[type];
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Add message to the inNetMessage pool - builder: " + builder + " message class: "+ messageBody.getClass().getSimpleName());
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Add msg to the pool - builder: " + builder + " type: "+ messageBody.getClass().getSimpleName());
       if (builder != null) {
         Job job=builder.createJob(messageBody,fromRouter,fromRouterHash);
         if (job != null) {
