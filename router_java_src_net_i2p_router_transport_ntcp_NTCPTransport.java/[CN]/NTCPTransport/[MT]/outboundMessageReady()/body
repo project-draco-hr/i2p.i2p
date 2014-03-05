@@ -28,8 +28,21 @@ synchronized (_conLock) {
       return;
     }
     if (isNew) {
-      con.enqueueInfoMessage();
       con.send(msg);
+      boolean shouldSkipInfo=false;
+      I2NPMessage m=msg.getMessage();
+      if (m.getType() == DatabaseStoreMessage.MESSAGE_TYPE) {
+        DatabaseStoreMessage dsm=(DatabaseStoreMessage)m;
+        if (dsm.getKey().equals(_context.routerHash())) {
+          shouldSkipInfo=true;
+        }
+      }
+      if (!shouldSkipInfo) {
+        con.enqueueInfoMessage();
+      }
+ else       if (_log.shouldLog(Log.INFO)) {
+        _log.info("SKIPPING INFO message: " + con);
+      }
       try {
         SocketChannel channel=SocketChannel.open();
         con.setChannel(channel);
