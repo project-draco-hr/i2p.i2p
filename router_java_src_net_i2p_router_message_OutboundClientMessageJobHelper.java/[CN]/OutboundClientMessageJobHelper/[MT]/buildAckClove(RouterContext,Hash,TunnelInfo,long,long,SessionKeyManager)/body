@@ -1,6 +1,5 @@
 {
   Log log=ctx.logManager().getLog(OutboundClientMessageJobHelper.class);
-  PayloadGarlicConfig ackClove=new PayloadGarlicConfig();
   if (replyToTunnel == null) {
     if (log.shouldLog(Log.WARN))     log.warn("Unable to send client message from " + from.toBase64() + ", as there are no inbound tunnels available");
     return null;
@@ -12,14 +11,13 @@
   ackInstructions.setDeliveryMode(DeliveryInstructions.DELIVERY_MODE_TUNNEL);
   ackInstructions.setRouter(replyToTunnelRouter);
   ackInstructions.setTunnelId(replyToTunnelId);
-  DeliveryStatusMessage msg=new DeliveryStatusMessage(ctx);
-  msg.setArrival(ctx.clock().now());
-  msg.setMessageId(replyToken);
+  PayloadGarlicConfig ackClove=new PayloadGarlicConfig();
   ackClove.setCertificate(Certificate.NULL_CERT);
   ackClove.setDeliveryInstructions(ackInstructions);
   ackClove.setExpiration(expiration);
   ackClove.setId(ctx.random().nextLong(I2NPMessage.MAX_ID_VALUE));
+  DeliveryStatusMessage dsm=buildDSM(ctx,replyToken);
+  GarlicMessage msg=wrapDSM(ctx,skm,dsm);
   ackClove.setPayload(msg);
-  ackClove.setRecipient(ctx.router().getRouterInfo());
   return ackClove;
 }
