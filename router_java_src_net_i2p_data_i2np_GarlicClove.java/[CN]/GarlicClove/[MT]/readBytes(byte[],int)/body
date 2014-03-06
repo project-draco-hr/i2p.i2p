@@ -2,10 +2,10 @@
   int cur=offset;
   _instructions=new DeliveryInstructions();
   cur+=_instructions.readBytes(source,cur);
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Read instructions: " + _instructions);
   try {
-    cur+=_handler.readMessage(source,cur);
-    _msg=_handler.lastRead();
+    I2NPMessageHandler handler=new I2NPMessageHandler(_context);
+    cur+=handler.readMessage(source,cur);
+    _msg=handler.lastRead();
   }
  catch (  I2NPMessageException ime) {
     throw new DataFormatException("Unable to read the message from a garlic clove",ime);
@@ -14,9 +14,7 @@
   cur+=4;
   _expiration=DataHelper.fromDate(source,cur);
   cur+=DataHelper.DATE_LENGTH;
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("CloveID read: " + _cloveId + " expiration read: "+ _expiration);
   _certificate=Certificate.create(source,cur);
   cur+=_certificate.size();
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Read cert: " + _certificate);
   return cur - offset;
 }
