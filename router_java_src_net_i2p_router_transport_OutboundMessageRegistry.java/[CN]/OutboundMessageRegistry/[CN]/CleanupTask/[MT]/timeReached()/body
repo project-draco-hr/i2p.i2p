@@ -15,6 +15,7 @@ synchronized (_selectors) {
       }
     }
   }
+  boolean log=_log.shouldLog(Log.DEBUG);
   if (!removing.isEmpty()) {
     for (    MessageSelector sel : removing) {
       OutNetMessage msg=null;
@@ -32,15 +33,26 @@ synchronized (_selectorToMessage) {
         _activeMessages.remove(msg);
         Job fail=msg.getOnFailedReplyJob();
         if (fail != null)         _context.jobQueue().addJob(fail);
+        if (log)         _log.debug("Expired: " + sel + " with timeout job "+ fail);
       }
  else       if (msgs != null) {
         _activeMessages.removeAll(msgs);
         for (        OutNetMessage m : msgs) {
           Job fail=m.getOnFailedReplyJob();
           if (fail != null)           _context.jobQueue().addJob(fail);
+          if (log)           _log.debug("Expired: " + sel + " with timeout job(s) "+ fail);
         }
       }
+ else {
+        if (log)         _log.debug("Expired: " + sel + " with no known messages");
+      }
     }
+  }
+  if (log) {
+    int e=removing.size();
+    int r=_selectors.size();
+    int a=_activeMessages.size();
+    if (r > 0 || e > 0 || a > 0)     _log.debug("Expired: " + e + " remaining: "+ r+ " active: "+ a);
   }
   if (_nextExpire <= now)   _nextExpire=now + 10 * 1000;
   schedule(_nextExpire - now);

@@ -3,9 +3,12 @@ synchronized (_tagSets) {
     if (_unackedTagSets.remove(set)) {
       _tagSets.add(set);
     }
- else     if (_log.shouldLog(Log.WARN)) {
-      if (!_tagSets.contains(set))       _log.warn("Ack of unknown tagset: " + set);
- else       if (set.getAcked())       _log.warn("Dup ack of tagset: " + set);
+ else     if (!_tagSets.contains(set)) {
+      _tagSets.add(set);
+      if (_log.shouldLog(Log.WARN))       _log.warn("Ack of unknown (previously failed?) tagset: " + set);
+    }
+ else     if (set.getAcked()) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Dup ack of tagset: " + set);
     }
     _acked=true;
     _consecutiveFailures=0;

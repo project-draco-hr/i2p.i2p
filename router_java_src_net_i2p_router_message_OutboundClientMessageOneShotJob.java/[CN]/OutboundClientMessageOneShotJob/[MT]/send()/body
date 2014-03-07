@@ -1,19 +1,27 @@
 {
-  if (_finished.get())   return;
+synchronized (this) {
+    if (_finished != Result.NONE) {
+      if (_log.shouldLog(Log.WARN))       _log.warn(OutboundClientMessageOneShotJob.this.getJobId() + ": SEND-AFTER-" + _finished);
+      return;
+    }
+  }
   long now=getContext().clock().now();
   if (now >= _overallExpiration) {
     dieFatal(MessageStatusMessage.STATUS_SEND_FAILURE_EXPIRED);
     return;
   }
   _outTunnel=selectOutboundTunnel(_to);
+  if (_outTunnel == null) {
+    if (_log.shouldLog(Log.WARN))     _log.warn(getJobId() + ": Could not find any outbound tunnels to send the payload through... this might take a while");
+    getContext().statManager().addRateData("client.dispatchNoTunnels",now - _start);
+    dieFatal(MessageStatusMessage.STATUS_SEND_FAILURE_NO_TUNNELS);
+    return;
+  }
   Long lastReplyRequestSent=_cache.lastReplyRequestCache.get(_hashPair);
   boolean shouldRequestReply=lastReplyRequestSent == null || lastReplyRequestSent.longValue() < now - REPLY_REQUEST_INTERVAL;
   int sendFlags=_clientMessage.getFlags();
   int tagsRequired=SendMessageOptions.getTagThreshold(sendFlags);
   boolean wantACK=_wantACK || shouldRequestReply || GarlicMessageBuilder.needsTags(getContext(),_leaseSet.getEncryptionKey(),_from.calculateHash(),tagsRequired);
-  PublicKey key=_leaseSet.getEncryptionKey();
-  SessionKey sessKey=new SessionKey();
-  Set<SessionTag> tags=new HashSet<SessionTag>();
   LeaseSet replyLeaseSet;
   String allow=_clientMessage.getSenderConfig().getOptions().getProperty(BUNDLE_REPLY_LEASESET);
   boolean allowLeaseBundle=SendMessageOptions.getSendLeaseSet(sendFlags) && (allow == null || Boolean.parseBoolean(allow));
@@ -33,17 +41,20 @@
  else {
     token=-1;
   }
-  boolean ok=buildClove();
-  if (!ok) {
+  PayloadGarlicConfig clove=buildClove();
+  if (clove == null) {
     dieFatal(MessageStatusMessage.STATUS_SEND_FAILURE_UNSUPPORTED_ENCRYPTION);
     return;
   }
+  PublicKey key=_leaseSet.getEncryptionKey();
+  SessionKey sessKey=new SessionKey();
+  Set<SessionTag> tags=new HashSet<SessionTag>();
   long msgExpiration=_overallExpiration;
   int tagsToSend=SendMessageOptions.getTagsToSend(sendFlags);
-  GarlicMessage msg=OutboundClientMessageJobHelper.createGarlicMessage(getContext(),token,msgExpiration,key,_clove,_from.calculateHash(),_to,_inTunnel,tagsToSend,tagsRequired,sessKey,tags,wantACK,replyLeaseSet);
+  GarlicMessage msg=OutboundClientMessageJobHelper.createGarlicMessage(getContext(),token,msgExpiration,key,clove,_from.calculateHash(),_to,_inTunnel,tagsToSend,tagsRequired,sessKey,tags,wantACK,replyLeaseSet);
   if (msg == null) {
     if (_log.shouldLog(Log.WARN))     _log.warn(getJobId() + ": Unable to create the garlic message (no tunnels left or too lagged) to " + _toString);
-    getContext().statManager().addRateData("client.dispatchNoTunnels",now - _start,0);
+    getContext().statManager().addRateData("client.dispatchNoTunnels",now - _start);
     dieFatal(MessageStatusMessage.STATUS_SEND_FAILURE_NO_TUNNELS);
     return;
   }
@@ -58,20 +69,12 @@
     }
     onReply=new SendSuccessJob(getContext(),sessKey,tsh);
     onFail=new SendTimeoutJob(getContext(),sessKey,tsh);
-    selector=new ReplySelector(token);
+    long expiration=Math.max(_overallExpiration,_start + REPLY_TIMEOUT_MS_MIN);
+    selector=new ReplySelector(token,expiration);
   }
-  if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": GarlicMessage in new tunnel msg for " + _toString+ " at "+ _lease.getTunnelId()+ " on "+ _lease.getGateway());
-  if (_outTunnel != null) {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug(getJobId() + ": Sending msg out " + _outTunnel.getSendTunnelId(0)+ " to "+ _toString+ " at "+ _lease.getTunnelId()+ " on "+ _lease.getGateway());
-    DispatchJob dispatchJob=new DispatchJob(getContext(),msg,selector,onReply,onFail,(int)(_overallExpiration - getContext().clock().now()));
-    dispatchJob.runJob();
-  }
- else {
-    if (_log.shouldLog(Log.WARN))     _log.warn(getJobId() + ": Could not find any outbound tunnels to send the payload through... this might take a while");
-    getContext().statManager().addRateData("client.dispatchNoTunnels",now - _start,0);
-    dieFatal(MessageStatusMessage.STATUS_SEND_FAILURE_NO_TUNNELS);
-  }
-  _clove=null;
-  getContext().statManager().addRateData("client.dispatchPrepareTime",now - _start,0);
-  if (!wantACK)   getContext().statManager().addRateData("client.dispatchNoACK",1,0);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": Sending msg out " + _outTunnel.getSendTunnelId(0)+ " to "+ _toString+ " at "+ _lease.getTunnelId()+ " on "+ _lease.getGateway());
+  DispatchJob dispatchJob=new DispatchJob(getContext(),msg,selector,onReply,onFail);
+  dispatchJob.runJob();
+  getContext().statManager().addRateData("client.dispatchPrepareTime",now - _start);
+  if (!wantACK)   getContext().statManager().addRateData("client.dispatchNoACK",1);
 }

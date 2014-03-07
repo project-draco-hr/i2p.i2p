@@ -1,5 +1,11 @@
 {
-  if (_finished.getAndSet(true))   return;
+synchronized (this) {
+    if (_finished != Result.NONE) {
+      if (_log.shouldLog(Log.WARN))       _log.warn(OutboundClientMessageOneShotJob.this.getJobId() + ": FAIL-AFTER-" + _finished);
+      return;
+    }
+    _finished=Result.FAIL;
+  }
   long sendTime=getContext().clock().now() - _start;
   if (_log.shouldLog(Log.WARN))   _log.warn(getJobId() + ": Send failed (cause: " + status+ ") "+ _clientMessageId+ " to "+ _toString+ " out "+ _outTunnel+ " in "+ _lease+ " ack "+ _inTunnel+ " after "+ sendTime+ "ms");
   long messageDelay=getContext().throttle().getMessageDelay();
@@ -12,5 +18,4 @@
   getContext().messageHistory().sendPayloadMessage(_clientMessageId.getMessageId(),false,sendTime);
   getContext().clientManager().messageDeliveryStatusUpdate(_from,_clientMessageId,status);
   getContext().statManager().updateFrequency("client.sendMessageFailFrequency");
-  _clove=null;
 }

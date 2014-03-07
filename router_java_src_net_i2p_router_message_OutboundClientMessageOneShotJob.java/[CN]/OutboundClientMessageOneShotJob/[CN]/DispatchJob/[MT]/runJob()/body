@@ -1,9 +1,20 @@
 {
-  if (_selector != null)   getContext().messageRegistry().registerPending(_selector,_replyFound,_replyTimeout,_timeoutMs);
+  if (_selector != null) {
+    if (_overallExpiration >= _selector.getExpiration()) {
+      getContext().messageRegistry().registerPending(_selector,_replyFound,_replyTimeout);
+      if (_log.shouldLog(Log.INFO))       _log.info(OutboundClientMessageOneShotJob.this.getJobId() + ": Reply selector expires " + DataHelper.formatDuration(_overallExpiration - _selector.getExpiration())+ " before message, using selector only");
+    }
+ else {
+      getContext().messageRegistry().registerPending(_selector,_replyFound,null);
+      _replyTimeout.getTiming().setStartAfter(_overallExpiration);
+      getContext().jobQueue().addJob(_replyTimeout);
+      if (_log.shouldLog(Log.INFO))       _log.info(OutboundClientMessageOneShotJob.this.getJobId() + ": Reply selector expires " + DataHelper.formatDuration(_selector.getExpiration() - _overallExpiration)+ " after message, queueing separate timeout job");
+    }
+  }
   if (_log.shouldLog(Log.INFO))   _log.info(OutboundClientMessageOneShotJob.this.getJobId() + ": Dispatching message to " + _toString+ ": "+ _msg);
   long before=getContext().clock().now();
   getContext().tunnelDispatcher().dispatchOutbound(_msg,_outTunnel.getSendTunnelId(0),_lease.getTunnelId(),_lease.getGateway());
   long dispatchSendTime=getContext().clock().now() - before;
-  getContext().statManager().addRateData("client.dispatchTime",getContext().clock().now() - _start,0);
-  getContext().statManager().addRateData("client.dispatchSendTime",dispatchSendTime,0);
+  getContext().statManager().addRateData("client.dispatchTime",getContext().clock().now() - _start);
+  getContext().statManager().addRateData("client.dispatchSendTime",dispatchSendTime);
 }
