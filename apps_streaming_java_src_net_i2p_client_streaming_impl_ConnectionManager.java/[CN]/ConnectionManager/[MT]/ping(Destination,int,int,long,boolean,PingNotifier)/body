@@ -1,7 +1,8 @@
 {
-  Long id=Long.valueOf(_context.random().nextLong(Packet.MAX_STREAM_ID - 1) + 1);
+  PingRequest req=new PingRequest(notifier);
+  long id=assignPingId(req);
   PacketLocal packet=new PacketLocal(_context,peer);
-  packet.setSendStreamId(id.longValue());
+  packet.setSendStreamId(id);
   packet.setFlag(Packet.FLAG_ECHO | Packet.FLAG_NO_ACK | Packet.FLAG_SIGNATURE_INCLUDED);
   packet.setOptionalFrom(_session.getMyDestination());
   packet.setLocalPort(fromPort);
@@ -9,8 +10,6 @@
   if (_log.shouldLog(Log.INFO)) {
     _log.info(String.format("about to ping %s port %d from port %d timeout=%d blocking=%b",peer.calculateHash().toString(),toPort,fromPort,timeoutMs,blocking));
   }
-  PingRequest req=new PingRequest(notifier);
-  _pendingPings.put(id,req);
   _outboundQueue.enqueue(packet);
   packet.releasePayload();
   if (blocking) {

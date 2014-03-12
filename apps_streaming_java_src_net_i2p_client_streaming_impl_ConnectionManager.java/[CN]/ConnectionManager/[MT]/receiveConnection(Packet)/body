@@ -4,7 +4,6 @@
   opts.setLocalPort(synPacket.getLocalPort());
   Connection con=new Connection(_context,this,_schedulerChooser,_timer,_outboundQueue,_conPacketHandler,opts,true);
   _tcbShare.updateOptsFromShare(con);
-  long receiveId=_context.random().nextLong(Packet.MAX_STREAM_ID - 1) + 1;
   boolean reject=false;
   int active=0;
   int total=0;
@@ -19,15 +18,7 @@
       reject=true;
     }
  else {
-      while (true) {
-        Connection oldCon=_connectionByInboundId.putIfAbsent(Long.valueOf(receiveId),con);
-        if (oldCon == null) {
-          break;
-        }
- else {
-          receiveId=_context.random().nextLong(Packet.MAX_STREAM_ID - 1) + 1;
-        }
-      }
+      assignReceiveStreamId(con);
     }
   }
   _context.statManager().addRateData("stream.receiveActive",active,total);
@@ -53,13 +44,12 @@
     _outboundQueue.enqueue(reply);
     return null;
   }
-  con.setReceiveStreamId(receiveId);
   if (I2PSocketManagerFull.pcapWriter != null && _context.getBooleanProperty(I2PSocketManagerFull.PROP_PCAP))   synPacket.logTCPDump(con);
   try {
     con.getPacketHandler().receivePacket(synPacket,con);
   }
  catch (  I2PException ie) {
-    _connectionByInboundId.remove(Long.valueOf(receiveId));
+    _connectionByInboundId.remove(Long.valueOf(con.getReceiveStreamId()));
     return null;
   }
   _context.statManager().addRateData("stream.connectionReceived",1,0);
