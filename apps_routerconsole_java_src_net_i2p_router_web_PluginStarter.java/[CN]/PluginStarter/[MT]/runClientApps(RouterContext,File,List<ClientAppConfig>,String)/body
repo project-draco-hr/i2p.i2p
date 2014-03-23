@@ -5,6 +5,18 @@
   ThreadGroup pluginThreadGroup=pluginThreadGroups.get(pluginName);
   if (action.equals("start"))   _pendingPluginClients.put(pluginName,new ConcurrentHashSet<SimpleTimer2.TimedEvent>());
   for (  ClientAppConfig app : apps) {
+    ClientApp ca=ctx.routerAppManager().getClientApp(app.className,LoadClientAppsJob.parseArgs(app.args));
+    if (ca != null && ca.getState() == ClientAppState.RUNNING) {
+      if (action.equals("stop")) {
+        try {
+          ca.shutdown(LoadClientAppsJob.parseArgs(app.stopargs));
+        }
+ catch (        Throwable t) {
+          throw new Exception(t);
+        }
+        continue;
+      }
+    }
     if (action.equals("start") && app.disabled)     continue;
     String argVal[];
     if (action.equals("start")) {
