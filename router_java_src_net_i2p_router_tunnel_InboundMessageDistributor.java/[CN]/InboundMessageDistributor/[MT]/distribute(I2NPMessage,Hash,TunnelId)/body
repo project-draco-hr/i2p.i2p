@@ -15,6 +15,16 @@
     DatabaseStoreMessage dsm=(DatabaseStoreMessage)msg;
     if (dsm.getEntry().getType() == DatabaseEntry.KEY_TYPE_ROUTERINFO) {
       if (_log.shouldLog(Log.WARN))       _log.warn("Dropping DSM down a tunnel for " + _client + ": "+ msg);
+      Hash key=dsm.getKey();
+      if (_context.routerHash().equals(key))       return;
+      RouterInfo ri=(RouterInfo)dsm.getEntry();
+      if (!key.equals(ri.getIdentity().getHash()))       return;
+      if (!ri.isValid())       return;
+      RouterInfo oldri=_context.netDb().lookupRouterInfoLocally(key);
+      if (oldri != null && oldri.getPublished() < ri.getPublished() && !FloodfillNetworkDatabaseFacade.isFloodfill(ri)) {
+        if (_log.shouldLog(Log.WARN))         _log.warn("Updating caps for RI " + key + " from \""+ oldri.getCapabilities()+ "\" to \""+ ri.getCapabilities()+ '"');
+        _context.peerManager().setCapabilities(key,ri.getCapabilities());
+      }
       return;
     }
  else     if (dsm.getReplyToken() != 0) {
