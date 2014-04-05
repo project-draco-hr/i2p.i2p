@@ -19,26 +19,36 @@
     }
   }
  else {
-    if (_log.shouldLog(Log.INFO))     _log.info(getJobId() + ": Continue sending key " + _state.getTarget()+ " after "+ _state.getAttempted().size()+ " tries to "+ closestHashes);
+    int queued=0;
+    int skipped=0;
     for (    Hash peer : closestHashes) {
       DatabaseEntry ds=_facade.getDataStore().get(peer);
       if ((ds == null) || !(ds.getType() == DatabaseEntry.KEY_TYPE_ROUTERINFO)) {
         if (_log.shouldLog(Log.INFO))         _log.info(getJobId() + ": Error selecting closest hash that wasnt a router! " + peer+ " : "+ ds);
         _state.addSkipped(peer);
+        skipped++;
       }
  else       if (_state.getData().getType() == DatabaseEntry.KEY_TYPE_LEASESET && ((LeaseSet)_state.getData()).getDestination().getCertificate().getCertificateType() == Certificate.CERTIFICATE_TYPE_KEY && !supportsKeyCerts((RouterInfo)ds)) {
-        if (_log.shouldLog(Log.INFO))         _log.info(getJobId() + ": Skipping router that doesn't support key certs " + peer+ " : "+ ds);
+        if (_log.shouldLog(Log.INFO))         _log.info(getJobId() + ": Skipping router that doesn't support key certs " + peer);
         _state.addSkipped(peer);
+        skipped++;
       }
  else       if (_state.getData().getType() == DatabaseEntry.KEY_TYPE_LEASESET && ((LeaseSet)_state.getData()).getLeaseCount() > 6 && !supportsBigLeaseSets((RouterInfo)ds)) {
-        if (_log.shouldLog(Log.INFO))         _log.info(getJobId() + ": Skipping router that doesn't support big leasesets " + peer+ " : "+ ds);
+        if (_log.shouldLog(Log.INFO))         _log.info(getJobId() + ": Skipping router that doesn't support big leasesets " + peer);
         _state.addSkipped(peer);
+        skipped++;
       }
  else {
         int peerTimeout=_facade.getPeerTimeout(peer);
+        if (_log.shouldLog(Log.INFO))         _log.info(getJobId() + ": Continue sending key " + _state.getTarget()+ " after "+ _state.getAttempted().size()+ " tries to "+ closestHashes);
         _state.addPending(peer);
         sendStore((RouterInfo)ds,peerTimeout);
+        queued++;
       }
+    }
+    if (queued == 0 && _state.getPending().isEmpty()) {
+      if (_log.shouldLog(Log.INFO))       _log.info(getJobId() + ": No more peers left after skipping " + skipped+ " and none pending");
+      getContext().jobQueue().addJob(new WaitJob(getContext()));
     }
   }
 }
