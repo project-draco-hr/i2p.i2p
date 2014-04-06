@@ -1,12 +1,18 @@
 {
   if (peer.equals(getContext().routerHash()) || peer.equals(_key))   return;
+  if (getContext().banlist().isBanlistedForever(peer)) {
+    if (_log.shouldLog(Log.INFO))     _log.info(getJobId() + ": banlisted peer from DSRM " + peer);
+    return;
+  }
   RouterInfo ri=getContext().netDb().lookupRouterInfoLocally(peer);
-  if (!FloodfillNetworkDatabaseFacade.isFloodfill(ri))   return;
-  if (getContext().banlist().isBanlistedForever(peer))   return;
+  if (ri != null && !FloodfillNetworkDatabaseFacade.isFloodfill(ri)) {
+    if (_log.shouldLog(Log.INFO))     _log.info(getJobId() + ": non-ff peer from DSRM " + peer);
+    return;
+  }
 synchronized (this) {
     if (_failedPeers.contains(peer) || _unheardFrom.contains(peer))     return;
     if (!_toTry.add(peer))     return;
   }
-  if (_log.shouldLog(Log.INFO))   _log.info(getJobId() + ": new peer from DSRM " + peer);
+  if (_log.shouldLog(Log.INFO))   _log.info(getJobId() + ": new peer from DSRM: known? " + (ri != null)+ ' '+ peer);
   retry();
 }
