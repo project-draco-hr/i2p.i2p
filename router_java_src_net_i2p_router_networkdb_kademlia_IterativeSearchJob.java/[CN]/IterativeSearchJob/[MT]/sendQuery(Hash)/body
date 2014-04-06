@@ -1,5 +1,4 @@
 {
-  DatabaseLookupMessage dlm=new DatabaseLookupMessage(getContext(),true);
   TunnelManagerFacade tm=getContext().tunnelManager();
   TunnelInfo outTunnel;
   TunnelInfo replyTunnel;
@@ -20,10 +19,19 @@
     failed();
     return;
   }
-  if (outTunnel.getLength() <= 1 && peer.equals(_key)) {
-    failed(peer,false);
-    return;
+  if (outTunnel.getLength() <= 1) {
+    if (peer.equals(_key)) {
+      failed(peer,false);
+      if (_log.shouldLog(Log.WARN))       _log.warn(getJobId() + ": not doing zero-hop self-lookup of " + peer);
+      return;
+    }
+    if (_facade.lookupLocallyWithoutValidation(peer) == null) {
+      failed(peer,false);
+      if (_log.shouldLog(Log.WARN))       _log.warn(getJobId() + ": not doing zero-hop lookup to unknown " + peer);
+      return;
+    }
   }
+  DatabaseLookupMessage dlm=new DatabaseLookupMessage(getContext(),true);
   dlm.setFrom(replyTunnel.getPeer(0));
   dlm.setMessageExpiration(getContext().clock().now() + SINGLE_SEARCH_MSG_TIME);
   dlm.setReplyTunnel(replyTunnel.getReceiveTunnelId(0));

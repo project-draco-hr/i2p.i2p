@@ -2,14 +2,6 @@
   if (_log.shouldLog(Log.DEBUG))   _log.debug("IBMD for " + _client + " to "+ target+ " / "+ tunnel+ " : "+ msg);
   int type=msg.getType();
   if ((_client != null) && (type == DatabaseSearchReplyMessage.MESSAGE_TYPE)) {
-    DatabaseSearchReplyMessage orig=(DatabaseSearchReplyMessage)msg;
-    if (orig.getNumReplies() > 0) {
-      if (_log.shouldLog(Log.INFO))       _log.info("Removing replies from a DSRM down a tunnel for " + _client + ": "+ msg);
-      DatabaseSearchReplyMessage newMsg=new DatabaseSearchReplyMessage(_context);
-      newMsg.setFromHash(orig.getFromHash());
-      newMsg.setSearchKey(orig.getSearchKey());
-      msg=newMsg;
-    }
   }
  else   if ((_client != null) && (type == DatabaseStoreMessage.MESSAGE_TYPE)) {
     DatabaseStoreMessage dsm=(DatabaseStoreMessage)msg;
@@ -56,13 +48,14 @@
       if (_log.shouldLog(Log.WARN))       _log.warn("no outbound tunnel to send the client message for " + _client + ": "+ msg);
       return;
     }
-    if (_log.shouldLog(Log.INFO))     _log.info("distributing inbound tunnel message back out " + out + " targetting "+ target);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("distributing IB tunnel msg type " + type + " back out "+ out+ " targetting "+ target);
     TunnelId outId=out.getSendTunnelId(0);
     if (outId == null) {
       if (_log.shouldLog(Log.ERROR))       _log.error("wtf, outbound tunnel has no outboundId? " + out + " failing to distribute "+ msg);
       return;
     }
-    if (msg.getMessageExpiration() < _context.clock().now() + 10 * 1000)     msg.setMessageExpiration(_context.clock().now() + 10 * 1000);
+    long exp=_context.clock().now() + 20 * 1000;
+    if (msg.getMessageExpiration() < exp)     msg.setMessageExpiration(exp);
     _context.tunnelDispatcher().dispatchOutbound(msg,outId,tunnel,target);
   }
 }

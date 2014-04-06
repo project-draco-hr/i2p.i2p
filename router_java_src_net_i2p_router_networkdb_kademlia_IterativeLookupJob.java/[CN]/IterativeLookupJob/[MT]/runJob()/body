@@ -1,5 +1,9 @@
 {
   Hash from=_dsrm.getFromHash();
+  if (!_search.wasQueried(from)) {
+    if (_log.shouldLog(Log.WARN))     _log.warn(_search.getJobId() + ": ILJ DSRM from unqueried peer: " + _dsrm);
+    return;
+  }
   int limit=Math.min(_dsrm.getNumReplies(),SingleLookupJob.MAX_TO_FOLLOW);
   int newPeers=0;
   int oldPeers=0;
@@ -14,13 +18,26 @@
       invalidPeers++;
       continue;
     }
+    if (getContext().banlist().isBanlistedForever(peer)) {
+      oldPeers++;
+      continue;
+    }
     RouterInfo ri=getContext().netDb().lookupRouterInfoLocally(peer);
     if (ri == null) {
-      getContext().jobQueue().addJob(new IterativeFollowupJob(getContext(),peer,from,_search));
+      _search.newPeerToTry(peer);
+      if (_search.getFromHash() == null) {
+        getContext().jobQueue().addJob(new SingleSearchJob(getContext(),peer,from));
+      }
+ else {
+      }
       newPeers++;
     }
  else     if (ri.getPublished() < getContext().clock().now() - 60 * 60 * 1000 || !FloodfillNetworkDatabaseFacade.isFloodfill(ri)) {
-      getContext().jobQueue().addJob(new IterativeFollowupJob(getContext(),peer,peer,_search));
+      if (_search.getFromHash() == null) {
+        getContext().jobQueue().addJob(new IterativeFollowupJob(getContext(),peer,peer,_search));
+      }
+ else {
+      }
       oldPeers++;
     }
  else {
@@ -28,6 +45,7 @@
       oldPeers++;
     }
   }
+  if (_log.shouldLog(Log.INFO))   _log.info(_search.getJobId() + ": ILJ DSRM processed " + newPeers+ '/'+ oldPeers+ '/'+ invalidPeers+ " new/old/invalid hashes");
   long timeSent=_search.timeSent(from);
   if (timeSent > 0) {
     getContext().profileManager().dbLookupReply(from,newPeers,oldPeers,invalidPeers,0,getContext().clock().now() - timeSent);
