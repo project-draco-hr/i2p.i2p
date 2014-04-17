@@ -10,6 +10,7 @@
   _outboundByClaimedAddress=new ConcurrentHashMap<RemoteHostId,OutboundEstablishState>();
   _outboundByHash=new ConcurrentHashMap<Hash,OutboundEstablishState>();
   _activityLock=new Object();
+  _replayFilter=new DecayingHashSet(ctx,10 * 60 * 1000,8,"SSU-DH-X");
   DEFAULT_MAX_CONCURRENT_ESTABLISH=Math.max(DEFAULT_LOW_MAX_CONCURRENT_ESTABLISH,Math.min(DEFAULT_HIGH_MAX_CONCURRENT_ESTABLISH,ctx.bandwidthLimiter().getOutboundKBytesPerSecond() / 2));
   _context.statManager().createRateStat("udp.inboundEstablishTime","How long it takes for a new inbound session to be established","udp",UDPTransport.RATES);
   _context.statManager().createRateStat("udp.outboundEstablishTime","How long it takes for a new outbound session to be established","udp",UDPTransport.RATES);
@@ -30,4 +31,5 @@
   _context.statManager().createRateStat("udp.rejectConcurrentActive","How many messages are currently being sent to the peer when we reject it (period is how many concurrent packets we allow)","udp",UDPTransport.RATES);
   _context.statManager().createRateStat("udp.allowConcurrentActive","How many messages are currently being sent to the peer when we accept it (period is how many concurrent packets we allow)","udp",UDPTransport.RATES);
   _context.statManager().createRateStat("udp.rejectConcurrentSequence","How many consecutive concurrency rejections have we had when we stop rejecting (period is how many concurrent packets we are on)","udp",UDPTransport.RATES);
+  _context.statManager().createRateStat("udp.dupDHX","Session request replay","udp",new long[]{24 * 60 * 60* 1000L});
 }

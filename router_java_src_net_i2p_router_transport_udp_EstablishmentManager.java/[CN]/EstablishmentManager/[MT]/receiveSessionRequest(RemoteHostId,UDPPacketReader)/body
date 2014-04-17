@@ -20,6 +20,11 @@
     byte[] fromIP=from.getIP();
     state=new InboundEstablishState(_context,fromIP,from.getPort(),_transport.getExternalPort(fromIP.length == 16),_transport.getDHBuilder());
     state.receiveSessionRequest(reader.getSessionRequestReader());
+    if (_replayFilter.add(state.getReceivedX(),0,8)) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Duplicate X in session request from: " + from);
+      _context.statManager().addRateData("udp.dupDHX",1);
+      return;
+    }
     InboundEstablishState oldState=_inboundStates.putIfAbsent(from,state);
     isNew=oldState == null;
     if (!isNew)     state=oldState;
