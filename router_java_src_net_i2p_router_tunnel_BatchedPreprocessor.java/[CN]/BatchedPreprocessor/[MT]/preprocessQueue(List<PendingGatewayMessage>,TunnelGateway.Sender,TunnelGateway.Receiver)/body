@@ -34,7 +34,7 @@
         long beforeSend=System.currentTimeMillis();
         _pendingSince=0;
         send(pending,0,i,sender,rec);
-        _context.statManager().addRateData("tunnel.batchFullFragments",1,0);
+        _context.statManager().addRateData("tunnel.batchFullFragments",1);
         long afterSend=System.currentTimeMillis();
         if (_log.shouldLog(Log.INFO))         display(allocated,pending,"Sent the message with " + (i + 1));
         for (int j=0; j < i; j++) {
@@ -42,17 +42,17 @@
           if (cur.getOffset() < cur.getData().length)           throw new IllegalArgumentException("i=" + i + " j="+ j+ " off="+ cur.getOffset()+ " len="+ cur.getData().length+ " alloc="+ allocated);
           if (timingBuf != null)           timingBuf.append(" sent " + cur);
           notePreprocessing(cur.getMessageId(),cur.getFragmentNumber(),cur.getData().length,cur.getMessageIds(),"flushed allocated");
-          _context.statManager().addRateData("tunnel.batchFragmentation",cur.getFragmentNumber() + 1,0);
+          _context.statManager().addRateData("tunnel.batchFragmentation",cur.getFragmentNumber() + 1);
           _context.statManager().addRateData("tunnel.writeDelay",cur.getLifetime(),cur.getData().length);
         }
         if (msg.getOffset() >= msg.getData().length) {
           PendingGatewayMessage cur=pending.remove(0);
           if (timingBuf != null)           timingBuf.append(" sent perfect fit " + cur).append(".");
           notePreprocessing(cur.getMessageId(),cur.getFragmentNumber(),msg.getData().length,msg.getMessageIds(),"flushed tail, remaining: " + pending);
-          _context.statManager().addRateData("tunnel.batchFragmentation",cur.getFragmentNumber() + 1,0);
+          _context.statManager().addRateData("tunnel.batchFragmentation",cur.getFragmentNumber() + 1);
           _context.statManager().addRateData("tunnel.writeDelay",cur.getLifetime(),cur.getData().length);
         }
-        if (i > 0)         _context.statManager().addRateData("tunnel.batchMultipleCount",i + 1,0);
+        if (i > 0)         _context.statManager().addRateData("tunnel.batchMultipleCount",i + 1);
         allocated=0;
         batchCount++;
         long pendingEnd=System.currentTimeMillis();
@@ -65,17 +65,17 @@
     long afterDisplayed=System.currentTimeMillis();
     if (allocated > 0) {
       if ((pending.size() > FORCE_BATCH_FLUSH) || ((_pendingSince > 0) && (getDelayAmount() <= 0)) || (allocated >= FULL_ENOUGH_SIZE)) {
-        if (pending.size() > 1)         _context.statManager().addRateData("tunnel.batchMultipleCount",pending.size(),0);
+        if (pending.size() > 1)         _context.statManager().addRateData("tunnel.batchMultipleCount",pending.size());
         _context.statManager().addRateData("tunnel.batchDelaySent",pending.size(),0);
         send(pending,0,pending.size() - 1,sender,rec);
-        _context.statManager().addRateData("tunnel.batchSmallFragments",FULL_SIZE - allocated,0);
+        _context.statManager().addRateData("tunnel.batchSmallFragments",FULL_SIZE - allocated);
         int beforeSize=pending.size();
         for (int i=0; i < beforeSize; i++) {
           PendingGatewayMessage cur=pending.get(0);
           if (cur.getOffset() < cur.getData().length)           break;
           pending.remove(0);
           notePreprocessing(cur.getMessageId(),cur.getFragmentNumber(),cur.getData().length,cur.getMessageIds(),"flushed remaining");
-          _context.statManager().addRateData("tunnel.batchFragmentation",cur.getFragmentNumber() + 1,0);
+          _context.statManager().addRateData("tunnel.batchFragmentation",cur.getFragmentNumber() + 1);
           _context.statManager().addRateData("tunnel.writeDelay",cur.getLifetime(),cur.getData().length);
         }
         if (!pending.isEmpty()) {
@@ -95,7 +95,7 @@
             delayAmount=_context.clock().now() - _pendingSince;
             _pendingSince=0;
           }
-          if (batchCount > 1)           _context.statManager().addRateData("tunnel.batchCount",batchCount,0);
+          if (batchCount > 1)           _context.statManager().addRateData("tunnel.batchCount",batchCount);
           if (_log.shouldLog(Log.INFO))           display(allocated,pending,"flushed " + (beforeSize) + ", no remaining after "+ delayAmount+ "ms");
           if (timingBuf != null) {
             timingBuf.append(" flushed, none remain (displayed to now: " + (System.currentTimeMillis() - afterDisplayed) + ")");
@@ -106,9 +106,9 @@
         }
       }
  else {
-        _context.statManager().addRateData("tunnel.batchDelay",pending.size(),0);
+        _context.statManager().addRateData("tunnel.batchDelay",pending.size());
         if (_pendingSince <= 0)         _pendingSince=_context.clock().now();
-        if (batchCount > 1)         _context.statManager().addRateData("tunnel.batchCount",batchCount,0);
+        if (batchCount > 1)         _context.statManager().addRateData("tunnel.batchCount",batchCount);
         if (_log.shouldLog(Log.INFO))         display(allocated,pending,"dont flush");
         if (timingBuf != null) {
           timingBuf.append(" dont flush (displayed to now: " + (System.currentTimeMillis() - afterDisplayed) + ")");
