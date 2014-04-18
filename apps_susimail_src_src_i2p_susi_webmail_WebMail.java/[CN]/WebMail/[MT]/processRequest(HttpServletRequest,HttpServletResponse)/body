@@ -31,7 +31,16 @@ synchronized (sessionObject) {
     sessionObject.themePath="/themes/susimail/" + theme + '/';
     sessionObject.imgPath=sessionObject.themePath + "images/";
     sessionObject.isMobile=isMobile;
+    int oldState=sessionObject.state;
     processStateChangeButtons(sessionObject,request);
+    int newState=sessionObject.state;
+    if (oldState != newState)     Debug.debug(Debug.DEBUG,"STATE CHANGE from " + oldState + " to "+ newState);
+    if (oldState == STATE_AUTH && newState != STATE_AUTH) {
+      int oldIdle=httpSession.getMaxInactiveInterval();
+      httpSession.setMaxInactiveInterval(60 * 60 * 24);
+      int newIdle=httpSession.getMaxInactiveInterval();
+      Debug.debug(Debug.DEBUG,"Changed idle from " + oldIdle + " to "+ newIdle);
+    }
     if (sessionObject.state != STATE_AUTH)     processGenericButtons(sessionObject,request);
     if (sessionObject.state == STATE_LIST) {
       processFolderButtons(sessionObject,request);
@@ -59,7 +68,9 @@ synchronized (sessionObject) {
     if (!sendAttachment(sessionObject,response)) {
       PrintWriter out=response.getWriter();
       if (sessionObject.state == STATE_AUTH)       subtitle=_("Login");
- else       if (sessionObject.state == STATE_LIST)       subtitle=ngettext("1 Message","{0} Messages",sessionObject.mailbox.getNumMails());
+ else       if (sessionObject.state == STATE_LIST) {
+        subtitle=ngettext("1 Message","{0} Messages",sessionObject.folder.getSize());
+      }
  else       if (sessionObject.state == STATE_SHOW)       subtitle=_("Show Message");
       response.setContentType("text/html");
       out.println("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\">\n<html>\n" + "<head>\n" + "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">\n"+ "<title>susimail - " + subtitle + "</title>\n"+ "<link rel=\"stylesheet\" type=\"text/css\" href=\""+ sessionObject.themePath+ "susimail.css\">\n");
@@ -77,7 +88,7 @@ synchronized (sessionObject) {
  else       if (sessionObject.state == STATE_LIST)       showFolder(out,sessionObject,request);
  else       if (sessionObject.state == STATE_SHOW)       showMessage(out,sessionObject);
  else       if (sessionObject.state == STATE_NEW)       showCompose(out,sessionObject,request);
-      out.println("</form><div id=\"footer\"><hr><p class=\"footer\">susimail v0." + version + " "+ (RELEASE ? "release" : "development")+ " &copy; 2004-2005 <a href=\"mailto:susi23@mail.i2p\">susi</a></div></div></body>\n</html>");
+      out.println("</form><div id=\"footer\"><hr><p class=\"footer\">susimail &copy; 2004-2005 susi</div></div></body>\n</html>");
       out.flush();
     }
   }
