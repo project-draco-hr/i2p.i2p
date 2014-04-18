@@ -1,5 +1,13 @@
 {
-  DateFormat dateFormatter=new SimpleDateFormat(Config.getProperty(DATEFORMAT,"mm/dd/yyyy HH:mm:ss"));
+  DateFormat dateFormatter=new SimpleDateFormat("yyyy-mm-dd HH:mm");
+  DateFormat localDateFormatter=DateFormat.getDateTimeInstance(DateFormat.SHORT,DateFormat.SHORT);
+  DateFormat longLocalDateFormatter=DateFormat.getDateTimeInstance(DateFormat.MEDIUM,DateFormat.MEDIUM);
+  String systemTimeZone=I2PAppContext.getGlobalContext().getProperty("i2p.systemTimeZone");
+  if (systemTimeZone != null) {
+    TimeZone tz=TimeZone.getTimeZone(systemTimeZone);
+    localDateFormatter.setTimeZone(tz);
+    longLocalDateFormatter.setTimeZone(tz);
+  }
   DateFormat mailDateFormatter=new SimpleDateFormat("EEE, d MMM yyyy HH:mm:ss Z",Locale.ENGLISH);
   error="";
   if (header != null) {
@@ -35,7 +43,8 @@
             try {
               date=mailDateFormatter.parse(dateString);
               formattedDate=dateFormatter.format(date);
-              quotedDate=html.encode(dateString);
+              localFormattedDate=localDateFormatter.format(date);
+              quotedDate=longLocalDateFormatter.format(date);
             }
  catch (            ParseException e) {
               date=null;
@@ -50,16 +59,16 @@
             shortSubject=html.encode(shortSubject);
           }
  else           if (line.toLowerCase(Locale.US).startsWith("reply-to:")) {
-            reply=Mail.getAddress(line.substring(9).trim());
+            reply=getAddress(line.substring(9).trim());
           }
  else           if (line.startsWith("To:")) {
             ArrayList<String> list=new ArrayList<String>();
-            Mail.getRecipientsFromList(list,line.substring(3).trim(),true);
+            getRecipientsFromList(list,line.substring(3).trim(),true);
             to=list.toArray();
           }
  else           if (line.startsWith("Cc:")) {
             ArrayList<String> list=new ArrayList<String>();
-            Mail.getRecipientsFromList(list,line.substring(3).trim(),true);
+            getRecipientsFromList(list,line.substring(3).trim(),true);
             cc=list.toArray();
           }
         }

@@ -11,7 +11,8 @@
     if (c == '=') {
       if (length > 0) {
         if (in[offset] == '?') {
-          int f2=offset + 1;
+          int f1=offset;
+          int f2=f1 + 1;
           for (; f2 < end && in[f2] != '?'; f2++)           ;
           if (f2 < end) {
             int f3=f2 + 1;
@@ -27,9 +28,21 @@
                     ReadBuffer tmp=null;
                     try {
                       tmp=e.decode(in,f3 + 1,f4 - f3 - 1);
-                      for (int j=0; j < tmp.length; j++) {
-                        byte d=tmp.content[tmp.offset + j];
-                        out[written++]=(d == '_' ? 32 : d);
+                      String charset=new String(in,f1 + 1,f2 - f1 - 1,"ISO-8859-1");
+                      String clc=charset.toLowerCase(Locale.US);
+                      if (clc.equals("utf-8") || clc.equals("utf8")) {
+                        for (int j=0; j < tmp.length; j++) {
+                          byte d=tmp.content[tmp.offset + j];
+                          out[written++]=(d == '_' ? 32 : d);
+                        }
+                      }
+ else {
+                        String decoded=new String(tmp.content,tmp.offset,tmp.length,charset);
+                        byte[] utf8=decoded.getBytes("UTF-8");
+                        for (int j=0; j < utf8.length; j++) {
+                          byte d=utf8[j];
+                          out[written++]=(d == '_' ? 32 : d);
+                        }
                       }
                       int distance=f4 + 2 - offset;
                       offset+=distance;
@@ -38,6 +51,7 @@
                       continue;
                     }
  catch (                    Exception e1) {
+                      Debug.debug(Debug.ERROR,e1.toString());
                     }
                   }
                 }
