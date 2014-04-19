@@ -2,8 +2,12 @@
   if (sessionObject.state == STATE_AUTH)   processLogin(sessionObject,request);
   if (sessionObject.state != STATE_AUTH)   processLogout(sessionObject,request);
   if (sessionObject.state == STATE_NEW) {
-    if (buttonPressed(request,CANCEL))     sessionObject.state=STATE_LIST;
- else     if (buttonPressed(request,SEND))     if (sendMail(sessionObject,request))     sessionObject.state=STATE_LIST;
+    if (buttonPressed(request,CANCEL) || buttonPressed(request,LIST)) {
+      sessionObject.state=STATE_LIST;
+    }
+ else     if (buttonPressed(request,SEND)) {
+      if (sendMail(sessionObject,request))       sessionObject.state=STATE_LIST;
+    }
   }
   if (sessionObject.state == STATE_SHOW) {
     if (buttonPressed(request,LIST)) {
@@ -32,7 +36,7 @@
       String uidl=null;
       if (sessionObject.state == STATE_LIST) {
         int pos=getCheckedMessage(request);
-        uidl=(String)sessionObject.folder.getElementAtPosXonCurrentPage(pos);
+        uidl=sessionObject.folder.getElementAtPosXonCurrentPage(pos);
       }
  else {
         uidl=sessionObject.showUIDL;
@@ -66,14 +70,14 @@
             if (mail.to != null) {
               for (int i=0; i < mail.to.length; i++) {
                 buf.append(pad);
-                buf.append((String)mail.to[i]);
+                buf.append(mail.to[i]);
                 pad=", ";
               }
             }
             if (mail.cc != null) {
               for (int i=0; i < mail.cc.length; i++) {
                 buf.append(pad);
-                buf.append((String)mail.cc[i]);
+                buf.append(mail.cc[i]);
                 pad=", ";
               }
             }
@@ -95,7 +99,7 @@
               String pad="To: ";
               for (int i=0; i < mail.to.length; i++) {
                 pw.println(pad);
-                pw.println((String)mail.to[i]);
+                pw.println(mail.to[i]);
                 pad="    ";
               }
             }
@@ -103,7 +107,7 @@
               String pad="Cc: ";
               for (int i=0; i < mail.cc.length; i++) {
                 pw.println(pad);
-                pw.println((String)mail.cc[i]);
+                pw.println(mail.cc[i]);
                 pad="    ";
               }
             }
@@ -128,7 +132,7 @@
       try {
         int id=Integer.parseInt(show);
         if (id >= 0 && id < sessionObject.folder.getPageSize()) {
-          String uidl=(String)sessionObject.folder.getElementAtPosXonCurrentPage(id);
+          String uidl=sessionObject.folder.getElementAtPosXonCurrentPage(id);
           if (uidl != null) {
             sessionObject.state=STATE_SHOW;
             sessionObject.showUIDL=uidl;
