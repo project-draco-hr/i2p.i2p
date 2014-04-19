@@ -1,3 +1,26 @@
 {
-  return sendCmdN(cmd,DEFAULT_BUFSIZE);
+synchronized (synchronizer) {
+    if (!isConnected())     connect();
+    try {
+      return sendCmdNa(cmd);
+    }
+ catch (    IOException e) {
+      lastError=e.toString();
+      Debug.debug(Debug.DEBUG,"sendCmdNa throws: " + e);
+    }
+    connect();
+    if (connected) {
+      try {
+        return sendCmdNa(cmd);
+      }
+ catch (      IOException e2) {
+        lastError=e2.toString();
+        Debug.debug(Debug.DEBUG,"2nd sendCmdNa throws: " + e2);
+      }
+    }
+ else {
+      Debug.debug(Debug.DEBUG,"not connected after reconnect");
+    }
+  }
+  return null;
 }

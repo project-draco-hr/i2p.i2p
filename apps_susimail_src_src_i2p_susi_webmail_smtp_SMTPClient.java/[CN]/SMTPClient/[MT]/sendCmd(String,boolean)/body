@@ -1,0 +1,49 @@
+{
+  Debug.debug(Debug.DEBUG,"SMTP sendCmd(" + cmd + ")");
+  if (socket == null)   return 0;
+  int result=0;
+  lastResponse="";
+  try {
+    InputStream in=socket.getInputStream();
+    OutputStream out=socket.getOutputStream();
+    if (cmd != null) {
+      cmd+="\r\n";
+      out.write(cmd.getBytes());
+    }
+    if (!shouldWait)     return 100;
+    out.flush();
+    String str="";
+    boolean doContinue=true;
+    while (doContinue) {
+      if (in.available() > 0) {
+        int read=in.read(buffer);
+        str+=new String(buffer,0,read);
+        lastResponse+=str;
+        while (true) {
+          int i=str.indexOf("\r\n");
+          if (i == -1)           break;
+          if (result == 0) {
+            try {
+              result=Integer.parseInt(str.substring(0,3));
+            }
+ catch (            NumberFormatException nfe) {
+              result=0;
+              doContinue=false;
+              break;
+            }
+          }
+          if (str.substring(3,4).compareTo(" ") == 0) {
+            doContinue=false;
+            break;
+          }
+          str=str.substring(i + 2);
+        }
+      }
+    }
+  }
+ catch (  IOException e) {
+    error+="IOException occured.<br>";
+    result=0;
+  }
+  return result;
+}

@@ -1,19 +1,25 @@
 {
   boolean result=false;
-  String msg=cmd;
-  if (msg.startsWith("PASS"))   msg="PASS provided";
-  Debug.debug(Debug.DEBUG,"sendCmd1a(" + msg + ")");
-  cmd+="\r\n";
-  socket.getOutputStream().write(cmd.getBytes());
-  read=socket.getInputStream().read(buffer);
-  if (read > 0) {
-    lastLine=new String(buffer,0,read);
+  sendCmd1aNoWait(cmd);
+  socket.getOutputStream().flush();
+  String foo=DataHelper.readLine(socket.getInputStream());
+  if (foo != null) {
+    lastLine=foo;
     if (lastLine.startsWith("+OK")) {
+      if (cmd.startsWith("PASS"))       cmd="PASS provided";
+      Debug.debug(Debug.DEBUG,"sendCmd1a: (" + cmd + ") success: \""+ lastLine.trim()+ '"');
       result=true;
     }
  else {
+      if (cmd.startsWith("PASS"))       cmd="PASS provided";
+      Debug.debug(Debug.DEBUG,"sendCmd1a: (" + cmd + ") FAIL: \""+ lastLine.trim()+ '"');
       lastError=lastLine;
     }
+  }
+ else {
+    Debug.debug(Debug.DEBUG,"sendCmd1a: (" + cmd + ") NO RESPONSE");
+    lastError=_("No response from server");
+    throw new IOException(lastError);
   }
   return result;
 }

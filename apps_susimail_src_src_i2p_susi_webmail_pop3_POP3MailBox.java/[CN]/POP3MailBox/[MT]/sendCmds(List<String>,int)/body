@@ -1,0 +1,25 @@
+{
+  boolean result=true;
+  for (  String cmd : cmds) {
+    sendCmd1aNoWait(cmd);
+  }
+  socket.getOutputStream().flush();
+  InputStream in=socket.getInputStream();
+  for (int i=0; i < rcvLines; i++) {
+    String foo=DataHelper.readLine(in);
+    if (foo == null) {
+      lastError=_("No response from server");
+      throw new IOException(lastError);
+    }
+    if (!foo.startsWith("+OK")) {
+      Debug.debug(Debug.DEBUG,"Fail after " + (i + 1) + " of "+ rcvLines+ " responses: \""+ foo.trim()+ '"');
+      if (result)       lastError=foo;
+      result=false;
+    }
+ else {
+      Debug.debug(Debug.DEBUG,"OK after " + (i + 1) + " of "+ rcvLines+ " responses: \""+ foo.trim()+ '"');
+    }
+    lastLine=foo;
+  }
+  return result;
+}

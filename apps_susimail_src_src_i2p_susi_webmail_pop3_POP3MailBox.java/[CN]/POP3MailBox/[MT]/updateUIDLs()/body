@@ -1,27 +1,25 @@
 {
-synchronized (synchronizer) {
-    ReadBuffer readBuffer=null;
-    uidlToID.clear();
-    uidlList.clear();
-    readBuffer=sendCmdNa("UIDL",DEFAULT_BUFSIZE);
-    if (readBuffer != null) {
-      String[] lines=readBuffer.toString().split("\r\n");
-      for (int i=0; i < lines.length; i++) {
-        int j=lines[i].indexOf(" ");
-        if (j != -1) {
-          try {
-            int n=Integer.parseInt(lines[i].substring(0,j));
-            String uidl=lines[i].substring(j + 1);
-            uidlToID.put(uidl,Integer.valueOf(n));
-            uidlList.add(n - 1,uidl);
-          }
- catch (          NumberFormatException nfe) {
-          }
+  uidlToID.clear();
+  List<String> lines=sendCmdNl("UIDL");
+  if (lines != null) {
+    for (    String line : lines) {
+      int j=line.indexOf(" ");
+      if (j != -1) {
+        try {
+          int n=Integer.parseInt(line.substring(0,j));
+          String uidl=line.substring(j + 1).trim();
+          uidlToID.put(uidl,Integer.valueOf(n));
+        }
+ catch (        NumberFormatException nfe) {
+          Debug.debug(Debug.DEBUG,"UIDL error " + nfe);
+        }
+catch (        IndexOutOfBoundsException ioobe) {
+          Debug.debug(Debug.DEBUG,"UIDL error " + ioobe);
         }
       }
     }
+  }
  else {
-      System.err.println("Error getting UIDL list from pop3 server.");
-    }
+    Debug.debug(Debug.DEBUG,"Error getting UIDL list from server.");
   }
 }

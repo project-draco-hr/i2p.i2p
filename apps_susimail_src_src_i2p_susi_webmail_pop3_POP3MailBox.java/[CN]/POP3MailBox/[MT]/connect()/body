@@ -6,16 +6,20 @@
     socket=new Socket(host,port);
   }
  catch (  UnknownHostException e) {
-    lastError=e.getMessage();
+    lastError=e.toString();
     return;
   }
 catch (  IOException e) {
-    lastError=e.getMessage();
+    lastError=e.toString();
     return;
   }
   if (socket != null) {
     try {
-      if (sendCmd1a("USER " + user) && sendCmd1a("PASS " + pass) && sendCmd1a("STAT")) {
+      lastError="";
+      List<String> cmds=new ArrayList(2);
+      cmds.add("USER " + user);
+      cmds.add("PASS " + pass);
+      if (sendCmds(cmds,3) && sendCmd1a("STAT")) {
         int i=lastLine.indexOf(" ",5);
         mails=Integer.parseInt(i != -1 ? lastLine.substring(4,i) : lastLine.substring(4));
         connected=true;
@@ -23,15 +27,15 @@ catch (  IOException e) {
         updateSizes();
       }
  else {
-        lastError=lastLine;
+        if (lastError.equals(""))         lastError=_("Error connecting to server");
         close();
       }
     }
  catch (    NumberFormatException e1) {
-      lastError="Error getting number of messages: " + e1.getCause();
+      lastError=_("Error opening mailbox") + ": " + e1;
     }
 catch (    IOException e1) {
-      lastError="Error while opening mailbox: " + e1.getCause();
+      lastError=_("Error opening mailbox") + ": " + e1;
     }
   }
 }
