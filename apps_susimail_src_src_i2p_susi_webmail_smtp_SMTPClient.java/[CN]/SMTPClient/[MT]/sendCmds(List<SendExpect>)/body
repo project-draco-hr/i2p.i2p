@@ -1,0 +1,29 @@
+{
+  int rv=0;
+  if (supportsPipelining) {
+    Debug.debug(Debug.DEBUG,"SMTP pipelining " + cmds.size() + " commands");
+    try {
+      for (      SendExpect cmd : cmds) {
+        sendCmdNoWait(cmd.send);
+      }
+      socket.getOutputStream().flush();
+    }
+ catch (    IOException ioe) {
+      return 0;
+    }
+    for (    SendExpect cmd : cmds) {
+      int r=getResult();
+      if (r == 0)       break;
+      if (r == cmd.expect)       rv++;
+    }
+  }
+ else {
+    for (    SendExpect cmd : cmds) {
+      int r=sendCmd(cmd.send);
+      if (r != cmd.expect)       break;
+      rv++;
+    }
+  }
+  Debug.debug(Debug.DEBUG,"SMTP success in " + rv + " of "+ cmds.size()+ " commands");
+  return rv;
+}

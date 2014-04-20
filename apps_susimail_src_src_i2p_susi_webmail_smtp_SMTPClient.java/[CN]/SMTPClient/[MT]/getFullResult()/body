@@ -1,0 +1,34 @@
+{
+  int result=0;
+  StringBuilder fullResponse=new StringBuilder(512);
+  try {
+    InputStream in=socket.getInputStream();
+    StringBuilder buf=new StringBuilder(128);
+    while (DataHelper.readLine(in,buf)) {
+      Debug.debug(Debug.DEBUG,"SMTP rcv \"" + buf.toString().trim() + '"');
+      int len=buf.length();
+      if (len < 4) {
+        result=0;
+        break;
+      }
+      if (result == 0) {
+        try {
+          String r=buf.substring(0,3);
+          result=Integer.parseInt(r);
+        }
+ catch (        NumberFormatException nfe) {
+          break;
+        }
+      }
+      fullResponse.append(buf.substring(4));
+      if (buf.charAt(3) == ' ')       break;
+      buf.setLength(0);
+    }
+  }
+ catch (  IOException e) {
+    error+="IOException occured.<br>";
+    result=0;
+  }
+  lastResponse=fullResponse.toString();
+  return new Result(result,lastResponse);
+}

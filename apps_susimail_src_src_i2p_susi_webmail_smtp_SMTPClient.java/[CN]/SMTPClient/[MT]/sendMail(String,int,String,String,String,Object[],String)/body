@@ -5,40 +5,68 @@
     socket=new Socket(host,port);
   }
  catch (  Exception e) {
-    error+="Cannot connect: " + e.getMessage() + "<br>";
+    error+=_("Cannot connect") + ": " + e.getMessage()+ "<br>";
     ok=false;
   }
   try {
-    if (ok && sendCmd(null) == 220 && sendCmd("EHLO localhost") == 250 && sendCmd("AUTH LOGIN") == 334 && sendCmd(base64.encode(user)) == 334 && sendCmd(base64.encode(pass)) == 235 && sendCmd("MAIL FROM: " + sender) == 250) {
-      for (int i=0; i < recipients.length; i++) {
-        if (sendCmd("RCPT TO: " + recipients[i]) != 250) {
-          ok=false;
-        }
-      }
-      if (ok) {
-        if (sendCmd("DATA") == 354) {
-          if (body.indexOf("\r\n.\r\n") != -1)           body=body.replaceAll("\r\n.\r\n","\r\n..\r\n");
-          body+="\r\n.\r\n";
-          try {
-            socket.getOutputStream().write(body.getBytes());
-            if (sendCmd(null) == 250) {
-              mailSent=true;
-            }
-          }
- catch (          Exception e) {
-            ok=false;
-            error+="Error while sending mail: " + e.getMessage() + "<br>";
-          }
-        }
+    if (ok) {
+      int result=sendCmd(null);
+      if (result != 220) {
+        error+=_("Server refused connection") + " (" + result+ ")<br>";
+        ok=false;
       }
     }
+    if (ok) {
+      sendCmdNoWait("EHLO localhost");
+      socket.getOutputStream().flush();
+      Result r=getFullResult();
+      if (r.result == 250) {
+        supportsPipelining=r.recv.contains("PIPELINING");
+      }
+ else {
+        error+=_("Server refused connection") + " (" + r.result+ ")<br>";
+        ok=false;
+      }
+    }
+    if (ok) {
+      List<SendExpect> cmds=new ArrayList<SendExpect>();
+      cmds.add(new SendExpect("AUTH LOGIN",334));
+      cmds.add(new SendExpect(base64.encode(user),334));
+      cmds.add(new SendExpect(base64.encode(pass),235));
+      if (sendCmds(cmds) != 3) {
+        error+=_("Login failed") + "<br>";
+        ok=false;
+      }
+    }
+    if (ok) {
+      List<SendExpect> cmds=new ArrayList<SendExpect>();
+      cmds.add(new SendExpect("MAIL FROM: " + sender,250));
+      for (int i=0; i < recipients.length; i++) {
+        cmds.add(new SendExpect("RCPT TO: " + recipients[i],250));
+      }
+      cmds.add(new SendExpect("DATA",354));
+      if (sendCmds(cmds) != cmds.size()) {
+        error+=_("Mail rejected") + "<br>";
+        ok=false;
+      }
+    }
+    if (ok) {
+      if (body.indexOf("\r\n.\r\n") != -1)       body=body.replaceAll("\r\n.\r\n","\r\n..\r\n");
+      socket.getOutputStream().write(body.getBytes());
+      socket.getOutputStream().write("\r\n.\r\n".getBytes());
+      int result=sendCmd(null);
+      if (result == 250)       mailSent=true;
+ else       error+=_("Error sending mail") + " (" + result+ ")<br>";
+    }
   }
- catch (  EncodingException e) {
-    ok=false;
+ catch (  IOException e) {
+    error+=_("Error sending mail") + ": " + e.getMessage()+ "<br>";
+  }
+catch (  EncodingException e) {
     error+=e.getMessage();
   }
   if (!mailSent && lastResponse.length() > 0) {
-    String[] lines=lastResponse.split("\r\n");
+    String[] lines=lastResponse.split("\r");
     for (int i=0; i < lines.length; i++)     error+=lines[i] + "<br>";
   }
   sendCmd("QUIT",false);
