@@ -70,9 +70,18 @@
           sessionObject.host=host;
           sessionObject.smtpPort=smtpPortNo;
           sessionObject.state=STATE_LIST;
-          sessionObject.mailCache=new MailCache(mailbox);
+          MailCache mc=new MailCache(mailbox);
+          sessionObject.mailCache=mc;
           sessionObject.folder=new Folder<String>();
-          sessionObject.folder.setElements(mailbox.getUIDLs());
+          String[] uidls=mailbox.getUIDLs();
+          sessionObject.folder.setElements(uidls);
+          if (uidls.length > 0) {
+            List<MailCache.MailRequest> reqs=new ArrayList<MailCache.MailRequest>(uidls.length);
+            for (int i=0; i < uidls.length; i++) {
+              reqs.add(new CacheRequest(uidls[i]));
+            }
+            mc.getMail(reqs);
+          }
           sessionObject.folder.addSorter(SORT_ID,new IDSorter(sessionObject.mailCache));
           sessionObject.folder.addSorter(SORT_SENDER,new SenderSorter(sessionObject.mailCache));
           sessionObject.folder.addSorter(SORT_SUBJECT,new SubjectSorter(sessionObject.mailCache));

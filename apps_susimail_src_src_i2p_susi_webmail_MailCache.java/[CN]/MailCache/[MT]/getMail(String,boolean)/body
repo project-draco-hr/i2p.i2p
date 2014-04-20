@@ -1,34 +1,32 @@
 {
   Mail mail=null, newMail=null;
-  if (mailbox != null) {
 synchronized (mails) {
-      mail=mails.get(uidl);
-      if (mail == null) {
-        newMail=new Mail();
-        mails.put(uidl,newMail);
-      }
-    }
+    mail=mails.get(uidl);
     if (mail == null) {
-      mail=newMail;
-      mail.uidl=uidl;
-      mail.size=mailbox.getSize(uidl);
+      newMail=new Mail();
+      mails.put(uidl,newMail);
     }
-    if (mail.size <= FETCH_ALL_SIZE)     headerOnly=false;
-    boolean parseHeaders=mail.header == null;
-    if (headerOnly) {
-      if (mail.header == null)       mail.header=mailbox.getHeader(uidl);
-    }
+  }
+  if (mail == null) {
+    mail=newMail;
+    mail.uidl=uidl;
+    mail.size=mailbox.getSize(uidl);
+  }
+  if (mail.size <= FETCH_ALL_SIZE)   headerOnly=false;
+  boolean parseHeaders=mail.header == null;
+  if (headerOnly) {
+    if (mail.header == null)     mail.header=mailbox.getHeader(uidl);
+  }
  else {
-      if (mail.body == null) {
-        mail.body=mailbox.getBody(uidl);
-        if (mail.body != null) {
-          mail.header=mail.body;
-          MailPart.parse(mail);
-        }
+    if (mail.body == null) {
+      mail.body=mailbox.getBody(uidl);
+      if (mail.body != null) {
+        mail.header=mail.body;
+        MailPart.parse(mail);
       }
     }
-    if (parseHeaders && mail.header != null)     mail.parseHeaders();
   }
+  if (parseHeaders && mail.header != null)   mail.parseHeaders();
   if (mail != null && mail.deleted)   mail=null;
   return mail;
 }

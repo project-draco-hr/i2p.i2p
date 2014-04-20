@@ -1,0 +1,26 @@
+{
+  List<SendRecv> srs=new ArrayList<SendRecv>(requests.size());
+synchronized (synchronizer) {
+    for (    FetchRequest fr : requests) {
+      int id=getIDfromUIDL(fr.getUIDL());
+      if (id < 0)       continue;
+      SendRecv sr;
+      if (fr.getHeaderOnly() && supportsTOP)       sr=new SendRecv("TOP " + id + " 0",Mode.RB);
+ else       sr=new SendRecv("RETR " + id,Mode.RB);
+      sr.savedObject=fr;
+      srs.add(sr);
+    }
+    if (srs.isEmpty())     return;
+    try {
+      sendCmds(srs);
+    }
+ catch (    IOException ioe) {
+    }
+  }
+  for (  SendRecv sr : srs) {
+    if (sr.result) {
+      FetchRequest fr=(FetchRequest)sr.savedObject;
+      fr.setBuffer(sr.rb);
+    }
+  }
+}
