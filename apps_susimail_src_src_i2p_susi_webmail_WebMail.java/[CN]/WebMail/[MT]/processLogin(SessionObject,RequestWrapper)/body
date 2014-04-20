@@ -62,16 +62,17 @@
         }
       }
       if (doContinue) {
-        sessionObject.mailbox=new POP3MailBox(host,pop3PortNo,user,pass);
-        if (sessionObject.mailbox.isConnected()) {
+        POP3MailBox mailbox=new POP3MailBox(host,pop3PortNo,user,pass);
+        if (mailbox.isConnected()) {
+          sessionObject.mailbox=mailbox;
           sessionObject.user=user;
           sessionObject.pass=pass;
           sessionObject.host=host;
           sessionObject.smtpPort=smtpPortNo;
           sessionObject.state=STATE_LIST;
-          sessionObject.mailCache=new MailCache(sessionObject.mailbox);
+          sessionObject.mailCache=new MailCache(mailbox);
           sessionObject.folder=new Folder<String>();
-          sessionObject.folder.setElements(sessionObject.mailbox.getUIDLs());
+          sessionObject.folder.setElements(mailbox.getUIDLs());
           sessionObject.folder.addSorter(SORT_ID,new IDSorter(sessionObject.mailCache));
           sessionObject.folder.addSorter(SORT_SENDER,new SenderSorter(sessionObject.mailCache));
           sessionObject.folder.addSorter(SORT_SUBJECT,new SubjectSorter(sessionObject.mailCache));
@@ -83,8 +84,8 @@
           Debug.debug(Debug.DEBUG,"CONNECTED, YAY");
         }
  else {
-          sessionObject.error+=sessionObject.mailbox.lastError();
-          sessionObject.mailbox.close();
+          sessionObject.error+=mailbox.lastError();
+          mailbox.close();
           sessionObject.mailbox=null;
           Debug.debug(Debug.DEBUG,"NOT CONNECTED, BOO");
         }
