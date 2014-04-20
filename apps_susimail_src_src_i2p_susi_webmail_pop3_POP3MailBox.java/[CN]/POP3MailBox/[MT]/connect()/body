@@ -16,16 +16,29 @@ catch (  IOException e) {
   if (socket != null) {
     try {
       lastError="";
-      List<SendRecv> cmds=new ArrayList<SendRecv>(3);
-      cmds.add(new SendRecv(null,Mode.A1));
-      cmds.add(new SendRecv("USER " + user,Mode.A1));
-      cmds.add(new SendRecv("PASS " + pass,Mode.A1));
-      if (sendCmds(cmds) && sendCmd1a("STAT")) {
-        int i=lastLine.indexOf(" ",5);
-        mails=Integer.parseInt(i != -1 ? lastLine.substring(4,i) : lastLine.substring(4));
+      boolean ok=doHandshake();
+      if (ok) {
+        List<SendRecv> cmds=new ArrayList<SendRecv>(4);
+        cmds.add(new SendRecv("USER " + user,Mode.A1));
+        cmds.add(new SendRecv("PASS " + pass,Mode.A1));
+        ok=sendCmds(cmds);
+      }
+      if (ok) {
         connected=true;
-        updateUIDLs();
-        updateSizes();
+        List<SendRecv> cmds=new ArrayList<SendRecv>(4);
+        SendRecv stat=new SendRecv("STAT",Mode.A1);
+        cmds.add(stat);
+        SendRecv uidl=new SendRecv("UIDL",Mode.LS);
+        cmds.add(uidl);
+        SendRecv list=new SendRecv("LIST",Mode.LS);
+        cmds.add(list);
+        sendCmds(cmds);
+        if (stat.result)         updateMailCount(stat.response);
+ else         Debug.debug(Debug.DEBUG,"STAT failed");
+        if (uidl.result)         updateUIDLs(uidl.ls);
+ else         Debug.debug(Debug.DEBUG,"UIDL failed");
+        if (list.result)         updateSizes(list.ls);
+ else         Debug.debug(Debug.DEBUG,"LIST failed");
       }
  else {
         if (lastError.equals(""))         lastError=_("Error connecting to server");
