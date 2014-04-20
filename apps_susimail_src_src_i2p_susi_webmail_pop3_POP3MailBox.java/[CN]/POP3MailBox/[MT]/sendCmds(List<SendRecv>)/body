@@ -1,0 +1,66 @@
+{
+  boolean result=true;
+  boolean pipe=supportsPipelining;
+  if (pipe) {
+    Debug.debug(Debug.DEBUG,"POP3 pipelining " + cmds.size() + " commands");
+    for (    SendRecv sr : cmds) {
+      String cmd=sr.send;
+      if (cmd != null)       sendCmd1aNoWait(cmd);
+    }
+  }
+  socket.getOutputStream().flush();
+  InputStream in=socket.getInputStream();
+  int i=0;
+  for (  SendRecv sr : cmds) {
+    if (!pipe) {
+      String cmd=sr.send;
+      if (cmd != null) {
+        sendCmd1aNoWait(cmd);
+        socket.getOutputStream().flush();
+      }
+    }
+    String foo=DataHelper.readLine(in);
+    if (foo == null) {
+      lastError=_("No response from server");
+      throw new IOException(lastError);
+    }
+    sr.response=foo.trim();
+    i++;
+    if (!foo.startsWith("+OK")) {
+      Debug.debug(Debug.DEBUG,"Fail after " + i + " of "+ cmds.size()+ " responses: \""+ foo.trim()+ '"');
+      if (result)       lastError=foo;
+      result=false;
+      sr.result=false;
+    }
+ else {
+      Debug.debug(Debug.DEBUG,"OK after " + i + " of "+ cmds.size()+ " responses: \""+ foo.trim()+ '"');
+switch (sr.mode) {
+case A1:
+        sr.result=true;
+      break;
+case RB:
+    try {
+      sr.rb=getResultNa();
+      sr.result=true;
+    }
+ catch (    IOException ioe) {
+      result=false;
+      sr.result=false;
+    }
+  break;
+case LS:
+try {
+  sr.ls=getResultNl();
+  sr.result=true;
+}
+ catch (IOException ioe) {
+  result=false;
+  sr.result=false;
+}
+break;
+}
+}
+lastLine=foo;
+}
+return result;
+}
