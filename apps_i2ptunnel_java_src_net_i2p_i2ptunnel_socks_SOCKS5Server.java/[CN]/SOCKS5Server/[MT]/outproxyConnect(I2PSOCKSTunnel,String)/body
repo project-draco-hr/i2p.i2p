@@ -5,8 +5,10 @@
   Destination dest=I2PAppContext.getGlobalContext().namingService().lookup(proxy);
   if (dest == null)   throw new SOCKSException("Outproxy not found");
   I2PSocket destSock=tun.createI2PSocket(I2PAppContext.getGlobalContext().namingService().lookup(proxy),proxyOpts);
+  DataOutputStream out=null;
+  DataInputStream in=null;
   try {
-    DataOutputStream out=new DataOutputStream(destSock.getOutputStream());
+    out=new DataOutputStream(destSock.getOutputStream());
     boolean authAvail=Boolean.parseBoolean(props.getProperty(I2PTunnelHTTPClientBase.PROP_OUTPROXY_AUTH));
     String configUser=null;
     String configPW=null;
@@ -30,7 +32,7 @@
       out.writeByte(Method.NO_AUTH_REQUIRED);
     }
     out.flush();
-    DataInputStream in=new DataInputStream(destSock.getInputStream());
+    in=new DataInputStream(destSock.getInputStream());
     int hisVersion=in.readByte();
     if (hisVersion != SOCKS_VERSION_5)     throw new SOCKSException("SOCKS Outproxy is not Version 5");
     int method=in.readByte();
@@ -95,6 +97,8 @@
     in.readFully(addr);
     in.readUnsignedShort();
     if (reply != Reply.SUCCEEDED)     throw new SOCKSException("Outproxy rejected request, response = " + reply);
+    out.close();
+    in.close();
   }
  catch (  IOException e) {
     try {
