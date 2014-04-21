@@ -32,8 +32,8 @@
  else     sessionObject.error+=_("No messages marked for deletion.") + "<br>";
   }
  else {
-    int numberDeleted=0;
     if (buttonPressed(request,REALLYDELETE)) {
+      List<String> toDelete=new ArrayList<String>();
       for (Enumeration<String> e=request.getParameterNames(); e.hasMoreElements(); ) {
         String parameter=e.nextElement();
         if (parameter.startsWith("check") && request.getParameter(parameter).equals("1")) {
@@ -41,25 +41,19 @@
           try {
             int n=Integer.parseInt(number);
             String uidl=sessionObject.folder.getElementAtPosXonCurrentPage(n);
-            if (uidl != null) {
-              Mail mail=sessionObject.mailCache.getMail(uidl,MailCache.FETCH_HEADER);
-              if (mail != null) {
-                if (sessionObject.mailbox.delete(uidl)) {
-                  mail.markForDeletion=true;
-                  numberDeleted++;
-                }
- else                 sessionObject.error+=_("Error deleting message: {0}",sessionObject.mailbox.lastError()) + "<br>";
-              }
-            }
+            if (uidl != null)             toDelete.add(uidl);
           }
  catch (          NumberFormatException nfe) {
           }
         }
       }
-      sessionObject.mailbox.performDelete();
-      sessionObject.folder.setElements(sessionObject.mailbox.getUIDLs());
-      sessionObject.pageChanged=true;
-      sessionObject.info+=ngettext("1 message deleted.","{0} messages deleted.",numberDeleted);
+      int numberDeleted=toDelete.size();
+      if (numberDeleted > 0) {
+        sessionObject.mailCache.delete(toDelete);
+        sessionObject.folder.removeElements(toDelete);
+        sessionObject.pageChanged=true;
+        sessionObject.info+=ngettext("1 message deleted.","{0} messages deleted.",numberDeleted);
+      }
     }
     sessionObject.reallyDelete=false;
   }

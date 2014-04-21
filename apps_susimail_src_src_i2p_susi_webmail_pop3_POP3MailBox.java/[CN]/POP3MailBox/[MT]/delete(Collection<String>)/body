@@ -1,0 +1,33 @@
+{
+  List<SendRecv> srs=new ArrayList<SendRecv>(uidls.size() + 1);
+synchronized (synchronizer) {
+    try {
+      checkConnection();
+    }
+ catch (    IOException ioe) {
+      Debug.debug(Debug.DEBUG,"Error deleting: " + ioe);
+      return;
+    }
+    for (    String uidl : uidls) {
+      int id=getIDfromUIDL(uidl);
+      if (id < 0)       continue;
+      SendRecv sr=new SendRecv("DELE " + id,Mode.A1);
+      srs.add(sr);
+    }
+    if (srs.isEmpty())     return;
+    SendRecv sr=new SendRecv("QUIT",Mode.A1);
+    srs.add(sr);
+    try {
+      sendCmds(srs);
+      try {
+        socket.close();
+      }
+ catch (      IOException e) {
+      }
+      clear();
+    }
+ catch (    IOException ioe) {
+      Debug.debug(Debug.DEBUG,"Error deleting: " + ioe);
+    }
+  }
+}
