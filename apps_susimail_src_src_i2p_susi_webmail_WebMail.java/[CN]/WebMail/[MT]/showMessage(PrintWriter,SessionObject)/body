@@ -3,20 +3,17 @@
     out.println("<p class=\"error\">" + _("Really delete this message?") + " "+ button(REALLYDELETE,_("Yes, really delete it!"))+ "</p>");
   }
   Mail mail=sessionObject.mailCache.getMail(sessionObject.showUIDL,MailCache.FETCH_ALL);
-  if (mail != null && mail.body != null && mail.part == null) {
-    mail.part=new MailPart();
-    mail.part.parse(mail.body);
-  }
-  if (!RELEASE && mail != null && mail.body != null) {
+  if (!RELEASE && mail != null && mail.hasBody()) {
     out.println("<!--");
-    out.println(quoteHTML(new String(mail.body.content,mail.body.offset,mail.body.length)));
+    ReadBuffer body=mail.getBody();
+    out.println(quoteHTML(new String(body.content,body.offset,body.length)));
     out.println("-->");
   }
   out.println(button(NEW,_("New")) + spacer + button(REPLY,_("Reply"))+ button(REPLYALL,_("Reply All"))+ button(FORWARD,_("Forward"))+ spacer+ button(DELETE,_("Delete"))+ spacer+ "<br>"+ (sessionObject.folder.isFirstElement(sessionObject.showUIDL) ? button2(PREV,_("Previous")) : button(PREV,_("Previous")))+ spacer+ button(LIST,_("Back to Folder"))+ spacer+ (sessionObject.folder.isLastElement(sessionObject.showUIDL) ? button2(NEXT,_("Next")) : button(NEXT,_("Next"))));
   if (mail != null) {
     out.println("<table cellspacing=\"0\" cellpadding=\"5\">\n" + "<tr><td colspan=\"2\" align=\"center\"><hr></td></tr>\n" + "<tr class=\"mailhead\"><td align=\"right\" valign=\"top\">" + _("From:") + "</td><td align=\"left\">"+ quoteHTML(mail.sender)+ "</td></tr>\n"+ "<tr class=\"mailhead\"><td align=\"right\" valign=\"top\">"+ _("Subject:")+ "</td><td align=\"left\">"+ quoteHTML(mail.formattedSubject)+ "</td></tr>\n"+ "<tr class=\"mailhead\"><td align=\"right\" valign=\"top\">"+ _("Date:")+ "</td><td align=\"left\">"+ mail.quotedDate+ "</td></tr>\n"+ "<tr><td colspan=\"2\" align=\"center\"><hr></td></tr>");
-    if (mail.body != null) {
-      showPart(out,mail.part,0,SHOW_HTML);
+    if (mail.hasPart()) {
+      showPart(out,mail.getPart(),0,SHOW_HTML);
     }
  else {
       out.println("<tr class=\"mailbody\"><td colspan=\"2\" align=\"center\"><p class=\"error\">" + _("Could not fetch mail body.") + "</p></td></tr>");

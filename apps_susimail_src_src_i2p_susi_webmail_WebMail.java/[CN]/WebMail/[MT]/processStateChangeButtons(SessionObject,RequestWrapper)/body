@@ -50,11 +50,8 @@
       }
       if (uidl != null) {
         Mail mail=sessionObject.mailCache.getMail(uidl,MailCache.FETCH_ALL);
-        if (mail.part == null) {
-          mail.part=new MailPart();
-          mail.part.parse(mail.body);
-        }
-        if (mail.part != null) {
+        MailPart part=mail.getPart();
+        if (part != null) {
           if (reply || replyAll) {
             if (mail.reply != null && Mail.validateAddress(mail.reply))             sessionObject.replyTo=Mail.getAddress(mail.reply);
  else             if (mail.sender != null && Mail.validateAddress(mail.sender))             sessionObject.replyTo=Mail.getAddress(mail.sender);
@@ -64,7 +61,7 @@
             pw.println(_("On {0} {1} wrote:",mail.formattedDate + " UTC",sessionObject.replyTo));
             StringWriter text2=new StringWriter();
             PrintWriter pw2=new PrintWriter(text2);
-            showPart(pw2,mail.part,0,TEXT_ONLY);
+            showPart(pw2,part,0,TEXT_ONLY);
             pw2.flush();
             String[] lines=text2.toString().split("\r\n");
             for (int i=0; i < lines.length; i++)             pw.println("> " + lines[i]);
@@ -120,7 +117,7 @@
             }
             if (mail.dateString != null)             pw.print("Date: " + mail.dateString);
             pw.println();
-            showPart(pw,mail.part,0,TEXT_ONLY);
+            showPart(pw,part,0,TEXT_ONLY);
             pw.println("----  " + _("end forwarded mail") + "  ----");
             pw.flush();
             sessionObject.body=text.toString();

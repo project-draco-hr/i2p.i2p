@@ -3,30 +3,23 @@
 synchronized (mails) {
     mail=mails.get(uidl);
     if (mail == null) {
-      newMail=new Mail();
+      newMail=new Mail(uidl);
       mails.put(uidl,newMail);
     }
   }
   if (mail == null) {
     mail=newMail;
-    mail.uidl=uidl;
     mail.size=mailbox.getSize(uidl);
   }
   if (mail.size <= FETCH_ALL_SIZE)   headerOnly=false;
-  boolean parseHeaders=mail.header == null;
   if (headerOnly) {
-    if (mail.header == null)     mail.header=mailbox.getHeader(uidl);
+    if (!mail.hasHeader())     mail.setHeader(mailbox.getHeader(uidl));
   }
  else {
-    if (mail.body == null) {
-      mail.body=mailbox.getBody(uidl);
-      if (mail.body != null) {
-        mail.header=mail.body;
-        MailPart.parse(mail);
-      }
+    if (!mail.hasBody()) {
+      mail.setBody(mailbox.getBody(uidl));
     }
   }
-  if (parseHeaders && mail.header != null)   mail.parseHeaders();
   if (mail != null && mail.deleted)   mail=null;
   return mail;
 }

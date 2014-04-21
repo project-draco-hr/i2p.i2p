@@ -43,40 +43,28 @@
  else       prepareAttachment=true;
     }
     if (showBody) {
-      String encoding=mailPart.encoding;
-      if (encoding == null) {
-        encoding="7bit";
-        reason+=_("Warning: no transfer encoding found, fallback to 7bit.") + br;
+      String charset=mailPart.charset;
+      if (charset == null) {
+        charset="US-ASCII";
+        reason+=_("Warning: no charset found, fallback to US-ASCII.") + br;
       }
-      Encoding e=EncodingFactory.getEncoding(encoding);
-      if (e == null) {
+      try {
+        ReadBuffer decoded=mailPart.decode(0);
+        BufferedReader reader=new BufferedReader(new InputStreamReader(new ByteArrayInputStream(decoded.content,decoded.offset,decoded.length),charset));
+        body=new StringBuilder();
+        String line;
+        while ((line=reader.readLine()) != null) {
+          body.append(quoteHTML(line));
+          body.append(br);
+        }
+      }
+ catch (      UnsupportedEncodingException uee) {
         showBody=false;
-        reason+=_("No encoder found for encoding \\''{0}\\''.",quoteHTML(encoding));
+        reason=_("Charset \\''{0}\\'' not supported.",quoteHTML(mailPart.charset)) + br;
       }
- else {
-        String charset=mailPart.charset;
-        if (charset == null) {
-          charset="US-ASCII";
-          reason+=_("Warning: no charset found, fallback to US-ASCII.") + br;
-        }
-        try {
-          ReadBuffer decoded=e.decode(mailPart.buffer.content,mailPart.beginBody,mailPart.end - mailPart.beginBody);
-          BufferedReader reader=new BufferedReader(new InputStreamReader(new ByteArrayInputStream(decoded.content,decoded.offset,decoded.length),charset));
-          body=new StringBuilder();
-          String line;
-          while ((line=reader.readLine()) != null) {
-            body.append(quoteHTML(line));
-            body.append(br);
-          }
-        }
- catch (        UnsupportedEncodingException uee) {
-          showBody=false;
-          reason=_("Charset \\''{0}\\'' not supported.",quoteHTML(mailPart.charset)) + br;
-        }
-catch (        Exception e1) {
-          showBody=false;
-          reason+=_("Part ({0}) not shown, because of {1}",ident,e1.getClass().getName()) + br;
-        }
+catch (      Exception e1) {
+        showBody=false;
+        reason+=_("Part ({0}) not shown, because of {1}",ident,e1.getClass().getName()) + br;
       }
     }
     if (html)     out.println("<tr class=\"mailbody\"><td colspan=\"2\" align=\"center\">");
