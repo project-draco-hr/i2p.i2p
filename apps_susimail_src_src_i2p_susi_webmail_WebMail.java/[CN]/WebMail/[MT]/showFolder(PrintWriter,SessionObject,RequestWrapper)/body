@@ -1,2 +1,34 @@
 {
+  if (sessionObject.reallyDelete) {
+    out.println("<p class=\"error\">" + _("Really delete the marked messages?") + " "+ button(REALLYDELETE,_("Yes, really delete them!"))+ "</p>");
+  }
+  out.println(button(NEW,_("New")) + spacer + button(DELETE,_("Delete"))+ spacer+ button(REFRESH,_("Check Mail"))+ spacer);
+  if (Config.hasConfigFile())   out.println(button(RELOAD,_("Reload Config")) + spacer);
+  out.println(button(LOGOUT,_("Logout")));
+  if (sessionObject.folder.getPages() > 1) {
+    out.println("<br>" + (sessionObject.folder.isFirstPage() ? button2(FIRSTPAGE,_("First")) + button2(PREVPAGE,_("Previous")) : button(FIRSTPAGE,_("First")) + button(PREVPAGE,_("Previous"))) + " &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"+ _("Page {0} of {1}",sessionObject.folder.getCurrentPage(),sessionObject.folder.getPages())+ "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; "+ (sessionObject.folder.isLastPage() ? button2(NEXTPAGE,_("Next")) + button2(LASTPAGE,_("Last")) : button(NEXTPAGE,_("Next")) + button(LASTPAGE,_("Last"))));
+  }
+  out.println("<table id=\"mailbox\" cellspacing=\"0\" cellpadding=\"5\">\n" + "<tr><td colspan=\"8\"><hr></td></tr>\n<tr>" + thSpacer + "<th>"+ sortHeader(SORT_SENDER,_("From"),sessionObject.imgPath)+ "</th>"+ thSpacer+ "<th>"+ sortHeader(SORT_SUBJECT,_("Subject"),sessionObject.imgPath)+ "</th>"+ thSpacer+ "<th>"+ sortHeader(SORT_DATE,_("Date"),sessionObject.imgPath)+ "</th>"+ thSpacer+ "<th>"+ sortHeader(SORT_SIZE,_("Size"),sessionObject.imgPath)+ "</th></tr>");
+  int bg=0;
+  int i=0;
+  for (Iterator<String> it=sessionObject.folder.currentPageIterator(); it != null && it.hasNext(); ) {
+    String uidl=it.next();
+    Mail mail=sessionObject.mailCache.getMail(uidl,MailCache.FETCH_HEADER);
+    String link="<a href=\"" + myself + "?"+ SHOW+ "="+ i+ "\">";
+    boolean idChecked=false;
+    String checkId=sessionObject.pageChanged ? null : request.getParameter("check" + i);
+    if (checkId != null && checkId.equals("1"))     idChecked=true;
+    if (sessionObject.markAll)     idChecked=true;
+    if (sessionObject.invert)     idChecked=!idChecked;
+    if (sessionObject.clear)     idChecked=false;
+    out.println("<tr class=\"list" + bg + "\"><td><input type=\"checkbox\" class=\"optbox\" name=\"check"+ i+ "\" value=\"1\""+ (idChecked ? "checked" : "")+ ">"+ "</td><td>"+ link+ mail.shortSender+ "</a></td><td>&nbsp;</td><td>"+ link+ mail.shortSubject+ "</a></td><td>&nbsp;</td><td>"+ mail.localFormattedDate.replace(" ","&nbsp;")+ "</td><td>&nbsp;</td><td align=\"right\">"+ ((mail.getSize() > 0) ? (DataHelper.formatSize2(mail.getSize()) + 'B') : "???")+ "</td></tr>");
+    bg=1 - bg;
+    i++;
+  }
+  if (i == 0)   out.println("<tr><td colspan=\"8\" align=\"center\"><i>" + _("No messages") + "</i></td></tr>\n</table>");
+  out.println("<tr><td colspan=\"8\"><hr></td></tr>\n</table>");
+  if (i > 0) {
+    out.println(button(MARKALL,_("Mark All")) + button(INVERT,_("Invert Selection")) + button(CLEAR,_("Clear"))+ "<br>");
+    out.println(_("Page Size") + ":&nbsp;<input type=\"text\" style=\"text-align: right;\" name=\"" + PAGESIZE+ "\" size=\"4\" value=\""+ sessionObject.folder.getPageSize()+ "\">"+ button(SETPAGESIZE,_("Set")));
+  }
 }
