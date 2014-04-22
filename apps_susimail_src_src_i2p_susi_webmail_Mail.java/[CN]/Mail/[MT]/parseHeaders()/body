@@ -32,11 +32,14 @@
           if (line.startsWith("From:")) {
             sender=line.substring(5).trim();
             formattedSender=getAddress(sender);
-            shortSender=formattedSender.trim();
-            if (shortSender.length() > 40) {
-              shortSender=shortSender.substring(0,37).trim() + "&hellip;";
-            }
+            shortSender=sender.replace("\"","").trim();
+            int lt=shortSender.indexOf('<');
+            if (lt > 0)             shortSender=shortSender.substring(0,lt).trim();
+ else             if (lt < 0 && shortSender.contains("@"))             shortSender='<' + shortSender + '>';
+            boolean trim=shortSender.length() > 40;
+            if (trim)             shortSender=shortSender.substring(0,37).trim();
             shortSender=html.encode(shortSender);
+            if (trim)             shortSender+="&hellip;";
           }
  else           if (line.startsWith("Date:")) {
             dateString=line.substring(5).trim();
@@ -55,8 +58,10 @@
             subject=line.substring(8).trim();
             formattedSubject=subject;
             shortSubject=formattedSubject;
-            if (formattedSubject.length() > 60)             shortSubject=formattedSubject.substring(0,57).trim() + "&hellip;";
+            boolean trim=formattedSubject.length() > 60;
+            if (trim)             shortSubject=formattedSubject.substring(0,57).trim();
             shortSubject=html.encode(shortSubject);
+            if (trim)             shortSubject+="&hellip;";
           }
  else           if (line.toLowerCase(Locale.US).startsWith("reply-to:")) {
             reply=getAddress(line.substring(9).trim());
