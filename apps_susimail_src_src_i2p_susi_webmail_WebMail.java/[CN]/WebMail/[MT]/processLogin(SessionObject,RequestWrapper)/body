@@ -12,7 +12,8 @@
       smtpPort=Config.getProperty(CONFIG_PORTS_SMTP,"" + DEFAULT_SMTPPORT);
     }
     boolean doContinue=true;
-    if (buttonPressed(request,LOGIN)) {
+    boolean offline=buttonPressed(request,OFFLINE);
+    if (buttonPressed(request,LOGIN) || offline) {
       if (user == null || user.length() == 0) {
         sessionObject.error+=_("Need username for authentication.") + "<br>";
         doContinue=false;
@@ -63,7 +64,7 @@
       }
       if (doContinue) {
         POP3MailBox mailbox=new POP3MailBox(host,pop3PortNo,user,pass);
-        if (mailbox.isConnected()) {
+        if (offline || mailbox.connectToServer()) {
           sessionObject.mailbox=mailbox;
           sessionObject.user=user;
           sessionObject.pass=pass;
@@ -73,9 +74,9 @@
           MailCache mc=new MailCache(mailbox,host,pop3PortNo,user,pass);
           sessionObject.mailCache=mc;
           sessionObject.folder=new Folder<String>();
-          String[] uidls=mailbox.getUIDLs();
+          String[] uidls=mc.getUIDLs();
           sessionObject.folder.setElements(uidls);
-          if (uidls.length > 0) {
+          if (uidls.length > 0 && !offline) {
             List<MailCache.MailRequest> reqs=new ArrayList<MailCache.MailRequest>(uidls.length);
             for (int i=0; i < uidls.length; i++) {
               reqs.add(new CacheRequest(uidls[i]));
@@ -89,7 +90,8 @@
           sessionObject.folder.setSortingDirection(Folder.SortOrder.UP);
           sessionObject.folder.sortBy(SORT_DATE);
           sessionObject.reallyDelete=false;
-          Debug.debug(Debug.DEBUG,"CONNECTED, YAY");
+          if (offline)           Debug.debug(Debug.DEBUG,"OFFLINE MODE");
+ else           Debug.debug(Debug.DEBUG,"CONNECTED, YAY");
         }
  else {
           sessionObject.error+=mailbox.lastError();
