@@ -1,13 +1,16 @@
 {
-  supportsPipelining=false;
-  supportsUIDL=false;
-  supportsTOP=false;
   List<SendRecv> cmds=new ArrayList<SendRecv>(2);
   cmds.add(new SendRecv(null,Mode.A1));
-  SendRecv capa=new SendRecv("CAPA",Mode.LS);
-  cmds.add(capa);
+  SendRecv capa=null;
+  if (gotCAPA) {
+    Debug.debug(Debug.DEBUG,"Skipping CAPA");
+  }
+ else {
+    capa=new SendRecv("CAPA",Mode.LS);
+    cmds.add(capa);
+  }
   boolean rv=sendCmds(cmds);
-  if (rv) {
+  if (rv && capa != null) {
     if (capa.ls != null) {
       for (      String cap : capa.ls) {
         String t=cap.trim();
@@ -16,7 +19,8 @@
  else         if (t.equals("TOP"))         supportsTOP=true;
       }
     }
+    gotCAPA=true;
+    Debug.debug(Debug.DEBUG,"POP3 server caps: pipelining? " + supportsPipelining + " UIDL? "+ supportsUIDL+ " TOP? "+ supportsTOP);
   }
-  Debug.debug(Debug.DEBUG,"POP3 server caps: pipelining? " + supportsPipelining + " UIDL? "+ supportsUIDL+ " TOP? "+ supportsTOP);
   return rv;
 }
