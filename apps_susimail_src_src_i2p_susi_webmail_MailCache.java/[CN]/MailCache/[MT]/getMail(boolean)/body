@@ -1,9 +1,10 @@
 {
+  Collection<String> popKnown=mailbox.getUIDLs();
+  if (popKnown == null)   return false;
   List<POP3Request> fetches=new ArrayList<POP3Request>();
-  for (  MailRequest mr : requests) {
+  for (  String uidl : popKnown) {
     Mail mail=null, newMail=null;
-    String uidl=mr.getUIDL();
-    boolean headerOnly=mr.getHeaderOnly();
+    boolean headerOnly=hOnly;
 synchronized (mails) {
       mail=mails.get(uidl);
       if (mail == null) {
@@ -16,7 +17,6 @@ synchronized (mails) {
       mail.setSize(mailbox.getSize(uidl));
     }
     if (mail.markForDeletion)     continue;
-    mr.setMail(mail);
     int sz=mail.getSize();
     if (sz > 0 && sz <= FETCH_ALL_SIZE)     headerOnly=false;
     if (headerOnly) {
@@ -27,7 +27,7 @@ synchronized (mails) {
             continue;
           }
         }
-        POP3Request pr=new POP3Request(mr,mail,true);
+        POP3Request pr=new POP3Request(mail,true);
         fetches.add(pr);
       }
     }
@@ -39,11 +39,12 @@ synchronized (mails) {
             continue;
           }
         }
-        POP3Request pr=new POP3Request(mr,mail,false);
+        POP3Request pr=new POP3Request(mail,false);
         fetches.add(pr);
       }
     }
   }
+  boolean rv=false;
   if (!fetches.isEmpty()) {
     List foo=fetches;
     List<FetchRequest> bar=foo;
@@ -58,11 +59,14 @@ synchronized (mails) {
  else {
           mail.setBody(rb);
         }
+        rv=true;
         if (disk != null) {
-          if (disk.saveMail(mail) && mail.hasBody()) {
+          if (disk.saveMail(mail) && mail.hasBody() && false&& !Boolean.parseBoolean(Config.getProperty(WebMail.CONFIG_LEAVE_ON_SERVER))) {
+            mailbox.queueForDeletion(mail.uidl);
           }
         }
       }
     }
   }
+  return rv;
 }
