@@ -3,8 +3,33 @@ synchronized (synchronizer) {
     Debug.debug(Debug.DEBUG,"close()");
     if (socket != null && socket.isConnected()) {
       try {
-        if (shouldWait)         sendCmd1a("QUIT");
- else         sendCmd1aNoWait("QUIT");
+        Collection<String> toDelete=delayedDeleter.getQueued();
+        Map<String,Integer> sendDelete=new HashMap<String,Integer>(toDelete.size());
+        for (        String uidl : toDelete) {
+          int id=getIDfromUIDL(uidl);
+          if (id >= 0) {
+            sendDelete.put(uidl,Integer.valueOf(id));
+          }
+        }
+        if (shouldWait) {
+          if (!sendDelete.isEmpty()) {
+            Collection<String> deleted=delete(sendDelete.keySet());
+            for (            String uidl : deleted) {
+              delayedDeleter.removeQueued(uidl);
+            }
+          }
+ else {
+            sendCmd1a("QUIT");
+          }
+        }
+ else {
+          if (!sendDelete.isEmpty()) {
+            for (            Integer id : sendDelete.values()) {
+              sendCmd1aNoWait("DELE " + id);
+            }
+          }
+          sendCmd1aNoWait("QUIT");
+        }
         socket.close();
       }
  catch (      IOException e) {
