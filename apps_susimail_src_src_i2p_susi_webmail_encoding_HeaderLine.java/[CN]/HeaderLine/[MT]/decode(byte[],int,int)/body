@@ -1,5 +1,5 @@
 {
-  byte[] out=new byte[length];
+  ByteArrayOutputStream out=new ByteArrayOutputStream(4096);
   int written=0;
   int end=offset + length;
   if (end > in.length)   throw new DecodingException("Index out of bound.");
@@ -33,7 +33,7 @@
                       if (clc.equals("utf-8") || clc.equals("utf8")) {
                         for (int j=0; j < tmp.length; j++) {
                           byte d=tmp.content[tmp.offset + j];
-                          out[written++]=(d == '_' ? 32 : d);
+                          out.write(d == '_' ? 32 : d);
                         }
                       }
  else {
@@ -41,7 +41,7 @@
                         byte[] utf8=DataHelper.getUTF8(decoded);
                         for (int j=0; j < utf8.length; j++) {
                           byte d=utf8[j];
-                          out[written++]=(d == '_' ? 32 : d);
+                          out.write(d == '_' ? 32 : d);
                         }
                       }
                       int distance=f4 + 2 - offset;
@@ -64,6 +64,7 @@
  else     if (c == '\r') {
       if (length > 0 && in[offset] == '\n') {
         linebreak=true;
+        if (length > 2 && in[offset + 1] == '\r' && in[offset + 2] == '\n')         break;
         length--;
         offset++;
         continue;
@@ -72,12 +73,12 @@
     if (linebreak) {
       linebreak=false;
       if (c != ' ' && c != '\t') {
-        out[written++]='\r';
-        out[written++]='\n';
+        out.write('\r');
+        out.write('\n');
         lastSkip=0;
       }
  else {
-        if (!lastCharWasQuoted)         out[written++]=' ';
+        if (!lastCharWasQuoted)         out.write(' ');
         int skipped=1;
         while (length > 0 && (in[offset] == ' ' || in[offset] == '\t')) {
           if (lastSkip > 0 && skipped >= lastSkip) {
@@ -93,13 +94,12 @@
         continue;
       }
     }
-    out[written++]=c;
+    out.write(c);
     lastCharWasQuoted=false;
   }
   if (linebreak) {
-    out[written++]='\r';
-    out[written++]='\n';
-    lastSkip=0;
+    out.write('\r');
+    out.write('\n');
   }
-  return new ReadBuffer(out,0,written);
+  return new ReadBuffer(out.toByteArray(),0,out.size());
 }
