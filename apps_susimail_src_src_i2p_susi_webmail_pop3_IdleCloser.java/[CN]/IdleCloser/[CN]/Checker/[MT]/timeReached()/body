@@ -1,0 +1,19 @@
+{
+  if (isDead)   return;
+  if (!mailbox.isConnected())   return;
+  if (!isClosing) {
+    long config=getMaxIdle();
+    long idle=System.currentTimeMillis() - mailbox.getLastActivity();
+    long remaining=config - idle;
+    if (remaining <= 0) {
+      Debug.debug(Debug.DEBUG,"Threading close after " + idle + " ms idle");
+      Thread t=new Closer();
+      isClosing=true;
+      t.start();
+    }
+ else {
+      Debug.debug(Debug.DEBUG,"Not closing after " + idle + " ms idle");
+      schedule(remaining + 5000);
+    }
+  }
+}

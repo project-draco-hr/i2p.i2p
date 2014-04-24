@@ -1,0 +1,21 @@
+{
+  try {
+synchronized (mailbox.getLock()) {
+      if (!mailbox.isConnected())       return;
+      long config=getMaxIdle();
+      long idle=System.currentTimeMillis() - mailbox.getLastActivity();
+      long remaining=config - idle;
+      if (remaining <= 0) {
+        boolean shouldWait=!mailbox.hasQueuedDeletions();
+        mailbox.close(shouldWait);
+        isDead=true;
+      }
+ else {
+        timer.schedule(remaining + 5000);
+      }
+    }
+  }
+  finally {
+    isClosing=false;
+  }
+}

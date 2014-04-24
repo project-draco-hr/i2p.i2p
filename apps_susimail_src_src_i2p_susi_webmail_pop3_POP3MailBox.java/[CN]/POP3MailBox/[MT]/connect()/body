@@ -11,17 +11,20 @@
     return;
   }
 catch (  IOException e) {
+    Debug.debug(Debug.DEBUG,"Error connecting: " + e);
     lastError=e.toString();
     return;
   }
   if (socket != null) {
     try {
       lastError="";
+      socket.setSoTimeout(120 * 1000);
       boolean ok=doHandshake();
       if (ok) {
         List<SendRecv> cmds=new ArrayList<SendRecv>(4);
         cmds.add(new SendRecv("USER " + user,Mode.A1));
         cmds.add(new SendRecv("PASS " + pass,Mode.A1));
+        socket.setSoTimeout(60 * 1000);
         ok=sendCmds(cmds);
       }
       if (ok) {
@@ -33,13 +36,17 @@ catch (  IOException e) {
         cmds.add(uidl);
         SendRecv list=new SendRecv("LIST",Mode.LS);
         cmds.add(list);
-        sendCmds(cmds);
+        socket.setSoTimeout(120 * 1000);
+        ok=sendCmds(cmds);
         if (stat.result)         updateMailCount(stat.response);
  else         Debug.debug(Debug.DEBUG,"STAT failed");
         if (uidl.result)         updateUIDLs(uidl.ls);
  else         Debug.debug(Debug.DEBUG,"UIDL failed");
         if (list.result)         updateSizes(list.ls);
  else         Debug.debug(Debug.DEBUG,"LIST failed");
+        socket.setSoTimeout(300 * 1000);
+        if (ok && backgroundChecker == null && Boolean.parseBoolean(Config.getProperty(WebMail.CONFIG_BACKGROUND_CHECK)))         backgroundChecker=new BackgroundChecker(this);
+        if (ok && idleCloser == null)         idleCloser=new IdleCloser(this);
       }
  else {
         if (lastError.equals(""))         lastError=_("Error connecting to server");
