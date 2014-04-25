@@ -33,12 +33,14 @@ synchronized (sessionObject) {
     sessionObject.isMobile=isMobile;
     if (sessionObject.state == STATE_NEW)     processComposeButtons(sessionObject,request);
     int oldState=sessionObject.state;
-    processStateChangeButtons(sessionObject,request);
+    processStateChangeButtons(sessionObject,request,isPOST);
     int newState=sessionObject.state;
     if (oldState != newState)     Debug.debug(Debug.DEBUG,"STATE CHANGE from " + oldState + " to "+ newState);
-    if (sessionObject.state != STATE_AUTH)     processGenericButtons(sessionObject,request);
+    if (sessionObject.state != STATE_AUTH) {
+      if (isPOST)       processGenericButtons(sessionObject,request);
+    }
     if (sessionObject.state == STATE_LIST) {
-      processFolderButtons(sessionObject,request);
+      if (isPOST)       processFolderButtons(sessionObject,request);
       for (Iterator<String> it=sessionObject.folder.currentPageIterator(); it != null && it.hasNext(); ) {
         String uidl=it.next();
         Mail mail=sessionObject.mailCache.getMail(uidl,MailCache.FETCH_HEADER);
@@ -49,7 +51,7 @@ synchronized (sessionObject) {
       }
     }
     if (sessionObject.state == STATE_SHOW) {
-      processMessageButtons(sessionObject,request);
+      if (isPOST)       processMessageButtons(sessionObject,request);
       if (sessionObject.showUIDL != null) {
         Mail mail=sessionObject.mailCache.getMail(sessionObject.showUIDL,MailCache.FETCH_ALL);
         if (mail != null && mail.error.length() > 0) {
