@@ -2,9 +2,7 @@
   out.println(button(NEW,_("New")) + spacer + button(REFRESH,_("Check Mail"))+ spacer);
   if (Config.hasConfigFile())   out.println(button(RELOAD,_("Reload Config")) + spacer);
   out.println(button(LOGOUT,_("Logout")));
-  if (sessionObject.folder.getPages() > 1) {
-    out.println("<br>" + (sessionObject.folder.isFirstPage() ? button2(FIRSTPAGE,_("First")) + "&nbsp;" + button2(PREVPAGE,_("Previous")) : button(FIRSTPAGE,_("First")) + "&nbsp;" + button(PREVPAGE,_("Previous"))) + " &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;"+ _("Page {0} of {1}",sessionObject.folder.getCurrentPage(),sessionObject.folder.getPages())+ "&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; "+ (sessionObject.folder.isLastPage() ? button2(NEXTPAGE,_("Next")) + "&nbsp;" + button2(LASTPAGE,_("Last")) : button(NEXTPAGE,_("Next")) + "&nbsp;" + button(LASTPAGE,_("Last"))));
-  }
+  if (sessionObject.folder.getPages() > 1)   showPageButtons(out,sessionObject.folder);
   String curSort=sessionObject.folder.getCurrentSortBy();
   Folder.SortOrder curOrder=sessionObject.folder.getCurrentSortingDirection();
   out.println("<table id=\"mailbox\" cellspacing=\"0\" cellpadding=\"5\">\n" + "<tr><td colspan=\"9\"><hr></td></tr>\n<tr>" + thSpacer + thSpacer+ "<th>"+ sortHeader(SORT_SENDER,_("From"),sessionObject.imgPath,curSort,curOrder)+ "</th>"+ thSpacer+ "<th>"+ sortHeader(SORT_SUBJECT,_("Subject"),sessionObject.imgPath,curSort,curOrder)+ "</th>"+ thSpacer+ "<th>"+ sortHeader(SORT_DATE,_("Date"),sessionObject.imgPath,curSort,curOrder)+ "</th>"+ thSpacer+ "<th>"+ sortHeader(SORT_SIZE,_("Size"),sessionObject.imgPath,curSort,curOrder)+ "</th></tr>");
@@ -28,13 +26,18 @@
     if (sessionObject.markAll)     idChecked=true;
     if (sessionObject.invert)     idChecked=!idChecked;
     if (sessionObject.clear)     idChecked=false;
-    out.println("<tr class=\"list" + bg + "\"><td><input type=\"checkbox\" class=\"optbox\" name=\"check"+ i+ "\" value=\"1\""+ (idChecked ? "checked" : "")+ ">"+ "</td><td>"+ (mail.isNew() ? "<img src=\"/susimail/icons/flag_green.png\" alt=\"\">" : "&nbsp;")+ "</td><td>"+ link+ mail.shortSender+ "</a></td><td>"+ (mail.hasAttachment() ? "<img src=\"/susimail/icons/attach.png\" alt=\"\">" : "&nbsp;")+ "</td><td>"+ link+ mail.shortSubject+ "</a></td><td>"+ (mail.isSpam() ? "<img src=\"/susimail/icons/flag_red.png\" alt=\"\">" : "&nbsp;")+ "</td><td>"+ mail.localFormattedDate.replace(" ","&nbsp;")+ "</td><td>&nbsp;</td><td align=\"right\">"+ ((mail.getSize() > 0) ? (DataHelper.formatSize2(mail.getSize()) + 'B') : "???")+ "</td></tr>");
+    out.println("<tr class=\"list" + bg + "\"><td><input type=\"checkbox\" class=\"optbox\" name=\"check"+ i+ "\" value=\"1\""+ (idChecked ? "checked" : "")+ ">"+ "</td><td>"+ (mail.isNew() ? "<img src=\"/susimail/icons/flag_green.png\" alt=\"\" title=\"" + _("Message is new") + "\">" : "&nbsp;")+ "</td><td>"+ link+ mail.shortSender+ "</a></td><td>"+ (mail.hasAttachment() ? "<img src=\"/susimail/icons/attach.png\" alt=\"\" title=\"" + _("Message has an attachment") + "\">" : "&nbsp;")+ "</td><td>"+ link+ mail.shortSubject+ "</a></td><td>"+ (mail.isSpam() ? "<img src=\"/susimail/icons/flag_red.png\" alt=\"\" title=\"" + _("Message is spam") + "\">" : "&nbsp;")+ "</td><td>"+ mail.localFormattedDate.replace(" ","&nbsp;")+ "</td><td>&nbsp;</td><td align=\"right\">"+ ((mail.getSize() > 0) ? (DataHelper.formatSize2(mail.getSize()) + 'B') : "???")+ "</td></tr>");
     bg=1 - bg;
     i++;
   }
   if (i == 0)   out.println("<tr><td colspan=\"9\" align=\"center\"><i>" + _("No messages") + "</i></td></tr>\n</table>");
   if (i > 0) {
     out.println("<tr><td colspan=\"9\"><hr></td></tr>");
+    if (sessionObject.folder.getPages() > 1 && i > 30) {
+      out.println("<tr><td colspan=\"9\" align=\"center\">");
+      showPageButtons(out,sessionObject.folder);
+      out.println("</td></tr>");
+    }
     out.println("<tr><td colspan=\"5\" align=\"left\">");
     if (sessionObject.reallyDelete) {
       out.println("<p class=\"error\">" + _("Really delete the marked messages?") + "</p>"+ button(REALLYDELETE,_("Yes, really delete them!"))+ "<br>"+ button(CLEAR,_("Cancel")));
