@@ -19,12 +19,13 @@ synchronized (mails) {
   }
  else {
     if (!mail.hasBody()) {
-      mail.setBody(mailbox.getBody(uidl));
-    }
-  }
-  if (disk != null) {
-    if (disk.saveMail(mail) && mail.hasBody() && false&& !Boolean.parseBoolean(Config.getProperty(WebMail.CONFIG_LEAVE_ON_SERVER))) {
-      mailbox.queueForDeletion(mail.uidl);
+      ReadBuffer rb=mailbox.getBody(uidl);
+      if (rb != null) {
+        mail.setBody(rb);
+        if (disk != null && disk.saveMail(mail) && !Boolean.parseBoolean(Config.getProperty(WebMail.CONFIG_LEAVE_ON_SERVER))) {
+          mailbox.queueForDeletion(mail.uidl);
+        }
+      }
     }
   }
   return mail;

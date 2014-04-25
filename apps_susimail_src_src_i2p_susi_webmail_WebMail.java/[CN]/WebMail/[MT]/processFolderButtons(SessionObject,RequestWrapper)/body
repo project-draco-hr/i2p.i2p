@@ -27,25 +27,17 @@
     sessionObject.folder.lastPage();
   }
  else   if (buttonPressed(request,DELETE)) {
-    int m=getCheckedMessage(request);
-    if (m != -1)     sessionObject.reallyDelete=true;
+    int m=getCheckedItems(request).size();
+    if (m > 0)     sessionObject.reallyDelete=true;
  else     sessionObject.error+=_("No messages marked for deletion.") + "<br>";
   }
  else {
     if (buttonPressed(request,REALLYDELETE)) {
       List<String> toDelete=new ArrayList<String>();
-      for (Enumeration<String> e=request.getParameterNames(); e.hasMoreElements(); ) {
-        String parameter=e.nextElement();
-        if (parameter.startsWith("check") && request.getParameter(parameter).equals("1")) {
-          String number=parameter.substring(5);
-          try {
-            int n=Integer.parseInt(number);
-            String uidl=sessionObject.folder.getElementAtPosXonCurrentPage(n);
-            if (uidl != null)             toDelete.add(uidl);
-          }
- catch (          NumberFormatException nfe) {
-          }
-        }
+      for (      Integer item : getCheckedItems(request)) {
+        int n=item.intValue();
+        String uidl=sessionObject.folder.getElementAtPosXonCurrentPage(n);
+        if (uidl != null)         toDelete.add(uidl);
       }
       int numberDeleted=toDelete.size();
       if (numberDeleted > 0) {

@@ -14,8 +14,6 @@
         if (l > 0) {
           byte buf[]=new byte[l];
           in.read(buf);
-          Attachment attachment=new Attachment();
-          attachment.setFileName(filename);
           String contentType=request.getContentType(NEW_FILENAME);
           Encoding encoding;
           String encodeTo;
@@ -24,11 +22,9 @@
           encoding=EncodingFactory.getEncoding(encodeTo);
           try {
             if (encoding != null) {
-              attachment.setData(encoding.encode(buf));
-              attachment.setTransferEncoding(encodeTo);
-              attachment.setContentType(contentType);
+              String data=encoding.encode(buf);
               if (sessionObject.attachments == null)               sessionObject.attachments=new ArrayList<Attachment>();
-              sessionObject.attachments.add(attachment);
+              sessionObject.attachments.add(new Attachment(filename,contentType,encodeTo,data));
             }
  else {
               sessionObject.error+=_("No Encoding found for {0}",encodeTo) + "<br>";
@@ -45,21 +41,13 @@
     }
   }
  else   if (sessionObject.attachments != null && buttonPressed(request,DELETE_ATTACHMENT)) {
-    for (Enumeration<String> e=request.getParameterNames(); e.hasMoreElements(); ) {
-      String parameter=e.nextElement();
-      if (parameter.startsWith("check") && request.getParameter(parameter).equals("1")) {
-        String number=parameter.substring(5);
-        try {
-          int n=Integer.parseInt(number);
-          for (int i=0; i < sessionObject.attachments.size(); i++) {
-            Attachment attachment=(Attachment)sessionObject.attachments.get(i);
-            if (attachment.hashCode() == n) {
-              sessionObject.attachments.remove(i);
-              break;
-            }
-          }
-        }
- catch (        NumberFormatException nfe) {
+    for (    Integer item : getCheckedItems(request)) {
+      int n=item.intValue();
+      for (int i=0; i < sessionObject.attachments.size(); i++) {
+        Attachment attachment=(Attachment)sessionObject.attachments.get(i);
+        if (attachment.hashCode() == n) {
+          sessionObject.attachments.remove(i);
+          break;
         }
       }
     }
