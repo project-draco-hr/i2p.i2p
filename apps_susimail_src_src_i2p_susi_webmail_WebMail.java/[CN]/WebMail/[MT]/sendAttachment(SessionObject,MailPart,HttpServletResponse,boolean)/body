@@ -1,7 +1,6 @@
 {
   boolean shown=false;
-  if (sessionObject.showAttachment != null) {
-    MailPart part=sessionObject.showAttachment;
+  if (part != null) {
     ReadBuffer content=part.buffer;
     if (part.encoding != null) {
       try {
@@ -12,7 +11,19 @@
         content=null;
       }
     }
-    if (content != null) {
+    if (content == null)     return false;
+    if (isRaw) {
+      try {
+        if (part.type != null)         response.setContentType(part.type);
+        response.setContentLength(content.length);
+        response.getOutputStream().write(content.content,content.offset,content.length);
+        shown=true;
+      }
+ catch (      IOException e) {
+        e.printStackTrace();
+      }
+    }
+ else {
       ZipOutputStream zip=null;
       try {
         zip=new ZipOutputStream(response.getOutputStream());

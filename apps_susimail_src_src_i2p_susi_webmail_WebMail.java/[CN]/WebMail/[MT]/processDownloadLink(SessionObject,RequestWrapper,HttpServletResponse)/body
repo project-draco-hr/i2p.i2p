@@ -1,0 +1,29 @@
+{
+  String str=request.getParameter(DOWNLOAD);
+  boolean isRaw=false;
+  if (str == null) {
+    str=request.getParameter(RAW_ATTACHMENT);
+    isRaw=str != null;
+  }
+  if (str != null) {
+    try {
+      int hashCode=Integer.parseInt(str);
+      Mail mail=sessionObject.mailCache.getMail(sessionObject.showUIDL,MailCache.FETCH_ALL);
+      MailPart part=mail != null ? getMailPartFromHashCode(mail.getPart(),hashCode) : null;
+      if (part != null) {
+        if (sendAttachment(sessionObject,part,response,isRaw))         return true;
+      }
+    }
+ catch (    NumberFormatException nfe) {
+    }
+    sessionObject.error+=_("Attachment not found.");
+    if (isRaw) {
+      try {
+        response.sendError(404,_("Attachment not found."));
+      }
+ catch (      IOException ioe) {
+      }
+    }
+  }
+  return isRaw;
+}

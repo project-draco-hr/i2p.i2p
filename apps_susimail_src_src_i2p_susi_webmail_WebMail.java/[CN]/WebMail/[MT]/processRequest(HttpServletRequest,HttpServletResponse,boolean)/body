@@ -27,7 +27,6 @@ synchronized (sessionObject) {
     sessionObject.error="";
     sessionObject.info="";
     sessionObject.pageChanged=false;
-    sessionObject.showAttachment=null;
     sessionObject.themePath="/themes/susimail/" + theme + '/';
     sessionObject.imgPath=sessionObject.themePath + "images/";
     sessionObject.isMobile=isMobile;
@@ -53,6 +52,9 @@ synchronized (sessionObject) {
     }
     if (sessionObject.state == STATE_SHOW) {
       if (isPOST)       processMessageButtons(sessionObject,request);
+      if (processDownloadLink(sessionObject,request,response)) {
+        return;
+      }
       if (sessionObject.showUIDL != null) {
         Mail mail=sessionObject.mailCache.getMail(sessionObject.showUIDL,MailCache.FETCH_ALL);
         if (mail != null && mail.error.length() > 0) {
@@ -67,34 +69,32 @@ synchronized (sessionObject) {
         sessionObject.folder.setElements(uidls);
       }
     }
-    if (!sendAttachment(sessionObject,response)) {
-      PrintWriter out=response.getWriter();
-      if (sessionObject.state == STATE_AUTH)       subtitle=_("Login");
- else       if (sessionObject.state == STATE_LIST) {
-        subtitle=ngettext("1 Message","{0} Messages",sessionObject.folder.getSize());
-      }
- else       if (sessionObject.state == STATE_SHOW)       subtitle=_("Show Message");
-      response.setContentType("text/html");
-      out.println("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\">\n<html>\n" + "<head>\n" + "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">\n"+ "<title>" + _("SusiMail") + " - "+ subtitle+ "</title>\n"+ "<link rel=\"stylesheet\" type=\"text/css\" href=\""+ sessionObject.themePath+ "susimail.css\">\n");
-      if (sessionObject.isMobile) {
-        out.println("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, maximum-scale=2.0, user-scalable=yes\" />\n" + "<link rel=\"stylesheet\" type=\"text/css\" href=\"" + sessionObject.themePath + "mobile.css\" />\n");
-      }
-      if (sessionObject.state == STATE_NEW) {
-        out.println("<script type = \"text/javascript\">" + "window.onbeforeunload = function () {" + "return \"" + _("Message has not been sent. Do you want to discard it?") + "\";"+ "};"+ "function cancelPopup() {"+ "window.onbeforeunload = null;"+ "};"+ "</script>");
-      }
-      out.println("</head>\n<body>\n" + "<div class=\"page\"><p><img src=\"" + sessionObject.imgPath + "susimail.png\" alt=\"Susimail\"></p>\n"+ "<form method=\"POST\" enctype=\"multipart/form-data\" action=\""+ myself+ "\" accept-charset=\"UTF-8\">");
-      if (sessionObject.error != null && sessionObject.error.length() > 0) {
-        out.println("<p class=\"error\">" + sessionObject.error + "</p>");
-      }
-      if (sessionObject.info != null && sessionObject.info.length() > 0) {
-        out.println("<p class=\"info\">" + sessionObject.info + "</p>");
-      }
-      if (sessionObject.state == STATE_AUTH)       showLogin(out);
- else       if (sessionObject.state == STATE_LIST)       showFolder(out,sessionObject,request);
- else       if (sessionObject.state == STATE_SHOW)       showMessage(out,sessionObject);
- else       if (sessionObject.state == STATE_NEW)       showCompose(out,sessionObject,request);
-      out.println("</form><div id=\"footer\"><hr><p class=\"footer\">susimail &copy; 2004-2005 susi</div></div></body>\n</html>");
-      out.flush();
+    PrintWriter out=response.getWriter();
+    if (sessionObject.state == STATE_AUTH)     subtitle=_("Login");
+ else     if (sessionObject.state == STATE_LIST) {
+      subtitle=ngettext("1 Message","{0} Messages",sessionObject.folder.getSize());
     }
+ else     if (sessionObject.state == STATE_SHOW)     subtitle=_("Show Message");
+    response.setContentType("text/html");
+    out.println("<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.01 Transitional//EN\">\n<html>\n" + "<head>\n" + "<meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\">\n"+ "<title>" + _("SusiMail") + " - "+ subtitle+ "</title>\n"+ "<link rel=\"stylesheet\" type=\"text/css\" href=\""+ sessionObject.themePath+ "susimail.css\">\n");
+    if (sessionObject.isMobile) {
+      out.println("<meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, maximum-scale=2.0, user-scalable=yes\" />\n" + "<link rel=\"stylesheet\" type=\"text/css\" href=\"" + sessionObject.themePath + "mobile.css\" />\n");
+    }
+    if (sessionObject.state == STATE_NEW) {
+      out.println("<script type = \"text/javascript\">" + "window.onbeforeunload = function () {" + "return \"" + _("Message has not been sent. Do you want to discard it?") + "\";"+ "};"+ "function cancelPopup() {"+ "window.onbeforeunload = null;"+ "};"+ "</script>");
+    }
+    out.println("</head>\n<body>\n" + "<div class=\"page\"><p><img src=\"" + sessionObject.imgPath + "susimail.png\" alt=\"Susimail\"></p>\n"+ "<form method=\"POST\" enctype=\"multipart/form-data\" action=\""+ myself+ "\" accept-charset=\"UTF-8\">");
+    if (sessionObject.error != null && sessionObject.error.length() > 0) {
+      out.println("<p class=\"error\">" + sessionObject.error + "</p>");
+    }
+    if (sessionObject.info != null && sessionObject.info.length() > 0) {
+      out.println("<p class=\"info\">" + sessionObject.info + "</p>");
+    }
+    if (sessionObject.state == STATE_AUTH)     showLogin(out);
+ else     if (sessionObject.state == STATE_LIST)     showFolder(out,sessionObject,request);
+ else     if (sessionObject.state == STATE_SHOW)     showMessage(out,sessionObject);
+ else     if (sessionObject.state == STATE_NEW)     showCompose(out,sessionObject,request);
+    out.println("</form><div id=\"footer\"><hr><p class=\"footer\">susimail &copy; 2004-2005 susi</div></div></body>\n</html>");
+    out.flush();
   }
 }

@@ -2,6 +2,7 @@
   String br=html ? "<br>\r\n" : "\r\n";
   if (html) {
     out.println("<!-- ");
+    out.println("Debug: Mail Part headers follow");
     for (int i=0; i < mailPart.headerLines.length; i++) {
       out.println(mailPart.headerLines[i].replace("--","&mdash;"));
     }
@@ -81,7 +82,16 @@ catch (      Exception e1) {
     if (prepareAttachment) {
       if (html) {
         out.println("<hr><p class=\"mailbody\">");
-        out.println("<a target=\"_blank\" href=\"" + myself + "?"+ DOWNLOAD+ "="+ mailPart.hashCode()+ "\">"+ _("Download attachment {0}",ident)+ "</a>"+ " ("+ _("File is packed into a zipfile for security reasons.")+ ')');
+        String type=mailPart.type;
+        if (type != null && type.startsWith("image/")) {
+          out.println("<img src=\"" + myself + "?"+ RAW_ATTACHMENT+ "="+ mailPart.hashCode()+ "\">");
+        }
+ else         if (type != null && (type.startsWith("audio/") || type.equals("application/ogg") || type.startsWith("video/")|| type.equals("application/zip")|| type.equals("application/x-gtar")|| type.equals("application/compress")|| type.equals("application/gzip")|| type.equals("application/x-7z-compressed")|| type.equals("application/x-rar-compressed")|| type.equals("application/x-tar")|| type.equals("application/x-bzip2"))) {
+          out.println("<a href=\"" + myself + "?"+ RAW_ATTACHMENT+ "="+ mailPart.hashCode()+ "\">"+ _("Download attachment {0}",ident)+ "</a>");
+        }
+ else {
+          out.println("<a target=\"_blank\" href=\"" + myself + "?"+ DOWNLOAD+ "="+ mailPart.hashCode()+ "\">"+ _("Download attachment {0}",ident)+ "</a>"+ " ("+ _("File is packed into a zipfile for security reasons.")+ ')');
+        }
         out.println("</p>");
       }
  else {
