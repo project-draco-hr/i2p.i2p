@@ -11,19 +11,24 @@
       PeerState peer=getPeerState(new Hash(key));
       if (peer != null)       valid++;
     }
+    long sinceSelected=_context.clock().now() - _introducersSelectedOn;
     if (valid >= PUBLIC_RELAY_COUNT) {
-      if (_introducersSelectedOn < _context.clock().now() - 10 * 60 * 1000) {
-        if (_log.shouldLog(Log.WARN))         _log.warn("Our introducers are valid, but havent changed in a while, so lets rechoose");
+      if (sinceSelected > 10 * 60 * 1000) {
+        if (_log.shouldLog(Log.WARN))         _log.warn("Our introducers are valid, but haven't changed in " + DataHelper.formatDuration(sinceSelected) + ", so lets rechoose");
         return true;
       }
  else {
-        if (_log.shouldLog(Log.INFO))         _log.info("Our introducers are valid and haven't changed in a while");
+        if (_log.shouldLog(Log.INFO))         _log.info("Our introducers are valid and were selected " + DataHelper.formatDuration(sinceSelected) + " ago");
         return false;
       }
     }
- else {
+ else     if (sinceSelected > 2 * 60 * 1000) {
       if (_log.shouldLog(Log.INFO))       _log.info("Need more introducers (have " + valid + " need "+ PUBLIC_RELAY_COUNT+ ')');
       return true;
+    }
+ else {
+      if (_log.shouldLog(Log.INFO))       _log.info("Need more introducers (have " + valid + " need "+ PUBLIC_RELAY_COUNT+ ')'+ " but we just chose them "+ DataHelper.formatDuration(sinceSelected)+ " ago so wait");
+      return false;
     }
   }
  else {
