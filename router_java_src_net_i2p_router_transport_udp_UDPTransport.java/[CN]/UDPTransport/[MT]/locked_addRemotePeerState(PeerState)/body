@@ -42,10 +42,11 @@
   _expireEvent.add(peer);
   _introManager.add(peer);
   if (oldEstablishedOn > 0)   _context.statManager().addRateData("udp.alreadyConnected",oldEstablishedOn,0);
-  rebuildIfNecessary();
-  if (getReachabilityStatus() != CommSystemFacade.STATUS_OK) {
-    _testEvent.forceRun();
-    _testEvent.reschedule(0);
+synchronized (_rebuildLock) {
+    rebuildIfNecessary();
+    if (getReachabilityStatus() != CommSystemFacade.STATUS_OK && _reachabilityStatusUnchanged < 7) {
+      _testEvent.forceRunSoon();
+    }
   }
   return true;
 }

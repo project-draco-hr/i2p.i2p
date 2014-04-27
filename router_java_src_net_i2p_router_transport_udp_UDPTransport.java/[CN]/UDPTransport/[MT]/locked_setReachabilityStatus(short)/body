@@ -24,8 +24,16 @@ default :
 _context.statManager().addRateData("udp.statusUnknown",1);
 break;
 }
+_testEvent.setLastTested();
+if (status != CommSystemFacade.STATUS_UNKNOWN) {
+if (status != old) _reachabilityStatusUnchanged=0;
+ else _reachabilityStatusUnchanged++;
+}
 if ((status != old) && (status != CommSystemFacade.STATUS_UNKNOWN)) {
-if (_log.shouldLog(Log.INFO)) _log.info("Old status: " + old + " New status: "+ status+ " from: ",new Exception("traceback"));
+if (_log.shouldLog(Log.WARN)) _log.warn("Old status: " + old + " New status: "+ status+ " from: ",new Exception("traceback"));
 rebuildExternalAddress();
+}
+ else {
+if (_log.shouldLog(Log.INFO)) _log.info("Status unchanged: " + _reachabilityStatus + " ("+ _reachabilityStatusUnchanged+ " consecutive times), last updated "+ DataHelper.formatDuration(_context.clock().now() - _reachabilityStatusLastUpdated)+ " ago");
 }
 }
