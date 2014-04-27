@@ -1,0 +1,54 @@
+{
+  if (buttonPressed(request,SAVE)) {
+    try {
+      String raw=request.getParameter(CONFIG_TEXT);
+      if (raw == null)       return;
+      Properties props=new Properties();
+      DataHelper.loadProps(props,new ByteArrayInputStream(DataHelper.getUTF8(raw)));
+      Config.saveConfiguration(props);
+      String ps=props.getProperty(Folder.PAGESIZE);
+      if (sessionObject.folder != null && ps != null) {
+        try {
+          int pageSize=Math.max(5,Integer.parseInt(request.getParameter(PAGESIZE)));
+          int oldPageSize=sessionObject.folder.getPageSize();
+          if (pageSize != oldPageSize)           sessionObject.folder.setPageSize(pageSize);
+        }
+ catch (        NumberFormatException nfe) {
+        }
+      }
+      sessionObject.state=sessionObject.folder != null ? STATE_LIST : STATE_AUTH;
+      sessionObject.info=_("Configuration saved");
+    }
+ catch (    IOException ioe) {
+      sessionObject.error=ioe.toString();
+    }
+  }
+ else   if (buttonPressed(request,SETPAGESIZE)) {
+    try {
+      int pageSize=Math.max(5,Integer.parseInt(request.getParameter(PAGESIZE)));
+      Properties props=Config.getProperties();
+      props.setProperty(Folder.PAGESIZE,String.valueOf(pageSize));
+      Config.saveConfiguration(props);
+      if (sessionObject.folder != null) {
+        int oldPageSize=sessionObject.folder.getPageSize();
+        if (pageSize != oldPageSize)         sessionObject.folder.setPageSize(pageSize);
+        sessionObject.state=STATE_LIST;
+      }
+ else {
+        sessionObject.state=STATE_AUTH;
+      }
+    }
+ catch (    IOException ioe) {
+      sessionObject.error=ioe.toString();
+    }
+catch (    NumberFormatException nfe) {
+      sessionObject.error+=_("Invalid pagesize number, resetting to default value.") + "<br>";
+    }
+  }
+ else   if (buttonPressed(request,CANCEL)) {
+    sessionObject.state=(sessionObject.folder != null) ? STATE_LIST : STATE_AUTH;
+  }
+ else   if (buttonPressed(request,CONFIGURE)) {
+    sessionObject.state=STATE_CONFIG;
+  }
+}
