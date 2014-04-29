@@ -1,8 +1,10 @@
 {
+  out.println("<div class=\"topbuttons\">");
   out.println(button(SEND,_("Send")) + spacer + button(CANCEL,_("Cancel")));
+  out.println("</div>");
   String from=request.getParameter(NEW_FROM);
-  String fixed=Config.getProperty(CONFIG_SENDER_FIXED,"true");
-  if (from == null || !fixed.equalsIgnoreCase("false")) {
+  boolean fixed=Boolean.parseBoolean(Config.getProperty(CONFIG_SENDER_FIXED,"true"));
+  if (from == null || !fixed) {
     String user=sessionObject.user;
     String name=Config.getProperty(CONFIG_SENDER_NAME);
     if (name != null) {
@@ -14,11 +16,12 @@
       from="";
     }
     if (user.contains("@")) {
-      String domain=Config.getProperty(CONFIG_SENDER_DOMAIN,"mail.i2p");
-      from+='<' + user + '@'+ domain+ '>';
+      from+='<' + user + '>';
     }
  else {
-      from+='<' + user + '>';
+      String domain=Config.getProperty(CONFIG_SENDER_DOMAIN,"mail.i2p");
+      if (from.length() == 0)       from=user + ' ';
+      from+='<' + user + '@'+ domain+ '>';
     }
   }
   String to=request.getParameter(NEW_TO,sessionObject.replyTo != null ? sessionObject.replyTo : "");
@@ -30,7 +33,7 @@
   sessionObject.replyCC=null;
   sessionObject.subject=null;
   sessionObject.body=null;
-  out.println("<table cellspacing=\"0\" cellpadding=\"5\">\n" + "<tr><td colspan=\"2\" align=\"center\"><hr></td></tr>\n" + "<tr><td align=\"right\">" + _("From") + ":</td><td align=\"left\"><input type=\"text\" size=\"80\" name=\""+ NEW_FROM+ "\" value=\""+ from+ "\" "+ (!fixed.equalsIgnoreCase("false") ? "disabled" : "")+ "></td></tr>\n"+ "<tr><td align=\"right\">"+ _("To")+ ":</td><td align=\"left\"><input type=\"text\" size=\"80\" name=\""+ NEW_TO+ "\" value=\""+ to+ "\"></td></tr>\n"+ "<tr><td align=\"right\">"+ _("Cc")+ ":</td><td align=\"left\"><input type=\"text\" size=\"80\" name=\""+ NEW_CC+ "\" value=\""+ cc+ "\"></td></tr>\n"+ "<tr><td align=\"right\">"+ _("Bcc")+ ":</td><td align=\"left\"><input type=\"text\" size=\"80\" name=\""+ NEW_BCC+ "\" value=\""+ bcc+ "\"></td></tr>\n"+ "<tr><td align=\"right\">"+ _("Bcc to self")+ ": </td><td align=\"left\"><input type=\"checkbox\" class=\"optbox\" name=\""+ NEW_BCC_TO_SELF+ "\" value=\"1\" "+ (sessionObject.bccToSelf ? "checked" : "")+ "></td></tr>\n"+ "<tr><td align=\"right\">"+ _("Subject")+ ":</td><td align=\"left\"><input type=\"text\" size=\"80\" name=\""+ NEW_SUBJECT+ "\" value=\""+ subject+ "\"></td></tr>\n"+ "<tr><td colspan=\"2\" align=\"center\"><textarea cols=\""+ Config.getProperty(CONFIG_COMPOSER_COLS,80)+ "\" rows=\""+ Config.getProperty(CONFIG_COMPOSER_ROWS,10)+ "\" name=\""+ NEW_TEXT+ "\">"+ text+ "</textarea>"+ "<tr><td colspan=\"2\" align=\"center\"><hr></td></tr>\n"+ "<tr><td align=\"right\">"+ _("Add Attachment")+ ":</td><td align=\"left\"><input type=\"file\" size=\"50%\" name=\""+ NEW_FILENAME+ "\" value=\"\"></td></tr>"+ "<tr><td>&nbsp;</td><td align=\"left\">"+ button(NEW_UPLOAD,_("Add another attachment"))+ "</td></tr>");
+  out.println("<table cellspacing=\"0\" cellpadding=\"5\">\n" + "<tr><td colspan=\"2\" align=\"center\"><hr></td></tr>\n" + "<tr><td align=\"right\">" + _("From") + ":</td><td align=\"left\"><input type=\"text\" size=\"80\" name=\""+ NEW_FROM+ "\" value=\""+ from+ "\" "+ (fixed ? "disabled" : "")+ "></td></tr>\n"+ "<tr><td align=\"right\">"+ _("To")+ ":</td><td align=\"left\"><input type=\"text\" size=\"80\" name=\""+ NEW_TO+ "\" value=\""+ to+ "\"></td></tr>\n"+ "<tr><td align=\"right\">"+ _("Cc")+ ":</td><td align=\"left\"><input type=\"text\" size=\"80\" name=\""+ NEW_CC+ "\" value=\""+ cc+ "\"></td></tr>\n"+ "<tr><td align=\"right\">"+ _("Bcc")+ ":</td><td align=\"left\"><input type=\"text\" size=\"80\" name=\""+ NEW_BCC+ "\" value=\""+ bcc+ "\"></td></tr>\n"+ "<tr><td align=\"right\">"+ _("Bcc to self")+ ": </td><td align=\"left\"><input type=\"checkbox\" class=\"optbox\" name=\""+ NEW_BCC_TO_SELF+ "\" value=\"1\" "+ (sessionObject.bccToSelf ? "checked" : "")+ "></td></tr>\n"+ "<tr><td align=\"right\">"+ _("Subject")+ ":</td><td align=\"left\"><input type=\"text\" size=\"80\" name=\""+ NEW_SUBJECT+ "\" value=\""+ subject+ "\"></td></tr>\n"+ "<tr><td colspan=\"2\" align=\"center\"><textarea cols=\""+ Config.getProperty(CONFIG_COMPOSER_COLS,80)+ "\" rows=\""+ Config.getProperty(CONFIG_COMPOSER_ROWS,10)+ "\" name=\""+ NEW_TEXT+ "\">"+ text+ "</textarea>"+ "<tr class=\"bottombuttons\"><td colspan=\"2\" align=\"center\"><hr></td></tr>\n"+ "<tr class=\"bottombuttons\"><td align=\"right\">"+ _("Add Attachment")+ ":</td><td align=\"left\"><input type=\"file\" size=\"50%\" name=\""+ NEW_FILENAME+ "\" value=\"\"></td></tr>"+ "<tr class=\"bottombuttons\"><td>&nbsp;</td><td align=\"left\">"+ button(NEW_UPLOAD,_("Add another attachment"))+ "</td></tr>");
   if (sessionObject.attachments != null && !sessionObject.attachments.isEmpty()) {
     boolean wroteHeader=false;
     for (    Attachment attachment : sessionObject.attachments) {
@@ -43,7 +46,7 @@
       }
       out.println("<td align=\"left\"><input type=\"checkbox\" class=\"optbox\" name=\"check" + attachment.hashCode() + "\" value=\"1\">&nbsp;"+ attachment.getFileName()+ "</td></tr>");
     }
-    out.println("<tr><td>&nbsp;</td><td align=\"left\">" + button(DELETE_ATTACHMENT,_("Delete selected attachments")) + "</td></tr>");
+    out.println("<tr class=\"bottombuttons\"><td>&nbsp;</td><td align=\"left\">" + button(DELETE_ATTACHMENT,_("Delete selected attachments")) + "</td></tr>");
   }
   out.println("</table>");
 }
