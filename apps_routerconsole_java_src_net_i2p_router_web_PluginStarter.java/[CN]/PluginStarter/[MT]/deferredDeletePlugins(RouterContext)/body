@@ -1,0 +1,26 @@
+{
+  Log log=ctx.logManager().getLog(PluginStarter.class);
+  boolean changed=false;
+  Properties props=pluginProperties();
+  for (Iterator<Map.Entry<Object,Object>> iter=props.entrySet().iterator(); iter.hasNext(); ) {
+    Map.Entry<Object,Object> e=iter.next();
+    String name=(String)e.getKey();
+    if (name.startsWith(PREFIX) && name.endsWith(ENABLED)) {
+      if (e.getValue().equals(DELETED)) {
+        String app=name.substring(PREFIX.length(),name.lastIndexOf(ENABLED));
+        if (isPluginRunning(app,ctx))         continue;
+        File pluginDir=new File(ctx.getConfigDir(),PLUGIN_DIR + '/' + app);
+        boolean deleted=FileUtil.rmdir(pluginDir,false);
+        if (deleted) {
+          log.logAlways(Log.WARN,"Deferred deletion of " + pluginDir + " successful");
+          iter.remove();
+          changed=true;
+        }
+ else {
+          if (log.shouldLog(Log.WARN))           log.warn("Deferred deletion of " + pluginDir + " failed");
+        }
+      }
+    }
+  }
+  if (changed)   storePluginProperties(props);
+}
