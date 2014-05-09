@@ -12,6 +12,19 @@
     System.arraycopy(payload,payloadIndex,out,outIndex,length);
     return;
   }
+  if (USE_SYSTEM_AES) {
+    try {
+      SecretKeySpec key=new SecretKeySpec(sessionKey.getData(),"AES");
+      IvParameterSpec ivps=new IvParameterSpec(iv,ivOffset,16);
+      Cipher cipher=Cipher.getInstance("AES/CBC/NoPadding");
+      cipher.init(Cipher.ENCRYPT_MODE,key,ivps,_context.random());
+      cipher.doFinal(payload,payloadIndex,length,out,outIndex);
+      return;
+    }
+ catch (    GeneralSecurityException gse) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Java encrypt fail",gse);
+    }
+  }
   int numblock=length / 16;
   DataHelper.xor(iv,ivOffset,payload,payloadIndex,out,outIndex,16);
   encryptBlock(out,outIndex,sessionKey,out,outIndex);
