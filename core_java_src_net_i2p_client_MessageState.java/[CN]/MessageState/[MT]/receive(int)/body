@@ -1,6 +1,13 @@
 {
-synchronized (_receivedStatus) {
-    _receivedStatus.add(Integer.valueOf(status));
-    _receivedStatus.notifyAll();
+  State oldState;
+  State newState;
+synchronized (this) {
+    oldState=_state;
+    locked_update(status);
+    newState=_state;
+    this.notifyAll();
+  }
+  if (_listener != null) {
+    if (oldState != newState && _expires > _context.clock().now())     _listener.messageStatus(_session,_nonce,status);
   }
 }

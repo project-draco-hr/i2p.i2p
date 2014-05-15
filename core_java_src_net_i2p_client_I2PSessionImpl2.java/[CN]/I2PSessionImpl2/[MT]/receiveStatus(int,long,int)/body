@@ -1,29 +1,18 @@
 {
   if (_log.shouldLog(Log.DEBUG))   _log.debug(getPrefix() + "Received status " + status+ " for msgId "+ msgId+ " / "+ nonce);
   MessageState state=null;
-  long beforeSync=_context.clock().now();
-  long inSync=0;
-synchronized (_sendingStates) {
-    inSync=_context.clock().now();
-    for (Iterator<MessageState> iter=_sendingStates.iterator(); iter.hasNext(); ) {
-      state=iter.next();
-      if (_log.shouldLog(Log.DEBUG))       _log.debug(getPrefix() + "State " + state.getMessageId()+ " / "+ state.getNonce());
-      if (state.getNonce() == nonce) {
-        if (_log.shouldLog(Log.DEBUG))         _log.debug(getPrefix() + "Found a matching state");
-        break;
-      }
- else       if ((state.getMessageId() != null) && (state.getMessageId().getMessageId() == msgId)) {
+  if ((state=_sendingStates.get(Long.valueOf(nonce))) != null) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug(getPrefix() + "Found a matching state");
+  }
+ else   if (!_sendingStates.isEmpty()) {
+    for (    MessageState s : _sendingStates.values()) {
+      if (s.getMessageId() != null && s.getMessageId().getMessageId() == msgId) {
         if (_log.shouldLog(Log.DEBUG))         _log.debug(getPrefix() + "Found a matching state by msgId");
+        state=s;
         break;
-      }
- else {
-        if (_log.shouldLog(Log.DEBUG))         _log.debug(getPrefix() + "State does not match");
-        state=null;
       }
     }
   }
-  long afterSync=_context.clock().now();
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("receiveStatus(" + msgId + ", "+ nonce+ ", "+ status+ "): sync: "+ (inSync - beforeSync)+ "ms, check: "+ (afterSync - inSync));
   if (state != null) {
     if (state.getMessageId() == null) {
       MessageId id=new MessageId();
@@ -31,21 +20,21 @@ synchronized (_sendingStates) {
       state.setMessageId(id);
     }
     state.receive(status);
+    if (state.wasSuccessful())     _sendingStates.remove(Long.valueOf(nonce));
     long lifetime=state.getElapsed();
 switch (status) {
 case 1:
-      _context.statManager().addRateData("i2cp.receiveStatusTime.1",lifetime,0);
+      _context.statManager().addRateData("i2cp.receiveStatusTime.1",lifetime);
     break;
 case 4:
-  _context.statManager().addRateData("i2cp.receiveStatusTime.4",lifetime,0);
+  _context.statManager().addRateData("i2cp.receiveStatusTime.4",lifetime);
 break;
 case 5:
-_context.statManager().addRateData("i2cp.receiveStatusTime.5",lifetime,0);
+_context.statManager().addRateData("i2cp.receiveStatusTime.5",lifetime);
 break;
 }
 }
  else {
 if (_log.shouldLog(Log.INFO)) _log.info(getPrefix() + "No matching state for messageId " + msgId+ " / "+ nonce+ " w/ status = "+ status);
 }
-_context.statManager().addRateData("i2cp.receiveStatusTime",_context.clock().now() - beforeSync,0);
 }
