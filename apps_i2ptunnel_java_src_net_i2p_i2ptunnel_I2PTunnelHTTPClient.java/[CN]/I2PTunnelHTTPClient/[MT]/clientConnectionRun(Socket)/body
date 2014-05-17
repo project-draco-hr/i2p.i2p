@@ -74,10 +74,9 @@
           if (_log.shouldLog(Log.WARN)) {
             _log.warn(getPrefix(requestId) + "Bad request [" + request+ "]",use);
           }
-          if (out != null) {
-            out.write(getErrorPage("baduri",ERR_BAD_URI));
-            writeFooter(out);
-          }
+          out.write(getErrorPage("baduri",ERR_BAD_URI));
+          writeFooter(out);
+          reader.drain();
           s.close();
           return;
         }
@@ -202,31 +201,30 @@
               }
             }
             if (ahelperConflict) {
-              if (out != null) {
-                String alias=getHostName(ahelperKey);
-                if (alias.equals("i2p")) {
-                  byte[] header=getErrorPage("dnfb",ERR_DESTINATION_UNKNOWN);
-                  writeErrorMessage(header,out,targetRequest,false,destination,null);
-                }
- else {
-                  String trustedURL=requestURI.toASCIIString();
-                  URI conflictURI;
-                  try {
-                    conflictURI=changeURI(requestURI,alias,0,null);
-                  }
- catch (                  URISyntaxException use) {
-                    _log.warn(request,use);
-                    method=null;
-                    break;
-                  }
-                  String conflictURL=conflictURI.toASCIIString();
-                  byte[] header=getErrorPage("ahelper-conflict",ERR_AHELPER_CONFLICT);
-                  out.write(header);
-                  out.write(_("To visit the destination in your host database, click <a href=\"{0}\">here</a>. To visit the conflicting addresshelper destination, click <a href=\"{1}\">here</a>.",trustedURL,conflictURL).getBytes("UTF-8"));
-                  out.write(("</p></div>").getBytes());
-                  writeFooter(out);
-                }
+              String alias=getHostName(ahelperKey);
+              if (alias.equals("i2p")) {
+                byte[] header=getErrorPage("dnfb",ERR_DESTINATION_UNKNOWN);
+                writeErrorMessage(header,out,targetRequest,false,destination,null);
               }
+ else {
+                String trustedURL=requestURI.toASCIIString();
+                URI conflictURI;
+                try {
+                  conflictURI=changeURI(requestURI,alias,0,null);
+                }
+ catch (                URISyntaxException use) {
+                  _log.warn(request,use);
+                  method=null;
+                  break;
+                }
+                String conflictURL=conflictURI.toASCIIString();
+                byte[] header=getErrorPage("ahelper-conflict",ERR_AHELPER_CONFLICT);
+                out.write(header);
+                out.write(_("To visit the destination in your host database, click <a href=\"{0}\">here</a>. To visit the conflicting addresshelper destination, click <a href=\"{1}\">here</a>.",trustedURL,conflictURL).getBytes("UTF-8"));
+                out.write(("</p></div>").getBytes());
+                writeFooter(out);
+              }
+              reader.drain();
               s.close();
               return;
             }
@@ -250,10 +248,9 @@
           }
         }
  else         if (hostLowerCase.equals("localhost") || host.equals("127.0.0.1") || host.startsWith("192.168.")|| host.equals("[::1]")) {
-          if (out != null) {
-            out.write(getErrorPage("localhost",ERR_LOCALHOST));
-            writeFooter(out);
-          }
+          out.write(getErrorPage("localhost",ERR_LOCALHOST));
+          writeFooter(out);
+          reader.drain();
           s.close();
           return;
         }
@@ -291,10 +288,9 @@
                 _log.warn(getPrefix(requestId) + "Host wants to be outproxied, but we dont have any!");
               }
               l.log("No outproxy found for the request.");
-              if (out != null) {
-                out.write(getErrorPage("noproxy",_ERR_NO_OUTPROXY));
-                writeFooter(out);
-              }
+              out.write(getErrorPage("noproxy",_ERR_NO_OUTPROXY));
+              writeFooter(out);
+              reader.drain();
               s.close();
               return;
             }
@@ -310,10 +306,9 @@
           if (_log.shouldLog(Log.WARN)) {
             _log.warn("NODOTS, NOI2P: " + request);
           }
-          if (out != null) {
-            out.write(getErrorPage("denied",ERR_REQUEST_DENIED));
-            writeFooter(out);
-          }
+          out.write(getErrorPage("denied",ERR_REQUEST_DENIED));
+          writeFooter(out);
+          reader.drain();
           s.close();
           return;
         }
@@ -426,15 +421,13 @@
       _log.debug(getPrefix(requestId) + "NewRequest header: [" + newRequest.toString()+ "]");
     }
     if (method == null || (destination == null && !usingInternalOutproxy)) {
-      if (out != null) {
-        if (protocol != null && "http".equals(protocol.toLowerCase(Locale.US))) {
-          out.write(getErrorPage("denied",ERR_REQUEST_DENIED));
-        }
- else {
-          out.write(getErrorPage("protocol",ERR_BAD_PROTOCOL));
-        }
-        writeFooter(out);
+      if (protocol != null && "http".equals(protocol.toLowerCase(Locale.US))) {
+        out.write(getErrorPage("denied",ERR_REQUEST_DENIED));
       }
+ else {
+        out.write(getErrorPage("protocol",ERR_BAD_PROTOCOL));
+      }
+      writeFooter(out);
       s.close();
       return;
     }
@@ -583,14 +576,7 @@
       new I2PTunnelHTTPClientRunner(s,i2ps,sockLock,data,mySockets,onTimeout);
     }
   }
- catch (  SocketException ex) {
-    if (_log.shouldLog(Log.INFO)) {
-      _log.info(getPrefix(requestId) + "Error trying to connect",ex);
-    }
-    handleHTTPClientException(ex,out,targetRequest,usingWWWProxy,currentProxy,requestId);
-    closeSocket(s);
-  }
-catch (  IOException ex) {
+ catch (  IOException ex) {
     if (_log.shouldLog(Log.INFO)) {
       _log.info(getPrefix(requestId) + "Error trying to connect",ex);
     }
