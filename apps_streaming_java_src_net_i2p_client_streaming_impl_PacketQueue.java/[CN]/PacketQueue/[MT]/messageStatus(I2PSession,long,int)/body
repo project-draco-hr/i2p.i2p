@@ -1,11 +1,15 @@
 {
+  if (_dead)   return;
+  Connection con=_messageStatusMap.get(Long.valueOf(msgId));
+  if (con == null) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Rcvd status " + status + " for msg "+ msgId+ " on unknown connection");
+    return;
+  }
 switch (status) {
-case MessageStatusMessage.STATUS_SEND_ACCEPTED:
-    if (_state == State.INIT)     _state=State.ACCEPTED;
-  break;
 case MessageStatusMessage.STATUS_SEND_BEST_EFFORT_FAILURE:
 case MessageStatusMessage.STATUS_SEND_GUARANTEED_FAILURE:
-if (_state != State.FAIL && _state != State.SUCCESS) _state=State.PROBABLE_FAIL;
+    _messageStatusMap.remove(Long.valueOf(msgId));
+  if (_log.shouldLog(Log.WARN))   _log.warn("Rcvd soft failure status " + status + " for msg "+ msgId+ " on "+ con);
 break;
 case MessageStatusMessage.STATUS_SEND_FAILURE_LOCAL:
 case MessageStatusMessage.STATUS_SEND_FAILURE_ROUTER:
@@ -23,14 +27,26 @@ case MessageStatusMessage.STATUS_SEND_FAILURE_BAD_LEASESET:
 case MessageStatusMessage.STATUS_SEND_FAILURE_EXPIRED_LEASESET:
 case MessageStatusMessage.STATUS_SEND_FAILURE_NO_LEASESET:
 case SendMessageStatusListener.STATUS_CANCELLED:
-if (_state != State.SUCCESS) _state=State.FAIL;
+IOException ioe=new I2PSocketException(status);
+if (_log.shouldLog(Log.WARN)) _log.warn("Rcvd hard failure status " + status + " for msg "+ msgId+ " on "+ con);
+_messageStatusMap.remove(Long.valueOf(msgId));
+con.getOutputStream().streamErrorOccurred(ioe);
+con.getInputStream().streamErrorOccurred(ioe);
+con.setConnectionError("barf boof bazzle code " + status);
+con.disconnect(false);
 break;
 case MessageStatusMessage.STATUS_SEND_BEST_EFFORT_SUCCESS:
 case MessageStatusMessage.STATUS_SEND_GUARANTEED_SUCCESS:
 case MessageStatusMessage.STATUS_SEND_SUCCESS_LOCAL:
-_state=State.SUCCESS;
+if (_log.shouldLog(Log.WARN)) _log.warn("Rcvd success status " + status + " for msg "+ msgId+ " on "+ con);
+_messageStatusMap.remove(Long.valueOf(msgId));
+break;
+case MessageStatusMessage.STATUS_SEND_ACCEPTED:
+if (_log.shouldLog(Log.WARN)) _log.warn("Rcvd accept status " + status + " for msg "+ msgId+ " on "+ con);
 break;
 default :
+if (_log.shouldLog(Log.WARN)) _log.warn("Rcvd unknown status " + status + " for msg "+ msgId+ " on "+ con);
+_messageStatusMap.remove(Long.valueOf(msgId));
 break;
 }
 }

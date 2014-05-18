@@ -1,4 +1,5 @@
 {
+  if (_dead)   return false;
   packet.prepare();
   String conStr=null;
   if (_log.shouldLog(Log.DEBUG))   conStr=(packet.getConnection() != null ? packet.getConnection().toString() : "");
@@ -28,9 +29,13 @@
     if (rpe != null)     expires=rpe.getNextSendTime() - 500;
     SendMessageOptions options=new SendMessageOptions();
     if (expires > 0)     options.setDate(expires);
+    boolean listenForStatus=false;
     if (packet.isFlagSet(FLAGS_INITIAL_TAGS)) {
       Connection con=packet.getConnection();
-      if (con != null && con.isInbound())       options.setSendLeaseSet(false);
+      if (con != null) {
+        if (con.isInbound())         options.setSendLeaseSet(false);
+ else         listenForStatus=true;
+      }
       options.setTagsToSend(INITIAL_TAGS_TO_SEND);
       options.setTagThreshold(MIN_TAG_THRESHOLD);
     }
@@ -53,7 +58,14 @@
         options.setTagThreshold(thresh);
       }
     }
-    sent=_session.sendMessage(packet.getTo(),buf,0,size,I2PSession.PROTO_STREAMING,packet.getLocalPort(),packet.getRemotePort(),options);
+    if (listenForStatus) {
+      long id=_session.sendMessage(packet.getTo(),buf,0,size,I2PSession.PROTO_STREAMING,packet.getLocalPort(),packet.getRemotePort(),options,this);
+      _messageStatusMap.put(Long.valueOf(id),packet.getConnection());
+      sent=true;
+    }
+ else {
+      sent=_session.sendMessage(packet.getTo(),buf,0,size,I2PSession.PROTO_STREAMING,packet.getLocalPort(),packet.getRemotePort(),options);
+    }
     end=_context.clock().now();
     if ((end - begin > 1000) && (_log.shouldLog(Log.WARN)))     _log.warn("Took " + (end - begin) + "ms to sendMessage(...) "+ packet);
     _context.statManager().addRateData("stream.con.sendMessageSize",size,packet.getLifetime());
