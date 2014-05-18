@@ -204,7 +204,7 @@
               String alias=getHostName(ahelperKey);
               if (alias.equals("i2p")) {
                 byte[] header=getErrorPage("dnfb",ERR_DESTINATION_UNKNOWN);
-                writeErrorMessage(header,out,targetRequest,false,destination,null);
+                writeErrorMessage(header,out,targetRequest,false,destination);
               }
  else {
                 String trustedURL=requestURI.toASCIIString();
@@ -461,7 +461,7 @@
     }
     if (usingInternalOutproxy) {
       Socket outSocket=outproxy.connect(host,remotePort);
-      Runnable onTimeout=new OnTimeout(s,s.getOutputStream(),targetRequest,usingWWWProxy,currentProxy,requestId);
+      OnTimeout onTimeout=new OnTimeout(s,s.getOutputStream(),targetRequest,usingWWWProxy,currentProxy,requestId);
       byte[] data;
       byte[] response;
       if (method.toUpperCase(Locale.US).equals("CONNECT")) {
@@ -472,7 +472,8 @@
         data=newRequest.toString().getBytes("ISO-8859-1");
         response=null;
       }
-      new I2PTunnelOutproxyRunner(s,outSocket,sockLock,data,response,onTimeout);
+      Thread t=new I2PTunnelOutproxyRunner(s,outSocket,sockLock,data,response,onTimeout);
+      t.start();
       return;
     }
     Destination clientDest=null;
@@ -485,7 +486,7 @@
           _log.warn(getPrefix(requestId) + "Could not find destination for " + addressHelper);
         }
         byte[] header=getErrorPage("ahelper-notfound",ERR_AHELPER_NOTFOUND);
-        writeErrorMessage(header,out,targetRequest,false,destination,null);
+        writeErrorMessage(header,out,targetRequest,false,destination);
         s.close();
         return;
       }
@@ -526,7 +527,7 @@
         header=getErrorPage("dnfb",ERR_DESTINATION_UNKNOWN);
       }
  else       if (destination.length() == 60 && destination.toLowerCase(Locale.US).endsWith(".b32.i2p")) {
-        header=getErrorPage("dnf",ERR_DESTINATION_UNKNOWN);
+        header=getErrorPage("nols",ERR_DESTINATION_UNKNOWN);
       }
  else {
         header=getErrorPage("dnfh",ERR_DESTINATION_UNKNOWN);
@@ -557,7 +558,7 @@
     I2PSocketOptions sktOpts=getDefaultOptions(opts);
     if (remotePort > 0)     sktOpts.setPort(remotePort);
     I2PSocket i2ps=createI2PSocket(clientDest,sktOpts);
-    Runnable onTimeout=new OnTimeout(s,s.getOutputStream(),targetRequest,usingWWWProxy,currentProxy,requestId);
+    OnTimeout onTimeout=new OnTimeout(s,s.getOutputStream(),targetRequest,usingWWWProxy,currentProxy,requestId);
     if (method.toUpperCase(Locale.US).equals("CONNECT")) {
       byte[] data;
       byte[] response;
@@ -569,31 +570,33 @@
         data=null;
         response=I2PTunnelConnectClient.SUCCESS_RESPONSE;
       }
-      new I2PTunnelRunner(s,i2ps,sockLock,data,response,mySockets,onTimeout);
+      Thread t=new I2PTunnelRunner(s,i2ps,sockLock,data,response,mySockets,onTimeout);
+      t.start();
     }
  else {
       byte[] data=newRequest.toString().getBytes("ISO-8859-1");
-      new I2PTunnelHTTPClientRunner(s,i2ps,sockLock,data,mySockets,onTimeout);
+      Thread t=new I2PTunnelHTTPClientRunner(s,i2ps,sockLock,data,mySockets,onTimeout);
+      t.start();
     }
   }
  catch (  IOException ex) {
     if (_log.shouldLog(Log.INFO)) {
       _log.info(getPrefix(requestId) + "Error trying to connect",ex);
     }
-    handleHTTPClientException(ex,out,targetRequest,usingWWWProxy,currentProxy,requestId);
+    handleClientException(ex,out,targetRequest,usingWWWProxy,currentProxy,requestId);
     closeSocket(s);
   }
 catch (  I2PException ex) {
     if (_log.shouldLog(Log.INFO)) {
       _log.info("getPrefix(requestId) + Error trying to connect",ex);
     }
-    handleHTTPClientException(ex,out,targetRequest,usingWWWProxy,currentProxy,requestId);
+    handleClientException(ex,out,targetRequest,usingWWWProxy,currentProxy,requestId);
     closeSocket(s);
   }
 catch (  OutOfMemoryError oom) {
     IOException ex=new IOException("OOM");
     _log.error("getPrefix(requestId) + Error trying to connect",oom);
-    handleHTTPClientException(ex,out,targetRequest,usingWWWProxy,currentProxy,requestId);
+    handleClientException(ex,out,targetRequest,usingWWWProxy,currentProxy,requestId);
     closeSocket(s);
   }
 }

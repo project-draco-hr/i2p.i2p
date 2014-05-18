@@ -105,8 +105,8 @@
     Destination clientDest=_context.namingService().lookup(destination);
     if (clientDest == null) {
       byte[] header;
-      if (usingWWWProxy)       header=getErrorPage("dnfp-header.ht",ERR_DESTINATION_UNKNOWN);
- else       header=getErrorPage("dnfh-header.ht",ERR_DESTINATION_UNKNOWN);
+      if (usingWWWProxy)       header=getErrorPage("dnfp",ERR_DESTINATION_UNKNOWN);
+ else       header=getErrorPage("dnfh",ERR_DESTINATION_UNKNOWN);
       writeErrorMessage(header,out,targetRequest,usingWWWProxy,destination);
       s.close();
       return;
@@ -116,28 +116,24 @@
     byte[] response=null;
     if (usingWWWProxy)     data=newRequest.toString().getBytes("ISO-8859-1");
  else     response=SUCCESS_RESPONSE;
-    Runnable onTimeout=new OnTimeout(s,s.getOutputStream(),targetRequest,usingWWWProxy,currentProxy,requestId);
-    new I2PTunnelRunner(s,i2ps,sockLock,data,response,mySockets,onTimeout);
+    OnTimeout onTimeout=new OnTimeout(s,s.getOutputStream(),targetRequest,usingWWWProxy,currentProxy,requestId);
+    Thread t=new I2PTunnelRunner(s,i2ps,sockLock,data,response,mySockets,onTimeout);
+    t.start();
   }
- catch (  SocketException ex) {
+ catch (  IOException ex) {
     _log.info(getPrefix(requestId) + "Error trying to connect",ex);
-    handleConnectClientException(ex,out,targetRequest,usingWWWProxy,currentProxy,requestId);
-    closeSocket(s);
-  }
-catch (  IOException ex) {
-    _log.info(getPrefix(requestId) + "Error trying to connect",ex);
-    handleConnectClientException(ex,out,targetRequest,usingWWWProxy,currentProxy,requestId);
+    handleClientException(ex,out,targetRequest,usingWWWProxy,currentProxy,requestId);
     closeSocket(s);
   }
 catch (  I2PException ex) {
     _log.info("getPrefix(requestId) + Error trying to connect",ex);
-    handleConnectClientException(ex,out,targetRequest,usingWWWProxy,currentProxy,requestId);
+    handleClientException(ex,out,targetRequest,usingWWWProxy,currentProxy,requestId);
     closeSocket(s);
   }
 catch (  OutOfMemoryError oom) {
     IOException ex=new IOException("OOM");
     _log.info("getPrefix(requestId) + Error trying to connect",ex);
-    handleConnectClientException(ex,out,targetRequest,usingWWWProxy,currentProxy,requestId);
+    handleClientException(ex,out,targetRequest,usingWWWProxy,currentProxy,requestId);
     closeSocket(s);
   }
 }

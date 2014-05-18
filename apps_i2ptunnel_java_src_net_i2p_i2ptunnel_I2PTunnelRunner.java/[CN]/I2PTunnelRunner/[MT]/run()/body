@@ -15,19 +15,30 @@
     }
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Initial data " + (initialI2PData != null ? initialI2PData.length : 0) + " written to I2P, "+ (initialSocketData != null ? initialSocketData.length : 0)+ " written to the socket, starting forwarders");
     if (!(s instanceof InternalSocket))     in=new BufferedInputStream(in,2 * NETWORK_BUFFER_SIZE);
-    Thread t1=new StreamForwarder(in,i2pout,true);
-    Thread t2=new StreamForwarder(i2pin,out,false);
+    StreamForwarder toI2P=new StreamForwarder(in,i2pout,true);
+    StreamForwarder fromI2P=new StreamForwarder(i2pin,out,false);
+    toI2P.start();
+    fromI2P.start();
 synchronized (finishLock) {
       while (!finished) {
         finishLock.wait();
       }
     }
     if (_log.shouldLog(Log.DEBUG))     _log.debug("At least one forwarder completed, closing and joining");
-    if (onTimeout != null) {
+    if (onTimeout != null || _onFail != null) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("runner has a timeout job, totalReceived = " + totalReceived + " totalSent = "+ totalSent+ " job = "+ onTimeout);
-      if (totalReceived <= 0)       onTimeout.run();
+      if (totalReceived <= 0) {
+        if (_onFail != null) {
+          Exception e=fromI2P.getFailure();
+          if (e == null)           e=toI2P.getFailure();
+          _onFail.onFail(e);
+        }
+ else {
+          onTimeout.run();
+        }
+      }
     }
-    close(out,in,i2pout,i2pin,s,i2ps,t1,t2);
+    close(out,in,i2pout,i2pin,s,i2ps,toI2P,fromI2P);
   }
  catch (  InterruptedException ex) {
     if (_log.shouldLog(Log.ERROR))     _log.error("Interrupted",ex);

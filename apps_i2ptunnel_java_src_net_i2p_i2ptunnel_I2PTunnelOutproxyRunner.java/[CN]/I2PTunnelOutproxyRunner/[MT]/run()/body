@@ -15,6 +15,8 @@
     if (!(s instanceof InternalSocket))     in=new BufferedInputStream(in,2 * NETWORK_BUFFER_SIZE);
     Thread t1=new StreamForwarder(in,i2pout,true);
     Thread t2=new StreamForwarder(i2pin,out,false);
+    t1.start();
+    t2.start();
 synchronized (finishLock) {
       while (!finished) {
         finishLock.wait();
@@ -23,7 +25,7 @@ synchronized (finishLock) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("At least one forwarder completed, closing and joining");
     if (onTimeout != null) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("runner has a timeout job, totalReceived = " + totalReceived + " totalSent = "+ totalSent+ " job = "+ onTimeout);
-      if (totalReceived <= 0)       onTimeout.run();
+      if (totalReceived <= 0)       onTimeout.onFail(null);
     }
     close(out,in,i2pout,i2pin,s,i2ps,t1,t2);
   }
