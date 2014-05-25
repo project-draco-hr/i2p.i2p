@@ -288,7 +288,7 @@
                 _log.warn(getPrefix(requestId) + "Host wants to be outproxied, but we dont have any!");
               }
               l.log("No outproxy found for the request.");
-              out.write(getErrorPage("noproxy",_ERR_NO_OUTPROXY));
+              out.write(getErrorPage("noproxy",ERR_NO_OUTPROXY));
               writeFooter(out);
               reader.drain();
               s.close();
@@ -348,8 +348,10 @@
           }
         }
  else         if (lowercaseLine.startsWith("accept")) {
-          line=null;
-          continue;
+          if (!Boolean.parseBoolean(getTunnel().getClientOptions().getProperty(PROP_ACCEPT))) {
+            line=null;
+            continue;
+          }
         }
  else         if (lowercaseLine.startsWith("referer: ")) {
           referer=line.substring(9);
@@ -386,7 +388,7 @@
           gzip=Boolean.parseBoolean(ok);
         }
         if (gzip && !usingInternalServer && !method.toUpperCase(Locale.US).equals("CONNECT")) {
-          newRequest.append("Accept-Encoding: \r\n");
+          if (!Boolean.parseBoolean(getTunnel().getClientOptions().getProperty(PROP_ACCEPT)))           newRequest.append("Accept-Encoding: \r\n");
           if (!usingInternalOutproxy)           newRequest.append("X-Accept-Encoding: x-i2p-gzip;q=1.0, identity;q=0.5, deflate;q=0, gzip;q=0, *;q=0\r\n");
         }
         if (!shout && !method.toUpperCase(Locale.US).equals("CONNECT")) {
@@ -520,6 +522,7 @@
       }
       byte[] header;
       String jumpServers=null;
+      String extraMessage=null;
       if (usingWWWProxy) {
         header=getErrorPage("dnfp",ERR_DESTINATION_UNKNOWN);
       }
@@ -528,6 +531,7 @@
       }
  else       if (destination.length() == 60 && destination.toLowerCase(Locale.US).endsWith(".b32.i2p")) {
         header=getErrorPage("nols",ERR_DESTINATION_UNKNOWN);
+        extraMessage=_("Destination lease set not found");
       }
  else {
         header=getErrorPage("dnfh",ERR_DESTINATION_UNKNOWN);
@@ -536,8 +540,14 @@
           jumpServers=DEFAULT_JUMP_SERVERS;
         }
       }
-      writeErrorMessage(header,out,targetRequest,usingWWWProxy,destination,jumpServers);
+      writeErrorMessage(header,extraMessage,out,targetRequest,usingWWWProxy,destination,jumpServers);
       s.close();
+      return;
+    }
+    if (method.toUpperCase(Locale.US).equals("CONNECT") && !usingWWWProxy && !Boolean.parseBoolean(getTunnel().getClientOptions().getProperty(PROP_INTERNAL_SSL))) {
+      writeErrorMessage(ERR_INTERNAL_SSL,out,targetRequest,false,destination);
+      s.close();
+      if (_log.shouldLog(Log.WARN))       _log.warn("SSL to i2p destinations denied by configuration: " + targetRequest);
       return;
     }
     if (ahelperNew && "GET".equals(method) && (userAgent == null || !userAgent.startsWith("Wget"))&& !Boolean.parseBoolean(getTunnel().getClientOptions().getProperty(PROP_DISABLE_HELPER))) {
