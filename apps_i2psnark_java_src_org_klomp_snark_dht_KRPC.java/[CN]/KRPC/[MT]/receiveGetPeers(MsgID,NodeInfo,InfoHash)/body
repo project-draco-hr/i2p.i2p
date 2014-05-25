@@ -4,8 +4,9 @@
   _outgoingTokens.put(token,nInfo);
   if (_log.shouldLog(Log.INFO))   _log.info("Stored new OB token: " + token + " for: "+ nInfo);
   List<Hash> peers=_tracker.getPeers(ih,MAX_WANT);
+  boolean noPeers=peers.isEmpty();
   peers.remove(nInfo.getHash());
-  if (peers.isEmpty()) {
+  if (noPeers) {
     List<NodeInfo> nodes=_knownNodes.findClosest(ih,K);
     nodes.remove(nInfo);
     nodes.remove(_myNodeInfo);
@@ -16,9 +17,15 @@
     sendNodes(nInfo,msgID,token,nodeArray);
   }
  else {
-    List<byte[]> hashes=new ArrayList<byte[]>(peers.size());
-    for (    Hash peer : peers) {
-      hashes.add(peer.getData());
+    List<byte[]> hashes;
+    if (peers.isEmpty()) {
+      hashes=Collections.EMPTY_LIST;
+    }
+ else {
+      hashes=new ArrayList<byte[]>(peers.size());
+      for (      Hash peer : peers) {
+        hashes.add(peer.getData());
+      }
     }
     sendPeers(nInfo,msgID,token,hashes);
   }
