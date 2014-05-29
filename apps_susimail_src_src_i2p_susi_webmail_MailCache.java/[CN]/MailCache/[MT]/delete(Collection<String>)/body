@@ -2,9 +2,14 @@
   List<String> toDelete=new ArrayList<String>(uidls.size());
   for (  String uidl : uidls) {
     if (disk != null)     disk.deleteMail(uidl);
-    Mail mail=mails.get(uidl);
-    if (mail == null)     continue;
-    mail.markForDeletion=true;
+synchronized (mails) {
+      Mail mail=mails.get(uidl);
+      if (mail == null)       continue;
+      mail.markForDeletion=true;
+      mail=new Mail(uidl);
+      mail.markForDeletion=true;
+      mails.put(uidl,mail);
+    }
     toDelete.add(uidl);
   }
   if (toDelete.isEmpty())   return;
