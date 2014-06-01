@@ -1,6 +1,6 @@
 {
   InfoHash iHash=new InfoHash(ih);
-  Collection<Hash> rv=_tracker.getPeers(iHash,max);
+  Collection<Hash> rv=_tracker.getPeers(iHash,max,noSeeds);
   rv.remove(_myNodeInfo.getHash());
   if (rv.size() >= max)   return rv;
   rv=new HashSet<Hash>(rv);
@@ -26,7 +26,7 @@
     toTry.remove(nInfo);
     tried.add(nInfo);
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Try " + i + ": "+ nInfo);
-    ReplyWaiter waiter=sendGetPeers(nInfo,iHash);
+    ReplyWaiter waiter=sendGetPeers(nInfo,iHash,noSeeds);
     if (waiter == null)     continue;
 synchronized (waiter) {
       try {
@@ -76,7 +76,7 @@ synchronized (waiter) {
     }
   }
   if (!heardFrom.isEmpty()) {
-    announce(ih);
+    announce(ih,isSeed);
     int annCnt=0;
     long start=_context.clock().now();
     for (Iterator<NodeInfo> iter=heardFrom.iterator(); iter.hasNext() && annCnt < annMax && _isRunning; ) {

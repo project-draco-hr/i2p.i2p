@@ -47,7 +47,7 @@
         DHT dht=_util.getDHT();
         if (dht != null) {
           for (          Peer peer : peers) {
-            dht.announce(snark.getInfoHash(),peer.getPeerID().getDestHash());
+            dht.announce(snark.getInfoHash(),peer.getPeerID().getDestHash(),false);
           }
         }
         if (coordinator.needOutboundPeers()) {
@@ -72,8 +72,9 @@
         if (_log.shouldLog(Log.WARN))         _log.warn("WARNING: Could not contact tracker at '" + tr.announce + "': "+ ioe);
         tr.trackerProblems=ioe.getMessage();
         if (tr.isPrimary)         snark.setTrackerProblems(tr.trackerProblems);
-        if (tr.trackerProblems.toLowerCase(Locale.US).startsWith(NOT_REGISTERED)) {
-          if (tr.registerFails++ > MAX_REGISTER_FAILS)           tr.stop=true;
+        String tplc=tr.trackerProblems.toLowerCase(Locale.US);
+        if (tplc.startsWith(NOT_REGISTERED) || tplc.startsWith(NOT_REGISTERED_2)) {
+          if (tr.registerFails++ > MAX_REGISTER_FAILS || (!tr.isPrimary && tr.registerFails > MAX_REGISTER_FAILS / 2))           tr.stop=true;
         }
         if (++tr.consecutiveFails == MAX_CONSEC_FAILS) {
           tr.seenPeers=0;
