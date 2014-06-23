@@ -34,7 +34,14 @@
   long time=req.readRequestTime();
   long now=(_context.clock().now() / (60l * 60l * 1000l)) * (60 * 60 * 1000);
   int ourSlot=-1;
-  int response=_context.throttle().acceptTunnelRequest();
+  int response;
+  if (_context.router().isHidden()) {
+    _context.throttle().setTunnelStatus(_x("Rejecting tunnels: Hidden mode"));
+    response=TunnelHistory.TUNNEL_REJECT_BANDWIDTH;
+  }
+ else {
+    response=_context.throttle().acceptTunnelRequest();
+  }
   long recvDelay=_context.clock().now() - state.recvTime;
   if (response == 0) {
     float pDrop=((float)recvDelay) / (float)(BuildRequestor.REQUEST_TIMEOUT * 3);
