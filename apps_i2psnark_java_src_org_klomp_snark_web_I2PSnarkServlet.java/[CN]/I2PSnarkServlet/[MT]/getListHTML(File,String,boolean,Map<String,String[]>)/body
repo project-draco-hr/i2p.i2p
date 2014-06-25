@@ -3,9 +3,16 @@
   String cpath=_contextPath + '/';
   if (title.startsWith(cpath))   title=title.substring(cpath.length());
   String torrentName;
+  String pathInTorrent;
   int slash=title.indexOf('/');
-  if (slash > 0)   torrentName=title.substring(0,slash);
- else   torrentName=title;
+  if (slash > 0) {
+    torrentName=title.substring(0,slash);
+    pathInTorrent=title.substring(slash);
+  }
+ else {
+    torrentName=title;
+    pathInTorrent="/";
+  }
   Snark snark=_manager.getTorrentByBaseName(torrentName);
   if (snark != null && postParams != null) {
     String[] val=postParams.get("nonce");
@@ -15,6 +22,21 @@
  else       _manager.addMessage("Please retry form submission (bad nonce)");
     }
     return null;
+  }
+  File r;
+  if (snark != null) {
+    Storage storage=snark.getStorage();
+    if (storage != null) {
+      File sbase=storage.getBase();
+      if (pathInTorrent.equals("/"))       r=sbase;
+ else       r=new File(sbase,pathInTorrent);
+    }
+ else {
+      r=new File("");
+    }
+  }
+ else {
+    r=new File("");
   }
   StringBuilder buf=new StringBuilder(4096);
   buf.append(DOCTYPE).append("<HTML><HEAD><TITLE>");
