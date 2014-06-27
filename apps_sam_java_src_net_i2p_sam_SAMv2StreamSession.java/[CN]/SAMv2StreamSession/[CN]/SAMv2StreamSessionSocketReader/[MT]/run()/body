@@ -1,5 +1,5 @@
 {
-  _log.debug("run() called for socket reader " + id);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("run() called for socket reader " + id);
   int read=-1;
   ByteBuffer data=ByteBuffer.allocate(SOCKET_HANDLER_BUF_SIZE);
   try {
@@ -18,7 +18,7 @@ synchronized (runningLock) {
       data.clear();
       read=Channels.newChannel(in).read(data);
       if (read == -1) {
-        _log.debug("Handler " + id + ": connection closed");
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Handler " + id + ": connection closed");
         break;
       }
       totalReceived+=read;
@@ -27,13 +27,13 @@ synchronized (runningLock) {
     }
   }
  catch (  IOException e) {
-    _log.debug("Caught IOException",e);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Caught IOException",e);
   }
   try {
     i2pSocket.close();
   }
  catch (  IOException e) {
-    _log.debug("Caught IOException",e);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Caught IOException",e);
   }
   if (stillRunning) {
     removeSocketHandler(id);
@@ -41,8 +41,8 @@ synchronized (runningLock) {
       recv.notifyStreamDisconnection(id,"OK",null);
     }
  catch (    IOException e) {
-      _log.debug("Error sending disconnection notice for handler " + id,e);
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Error sending disconnection notice for handler " + id,e);
     }
   }
-  _log.debug("Shutting down SAM STREAM session socket handler " + id);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Shutting down SAM STREAM session socket handler " + id);
 }
