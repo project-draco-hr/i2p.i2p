@@ -1,5 +1,5 @@
 {
-  List<String> URLList=new ArrayList<String>();
+  List<URL> URLList=new ArrayList<URL>();
   String URLs=_context.getProperty(PROP_RESEED_URL);
   boolean defaulted=URLs == null;
   boolean SSLDisable=_context.getBooleanProperty(PROP_SSL_DISABLE);
@@ -9,29 +9,46 @@
  else     URLs=DEFAULT_SSL_SEED_URL;
   }
   StringTokenizer tok=new StringTokenizer(URLs," ,");
-  while (tok.hasMoreTokens())   URLList.add(tok.nextToken().trim());
+  while (tok.hasMoreTokens()) {
+    try {
+      URLList.add(new URL(tok.nextToken().trim()));
+    }
+ catch (    MalformedURLException mue) {
+    }
+  }
   Collections.shuffle(URLList,_context.random());
   if (defaulted && !SSLDisable && !SSLRequired) {
-    List<String> URLList2=new ArrayList<String>();
+    List<URL> URLList2=new ArrayList<URL>();
     tok=new StringTokenizer(DEFAULT_SEED_URL," ,");
-    while (tok.hasMoreTokens())     URLList2.add(tok.nextToken().trim());
+    while (tok.hasMoreTokens()) {
+      try {
+        URLList2.add(new URL(tok.nextToken().trim()));
+      }
+ catch (      MalformedURLException mue) {
+      }
+    }
     Collections.shuffle(URLList2,_context.random());
     URLList.addAll(URLList2);
   }
   int total=0;
   for (int i=0; i < URLList.size() && _isRunning; i++) {
-    String url=URLList.get(i);
+    URL url=URLList.get(i);
     int dl=0;
-    if (ENABLE_SU3)     dl=reseedSU3(url + SU3_FILENAME,echoStatus);
+    if (ENABLE_SU3) {
+      try {
+        dl=reseedSU3(new URL(url.toString() + SU3_FILENAME),echoStatus);
+      }
+ catch (      MalformedURLException mue) {
+      }
+    }
     if (dl <= 0)     dl=reseedOne(url,echoStatus);
     if (dl > 0) {
       total+=dl;
       if (total >= 100)       break;
-      String alt;
-      if (url.startsWith("http://"))       alt=url.replace("http://","https://");
- else       alt=url.replace("https://","http://");
-      int idx=URLList.indexOf(alt);
-      if (idx > i)       URLList.remove(i);
+      for (int j=i + 1; j < URLList.size(); ) {
+        if (url.getHost().equals(URLList.get(j).getHost()))         URLList.remove(j);
+ else         j++;
+      }
     }
   }
   return total;
