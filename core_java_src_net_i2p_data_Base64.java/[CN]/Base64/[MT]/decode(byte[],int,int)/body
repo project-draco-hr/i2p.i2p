@@ -2,28 +2,31 @@
   int len34=len * 3 / 4;
   byte[] outBuff=new byte[len34];
   int outBuffPosn=0;
-  byte[] b4=new byte[4];
-  int b4Posn=0;
-  int i=0;
-  byte sbiCrop=0;
-  byte sbiDecode=0;
-  for (i=0; i < len; i++) {
-    sbiCrop=(byte)(source[i] & 0x7f);
-    sbiDecode=DECODABET[sbiCrop];
-    if (sbiDecode >= WHITE_SPACE_ENC) {
-      if (sbiDecode >= EQUALS_SIGN_ENC) {
-        b4[b4Posn++]=sbiCrop;
-        if (b4Posn > 3) {
-          outBuffPosn+=decode4to3(b4,0,outBuff,outBuffPosn);
-          b4Posn=0;
-          if (sbiCrop == EQUALS_SIGN)           break;
-        }
-      }
-    }
- else {
-      return null;
-    }
+  int i=off;
+  int end=off + len;
+  int converted=0;
+  while (i + 3 < end) {
+    converted=decode4to3(source,i,outBuff,outBuffPosn);
+    if (converted < 0)     return null;
+    outBuffPosn+=converted;
+    i+=4;
+    if (converted < 3)     break;
   }
+  int remaining=end - i;
+  if (remaining > 0) {
+    if (converted > 0 && converted < 3)     return null;
+    if (remaining == 1 || remaining > 3)     return null;
+    byte[] b4=new byte[4];
+    b4[0]=source[i++];
+    b4[1]=source[i++];
+    if (remaining == 3)     b4[2]=source[i];
+ else     b4[2]=EQUALS_SIGN;
+    b4[3]=EQUALS_SIGN;
+    converted=decode4to3(b4,0,outBuff,outBuffPosn);
+    if (converted < 0)     return null;
+    outBuffPosn+=converted;
+  }
+  if (outBuffPosn == outBuff.length)   return outBuff;
   byte[] out=new byte[outBuffPosn];
   System.arraycopy(outBuff,0,out,0,outBuffPosn);
   return out;
