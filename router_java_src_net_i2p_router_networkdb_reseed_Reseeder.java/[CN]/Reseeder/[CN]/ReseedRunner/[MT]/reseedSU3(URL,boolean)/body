@@ -1,4 +1,6 @@
 {
+  int fetched=0;
+  int errors=0;
   File contentRaw=null;
   File zip=null;
   File tmpDir=null;
@@ -25,8 +27,6 @@
     List<File> fList=Arrays.asList(files);
     Collections.shuffle(fList,_context.random());
     long minTime=_context.clock().now() - MAX_FILE_AGE;
-    int fetched=0;
-    int errors=0;
     File netDbDir=new SecureDirectory(_context.getRouterDir(),"netDb");
     if (!netDbDir.exists())     netDbDir.mkdirs();
     for (Iterator<File> iter=fList.iterator(); iter.hasNext() && fetched < 400; ) {
@@ -48,19 +48,17 @@
       }
       if (errors >= 5)       break;
     }
-    _checker.setStatus(_("Reseeding: fetching router info from seed URL ({0} successful, {1} errors).",fetched,errors));
-    System.err.println("Reseed got " + fetched + " router infos from "+ seedURL+ " with "+ errors+ " errors");
-    if (fetched > 0)     _context.netDb().rescan();
-    return fetched;
   }
  catch (  Throwable t) {
     _log.warn("Error reseeding",t);
-    System.err.println("Reseed got no router infos from " + seedURL);
-    return 0;
   }
  finally {
     if (contentRaw != null)     contentRaw.delete();
     if (zip != null)     zip.delete();
     if (tmpDir != null)     FileUtil.rmdir(tmpDir,false);
   }
+  _checker.setStatus(_("Reseeding: fetching router info from seed URL ({0} successful, {1} errors).",fetched,errors));
+  System.err.println("Reseed got " + fetched + " router infos from "+ seedURL+ " with "+ errors+ " errors");
+  if (fetched > 0)   _context.netDb().rescan();
+  return fetched;
 }
