@@ -1,0 +1,33 @@
+{
+  File out=new File(_context.getTempDir(),"reseed-" + _context.random().nextInt() + ".tmp");
+  EepGet get;
+  boolean ssl=url.toString().startsWith("https");
+  if (ssl) {
+    SSLEepGet sslget;
+    if (_sslState == null) {
+      sslget=new SSLEepGet(I2PAppContext.getGlobalContext(),out.getPath(),url.toString());
+      _sslState=sslget.getSSLState();
+    }
+ else {
+      sslget=new SSLEepGet(I2PAppContext.getGlobalContext(),out.getPath(),url.toString(),_sslState);
+    }
+    get=sslget;
+  }
+ else {
+    boolean shouldProxy=_proxyHost != null && _proxyHost.length() > 0 && _proxyPort > 0;
+    get=new EepGet(I2PAppContext.getGlobalContext(),shouldProxy,_proxyHost,_proxyPort,0,0,MAX_SU3_RESPONSE_SIZE,out.getPath(),null,url.toString(),false,null,null);
+    if (shouldProxy && _context.getBooleanProperty(PROP_PROXY_AUTH_ENABLE)) {
+      String user=_context.getProperty(PROP_PROXY_USERNAME);
+      String pass=_context.getProperty(PROP_PROXY_PASSWORD);
+      if (user != null && user.length() > 0 && pass != null && pass.length() > 0)       get.addAuthorization(user,pass);
+    }
+  }
+  if (!url.toString().endsWith("/")) {
+    String minLastMod=RFC822Date.to822Date(_context.clock().now() - MAX_FILE_AGE);
+    get.addHeader("If-Modified-Since",minLastMod);
+  }
+  get.addStatusListener(ReseedRunner.this);
+  if (get.fetch() && get.getStatusCode() == 200)   return out;
+  out.delete();
+  return null;
+}

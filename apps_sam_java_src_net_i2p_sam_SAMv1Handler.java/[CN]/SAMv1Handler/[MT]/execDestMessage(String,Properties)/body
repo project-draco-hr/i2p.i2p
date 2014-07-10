@@ -1,16 +1,25 @@
 {
   if (opcode.equals("GENERATE")) {
-    if (!props.isEmpty()) {
-      _log.debug("Properties specified in DEST GENERATE message");
-      return false;
+    String sigTypeStr=props.getProperty("SIGNATURE_TYPE");
+    SigType sigType;
+    if (sigTypeStr != null) {
+      sigType=SigType.parseSigType(sigTypeStr);
+      if (sigType == null) {
+        writeString("DEST REPLY RESULT=I2P_ERROR MESSAGE=\"SIGNATURE_TYPE " + sigTypeStr + " unsupported\"\n");
+        return false;
+      }
     }
-    ByteArrayOutputStream priv=new ByteArrayOutputStream();
-    ByteArrayOutputStream pub=new ByteArrayOutputStream();
-    SAMUtils.genRandomKey(priv,pub);
+ else {
+      sigType=SigType.DSA_SHA1;
+    }
+    ByteArrayOutputStream priv=new ByteArrayOutputStream(663);
+    ByteArrayOutputStream pub=new ByteArrayOutputStream(387);
+    SAMUtils.genRandomKey(priv,pub,sigType);
     return writeString("DEST REPLY" + " PUB=" + Base64.encode(pub.toByteArray()) + " PRIV="+ Base64.encode(priv.toByteArray())+ "\n");
   }
  else {
-    _log.debug("Unrecognized DEST message opcode: \"" + opcode + "\"");
+    writeString("DEST REPLY RESULT=I2P_ERROR MESSAGE=\"DEST GENERATE required\"");
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Unrecognized DEST message opcode: \"" + opcode + "\"");
     return false;
   }
 }

@@ -22,7 +22,11 @@
       if (user != null && user.length() > 0 && pass != null && pass.length() > 0)       get.addAuthorization(user,pass);
     }
   }
+  if (!url.toString().endsWith("/")) {
+    String minLastMod=RFC822Date.to822Date(_context.clock().now() - MAX_FILE_AGE);
+    get.addHeader("If-Modified-Since",minLastMod);
+  }
   get.addStatusListener(ReseedRunner.this);
-  if (get.fetch())   return baos.toByteArray();
+  if (get.fetch() && get.getStatusCode() == 200)   return baos.toByteArray();
   return null;
 }

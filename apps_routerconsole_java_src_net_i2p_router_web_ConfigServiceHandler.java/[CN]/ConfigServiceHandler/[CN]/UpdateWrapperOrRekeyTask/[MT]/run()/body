@@ -3,19 +3,22 @@
     if (_rekey)     ContextHelper.getContext(null).router().killKeys();
     if (_tellWrapper) {
       int wait=WAIT;
-      try {
-        Properties props=WrapperManager.getProperties();
-        String tmout=props.getProperty("wrapper.jvm_exit.timeout");
-        if (tmout != null) {
-          try {
-            int cwait=Integer.parseInt(tmout) * 1000;
-            if (cwait > wait)             wait=cwait;
-          }
- catch (          NumberFormatException nfe) {
+      String wv=System.getProperty("wrapper.version");
+      if (wv != null && VersionComparator.comp(wv,PROPERTIES_AVAILABLE) >= 0) {
+        try {
+          Properties props=WrapperManager.getProperties();
+          String tmout=props.getProperty("wrapper.jvm_exit.timeout");
+          if (tmout != null) {
+            try {
+              int cwait=Integer.parseInt(tmout) * 1000;
+              if (cwait > wait)               wait=cwait;
+            }
+ catch (            NumberFormatException nfe) {
+            }
           }
         }
-      }
- catch (      Throwable t) {
+ catch (        Throwable t) {
+        }
       }
       WrapperManager.signalStopping(wait);
     }

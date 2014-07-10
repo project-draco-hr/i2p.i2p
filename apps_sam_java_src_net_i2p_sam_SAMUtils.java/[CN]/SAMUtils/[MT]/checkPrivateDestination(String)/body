@@ -1,11 +1,19 @@
 {
-  ByteArrayInputStream destKeyStream=new ByteArrayInputStream(Base64.decode(dest));
+  byte[] b=Base64.decode(dest);
+  if (b == null || b.length < 663)   return false;
+  ByteArrayInputStream destKeyStream=new ByteArrayInputStream(b);
   try {
-    new Destination().readBytes(destKeyStream);
+    Destination d=new Destination();
+    d.readBytes(destKeyStream);
     new PrivateKey().readBytes(destKeyStream);
-    new SigningPrivateKey().readBytes(destKeyStream);
+    SigningPrivateKey spk=new SigningPrivateKey(d.getSigningPublicKey().getType());
+    spk.readBytes(destKeyStream);
   }
- catch (  Exception e) {
-    throw new InvalidDestination();
+ catch (  DataFormatException e) {
+    return false;
   }
+catch (  IOException e) {
+    return false;
+  }
+  return destKeyStream.available() == 0;
 }
