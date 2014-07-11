@@ -1,6 +1,14 @@
 {
   if (this.valid)   return;
-  if (rxSign == null || rxSign.getData() == null || rxDest == null || rxDest.getSigningPublicKey() == null)   throw new I2PInvalidDatagramException("Datagram not yet read");
-  if (!this.dsaEng.verifySignature(rxSign,rxHash.getData(),rxDest.getSigningPublicKey()))   throw new I2PInvalidDatagramException("Incorrect I2P repliable datagram signature");
+  if (rxSign == null || rxSign.getData() == null || rxDest == null)   throw new I2PInvalidDatagramException("Datagram not yet read");
+  SigningPublicKey spk=rxDest.getSigningPublicKey();
+  SigType type=spk.getType();
+  if (type == null)   throw new I2PInvalidDatagramException("unsupported sig type");
+  if (type == SigType.DSA_SHA1) {
+    if (!this.dsaEng.verifySignature(rxSign,rxHash,spk))     throw new I2PInvalidDatagramException("Incorrect I2P repliable datagram signature");
+  }
+ else {
+    if (!this.dsaEng.verifySignature(rxSign,rxPayload,0,rxPayloadLen,spk))     throw new I2PInvalidDatagramException("Incorrect I2P repliable datagram signature");
+  }
   this.valid=true;
 }
