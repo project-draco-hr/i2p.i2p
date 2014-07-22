@@ -1,9 +1,17 @@
 {
-  if (!_ctx.getBooleanProperty(PROP_DISABLE_EXTERNAL)) {
-    if (_ctx.getBooleanProperty(PROP_ENABLE_SSL))     _listener=new SSLClientListenerRunner(_ctx,this,_port);
- else     _listener=new ClientListenerRunner(_ctx,this,_port);
-    Thread t=new I2PThread(_listener,"ClientListener:" + _port,true);
+  ClientListenerRunner listener;
+  if (SystemVersion.isAndroid()) {
+    listener=new DomainClientListenerRunner(_ctx,this);
+    Thread t=new I2PThread(listener,"DomainClientListener",true);
     t.start();
+    _listeners.add(listener);
+  }
+  if (!_ctx.getBooleanProperty(PROP_DISABLE_EXTERNAL)) {
+    if (_ctx.getBooleanProperty(PROP_ENABLE_SSL))     listener=new SSLClientListenerRunner(_ctx,this,_port);
+ else     listener=new ClientListenerRunner(_ctx,this,_port);
+    Thread t=new I2PThread(listener,"ClientListener:" + _port,true);
+    t.start();
+    _listeners.add(listener);
   }
   _isStarted=true;
 }
