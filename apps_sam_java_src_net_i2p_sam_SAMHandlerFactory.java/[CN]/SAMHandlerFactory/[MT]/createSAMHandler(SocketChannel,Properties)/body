@@ -1,16 +1,21 @@
 {
-  String line;
   StringTokenizer tok;
-  Log log=new Log(SAMHandlerFactory.class);
+  Log log=I2PAppContext.getGlobalContext().logManager().getLog(SAMHandlerFactory.class);
   try {
-    line=DataHelper.readLine(s.socket().getInputStream());
+    Socket sock=s.socket();
+    sock.setSoTimeout(HELLO_TIMEOUT);
+    String line=DataHelper.readLine(sock.getInputStream());
+    sock.setSoTimeout(0);
     if (line == null) {
       log.debug("Connection closed by client");
       return null;
     }
     tok=new StringTokenizer(line.trim()," ");
   }
- catch (  IOException e) {
+ catch (  SocketTimeoutException e) {
+    throw new SAMException("Timeout waiting for HELLO VERSION",e);
+  }
+catch (  IOException e) {
     throw new SAMException("Error reading from socket",e);
   }
 catch (  Exception e) {
