@@ -5,8 +5,23 @@
   }
   int count=values.length;
   String[] encodedValues=new String[count];
+  int good=0;
   for (int i=0; i < count; i++) {
-    encodedValues[i]=stripXSS(values[i],parameterValuePattern);
+    String value=values[i];
+    String v2=stripXSS(value,parameterValuePattern);
+    if (v2 != null) {
+      encodedValues[good++]=v2;
+    }
+ else     if (value != null) {
+      Log log=I2PAppContext.getGlobalContext().logManager().getLog(XSSRequestWrapper.class);
+      log.logAlways(Log.WARN,"URL \"" + getServletPath() + "\" Stripped param \""+ parameter+ "\" : \""+ value+ '"');
+    }
+  }
+  if (good <= 0)   return null;
+  if (good < count) {
+    String[] rv=new String[good];
+    System.arraycopy(encodedValues,0,rv,0,good);
+    encodedValues=rv;
   }
   return encodedValues;
 }
