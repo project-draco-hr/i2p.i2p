@@ -4,6 +4,39 @@
     ClientAppConfig ca=clients.get(cur);
     Object val=_settings.get(cur + ".enabled");
     if (!(RouterConsoleRunner.class.getName().equals(ca.className)))     ca.disabled=val == null;
+    if (_context.getBooleanProperty(ConfigClientsHelper.PROP_ENABLE_CLIENT_CHANGE) || isAdvanced()) {
+      String desc=getJettyString("desc" + cur);
+      if (desc != null) {
+        int spc=desc.indexOf(" ");
+        String clss=desc;
+        String args=null;
+        if (spc >= 0) {
+          clss=desc.substring(0,spc);
+          args=desc.substring(spc + 1);
+        }
+        ca.className=clss;
+        ca.args=args;
+        ca.clientName=getJettyString("name" + cur);
+      }
+    }
+  }
+  if (_context.getBooleanProperty(ConfigClientsHelper.PROP_ENABLE_CLIENT_CHANGE) || isAdvanced()) {
+    int newClient=clients.size();
+    String newDesc=getJettyString("desc" + newClient);
+    if (newDesc != null && newDesc.trim().length() > 0) {
+      int spc=newDesc.indexOf(" ");
+      String clss=newDesc;
+      String args=null;
+      if (spc >= 0) {
+        clss=newDesc.substring(0,spc);
+        args=newDesc.substring(spc + 1);
+      }
+      String name=getJettyString("name" + newClient);
+      if (name == null || name.trim().length() <= 0)       name="new client";
+      ClientAppConfig ca=new ClientAppConfig(clss,name,args,2 * 60 * 1000,_settings.get(newClient + ".enabled") != null);
+      clients.add(ca);
+      addFormNotice(_("New client added") + ": " + name+ " ("+ clss+ ").");
+    }
   }
   ClientAppConfig.writeClientAppConfig(_context,clients);
   addFormNotice(_("Client configuration saved successfully"));

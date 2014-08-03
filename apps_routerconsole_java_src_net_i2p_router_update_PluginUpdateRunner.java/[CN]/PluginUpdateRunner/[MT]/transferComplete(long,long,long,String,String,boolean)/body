@@ -39,7 +39,7 @@
   }
   FileUtil.rmdir(tempDir,false);
   String pubkey=props.getProperty("key");
-  String signer=props.getProperty("signer");
+  String signer=DataHelper.stripHTML(props.getProperty("signer"));
   if (pubkey == null || signer == null || pubkey.length() != 172 || signer.length() <= 0) {
     f.delete();
     to.delete();
@@ -48,6 +48,10 @@
   }
   Map<String,String> existingKeys=PluginStarter.getPluginKeys(_context);
   for (  Map.Entry<String,String> e : existingKeys.entrySet()) {
+    up.addKey(e.getKey(),e.getValue());
+  }
+  Map<String,String> trustedKeys=TrustedPluginKeys.getKeys();
+  for (  Map.Entry<String,String> e : trustedKeys.entrySet()) {
     up.addKey(e.getKey(),e.getValue());
   }
   if (up.haveKey(pubkey)) {
@@ -61,7 +65,7 @@
       return;
     }
   }
- else {
+ else   if (_context.getBooleanProperty(PROP_ALLOW_NEW_KEYS)) {
     if (!up.addKey(pubkey,signer)) {
       f.delete();
       to.delete();
@@ -78,6 +82,13 @@
       statusDone("<b>" + _("Plugin signature verification of {0} failed",url) + "</b>");
       return;
     }
+  }
+ else {
+    f.delete();
+    to.delete();
+    _log.error("Untrusted plugin key \"" + pubkey + "\" for plugin signer \""+ signer+ "\"");
+    statusDone("<b>" + _("Plugin not installed - signer is untrusted") + "</b>");
+    return;
   }
   String sudVersion=TrustedUpdate.getVersionString(f);
   f.delete();

@@ -16,16 +16,20 @@
     saveWebAppChanges();
     return;
   }
+  boolean pluginsEnabled=PluginStarter.pluginsEnabled(_context);
   if (_action.equals(_("Save Plugin Configuration"))) {
-    savePluginChanges();
+    if (pluginsEnabled)     savePluginChanges();
+ else     addFormError("Plugins disabled");
     return;
   }
   if (_action.equals(_("Install Plugin"))) {
-    addFormError("Plugin installation disabled");
+    if (pluginsEnabled && (_context.getBooleanProperty(ConfigClientsHelper.PROP_ENABLE_PLUGIN_INSTALL) || isAdvanced()))     installPlugin();
+ else     addFormError("Plugins disabled");
     return;
   }
   if (_action.equals(_("Update All Installed Plugins"))) {
-    updateAllPlugins();
+    if (pluginsEnabled)     updateAllPlugins();
+ else     addFormError("Plugins disabled");
     return;
   }
   if (_action.startsWith("Start ")) {
@@ -41,8 +45,13 @@
     }
  else {
       List<String> plugins=PluginStarter.getPlugins();
-      if (plugins.contains(app))       startPlugin(app);
- else       startWebApp(app);
+      if (plugins.contains(app)) {
+        if (pluginsEnabled)         startPlugin(app);
+ else         addFormError("Plugins disabled");
+      }
+ else {
+        startWebApp(app);
+      }
     }
     return;
   }
@@ -57,7 +66,7 @@
     if (appnum >= 0) {
       deleteClient(appnum);
     }
- else {
+ else     if (pluginsEnabled) {
       try {
         PluginStarter.stopPlugin(_context,app);
       }
@@ -76,6 +85,9 @@ catch (      Throwable e) {
         _log.error("Error deleting plugin " + app,e);
       }
     }
+ else {
+      addFormError("Plugins disabled");
+    }
     return;
   }
   if (_action.startsWith("Stop ")) {
@@ -93,8 +105,13 @@ catch (      Throwable e) {
       List<String> plugins=PluginStarter.getPlugins();
       if (plugins.contains(app)) {
         try {
-          PluginStarter.stopPlugin(_context,app);
-          addFormNotice(_("Stopped plugin {0}",app));
+          if (pluginsEnabled) {
+            PluginStarter.stopPlugin(_context,app);
+            addFormNotice(_("Stopped plugin {0}",app));
+          }
+ else {
+            addFormError("Plugins disabled");
+          }
         }
  catch (        Throwable e) {
           addFormError(_("Error stopping plugin {0}",app) + ": " + e);
@@ -109,13 +126,23 @@ catch (      Throwable e) {
     return;
   }
   if (_action.startsWith("Update ")) {
-    String app=_action.substring(7);
-    updatePlugin(app);
+    if (pluginsEnabled) {
+      String app=_action.substring(7);
+      updatePlugin(app);
+    }
+ else {
+      addFormError("Plugins disabled");
+    }
     return;
   }
   if (_action.startsWith("Check ")) {
-    String app=_action.substring(6);
-    checkPlugin(app);
+    if (pluginsEnabled) {
+      String app=_action.substring(6);
+      checkPlugin(app);
+    }
+ else {
+      addFormError("Plugins disabled");
+    }
     return;
   }
   String xStart=_("Start");
@@ -132,8 +159,13 @@ catch (      Throwable e) {
     }
  else {
       List<String> plugins=PluginStarter.getPlugins();
-      if (plugins.contains(app))       startPlugin(app);
- else       startWebApp(app);
+      if (plugins.contains(app)) {
+        if (pluginsEnabled)         startPlugin(app);
+ else         addFormError("Plugins disabled");
+      }
+ else {
+        startWebApp(app);
+      }
     }
   }
  else {

@@ -15,9 +15,12 @@
     }
   }
   if ("Add".equals(action)) {
-    String newURL=req.getParameter("newURL");
+    String newURL=req.getParameter("nofilter_newURL");
     if (newURL != null) {
-      if (newURL.startsWith("http://")) {
+      if (newURL.contains("<") || newURL.contains(">") || newURL.contains("%3C")|| newURL.contains("%3E")|| newURL.contains("%3c")|| newURL.contains("%3e")|| newURL.contains("\"")|| newURL.contains("'")|| newURL.contains("%22")|| newURL.contains("%27")) {
+        _manager.addMessage("Invalid URL");
+      }
+ else       if (newURL.startsWith("http://")) {
         FetchAndAdd fetch=new FetchAndAdd(_context,_manager,newURL);
         _manager.addDownloader(fetch);
       }
@@ -189,7 +192,7 @@
           String k=(String)o;
           if (k.startsWith("backup_")) {
             String url=k.substring(7);
-            if (!url.equals(announceURL))             backupURLs.add(url);
+            if (!url.equals(announceURL))             backupURLs.add(DataHelper.stripHTML(url));
           }
         }
         List<List<String>> announceList=null;

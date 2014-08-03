@@ -1,6 +1,7 @@
 {
   StringBuilder buf=new StringBuilder(1024);
   buf.append("<table>\n" + "<tr><th align=\"right\">").append(_("Client")).append("</th><th>").append(_("Run at Startup?")).append("</th><th>").append(_("Control")).append("</th><th align=\"left\">").append(_("Class and arguments")).append("</th></tr>\n");
+  boolean allowEdit=isClientChangeEnabled();
   List<ClientAppConfig> clients=ClientAppConfig.getClientApps(_context);
   for (int cur=0; cur < clients.size(); cur++) {
     ClientAppConfig ca=clients.get(cur);
@@ -16,8 +17,9 @@
       showStart=clientApp == null;
       showStop=clientApp != null && clientApp.getState() == ClientAppState.RUNNING;
     }
-    renderForm(buf,"" + cur,ca.clientName,false,!ca.disabled,false,RouterConsoleRunner.class.getName().equals(ca.className),ca.className + ((ca.args != null) ? " " + ca.args : ""),false,false,false,showStop,!isConsole,showStart);
+    renderForm(buf,"" + cur,ca.clientName,false,!ca.disabled,false,RouterConsoleRunner.class.getName().equals(ca.className),ca.className + ((ca.args != null) ? " " + ca.args : ""),allowEdit && ("" + cur).equals(_edit),allowEdit && !showStop,false,showStop,!isConsole,showStart);
   }
+  if (allowEdit && "new".equals(_edit))   renderForm(buf,"" + clients.size(),"",false,false,false,false,"",true,false,false,false,false,false);
   buf.append("</table>\n");
   return buf.toString();
 }
