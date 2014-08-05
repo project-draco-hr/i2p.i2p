@@ -46,6 +46,16 @@
     statusDone("<b>" + _("Plugin from {0} contains an invalid key",url) + "</b>");
     return;
   }
+  SigningPublicKey spk;
+  try {
+    spk=new SigningPublicKey(pubkey);
+  }
+ catch (  DataFormatException dfe) {
+    f.delete();
+    to.delete();
+    statusDone("<b>" + _("Plugin from {0} contains an invalid key",url) + "</b>");
+    return;
+  }
   Map<String,String> existingKeys=PluginStarter.getPluginKeys(_context);
   for (  Map.Entry<String,String> e : existingKeys.entrySet()) {
     up.addKey(e.getKey(),e.getValue());
@@ -55,8 +65,9 @@
     up.addKey(e.getKey(),e.getValue());
   }
   if (up.haveKey(pubkey)) {
-    String signingKeyName=up.verifyAndGetSigner(f);
-    if (!(signer.equals(signingKeyName) || "".equals(signingKeyName))) {
+    boolean ok=up.verify(f,spk);
+    String signingKeyName=up.getKeys().get(spk);
+    if ((!ok) || !(signer.equals(signingKeyName) || "".equals(signingKeyName))) {
       f.delete();
       to.delete();
       if (signingKeyName == null)       _log.error("Failed to verify plugin signature, corrupt plugin or bad signature, signed by: " + signer);
