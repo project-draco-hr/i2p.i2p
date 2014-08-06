@@ -1,15 +1,16 @@
 {
   while (_keepRunning) {
     UDPPacket packet=UDPPacket.acquire(_context,true);
-    if (_isAndroid)     packet.getPacket().setLength(UDPPacket.MAX_PACKET_SIZE);
+    DatagramPacket dpacket=packet.getPacket();
+    if (_isAndroid)     dpacket.setLength(UDPPacket.MAX_PACKET_SIZE);
     while (!_context.throttle().acceptNetworkMessage())     try {
       Thread.sleep(10);
     }
  catch (    InterruptedException ie) {
     }
     try {
-      _socket.receive(packet.getPacket());
-      int size=packet.getPacket().getLength();
+      _socket.receive(dpacket);
+      int size=dpacket.getLength();
       if (_log.shouldLog(Log.INFO))       _log.info("After blocking socket.receive: packet is " + size + " bytes on "+ System.identityHashCode(packet));
       packet.resetBegin();
       if (size >= UDPPacket.MAX_PACKET_SIZE) {
@@ -25,7 +26,8 @@
       }
  else {
         _context.statManager().addRateData("udp.receiveHolePunch",1);
-        if (_log.shouldLog(Log.INFO))         _log.info("Received a 0 byte udp packet from " + packet.getPacket().getAddress() + ":"+ packet.getPacket().getPort());
+        if (_log.shouldLog(Log.INFO))         _log.info("Received a 0 byte udp packet from " + dpacket.getAddress() + ":"+ dpacket.getPort());
+        _transport.getEstablisher().receiveHolePunch(dpacket.getAddress(),dpacket.getPort());
         packet.release();
       }
     }
