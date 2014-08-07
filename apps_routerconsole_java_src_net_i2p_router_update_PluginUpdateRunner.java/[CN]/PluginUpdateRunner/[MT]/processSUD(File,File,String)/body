@@ -8,27 +8,8 @@
     to.delete();
     return;
   }
-  File tempDir=new File(_context.getTempDir(),"tmp" + _context.random().nextInt() + "-unzip");
-  if (!FileUtil.extractZip(to,tempDir,Log.ERROR)) {
-    f.delete();
-    to.delete();
-    FileUtil.rmdir(tempDir,false);
-    statusDone("<b>" + _("Plugin from {0} is corrupt",url) + "</b>");
-    return;
-  }
-  File installProps=new File(tempDir,"plugin.config");
-  Properties props=new OrderedProperties();
-  try {
-    DataHelper.loadProps(props,installProps);
-  }
- catch (  IOException ioe) {
-    f.delete();
-    to.delete();
-    FileUtil.rmdir(tempDir,false);
-    statusDone("<b>" + _("Plugin from {0} does not contain the required configuration file",url) + "</b>");
-    return;
-  }
-  FileUtil.rmdir(tempDir,false);
+  Properties props=getPluginConfig(f,to,url);
+  if (props == null)   return;
   String pubkey=props.getProperty("key");
   String signer=props.getProperty("signer");
   if (pubkey == null || signer == null || pubkey.length() != 172 || signer.length() <= 0) {
@@ -72,5 +53,5 @@
   }
   String sudVersion=TrustedUpdate.getVersionString(f);
   f.delete();
-  processFinal(to,appDir,tempDir,url,props,sudVersion,pubkey,signer);
+  processFinal(to,appDir,url,props,sudVersion,pubkey,signer);
 }

@@ -1,2 +1,36 @@
 {
+  SU3File su3=new SU3File(_context,f);
+  File to=new File(_context.getTempDir(),"tmp" + _context.random().nextInt() + ZIP);
+  String sudVersion;
+  String signingKeyName;
+  try {
+    su3.verifyAndMigrate(to);
+    sudVersion=su3.getVersionString();
+    signingKeyName=su3.getSignerString();
+  }
+ catch (  IOException ioe) {
+    statusDone("<b>" + ioe + ' '+ _("from {0}",url)+ " </b>");
+    f.delete();
+    to.delete();
+    return;
+  }
+  Properties props=getPluginConfig(f,to,url);
+  if (props == null)   return;
+  String pubkey=props.getProperty("key");
+  String signer=props.getProperty("signer");
+  if (pubkey == null || signer == null || pubkey.length() != 172 || signer.length() <= 0) {
+    f.delete();
+    to.delete();
+    statusDone("<b>" + _("Plugin from {0} contains an invalid key",url) + "</b>");
+    return;
+  }
+  if (!signer.equals(signingKeyName)) {
+    f.delete();
+    to.delete();
+    if (signingKeyName == null)     _log.error("Failed to verify plugin signature, corrupt plugin or bad signature, signed by: " + signer);
+ else     _log.error("Plugin signer \"" + signer + "\" does not match new signer in plugin.config file \""+ signingKeyName+ "\"");
+    statusDone("<b>" + _("Plugin signature verification of {0} failed",url) + "</b>");
+    return;
+  }
+  processFinal(to,appDir,url,props,sudVersion,pubkey,signer);
 }
