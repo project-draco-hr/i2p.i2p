@@ -5,6 +5,8 @@
   String signingKeyName;
   try {
     su3.verifyAndMigrate(to);
+    if (su3.getFileType() != SU3File.TYPE_ZIP)     throw new IOException("bad file type");
+    if (su3.getContentType() != SU3File.CONTENT_PLUGIN)     throw new IOException("bad content type");
     sudVersion=su3.getVersionString();
     signingKeyName=su3.getSignerString();
   }
@@ -16,9 +18,8 @@
   }
   Properties props=getPluginConfig(f,to,url);
   if (props == null)   return;
-  String pubkey=props.getProperty("key");
   String signer=props.getProperty("signer");
-  if (pubkey == null || signer == null || pubkey.length() != 172 || signer.length() <= 0) {
+  if (signer == null || signer.length() <= 0) {
     f.delete();
     to.delete();
     statusDone("<b>" + _("Plugin from {0} contains an invalid key",url) + "</b>");
@@ -32,5 +33,5 @@
     statusDone("<b>" + _("Plugin signature verification of {0} failed",url) + "</b>");
     return;
   }
-  processFinal(to,appDir,url,props,sudVersion,pubkey,signer);
+  processFinal(to,appDir,url,props,sudVersion,null,signer);
 }
