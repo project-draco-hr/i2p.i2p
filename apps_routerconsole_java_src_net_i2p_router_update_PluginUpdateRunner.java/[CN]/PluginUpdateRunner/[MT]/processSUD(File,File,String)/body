@@ -1,0 +1,76 @@
+{
+  TrustedUpdate up=new TrustedUpdate(_context);
+  File to=new File(_context.getTempDir(),"tmp" + _context.random().nextInt() + ZIP);
+  String err=up.migrateFile(f,to);
+  if (err != null) {
+    statusDone("<b>" + err + ' '+ _("from {0}",url)+ " </b>");
+    f.delete();
+    to.delete();
+    return;
+  }
+  File tempDir=new File(_context.getTempDir(),"tmp" + _context.random().nextInt() + "-unzip");
+  if (!FileUtil.extractZip(to,tempDir,Log.ERROR)) {
+    f.delete();
+    to.delete();
+    FileUtil.rmdir(tempDir,false);
+    statusDone("<b>" + _("Plugin from {0} is corrupt",url) + "</b>");
+    return;
+  }
+  File installProps=new File(tempDir,"plugin.config");
+  Properties props=new OrderedProperties();
+  try {
+    DataHelper.loadProps(props,installProps);
+  }
+ catch (  IOException ioe) {
+    f.delete();
+    to.delete();
+    FileUtil.rmdir(tempDir,false);
+    statusDone("<b>" + _("Plugin from {0} does not contain the required configuration file",url) + "</b>");
+    return;
+  }
+  FileUtil.rmdir(tempDir,false);
+  String pubkey=props.getProperty("key");
+  String signer=props.getProperty("signer");
+  if (pubkey == null || signer == null || pubkey.length() != 172 || signer.length() <= 0) {
+    f.delete();
+    to.delete();
+    statusDone("<b>" + _("Plugin from {0} contains an invalid key",url) + "</b>");
+    return;
+  }
+  Map<String,String> existingKeys=PluginStarter.getPluginKeys(_context);
+  for (  Map.Entry<String,String> e : existingKeys.entrySet()) {
+    up.addKey(e.getKey(),e.getValue());
+  }
+  if (up.haveKey(pubkey)) {
+    String signingKeyName=up.verifyAndGetSigner(f);
+    if (!(signer.equals(signingKeyName) || "".equals(signingKeyName))) {
+      f.delete();
+      to.delete();
+      if (signingKeyName == null)       _log.error("Failed to verify plugin signature, corrupt plugin or bad signature, signed by: " + signer);
+ else       _log.error("Plugin signer \"" + signer + "\" does not match existing signer in plugin.config file \""+ signingKeyName+ "\"");
+      statusDone("<b>" + _("Plugin signature verification of {0} failed",url) + "</b>");
+      return;
+    }
+  }
+ else {
+    if (!up.addKey(pubkey,signer)) {
+      f.delete();
+      to.delete();
+      _log.error("Bad key or key mismatch - Failed to add plugin key \"" + pubkey + "\" for plugin signer \""+ signer+ "\"");
+      statusDone("<b>" + _("Plugin signature verification of {0} failed",url) + "</b>");
+      return;
+    }
+    String signingKeyName=up.verifyAndGetSigner(f);
+    if (!signer.equals(signingKeyName)) {
+      f.delete();
+      to.delete();
+      if (signingKeyName == null)       _log.error("Failed to verify plugin signature, corrupt plugin or bad signature, signed by: " + signer);
+ else       _log.error("Plugin signer \"" + signer + "\" does not match new signer in plugin.config file \""+ signingKeyName+ "\"");
+      statusDone("<b>" + _("Plugin signature verification of {0} failed",url) + "</b>");
+      return;
+    }
+  }
+  String sudVersion=TrustedUpdate.getVersionString(f);
+  f.delete();
+  processFinal(to,appDir,tempDir,url,props,sudVersion,pubkey,signer);
+}
