@@ -38,15 +38,22 @@
   bytesRead=DataHelper.read(in,data);
   if (bytesRead != signerLen)   throw new EOFException();
   _signer=DataHelper.getUTF8(data);
-  KeyRing ring=new DirKeyRing(new File(_context.getBaseDir(),"certificates"));
-  try {
-    _signerPubkey=ring.getKey(_signer,_contentType.getName(),_sigType);
+  if (_verifySignature) {
+    if (_certFile != null) {
+      _signerPubkey=loadKey(_certFile);
+    }
+ else {
+      KeyRing ring=new DirKeyRing(new File(_context.getBaseDir(),"certificates"));
+      try {
+        _signerPubkey=ring.getKey(_signer,_contentType.getName(),_sigType);
+      }
+ catch (      GeneralSecurityException gse) {
+        IOException ioe=new IOException("keystore error");
+        ioe.initCause(gse);
+        throw ioe;
+      }
+      if (_signerPubkey == null)       throw new IOException("unknown signer: " + _signer + " for content type: "+ _contentType.getName());
+    }
   }
- catch (  GeneralSecurityException gse) {
-    IOException ioe=new IOException("keystore error");
-    ioe.initCause(gse);
-    throw ioe;
-  }
-  if (_signerPubkey == null)   throw new IOException("unknown signer: " + _signer + " for content type: "+ _contentType.getName());
   _headerVerified=true;
 }
