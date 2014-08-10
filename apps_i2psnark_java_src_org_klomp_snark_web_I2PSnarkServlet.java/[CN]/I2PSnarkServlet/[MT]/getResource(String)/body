@@ -1,4 +1,19 @@
 {
-  if (pathInContext == null || pathInContext.equals("/") || pathInContext.equals("/index.jsp") || pathInContext.equals("/index.html") || pathInContext.startsWith("/.icons/"))   return super.getResource(pathInContext);
+  if (pathInContext == null || pathInContext.equals("/") || pathInContext.equals("/index.jsp") || !pathInContext.startsWith("/") || pathInContext.length() == 0 || pathInContext.equals("/index.html") || pathInContext.startsWith(WARBASE))   return super.getResource(pathInContext);
+  pathInContext=pathInContext.substring(1);
+  File top=new File(pathInContext);
+  File parent;
+  while ((parent=top.getParentFile()) != null) {
+    top=parent;
+  }
+  Snark snark=_manager.getTorrentByBaseName(top.getPath());
+  if (snark != null) {
+    Storage storage=snark.getStorage();
+    if (storage != null) {
+      File sbase=storage.getBase();
+      String child=pathInContext.substring(top.getPath().length());
+      return new File(sbase,child);
+    }
+  }
   return new File(_resourceBase,pathInContext);
 }

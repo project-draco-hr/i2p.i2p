@@ -1,20 +1,42 @@
 {
-  File[] ls=null;
-  if (r.isDirectory()) {
-    ls=r.listFiles();
-    Arrays.sort(ls,new ListingComparator());
-  }
   String title=decodePath(base);
   String cpath=_contextPath + '/';
   if (title.startsWith(cpath))   title=title.substring(cpath.length());
   String torrentName;
+  String pathInTorrent;
   int slash=title.indexOf('/');
-  if (slash > 0)   torrentName=title.substring(0,slash);
- else   torrentName=title;
+  if (slash > 0) {
+    torrentName=title.substring(0,slash);
+    pathInTorrent=title.substring(slash);
+  }
+ else {
+    torrentName=title;
+    pathInTorrent="/";
+  }
   Snark snark=_manager.getTorrentByBaseName(torrentName);
   if (snark != null && postParams != null) {
-    savePriorities(snark,postParams);
+    String[] val=postParams.get("nonce");
+    if (val != null) {
+      String nonce=val[0];
+      if (String.valueOf(_nonce).equals(nonce))       savePriorities(snark,postParams);
+ else       _manager.addMessage("Please retry form submission (bad nonce)");
+    }
     return null;
+  }
+  File r;
+  if (snark != null) {
+    Storage storage=snark.getStorage();
+    if (storage != null) {
+      File sbase=storage.getBase();
+      if (pathInTorrent.equals("/"))       r=sbase;
+ else       r=new File(sbase,pathInTorrent);
+    }
+ else {
+      r=new File("");
+    }
+  }
+ else {
+    r=new File("");
   }
   StringBuilder buf=new StringBuilder(4096);
   buf.append(DOCTYPE).append("<HTML><HEAD><TITLE>");
@@ -23,19 +45,23 @@
   title=_("Torrent") + ": " + title;
   buf.append(title);
   buf.append("</TITLE>").append(HEADER_A).append(_themePath).append(HEADER_B).append("<link rel=\"shortcut icon\" href=\"" + _themePath + "favicon.ico\">"+ "</HEAD><BODY>\n<center><div class=\"snarknavbar\"><a href=\"").append(_contextPath).append("/\" title=\"Torrents\"");
-  buf.append(" class=\"snarkRefresh\"><img alt=\"\" border=\"0\" src=\"" + _imgPath + "arrow_refresh.png\">&nbsp;&nbsp;");
+  buf.append(" class=\"snarkRefresh\"><img alt=\"\" border=\"0\" src=\"").append(_imgPath).append("arrow_refresh.png\">&nbsp;&nbsp;");
   if (_contextName.equals(DEFAULT_NAME))   buf.append(_("I2PSnark"));
  else   buf.append(_contextName);
   buf.append("</a></div></center>\n");
   if (parent)   buf.append("<div class=\"page\"><div class=\"mainsection\">");
-  boolean showPriority=ls != null && snark != null && snark.getStorage() != null && !snark.getStorage().complete();
-  if (showPriority)   buf.append("<form action=\"").append(base).append("\" method=\"POST\">\n");
+  boolean showPriority=snark != null && snark.getStorage() != null && !snark.getStorage().complete() && r.isDirectory();
+  if (showPriority) {
+    buf.append("<form action=\"").append(base).append("\" method=\"POST\">\n");
+    buf.append("<input type=\"hidden\" name=\"nonce\" value=\"").append(_nonce).append("\" >\n");
+  }
   if (snark != null) {
     buf.append("<table class=\"snarkTorrentInfo\">\n");
     buf.append("<tr><th><b>").append(_("Torrent")).append(":</b> ").append(snark.getBaseName()).append("</th></tr>\n");
     String fullPath=snark.getName();
     String baseName=urlEncode((new File(fullPath)).getName());
-    buf.append("<tr><td>").append("<img alt=\"\" border=\"0\" src=\"" + _imgPath + "file.png\" >&nbsp;<b>").append(_("Torrent file")).append(":</b> <a href=\"").append(_contextPath).append('/').append(baseName).append("\">").append(fullPath).append("</a></td></tr>\n");
+    buf.append("<tr><td>").append("<img alt=\"\" border=\"0\" src=\"").append(_imgPath).append("file.png\" >&nbsp;<b>").append(_("Torrent file")).append(":</b> <a href=\"").append(_contextPath).append('/').append(baseName).append("\">").append(fullPath).append("</a></td></tr>\n");
+    buf.append("<tr><td>").append("<img alt=\"\" border=\"0\" src=\"").append(_imgPath).append("file.png\" >&nbsp;<b>").append(_("Data location")).append(":</b> ").append(urlEncode(snark.getStorage().getBase().getPath())).append("</td></tr>\n");
     String announce=null;
     MetaInfo meta=snark.getMetaInfo();
     if (meta != null) {
@@ -97,38 +123,47 @@
  else {
       buf.append("<tr><td>").append(_("Private torrent")).append("</td></tr>\n");
     }
-    buf.append("<tr><td>").append("<img alt=\"\" border=\"0\" src=\"" + _imgPath + "size.png\" >&nbsp;<b>").append(_("Size")).append(":</b> ").append(formatSize(snark.getTotalLength()));
+    buf.append("<tr><td>").append("<img alt=\"\" border=\"0\" src=\"").append(_imgPath).append("size.png\" >&nbsp;<b>").append(_("Size")).append(":</b> ").append(formatSize(snark.getTotalLength()));
     int pieces=snark.getPieces();
     double completion=(pieces - snark.getNeeded()) / (double)pieces;
-    if (completion < 1.0)     buf.append("&nbsp;<img alt=\"\" border=\"0\" src=\"" + _imgPath + "head_rx.png\" >&nbsp;<b>").append(_("Completion")).append(":</b> ").append((new DecimalFormat("0.00%")).format(completion));
- else     buf.append("&nbsp;<img alt=\"\" border=\"0\" src=\"" + _imgPath + "head_rx.png\" >&nbsp;").append(_("Complete"));
+    if (completion < 1.0)     buf.append("&nbsp;<img alt=\"\" border=\"0\" src=\"").append(_imgPath).append("head_rx.png\" >&nbsp;<b>").append(_("Completion")).append(":</b> ").append((new DecimalFormat("0.00%")).format(completion));
+ else     buf.append("&nbsp;<img alt=\"\" border=\"0\" src=\"").append(_imgPath).append("head_rx.png\" >&nbsp;").append(_("Complete"));
     long needed=snark.getNeededLength();
-    if (needed > 0)     buf.append("&nbsp;<img alt=\"\" border=\"0\" src=\"" + _imgPath + "head_rx.png\" >&nbsp;<b>").append(_("Remaining")).append(":</b> ").append(formatSize(needed));
+    if (needed > 0)     buf.append("&nbsp;<img alt=\"\" border=\"0\" src=\"").append(_imgPath).append("head_rx.png\" >&nbsp;<b>").append(_("Remaining")).append(":</b> ").append(formatSize(needed));
     if (meta != null) {
       List<List<String>> files=meta.getFiles();
       int fileCount=files != null ? files.size() : 1;
-      buf.append("&nbsp;<img alt=\"\" border=\"0\" src=\"" + _imgPath + "file.png\" >&nbsp;<b>").append(_("Files")).append(":</b> ").append(fileCount);
+      buf.append("&nbsp;<img alt=\"\" border=\"0\" src=\"").append(_imgPath).append("file.png\" >&nbsp;<b>").append(_("Files")).append(":</b> ").append(fileCount);
     }
-    buf.append("&nbsp;<img alt=\"\" border=\"0\" src=\"" + _imgPath + "file.png\" >&nbsp;<b>").append(_("Pieces")).append(":</b> ").append(pieces);
-    buf.append("&nbsp;<img alt=\"\" border=\"0\" src=\"" + _imgPath + "file.png\" >&nbsp;<b>").append(_("Piece size")).append(":</b> ").append(formatSize(snark.getPieceLength(0))).append("</td></tr>\n");
+    buf.append("&nbsp;<img alt=\"\" border=\"0\" src=\"").append(_imgPath).append("file.png\" >&nbsp;<b>").append(_("Pieces")).append(":</b> ").append(pieces);
+    buf.append("&nbsp;<img alt=\"\" border=\"0\" src=\"").append(_imgPath).append("file.png\" >&nbsp;<b>").append(_("Piece size")).append(":</b> ").append(formatSize(snark.getPieceLength(0))).append("</td></tr>\n");
   }
  else {
     buf.append("<tr><th>Not found<br>resource=\"").append(r.toString()).append("\"<br>base=\"").append(base).append("\"<br>torrent=\"").append(torrentName).append("\"</th></tr>\n");
   }
   buf.append("</table>\n");
+  if (snark != null && !r.exists()) {
+    buf.append("<p>Does not exist<br>resource=\"").append(r.toString()).append("\"<br>base=\"").append(base).append("\"<br>torrent=\"").append(torrentName).append("\"</p></div></div></BODY></HTML>");
+    return buf.toString();
+  }
+  File[] ls=null;
+  if (r.isDirectory()) {
+    ls=r.listFiles();
+    Arrays.sort(ls,new ListingComparator());
+  }
   if (ls == null) {
     buf.append("</div></div></BODY></HTML>");
     return buf.toString();
   }
   buf.append("<table class=\"snarkDirInfo\"><thead>\n");
-  buf.append("<tr>\n").append("<th colspan=2>").append("<img border=\"0\" src=\"" + _imgPath + "file.png\" title=\"").append(_("Directory")).append(": ").append(directory).append("\" alt=\"").append(_("Directory")).append("\"></th>\n");
-  buf.append("<th align=\"right\">").append("<img border=\"0\" src=\"" + _imgPath + "size.png\" title=\"").append(_("Size")).append("\" alt=\"").append(_("Size")).append("\"></th>\n");
-  buf.append("<th class=\"headerstatus\">").append("<img border=\"0\" src=\"" + _imgPath + "status.png\" title=\"").append(_("Status")).append("\" alt=\"").append(_("Status")).append("\"></th>\n");
-  if (showPriority)   buf.append("<th class=\"headerpriority\">").append("<img border=\"0\" src=\"" + _imgPath + "priority.png\" title=\"").append(_("Priority")).append("\" alt=\"").append(_("Priority")).append("\"></th>\n");
+  buf.append("<tr>\n").append("<th colspan=2>").append("<img border=\"0\" src=\"").append(_imgPath).append("file.png\" title=\"").append(_("Directory")).append(": ").append(directory).append("\" alt=\"").append(_("Directory")).append("\"></th>\n");
+  buf.append("<th align=\"right\">").append("<img border=\"0\" src=\"").append(_imgPath).append("size.png\" title=\"").append(_("Size")).append("\" alt=\"").append(_("Size")).append("\"></th>\n");
+  buf.append("<th class=\"headerstatus\">").append("<img border=\"0\" src=\"").append(_imgPath).append("status.png\" title=\"").append(_("Status")).append("\" alt=\"").append(_("Status")).append("\"></th>\n");
+  if (showPriority)   buf.append("<th class=\"headerpriority\">").append("<img border=\"0\" src=\"").append(_imgPath).append("priority.png\" title=\"").append(_("Priority")).append("\" alt=\"").append(_("Priority")).append("\"></th>\n");
   buf.append("</tr>\n</thead>\n");
   buf.append("<tr><td colspan=\"" + (showPriority ? '5' : '4') + "\" class=\"ParentDir\"><A HREF=\"");
   buf.append(addPaths(base,"../"));
-  buf.append("\"><img alt=\"\" border=\"0\" src=\"" + _imgPath + "up.png\"> ").append(_("Up to higher level directory")).append("</A></td></tr>\n");
+  buf.append("\"><img alt=\"\" border=\"0\" src=\"").append(_imgPath).append("up.png\"> ").append(_("Up to higher level directory")).append("</A></td></tr>\n");
   boolean showSaveButton=false;
   for (int i=0; i < ls.length; i++) {
     String encoded=encodePath(ls[i].getName());
@@ -138,6 +173,7 @@
     boolean complete=false;
     String status="";
     long length=item.length();
+    int priority=0;
     if (item.isDirectory()) {
       complete=true;
     }
@@ -148,27 +184,21 @@
       }
  else {
         Storage storage=snark.getStorage();
-        try {
-          File f=item;
-          long remaining=storage.remaining(f.getCanonicalPath());
-          if (remaining < 0) {
-            complete=true;
-            status=toImg("cancel") + ' ' + _("File not found in torrent?");
-          }
- else           if (remaining == 0 || length <= 0) {
-            complete=true;
-            status=toImg("tick") + ' ' + _("Complete");
-          }
- else {
-            int priority=storage.getPriority(f.getCanonicalPath());
-            if (priority < 0)             status=toImg("cancel");
- else             if (priority == 0)             status=toImg("clock");
- else             status=toImg("clock_red");
-            status+=" " + (100 * (length - remaining) / length) + "% "+ _("complete")+ " ("+ DataHelper.formatSize2(remaining)+ "B "+ _("remaining")+ ")";
-          }
+        long remaining=storage.remaining(item);
+        if (remaining < 0) {
+          complete=true;
+          status=toImg("cancel") + ' ' + _("File not found in torrent?");
         }
- catch (        IOException ioe) {
-          status="Not a file? " + ioe;
+ else         if (remaining == 0 || length <= 0) {
+          complete=true;
+          status=toImg("tick") + ' ' + _("Complete");
+        }
+ else {
+          priority=storage.getPriority(item);
+          if (priority < 0)           status=toImg("cancel");
+ else           if (priority == 0)           status=toImg("clock");
+ else           status=toImg("clock_red");
+          status+=" " + (100 * (length - remaining) / length) + "% "+ _("complete")+ " ("+ DataHelper.formatSize2(remaining)+ "B "+ _("remaining")+ ")";
         }
       }
     }
@@ -201,17 +231,15 @@
     buf.append("</TD>");
     if (showPriority) {
       buf.append("<td class=\"priority\">");
-      File f=item;
       if ((!complete) && (!item.isDirectory())) {
-        int pri=snark.getStorage().getPriority(f.getCanonicalPath());
-        buf.append("<input type=\"radio\" value=\"5\" name=\"pri.").append(f.getCanonicalPath()).append("\" ");
-        if (pri > 0)         buf.append("checked=\"true\"");
+        buf.append("<input type=\"radio\" value=\"5\" name=\"pri.").append(item).append("\" ");
+        if (priority > 0)         buf.append("checked=\"true\"");
         buf.append('>').append(_("High"));
-        buf.append("<input type=\"radio\" value=\"0\" name=\"pri.").append(f.getCanonicalPath()).append("\" ");
-        if (pri == 0)         buf.append("checked=\"true\"");
+        buf.append("<input type=\"radio\" value=\"0\" name=\"pri.").append(item).append("\" ");
+        if (priority == 0)         buf.append("checked=\"true\"");
         buf.append('>').append(_("Normal"));
-        buf.append("<input type=\"radio\" value=\"-9\" name=\"pri.").append(f.getCanonicalPath()).append("\" ");
-        if (pri < 0)         buf.append("checked=\"true\"");
+        buf.append("<input type=\"radio\" value=\"-9\" name=\"pri.").append(item).append("\" ");
+        if (priority < 0)         buf.append("checked=\"true\"");
         buf.append('>').append(_("Skip"));
         showSaveButton=true;
       }
