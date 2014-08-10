@@ -1,92 +1,15 @@
 {
   _isRunning=true;
-  List<TunnelPool> wanted=new ArrayList<TunnelPool>(MAX_CONCURRENT_BUILDS);
-  List<TunnelPool> pools=new ArrayList<TunnelPool>(8);
-  while (_isRunning && !_manager.isShutdown()) {
-    try {
-      _repoll=false;
-      _manager.listPools(pools);
-      for (int i=0; i < pools.size(); i++) {
-        TunnelPool pool=pools.get(i);
-        if (!pool.isAlive())         continue;
-        int howMany=pool.countHowManyToBuild();
-        for (int j=0; j < howMany; j++)         wanted.add(pool);
-      }
-      int allowed=allowed();
-      allowed=buildZeroHopTunnels(wanted,allowed);
-      TunnelManagerFacade mgr=_context.tunnelManager();
-      if ((mgr == null) || (mgr.getFreeTunnelCount() <= 0) || (mgr.getOutboundTunnelCount() <= 0)) {
-        if (mgr != null) {
-          if (mgr.getFreeTunnelCount() <= 0)           mgr.selectInboundTunnel();
-          if (mgr.getOutboundTunnelCount() <= 0)           mgr.selectOutboundTunnel();
-        }
-synchronized (_currentlyBuilding) {
-          if (!_repoll) {
-            if (_log.shouldLog(Log.DEBUG))             _log.debug("No tunnel to build with (allowed=" + allowed + ", wanted="+ wanted.size()+ "), wait for a while");
-            try {
-              _currentlyBuilding.wait(1 * 1000 + _context.random().nextInt(1 * 1000));
-            }
- catch (            InterruptedException ie) {
-            }
-          }
-        }
-      }
- else {
-        if ((allowed > 0) && (!wanted.isEmpty())) {
-          if (wanted.size() > 1) {
-            Collections.shuffle(wanted,_context.random());
-            boolean preferEmpty=_context.random().nextInt(4) != 0;
-            try {
-              Collections.sort(wanted,new TunnelPoolComparator(preferEmpty));
-            }
- catch (            IllegalArgumentException iae) {
-              continue;
-            }
-          }
-          if (allowed > 2)           allowed=2;
-          for (int i=0; (i < allowed) && (!wanted.isEmpty()); i++) {
-            TunnelPool pool=wanted.remove(0);
-            long bef=System.currentTimeMillis();
-            PooledTunnelCreatorConfig cfg=pool.configureNewTunnel();
-            if (cfg != null) {
-              if (cfg.getLength() <= 1 && !pool.needFallback()) {
-                if (_log.shouldLog(Log.DEBUG))                 _log.debug("We don't need more fallbacks for " + pool);
-                i--;
-                pool.buildComplete(cfg);
-                continue;
-              }
-              long pTime=System.currentTimeMillis() - bef;
-              _context.statManager().addRateData("tunnel.buildConfigTime",pTime,0);
-              if (_log.shouldLog(Log.DEBUG))               _log.debug("Configuring new tunnel " + i + " for "+ pool+ ": "+ cfg);
-              buildTunnel(pool,cfg);
-            }
- else {
-              i--;
-            }
-          }
-        }
-        try {
-synchronized (_currentlyBuilding) {
-            if (!_repoll) {
-              _currentlyBuilding.wait((LOOP_TIME / 2) + _context.random().nextInt(LOOP_TIME));
-            }
-          }
-        }
- catch (        InterruptedException ie) {
-        }
-      }
-    }
- catch (    RuntimeException e) {
-      _log.log(Log.CRIT,"B0rked in the tunnel builder",e);
-      try {
-        Thread.sleep(LOOP_TIME);
-      }
- catch (      InterruptedException ie) {
-      }
-    }
-    wanted.clear();
-    pools.clear();
+  try {
+    run2();
   }
-  if (_log.shouldLog(Log.WARN))   _log.warn("Done building");
-  _isRunning=false;
+ catch (  NoSuchMethodError nsme) {
+    String s="Fatal error:" + "\nJava 8 compiler used with JRE version " + System.getProperty("java.version") + " and no bootclasspath specified."+ "\nUpdate to Java 8 or contact packager."+ "\nStop I2P now, it will not build tunnels.";
+    _log.log(Log.CRIT,s,nsme);
+    System.out.println(s);
+    throw nsme;
+  }
+ finally {
+    _isRunning=false;
+  }
 }
