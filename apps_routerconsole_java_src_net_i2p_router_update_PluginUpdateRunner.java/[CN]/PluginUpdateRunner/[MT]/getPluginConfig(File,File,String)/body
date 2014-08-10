@@ -1,0 +1,25 @@
+{
+  File tempDir=new File(_context.getTempDir(),"tmp" + _context.random().nextInt() + "-unzip");
+  if (!FileUtil.extractZip(to,tempDir,Log.ERROR)) {
+    f.delete();
+    to.delete();
+    FileUtil.rmdir(tempDir,false);
+    statusDone("<b>" + _("Plugin from {0} is corrupt",url) + "</b>");
+    return null;
+  }
+  File installProps=new File(tempDir,"plugin.config");
+  Properties props=new OrderedProperties();
+  try {
+    DataHelper.loadProps(props,installProps);
+  }
+ catch (  IOException ioe) {
+    f.delete();
+    to.delete();
+    statusDone("<b>" + _("Plugin from {0} does not contain the required configuration file",url) + "</b>");
+    return null;
+  }
+ finally {
+    FileUtil.rmdir(tempDir,false);
+  }
+  return props;
+}
