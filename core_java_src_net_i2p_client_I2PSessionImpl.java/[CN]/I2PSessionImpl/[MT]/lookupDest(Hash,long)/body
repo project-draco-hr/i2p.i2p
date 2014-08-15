@@ -18,6 +18,7 @@ synchronized (_lookupCache) {
     waiter=new LookupWaiter(h);
   }
   _pendingLookups.offer(waiter);
+  Destination rv=null;
   try {
     if (_routerSupportsHostLookup) {
       if (_log.shouldLog(Log.INFO))       _log.info("Sending HostLookup for " + h);
@@ -32,6 +33,7 @@ synchronized (_lookupCache) {
     try {
 synchronized (waiter) {
         waiter.wait(maxWait);
+        rv=waiter.destination;
       }
     }
  catch (    InterruptedException ie) {
@@ -41,5 +43,5 @@ synchronized (waiter) {
   finally {
     _pendingLookups.remove(waiter);
   }
-  return waiter.destination;
+  return rv;
 }
