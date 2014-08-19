@@ -1,5 +1,6 @@
 {
-  String title=decodePath(base);
+  String decodedBase=decodePath(base);
+  String title=decodedBase;
   String cpath=_contextPath + '/';
   if (title.startsWith(cpath))   title=title.substring(cpath.length());
   String torrentName;
@@ -42,7 +43,7 @@
   buf.append(DOCTYPE).append("<HTML><HEAD><TITLE>");
   if (title.endsWith("/"))   title=title.substring(0,title.length() - 1);
   String directory=title;
-  title=_("Torrent") + ": " + title;
+  title=_("Torrent") + ": " + DataHelper.escapeHTML(title);
   buf.append(title);
   buf.append("</TITLE>").append(HEADER_A).append(_themePath).append(HEADER_B).append("<link rel=\"shortcut icon\" href=\"" + _themePath + "favicon.ico\">"+ "</HEAD><BODY>\n<center><div class=\"snarknavbar\"><a href=\"").append(_contextPath).append("/\" title=\"Torrents\"");
   buf.append(" class=\"snarkRefresh\"><img alt=\"\" border=\"0\" src=\"").append(_imgPath).append("arrow_refresh.png\">&nbsp;&nbsp;");
@@ -57,11 +58,11 @@
   }
   if (snark != null) {
     buf.append("<table class=\"snarkTorrentInfo\">\n");
-    buf.append("<tr><th><b>").append(_("Torrent")).append(":</b> ").append(snark.getBaseName()).append("</th></tr>\n");
+    buf.append("<tr><th><b>").append(_("Torrent")).append(":</b> ").append(DataHelper.escapeHTML(snark.getBaseName())).append("</th></tr>\n");
     String fullPath=snark.getName();
-    String baseName=urlEncode((new File(fullPath)).getName());
-    buf.append("<tr><td>").append("<img alt=\"\" border=\"0\" src=\"").append(_imgPath).append("file.png\" >&nbsp;<b>").append(_("Torrent file")).append(":</b> <a href=\"").append(_contextPath).append('/').append(baseName).append("\">").append(fullPath).append("</a></td></tr>\n");
-    buf.append("<tr><td>").append("<img alt=\"\" border=\"0\" src=\"").append(_imgPath).append("file.png\" >&nbsp;<b>").append(_("Data location")).append(":</b> ").append(urlEncode(snark.getStorage().getBase().getPath())).append("</td></tr>\n");
+    String baseName=encodePath((new File(fullPath)).getName());
+    buf.append("<tr><td>").append("<img alt=\"\" border=\"0\" src=\"").append(_imgPath).append("file.png\" >&nbsp;<b>").append(_("Torrent file")).append(":</b> <a href=\"").append(_contextPath).append('/').append(baseName).append("\">").append(DataHelper.escapeHTML(fullPath)).append("</a></td></tr>\n");
+    buf.append("<tr><td>").append("<img alt=\"\" border=\"0\" src=\"").append(_imgPath).append("file.png\" >&nbsp;<b>").append(_("Data location")).append(":</b> ").append(DataHelper.escapeHTML(snark.getStorage().getBase().getPath())).append("</td></tr>\n");
     String announce=null;
     MetaInfo meta=snark.getMetaInfo();
     if (meta != null) {
@@ -162,11 +163,10 @@
   if (showPriority)   buf.append("<th class=\"headerpriority\">").append("<img border=\"0\" src=\"").append(_imgPath).append("priority.png\" title=\"").append(_("Priority")).append("\" alt=\"").append(_("Priority")).append("\"></th>\n");
   buf.append("</tr>\n</thead>\n");
   buf.append("<tr><td colspan=\"" + (showPriority ? '5' : '4') + "\" class=\"ParentDir\"><A HREF=\"");
-  buf.append(addPaths(base,"../"));
+  URIUtil.encodePath(buf,addPaths(decodedBase,"../"));
   buf.append("\"><img alt=\"\" border=\"0\" src=\"").append(_imgPath).append("up.png\"> ").append(_("Up to higher level directory")).append("</A></td></tr>\n");
   boolean showSaveButton=false;
   for (int i=0; i < ls.length; i++) {
-    String encoded=encodePath(ls[i].getName());
     File item=ls[i];
     String rowClass=(i % 2 == 0 ? "snarkTorrentEven" : "snarkTorrentOdd");
     buf.append("<TR class=\"").append(rowClass).append("\">");
@@ -202,9 +202,9 @@
         }
       }
     }
-    String path=addPaths(base,encoded);
+    String path=addPaths(decodedBase,ls[i].getName());
     if (item.isDirectory() && !path.endsWith("/"))     path=addPaths(path,"/");
-    path=urlEncode(path);
+    path=encodePath(path);
     String icon=toIcon(item);
     buf.append("<TD class=\"snarkFileIcon\">");
     if (complete) {
@@ -222,7 +222,7 @@
     }
     buf.append("</TD><TD class=\"snarkFileName\">");
     if (complete)     buf.append("<a href=\"").append(path).append("\">");
-    buf.append(item.getName().replace("&","&amp;"));
+    buf.append(DataHelper.escapeHTML(item.getName()));
     if (complete)     buf.append("</a>");
     buf.append("</TD><TD ALIGN=right class=\"snarkFileSize\">");
     if (!item.isDirectory())     buf.append(DataHelper.formatSize2(length)).append('B');
