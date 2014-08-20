@@ -1,14 +1,13 @@
 {
-  destReceived(d);
+  Hash h=d.calculateHash();
   for (  LookupWaiter w : _pendingLookups) {
-    if (nonce == w.nonce) {
-      w.destination=d;
-      if (w.name != null) {
+    if (nonce == w.nonce || h.equals(w.hash)) {
 synchronized (_lookupCache) {
-          _lookupCache.put(w.name,d);
-        }
+        if (w.name != null)         _lookupCache.put(w.name,d);
+        _lookupCache.put(h,d);
       }
 synchronized (w) {
+        w.destination=d;
         w.notifyAll();
       }
     }

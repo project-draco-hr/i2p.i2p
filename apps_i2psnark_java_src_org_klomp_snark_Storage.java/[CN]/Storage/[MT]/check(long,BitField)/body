@@ -1,0 +1,67 @@
+{
+  boolean areFilesPublic=_util.getFilesPublic();
+  boolean useSavedBitField=savedTime > 0 && savedBitField != null;
+  if (!_torrentFiles.isEmpty())   throw new IllegalStateException();
+  List<List<String>> files=metainfo.getFiles();
+  if (files == null) {
+    if (_log.shouldLog(Log.INFO))     _log.info("Creating/Checking file: " + _base);
+    if (!_base.exists() && !_base.createNewFile())     throw new IOException("Could not create file " + _base);
+    _torrentFiles.add(new TorrentFile(_base,_base,metainfo.getTotalLength()));
+    if (useSavedBitField) {
+      long lm=_base.lastModified();
+      if (lm <= 0 || lm > savedTime)       useSavedBitField=false;
+ else       if (_base.length() != metainfo.getTotalLength())       useSavedBitField=false;
+    }
+  }
+ else {
+    if (_log.shouldLog(Log.INFO))     _log.info("Creating/Checking directory: " + _base);
+    if (!_base.mkdir() && !_base.isDirectory())     throw new IOException("Could not create directory " + _base);
+    List<Long> ls=metainfo.getLengths();
+    int size=files.size();
+    long total=0;
+    for (int i=0; i < size; i++) {
+      List<String> path=files.get(i);
+      File f=createFileFromNames(_base,path,areFilesPublic);
+      for (int j=0; j < i; j++) {
+        if (f.equals(_torrentFiles.get(j).RAFfile)) {
+          path=new ArrayList<String>(path);
+          int last=path.size() - 1;
+          String lastPath=path.get(last);
+          int dot=lastPath.lastIndexOf('.');
+          if (dot >= 0)           lastPath=lastPath.substring(0,dot) + '_' + lastPath.substring(dot);
+ else           lastPath='_' + lastPath;
+          path.set(last,lastPath);
+          f=createFileFromNames(_base,path,areFilesPublic);
+          j=0;
+        }
+      }
+      long len=ls.get(i).longValue();
+      _torrentFiles.add(new TorrentFile(_base,f,len));
+      total+=len;
+      if (useSavedBitField) {
+        long lm=f.lastModified();
+        if (lm <= 0 || lm > savedTime)         useSavedBitField=false;
+ else         if (f.length() != len)         useSavedBitField=false;
+      }
+    }
+    long metalength=metainfo.getTotalLength();
+    if (total != metalength)     throw new IOException("File lengths do not add up " + total + " != "+ metalength);
+  }
+  if (useSavedBitField) {
+    bitfield=savedBitField;
+    needed=metainfo.getPieces() - bitfield.count();
+    _probablyComplete=complete();
+    if (_log.shouldLog(Log.INFO))     _log.info("Found saved state and files unchanged, skipping check");
+  }
+ else {
+    changed=true;
+    if (_log.shouldLog(Log.INFO))     _log.info("Forcing check");
+    checkCreateFiles(false);
+  }
+  if (complete()) {
+    if (_log.shouldLog(Log.INFO))     _log.info("Torrent is complete");
+  }
+ else {
+    if (_log.shouldLog(Log.INFO))     _log.info("Still need " + needed + " out of "+ metainfo.getPieces()+ " pieces");
+  }
+}

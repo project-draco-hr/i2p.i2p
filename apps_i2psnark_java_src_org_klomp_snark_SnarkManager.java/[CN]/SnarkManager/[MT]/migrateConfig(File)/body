@@ -1,0 +1,94 @@
+{
+  File dir=new SecureDirectory(oldFile + CONFIG_DIR_SUFFIX);
+  if ((!dir.exists()) && (!dir.mkdirs())) {
+    _log.error("Error creating I2PSnark config dir " + dir);
+    throw new RuntimeException("Error creating I2PSnark config dir " + dir);
+  }
+  String oldName=oldFile.toString();
+  if (oldName.endsWith(CONFIG_FILE_SUFFIX)) {
+    String oldDHT=oldName.replace(CONFIG_FILE_SUFFIX,KRPC.DHT_FILE_SUFFIX);
+    File oldDHTFile=new File(oldDHT);
+    if (oldDHTFile.exists()) {
+      File newDHTFile=new File(dir,"i2psnark" + KRPC.DHT_FILE_SUFFIX);
+      FileUtil.rename(oldDHTFile,newDHTFile);
+    }
+  }
+  if (!oldFile.exists())   return dir;
+  Properties oldProps=new Properties();
+  try {
+    DataHelper.loadProps(oldProps,oldFile);
+    String auto=(String)oldProps.remove(PROP_OLD_AUTO_START);
+    if (auto != null)     oldProps.setProperty(PROP_AUTO_START,auto);
+  }
+ catch (  IOException ioe) {
+    _log.error("Error loading I2PSnark config " + oldFile,ioe);
+    return dir;
+  }
+  Map<String,Properties> configs=new HashMap<String,Properties>(16);
+  for (Iterator<Map.Entry<Object,Object>> iter=oldProps.entrySet().iterator(); iter.hasNext(); ) {
+    Map.Entry<Object,Object> e=iter.next();
+    String k=(String)e.getKey();
+    if (k.startsWith(PROP_META_PREFIX)) {
+      iter.remove();
+      String v=(String)e.getValue();
+      try {
+        k=k.substring(PROP_META_PREFIX.length());
+        String h=k.substring(0,28);
+        k=k.substring(29);
+        Properties tprops=configs.get(h);
+        if (tprops == null) {
+          tprops=new OrderedProperties();
+          configs.put(h,tprops);
+        }
+        if (k.equals(PROP_META_BITFIELD)) {
+          int comma=v.indexOf(',');
+          if (comma > 0 && v.length() > comma + 1) {
+            tprops.put(PROP_META_STAMP,v.substring(0,comma));
+            tprops.put(PROP_META_BITFIELD,v.substring(comma + 1));
+          }
+ else {
+            tprops.put(PROP_META_STAMP,v);
+          }
+        }
+ else {
+          tprops.put(k,v);
+        }
+      }
+ catch (      IndexOutOfBoundsException ioobe) {
+        continue;
+      }
+    }
+  }
+  for (  Map.Entry<String,Properties> e : configs.entrySet()) {
+    String b64=e.getKey();
+    Properties props=e.getValue();
+    if (props.isEmpty())     continue;
+    b64=b64.replace('$','=');
+    byte[] ih=Base64.decode(b64);
+    if (ih == null || ih.length != 20)     continue;
+    File cfg=configFile(dir,ih);
+    if (!cfg.exists()) {
+      File subdir=cfg.getParentFile();
+      if (!subdir.exists())       subdir.mkdirs();
+      try {
+        DataHelper.storeProps(props,cfg);
+      }
+ catch (      IOException ioe) {
+        _log.error("Error storing I2PSnark config " + cfg,ioe);
+      }
+    }
+  }
+  File newFile=new File(dir,CONFIG_FILE);
+  Properties newProps=new OrderedProperties();
+  newProps.putAll(oldProps);
+  try {
+    DataHelper.storeProps(newProps,newFile);
+  }
+ catch (  IOException ioe) {
+    _log.error("Error storing I2PSnark config " + newFile,ioe);
+    return dir;
+  }
+  oldFile.delete();
+  if (_log.shouldLog(Log.WARN))   _log.warn("Config migrated from " + oldFile + " to "+ dir);
+  return dir;
+}

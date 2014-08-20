@@ -1,0 +1,20 @@
+{
+synchronized (_snarks) {
+    Snark snark=getTorrentByInfoHash(metainfo.getInfoHash());
+    if (snark != null) {
+      addMessage(_("Torrent with this info hash is already running: {0}",snark.getBaseName()));
+      return false;
+    }
+    saveTorrentStatus(metainfo,bitfield,null,baseFile,true);
+    try {
+      locked_writeMetaInfo(metainfo,filename,areFilesPublic());
+      addTorrent(filename,baseFile,dontAutoStart);
+    }
+ catch (    IOException ioe) {
+      addMessage(_("Failed to copy torrent file to {0}",filename));
+      _log.error("Failed to write torrent file",ioe);
+      return false;
+    }
+  }
+  return true;
+}

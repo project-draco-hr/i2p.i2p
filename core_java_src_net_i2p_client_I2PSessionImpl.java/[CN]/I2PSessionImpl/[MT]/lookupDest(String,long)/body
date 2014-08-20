@@ -25,6 +25,7 @@ synchronized (_lookupCache) {
   int nonce=_lookupID.incrementAndGet() & 0x7fffffff;
   LookupWaiter waiter=new LookupWaiter(name,nonce);
   _pendingLookups.offer(waiter);
+  Destination rv=null;
   try {
     if (_log.shouldLog(Log.INFO))     _log.info("Sending HostLookup for " + name);
     SessionId id=_sessionId;
@@ -33,6 +34,7 @@ synchronized (_lookupCache) {
     try {
 synchronized (waiter) {
         waiter.wait(maxWait);
+        rv=waiter.destination;
       }
     }
  catch (    InterruptedException ie) {
@@ -42,5 +44,5 @@ synchronized (waiter) {
   finally {
     _pendingLookups.remove(waiter);
   }
-  return waiter.destination;
+  return rv;
 }
