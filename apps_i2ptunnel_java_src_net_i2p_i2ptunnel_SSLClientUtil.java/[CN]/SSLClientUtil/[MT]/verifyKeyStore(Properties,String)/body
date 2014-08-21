@@ -1,0 +1,27 @@
+{
+  String name=opts.getProperty(optPfx + PROP_KEY_ALIAS);
+  if (name == null) {
+    name=KeyStoreUtil.randomString();
+    opts.setProperty(optPfx + PROP_KEY_ALIAS,name);
+  }
+  String ksname=opts.getProperty(optPfx + PROP_KS_NAME);
+  if (ksname == null) {
+    ksname=PREFIX + name + KS_SUFFIX;
+    opts.setProperty(optPfx + PROP_KS_NAME,ksname);
+  }
+  File ks=new File(ksname);
+  if (!ks.isAbsolute()) {
+    ks=new File(I2PAppContext.getGlobalContext().getConfigDir(),KS_DIR);
+    ks=new File(ks,ksname);
+  }
+  if (ks.exists())   return false;
+  File dir=ks.getParentFile();
+  if (!dir.exists()) {
+    File sdir=new SecureDirectory(dir.getAbsolutePath());
+    if (!sdir.mkdirs())     throw new IOException("Unable to create keystore " + ks);
+  }
+  boolean rv=createKeyStore(ks,name,opts,optPfx);
+  if (!rv)   throw new IOException("Unable to create keystore " + ks);
+  exportCert(ks,name,opts,optPfx);
+  return true;
+}
