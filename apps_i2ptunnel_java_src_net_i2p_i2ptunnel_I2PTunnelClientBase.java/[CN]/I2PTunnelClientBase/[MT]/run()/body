@@ -8,7 +8,19 @@ synchronized (this) {
       }
       return;
     }
-    ss=new ServerSocket(localPort,0,addr);
+    Properties opts=getTunnel().getClientOptions();
+    boolean useSSL=Boolean.parseBoolean(opts.getProperty(PROP_USE_SSL));
+    if (useSSL) {
+      boolean wasCreated=SSLClientUtil.verifyKeyStore(opts);
+      if (wasCreated) {
+        _log.logAlways(Log.WARN,"Created new i2ptunnel SSL keys but can't save the config, disable and enable via i2ptunnel GUI");
+      }
+      SSLServerSocketFactory fact=SSLClientUtil.initializeFactory(opts);
+      ss=fact.createServerSocket(localPort,0,addr);
+    }
+ else {
+      ss=new ServerSocket(localPort,0,addr);
+    }
     if (localPort == 0) {
       localPort=ss.getLocalPort();
     }

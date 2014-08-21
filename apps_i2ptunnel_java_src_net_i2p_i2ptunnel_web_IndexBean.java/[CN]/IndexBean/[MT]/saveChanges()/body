@@ -1,6 +1,21 @@
 {
   TunnelController cur=getController(_tunnel);
   Properties config=getConfig();
+  String ksMsg=null;
+  String type=config.getProperty(TunnelController.PROP_TYPE);
+  if (TunnelController.TYPE_STD_CLIENT.equals(type) || TunnelController.TYPE_IRC_CLIENT.equals(type)) {
+    if (Boolean.parseBoolean(config.getProperty(OPT + I2PTunnelClientBase.PROP_USE_SSL))) {
+      try {
+        boolean created=SSLClientUtil.verifyKeyStore(config,OPT);
+        if (created) {
+          ksMsg="Created new self-signed certificate for tunnel " + getTunnelName(_tunnel);
+        }
+      }
+ catch (      IOException ioe) {
+        ksMsg="Failed to create new self-signed certificate for tunnel " + getTunnelName(_tunnel) + ", check logs: "+ ioe;
+      }
+    }
+  }
   if (cur == null) {
     cur=new TunnelController(config,"",true);
     _group.addController(cur);
@@ -39,5 +54,6 @@
     }
   }
   List<String> msgs=doSave();
+  if (ksMsg != null)   msgs.add(ksMsg);
   return getMessages(msgs);
 }
