@@ -1,0 +1,27 @@
+{
+  FieldElement x, y, yy, u, v, v3, vxx, check;
+  y=curve.getField().fromByteArray(s);
+  yy=y.square();
+  u=yy.subtractOne();
+  v=yy.multiply(curve.getD()).addOne();
+  v3=v.square().multiply(v);
+  x=v3.square().multiply(v).multiply(u);
+  x=x.pow22523();
+  x=v3.multiply(u).multiply(x);
+  vxx=x.square().multiply(v);
+  check=vxx.subtract(u);
+  if (check.isNonZero()) {
+    check=vxx.add(u);
+    if (check.isNonZero())     throw new IllegalArgumentException("not a valid GroupElement");
+    x=x.multiply(curve.getI());
+  }
+  if ((x.isNegative() ? 1 : 0) != Utils.bit(s,curve.getField().getb() - 1)) {
+    x=x.negate();
+  }
+  this.curve=curve;
+  repr=Representation.P3;
+  X=x;
+  Y=y;
+  Z=curve.getField().one;
+  T=X.multiply(Y);
+}

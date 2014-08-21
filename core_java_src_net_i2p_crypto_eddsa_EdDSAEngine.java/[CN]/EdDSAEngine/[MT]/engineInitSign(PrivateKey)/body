@@ -1,0 +1,20 @@
+{
+  if (digest != null)   digest.reset();
+  baos.reset();
+  if (privateKey instanceof EdDSAPrivateKey) {
+    EdDSAPrivateKey privKey=(EdDSAPrivateKey)privateKey;
+    key=privKey;
+    if (digest == null) {
+      try {
+        digest=MessageDigest.getInstance(key.getParams().getHashAlgorithm());
+      }
+ catch (      NoSuchAlgorithmException e) {
+        throw new InvalidKeyException("cannot get required digest " + key.getParams().getHashAlgorithm() + " for private key.");
+      }
+    }
+ else     if (!key.getParams().getHashAlgorithm().equals(digest.getAlgorithm()))     throw new InvalidKeyException("Key hash algorithm does not match chosen digest");
+    int b=privKey.getParams().getCurve().getField().getb();
+    digest.update(privKey.getH(),b / 8,b / 4 - b / 8);
+  }
+ else   throw new InvalidKeyException("cannot identify EdDSA private key.");
+}

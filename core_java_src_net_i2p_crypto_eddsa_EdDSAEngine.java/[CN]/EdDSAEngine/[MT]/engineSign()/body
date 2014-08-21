@@ -1,0 +1,19 @@
+{
+  Curve curve=key.getParams().getCurve();
+  ScalarOps sc=key.getParams().getScalarOps();
+  byte[] a=((EdDSAPrivateKey)key).geta();
+  byte[] message=baos.toByteArray();
+  byte[] r=digest.digest(message);
+  r=sc.reduce(r);
+  GroupElement R=key.getParams().getB().scalarMultiply(r);
+  byte[] Rbyte=R.toByteArray();
+  digest.update(Rbyte);
+  digest.update(((EdDSAPrivateKey)key).getAbyte());
+  byte[] h=digest.digest(message);
+  h=sc.reduce(h);
+  byte[] S=sc.multiplyAndAdd(h,a,r);
+  int b=curve.getField().getb();
+  ByteBuffer out=ByteBuffer.allocate(b / 4);
+  out.put(Rbyte).put(S);
+  return out.array();
+}

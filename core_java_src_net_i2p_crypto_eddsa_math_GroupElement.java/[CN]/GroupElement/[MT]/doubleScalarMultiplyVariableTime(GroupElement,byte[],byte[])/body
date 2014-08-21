@@ -1,0 +1,28 @@
+{
+  byte[] aslide=slide(a);
+  byte[] bslide=slide(b);
+  GroupElement r=curve.getZero(Representation.P2);
+  int i;
+  for (i=255; i >= 0; --i) {
+    if (aslide[i] != 0 || bslide[i] != 0)     break;
+  }
+synchronized (this) {
+    for (; i >= 0; --i) {
+      GroupElement t=r.dbl();
+      if (aslide[i] > 0) {
+        t=t.toP3().madd(A.dblPrecmp[aslide[i] / 2]);
+      }
+ else       if (aslide[i] < 0) {
+        t=t.toP3().msub(A.dblPrecmp[(-aslide[i]) / 2]);
+      }
+      if (bslide[i] > 0) {
+        t=t.toP3().madd(dblPrecmp[bslide[i] / 2]);
+      }
+ else       if (bslide[i] < 0) {
+        t=t.toP3().msub(dblPrecmp[(-bslide[i]) / 2]);
+      }
+      r=t.toP2();
+    }
+  }
+  return r;
+}

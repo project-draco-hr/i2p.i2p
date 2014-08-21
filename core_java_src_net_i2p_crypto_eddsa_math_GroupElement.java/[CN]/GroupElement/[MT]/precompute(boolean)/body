@@ -1,0 +1,30 @@
+{
+  GroupElement Bi;
+  if (precomputeSingle && precmp == null) {
+    precmp=new GroupElement[32][8];
+    Bi=this;
+    for (int i=0; i < 32; i++) {
+      GroupElement Bij=Bi;
+      for (int j=0; j < 8; j++) {
+        FieldElement recip=Bij.Z.invert();
+        FieldElement x=Bij.X.multiply(recip);
+        FieldElement y=Bij.Y.multiply(recip);
+        precmp[i][j]=precomp(curve,y.add(x),y.subtract(x),x.multiply(y).multiply(curve.get2D()));
+        Bij=Bij.add(Bi.toCached()).toP3();
+      }
+      for (int k=0; k < 8; k++) {
+        Bi=Bi.add(Bi.toCached()).toP3();
+      }
+    }
+  }
+  if (dblPrecmp != null)   return;
+  dblPrecmp=new GroupElement[8];
+  Bi=this;
+  for (int i=0; i < 8; i++) {
+    FieldElement recip=Bi.Z.invert();
+    FieldElement x=Bi.X.multiply(recip);
+    FieldElement y=Bi.Y.multiply(recip);
+    dblPrecmp[i]=precomp(curve,y.add(x),y.subtract(x),x.multiply(y).multiply(curve.get2D()));
+    Bi=add(add(Bi.toCached()).toP3().toCached()).toP3();
+  }
+}
