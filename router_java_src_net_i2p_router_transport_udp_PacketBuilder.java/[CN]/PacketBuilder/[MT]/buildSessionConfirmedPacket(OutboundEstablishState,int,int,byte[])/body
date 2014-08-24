@@ -27,14 +27,16 @@
   if (fragmentNum == numFragments - 1) {
     DataHelper.toLong(data,off,4,state.getSentSignedOnTime());
     off+=4;
-    int mod=(off + Signature.SIGNATURE_BYTES) & 0x0f;
+    Signature sig=state.getSentSignature();
+    int siglen=sig.length();
+    int mod=(off + siglen) & 0x0f;
     if (mod != 0) {
       int paddingRequired=16 - mod;
       _context.random().nextBytes(data,off,paddingRequired);
       off+=paddingRequired;
     }
-    System.arraycopy(state.getSentSignature().getData(),0,data,off,Signature.SIGNATURE_BYTES);
-    off+=Signature.SIGNATURE_BYTES;
+    System.arraycopy(sig.getData(),0,data,off,siglen);
+    off+=siglen;
   }
  else {
     off=pad1(data,off);

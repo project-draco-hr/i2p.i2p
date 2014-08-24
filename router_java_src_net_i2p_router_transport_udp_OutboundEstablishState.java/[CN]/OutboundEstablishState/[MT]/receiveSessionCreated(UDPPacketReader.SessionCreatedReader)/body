@@ -14,8 +14,18 @@
   _alicePort=reader.readPort();
   _receivedRelayTag=reader.readRelayTag();
   _receivedSignedOnTime=reader.readSignedOnTime();
-  _receivedEncryptedSignature=new byte[Signature.SIGNATURE_BYTES + 8];
-  reader.readEncryptedSignature(_receivedEncryptedSignature,0);
+  SigType type=_remotePeer.getSigningPublicKey().getType();
+  if (type == null) {
+    fail();
+    packetReceived();
+    return;
+  }
+  int sigLen=type.getSigLen();
+  int mod=sigLen % 16;
+  int pad=(mod == 0) ? 0 : (16 - mod);
+  int esigLen=sigLen + pad;
+  _receivedEncryptedSignature=new byte[esigLen];
+  reader.readEncryptedSignature(_receivedEncryptedSignature,0,esigLen);
   _receivedIV=new byte[UDPPacket.IV_SIZE];
   reader.readIV(_receivedIV,0);
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Receive session created:Sig: " + Base64.encode(_receivedEncryptedSignature) + "receivedIV: "+ Base64.encode(_receivedIV)+ "AliceIP: "+ Addresses.toString(_aliceIP)+ " RelayTag: "+ _receivedRelayTag+ " SignedOn: "+ _receivedSignedOnTime+ ' '+ this.toString());
