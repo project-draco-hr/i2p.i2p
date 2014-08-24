@@ -7,7 +7,6 @@
   File rkf2=new File(getContext().getRouterDir(),CreateRouterInfoJob.KEYS2_FILENAME);
   boolean keys2Exist=rkf2.exists();
   InputStream fis1=null;
-  InputStream fis2=null;
   try {
     if (infoExists && (keys2Exist || keysExist)) {
       fis1=new BufferedInputStream(new FileInputStream(rif));
@@ -18,27 +17,14 @@
       _us=info;
     }
     if (keys2Exist || keysExist) {
-      SigType stype;
-      if (keys2Exist) {
-        fis2=new BufferedInputStream(new FileInputStream(rkf2));
-        byte[] magic=new byte[CreateRouterInfoJob.KEYS2_MAGIC.length];
-        DataHelper.read(fis2,magic);
-        if (!DataHelper.eq(magic,CreateRouterInfoJob.KEYS2_MAGIC))         throw new IOException("Bad magic");
-        int ctype=(int)DataHelper.readLong(fis2,2);
-        if (ctype != 0)         throw new IOException("Unsupported RI crypto type " + ctype);
-        int sstype=(int)DataHelper.readLong(fis2,2);
-        stype=SigType.getByCode(sstype);
-        if (stype == null || !stype.isAvailable())         throw new IOException("Unsupported RI sig type " + stype);
-        DataHelper.skip(fis2,CreateRouterInfoJob.KEYS2_UNUSED_BYTES);
-      }
- else {
-        fis2=new BufferedInputStream(new FileInputStream(rkf));
-        stype=SigType.DSA_SHA1;
-      }
+      KeyData kd=readKeyData(rkf,rkf2);
+      PublicKey pubkey=kd.routerIdentity.getPublicKey();
+      SigningPublicKey signingPubKey=kd.routerIdentity.getSigningPublicKey();
+      PrivateKey privkey=kd.privateKey;
+      SigningPrivateKey signingPrivKey=kd.signingPrivateKey;
+      SigType stype=signingPubKey.getType();
       SigType cstype=CreateRouterInfoJob.getSigTypeConfig(getContext());
       boolean sigTypeChanged=stype != cstype;
-      PrivateKey privkey=new PrivateKey();
-      privkey.readBytes(fis2);
       if (sigTypeChanged || shouldRebuild(privkey)) {
         if (sigTypeChanged)         _log.logAlways(Log.WARN,"Rebuilding RouterInfo with new signature type " + cstype);
         _us=null;
@@ -50,27 +36,11 @@
           }
           fis1=null;
         }
-        try {
-          fis2.close();
-        }
- catch (        IOException ioe) {
-        }
-        fis2=null;
         rif.delete();
         rkf.delete();
         rkf2.delete();
         return;
       }
-      SigningPrivateKey signingPrivKey=new SigningPrivateKey(stype);
-      signingPrivKey.readBytes(fis2);
-      PublicKey pubkey=new PublicKey();
-      pubkey.readBytes(fis2);
-      SigningPublicKey signingPubKey=new SigningPublicKey(stype);
-      int padLen=SigningPublicKey.KEYSIZE_BYTES - signingPubKey.length();
-      if (padLen > 0) {
-        DataHelper.skip(fis2,padLen);
-      }
-      signingPubKey.readBytes(fis2);
       getContext().keyManager().setKeys(pubkey,privkey,signingPubKey,signingPrivKey);
     }
   }
@@ -84,14 +54,6 @@
  catch (      IOException ioe2) {
       }
       fis1=null;
-    }
-    if (fis2 != null) {
-      try {
-        fis2.close();
-      }
- catch (      IOException ioe2) {
-      }
-      fis2=null;
     }
     rif.delete();
     rkf.delete();
@@ -108,14 +70,6 @@ catch (  DataFormatException dfe) {
       }
       fis1=null;
     }
-    if (fis2 != null) {
-      try {
-        fis2.close();
-      }
- catch (      IOException ioe) {
-      }
-      fis2=null;
-    }
     rif.delete();
     rkf.delete();
     rkf2.delete();
@@ -123,11 +77,6 @@ catch (  DataFormatException dfe) {
  finally {
     if (fis1 != null)     try {
       fis1.close();
-    }
- catch (    IOException ioe) {
-    }
-    if (fis2 != null)     try {
-      fis2.close();
     }
  catch (    IOException ioe) {
     }

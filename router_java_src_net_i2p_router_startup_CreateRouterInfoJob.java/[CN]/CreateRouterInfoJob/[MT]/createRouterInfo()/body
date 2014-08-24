@@ -2,7 +2,6 @@
   SigType type=getSigTypeConfig(getContext());
   RouterInfo info=new RouterInfo();
   OutputStream fos1=null;
-  OutputStream fos2=null;
   try {
     info.setAddresses(getContext().commSystem().createAddresses());
     Properties stats=getContext().statPublisher().publishStatistics();
@@ -39,16 +38,8 @@
     fos1=new BufferedOutputStream(new SecureFileOutputStream(ifile));
     info.writeBytes(fos1);
     File kfile=new File(getContext().getRouterDir(),KEYS2_FILENAME);
-    fos2=new BufferedOutputStream(new SecureFileOutputStream(kfile));
-    fos2.write(KEYS2_MAGIC);
-    DataHelper.writeLong(fos2,2,0);
-    DataHelper.writeLong(fos2,2,type.getCode());
-    fos2.write(new byte[KEYS2_UNUSED_BYTES]);
-    privkey.writeBytes(fos2);
-    signingPrivKey.writeBytes(fos2);
-    pubkey.writeBytes(fos2);
-    if (padding != null)     fos2.write(padding);
-    signingPubKey.writeBytes(fos2);
+    PrivateKeyFile pkf=new PrivateKeyFile(kfile,pubkey,signingPubKey,cert,privkey,signingPrivKey,padding);
+    pkf.write();
     getContext().keyManager().setKeys(pubkey,privkey,signingPubKey,signingPrivKey);
     if (_log.shouldLog(Log.INFO))     _log.info("Router info created and stored at " + ifile.getAbsolutePath() + " with private keys stored at "+ kfile.getAbsolutePath()+ " ["+ info+ "]");
     getContext().router().eventLog().addEvent(EventLog.REKEYED,ident.calculateHash().toBase64());
@@ -65,11 +56,6 @@ catch (  IOException ioe) {
  finally {
     if (fos1 != null)     try {
       fos1.close();
-    }
- catch (    IOException ioe) {
-    }
-    if (fos2 != null)     try {
-      fos2.close();
     }
  catch (    IOException ioe) {
     }

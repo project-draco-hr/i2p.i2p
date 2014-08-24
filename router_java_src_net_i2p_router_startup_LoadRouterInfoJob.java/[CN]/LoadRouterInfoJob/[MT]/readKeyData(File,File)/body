@@ -1,0 +1,37 @@
+{
+  RouterIdentity ri;
+  PrivateKey privkey;
+  SigningPrivateKey signingPrivKey;
+  if (rkf2.exists()) {
+    RouterPrivateKeyFile pkf=new RouterPrivateKeyFile(rkf2);
+    ri=pkf.getRouterIdentity();
+    privkey=pkf.getPrivKey();
+    signingPrivKey=pkf.getSigningPrivKey();
+  }
+ else {
+    InputStream fis=null;
+    try {
+      fis=new BufferedInputStream(new FileInputStream(rkf1));
+      privkey=new PrivateKey();
+      privkey.readBytes(fis);
+      signingPrivKey=new SigningPrivateKey();
+      signingPrivKey.readBytes(fis);
+      PublicKey pubkey=new PublicKey();
+      pubkey.readBytes(fis);
+      SigningPublicKey signingPubKey=new SigningPublicKey();
+      signingPubKey.readBytes(fis);
+      ri=new RouterIdentity();
+      ri.setPublicKey(pubkey);
+      ri.setSigningPublicKey(signingPubKey);
+      ri.setCertificate(Certificate.NULL_CERT);
+    }
+  finally {
+      if (fis != null)       try {
+        fis.close();
+      }
+ catch (      IOException ioe) {
+      }
+    }
+  }
+  return new KeyData(ri,privkey,signingPrivKey);
+}
