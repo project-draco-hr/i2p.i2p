@@ -80,33 +80,42 @@
         _curEncrypted=swap;
         _curEncryptedOffset=0;
         if (_aliceIdentSize <= 0) {
-          _aliceIdentSize=(int)DataHelper.fromLong(_curDecrypted,0,2);
-          _sz_aliceIdent_tsA_padding_aliceSigSize=2 + _aliceIdentSize + 4+ Signature.SIGNATURE_BYTES;
+          int sz=(int)DataHelper.fromLong(_curDecrypted,0,2);
+          if (sz < MIN_RI_SIZE || sz > MAX_RI_SIZE) {
+            _context.statManager().addRateData("ntcp.invalidInboundSize",sz);
+            fail("size is invalid",new Exception("size is " + sz));
+            return;
+          }
+          _aliceIdentSize=sz;
+        }
+        try {
+          _sz_aliceIdent_tsA_padding_aliceSig.write(_curDecrypted);
+        }
+ catch (        IOException ioe) {
+          if (_log.shouldLog(Log.ERROR))           _log.error(prefix() + "Error writing to the baos?",ioe);
+        }
+        if (_aliceIdent == null && _sz_aliceIdent_tsA_padding_aliceSig.size() >= 2 + _aliceIdentSize) {
+          readAliceRouterIdentity();
+          if (_aliceIdent == null) {
+            return;
+          }
+          SigType type=_aliceIdent.getSigningPublicKey().getType();
+          if (type == null) {
+            fail("Unsupported sig type");
+            return;
+          }
+          _sz_aliceIdent_tsA_padding_aliceSigSize=2 + _aliceIdentSize + 4+ type.getSigLen();
           int rem=(_sz_aliceIdent_tsA_padding_aliceSigSize % 16);
           int padding=0;
           if (rem > 0)           padding=16 - rem;
           _sz_aliceIdent_tsA_padding_aliceSigSize+=padding;
-          try {
-            _sz_aliceIdent_tsA_padding_aliceSig.write(_curDecrypted);
-          }
- catch (          IOException ioe) {
-            if (_log.shouldLog(Log.ERROR))             _log.error(prefix() + "Error writing to the baos?",ioe);
-          }
           if (_log.shouldLog(Log.DEBUG))           _log.debug(prefix() + "alice ident size decrypted as " + _aliceIdentSize+ ", making the padding at "+ padding+ " and total size at "+ _sz_aliceIdent_tsA_padding_aliceSigSize);
         }
- else {
-          try {
-            _sz_aliceIdent_tsA_padding_aliceSig.write(_curDecrypted);
-          }
- catch (          IOException ioe) {
-            if (_log.shouldLog(Log.ERROR))             _log.error(prefix() + "Error writing to the baos?",ioe);
-          }
-          if (_sz_aliceIdent_tsA_padding_aliceSig.size() >= _sz_aliceIdent_tsA_padding_aliceSigSize) {
-            verifyInbound();
-            if (!_corrupt && _verified && src.hasRemaining())             prepareExtra(src);
-            if (_log.shouldLog(Log.DEBUG))             _log.debug(prefix() + "verifying size (sz=" + _sz_aliceIdent_tsA_padding_aliceSig.size()+ " expected="+ _sz_aliceIdent_tsA_padding_aliceSigSize+ " corrupt="+ _corrupt+ " verified="+ _verified+ " extra="+ (_extra != null ? _extra.length : 0)+ ")");
-            return;
-          }
+        if (_aliceIdent != null && _sz_aliceIdent_tsA_padding_aliceSig.size() >= _sz_aliceIdent_tsA_padding_aliceSigSize) {
+          verifyInbound();
+          if (!_corrupt && _verified && src.hasRemaining())           prepareExtra(src);
+          if (_log.shouldLog(Log.DEBUG))           _log.debug(prefix() + "verifying size (sz=" + _sz_aliceIdent_tsA_padding_aliceSig.size()+ " expected="+ _sz_aliceIdent_tsA_padding_aliceSigSize+ " corrupt="+ _corrupt+ " verified="+ _verified+ " extra="+ (_extra != null ? _extra.length : 0)+ ")");
+          return;
         }
       }
  else {

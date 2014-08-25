@@ -69,7 +69,7 @@
       DataHelper.toLong(preSign,_X.length + _Y.length + Hash.HASH_LENGTH+ 4,4,_tsB);
       Signature sig=_context.dsa().sign(preSign,_context.keyManager().getSigningPrivateKey());
       byte ident[]=_context.router().getRouterInfo().getIdentity().toByteArray();
-      int min=2 + ident.length + 4+ Signature.SIGNATURE_BYTES;
+      int min=2 + ident.length + 4+ sig.length();
       int rem=min % 16;
       int padding=0;
       if (rem > 0)       padding=16 - rem;
@@ -78,7 +78,7 @@
       System.arraycopy(ident,0,preEncrypt,2,ident.length);
       DataHelper.toLong(preEncrypt,2 + ident.length,4,_tsA);
       if (padding > 0)       _context.random().nextBytes(preEncrypt,2 + ident.length + 4,padding);
-      System.arraycopy(sig.getData(),0,preEncrypt,2 + ident.length + 4+ padding,Signature.SIGNATURE_BYTES);
+      System.arraycopy(sig.getData(),0,preEncrypt,2 + ident.length + 4+ padding,sig.length());
       _prevEncrypted=new byte[preEncrypt.length];
       _context.aes().encrypt(preEncrypt,0,_prevEncrypted,0,_dh.getSessionKey(),_hX_xor_bobIdentHash,_hX_xor_bobIdentHash.length - 16,preEncrypt.length);
       _transport.getPumper().wantsWrite(_con,_prevEncrypted);
@@ -87,7 +87,12 @@
   if (_received >= _Y.length + _e_hXY_tsB.length && src.hasRemaining()) {
     int off=0;
     if (_e_bobSig == null) {
-      _e_bobSig=new byte[48];
+      int siglen=_con.getRemotePeer().getSigningPublicKey().getType().getSigLen();
+      int rem=siglen % 16;
+      int padding;
+      if (rem > 0)       padding=16 - rem;
+ else       padding=0;
+      _e_bobSig=new byte[siglen + padding];
       if (_log.shouldLog(Log.DEBUG))       _log.debug(prefix() + "receiving E(S(X+Y+Alice.identHash+tsA+tsB)+padding, sk, prev) (remaining? " + src.hasRemaining()+ ")");
     }
  else {
@@ -101,9 +106,11 @@
       if (off >= _e_bobSig.length) {
         byte bobSig[]=new byte[_e_bobSig.length];
         _context.aes().decrypt(_e_bobSig,0,bobSig,0,_dh.getSessionKey(),_e_hXY_tsB,_e_hXY_tsB.length - 16,_e_bobSig.length);
-        byte bobSigData[]=new byte[Signature.SIGNATURE_BYTES];
-        System.arraycopy(bobSig,0,bobSigData,0,Signature.SIGNATURE_BYTES);
-        Signature sig=new Signature(bobSigData);
+        SigType type=_con.getRemotePeer().getSigningPublicKey().getType();
+        int siglen=type.getSigLen();
+        byte bobSigData[]=new byte[siglen];
+        System.arraycopy(bobSig,0,bobSigData,0,siglen);
+        Signature sig=new Signature(type,bobSigData);
         byte toVerify[]=new byte[_X.length + _Y.length + Hash.HASH_LENGTH+ 4+ 4];
         int voff=0;
         System.arraycopy(_X,0,toVerify,voff,_X.length);

@@ -13,9 +13,14 @@
   DataHelper.toLong(toSign,off,4,_tsB);
   off+=4;
   Signature sig=_context.dsa().sign(toSign,_context.keyManager().getSigningPrivateKey());
-  byte preSig[]=new byte[Signature.SIGNATURE_BYTES + 8];
-  System.arraycopy(sig.getData(),0,preSig,0,Signature.SIGNATURE_BYTES);
-  _context.random().nextBytes(preSig,Signature.SIGNATURE_BYTES,8);
+  int siglen=sig.length();
+  int rem=siglen % 16;
+  int padding;
+  if (rem > 0)   padding=16 - rem;
+ else   padding=0;
+  byte preSig[]=new byte[siglen + padding];
+  System.arraycopy(sig.getData(),0,preSig,0,siglen);
+  if (padding > 0)   _context.random().nextBytes(preSig,siglen,padding);
   _e_bobSig=new byte[preSig.length];
   _context.aes().encrypt(preSig,0,_e_bobSig,0,_dh.getSessionKey(),_e_hXY_tsB,_e_hXY_tsB.length - 16,_e_bobSig.length);
   if (_log.shouldLog(Log.DEBUG))   _log.debug(prefix() + "Sending encrypted inbound confirmation");
