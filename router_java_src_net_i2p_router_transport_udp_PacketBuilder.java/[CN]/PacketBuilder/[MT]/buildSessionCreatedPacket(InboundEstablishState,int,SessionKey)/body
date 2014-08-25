@@ -32,12 +32,20 @@
   off+=4;
   DataHelper.toLong(data,off,4,state.getSentSignedOnTime());
   off+=4;
-  System.arraycopy(state.getSentSignature().getData(),0,data,off,Signature.SIGNATURE_BYTES);
-  off+=Signature.SIGNATURE_BYTES;
-  long l=_context.random().nextLong();
-  if (l < 0)   l=0 - l;
-  DataHelper.toLong(data,off,8,l);
-  off+=8;
+  Signature sig=state.getSentSignature();
+  int siglen=sig.length();
+  System.arraycopy(sig.getData(),0,data,off,siglen);
+  off+=siglen;
+  int rem=siglen % 16;
+  int padding;
+  if (rem > 0) {
+    padding=16 - rem;
+    _context.random().nextBytes(data,off,padding);
+    off+=padding;
+  }
+ else {
+    padding=0;
+  }
   if (_log.shouldLog(Log.DEBUG)) {
     StringBuilder buf=new StringBuilder(128);
     buf.append("Sending sessionCreated:");
@@ -45,14 +53,14 @@
     buf.append(" Bob: ").append(Addresses.toString(state.getReceivedOurIP(),externalPort));
     buf.append(" RelayTag: ").append(state.getSentRelayTag());
     buf.append(" SignedOn: ").append(state.getSentSignedOnTime());
-    buf.append(" signature: ").append(Base64.encode(state.getSentSignature().getData()));
+    buf.append(" signature: ").append(Base64.encode(sig.getData()));
     buf.append("\nRawCreated: ").append(Base64.encode(data,0,off));
-    buf.append("\nsignedTime: ").append(Base64.encode(data,off - 8 - Signature.SIGNATURE_BYTES- 4,4));
+    buf.append("\nsignedTime: ").append(Base64.encode(data,off - padding - siglen- 4,4));
     _log.debug(buf.toString());
   }
   byte[] iv=SimpleByteCache.acquire(UDPPacket.IV_SIZE);
   _context.random().nextBytes(iv);
-  int encrWrite=Signature.SIGNATURE_BYTES + 8;
+  int encrWrite=siglen + padding;
   int sigBegin=off - encrWrite;
   _context.aes().encrypt(data,sigBegin,data,sigBegin,state.getCipherKey(),iv,encrWrite);
   off=pad1(data,off);

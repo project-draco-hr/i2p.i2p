@@ -1,48 +1,30 @@
 {
-  int identSize=0;
-  for (int i=0; i < _receivedIdentity.length; i++)   identSize+=_receivedIdentity[i].length;
-  byte ident[]=new byte[identSize];
+  if (_receivedUnconfirmedIdentity == null)   return;
+  if (_receivedSignature == null)   return;
+  byte signed[]=new byte[256 + 256 + _aliceIP.length+ 2+ _bobIP.length+ 2+ 4+ 4];
   int off=0;
-  for (int i=0; i < _receivedIdentity.length; i++) {
-    int len=_receivedIdentity[i].length;
-    System.arraycopy(_receivedIdentity[i],0,ident,off,len);
-    off+=len;
+  System.arraycopy(_receivedX,0,signed,off,_receivedX.length);
+  off+=_receivedX.length;
+  getSentY();
+  System.arraycopy(_sentY,0,signed,off,_sentY.length);
+  off+=_sentY.length;
+  System.arraycopy(_aliceIP,0,signed,off,_aliceIP.length);
+  off+=_aliceIP.length;
+  DataHelper.toLong(signed,off,2,_alicePort);
+  off+=2;
+  System.arraycopy(_bobIP,0,signed,off,_bobIP.length);
+  off+=_bobIP.length;
+  DataHelper.toLong(signed,off,2,_bobPort);
+  off+=2;
+  DataHelper.toLong(signed,off,4,_sentRelayTag);
+  off+=4;
+  DataHelper.toLong(signed,off,4,_receivedSignedOnTime);
+  Signature sig=new Signature(_receivedSignature);
+  boolean ok=_context.dsa().verifySignature(sig,signed,_receivedUnconfirmedIdentity.getSigningPublicKey());
+  if (ok) {
+    _receivedConfirmedIdentity=_receivedUnconfirmedIdentity;
   }
-  ByteArrayInputStream in=new ByteArrayInputStream(ident);
-  RouterIdentity peer=new RouterIdentity();
-  try {
-    peer.readBytes(in);
-    byte signed[]=new byte[256 + 256 + _aliceIP.length+ 2+ _bobIP.length+ 2+ 4+ 4];
-    off=0;
-    System.arraycopy(_receivedX,0,signed,off,_receivedX.length);
-    off+=_receivedX.length;
-    getSentY();
-    System.arraycopy(_sentY,0,signed,off,_sentY.length);
-    off+=_sentY.length;
-    System.arraycopy(_aliceIP,0,signed,off,_aliceIP.length);
-    off+=_aliceIP.length;
-    DataHelper.toLong(signed,off,2,_alicePort);
-    off+=2;
-    System.arraycopy(_bobIP,0,signed,off,_bobIP.length);
-    off+=_bobIP.length;
-    DataHelper.toLong(signed,off,2,_bobPort);
-    off+=2;
-    DataHelper.toLong(signed,off,4,_sentRelayTag);
-    off+=4;
-    DataHelper.toLong(signed,off,4,_receivedSignedOnTime);
-    Signature sig=new Signature(_receivedSignature);
-    boolean ok=_context.dsa().verifySignature(sig,signed,peer.getSigningPublicKey());
-    if (ok) {
-      _receivedConfirmedIdentity=peer;
-    }
  else {
-      if (_log.shouldLog(Log.WARN))       _log.warn("Signature failed from " + peer);
-    }
-  }
- catch (  DataFormatException dfe) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("Improperly formatted yet fully received ident",dfe);
-  }
-catch (  IOException ioe) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("Improperly formatted yet fully received ident",ioe);
+    if (_log.shouldLog(Log.WARN))     _log.warn("Signature failed from " + _receivedUnconfirmedIdentity);
   }
 }

@@ -1,0 +1,47 @@
+{
+  if (_signature != null)   throw new IllegalStateException();
+  _identity=new RouterIdentity();
+  _identity.readBytes(in);
+  InputStream din;
+  MessageDigest digest;
+  if (verifySig) {
+    digest=_identity.getSigningPublicKey().getType().getDigestInstance();
+    digest.update(_identity.toByteArray());
+    din=new DigestInputStream(in,digest);
+  }
+ else {
+    digest=null;
+    din=in;
+  }
+  _published=DataHelper.readLong(din,8);
+  int numAddresses=(int)DataHelper.readLong(din,1);
+  for (int i=0; i < numAddresses; i++) {
+    RouterAddress address=new RouterAddress();
+    address.readBytes(din);
+    _addresses.add(address);
+  }
+  int numPeers=(int)DataHelper.readLong(din,1);
+  if (numPeers == 0) {
+    _peers=null;
+  }
+ else {
+    _peers=new HashSet<Hash>(numPeers);
+    for (int i=0; i < numPeers; i++) {
+      Hash peerIdentityHash=new Hash();
+      peerIdentityHash.readBytes(din);
+      _peers.add(peerIdentityHash);
+    }
+  }
+  DataHelper.readProperties(din,_options);
+  _signature=new Signature(_identity.getSigningPublicKey().getType());
+  _signature.readBytes(in);
+  if (verifySig) {
+    SimpleDataStructure hash=_identity.getSigningPublicKey().getType().getHashInstance();
+    hash.setData(digest.digest());
+    _isValid=DSAEngine.getInstance().verifySignature(_signature,hash,_identity.getSigningPublicKey());
+    _validated=true;
+    if (!_isValid) {
+      throw new DataFormatException("Bad sig");
+    }
+  }
+}
