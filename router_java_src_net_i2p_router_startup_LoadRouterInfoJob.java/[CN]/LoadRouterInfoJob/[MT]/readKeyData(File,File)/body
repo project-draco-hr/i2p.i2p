@@ -5,6 +5,7 @@
   if (rkf2.exists()) {
     RouterPrivateKeyFile pkf=new RouterPrivateKeyFile(rkf2);
     ri=pkf.getRouterIdentity();
+    if (!pkf.validateKeyPairs())     throw new DataFormatException("Key pairs invalid");
     privkey=pkf.getPrivKey();
     signingPrivKey=pkf.getSigningPrivKey();
   }
@@ -20,6 +21,13 @@
       pubkey.readBytes(fis);
       SigningPublicKey signingPubKey=new SigningPublicKey();
       signingPubKey.readBytes(fis);
+      try {
+        if (!pubkey.equals(KeyGenerator.getPublicKey(privkey)))         throw new DataFormatException("Key pairs invalid");
+        if (!signingPubKey.equals(KeyGenerator.getSigningPublicKey(signingPrivKey)))         throw new DataFormatException("Key pairs invalid");
+      }
+ catch (      IllegalArgumentException iae) {
+        throw new DataFormatException("Key pairs invalid",iae);
+      }
       ri=new RouterIdentity();
       ri.setPublicKey(pubkey);
       ri.setSigningPublicKey(signingPubKey);
