@@ -13,7 +13,16 @@
   }
   LeaseSetKeys keys=_context.keyManager().getKeys(dest);
   if (keys == null || !message.getPrivateKey().equals(keys.getDecryptionKey())) {
-    if (!message.getPrivateKey().toPublic().equals(dest.getPublicKey())) {
+    PublicKey pk;
+    try {
+      pk=message.getPrivateKey().toPublic();
+    }
+ catch (    IllegalArgumentException iae) {
+      if (_log.shouldLog(Log.ERROR))       _log.error("Bad private key in LS");
+      _runner.disconnectClient("Bad private key in LS");
+      return;
+    }
+    if (!pk.equals(dest.getPublicKey())) {
       if (_log.shouldLog(Log.ERROR))       _log.error("Private/public crypto key mismatch in LS");
       _runner.disconnectClient("Private/public crypto key mismatch in LS");
       return;
