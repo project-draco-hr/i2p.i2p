@@ -16,10 +16,10 @@
   if (_log.shouldLog(Log.INFO))   _log.info("Sending TrackerClient request: " + s);
   tr.lastRequestTime=System.currentTimeMillis();
   boolean fast=_fastUnannounce && event.equals(STOPPED_EVENT);
-  byte[] fetched=_util.get(s,true,fast ? -1 : 0,small ? 128 : 1024,small ? 1024 : 8 * 1024);
-  if (fetched == null) {
-    throw new IOException("Error fetching " + s);
-  }
+  byte[] fetched=_util.get(s,true,fast ? -1 : 0,small ? 128 : 1024,small ? 1024 : 32 * 1024);
+  if (fetched == null)   throw new IOException("Error fetching");
+  if (fetched.length == 0)   throw new IOException("No data");
+  if (fetched[0] == '<')   throw new IOException(ERROR_GOT_HTML);
   InputStream in=new ByteArrayInputStream(fetched);
   TrackerInfo info=new TrackerInfo(in,snark.getID(),snark.getInfoHash(),snark.getMetaInfo(),_util);
   if (_log.shouldLog(Log.INFO))   _log.info("TrackerClient response: " + info);
