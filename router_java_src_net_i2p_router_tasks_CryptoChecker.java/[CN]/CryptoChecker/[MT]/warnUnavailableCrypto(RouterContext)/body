@@ -1,0 +1,34 @@
+{
+  if (SystemVersion.isAndroid())   return;
+  boolean unavail=false;
+  Log log=null;
+  for (  SigType t : SigType.values()) {
+    if (!t.isAvailable()) {
+      if (!unavail) {
+        unavail=true;
+        log=ctx.logManager().getLog(CryptoChecker.class);
+      }
+      String s="Crypto " + t + " is not available";
+      log.logAlways(log.WARN,s);
+      System.out.println("Warning: " + s);
+    }
+  }
+  if (unavail) {
+    if (!SystemVersion.isJava7()) {
+      String s="Java version: " + System.getProperty("java.version") + " Please consider upgrading to Java 7";
+      log.logAlways(log.WARN,s);
+      System.out.println(s);
+    }
+    if (!isUnlimited()) {
+      String s="Please consider installing the Java Cryptography Unlimited Strength Jurisdiction Policy Files from ";
+      if (SystemVersion.isJava8())       s+=JRE8;
+ else       if (SystemVersion.isJava7())       s+=JRE7;
+ else       s+=JRE6;
+      log.logAlways(log.WARN,s);
+      System.out.println(s);
+    }
+    String s="This crypto will be required in a future release";
+    log.logAlways(log.WARN,s);
+    System.out.println("Warning: " + s);
+  }
+}
