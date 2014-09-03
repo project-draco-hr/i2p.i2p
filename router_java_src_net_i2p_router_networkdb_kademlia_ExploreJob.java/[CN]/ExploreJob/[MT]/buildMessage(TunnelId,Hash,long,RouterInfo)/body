@@ -19,5 +19,19 @@
   }
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Peers we don't want to hear about: " + dontIncludePeers);
   msg.setDontIncludePeers(dontIncludePeers);
-  return msg;
+  I2NPMessage outMsg;
+  if (getContext().getProperty(IterativeSearchJob.PROP_ENCRYPT_RI,IterativeSearchJob.DEFAULT_ENCRYPT_RI)) {
+    if (DatabaseLookupMessage.supportsEncryptedReplies(peer)) {
+      MessageWrapper.OneTimeSession sess;
+      sess=MessageWrapper.generateSession(getContext());
+      if (_log.shouldLog(Log.INFO))       _log.info(getJobId() + ": Requesting encrypted reply from " + peer.getIdentity().calculateHash()+ ' '+ sess.key+ ' '+ sess.tag);
+      msg.setReplySession(sess.key,sess.tag);
+    }
+    outMsg=MessageWrapper.wrap(getContext(),msg,peer);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug(getJobId() + ": Encrypted exploratory DLM for " + getState().getTarget()+ " to "+ peer.getIdentity().calculateHash());
+  }
+ else {
+    outMsg=msg;
+  }
+  return outMsg;
 }
