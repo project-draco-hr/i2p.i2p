@@ -32,6 +32,9 @@ if (error) {
 usage();
 System.exit(1);
 }
+Properties props=new Properties();
+props.setProperty(GeoIP.PROP_GEOIP_DIR,System.getProperty("user.dir") + "/installer/resources");
+GeoIP geoIP=new GeoIP(new I2PAppContext(props));
 File confDir=new File(in);
 File dbDir=new File(confDir,"netDb");
 if (!dbDir.exists()) {
@@ -60,9 +63,9 @@ fis.close();
 }
 int routerCount=0;
 List<File> toRead=new ArrayList<File>(2048);
-for (int j=0; j < B64.length(); j++) {
-File subdir=new File(dbDir,DIR_PREFIX + B64.charAt(j));
-File[] files=subdir.listFiles(RouterInfoFilter.getInstance());
+for (int j=0; j < PersistentDataStore.B64.length(); j++) {
+File subdir=new File(dbDir,PersistentDataStore.DIR_PREFIX + PersistentDataStore.B64.charAt(j));
+File[] files=subdir.listFiles(PersistentDataStore.RouterInfoFilter.getInstance());
 if (files == null) continue;
 routerCount+=files.length;
 for (int i=0; i < files.length; i++) {
@@ -76,9 +79,10 @@ System.exit(1);
 Collections.shuffle(toRead);
 int copied=0;
 long tooOld=System.currentTimeMillis() - 7 * 24 * 60* 60* 1000L;
+Map<String,String> ipMap=new HashMap<String,String>(count);
 for (File file : toRead) {
 if (copied >= count) break;
-Hash key=getRouterInfoHash(file.getName());
+Hash key=PersistentDataStore.getRouterInfoHash(file.getName());
 if (key == null) {
 System.out.println("Skipping bad " + file);
 continue;
@@ -106,6 +110,10 @@ if (ri.getCapabilities().contains("U")) {
 System.out.println("Skipping unreachable " + key);
 continue;
 }
+if (ri.getCapabilities().contains("K")) {
+System.out.println("Skipping slow " + key);
+continue;
+}
 Collection<RouterAddress> addrs=ri.getAddresses();
 if (addrs.isEmpty()) {
 System.out.println("Skipping hidden " + key);
@@ -113,13 +121,26 @@ continue;
 }
 boolean hasIntro=false;
 boolean hasIPv4=false;
+boolean dupIP=false;
 for (RouterAddress addr : addrs) {
 if ("SSU".equals(addr.getTransportStyle()) && addr.getOption("ihost0") != null) {
 hasIntro=true;
 break;
 }
 String host=addr.getHost();
-if (host != null && host.contains(".")) hasIPv4=true;
+if (host != null && host.contains(".")) {
+hasIPv4=true;
+geoIP.add(host);
+String old=ipMap.put(host,file.getName());
+if (old != null && !old.equals(file.getName())) {
+dupIP=true;
+break;
+}
+}
+}
+if (dupIP) {
+System.out.println("Skipping dup IP " + key);
+continue;
 }
 if (hasIntro) {
 System.out.println("Skipping introduced " + key);
@@ -142,6 +163,24 @@ if (fis != null) try {
 fis.close();
 }
  catch (IOException ioe) {
+}
+}
+}
+if (copied > 0) {
+geoIP.blockingLookup();
+for (Map.Entry<String,String> e : ipMap.entrySet()) {
+String co=geoIP.get(e.getKey());
+if (co != null) {
+if (BadCountries.contains(co)) {
+String name=e.getValue();
+File toFile=new File(toDir,name);
+if (toFile.delete()) {
+String full=geoIP.fullName(co);
+if (full == null) full=co;
+System.out.println("Skipping " + full + ": "+ name);
+copied--;
+}
+}
 }
 }
 }
