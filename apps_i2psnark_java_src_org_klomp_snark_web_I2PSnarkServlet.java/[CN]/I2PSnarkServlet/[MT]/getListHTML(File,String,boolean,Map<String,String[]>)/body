@@ -173,6 +173,7 @@
     boolean complete=false;
     String status="";
     long length=item.length();
+    int fileIndex=-1;
     int priority=0;
     if (item.isDirectory()) {
       complete=true;
@@ -184,7 +185,8 @@
       }
  else {
         Storage storage=snark.getStorage();
-        long remaining=storage.remaining(item);
+        fileIndex=storage.indexOf(item);
+        long remaining=storage.remaining(fileIndex);
         if (remaining < 0) {
           complete=true;
           status=toImg("cancel") + ' ' + _("File not found in torrent?");
@@ -194,7 +196,7 @@
           status=toImg("tick") + ' ' + _("Complete");
         }
  else {
-          priority=storage.getPriority(item);
+          priority=storage.getPriority(fileIndex);
           if (priority < 0)           status=toImg("cancel");
  else           if (priority == 0)           status=toImg("clock");
  else           status=toImg("clock_red");
@@ -232,13 +234,13 @@
     if (showPriority) {
       buf.append("<td class=\"priority\">");
       if ((!complete) && (!item.isDirectory())) {
-        buf.append("<input type=\"radio\" value=\"5\" name=\"pri.").append(item).append("\" ");
+        buf.append("<input type=\"radio\" value=\"5\" name=\"pri.").append(fileIndex).append("\" ");
         if (priority > 0)         buf.append("checked=\"true\"");
         buf.append('>').append(_("High"));
-        buf.append("<input type=\"radio\" value=\"0\" name=\"pri.").append(item).append("\" ");
+        buf.append("<input type=\"radio\" value=\"0\" name=\"pri.").append(fileIndex).append("\" ");
         if (priority == 0)         buf.append("checked=\"true\"");
         buf.append('>').append(_("Normal"));
-        buf.append("<input type=\"radio\" value=\"-9\" name=\"pri.").append(item).append("\" ");
+        buf.append("<input type=\"radio\" value=\"-9\" name=\"pri.").append(fileIndex).append("\" ");
         if (priority < 0)         buf.append("checked=\"true\"");
         buf.append('>').append(_("Skip"));
         showSaveButton=true;
