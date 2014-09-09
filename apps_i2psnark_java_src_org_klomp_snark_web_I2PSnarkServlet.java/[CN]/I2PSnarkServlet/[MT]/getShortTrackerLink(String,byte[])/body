@@ -4,8 +4,29 @@
   if (announce.startsWith("http://"))   announce=announce.substring(7);
   int slsh=announce.indexOf('/');
   if (slsh > 0)   announce=announce.substring(0,slsh);
-  if (trackerLinkUrl != null)   buf.append(trackerLinkUrl);
- else   buf.append("<a href=\"http://").append(urlEncode(announce)).append("/\">");
+  if (trackerLinkUrl != null) {
+    buf.append(trackerLinkUrl);
+  }
+ else {
+    String host=announce;
+    if (host.length() >= 516) {
+      int colon=announce.indexOf(':');
+      String port="";
+      if (colon > 0) {
+        port=host.substring(colon);
+        host=host.substring(0,colon);
+      }
+      if (host.endsWith(".i2p"))       host=host.substring(0,host.length() - 4);
+      byte[] b=Base64.decode(host);
+      if (b != null) {
+        Hash h=_context.sha().calculateHash(b);
+        host=Base32.encode(h.getData()) + ".b32.i2p" + port;
+      }
+    }
+    buf.append("<a href=\"http://").append(urlEncode(host)).append("/\">");
+  }
+  int colon=announce.indexOf(':');
+  if (colon > 0)   announce=announce.substring(0,colon);
   if (announce.length() > 67)   announce=DataHelper.escapeHTML(announce.substring(0,40)) + "&hellip;" + DataHelper.escapeHTML(announce.substring(announce.length() - 8));
   buf.append(announce);
   buf.append("</a>");

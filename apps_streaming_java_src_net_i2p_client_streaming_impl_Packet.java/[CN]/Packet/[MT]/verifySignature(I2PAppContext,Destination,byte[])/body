@@ -4,12 +4,20 @@
   if (from == null)   return false;
   int size=writtenSize();
   if (buffer == null)   buffer=new byte[size];
-  int written=writePacket(buffer,0,from.getSigningPublicKey().getType().getSigLen());
+  SigningPublicKey spk=from.getSigningPublicKey();
+  SigType type=spk.getType();
+  if (type == null) {
+    Log l=ctx.logManager().getLog(Packet.class);
+    if (l.shouldLog(Log.WARN))     l.warn("Unknown sig type in " + from + " cannot verify "+ toString());
+    return false;
+  }
+  int written=writePacket(buffer,0,type.getSigLen());
   if (written != size) {
     ctx.logManager().getLog(Packet.class).error("Written " + written + " size "+ size+ " for "+ toString(),new Exception("moo"));
     return false;
   }
-  boolean ok=ctx.dsa().verifySignature(_optionSignature,buffer,0,size,from.getSigningPublicKey());
+  if (type != _optionSignature.getType() && type.getSigLen() == _optionSignature.length())   _optionSignature=new Signature(type,_optionSignature.getData());
+  boolean ok=ctx.dsa().verifySignature(_optionSignature,buffer,0,size,spk);
   if (!ok) {
     Log l=ctx.logManager().getLog(Packet.class);
     if (l.shouldLog(Log.WARN))     l.warn("Signature failed on " + toString(),new Exception("moo"));
