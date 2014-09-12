@@ -1,29 +1,34 @@
 {
   if (_dead)   return null;
+  List<OutboundMessageState> rv=null;
 synchronized (_outboundMessages) {
     for (    OutboundMessageState state : _outboundMessages) {
       ShouldSend should=locked_shouldSend(state);
       if (should == ShouldSend.YES) {
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Allocate sending (OLD) to " + _remotePeer + ": "+ state.getMessageId());
-        return state;
+        if (rv == null)         rv=new ArrayList<OutboundMessageState>(MAX_ALLOCATE_SEND);
+        rv.add(state);
+        if (rv.size() >= MAX_ALLOCATE_SEND)         return rv;
       }
  else       if (should == ShouldSend.NO_BW) {
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("Nothing to send (BW) to " + _remotePeer + ", with "+ _outboundMessages.size()+ " / "+ _outboundQueue.size()+ " remaining");
-        return null;
+        if (rv == null && _log.shouldLog(Log.DEBUG))         _log.debug("Nothing to send (BW) to " + _remotePeer + ", with "+ _outboundMessages.size()+ " / "+ _outboundQueue.size()+ " remaining");
+        return rv;
       }
     }
-    OutboundMessageState state=_outboundQueue.peek();
-    if (state != null && ShouldSend.YES == locked_shouldSend(state)) {
+    OutboundMessageState state;
+    while ((state=_outboundQueue.peek()) != null && ShouldSend.YES == locked_shouldSend(state)) {
       OutboundMessageState dequeuedState=_outboundQueue.poll();
       if (dequeuedState != null) {
         _outboundMessages.add(dequeuedState);
-        if (dequeuedState == state || ShouldSend.YES == locked_shouldSend(dequeuedState)) {
+        if (dequeuedState == state || ShouldSend.YES == locked_shouldSend(state)) {
           if (_log.shouldLog(Log.DEBUG))           _log.debug("Allocate sending (NEW) to " + _remotePeer + ": "+ dequeuedState.getMessageId());
-          return dequeuedState;
+          if (rv == null)           rv=new ArrayList<OutboundMessageState>(MAX_ALLOCATE_SEND);
+          rv.add(state);
+          if (rv.size() >= MAX_ALLOCATE_SEND)           return rv;
         }
       }
     }
   }
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Nothing to send to " + _remotePeer + ", with "+ _outboundMessages.size()+ " / "+ _outboundQueue.size()+ " remaining");
-  return null;
+  if (rv == null && _log.shouldLog(Log.DEBUG))   _log.debug("Nothing to send to " + _remotePeer + ", with "+ _outboundMessages.size()+ " / "+ _outboundQueue.size()+ " remaining");
+  return rv;
 }
