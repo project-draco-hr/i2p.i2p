@@ -51,7 +51,9 @@
   buf.append("</HEAD><BODY");
   if (showPriority)   buf.append(" onload=\"setupbuttons()\"");
   buf.append(">\n<center><div class=\"snarknavbar\"><a href=\"").append(_contextPath).append("/\" title=\"Torrents\"");
-  buf.append(" class=\"snarkRefresh\"><img alt=\"\" border=\"0\" src=\"").append(_imgPath).append("arrow_refresh.png\">&nbsp;&nbsp;");
+  buf.append(" class=\"snarkRefresh\">");
+  toThemeImg(buf,"arrow_refresh");
+  buf.append("&nbsp;&nbsp;");
   if (_contextName.equals(DEFAULT_NAME))   buf.append(_("I2PSnark"));
  else   buf.append(_contextName);
   buf.append("</a></div></center>\n");
@@ -65,8 +67,12 @@
     buf.append("<tr><th><b>").append(_("Torrent")).append(":</b> ").append(DataHelper.escapeHTML(snark.getBaseName())).append("</th></tr>\n");
     String fullPath=snark.getName();
     String baseName=encodePath((new File(fullPath)).getName());
-    buf.append("<tr><td>").append("<img alt=\"\" border=\"0\" src=\"").append(_imgPath).append("file.png\" >&nbsp;<b>").append(_("Torrent file")).append(":</b> <a href=\"").append(_contextPath).append('/').append(baseName).append("\">").append(DataHelper.escapeHTML(fullPath)).append("</a></td></tr>\n");
-    buf.append("<tr><td>").append("<img alt=\"\" border=\"0\" src=\"").append(_imgPath).append("file.png\" >&nbsp;<b>").append(_("Data location")).append(":</b> ").append(DataHelper.escapeHTML(snark.getStorage().getBase().getPath())).append("</td></tr>\n");
+    buf.append("<tr><td>");
+    toThemeImg(buf,"file");
+    buf.append("&nbsp;<b>").append(_("Torrent file")).append(":</b> <a href=\"").append(_contextPath).append('/').append(baseName).append("\">").append(DataHelper.escapeHTML(fullPath)).append("</a></td></tr>\n");
+    buf.append("<tr><td>");
+    toThemeImg(buf,"file");
+    buf.append("&nbsp;<b>").append(_("Data location")).append(":</b> ").append(DataHelper.escapeHTML(snark.getStorage().getBase().getPath())).append("</td></tr>\n");
     String announce=null;
     MetaInfo meta=snark.getMetaInfo();
     if (meta != null) {
@@ -76,15 +82,17 @@
         announce=DataHelper.stripHTML(announce);
         buf.append("<tr><td>");
         String trackerLink=getTrackerLink(announce,snark.getInfoHash());
-        if (trackerLink != null)         buf.append(trackerLink).append(' ');
-        buf.append("<b>").append(_("Primary Tracker")).append(":</b> ");
+        if (trackerLink != null)         buf.append(trackerLink);
+ else         toThemeImg(buf,"details");
+        buf.append(" <b>").append(_("Primary Tracker")).append(":</b> ");
         buf.append(getShortTrackerLink(announce,snark.getInfoHash()));
         buf.append("</td></tr>");
       }
       List<List<String>> alist=meta.getAnnounceList();
       if (alist != null) {
-        buf.append("<tr><td>" + "<img alt=\"\" border=\"0\" src=\"").append(_imgPath).append("details.png\"> <b>");
-        buf.append(_("Tracker List")).append(":</b> ");
+        buf.append("<tr><td>");
+        toThemeImg(buf,"details");
+        buf.append(" <b>").append(_("Tracker List")).append(":</b> ");
         for (        List<String> alist2 : alist) {
           buf.append('[');
           boolean more=false;
@@ -102,17 +110,23 @@
       String com=meta.getComment();
       if (com != null) {
         if (com.length() > 1024)         com=com.substring(0,1024);
-        buf.append("<tr><td><img alt=\"\" border=\"0\" src=\"").append(_imgPath).append("details.png\"> <b>").append(_("Comment")).append(":</b> ").append(DataHelper.stripHTML(com)).append("</td></tr>\n");
+        buf.append("<tr><td>");
+        toThemeImg(buf,"details");
+        buf.append(" <b>").append(_("Comment")).append(":</b> ").append(DataHelper.stripHTML(com)).append("</td></tr>\n");
       }
       long dat=meta.getCreationDate();
       if (dat > 0) {
         String date=(new SimpleDateFormat("yyyy-MM-dd HH:mm")).format(new Date(dat));
-        buf.append("<tr><td><img alt=\"\" border=\"0\" src=\"").append(_imgPath).append("details.png\"> <b>").append(_("Created")).append(":</b> ").append(date).append(" UTC").append("</td></tr>\n");
+        buf.append("<tr><td>");
+        toThemeImg(buf,"details");
+        buf.append(" <b>").append(_("Created")).append(":</b> ").append(date).append(" UTC").append("</td></tr>\n");
       }
       String cby=meta.getCreatedBy();
       if (cby != null) {
         if (cby.length() > 128)         cby=com.substring(0,128);
-        buf.append("<tr><td><img alt=\"\" border=\"0\" src=\"").append(_imgPath).append("details.png\"> <b>").append(_("Created By")).append(":</b> ").append(DataHelper.stripHTML(cby)).append("</td></tr>\n");
+        buf.append("<tr><td>");
+        toThemeImg(buf,"details");
+        buf.append(" <b>").append(_("Created By")).append(":</b> ").append(DataHelper.stripHTML(cby)).append("</td></tr>\n");
       }
     }
     String hex=I2PSnarkUtil.toHex(snark.getInfoHash());
@@ -128,12 +142,19 @@
  else {
       buf.append("<tr><td>").append(_("Private torrent")).append("</td></tr>\n");
     }
-    buf.append("<tr><td>").append("<img alt=\"\" border=\"0\" src=\"").append(_imgPath).append("size.png\" >&nbsp;<b>").append(_("Size")).append(":</b> ").append(formatSize(snark.getTotalLength()));
+    buf.append("<tr><td>");
+    toThemeImg(buf,"size");
+    buf.append("&nbsp;<b>").append(_("Size")).append(":</b> ").append(formatSize(snark.getTotalLength()));
     int pieces=snark.getPieces();
     double completion=(pieces - snark.getNeeded()) / (double)pieces;
-    if (completion < 1.0)     buf.append("&nbsp;<img alt=\"\" border=\"0\" src=\"").append(_imgPath).append("head_rx.png\" >&nbsp;<b>").append(_("Completion")).append(":</b> ").append((new DecimalFormat("0.00%")).format(completion));
- else     buf.append("&nbsp;<img alt=\"\" border=\"0\" src=\"").append(_imgPath).append("head_rx.png\" >&nbsp;<b>").append(_("Complete")).append("</b>");
-    buf.append("&nbsp;<img alt=\"\" border=\"0\" src=\"").append(_imgPath).append("head_tx.png\" >&nbsp;<b>").append(_("Upload ratio")).append(":</b> ");
+    buf.append("&nbsp;");
+    toThemeImg(buf,"head_rx");
+    buf.append("&nbsp;<b>");
+    if (completion < 1.0)     buf.append(_("Completion")).append(":</b> ").append((new DecimalFormat("0.00%")).format(completion));
+ else     buf.append(_("Complete")).append("</b>");
+    buf.append("&nbsp;");
+    toThemeImg(buf,"head_tx");
+    buf.append("&nbsp;<b>").append(_("Upload ratio")).append(":</b> ");
     long uploaded=snark.getUploaded();
     if (uploaded > 0) {
       double ratio=uploaded / ((double)snark.getTotalLength());
@@ -144,14 +165,22 @@
       buf.append('0');
     }
     long needed=snark.getNeededLength();
-    if (needed > 0)     buf.append("&nbsp;<img alt=\"\" border=\"0\" src=\"").append(_imgPath).append("head_rx.png\" >&nbsp;<b>").append(_("Remaining")).append(":</b> ").append(formatSize(needed));
+    if (needed > 0)     buf.append("&nbsp;");
+    toThemeImg(buf,"head_rx");
+    buf.append("&nbsp;<b>").append(_("Remaining")).append(":</b> ").append(formatSize(needed));
     if (meta != null) {
       List<List<String>> files=meta.getFiles();
       int fileCount=files != null ? files.size() : 1;
-      buf.append("&nbsp;<img alt=\"\" border=\"0\" src=\"").append(_imgPath).append("file.png\" >&nbsp;<b>").append(_("Files")).append(":</b> ").append(fileCount);
+      buf.append("&nbsp;");
+      toThemeImg(buf,"file");
+      buf.append("&nbsp;<b>").append(_("Files")).append(":</b> ").append(fileCount);
     }
-    buf.append("&nbsp;<img alt=\"\" border=\"0\" src=\"").append(_imgPath).append("file.png\" >&nbsp;<b>").append(_("Pieces")).append(":</b> ").append(pieces);
-    buf.append("&nbsp;<img alt=\"\" border=\"0\" src=\"").append(_imgPath).append("file.png\" >&nbsp;<b>").append(_("Piece size")).append(":</b> ").append(formatSize(snark.getPieceLength(0))).append("</td></tr>\n");
+    buf.append("&nbsp;");
+    toThemeImg(buf,"file");
+    buf.append("&nbsp;<b>").append(_("Pieces")).append(":</b> ").append(pieces);
+    buf.append("&nbsp;");
+    toThemeImg(buf,"file");
+    buf.append("&nbsp;<b>").append(_("Piece size")).append(":</b> ").append(formatSize(snark.getPieceLength(0))).append("</td></tr>\n");
   }
  else {
     buf.append("<tr><th>Not found<br>resource=\"").append(r.toString()).append("\"<br>base=\"").append(base).append("\"<br>torrent=\"").append(torrentName).append("\"</th></tr>\n");
@@ -171,14 +200,26 @@
     return buf.toString();
   }
   buf.append("<table class=\"snarkDirInfo\"><thead>\n");
-  buf.append("<tr>\n").append("<th colspan=2>").append("<img border=\"0\" src=\"").append(_imgPath).append("file.png\" title=\"").append(_("Directory")).append(": ").append(directory).append("\" alt=\"").append(_("Directory")).append("\"></th>\n");
-  buf.append("<th align=\"right\">").append("<img border=\"0\" src=\"").append(_imgPath).append("size.png\" title=\"").append(_("Size")).append("\" alt=\"").append(_("Size")).append("\"></th>\n");
-  buf.append("<th class=\"headerstatus\">").append("<img border=\"0\" src=\"").append(_imgPath).append("status.png\" title=\"").append(_("Status")).append("\" alt=\"").append(_("Status")).append("\"></th>\n");
-  if (showPriority)   buf.append("<th class=\"headerpriority\">").append("<img border=\"0\" src=\"").append(_imgPath).append("priority.png\" title=\"").append(_("Priority")).append("\" alt=\"").append(_("Priority")).append("\"></th>\n");
-  buf.append("</tr>\n</thead>\n");
+  buf.append("<tr>\n").append("<th colspan=2>");
+  String tx=_("Directory");
+  toThemeImg(buf,"file",tx,tx + ": " + directory);
+  buf.append("</th>\n<th align=\"right\">");
+  tx=_("Size");
+  toThemeImg(buf,"size",tx,tx);
+  buf.append("</th>\n<th class=\"headerstatus\">");
+  tx=_("Status");
+  toThemeImg(buf,"status",tx,tx);
+  if (showPriority) {
+    buf.append("</th>\n<th class=\"headerpriority\">");
+    tx=_("Priority");
+    toThemeImg(buf,"priority",tx,tx);
+  }
+  buf.append("</th>\n</tr>\n</thead>\n");
   buf.append("<tr><td colspan=\"" + (showPriority ? '5' : '4') + "\" class=\"ParentDir\"><A HREF=\"");
   URIUtil.encodePath(buf,addPaths(decodedBase,"../"));
-  buf.append("\"><img alt=\"\" border=\"0\" src=\"").append(_imgPath).append("up.png\"> ").append(_("Up to higher level directory")).append("</A></td></tr>\n");
+  buf.append("\">");
+  toThemeImg(buf,"up");
+  buf.append(' ').append(_("Up to higher level directory")).append("</A></td></tr>\n");
   boolean showSaveButton=false;
   for (int i=0; i < ls.length; i++) {
     File item=ls[i];
