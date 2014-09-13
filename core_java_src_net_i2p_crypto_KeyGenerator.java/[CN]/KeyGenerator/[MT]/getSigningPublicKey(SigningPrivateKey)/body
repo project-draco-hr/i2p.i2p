@@ -1,13 +1,41 @@
 {
-  if (priv.getType() != SigType.DSA_SHA1)   throw new IllegalArgumentException();
-  BigInteger x=new NativeBigInteger(1,priv.toByteArray());
-  BigInteger y=CryptoConstants.dsag.modPow(x,CryptoConstants.dsap);
-  SigningPublicKey pub=new SigningPublicKey();
+  SigType type=priv.getType();
+  if (type == null)   throw new IllegalArgumentException("Unknown type");
   try {
-    pub.setData(SigUtil.rectify(y,SigningPublicKey.KEYSIZE_BYTES));
-  }
- catch (  InvalidKeyException ike) {
-    throw new IllegalArgumentException(ike);
-  }
-  return pub;
+switch (type.getBaseAlgorithm()) {
+case DSA:
+      BigInteger x=new NativeBigInteger(1,priv.toByteArray());
+    BigInteger y=CryptoConstants.dsag.modPow(x,CryptoConstants.dsap);
+  SigningPublicKey pub=new SigningPublicKey();
+pub.setData(SigUtil.rectify(y,SigningPublicKey.KEYSIZE_BYTES));
+return pub;
+case EC:
+ECPrivateKey ecpriv=SigUtil.toJavaECKey(priv);
+BigInteger s=ecpriv.getS();
+ECParameterSpec spec=(ECParameterSpec)type.getParams();
+EllipticCurve curve=spec.getCurve();
+ECPoint g=spec.getGenerator();
+ECPoint w=ECUtil.scalarMult(g,s,curve);
+ECPublicKeySpec ecks=new ECPublicKeySpec(w,ecpriv.getParams());
+KeyFactory eckf=KeyFactory.getInstance("EC");
+ECPublicKey ecpub=(ECPublicKey)eckf.generatePublic(ecks);
+return SigUtil.fromJavaKey(ecpub,type);
+case RSA:
+RSAPrivateKey rsapriv=SigUtil.toJavaRSAKey(priv);
+BigInteger exp=((RSAKeyGenParameterSpec)type.getParams()).getPublicExponent();
+RSAPublicKeySpec rsaks=new RSAPublicKeySpec(rsapriv.getModulus(),exp);
+KeyFactory rsakf=KeyFactory.getInstance("RSA");
+RSAPublicKey rsapub=(RSAPublicKey)rsakf.generatePublic(rsaks);
+return SigUtil.fromJavaKey(rsapub,type);
+case EdDSA:
+EdDSAPrivateKey epriv=SigUtil.toJavaEdDSAKey(priv);
+EdDSAPublicKey epub=new EdDSAPublicKey(new EdDSAPublicKeySpec(epriv.getA(),epriv.getParams()));
+return SigUtil.fromJavaKey(epub,type);
+default :
+throw new IllegalArgumentException("Unsupported algorithm");
+}
+}
+ catch (GeneralSecurityException gse) {
+throw new IllegalArgumentException("Conversion failed",gse);
+}
 }

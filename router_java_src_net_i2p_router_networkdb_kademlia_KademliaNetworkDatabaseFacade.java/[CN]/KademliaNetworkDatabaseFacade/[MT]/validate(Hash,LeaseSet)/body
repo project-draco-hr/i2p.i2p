@@ -4,8 +4,9 @@
     return "Key does not match leaseSet.destination - " + key.toBase64();
   }
   if (!leaseSet.verifySignature()) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("Invalid leaseSet signature!  leaseSet = " + leaseSet);
-    return "Invalid leaseSet signature on " + leaseSet.getDestination().calculateHash().toBase64();
+    processStoreFailure(key,leaseSet);
+    if (_log.shouldLog(Log.WARN))     _log.warn("Invalid leaseSet signature! " + leaseSet);
+    return "Invalid leaseSet signature on " + key;
   }
   long earliest=leaseSet.getEarliestLeaseDate();
   long latest=leaseSet.getLatestLeaseDate();
@@ -13,7 +14,7 @@
   if (earliest <= now - 10 * 60 * 1000L || latest <= now - Router.CLOCK_FUDGE_FACTOR) {
     long age=now - earliest;
     if (_log.shouldLog(Log.WARN))     _log.warn("Old leaseSet!  not storing it: " + leaseSet.getDestination().calculateHash() + " first exp. "+ new Date(earliest)+ " last exp. "+ new Date(latest),new Exception("Rejecting store"));
-    return "Expired leaseSet for " + leaseSet.getDestination().calculateHash().toBase64() + " expired "+ DataHelper.formatDuration(age)+ " ago";
+    return "Expired leaseSet for " + leaseSet.getDestination().calculateHash() + " expired "+ DataHelper.formatDuration(age)+ " ago";
   }
   if (latest > now + (Router.CLOCK_FUDGE_FACTOR + MAX_LEASE_FUTURE)) {
     long age=latest - now;

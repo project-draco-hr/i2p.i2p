@@ -1,6 +1,7 @@
 {
   long recvBegin=System.currentTimeMillis();
   String invalidMessage=null;
+  boolean dontBlamePeer=false;
   boolean wasNew=false;
   RouterInfo prevNetDb=null;
   Hash key=_message.getKey();
@@ -10,6 +11,7 @@
     if (_log.shouldLog(Log.INFO))     _log.info("Handling dbStore of leaseset " + _message);
     try {
       if (getContext().clientManager().isLocal(key)) {
+        dontBlamePeer=true;
         throw new IllegalArgumentException("Peer attempted to store local leaseSet: " + key.toBase64().substring(0,4));
       }
       LeaseSet ls=(LeaseSet)entry;
@@ -26,7 +28,11 @@
         wasNew=false;
       }
     }
- catch (    IllegalArgumentException iae) {
+ catch (    UnsupportedCryptoException uce) {
+      invalidMessage=uce.getMessage();
+      dontBlamePeer=true;
+    }
+catch (    IllegalArgumentException iae) {
       invalidMessage=iae.getMessage();
     }
   }
@@ -36,8 +42,10 @@
     if (_log.shouldLog(Log.INFO))     _log.info("Handling dbStore of router " + key + " with publishDate of "+ new Date(ri.getPublished()));
     try {
       if (getContext().routerHash().equals(key)) {
+        dontBlamePeer=true;
         throw new IllegalArgumentException("Peer attempted to store our RouterInfo");
       }
+      getContext().profileManager().heardAbout(key);
       prevNetDb=getContext().netDb().store(key,ri);
       wasNew=((null == prevNetDb) || (prevNetDb.getPublished() < ri.getPublished()));
       if (wasNew) {
@@ -50,9 +58,12 @@
           if ((!newAddr.equals(oldAddr)) && (!getContext().banlist().isBanlistedForever(key)) && getContext().blocklist().isBlocklisted(key)&& _log.shouldLog(Log.WARN))           _log.warn("New address received, Blocklisting old peer " + key + ' '+ ri);
         }
       }
-      getContext().profileManager().heardAbout(key);
     }
- catch (    IllegalArgumentException iae) {
+ catch (    UnsupportedCryptoException uce) {
+      invalidMessage=uce.getMessage();
+      dontBlamePeer=true;
+    }
+catch (    IllegalArgumentException iae) {
       invalidMessage=iae.getMessage();
     }
   }
@@ -65,7 +76,7 @@
   long ackEnd=System.currentTimeMillis();
   if (_from != null)   _fromHash=_from.getHash();
   if (_fromHash != null) {
-    if (invalidMessage == null) {
+    if (invalidMessage == null || dontBlamePeer) {
       getContext().profileManager().dbStoreReceived(_fromHash,wasNew);
       getContext().statManager().addRateData("netDb.storeHandled",ackEnd - recvEnd);
     }
@@ -73,7 +84,7 @@
       if (_log.shouldLog(Log.WARN))       _log.warn("Peer " + _fromHash.toBase64() + " sent bad data: "+ invalidMessage);
     }
   }
- else   if (invalidMessage != null) {
+ else   if (invalidMessage != null && !dontBlamePeer) {
     if (_log.shouldLog(Log.WARN))     _log.warn("Unknown peer sent bad data: " + invalidMessage);
   }
   if (invalidMessage == null && getContext().netDb().floodfillEnabled() && _message.getReplyToken() > 0) {

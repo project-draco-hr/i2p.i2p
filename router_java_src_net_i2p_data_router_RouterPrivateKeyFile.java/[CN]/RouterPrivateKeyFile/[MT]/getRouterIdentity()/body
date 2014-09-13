@@ -1,0 +1,29 @@
+{
+  InputStream in=null;
+  try {
+    in=new BufferedInputStream(new FileInputStream(this.file));
+    RouterIdentity ri=new RouterIdentity();
+    ri.readBytes(in);
+    privKey=new PrivateKey();
+    privKey.readBytes(in);
+    SigType type=ri.getSigningPublicKey().getType();
+    if (type == null)     throw new DataFormatException("Unknown sig type");
+    signingPrivKey=new SigningPrivateKey(type);
+    signingPrivKey.readBytes(in);
+    dest=new Destination();
+    dest.setPublicKey(ri.getPublicKey());
+    dest.setSigningPublicKey(ri.getSigningPublicKey());
+    dest.setCertificate(ri.getCertificate());
+    dest.setPadding(ri.getPadding());
+    return ri;
+  }
+  finally {
+    if (in != null) {
+      try {
+        in.close();
+      }
+ catch (      IOException ioe) {
+      }
+    }
+  }
+}

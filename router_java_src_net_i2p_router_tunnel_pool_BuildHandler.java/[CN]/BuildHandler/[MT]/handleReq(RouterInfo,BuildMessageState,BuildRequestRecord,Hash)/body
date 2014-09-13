@@ -33,7 +33,17 @@
   }
   long time=req.readRequestTime();
   long now=(_context.clock().now() / (60l * 60l * 1000l)) * (60 * 60 * 1000);
-  int ourSlot=-1;
+  long timeDiff=now - time;
+  if (timeDiff > MAX_REQUEST_AGE) {
+    _context.statManager().addRateData("tunnel.rejectTooOld",1);
+    if (_log.shouldLog(Log.WARN))     _log.warn("Dropping build request too old... replay attack? " + DataHelper.formatDuration(timeDiff));
+    return;
+  }
+  if (timeDiff < 0 - MAX_REQUEST_FUTURE) {
+    _context.statManager().addRateData("tunnel.rejectFuture",1);
+    if (_log.shouldLog(Log.WARN))     _log.warn("Dropping build request too far in future " + DataHelper.formatDuration(0 - timeDiff));
+    return;
+  }
   int response;
   if (_context.router().isHidden()) {
     _context.throttle().setTunnelStatus(_x("Rejecting tunnels: Hidden mode"));
@@ -138,6 +148,7 @@
   }
   byte reply[]=BuildResponseRecord.create(_context,response,req.readReplyKey(),req.readReplyIV(),state.msg.getUniqueId());
   int records=state.msg.getRecordCount();
+  int ourSlot=-1;
   for (int j=0; j < records; j++) {
     if (state.msg.getRecord(j) == null) {
       ourSlot=j;
@@ -145,7 +156,7 @@
       break;
     }
   }
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Read slot " + ourSlot + " containing our hop @ "+ _context.routerHash()+ " accepted? "+ response+ " receiving on "+ ourId+ " sending to "+ nextId+ " on "+ nextPeer+ " inGW? "+ isInGW+ " outEnd? "+ isOutEnd+ " time difference "+ (now - time)+ " recvDelay "+ recvDelay+ " replyMessage "+ req.readReplyMessageId()+ " replyKey "+ req.readReplyKey()+ " replyIV "+ Base64.encode(req.readReplyIV()));
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Read slot " + ourSlot + " containing our hop @ "+ _context.routerHash()+ " accepted? "+ response+ " receiving on "+ ourId+ " sending to "+ nextId+ " on "+ nextPeer+ " inGW? "+ isInGW+ " outEnd? "+ isOutEnd+ " recvDelay "+ recvDelay+ " replyMessage "+ req.readReplyMessageId()+ " replyKey "+ req.readReplyKey()+ " replyIV "+ Base64.encode(req.readReplyIV()));
   if (!isOutEnd) {
     state.msg.setUniqueId(req.readReplyMessageId());
     state.msg.setMessageExpiration(_context.clock().now() + NEXT_HOP_SEND_TIMEOUT);

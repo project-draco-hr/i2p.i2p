@@ -1,0 +1,89 @@
+{
+  if (states == null || peer == null)   return null;
+  List<Long> msgIds=peer.getCurrentFullACKs();
+  int newFullAckCount=msgIds.size();
+  msgIds.addAll(peer.getCurrentResendACKs());
+  List<ACKBitfield> partialACKBitfields=new ArrayList<ACKBitfield>();
+  peer.fetchPartialACKs(partialACKBitfields);
+  int piggybackedPartialACK=partialACKBitfields.size();
+  List<Long> remaining=new ArrayList<Long>(msgIds);
+  List<Fragment> toSend=new ArrayList<Fragment>(8);
+  for (  OutboundMessageState state : states) {
+    int fragments=state.getFragmentCount();
+    int queued=0;
+    for (int i=0; i < fragments; i++) {
+      if (state.needsSending(i)) {
+        toSend.add(new Fragment(state,i));
+        queued++;
+      }
+    }
+    if (queued > 0 && state.getPushCount() > 1) {
+      peer.messageRetransmitted(queued);
+      _context.statManager().addRateData("udp.peerPacketsRetransmitted",peer.getPacketsRetransmitted(),peer.getPacketsTransmitted());
+      _context.statManager().addRateData("udp.packetsRetransmitted",state.getLifetime(),peer.getPacketsTransmitted());
+      if (_log.shouldLog(Log.INFO))       _log.info("Retransmitting " + state + " to "+ peer);
+      _context.statManager().addRateData("udp.sendVolleyTime",state.getLifetime(),queued);
+    }
+  }
+  if (toSend.isEmpty())   return null;
+  int fragmentsToSend=toSend.size();
+  if (fragmentsToSend > 1 && states.size() > 1)   Collections.sort(toSend,new FragmentComparator());
+  List<Fragment> sendNext=new ArrayList<Fragment>(Math.min(toSend.size(),4));
+  List<UDPPacket> rv=new ArrayList<UDPPacket>(toSend.size());
+  for (int i=0; i < toSend.size(); i++) {
+    Fragment next=toSend.get(i);
+    sendNext.add(next);
+    OutboundMessageState state=next.state;
+    OutNetMessage msg=state.getMessage();
+    int msgType=(msg != null) ? msg.getMessageTypeId() : -1;
+    if (_log.shouldLog(Log.INFO))     _log.info("Building packet for " + next + " to "+ peer);
+    int curTotalDataSize=state.fragmentSize(next.num);
+    if (i + 1 < toSend.size()) {
+      int maxAvail=PacketBuilder.getMaxAdditionalFragmentSize(peer,sendNext.size(),curTotalDataSize);
+      for (int j=i + 1; j < toSend.size(); j++) {
+        next=toSend.get(j);
+        int nextDataSize=next.state.fragmentSize(next.num);
+        if (nextDataSize <= maxAvail) {
+          toSend.remove(j);
+          j--;
+          sendNext.add(next);
+          curTotalDataSize+=nextDataSize;
+          maxAvail=PacketBuilder.getMaxAdditionalFragmentSize(peer,sendNext.size(),curTotalDataSize);
+          if (_log.shouldLog(Log.INFO))           _log.info("Adding in additional " + next + " to "+ peer);
+        }
+      }
+    }
+    int before=remaining.size();
+    UDPPacket pkt=_builder.buildPacket(sendNext,peer,remaining,newFullAckCount,partialACKBitfields);
+    if (pkt != null) {
+      if (_log.shouldLog(Log.INFO))       _log.info("Built packet with " + sendNext.size() + " fragments totalling "+ curTotalDataSize+ " data bytes to "+ peer);
+      _context.statManager().addRateData("udp.sendFragmentsPerPacket",sendNext.size());
+    }
+    sendNext.clear();
+    if (pkt == null) {
+      if (_log.shouldLog(Log.WARN))       _log.info("Build packet FAIL for " + DataHelper.toString(sendNext) + " to "+ peer);
+      continue;
+    }
+    rv.add(pkt);
+    int after=remaining.size();
+    newFullAckCount=Math.max(0,newFullAckCount - (before - after));
+    int piggybackedAck=0;
+    if (msgIds.size() != remaining.size()) {
+      for (int j=0; j < msgIds.size(); j++) {
+        Long id=msgIds.get(j);
+        if (!remaining.contains(id)) {
+          peer.removeACKMessage(id);
+          piggybackedAck++;
+        }
+      }
+    }
+    if (piggybackedAck > 0)     _context.statManager().addRateData("udp.sendPiggyback",piggybackedAck);
+    if (piggybackedPartialACK - partialACKBitfields.size() > 0)     _context.statManager().addRateData("udp.sendPiggybackPartial",piggybackedPartialACK - partialACKBitfields.size(),state.getLifetime());
+    pkt.setFragmentCount(sendNext.size());
+    pkt.setMessageType(msgType);
+  }
+  int sent=rv.size();
+  peer.packetsTransmitted(sent);
+  if (_log.shouldLog(Log.INFO))   _log.info("Sent " + fragmentsToSend + " fragments of "+ states.size()+ " messages in "+ sent+ " packets to "+ peer);
+  return rv;
+}

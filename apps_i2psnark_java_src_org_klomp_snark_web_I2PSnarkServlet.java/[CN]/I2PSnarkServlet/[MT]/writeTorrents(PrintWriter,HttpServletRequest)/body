@@ -6,9 +6,7 @@
   boolean isForm=_manager.util().connected() || !snarks.isEmpty();
   if (isForm) {
     out.write("<form action=\"_post\" method=\"POST\">\n");
-    out.write("<input type=\"hidden\" name=\"nonce\" value=\"" + _nonce + "\" >\n");
-    if (peerParam != null)     out.write("<input type=\"hidden\" name=\"p\" value=\"" + peerParam + "\" >\n");
-    if (stParam != null)     out.write("<input type=\"hidden\" name=\"st\" value=\"" + stParam + "\" >\n");
+    writeHiddenInputs(out,req,null);
   }
   out.write(TABLE_HEADER);
   String ua=req.getHeader("User-Agent");
@@ -24,18 +22,25 @@
     }
   }
   int pageSize=Math.max(_manager.getPageSize(),5);
-  out.write("<tr><th><img border=\"0\" src=\"" + _imgPath + "status.png\" title=\"");
-  out.write(_("Status"));
+  String currentSort=req.getParameter("sort");
+  boolean showSort=total > 1;
+  out.write("<tr><th>");
+  String sort=("2".equals(currentSort)) ? "-2" : "2";
+  if (showSort) {
+    out.write("<a href=\"" + _contextPath + '/'+ getQueryString(req,null,null,sort));
+    out.write("\">");
+  }
+  out.write("<img border=\"0\" src=\"" + _imgPath + "status.png\" title=\"");
+  if (showSort)   out.write(_("Sort by {0}",_("Status")));
+ else   out.write(_("Status"));
   out.write("\" alt=\"");
   out.write(_("Status"));
-  out.write("\"></th>\n<th>");
+  out.write("\">");
+  if (showSort)   out.write("</a>");
+  out.write("</th>\n<th>");
   if (_manager.util().connected() && !snarks.isEmpty()) {
     out.write(" <a href=\"" + _contextPath + '/');
     if (peerParam != null) {
-      if (stParam != null) {
-        out.write("?st=");
-        out.write(stParam);
-      }
       out.write("\">");
       out.write("<img border=\"0\" src=\"" + _imgPath + "hidepeers.png\" title=\"");
       out.write(_("Hide Peers"));
@@ -44,11 +49,7 @@
       out.write("\">");
     }
  else {
-      out.write("?p=1");
-      if (stParam != null) {
-        out.write("&amp;st=");
-        out.write(stParam);
-      }
+      out.write(getQueryString(req,"1",null,null));
       out.write("\">");
       out.write("<img border=\"0\" src=\"" + _imgPath + "showpeers.png\" title=\"");
       out.write(_("Show Peers"));
@@ -59,51 +60,142 @@
     out.write("</a><br>\n");
   }
   out.write("</th>\n<th colspan=\"2\" align=\"left\">");
+  boolean isTypeSort=false;
+  if (showSort) {
+    if (currentSort == null || "0".equals(currentSort) || "1".equals(currentSort)) {
+      sort="-1";
+    }
+ else     if ("-1".equals(currentSort)) {
+      sort="12";
+      isTypeSort=true;
+    }
+ else     if ("12".equals(currentSort)) {
+      sort="-12";
+      isTypeSort=true;
+    }
+ else {
+      sort="";
+    }
+    out.write("<a href=\"" + _contextPath + '/'+ getQueryString(req,null,null,sort));
+    out.write("\">");
+  }
   out.write("<img border=\"0\" src=\"" + _imgPath + "torrent.png\" title=\"");
-  out.write(_("Torrent"));
+  if (showSort)   out.write(_("Sort by {0}",(isTypeSort ? _("File type") : _("Torrent"))));
+ else   out.write(_("Torrent"));
   out.write("\" alt=\"");
   out.write(_("Torrent"));
-  out.write("\"></th>\n<th align=\"center\">");
+  out.write("\">");
+  if (showSort)   out.write("</a>");
+  out.write("</th>\n<th align=\"center\">");
   if (total > 0 && (start > 0 || total > pageSize)) {
-    writePageNav(out,start,pageSize,total,peerParam,noThinsp);
+    writePageNav(out,req,start,pageSize,total,noThinsp);
   }
   out.write("</th>\n<th align=\"right\">");
   if (_manager.util().connected() && !snarks.isEmpty()) {
+    if (showSort) {
+      sort=("4".equals(currentSort)) ? "-4" : "4";
+      out.write("<a href=\"" + _contextPath + '/'+ getQueryString(req,null,null,sort));
+      out.write("\">");
+    }
     out.write("<img border=\"0\" src=\"" + _imgPath + "eta.png\" title=\"");
-    out.write(_("Estimated time remaining"));
+    if (showSort)     out.write(_("Sort by {0}",_("Estimated time remaining")));
+ else     out.write(_("Estimated time remaining"));
     out.write("\" alt=\"");
     out.write(_("ETA"));
     out.write("\">");
+    if (showSort)     out.write("</a>");
   }
   out.write("</th>\n<th align=\"right\">");
+  boolean isDlSort=false;
+  if (showSort) {
+    if ("5".equals(currentSort)) {
+      sort="-5";
+    }
+ else     if ("-5".equals(currentSort)) {
+      sort="6";
+      isDlSort=true;
+    }
+ else     if ("6".equals(currentSort)) {
+      sort="-6";
+      isDlSort=true;
+    }
+ else {
+      sort="5";
+    }
+    out.write("<a href=\"" + _contextPath + '/'+ getQueryString(req,null,null,sort));
+    out.write("\">");
+  }
   out.write("<img border=\"0\" src=\"" + _imgPath + "head_rx.png\" title=\"");
-  out.write(_("Downloaded"));
+  if (showSort)   out.write(_("Sort by {0}",(isDlSort ? _("Downloaded") : _("Size"))));
+ else   out.write(_("Downloaded"));
   out.write("\" alt=\"");
   out.write(_("RX"));
   out.write("\">");
+  if (showSort)   out.write("</a>");
   out.write("</th>\n<th align=\"right\">");
+  boolean isRatSort=false;
   if (!snarks.isEmpty()) {
+    boolean nextRatSort=false;
+    if (showSort) {
+      if ("7".equals(currentSort)) {
+        sort="-7";
+      }
+ else       if ("-7".equals(currentSort)) {
+        sort="11";
+        nextRatSort=true;
+      }
+ else       if ("11".equals(currentSort)) {
+        sort="-11";
+        nextRatSort=true;
+        isRatSort=true;
+      }
+ else       if ("-11".equals(currentSort)) {
+        sort="7";
+        isRatSort=true;
+      }
+ else {
+        sort="7";
+      }
+      out.write("<a href=\"" + _contextPath + '/'+ getQueryString(req,null,null,sort));
+      out.write("\">");
+    }
     out.write("<img border=\"0\" src=\"" + _imgPath + "head_tx.png\" title=\"");
-    out.write(_("Uploaded"));
+    if (showSort)     out.write(_("Sort by {0}",(nextRatSort ? _("Upload ratio") : _("Uploaded"))));
+ else     out.write(_("Uploaded"));
     out.write("\" alt=\"");
     out.write(_("TX"));
     out.write("\">");
+    if (showSort)     out.write("</a>");
   }
   out.write("</th>\n<th align=\"right\">");
   if (_manager.util().connected() && !snarks.isEmpty()) {
+    if (showSort) {
+      sort=("8".equals(currentSort)) ? "-8" : "8";
+      out.write("<a href=\"" + _contextPath + '/'+ getQueryString(req,null,null,sort));
+      out.write("\">");
+    }
     out.write("<img border=\"0\" src=\"" + _imgPath + "head_rxspeed.png\" title=\"");
-    out.write(_("Down Rate"));
+    if (showSort)     out.write(_("Sort by {0}",_("Down Rate")));
+ else     out.write(_("Down Rate"));
     out.write("\" alt=\"");
     out.write(_("RX Rate"));
-    out.write(" \">");
+    out.write("\">");
+    if (showSort)     out.write("</a>");
   }
   out.write("</th>\n<th align=\"right\">");
   if (_manager.util().connected() && !snarks.isEmpty()) {
+    if (showSort) {
+      sort=("9".equals(currentSort)) ? "-9" : "9";
+      out.write("<a href=\"" + _contextPath + '/'+ getQueryString(req,null,null,sort));
+      out.write("\">");
+    }
     out.write("<img border=\"0\" src=\"" + _imgPath + "head_txspeed.png\" title=\"");
-    out.write(_("Up Rate"));
+    if (showSort)     out.write(_("Sort by {0}",_("Up Rate")));
+ else     out.write(_("Up Rate"));
     out.write("\" alt=\"");
     out.write(_("TX Rate"));
-    out.write(" \">");
+    out.write("\">");
+    if (showSort)     out.write("</a>");
   }
   out.write("</th>\n<th align=\"center\">");
   if (_manager.isStopping()) {
@@ -149,12 +241,11 @@
   out.write("</thead>\n");
   String uri=_contextPath + '/';
   boolean showDebug="2".equals(peerParam);
-  String stParamStr=stParam == null ? "" : "&amp;st=" + stParam;
   for (int i=0; i < total; i++) {
     Snark snark=snarks.get(i);
     boolean showPeers=showDebug || "1".equals(peerParam) || Base64.encode(snark.getInfoHash()).equals(peerParam);
     boolean hide=i < start || i >= start + pageSize;
-    displaySnark(out,snark,uri,i,stats,showPeers,isDegraded,noThinsp,showDebug,hide,stParamStr);
+    displaySnark(out,req,snark,uri,i,stats,showPeers,isDegraded,noThinsp,showDebug,hide,isRatSort);
   }
   if (total == 0) {
     out.write("<tr class=\"snarkTorrentNoneLoaded\">" + "<td class=\"snarkTorrentNoneLoaded\"" + " colspan=\"11\"><i>");
