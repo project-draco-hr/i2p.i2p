@@ -43,7 +43,11 @@
     for (    ACKBitfield bf : partialACKsRemaining) {
       if (partialAcksToSend >= ABSOLUTE_MAX_ACKS)       break;
       if (bf.receivedComplete())       continue;
-      int acksz=4 + (bf.fragmentCount() / 7) + 1;
+      int bits=bf.highestReceived() + 1;
+      if (bits <= 0)       continue;
+      int acksz=bits / 7;
+      if (bits % 7 > 0)       acksz++;
+      acksz+=4;
       if (partialAcksToSend == 0)       acksz++;
       if (availableForExplicitAcks >= acksz) {
         availableForExplicitAcks-=acksz;
@@ -85,10 +89,12 @@
     for (int i=0; i < partialAcksToSend && iter.hasNext(); i++) {
       ACKBitfield bitfield=iter.next();
       if (bitfield.receivedComplete())       continue;
+      int bits=bitfield.highestReceived() + 1;
+      if (bits <= 0)       continue;
+      int size=bits / 7;
+      if (bits % 7 > 0)       size++;
       DataHelper.toLong(data,off,4,bitfield.getMessageId());
       off+=4;
-      int bits=bitfield.fragmentCount();
-      int size=(bits / 7) + 1;
       for (int curByte=0; curByte < size; curByte++) {
         if (curByte + 1 < size)         data[off]|=(byte)(1 << 7);
         for (int curBit=0; curBit < 7; curBit++) {
@@ -97,7 +103,7 @@
         off++;
       }
       iter.remove();
-      if (msg != null)       msg.append(' ').append(bitfield);
+      if (msg != null)       msg.append(' ').append(bitfield).append(" with ack bytes: ").append(size);
     }
     DataHelper.toLong(data,numPartialOffset,1,origNumRemaining - partialACKsRemaining.size());
   }
