@@ -1,12 +1,13 @@
 {
-  if (_received <= 0) {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug(prefix() + "write out the first part of our handshake");
-    byte toWrite[]=new byte[_X.length + _hX_xor_bobIdentHash.length];
-    System.arraycopy(_X,0,toWrite,0,_X.length);
-    System.arraycopy(_hX_xor_bobIdentHash,0,toWrite,_X.length,_hX_xor_bobIdentHash.length);
+  if (_state == State.OB_INIT) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug(prefix() + "send X");
+    byte toWrite[]=new byte[XY_SIZE + _hX_xor_bobIdentHash.length];
+    System.arraycopy(_X,0,toWrite,0,XY_SIZE);
+    System.arraycopy(_hX_xor_bobIdentHash,0,toWrite,XY_SIZE,_hX_xor_bobIdentHash.length);
+    _state=State.OB_SENT_X;
     _transport.getPumper().wantsWrite(_con,toWrite);
   }
  else {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug(prefix() + "prepare outbound with received=" + _received);
+    if (_log.shouldLog(Log.WARN))     _log.warn(prefix() + "unexpected prepareOutbound()");
   }
 }

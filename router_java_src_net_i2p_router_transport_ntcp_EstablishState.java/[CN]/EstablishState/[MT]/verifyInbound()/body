@@ -1,5 +1,4 @@
 {
-  if (_corrupt)   return;
   byte b[]=_sz_aliceIdent_tsA_padding_aliceSig.toByteArray();
   try {
     int sz=_aliceIdentSize;
@@ -11,9 +10,6 @@
     baos.write(DataHelper.toLong(4,tsA));
     baos.write(DataHelper.toLong(4,_tsB));
     byte toVerify[]=baos.toByteArray();
-    if (_log.shouldLog(Log.DEBUG)) {
-      _log.debug(prefix() + "checking " + Base64.encode(toVerify,0,16));
-    }
     SigType type=_aliceIdent.getSigningPublicKey().getType();
     if (type == null) {
       fail("unsupported sig type");
@@ -22,8 +18,8 @@
     byte s[]=new byte[type.getSigLen()];
     System.arraycopy(b,b.length - s.length,s,0,s.length);
     Signature sig=new Signature(type,s);
-    _verified=_context.dsa().verifySignature(sig,toVerify,_aliceIdent.getSigningPublicKey());
-    if (_verified) {
+    boolean ok=_context.dsa().verifySignature(sig,toVerify,_aliceIdent.getSigningPublicKey());
+    if (ok) {
       InetAddress addr=this._con.getChannel().socket().getInetAddress();
       byte[] ip=(addr == null) ? null : addr.getAddress();
       if (_context.banlist().isBanlistedForever(_aliceIdent.calculateHash())) {
@@ -51,12 +47,14 @@
  else       if (_log.shouldLog(Log.DEBUG)) {
         _log.debug(prefix() + "Clock skew: " + diff+ " ms");
       }
+      _state=State.VERIFIED;
       sendInboundConfirm(_aliceIdent,tsA);
       _con.setRemotePeer(_aliceIdent);
       if (_log.shouldLog(Log.DEBUG))       _log.debug(prefix() + "e_bobSig is " + _e_bobSig.length+ " bytes long");
-      byte iv[]=new byte[16];
-      System.arraycopy(_e_bobSig,_e_bobSig.length - 16,iv,0,16);
+      byte iv[]=_curDecrypted;
+      System.arraycopy(_e_bobSig,_e_bobSig.length - AES_SIZE,iv,0,AES_SIZE);
       _con.finishInboundEstablishment(_dh.getSessionKey(),(tsA - _tsB),iv,_prevEncrypted);
+      releaseBufs();
       if (_log.shouldLog(Log.INFO))       _log.info(prefix() + "Verified remote peer as " + _aliceIdent.calculateHash());
     }
  else {
