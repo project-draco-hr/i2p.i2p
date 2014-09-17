@@ -4,17 +4,15 @@
   if (path != null && path.startsWith(WARBASE)) {
     if (method.equals("GET") || method.equals("HEAD"))     super.doGet(req,resp);
  else     resp.sendError(405);
+    return;
   }
   _themePath="/themes/snark/" + _manager.getTheme() + '/';
   _imgPath=_themePath + "images/";
-  resp.setHeader("X-Frame-Options","SAMEORIGIN");
-  resp.setHeader("Content-Security-Policy","default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'");
-  resp.setHeader("X-XSS-Protection","1; mode=block");
+  req.setCharacterEncoding("UTF-8");
   String pOverride=_manager.util().connected() ? null : "";
   String peerString=getQueryString(req,pOverride,null,null);
   if ("/.ajax/xhr1.html".equals(path)) {
-    resp.setCharacterEncoding("UTF-8");
-    resp.setContentType("text/html; charset=UTF-8");
+    setHTMLHeaders(resp);
     PrintWriter out=resp.getWriter();
     writeMessages(out,false,peerString);
     writeTorrents(out,req);
@@ -25,9 +23,6 @@
     if (path.endsWith("/")) {
       String pathInfo=req.getPathInfo();
       String pathInContext=addPaths(path,pathInfo);
-      req.setCharacterEncoding("UTF-8");
-      resp.setCharacterEncoding("UTF-8");
-      resp.setContentType("text/html; charset=UTF-8");
       File resource=getResource(pathInContext);
       if (resource == null) {
         resp.sendError(404);
@@ -39,6 +34,7 @@
           sendRedirect(req,resp,"");
         }
  else         if (listing != null) {
+          setHTMLHeaders(resp);
           resp.getWriter().write(listing);
         }
  else {
@@ -53,9 +49,6 @@
     }
     return;
   }
-  req.setCharacterEncoding("UTF-8");
-  resp.setCharacterEncoding("UTF-8");
-  resp.setContentType("text/html; charset=UTF-8");
   String nonce=req.getParameter("nonce");
   if (nonce != null) {
     if (nonce.equals(String.valueOf(_nonce)))     processRequest(req);
@@ -63,6 +56,7 @@
     sendRedirect(req,resp,peerString);
     return;
   }
+  setHTMLHeaders(resp);
   PrintWriter out=resp.getWriter();
   out.write(DOCTYPE + "<html>\n" + "<head><link rel=\"shortcut icon\" href=\""+ _themePath+ "favicon.ico\">\n"+ "<title>");
   if (_contextName.equals(DEFAULT_NAME))   out.write(_("I2PSnark"));
