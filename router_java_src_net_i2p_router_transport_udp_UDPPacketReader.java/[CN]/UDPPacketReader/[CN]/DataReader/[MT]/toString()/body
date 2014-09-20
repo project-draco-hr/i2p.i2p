@@ -19,10 +19,16 @@
     int numBitfields=(int)DataHelper.fromLong(_message,off,1);
     off++;
     buf.append("with partial ACKs for ");
-    for (int i=0; i < numBitfields; i++) {
-      PacketACKBitfield bf=new PacketACKBitfield(off);
-      buf.append(bf.getMessageId()).append(' ');
-      off+=bf.getByteLength();
+    try {
+      for (int i=0; i < numBitfields; i++) {
+        PacketACKBitfield bf=new PacketACKBitfield(off);
+        buf.append(bf.getMessageId()).append(' ');
+        off+=bf.getByteLength();
+      }
+    }
+ catch (    DataFormatException dfe) {
+      buf.append("CORRUPT");
+      return buf.toString();
     }
   }
   if (readExtendedDataIncluded()) {
