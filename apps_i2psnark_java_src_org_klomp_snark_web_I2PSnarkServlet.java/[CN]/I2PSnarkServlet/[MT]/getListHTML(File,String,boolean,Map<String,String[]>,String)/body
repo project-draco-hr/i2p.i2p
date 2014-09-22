@@ -198,11 +198,26 @@
   File[] ls=null;
   if (r.isDirectory()) {
     ls=r.listFiles();
-    Arrays.sort(ls,new ListingComparator());
   }
   if (ls == null) {
     buf.append("</div></div></BODY></HTML>");
     return buf.toString();
+  }
+  Storage storage=snark != null ? snark.getStorage() : null;
+  List<Sorters.FileAndIndex> fileList=new ArrayList<Sorters.FileAndIndex>(ls.length);
+  for (int i=0; i < ls.length; i++) {
+    fileList.add(new Sorters.FileAndIndex(ls[i],storage));
+  }
+  if (fileList.size() > 1) {
+    int sort=0;
+    if (sortParam != null) {
+      try {
+        sort=Integer.parseInt(sortParam);
+      }
+ catch (      NumberFormatException nfe) {
+      }
+    }
+    Collections.sort(fileList,Sorters.getFileComparator(sort,this));
   }
   buf.append("<table class=\"snarkDirInfo\"><thead>\n");
   buf.append("<tr>\n").append("<th colspan=2>");
@@ -226,16 +241,18 @@
   toThemeImg(buf,"up");
   buf.append(' ').append(_("Up to higher level directory")).append("</A></td></tr>\n");
   boolean showSaveButton=false;
-  for (int i=0; i < ls.length; i++) {
-    File item=ls[i];
-    String rowClass=(i % 2 == 0 ? "snarkTorrentEven" : "snarkTorrentOdd");
+  boolean rowEven=true;
+  for (  Sorters.FileAndIndex fai : fileList) {
+    File item=fai.file;
+    String rowClass=(rowEven ? "snarkTorrentEven" : "snarkTorrentOdd");
+    rowEven=!rowEven;
     buf.append("<TR class=\"").append(rowClass).append("\">");
     boolean complete=false;
     String status="";
     long length=item.length();
-    int fileIndex=-1;
+    int fileIndex=fai.index;
     int priority=0;
-    if (item.isDirectory()) {
+    if (fai.isDirectory) {
       complete=true;
     }
  else {
@@ -244,9 +261,7 @@
         status=toImg("cancel") + ' ' + _("Torrent not found?");
       }
  else {
-        Storage storage=snark.getStorage();
-        fileIndex=storage.indexOf(item);
-        long remaining=storage.remaining(fileIndex);
+        long remaining=fai.remaining;
         if (remaining < 0) {
           complete=true;
           status=toImg("cancel") + ' ' + _("File not found in torrent?");
@@ -256,7 +271,7 @@
           status=toImg("tick") + ' ' + _("Complete");
         }
  else {
-          priority=storage.getPriority(fileIndex);
+          priority=fai.priority;
           if (priority < 0)           status=toImg("cancel");
  else           if (priority == 0)           status=toImg("clock");
  else           status=toImg("clock_red");
@@ -264,7 +279,7 @@
         }
       }
     }
-    String path=addPaths(decodedBase,ls[i].getName());
+    String path=addPaths(decodedBase,item.getName());
     if (item.isDirectory() && !path.endsWith("/"))     path=addPaths(path,"/");
     path=encodePath(path);
     String icon=toIcon(item);
