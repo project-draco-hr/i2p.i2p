@@ -1,0 +1,37 @@
+{
+  DatabaseLookupMessage msg=new DatabaseLookupMessage(getContext(),true);
+  msg.setSearchKey(getState().getTarget());
+  msg.setFrom(replyGateway);
+  Set<Hash> dontIncludePeers=getState().getClosestAttempted(MAX_CLOSEST);
+  msg.setMessageExpiration(expiration);
+  msg.setReplyTunnel(replyTunnelId);
+  int available=MAX_CLOSEST - dontIncludePeers.size();
+  if (available > 0) {
+    if (dontIncludePeers.add(Hash.FAKE_HASH))     available--;
+  }
+  KBucketSet<Hash> ks=_facade.getKBuckets();
+  Hash rkey=getContext().routingKeyGenerator().getRoutingKey(getState().getTarget());
+  available=MAX_CLOSEST - dontIncludePeers.size();
+  if (available > 0) {
+    Set<Hash> dontInclude=new HashSet<Hash>(dontIncludePeers);
+    List<Hash> peers=_peerSelector.selectNearestExplicit(rkey,available,dontInclude,ks);
+    dontIncludePeers.addAll(peers);
+  }
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Peers we don't want to hear about: " + dontIncludePeers);
+  msg.setDontIncludePeers(dontIncludePeers);
+  I2NPMessage outMsg;
+  if (getContext().getProperty(IterativeSearchJob.PROP_ENCRYPT_RI,IterativeSearchJob.DEFAULT_ENCRYPT_RI)) {
+    if (DatabaseLookupMessage.supportsEncryptedReplies(peer)) {
+      MessageWrapper.OneTimeSession sess;
+      sess=MessageWrapper.generateSession(getContext());
+      if (_log.shouldLog(Log.INFO))       _log.info(getJobId() + ": Requesting encrypted reply from " + peer.getIdentity().calculateHash()+ ' '+ sess.key+ ' '+ sess.tag);
+      msg.setReplySession(sess.key,sess.tag);
+    }
+    outMsg=MessageWrapper.wrap(getContext(),msg,peer);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug(getJobId() + ": Encrypted exploratory DLM for " + getState().getTarget()+ " to "+ peer.getIdentity().calculateHash());
+  }
+ else {
+    outMsg=msg;
+  }
+  return outMsg;
+}

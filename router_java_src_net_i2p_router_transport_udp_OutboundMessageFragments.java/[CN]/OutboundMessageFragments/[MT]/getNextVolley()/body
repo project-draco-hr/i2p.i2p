@@ -1,8 +1,8 @@
 {
   PeerState peer=null;
-  OutboundMessageState state=null;
+  List<OutboundMessageState> states=null;
   int peersProcessed=0;
-  while (_alive && (state == null)) {
+  while (_alive && (states == null)) {
     int nextSendDelay=Integer.MAX_VALUE;
     if (_iterator == null || ((!_activePeers.isEmpty()) && (!_iterator.hasNext()))) {
       _iterator=_activePeers.iterator();
@@ -16,8 +16,8 @@
         continue;
       }
       peersProcessed++;
-      state=peer.allocateSend();
-      if (state != null) {
+      states=peer.allocateSend();
+      if (states != null) {
         break;
       }
  else       if (peersProcessed >= _activePeers.size()) {
@@ -29,8 +29,7 @@
         peer=null;
       }
     }
-    if (peer != null && _log.shouldLog(Log.DEBUG))     _log.debug("Done looping, next peer we are sending for: " + peer.getRemotePeer());
-    if (state == null && peersProcessed >= _activePeers.size() && nextSendDelay > 0) {
+    if (states == null && peersProcessed >= _activePeers.size() && nextSendDelay > 0) {
       _isWaiting=true;
       peersProcessed=0;
       int toWait=Math.min(Math.max(nextSendDelay,10),MAX_WAIT);
@@ -45,7 +44,7 @@ synchronized (_activePeers) {
       _isWaiting=false;
     }
   }
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Sending " + state);
-  UDPPacket packets[]=preparePackets(state,peer);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Sending " + DataHelper.toString(states));
+  List<UDPPacket> packets=preparePackets(states,peer);
   return packets;
 }

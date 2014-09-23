@@ -4,18 +4,22 @@
   _transport=transport;
   _con=con;
   _dh=_transport.getDHBuilder();
-  _hX_xor_bobIdentHash=new byte[Hash.HASH_LENGTH];
+  _hX_xor_bobIdentHash=SimpleByteCache.acquire(HXY_SIZE);
   if (_con.isInbound()) {
-    _X=new byte[256];
+    _X=SimpleByteCache.acquire(XY_SIZE);
+    _Y=_dh.getMyPublicValueBytes();
     _sz_aliceIdent_tsA_padding_aliceSig=new ByteArrayOutputStream(512);
+    _prevEncrypted=SimpleByteCache.acquire(AES_SIZE);
+    _state=State.IB_INIT;
   }
  else {
     _X=_dh.getMyPublicValueBytes();
-    _Y=new byte[256];
-    ctx.sha().calculateHash(_X,0,_X.length,_hX_xor_bobIdentHash,0);
+    _Y=SimpleByteCache.acquire(XY_SIZE);
+    ctx.sha().calculateHash(_X,0,XY_SIZE,_hX_xor_bobIdentHash,0);
     xor32(con.getRemotePeer().calculateHash().getData(),_hX_xor_bobIdentHash);
+    _state=State.OB_INIT;
   }
-  _prevEncrypted=new byte[16];
-  _curEncrypted=new byte[16];
-  _curDecrypted=new byte[16];
+  _e_hXY_tsB=new byte[HXY_TSB_PAD_SIZE];
+  _curEncrypted=SimpleByteCache.acquire(AES_SIZE);
+  _curDecrypted=SimpleByteCache.acquire(AES_SIZE);
 }

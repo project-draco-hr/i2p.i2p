@@ -1,17 +1,7 @@
 {
-  if (_corrupt)   return;
   byte b[]=_sz_aliceIdent_tsA_padding_aliceSig.toByteArray();
   try {
-    RouterIdentity alice=new RouterIdentity();
-    int sz=(int)DataHelper.fromLong(b,0,2);
-    if ((sz <= 0) || (sz > b.length - 2 - 4- Signature.SIGNATURE_BYTES)) {
-      _context.statManager().addRateData("ntcp.invalidInboundSize",sz);
-      fail("size is invalid",new Exception("size is " + sz));
-      return;
-    }
-    byte aliceData[]=new byte[sz];
-    System.arraycopy(b,2,aliceData,0,sz);
-    alice.fromByteArray(aliceData);
+    int sz=_aliceIdentSize;
     long tsA=DataHelper.fromLong(b,2 + sz,4);
     ByteArrayOutputStream baos=new ByteArrayOutputStream(768);
     baos.write(_X);
@@ -20,23 +10,25 @@
     baos.write(DataHelper.toLong(4,tsA));
     baos.write(DataHelper.toLong(4,_tsB));
     byte toVerify[]=baos.toByteArray();
-    if (_log.shouldLog(Log.DEBUG)) {
-      _log.debug(prefix() + "checking " + Base64.encode(toVerify,0,16));
+    SigType type=_aliceIdent.getSigningPublicKey().getType();
+    if (type == null) {
+      fail("unsupported sig type");
+      return;
     }
-    byte s[]=new byte[Signature.SIGNATURE_BYTES];
+    byte s[]=new byte[type.getSigLen()];
     System.arraycopy(b,b.length - s.length,s,0,s.length);
-    Signature sig=new Signature(s);
-    _verified=_context.dsa().verifySignature(sig,toVerify,alice.getSigningPublicKey());
-    if (_verified) {
+    Signature sig=new Signature(type,s);
+    boolean ok=_context.dsa().verifySignature(sig,toVerify,_aliceIdent.getSigningPublicKey());
+    if (ok) {
       InetAddress addr=this._con.getChannel().socket().getInetAddress();
       byte[] ip=(addr == null) ? null : addr.getAddress();
-      if (_context.banlist().isBanlistedForever(alice.calculateHash())) {
-        if (_log.shouldLog(Log.WARN))         _log.warn("Dropping inbound connection from permanently banlisted peer: " + alice.calculateHash().toBase64());
+      if (_context.banlist().isBanlistedForever(_aliceIdent.calculateHash())) {
+        if (_log.shouldLog(Log.WARN))         _log.warn("Dropping inbound connection from permanently banlisted peer: " + _aliceIdent.calculateHash());
         if (ip != null)         _context.blocklist().add(ip);
-        fail("Peer is banlisted forever: " + alice.calculateHash().toBase64());
+        fail("Peer is banlisted forever: " + _aliceIdent.calculateHash());
         return;
       }
-      if (ip != null)       _transport.setIP(alice.calculateHash(),ip);
+      if (ip != null)       _transport.setIP(_aliceIdent.calculateHash(),ip);
       if (_log.shouldLog(Log.DEBUG))       _log.debug(prefix() + "verification successful for " + _con);
       long diff=1000 * Math.abs(tsA - _tsB);
       if (!_context.clock().getUpdatedSuccessfully()) {
@@ -46,8 +38,8 @@
       }
  else       if (diff >= Router.CLOCK_FUDGE_FACTOR) {
         _context.statManager().addRateData("ntcp.invalidInboundSkew",diff);
-        _transport.markReachable(alice.calculateHash(),true);
-        _context.banlist().banlistRouter(DataHelper.formatDuration(diff),alice.calculateHash(),_x("Excessive clock skew: {0}"));
+        _transport.markReachable(_aliceIdent.calculateHash(),true);
+        _context.banlist().banlistRouter(DataHelper.formatDuration(diff),_aliceIdent.calculateHash(),_x("Excessive clock skew: {0}"));
         _transport.setLastBadSkew(tsA - _tsB);
         fail("Clocks too skewed (" + diff + " ms)",null,true);
         return;
@@ -55,28 +47,23 @@
  else       if (_log.shouldLog(Log.DEBUG)) {
         _log.debug(prefix() + "Clock skew: " + diff+ " ms");
       }
-      sendInboundConfirm(alice,tsA);
-      _con.setRemotePeer(alice);
+      _state=State.VERIFIED;
+      sendInboundConfirm(_aliceIdent,tsA);
+      _con.setRemotePeer(_aliceIdent);
       if (_log.shouldLog(Log.DEBUG))       _log.debug(prefix() + "e_bobSig is " + _e_bobSig.length+ " bytes long");
-      byte iv[]=new byte[16];
-      System.arraycopy(_e_bobSig,_e_bobSig.length - 16,iv,0,16);
+      byte iv[]=_curEncrypted;
+      System.arraycopy(_e_bobSig,_e_bobSig.length - AES_SIZE,iv,0,AES_SIZE);
       _con.finishInboundEstablishment(_dh.getSessionKey(),(tsA - _tsB),iv,_prevEncrypted);
-      if (_log.shouldLog(Log.INFO))       _log.info(prefix() + "Verified remote peer as " + alice.calculateHash().toBase64());
+      releaseBufs();
+      if (_log.shouldLog(Log.INFO))       _log.info(prefix() + "Verified remote peer as " + _aliceIdent.calculateHash());
     }
  else {
       _context.statManager().addRateData("ntcp.invalidInboundSignature",1);
-      fail("Peer verification failed - spoof of " + alice.calculateHash().toBase64() + "?");
+      fail("Peer verification failed - spoof of " + _aliceIdent.calculateHash() + "?");
     }
   }
  catch (  IOException ioe) {
     _context.statManager().addRateData("ntcp.invalidInboundIOE",1);
     fail("Error verifying peer",ioe);
-  }
-catch (  DataFormatException dfe) {
-    _context.statManager().addRateData("ntcp.invalidInboundDFE",1);
-    fail("Error verifying peer",dfe);
-  }
-catch (  NullPointerException npe) {
-    fail("Error verifying peer",npe);
   }
 }

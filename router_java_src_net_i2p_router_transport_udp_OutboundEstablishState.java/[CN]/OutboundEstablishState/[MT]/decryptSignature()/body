@@ -3,8 +3,16 @@
   if (_sessionKey == null)   throw new NullPointerException("SessionKey is null!");
   if (_receivedIV == null)   throw new NullPointerException("IV is null!");
   _context.aes().decrypt(_receivedEncryptedSignature,0,_receivedEncryptedSignature,0,_sessionKey,_receivedIV,_receivedEncryptedSignature.length);
-  byte signatureBytes[]=new byte[Signature.SIGNATURE_BYTES];
-  System.arraycopy(_receivedEncryptedSignature,0,signatureBytes,0,Signature.SIGNATURE_BYTES);
-  _receivedSignature=new Signature(signatureBytes);
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Decrypted received signature: " + Base64.encode(signatureBytes));
+  SigType type=_remotePeer.getSigningPublicKey().getType();
+  int sigLen=type.getSigLen();
+  int mod=sigLen % 16;
+  if (mod != 0) {
+    byte signatureBytes[]=new byte[sigLen];
+    System.arraycopy(_receivedEncryptedSignature,0,signatureBytes,0,sigLen);
+    _receivedSignature=new Signature(type,signatureBytes);
+  }
+ else {
+    _receivedSignature=new Signature(type,_receivedEncryptedSignature);
+  }
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Decrypted received signature: " + Base64.encode(_receivedSignature.getData()));
 }

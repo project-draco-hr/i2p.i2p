@@ -8,26 +8,11 @@
   }
   _themePath="/themes/snark/" + _manager.getTheme() + '/';
   _imgPath=_themePath + "images/";
-  resp.setHeader("X-Frame-Options","SAMEORIGIN");
-  resp.setHeader("Content-Security-Policy","default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'");
-  resp.setHeader("X-XSS-Protection","1; mode=block");
-  String peerParam=req.getParameter("p");
-  String stParam=req.getParameter("st");
-  String peerString;
-  if (peerParam == null || (!_manager.util().connected()) || peerParam.replaceAll("[a-zA-Z0-9~=-]","").length() > 0) {
-    peerString="";
-  }
- else {
-    peerString="?p=" + DataHelper.stripHTML(peerParam);
-  }
-  if (stParam != null && !stParam.equals("0")) {
-    stParam=DataHelper.stripHTML(stParam);
-    if (peerString.length() > 0)     peerString+="&amp;st=" + stParam;
- else     peerString="?st=" + stParam;
-  }
+  req.setCharacterEncoding("UTF-8");
+  String pOverride=_manager.util().connected() ? null : "";
+  String peerString=getQueryString(req,pOverride,null,null);
   if ("/.ajax/xhr1.html".equals(path)) {
-    resp.setCharacterEncoding("UTF-8");
-    resp.setContentType("text/html; charset=UTF-8");
+    setHTMLHeaders(resp);
     PrintWriter out=resp.getWriter();
     writeMessages(out,false,peerString);
     writeTorrents(out,req);
@@ -38,20 +23,18 @@
     if (path.endsWith("/")) {
       String pathInfo=req.getPathInfo();
       String pathInContext=addPaths(path,pathInfo);
-      req.setCharacterEncoding("UTF-8");
-      resp.setCharacterEncoding("UTF-8");
-      resp.setContentType("text/html; charset=UTF-8");
       File resource=getResource(pathInContext);
       if (resource == null) {
         resp.sendError(404);
       }
  else {
         String base=addPaths(req.getRequestURI(),"/");
-        String listing=getListHTML(resource,base,true,method.equals("POST") ? req.getParameterMap() : null);
+        String listing=getListHTML(resource,base,true,method.equals("POST") ? req.getParameterMap() : null,req.getParameter("sort"));
         if (method.equals("POST")) {
           sendRedirect(req,resp,"");
         }
  else         if (listing != null) {
+          setHTMLHeaders(resp);
           resp.getWriter().write(listing);
         }
  else {
@@ -66,9 +49,6 @@
     }
     return;
   }
-  req.setCharacterEncoding("UTF-8");
-  resp.setCharacterEncoding("UTF-8");
-  resp.setContentType("text/html; charset=UTF-8");
   String nonce=req.getParameter("nonce");
   if (nonce != null) {
     if (nonce.equals(String.valueOf(_nonce)))     processRequest(req);
@@ -76,6 +56,7 @@
     sendRedirect(req,resp,peerString);
     return;
   }
+  setHTMLHeaders(resp);
   PrintWriter out=resp.getWriter();
   out.write(DOCTYPE + "<html>\n" + "<head><link rel=\"shortcut icon\" href=\""+ _themePath+ "favicon.ico\">\n"+ "<title>");
   if (_contextName.equals(DEFAULT_NAME))   out.write(_("I2PSnark"));
@@ -83,6 +64,7 @@
   out.write(" - ");
   if (isConfigure)   out.write(_("Configuration"));
  else   out.write(_("Anonymous BitTorrent Client"));
+  String peerParam=req.getParameter("p");
   if ("2".equals(peerParam))   out.write(" | Debug Mode");
   out.write("</title>\n");
   int delay=0;
@@ -101,7 +83,8 @@
     out.write("<div class=\"snarknavbar\"><a href=\"" + _contextPath + "/\" title=\"");
     out.write(_("Torrents"));
     out.write("\" class=\"snarkRefresh\">");
-    out.write("<img alt=\"\" border=\"0\" src=\"" + _imgPath + "arrow_refresh.png\">&nbsp;&nbsp;");
+    out.write(toThemeImg("arrow_refresh"));
+    out.write(">&nbsp;&nbsp;");
     if (_contextName.equals(DEFAULT_NAME))     out.write(_("I2PSnark"));
  else     out.write(_contextName);
     out.write("</a>");
@@ -110,7 +93,8 @@
     out.write("<div class=\"snarknavbar\"><a href=\"" + _contextPath + '/'+ peerString+ "\" title=\"");
     out.write(_("Refresh page"));
     out.write("\" class=\"snarkRefresh\">");
-    out.write("<img alt=\"\" border=\"0\" src=\"" + _imgPath + "arrow_refresh.png\">&nbsp;&nbsp;");
+    out.write(toThemeImg("arrow_refresh"));
+    out.write(">&nbsp;&nbsp;");
     if (_contextName.equals(DEFAULT_NAME))     out.write(_("I2PSnark"));
  else     out.write(_contextName);
     out.write("</a> <a href=\"http://forum.i2p/viewforum.php?f=21\" class=\"snarkRefresh\" target=\"_blank\">");

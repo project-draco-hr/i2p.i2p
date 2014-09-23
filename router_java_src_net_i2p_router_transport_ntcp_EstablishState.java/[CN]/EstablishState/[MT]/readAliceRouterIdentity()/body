@@ -1,0 +1,23 @@
+{
+  byte b[]=_sz_aliceIdent_tsA_padding_aliceSig.toByteArray();
+  try {
+    int sz=_aliceIdentSize;
+    if (sz < MIN_RI_SIZE || sz > MAX_RI_SIZE || sz > b.length - 2) {
+      _context.statManager().addRateData("ntcp.invalidInboundSize",sz);
+      fail("size is invalid",new Exception("size is " + sz));
+      return;
+    }
+    RouterIdentity alice=new RouterIdentity();
+    ByteArrayInputStream bais=new ByteArrayInputStream(b,2,sz);
+    alice.readBytes(bais);
+    _aliceIdent=alice;
+  }
+ catch (  IOException ioe) {
+    _context.statManager().addRateData("ntcp.invalidInboundIOE",1);
+    fail("Error verifying peer",ioe);
+  }
+catch (  DataFormatException dfe) {
+    _context.statManager().addRateData("ntcp.invalidInboundDFE",1);
+    fail("Error verifying peer",dfe);
+  }
+}

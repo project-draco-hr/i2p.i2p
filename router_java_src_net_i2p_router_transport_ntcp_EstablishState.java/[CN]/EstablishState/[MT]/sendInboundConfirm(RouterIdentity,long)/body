@@ -1,10 +1,10 @@
 {
-  byte toSign[]=new byte[256 + 256 + 32+ 4+ 4];
+  byte toSign[]=new byte[XY_SIZE + XY_SIZE + 32+ 4+ 4];
   int off=0;
-  System.arraycopy(_X,0,toSign,off,256);
-  off+=256;
-  System.arraycopy(_Y,0,toSign,off,256);
-  off+=256;
+  System.arraycopy(_X,0,toSign,off,XY_SIZE);
+  off+=XY_SIZE;
+  System.arraycopy(_Y,0,toSign,off,XY_SIZE);
+  off+=XY_SIZE;
   Hash h=alice.calculateHash();
   System.arraycopy(h.getData(),0,toSign,off,32);
   off+=32;
@@ -13,11 +13,16 @@
   DataHelper.toLong(toSign,off,4,_tsB);
   off+=4;
   Signature sig=_context.dsa().sign(toSign,_context.keyManager().getSigningPrivateKey());
-  byte preSig[]=new byte[Signature.SIGNATURE_BYTES + 8];
-  System.arraycopy(sig.getData(),0,preSig,0,Signature.SIGNATURE_BYTES);
-  _context.random().nextBytes(preSig,Signature.SIGNATURE_BYTES,8);
+  int siglen=sig.length();
+  int rem=siglen % AES_SIZE;
+  int padding;
+  if (rem > 0)   padding=AES_SIZE - rem;
+ else   padding=0;
+  byte preSig[]=new byte[siglen + padding];
+  System.arraycopy(sig.getData(),0,preSig,0,siglen);
+  if (padding > 0)   _context.random().nextBytes(preSig,siglen,padding);
   _e_bobSig=new byte[preSig.length];
-  _context.aes().encrypt(preSig,0,_e_bobSig,0,_dh.getSessionKey(),_e_hXY_tsB,_e_hXY_tsB.length - 16,_e_bobSig.length);
+  _context.aes().encrypt(preSig,0,_e_bobSig,0,_dh.getSessionKey(),_e_hXY_tsB,HXY_TSB_PAD_SIZE - AES_SIZE,_e_bobSig.length);
   if (_log.shouldLog(Log.DEBUG))   _log.debug(prefix() + "Sending encrypted inbound confirmation");
   _transport.getPumper().wantsWrite(_con,_e_bobSig);
 }

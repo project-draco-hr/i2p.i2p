@@ -1,0 +1,156 @@
+{
+  StringBuilder msg=null;
+  if (_log.shouldLog(Log.INFO)) {
+    msg=new StringBuilder(256);
+    msg.append("Data pkt to ").append(peer.getRemotePeer().toBase64());
+  }
+  int numFragments=fragments.size();
+  int dataSize=0;
+  for (int i=0; i < numFragments; i++) {
+    Fragment frag=fragments.get(i);
+    OutboundMessageState state=frag.state;
+    int fragment=frag.num;
+    int sz=state.fragmentSize(fragment);
+    dataSize+=sz;
+    if (msg != null) {
+      msg.append(" Fragment ").append(i);
+      msg.append(": msg ").append(state.getMessageId()).append(' ').append(fragment);
+      msg.append('/').append(state.getFragmentCount());
+      msg.append(' ').append(sz);
+    }
+  }
+  if (dataSize < 0)   return null;
+  int currentMTU=peer.getMTU();
+  int availableForAcks=currentMTU - dataSize;
+  int ipHeaderSize;
+  if (peer.isIPv6()) {
+    availableForAcks-=MIN_IPV6_DATA_PACKET_OVERHEAD;
+    ipHeaderSize=IPV6_HEADER_SIZE;
+  }
+ else {
+    availableForAcks-=MIN_DATA_PACKET_OVERHEAD;
+    ipHeaderSize=IP_HEADER_SIZE;
+  }
+  if (numFragments > 1)   availableForAcks-=(numFragments - 1) * FRAGMENT_HEADER_SIZE;
+  int availableForExplicitAcks=availableForAcks;
+  UDPPacket packet=buildPacketHeader((byte)(UDPPacket.PAYLOAD_TYPE_DATA << 4));
+  DatagramPacket pkt=packet.getPacket();
+  byte data[]=pkt.getData();
+  int off=HEADER_SIZE;
+  data[off]|=UDPPacket.DATA_FLAG_WANT_REPLY;
+  int partialAcksToSend=0;
+  if (availableForExplicitAcks >= 6 && !partialACKsRemaining.isEmpty()) {
+    for (    ACKBitfield bf : partialACKsRemaining) {
+      if (partialAcksToSend >= ABSOLUTE_MAX_ACKS)       break;
+      if (bf.receivedComplete())       continue;
+      int bits=bf.highestReceived() + 1;
+      if (bits <= 0)       continue;
+      int acksz=bits / 7;
+      if (bits % 7 > 0)       acksz++;
+      acksz+=4;
+      if (partialAcksToSend == 0)       acksz++;
+      if (availableForExplicitAcks >= acksz) {
+        availableForExplicitAcks-=acksz;
+        partialAcksToSend++;
+      }
+ else {
+        break;
+      }
+    }
+    if (partialAcksToSend > 0)     data[off]|=UDPPacket.DATA_FLAG_ACK_BITFIELDS;
+  }
+  if (availableForExplicitAcks >= 5 && !ackIdsRemaining.isEmpty()) {
+    data[off]|=UDPPacket.DATA_FLAG_EXPLICIT_ACK;
+  }
+  off++;
+  if (msg != null) {
+    msg.append(" Total data: ").append(dataSize).append(" bytes, mtu: ").append(currentMTU).append(", ").append(newAckCount).append(" new full acks requested, ").append(ackIdsRemaining.size() - newAckCount).append(" resend acks requested, ").append(partialACKsRemaining.size()).append(" partial acks requested, ").append(availableForAcks).append(" avail. for all acks, ").append(availableForExplicitAcks).append(" for full acks, ");
+  }
+  int explicitToSend=Math.min(ABSOLUTE_MAX_ACKS,Math.min(newAckCount + (currentMTU > PeerState.MIN_MTU ? MAX_RESEND_ACKS_LARGE : MAX_RESEND_ACKS_SMALL),Math.min((availableForExplicitAcks - 1) / 4,ackIdsRemaining.size())));
+  if (explicitToSend > 0) {
+    if (msg != null)     msg.append(explicitToSend).append(" full acks included:");
+    DataHelper.toLong(data,off,1,explicitToSend);
+    off++;
+    Iterator<Long> iter=ackIdsRemaining.iterator();
+    for (int i=0; i < explicitToSend && iter.hasNext(); i++) {
+      Long ackId=iter.next();
+      iter.remove();
+      DataHelper.toLong(data,off,4,ackId.longValue());
+      off+=4;
+      if (msg != null)       msg.append(' ').append(ackId.longValue());
+    }
+  }
+  if (partialAcksToSend > 0) {
+    if (msg != null)     msg.append(partialAcksToSend).append(" partial acks included:");
+    int origNumRemaining=partialACKsRemaining.size();
+    int numPartialOffset=off;
+    off++;
+    Iterator<ACKBitfield> iter=partialACKsRemaining.iterator();
+    for (int i=0; i < partialAcksToSend && iter.hasNext(); i++) {
+      ACKBitfield bitfield=iter.next();
+      if (bitfield.receivedComplete())       continue;
+      int bits=bitfield.highestReceived() + 1;
+      if (bits <= 0)       continue;
+      int size=bits / 7;
+      if (bits % 7 > 0)       size++;
+      DataHelper.toLong(data,off,4,bitfield.getMessageId());
+      off+=4;
+      for (int curByte=0; curByte < size; curByte++) {
+        if (curByte + 1 < size)         data[off]|=(byte)(1 << 7);
+        for (int curBit=0; curBit < 7; curBit++) {
+          if (bitfield.received(curBit + 7 * curByte))           data[off]|=(byte)(1 << curBit);
+        }
+        off++;
+      }
+      iter.remove();
+      if (msg != null)       msg.append(' ').append(bitfield).append(" with ack bytes: ").append(size);
+    }
+    DataHelper.toLong(data,numPartialOffset,1,origNumRemaining - partialACKsRemaining.size());
+  }
+  DataHelper.toLong(data,off,1,numFragments);
+  off++;
+  int sizeWritten=0;
+  for (int i=0; i < numFragments; i++) {
+    Fragment frag=fragments.get(i);
+    OutboundMessageState state=frag.state;
+    int fragment=frag.num;
+    DataHelper.toLong(data,off,4,state.getMessageId());
+    off+=4;
+    data[off]|=fragment << 1;
+    if (fragment == state.getFragmentCount() - 1)     data[off]|=1;
+    off++;
+    int fragSize=state.fragmentSize(fragment);
+    DataHelper.toLong(data,off,2,fragSize);
+    data[off]&=(byte)0x3F;
+    off+=2;
+    int sz=state.writeFragment(data,off,fragment);
+    off+=sz;
+    sizeWritten+=sz;
+  }
+  if (sizeWritten != dataSize) {
+    if (sizeWritten < 0) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Write failed for " + DataHelper.toString(fragments));
+    }
+ else {
+      _log.error("Size written: " + sizeWritten + " but size: "+ dataSize+ " for "+ DataHelper.toString(fragments));
+    }
+    packet.release();
+    return null;
+  }
+  if (dataSize == 0) {
+    _log.error("Sending zero-size fragment??? for " + DataHelper.toString(fragments));
+  }
+  off=pad1(data,off);
+  off=pad2(data,off,currentMTU - (ipHeaderSize + UDP_HEADER_SIZE));
+  pkt.setLength(off);
+  if (msg != null) {
+    msg.append(" pkt size ").append(off + (ipHeaderSize + UDP_HEADER_SIZE));
+    _log.info(msg.toString());
+  }
+  authenticate(packet,peer.getCurrentCipherKey(),peer.getCurrentMACKey());
+  setTo(packet,peer.getRemoteIPAddress(),peer.getRemotePort());
+  if (off + (ipHeaderSize + UDP_HEADER_SIZE) > PeerState.LARGE_MTU) {
+    _log.error("Size is " + off + " for "+ packet+ " data size "+ dataSize+ " pkt size "+ (off + (ipHeaderSize + UDP_HEADER_SIZE))+ " MTU "+ currentMTU+ ' '+ availableForAcks+ " for all acks "+ availableForExplicitAcks+ " for full acks "+ explicitToSend+ " full acks included "+ partialAcksToSend+ " partial acks included "+ " Fragments: "+ DataHelper.toString(fragments),new Exception());
+  }
+  return packet;
+}

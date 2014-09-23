@@ -1,20 +1,10 @@
 {
-  if (_messageBuf == null)   return -1;
-  if (_released) {
-    if (_log.shouldLog(Log.WARN))     _log.log(Log.WARN,"SSU OMS Use after free: " + toString(),_releasedBy);
-    return -1;
-  }
   int start=_fragmentSize * fragmentNum;
-  int end=start + fragmentSize(fragmentNum);
-  int toSend=end - start;
-  byte buf[]=_messageBuf.getData();
-  if ((buf != null) && (start + toSend <= buf.length) && (outOffset + toSend <= out.length)) {
-    System.arraycopy(buf,start,out,outOffset,toSend);
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Raw fragment[" + fragmentNum + "] for "+ _messageId+ "["+ start+ "-"+ (start + toSend)+ "/"+ _totalSize+ "/"+ _fragmentSize+ "]: "+ Base64.encode(out,outOffset,toSend));
+  int toSend=fragmentSize(fragmentNum);
+  int end=start + toSend;
+  if (end <= _messageBuf.length && outOffset + toSend <= out.length) {
+    System.arraycopy(_messageBuf,start,out,outOffset,toSend);
     return toSend;
-  }
- else   if (buf == null) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("Error: null buf");
   }
  else {
     if (_log.shouldLog(Log.WARN))     _log.warn("Error: " + start + '/'+ end+ '/'+ outOffset+ '/'+ out.length);

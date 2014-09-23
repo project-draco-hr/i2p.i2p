@@ -13,8 +13,24 @@
   }
   if (cur == _receivedIdentity.length - 1) {
     _receivedSignedOnTime=conf.readFinalFragmentSignedOnTime();
-    if (_receivedSignature == null)     _receivedSignature=new byte[Signature.SIGNATURE_BYTES];
-    conf.readFinalSignature(_receivedSignature,0);
+    buildIdentity();
+    if (_receivedUnconfirmedIdentity != null) {
+      SigType type=_receivedUnconfirmedIdentity.getSigningPublicKey().getType();
+      if (type != null) {
+        int sigLen=type.getSigLen();
+        if (_receivedSignature == null)         _receivedSignature=new byte[sigLen];
+        conf.readFinalSignature(_receivedSignature,0,sigLen);
+      }
+ else {
+        if (_log.shouldLog(Log.WARN))         _log.warn("Unsupported sig type from: " + toString());
+        _context.banlist().banlistRouterForever(_receivedUnconfirmedIdentity.calculateHash(),"Unsupported signature type");
+        fail();
+      }
+    }
+ else {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Bad ident from: " + toString());
+      fail();
+    }
   }
   if ((_currentState == InboundState.IB_STATE_UNKNOWN) || (_currentState == InboundState.IB_STATE_REQUEST_RECEIVED) || (_currentState == InboundState.IB_STATE_CREATED_SENT)) {
     if (confirmedFullyReceived())     _currentState=InboundState.IB_STATE_CONFIRMED_COMPLETELY;

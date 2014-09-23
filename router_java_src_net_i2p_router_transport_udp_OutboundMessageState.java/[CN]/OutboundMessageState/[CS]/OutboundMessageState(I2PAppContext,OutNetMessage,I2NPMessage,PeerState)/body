@@ -5,8 +5,17 @@
   _message=m;
   _i2npMessage=msg;
   _peer=peer;
-  _messageId=msg.getUniqueId();
   _startedOn=_context.clock().now();
   _nextSendTime=_startedOn;
   _expiration=_startedOn + EXPIRATION;
+  int totalSize=_i2npMessage.getRawMessageSize();
+  if (totalSize > MAX_MSG_SIZE)   throw new IllegalArgumentException("Size too large! " + totalSize);
+  _messageBuf=new byte[totalSize];
+  _i2npMessage.toRawByteArray(_messageBuf);
+  _fragmentSize=_peer.fragmentSize();
+  int numFragments=totalSize / _fragmentSize;
+  if (numFragments * _fragmentSize < totalSize)   numFragments++;
+  if (numFragments > InboundMessageState.MAX_FRAGMENTS)   throw new IllegalArgumentException("Fragmenting a " + totalSize + " message into "+ numFragments+ " fragments - too many!");
+  _numFragments=numFragments;
+  _fragmentAcks=_numFragments < 64 ? mask(_numFragments) - 1L : -1L;
 }

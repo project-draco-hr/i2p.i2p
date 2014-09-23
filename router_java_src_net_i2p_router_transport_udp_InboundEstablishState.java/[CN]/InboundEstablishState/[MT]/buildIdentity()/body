@@ -1,0 +1,31 @@
+{
+  if (_receivedUnconfirmedIdentity != null)   return;
+  int frags=_receivedIdentity.length;
+  byte[] ident;
+  if (frags > 1) {
+    int identSize=0;
+    for (int i=0; i < _receivedIdentity.length; i++)     identSize+=_receivedIdentity[i].length;
+    ident=new byte[identSize];
+    int off=0;
+    for (int i=0; i < _receivedIdentity.length; i++) {
+      int len=_receivedIdentity[i].length;
+      System.arraycopy(_receivedIdentity[i],0,ident,off,len);
+      off+=len;
+    }
+  }
+ else {
+    ident=_receivedIdentity[0];
+  }
+  ByteArrayInputStream in=new ByteArrayInputStream(ident);
+  RouterIdentity peer=new RouterIdentity();
+  try {
+    peer.readBytes(in);
+    _receivedUnconfirmedIdentity=peer;
+  }
+ catch (  DataFormatException dfe) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Improperly formatted yet fully received ident",dfe);
+  }
+catch (  IOException ioe) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Improperly formatted yet fully received ident",ioe);
+  }
+}

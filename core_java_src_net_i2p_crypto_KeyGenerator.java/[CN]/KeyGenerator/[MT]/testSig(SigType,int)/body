@@ -3,12 +3,17 @@
   long stime=0;
   long vtime=0;
   SimpleDataStructure keys[]=KeyGenerator.getInstance().generateSigningKeys(type);
+  SigningPublicKey pubkey=(SigningPublicKey)keys[0];
+  SigningPrivateKey privkey=(SigningPrivateKey)keys[1];
+  SigningPublicKey pubkey2=getSigningPublicKey(privkey);
+  if (pubkey.equals(pubkey2))   System.out.println(type + " private-to-public test PASSED");
+ else   System.out.println(type + " private-to-public test FAILED");
   for (int i=0; i < runs; i++) {
     RandomSource.getInstance().nextBytes(src);
     long start=System.nanoTime();
-    Signature sig=DSAEngine.getInstance().sign(src,(SigningPrivateKey)keys[1]);
+    Signature sig=DSAEngine.getInstance().sign(src,privkey);
     long mid=System.nanoTime();
-    boolean ok=DSAEngine.getInstance().verifySignature(sig,src,(SigningPublicKey)keys[0]);
+    boolean ok=DSAEngine.getInstance().verifySignature(sig,src,pubkey);
     long end=System.nanoTime();
     stime+=mid - start;
     vtime+=end - mid;
