@@ -23,11 +23,18 @@
         _context.statManager().addRateData("udp.sendPacketSize",size,packet.getLifetime());
       }
  catch (      IOException ioe) {
-        if (_log.shouldLog(Log.WARN))         _log.warn("Error sending",ioe);
+        if (_log.shouldLog(Log.WARN))         _log.warn("Error sending to " + packet.getPacket().getAddress(),ioe);
         _context.statManager().addRateData("udp.sendException",1,packet.getLifetime());
+        if (_socket.isClosed()) {
+          if (_keepRunning) {
+            _keepRunning=false;
+            _endpoint.fail();
+          }
+        }
       }
       packet.release();
     }
   }
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Stop sending...");
+  if (_log.shouldLog(Log.WARN))   _log.warn("Stop sending on " + _endpoint);
+  _outboundQueue.clear();
 }
