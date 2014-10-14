@@ -8,38 +8,52 @@
   if (_replyTunnel != null) {
     byte flag=FLAG_TUNNEL;
     if (_replyKey != null)     flag|=FLAG_ENCRYPT;
-    out[curIndex++]=flag;
-    byte id[]=DataHelper.toLong(4,_replyTunnel.getTunnelId());
-    System.arraycopy(id,0,out,curIndex,4);
-    curIndex+=4;
-  }
- else   if (_replyKey != null) {
-    out[curIndex++]=FLAG_ENCRYPT;
-  }
+switch (_type) {
+case LS:
+      flag|=FLAG_TYPE_LS;
+    break;
+case RI:
+  flag|=FLAG_TYPE_RI;
+break;
+case EXPL:
+flag|=FLAG_TYPE_EXPL;
+break;
+case ANY:
+default :
+break;
+}
+out[curIndex++]=flag;
+byte id[]=DataHelper.toLong(4,_replyTunnel.getTunnelId());
+System.arraycopy(id,0,out,curIndex,4);
+curIndex+=4;
+}
+ else if (_replyKey != null) {
+out[curIndex++]=FLAG_ENCRYPT;
+}
  else {
-    out[curIndex++]=0x00;
-  }
-  if ((_dontIncludePeers == null) || (_dontIncludePeers.isEmpty())) {
-    out[curIndex++]=0x0;
-    out[curIndex++]=0x0;
-  }
+out[curIndex++]=0x00;
+}
+if ((_dontIncludePeers == null) || (_dontIncludePeers.isEmpty())) {
+out[curIndex++]=0x0;
+out[curIndex++]=0x0;
+}
  else {
-    int size=_dontIncludePeers.size();
-    if (size > MAX_NUM_PEERS)     throw new I2NPMessageException("Too many peers: " + size);
-    byte len[]=DataHelper.toLong(2,size);
-    out[curIndex++]=len[0];
-    out[curIndex++]=len[1];
-    for (    Hash peer : _dontIncludePeers) {
-      System.arraycopy(peer.getData(),0,out,curIndex,Hash.HASH_LENGTH);
-      curIndex+=Hash.HASH_LENGTH;
-    }
-  }
-  if (_replyKey != null) {
-    System.arraycopy(_replyKey.getData(),0,out,curIndex,SessionKey.KEYSIZE_BYTES);
-    curIndex+=SessionKey.KEYSIZE_BYTES;
-    out[curIndex++]=1;
-    System.arraycopy(_replyTag.getData(),0,out,curIndex,SessionTag.BYTE_LENGTH);
-    curIndex+=SessionTag.BYTE_LENGTH;
-  }
-  return curIndex;
+int size=_dontIncludePeers.size();
+if (size > MAX_NUM_PEERS) throw new I2NPMessageException("Too many peers: " + size);
+byte len[]=DataHelper.toLong(2,size);
+out[curIndex++]=len[0];
+out[curIndex++]=len[1];
+for (Hash peer : _dontIncludePeers) {
+System.arraycopy(peer.getData(),0,out,curIndex,Hash.HASH_LENGTH);
+curIndex+=Hash.HASH_LENGTH;
+}
+}
+if (_replyKey != null) {
+System.arraycopy(_replyKey.getData(),0,out,curIndex,SessionKey.KEYSIZE_BYTES);
+curIndex+=SessionKey.KEYSIZE_BYTES;
+out[curIndex++]=1;
+System.arraycopy(_replyTag.getData(),0,out,curIndex,SessionTag.BYTE_LENGTH);
+curIndex+=SessionTag.BYTE_LENGTH;
+}
+return curIndex;
 }
