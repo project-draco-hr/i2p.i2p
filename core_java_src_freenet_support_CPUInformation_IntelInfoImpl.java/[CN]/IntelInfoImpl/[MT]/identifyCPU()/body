@@ -1,7 +1,17 @@
 {
-  if (CPUID.getCPUExtendedModel() == 0) {
-    if (CPUID.getCPUFamily() == 4) {
-switch (CPUID.getCPUModel()) {
+  String modelString=null;
+  int family=CPUID.getCPUFamily();
+  int model=CPUID.getCPUModel();
+  if (family == 15 || family == 6) {
+    model+=CPUID.getCPUExtendedModel() << 4;
+  }
+  if (family == 15) {
+    family+=CPUID.getCPUExtendedFamily();
+  }
+switch (family) {
+case 4:
+{
+switch (model) {
 case 0:
         modelString="486 DX-25/33";
       break;
@@ -29,13 +39,16 @@ break;
 case 9:
 modelString="486 DX/4-WB";
 break;
+default :
+modelString="Intel 486/586 model " + model;
+break;
 }
 }
-}
-if (CPUID.getCPUExtendedModel() == 0) {
-if (CPUID.getCPUFamily() == 5) {
+break;
+case 5:
+{
 isPentiumCompatible=true;
-switch (CPUID.getCPUModel()) {
+switch (model) {
 case 0:
 modelString="Pentium 60/66 A-step";
 break;
@@ -59,14 +72,27 @@ case 8:
 isPentiumMMXCompatible=true;
 modelString="Mobile Pentium MMX";
 break;
+default :
+modelString="Intel Pentium model " + model;
+break;
 }
 }
-}
-if (CPUID.getCPUFamily() == 6) {
-if (CPUID.getCPUExtendedModel() == 0) {
+break;
+case 6:
+{
 isPentiumCompatible=true;
 isPentiumMMXCompatible=true;
-switch (CPUID.getCPUModel()) {
+int extmodel=model >> 4;
+if (extmodel >= 1) {
+isPentium2Compatible=true;
+isPentium3Compatible=true;
+isPentium4Compatible=true;
+isPentiumMCompatible=true;
+isCore2Compatible=true;
+isX64=true;
+if (extmodel >= 2) isCoreiCompatible=true;
+}
+switch (model) {
 case 0:
 modelString="Pentium Pro A-step";
 break;
@@ -120,13 +146,6 @@ isX64=true;
 modelString="Core (Yonah)";
 break;
 case 14:
-isPentium2Compatible=true;
-isPentium3Compatible=true;
-isPentiumMCompatible=true;
-isCore2Compatible=true;
-isX64=true;
-modelString="Core 2 (Conroe)";
-break;
 case 15:
 isPentium2Compatible=true;
 isPentium3Compatible=true;
@@ -135,92 +154,95 @@ isCore2Compatible=true;
 isX64=true;
 modelString="Core 2 (Conroe)";
 break;
-}
-}
- else if (CPUID.getCPUExtendedModel() == 1) {
-isPentiumCompatible=true;
-isPentiumMMXCompatible=true;
-isPentium2Compatible=true;
-isPentium3Compatible=true;
-isPentium4Compatible=true;
-isPentiumMCompatible=true;
-isCore2Compatible=true;
-isX64=true;
-switch (CPUID.getCPUModel()) {
-case 6:
+case 0x16:
 modelString="Celeron";
 break;
-case 10:
+case 0x17:
+modelString="Core 2 (45nm)";
+break;
+case 0x1a:
 isCoreiCompatible=true;
 modelString="Core i7 (45nm)";
 break;
-case 12:
+case 0x1c:
 isAtomCompatible=true;
 isCore2Compatible=false;
 isPentium4Compatible=false;
 isX64=true;
 modelString="Atom";
 break;
-case 13:
+case 0x1d:
 isCoreiCompatible=true;
 modelString="Xeon MP (45nm)";
 break;
-case 14:
+case 0x1e:
 isCoreiCompatible=true;
 modelString="Core i5/i7 (45nm)";
 break;
-}
-}
- else if (CPUID.getCPUExtendedModel() == 2) {
-isPentiumCompatible=true;
-isPentiumMMXCompatible=true;
-isPentium2Compatible=true;
-isPentium3Compatible=true;
-isPentium4Compatible=true;
-isPentiumMCompatible=true;
-isCore2Compatible=true;
-isCoreiCompatible=true;
-isX64=true;
-switch (CPUID.getCPUModel()) {
-case 5:
+case 0x25:
 modelString="Core i3 or i5/i7 mobile (32nm)";
 break;
-case 10:
+case 0x26:
+isAtomCompatible=true;
+isCoreiCompatible=false;
+modelString="Atom Z600";
+break;
+case 0x2a:
+modelString="Sandy Bridge H/M";
+break;
+case 0x2b:
 modelString="Core i7/i5 (32nm)";
 break;
-case 11:
-modelString="Core i7/i5 (32nm)";
-break;
-case 12:
+case 0x2c:
 modelString="Core i7 (32nm)";
 break;
-case 13:
-modelString="Core i7 Extreme Edition (32nm)";
+case 0x2d:
+modelString="Sandy Bridge EP";
 break;
-case 14:
+case 0x2e:
 modelString="Xeon MP (45nm)";
 break;
-case 15:
+case 0x2f:
 modelString="Xeon MP (32nm)";
+break;
+case 0x36:
+isAtomCompatible=true;
+isCore2Compatible=false;
+modelString="Atom N2000/D2000";
+break;
+case 0x3a:
+modelString="Ivy Bridge";
+break;
+case 0x3c:
+modelString="Haswell";
+break;
+case 0x3d:
+modelString="Broadwell";
+break;
+case 0x4d:
+isAtomCompatible=true;
+modelString="Bay Trail / Avoton";
+break;
+default :
+modelString="Intel model " + model;
 break;
 }
 }
+break;
+case 7:
+{
+modelString="Intel Itanium model " + model;
 }
-if (CPUID.getCPUFamily() == 7) {
-switch (CPUID.getCPUModel()) {
-}
-}
-if (CPUID.getCPUFamily() == 15) {
-if (CPUID.getCPUExtendedFamily() == 0) {
+break;
+case 15:
+{
 isPentiumCompatible=true;
 isPentiumMMXCompatible=true;
 isPentium2Compatible=true;
 isPentium3Compatible=true;
 isPentium4Compatible=true;
-switch (CPUID.getCPUModel()) {
+switch (model) {
 case 0:
-modelString="Pentium IV (180 nm)";
-break;
 case 1:
 modelString="Pentium IV (180 nm)";
 break;
@@ -238,11 +260,16 @@ case 6:
 isX64=true;
 modelString="Pentium IV (65 nm)";
 break;
+default :
+modelString="Intel Pentium IV model " + model;
+break;
 }
 }
-if (CPUID.getCPUExtendedFamily() == 1) {
-switch (CPUID.getCPUModel()) {
+break;
+case 16:
+{
+modelString="Intel Itanium II model " + model;
 }
 }
-}
+return modelString;
 }

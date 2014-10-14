@@ -1,0 +1,14 @@
+{
+  String style=t.getStyle();
+  if (style.equals(NTCPTransport.STYLE) || style.equals(UDPTransport.STYLE))   throw new IllegalArgumentException("Builtin transport");
+  if (_transports.containsKey(style) || _pluggableTransports.containsKey(style))   throw new IllegalStateException("Dup transport");
+  boolean shouldStart=!_transports.isEmpty();
+  _pluggableTransports.put(style,t);
+  addTransport(t);
+  t.setListener(this);
+  if (shouldStart) {
+    initializeAddress(t);
+    t.startListening();
+    _context.router().rebuildRouterInfo();
+  }
+}

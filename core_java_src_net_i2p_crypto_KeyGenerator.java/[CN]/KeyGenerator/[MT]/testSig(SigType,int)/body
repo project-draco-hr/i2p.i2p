@@ -1,8 +1,17 @@
 {
   byte src[]=new byte[512];
+  double gtime=0;
   long stime=0;
   long vtime=0;
-  SimpleDataStructure keys[]=KeyGenerator.getInstance().generateSigningKeys(type);
+  SimpleDataStructure keys[]=null;
+  long st=System.nanoTime();
+  int genruns=(type.getBaseAlgorithm() == SigAlgo.RSA) ? Math.min(runs,5) : runs;
+  for (int i=0; i < genruns; i++) {
+    keys=KeyGenerator.getInstance().generateSigningKeys(type);
+  }
+  long en=System.nanoTime();
+  gtime=((en - st) / (1000 * 1000d)) / genruns;
+  System.out.println(type + " key gen " + genruns+ " times: "+ gtime+ " ms each");
   SigningPublicKey pubkey=(SigningPublicKey)keys[0];
   SigningPrivateKey privkey=(SigningPrivateKey)keys[1];
   SigningPublicKey pubkey2=getSigningPublicKey(privkey);

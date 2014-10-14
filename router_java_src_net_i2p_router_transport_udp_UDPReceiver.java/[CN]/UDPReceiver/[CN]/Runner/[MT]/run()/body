@@ -34,7 +34,20 @@
  catch (    IOException ioe) {
       if (_log.shouldLog(Log.WARN))       _log.warn("Error receiving",ioe);
       packet.release();
+      if (_socket.isClosed()) {
+        if (_keepRunning) {
+          _keepRunning=false;
+          _endpoint.fail();
+        }
+      }
+ else       if (_keepRunning) {
+        try {
+          Thread.sleep(100);
+        }
+ catch (        InterruptedException ie) {
+        }
+      }
     }
   }
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Stop receiving...");
+  if (_log.shouldLog(Log.WARN))   _log.warn("Stop receiving on " + _endpoint);
 }

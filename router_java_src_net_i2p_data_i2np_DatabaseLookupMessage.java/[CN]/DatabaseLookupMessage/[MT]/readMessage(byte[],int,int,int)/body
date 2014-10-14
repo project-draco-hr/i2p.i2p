@@ -7,29 +7,44 @@
   curIndex+=Hash.HASH_LENGTH;
   boolean tunnelSpecified=(data[curIndex] & FLAG_TUNNEL) != 0;
   boolean replyKeySpecified=(data[curIndex] & FLAG_ENCRYPT) != 0;
-  curIndex++;
-  if (tunnelSpecified) {
-    _replyTunnel=new TunnelId(DataHelper.fromLong(data,curIndex,4));
-    curIndex+=4;
-  }
-  int numPeers=(int)DataHelper.fromLong(data,curIndex,2);
-  curIndex+=2;
-  if ((numPeers < 0) || (numPeers > MAX_NUM_PEERS))   throw new I2NPMessageException("Invalid number of peers - " + numPeers);
-  List<Hash> peers=numPeers > 0 ? new ArrayList<Hash>(numPeers) : null;
-  for (int i=0; i < numPeers; i++) {
-    Hash p=Hash.create(data,curIndex);
-    curIndex+=Hash.HASH_LENGTH;
-    peers.add(p);
-  }
-  _dontIncludePeers=peers;
-  if (replyKeySpecified) {
-    byte[] rk=new byte[SessionKey.KEYSIZE_BYTES];
-    System.arraycopy(data,curIndex,rk,0,SessionKey.KEYSIZE_BYTES);
-    _replyKey=new SessionKey(rk);
-    curIndex+=SessionKey.KEYSIZE_BYTES;
-    curIndex++;
-    byte[] rt=new byte[SessionTag.BYTE_LENGTH];
-    System.arraycopy(data,curIndex,rt,0,SessionTag.BYTE_LENGTH);
-    _replyTag=new SessionTag(rt);
-  }
+switch (data[curIndex] & FLAG_TYPE_MASK) {
+case FLAG_TYPE_LS:
+    _type=Type.LS;
+  break;
+case FLAG_TYPE_RI:
+_type=Type.RI;
+break;
+case FLAG_TYPE_EXPL:
+_type=Type.EXPL;
+break;
+case FLAG_TYPE_ANY:
+default :
+_type=Type.ANY;
+break;
+}
+curIndex++;
+if (tunnelSpecified) {
+_replyTunnel=new TunnelId(DataHelper.fromLong(data,curIndex,4));
+curIndex+=4;
+}
+int numPeers=(int)DataHelper.fromLong(data,curIndex,2);
+curIndex+=2;
+if ((numPeers < 0) || (numPeers > MAX_NUM_PEERS)) throw new I2NPMessageException("Invalid number of peers - " + numPeers);
+List<Hash> peers=numPeers > 0 ? new ArrayList<Hash>(numPeers) : null;
+for (int i=0; i < numPeers; i++) {
+Hash p=Hash.create(data,curIndex);
+curIndex+=Hash.HASH_LENGTH;
+peers.add(p);
+}
+_dontIncludePeers=peers;
+if (replyKeySpecified) {
+byte[] rk=new byte[SessionKey.KEYSIZE_BYTES];
+System.arraycopy(data,curIndex,rk,0,SessionKey.KEYSIZE_BYTES);
+_replyKey=new SessionKey(rk);
+curIndex+=SessionKey.KEYSIZE_BYTES;
+curIndex++;
+byte[] rt=new byte[SessionTag.BYTE_LENGTH];
+System.arraycopy(data,curIndex,rt,0,SessionTag.BYTE_LENGTH);
+_replyTag=new SessionTag(rt);
+}
 }

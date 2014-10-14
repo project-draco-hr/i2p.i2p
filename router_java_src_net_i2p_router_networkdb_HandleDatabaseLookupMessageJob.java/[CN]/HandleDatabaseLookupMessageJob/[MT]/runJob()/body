@@ -10,8 +10,9 @@
     }
     return;
   }
+  DatabaseLookupMessage.Type lookupType=_message.getSearchType();
   DatabaseEntry dbe=getContext().netDb().lookupLocally(_message.getSearchKey());
-  if (dbe != null && dbe.getType() == DatabaseEntry.KEY_TYPE_LEASESET) {
+  if (dbe != null && dbe.getType() == DatabaseEntry.KEY_TYPE_LEASESET && (lookupType == DatabaseLookupMessage.Type.ANY || lookupType == DatabaseLookupMessage.Type.LS)) {
     LeaseSet ls=(LeaseSet)dbe;
     boolean isLocal=getContext().clientManager().isLocal(ls.getDestination());
     boolean shouldPublishLocal=isLocal && getContext().clientManager().shouldPublishLeaseSet(_message.getSearchKey());
@@ -30,18 +31,18 @@
  else {
         if (_log.shouldLog(Log.INFO))         _log.info("We have local LS " + _message.getSearchKey() + ", NOT answering query, out of our keyspace");
         getContext().statManager().addRateData("netDb.lookupsMatchedLocalNotClosest",1);
-        Set<Hash> routerHashSet=getNearestRouters();
+        Set<Hash> routerHashSet=getNearestRouters(lookupType);
         sendClosest(_message.getSearchKey(),routerHashSet,fromKey,_message.getReplyTunnel());
       }
     }
  else {
       if (_log.shouldLog(Log.INFO))       _log.info("We have LS " + _message.getSearchKey() + ", NOT answering query - local? "+ isLocal+ " shouldPublish? "+ shouldPublishLocal+ " RAP? "+ ls.getReceivedAsPublished()+ " RAR? "+ ls.getReceivedAsReply());
       getContext().statManager().addRateData("netDb.lookupsMatchedRemoteNotClosest",1);
-      Set<Hash> routerHashSet=getNearestRouters();
+      Set<Hash> routerHashSet=getNearestRouters(lookupType);
       sendClosest(_message.getSearchKey(),routerHashSet,fromKey,_message.getReplyTunnel());
     }
   }
- else   if (dbe != null && dbe.getType() == DatabaseEntry.KEY_TYPE_ROUTERINFO) {
+ else   if (dbe != null && dbe.getType() == DatabaseEntry.KEY_TYPE_ROUTERINFO && lookupType != DatabaseLookupMessage.Type.LS) {
     RouterInfo info=(RouterInfo)dbe;
     if (info.isCurrent(EXPIRE_DELAY)) {
       if ((info.getIdentity().isHidden()) || (isUnreachable(info) && !publishUnreachable())) {
@@ -55,13 +56,13 @@
       }
     }
  else {
-      Set<Hash> routerHashSet=getNearestRouters();
+      Set<Hash> routerHashSet=getNearestRouters(lookupType);
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Expired " + _message.getSearchKey() + " locally.  sending back "+ routerHashSet.size()+ " peers to "+ fromKey);
       sendClosest(_message.getSearchKey(),routerHashSet,fromKey,_message.getReplyTunnel());
     }
   }
  else {
-    Set<Hash> routerHashSet=getNearestRouters();
+    Set<Hash> routerHashSet=getNearestRouters(lookupType);
     if (_log.shouldLog(Log.DEBUG))     _log.debug("We do not have key " + _message.getSearchKey() + " locally.  sending back "+ routerHashSet.size()+ " peers to "+ fromKey);
     sendClosest(_message.getSearchKey(),routerHashSet,fromKey,_message.getReplyTunnel());
   }
