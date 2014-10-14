@@ -1,8 +1,10 @@
 {
   PrintWriter out=null;
   IllegalArgumentException iae=null;
+  File tmpFile=new File(file.getPath() + ".tmp");
   try {
-    out=new PrintWriter(new BufferedWriter(new OutputStreamWriter(new SecureFileOutputStream(file),"UTF-8")));
+    FileOutputStream fos=new SecureFileOutputStream(tmpFile);
+    out=new PrintWriter(new BufferedWriter(new OutputStreamWriter(fos,"UTF-8")));
     out.println("# NOTE: This I2P config file must use UTF-8 encoding");
     for (    Map.Entry<Object,Object> entry : props.entrySet()) {
       String name=(String)entry.getKey();
@@ -17,6 +19,11 @@
       }
       out.println(name + "=" + val);
     }
+    out.flush();
+    fos.getFD().sync();
+    out.close();
+    out=null;
+    if (!FileUtil.rename(tmpFile,file))     throw new IOException("Failed rename from " + tmpFile + " to "+ file);
   }
   finally {
     if (out != null)     out.close();
