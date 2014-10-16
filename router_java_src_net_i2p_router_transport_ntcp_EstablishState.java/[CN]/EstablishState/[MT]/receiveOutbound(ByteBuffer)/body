@@ -7,7 +7,7 @@
         _dh.setPeerPublicValue(_Y);
         _dh.getSessionKey();
         if (_log.shouldLog(Log.DEBUG))         _log.debug(prefix() + "DH session key calculated (" + _dh.getSessionKey().toBase64()+ ")");
-        _state=State.OB_GOT_Y;
+        changeState(State.OB_GOT_Y);
       }
  catch (      DHSessionKeyBuilder.InvalidPublicParameterException e) {
         _context.statManager().addRateData("ntcp.invalidDH",1);
@@ -37,7 +37,7 @@
         return;
       }
       SimpleByteCache.release(h);
-      _state=State.OB_GOT_HXY;
+      changeState(State.OB_GOT_HXY);
       _tsB=DataHelper.fromLong(hXY_tsB,HXY_SIZE,4);
       _tsA=(_context.clock().now() + 500) / 1000;
       if (_log.shouldLog(Log.DEBUG))       _log.debug(prefix() + "h(X+Y) is correct, tsA-tsB=" + (_tsA - _tsB));
@@ -79,7 +79,7 @@
       System.arraycopy(sig.getData(),0,preEncrypt,2 + ident.length + 4+ padding,sig.length());
       _prevEncrypted=new byte[preEncrypt.length];
       _context.aes().encrypt(preEncrypt,0,_prevEncrypted,0,_dh.getSessionKey(),_hX_xor_bobIdentHash,_hX_xor_bobIdentHash.length - AES_SIZE,preEncrypt.length);
-      _state=State.OB_SENT_RI;
+      changeState(State.OB_SENT_RI);
       _transport.getPumper().wantsWrite(_con,_prevEncrypted);
     }
   }
@@ -102,7 +102,7 @@
       _e_bobSig[off++]=src.get();
       _received++;
       if (off >= _e_bobSig.length) {
-        _state=State.OB_GOT_SIG;
+        changeState(State.OB_GOT_SIG);
         byte bobSig[]=new byte[_e_bobSig.length];
         _context.aes().decrypt(_e_bobSig,0,bobSig,0,_dh.getSessionKey(),_e_hXY_tsB,HXY_TSB_PAD_SIZE - AES_SIZE,_e_bobSig.length);
         SigType type=_con.getRemotePeer().getSigningPublicKey().getType();
@@ -128,7 +128,6 @@
           fail("Signature was invalid - attempt to spoof " + _con.getRemotePeer().calculateHash().toBase64() + "?");
         }
  else {
-          _state=State.VERIFIED;
           if (_log.shouldLog(Log.DEBUG))           _log.debug(prefix() + "signature verified from Bob.  done!");
           prepareExtra(src);
           byte nextWriteIV[]=_curEncrypted;
@@ -137,6 +136,7 @@
           releaseBufs();
           InetAddress ia=_con.getChannel().socket().getInetAddress();
           if (ia != null)           _transport.setIP(_con.getRemotePeer().calculateHash(),ia.getAddress());
+          changeState(State.VERIFIED);
         }
         return;
       }
