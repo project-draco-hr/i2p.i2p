@@ -1,0 +1,34 @@
+{
+  SU3File su3=new SU3File(_context,_tempFile);
+  File to1=new File(_context.getTempDir(),"tmp-" + _context.random().nextInt() + ".xml");
+  File to2=new File(_context.getTempDir(),"tmp2-" + _context.random().nextInt() + ".xml");
+  String sudVersion;
+  String signingKeyName;
+  try {
+    su3.verifyAndMigrate(to1);
+    int type=su3.getFileType();
+    if (type != SU3File.TYPE_XML && type != SU3File.TYPE_XML_GZ)     throw new IOException("bad file type");
+    if (su3.getContentType() != SU3File.CONTENT_NEWS)     throw new IOException("bad content type");
+    File xml;
+    if (type == SU3File.TYPE_XML_GZ) {
+      gunzip(to1,to2);
+      xml=to2;
+    }
+ else {
+      xml=to1;
+    }
+    sudVersion=su3.getVersionString();
+    signingKeyName=su3.getSignerString();
+    NewsXMLParser parser=new NewsXMLParser(_context);
+    parser.parse(xml);
+    NewsMetadata data=parser.getMetadata();
+    List<NewsEntry> entries=parser.getEntries();
+    outputOldNewsXML(data,entries);
+  }
+ catch (  IOException ioe) {
+    _tempFile.delete();
+    to1.delete();
+    to2.delete();
+    return;
+  }
+}

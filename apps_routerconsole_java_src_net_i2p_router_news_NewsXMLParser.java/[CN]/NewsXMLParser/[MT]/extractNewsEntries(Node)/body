@@ -1,0 +1,67 @@
+{
+  List<NewsEntry> rv=new ArrayList<NewsEntry>();
+  List<Node> entries=getNodes(feed,"entry");
+  for (  Node entry : entries) {
+    NewsEntry e=new NewsEntry();
+    Node n=entry.getNode("title");
+    if (n != null)     e.title=n.getValue();
+    n=entry.getNode("link");
+    if (n != null)     e.link=n.getValue();
+    n=entry.getNode("id");
+    if (n != null)     e.id=n.getValue();
+    n=entry.getNode("updated");
+    if (n != null) {
+      String v=n.getValue();
+      if (v != null) {
+        long time=RFC3339Date.parse3339Date(v);
+        if (time > 0)         e.updated=time;
+      }
+    }
+    n=entry.getNode("summary");
+    if (n != null)     e.summary=n.getValue();
+    n=entry.getNode("author");
+    if (n != null) {
+      n=n.getNode("name");
+      if (n != null)       e.authorName=n.getValue();
+    }
+    n=entry.getNode("content");
+    if (n != null) {
+      String a=n.getAttributeValue("type");
+      if (a.length() > 0)       e.contentType=a;
+      StringBuilder buf=new StringBuilder(256);
+      for (int i=0; i < n.getNNodes(); i++) {
+        Node sn=n.getNode(i);
+        try {
+          boolean removed=validate(sn);
+          if (removed) {
+            i--;
+            continue;
+          }
+        }
+ catch (        I2PParserException ipe) {
+switch (_mode) {
+case ABORT:
+            throw ipe;
+case SKIP_ENTRY:
+          if (_log.shouldLog(Log.WARN))           _log.warn("Skipping entry",ipe);
+        e=null;
+      break;
+case REMOVE_ELEMENT:
+    if (_log.shouldLog(Log.WARN))     _log.warn("Removing element",ipe);
+  continue;
+case ALLOW_ALL:
+default :
+break;
+}
+}
+if (e == null) break;
+buf.append(sn.toString());
+}
+if (e == null) continue;
+e.content=buf.toString();
+}
+rv.add(e);
+}
+Collections.sort(rv);
+return rv;
+}

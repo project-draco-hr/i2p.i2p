@@ -1,0 +1,40 @@
+{
+  NewsMetadata rv=new NewsMetadata();
+  Node n=feed.getNode("title");
+  if (n != null)   rv.feedTitle=n.getValue();
+  n=feed.getNode("subtitle");
+  if (n != null)   rv.feedSubtitle=n.getValue();
+  n=feed.getNode("id");
+  if (n != null)   rv.feedID=n.getValue();
+  n=feed.getNode("updated");
+  if (n != null) {
+    String v=n.getValue();
+    if (v != null) {
+      long time=RFC3339Date.parse3339Date(v);
+      if (time > 0)       rv.feedUpdated=time;
+    }
+  }
+  Node r=feed.getNode("i2p:release");
+  if (r == null)   throw new I2PParserException("no release data in XML");
+  String a=r.getAttributeValue("date");
+  if (a.length() > 0) {
+    long time=RFC3339Date.parse3339Date(a);
+    if (time > 0)     rv.date=time;
+  }
+  a=r.getAttributeValue("minVersion");
+  if (a.length() > 0)   rv.minVersion=a;
+  a=r.getAttributeValue("minJavaVersion");
+  if (a.length() > 0)   rv.minJavaVersion=a;
+  n=r.getNode("i2p:version");
+  if (n != null)   rv.i2pVersion=n.getValue();
+  List<Node> urls=getNodes(r,"i2p:torrent");
+  for (  Node t : urls) {
+    String href=t.getAttributeValue("href");
+    if (href.length() > 0) {
+      String type=t.getAttributeValue("type");
+      if (type.equals("su2"))       rv.su2Torrent=href;
+ else       if (type.equals("su3"))       rv.su3Torrent=href;
+    }
+  }
+  return rv;
+}
