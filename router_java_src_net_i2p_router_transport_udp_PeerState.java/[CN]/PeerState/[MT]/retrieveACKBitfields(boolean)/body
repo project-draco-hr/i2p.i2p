@@ -17,9 +17,8 @@
   }
   if (_currentACKs.isEmpty())   _wantACKSendSince=-1;
   if (alwaysIncludeRetransmissions || !rv.isEmpty()) {
-    List<Long> randomResends=new ArrayList<Long>(_currentACKsResend);
+    List<Long> randomResends=getCurrentResendACKs();
     int oldIndex=Math.min(resendSize,maxResendAcks);
-    if (oldIndex > 0 && oldIndex < resendSize)     Collections.shuffle(randomResends,_context.random());
     iter=randomResends.iterator();
     while (bytesRemaining >= 4 && oldIndex-- > 0 && iter.hasNext()) {
       Long cur=iter.next();
@@ -28,11 +27,13 @@
       rv.add(bf);
       bytesRemaining-=4;
     }
-    for (    Long val : currentACKsRemoved) {
-      _currentACKsResend.offer(val);
+    if (!currentACKsRemoved.isEmpty()) {
+      long now=_context.clock().now();
+      for (      Long val : currentACKsRemoved) {
+        _currentACKsResend.offer(new ResendACK(val,now));
+      }
     }
   }
-  while (_currentACKsResend.size() > MAX_RESEND_ACKS)   _currentACKsResend.poll();
   int partialIncluded=0;
   if (bytesRemaining > 4) {
     List<ACKBitfield> partial=new ArrayList<ACKBitfield>();
