@@ -2,11 +2,21 @@
   if (_log.shouldLog(Log.INFO))   _log.info("News fetched from " + url + " with "+ (alreadyTransferred + bytesTransferred));
   long now=_context.clock().now();
   if (_tempFile.exists()) {
+    File from;
     if (url.endsWith(".su3")) {
-      processSU3();
-      return;
+      try {
+        from=processSU3();
+      }
+ catch (      IOException ioe) {
+        _log.error("Failed to extract the news file",ioe);
+        _tempFile.delete();
+        return;
+      }
     }
-    boolean copied=FileUtil.copy(_tempFile,_newsFile,true,false);
+ else {
+      from=_tempFile;
+    }
+    boolean copied=FileUtil.copy(from,_newsFile,true,false);
     _tempFile.delete();
     if (copied) {
       String newVer=Long.toString(now);
