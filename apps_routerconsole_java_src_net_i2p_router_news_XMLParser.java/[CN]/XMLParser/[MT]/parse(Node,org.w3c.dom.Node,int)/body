@@ -1,0 +1,58 @@
+{
+  int domNodeType=domNode.getNodeType();
+  String domNodeName=domNode.getNodeName();
+  String domNodeValue=domNode.getNodeValue();
+  NamedNodeMap attrs=domNode.getAttributes();
+  int arrrsLen=(attrs != null) ? attrs.getLength() : 0;
+  if (_log.shouldLog(Log.DEBUG)) {
+    String val=domNodeValue != null ? " = \"" + domNodeValue.replace("\n","\\n").replace("\r","\\r") + '"' : "";
+    _log.debug("[" + rank + "] ELEM : \""+ domNodeName+ '"'+ val+ " type = "+ domNodeType+ " with "+ arrrsLen+ " attrs");
+  }
+  if (domNodeType == org.w3c.dom.Node.TEXT_NODE) {
+    if (domNodeValue.replaceAll("[ \t\r\n]","").length() == 0) {
+      return parentNode;
+    }
+    if (!parentNode.hasNodes()) {
+      parentNode.addValue(domNodeValue);
+      return parentNode;
+    }
+  }
+ else   if (domNodeType != org.w3c.dom.Node.ELEMENT_NODE) {
+    return parentNode;
+  }
+  Node node=new Node();
+  node.setName(domNodeName);
+  node.setValue(domNodeValue);
+  if (parentNode != null) {
+    String oldValue=parentNode.getValue();
+    if (oldValue != null && oldValue.length() > 0) {
+      parentNode.setValue("");
+      Node text=new Node();
+      text.setName(TEXT_NAME);
+      text.setValue(oldValue);
+      parentNode.addNode(text);
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Converted value to node");
+    }
+    parentNode.addNode(node);
+  }
+  if (domNodeType == org.w3c.dom.Node.TEXT_NODE)   return parentNode;
+  if (attrs != null) {
+    for (int n=0; n < arrrsLen; n++) {
+      org.w3c.dom.Node attr=attrs.item(n);
+      String attrName=attr.getNodeName();
+      String attrValue=attr.getNodeValue();
+      node.setAttribute(attrName,attrValue);
+    }
+  }
+  org.w3c.dom.Node child=domNode.getFirstChild();
+  if (child == null) {
+    node.setValue("");
+    return node;
+  }
+  do {
+    parse(node,child,rank + 1);
+    child=child.getNextSibling();
+  }
+ while (child != null);
+  return node;
+}
