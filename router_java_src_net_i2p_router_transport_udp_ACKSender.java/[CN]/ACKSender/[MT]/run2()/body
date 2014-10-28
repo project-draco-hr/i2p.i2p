@@ -1,0 +1,83 @@
+{
+  Set<PeerState> notYet=new HashSet<PeerState>();
+  while (_alive) {
+    PeerState peer=null;
+    long now=0;
+    long remaining=-1;
+    long wanted=0;
+    while (_alive) {
+      PeerState cur=null;
+      try {
+        if (notYet.isEmpty())         cur=_peersToACK.take();
+ else         cur=_peersToACK.poll();
+      }
+ catch (      InterruptedException ie) {
+      }
+      if (cur != null) {
+        if (cur.getTheyRelayToUsAs() == POISON_PS)         return;
+        wanted=cur.getWantedACKSendSince();
+        now=_context.clock().now();
+        long delta=wanted + ackFrequency(now - cur.getLastACKSend(),cur.getRTT()) - now;
+        if (wanted <= 0) {
+          notYet.remove(cur);
+        }
+ else         if ((delta <= 0) || (cur.unsentACKThresholdReached())) {
+          peer=cur;
+          notYet.remove(cur);
+          try {
+            _peersToACK.addAll(notYet);
+          }
+ catch (          NoSuchElementException nsee) {
+          }
+          notYet.clear();
+          break;
+        }
+ else {
+          boolean added=notYet.add(cur);
+          if (added && _log.shouldLog(Log.DEBUG))           _log.debug("Pending ACK (delta = " + delta + ") for "+ cur);
+        }
+      }
+ else       if (!notYet.isEmpty()) {
+        try {
+          _peersToACK.addAll(notYet);
+        }
+ catch (        Exception e) {
+        }
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("sleeping, pending size = " + notYet.size());
+        notYet.clear();
+        try {
+          Thread.sleep(5 + (ACK_FREQUENCY / 3));
+        }
+ catch (        InterruptedException ie) {
+        }
+      }
+    }
+    if (peer != null) {
+      long lastSend=peer.getLastACKSend();
+      List<ACKBitfield> ackBitfields=peer.retrieveACKBitfields(false);
+      if (wanted < 0) {
+        if (_log.shouldLog(Log.WARN))         _log.warn("wtf, why are we acking something they dont want?  remaining=" + remaining + ", peer="+ peer+ ", bitfields="+ ackBitfields);
+        continue;
+      }
+      if (!ackBitfields.isEmpty()) {
+        _context.statManager().addRateData("udp.sendACKCount",ackBitfields.size());
+        if (remaining > 0)         _context.statManager().addRateData("udp.sendACKRemaining",remaining);
+        if (lastSend < 0)         lastSend=now - 1;
+        _context.statManager().addRateData("udp.ackFrequency",now - lastSend,now - wanted);
+        UDPPacket ack=_builder.buildACK(peer,ackBitfields);
+        ack.markType(1);
+        ack.setFragmentCount(-1);
+        ack.setMessageType(PacketBuilder.TYPE_ACK);
+        if (_log.shouldLog(Log.INFO))         _log.info("Sending " + ackBitfields + " to "+ peer);
+        _transport.send(ack);
+        if ((wanted > 0) && (wanted <= peer.getWantedACKSendSince())) {
+          if (_log.shouldLog(Log.WARN))           _log.warn("Rerequesting ACK for peer " + peer);
+          ackPeer(peer);
+        }
+      }
+ else {
+        _context.statManager().addRateData("udp.abortACK",1);
+      }
+    }
+  }
+}
