@@ -2,16 +2,19 @@
   if (_log.shouldLog(Log.DEBUG))   _log.debug("REA4 " + host + ':'+ port);
   if (_context.router().isHidden())   return null;
   OrderedProperties options=new OrderedProperties();
-  boolean directIncluded=false;
+  boolean directIncluded;
   boolean isIPv6=host != null && host.contains(":");
-  if (allowDirectUDP() && port > 0 && host != null) {
+  boolean introducersRequired=(!isIPv6) && introducersRequired();
+  if (!introducersRequired && allowDirectUDP() && port > 0 && host != null) {
     options.setProperty(UDPAddress.PROP_PORT,String.valueOf(port));
     options.setProperty(UDPAddress.PROP_HOST,host);
     directIncluded=true;
   }
-  boolean introducersRequired=(!isIPv6) && introducersRequired();
+ else {
+    directIncluded=false;
+  }
   boolean introducersIncluded=false;
-  if (introducersRequired || !directIncluded) {
+  if (introducersRequired) {
     int found=_introManager.pickInbound(options,PUBLIC_RELAY_COUNT);
     if (found > 0) {
       if (_log.shouldLog(Log.INFO))       _log.info("Direct? " + directIncluded + " reqd? "+ introducersRequired+ " picked introducers: "+ found);
