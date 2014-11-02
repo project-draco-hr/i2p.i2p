@@ -1,12 +1,10 @@
 {
   I2PClient client=I2PClientFactory.createClient();
-  String filename=getPrivKeyFile();
-  if ((filename == null) || (filename.trim().length() <= 0)) {
+  File keyFile=getPrivateKeyFile();
+  if (keyFile == null) {
     log("No filename specified for the private key");
     return false;
   }
-  File keyFile=new File(getPrivKeyFile());
-  if (!keyFile.isAbsolute())   keyFile=new File(I2PAppContext.getGlobalContext().getConfigDir(),getPrivKeyFile());
   if (keyFile.exists()) {
     return true;
   }
@@ -17,11 +15,11 @@
   FileOutputStream fos=null;
   try {
     fos=new SecureFileOutputStream(keyFile);
-    SigType stype=I2PClient.DEFAULT_SIGTYPE;
+    SigType stype=PREFERRED_SIGTYPE;
     String st=_config.getProperty(OPT_SIG_TYPE);
     if (st != null) {
       SigType type=SigType.parseSigType(st);
-      if (type != null)       stype=type;
+      if (type != null && type.isAvailable())       stype=type;
  else       log("Unsupported sig type " + st + ", reverting to "+ stype);
     }
     Destination dest=client.createDestination(fos,stype);
