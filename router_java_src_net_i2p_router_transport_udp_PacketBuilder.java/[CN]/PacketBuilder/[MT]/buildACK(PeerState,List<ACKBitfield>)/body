@@ -35,13 +35,15 @@
     off++;
     for (int i=0; i < ackBitfields.size(); i++) {
       ACKBitfield bitfield=ackBitfields.get(i);
+      if (bitfield.receivedComplete())       continue;
       DataHelper.toLong(data,off,4,bitfield.getMessageId());
       off+=4;
       int bits=bitfield.highestReceived() + 1;
       int size=bits / 7;
       if (bits == 0 || bits % 7 > 0)       size++;
       for (int curByte=0; curByte < size; curByte++) {
-        if (curByte + 1 < size)         data[off]|=(byte)(1 << 7);
+        if (curByte + 1 < size)         data[off]=(byte)(1 << 7);
+ else         data[off]=0;
         for (int curBit=0; curBit < 7; curBit++) {
           if (bitfield.received(curBit + 7 * curByte))           data[off]|=(byte)(1 << curBit);
         }
