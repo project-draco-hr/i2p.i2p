@@ -5,6 +5,7 @@ switch (_mode) {
 case ABORT:
 case SKIP_ENTRY:
       throw new I2PParserException("Invalid XHTML element \"" + name + '"');
+case REMOVE_ATTRIBUTE:
 case REMOVE_ELEMENT:
     if (_log.shouldLog(Log.WARN))     _log.warn("Removing element: " + node);
   node.getParentNode().removeNode(node);
@@ -12,6 +13,28 @@ return true;
 case ALLOW_ALL:
 if (_log.shouldLog(Log.WARN)) _log.warn("Allowing non-whitelisted element by configuration: " + node);
 break;
+}
+}
+for (int i=0; i < node.getNAttributes(); i++) {
+Attribute attr=node.getAttribute(i);
+String aname=attr.getName();
+if (attributeBlacklist.contains(aname.toLowerCase(Locale.US))) {
+switch (_mode) {
+case ABORT:
+case SKIP_ENTRY:
+throw new I2PParserException("Invalid XHTML element \"" + name + "\" due to attribute "+ aname);
+case REMOVE_ELEMENT:
+if (_log.shouldLog(Log.WARN)) _log.warn("Removing element: " + node + " due to attribute "+ aname);
+node.getParentNode().removeNode(node);
+return true;
+case REMOVE_ATTRIBUTE:
+if (_log.shouldLog(Log.WARN)) _log.warn("Removing attribute: " + aname + " from "+ node);
+if (node.removeAttribute(attr)) i--;
+break;
+case ALLOW_ALL:
+if (_log.shouldLog(Log.WARN)) _log.warn("Allowing blacklisted attribute by configuration: " + node);
+break;
+}
 }
 }
 int count=node.getNNodes();
