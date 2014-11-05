@@ -3,7 +3,13 @@
   if (!_allowParallelOperation)   return false;
   if (numReady > _maxWaitingJobs) {
     Class<? extends Job> cls=job.getClass();
-    if (cls == HandleFloodfillDatabaseLookupMessageJob.class)     return true;
+    if (cls == HandleFloodfillDatabaseLookupMessageJob.class) {
+      JobTiming jt=job.getTiming();
+      if (jt != null) {
+        long lag=_context.clock().now() - jt.getStartAfter();
+        if (lag > 2 * 1000L)         return true;
+      }
+    }
   }
   return false;
 }
