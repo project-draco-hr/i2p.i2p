@@ -1,0 +1,28 @@
+{
+  Log log=I2PAppContext.getGlobalContext().logManager().getLog(I2PSSLSocketFactory.class);
+  Set<String> selected=new HashSet<String>(enabledArr.length);
+  selected.addAll(Arrays.asList(enabledArr));
+  selected.removeAll(toExclude);
+  Set<String> supported=new HashSet<String>(supportedArr.length);
+  supported.addAll(Arrays.asList(supportedArr));
+  for (  String s : toEnable) {
+    if (supported.contains(s)) {
+      if (selected.add(s)) {
+        if (log.shouldLog(Log.INFO))         log.info("Added, previously disabled: " + s);
+      }
+    }
+ else     if (log.shouldLog(Log.INFO)) {
+      log.info("Not supported in this JVM: " + s);
+    }
+  }
+  if (selected.isEmpty()) {
+    log.logAlways(Log.WARN,"No TLS support for SSLEepGet, falling back");
+    return enabledArr;
+  }
+  if (log.shouldLog(Log.DEBUG)) {
+    List<String> foo=new ArrayList(selected);
+    Collections.sort(foo);
+    log.debug("Selected: " + foo);
+  }
+  return selected.toArray(new String[selected.size()]);
+}

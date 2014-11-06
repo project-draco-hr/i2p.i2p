@@ -47,15 +47,15 @@
  else       if (_log.shouldLog(Log.DEBUG)) {
         _log.debug(prefix() + "Clock skew: " + diff+ " ms");
       }
-      _state=State.VERIFIED;
       sendInboundConfirm(_aliceIdent,tsA);
       _con.setRemotePeer(_aliceIdent);
       if (_log.shouldLog(Log.DEBUG))       _log.debug(prefix() + "e_bobSig is " + _e_bobSig.length+ " bytes long");
       byte iv[]=_curEncrypted;
       System.arraycopy(_e_bobSig,_e_bobSig.length - AES_SIZE,iv,0,AES_SIZE);
       _con.finishInboundEstablishment(_dh.getSessionKey(),(tsA - _tsB),iv,_prevEncrypted);
-      releaseBufs();
+      releaseBufs(true);
       if (_log.shouldLog(Log.INFO))       _log.info(prefix() + "Verified remote peer as " + _aliceIdent.calculateHash());
+      changeState(State.VERIFIED);
     }
  else {
       _context.statManager().addRateData("ntcp.invalidInboundSignature",1);

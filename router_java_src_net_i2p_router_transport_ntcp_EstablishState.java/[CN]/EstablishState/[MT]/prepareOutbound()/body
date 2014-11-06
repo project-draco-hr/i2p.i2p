@@ -1,10 +1,14 @@
 {
-  if (_state == State.OB_INIT) {
+  boolean shouldSend;
+synchronized (_stateLock) {
+    shouldSend=_state == State.OB_INIT;
+  }
+  if (shouldSend) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug(prefix() + "send X");
     byte toWrite[]=new byte[XY_SIZE + _hX_xor_bobIdentHash.length];
     System.arraycopy(_X,0,toWrite,0,XY_SIZE);
     System.arraycopy(_hX_xor_bobIdentHash,0,toWrite,XY_SIZE,_hX_xor_bobIdentHash.length);
-    _state=State.OB_SENT_X;
+    changeState(State.OB_SENT_X);
     _transport.getPumper().wantsWrite(_con,toWrite);
   }
  else {
