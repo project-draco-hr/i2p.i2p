@@ -23,9 +23,21 @@
     markUnreachable(peer);
     return null;
   }
-  if (toAddress.getIdentity().getSigningPublicKey().getType() == null) {
+  SigType type=toAddress.getIdentity().getSigType();
+  if (type == null || !type.isAvailable()) {
     markUnreachable(peer);
     return null;
+  }
+  RouterInfo us=_context.router().getRouterInfo();
+  if (us != null) {
+    RouterIdentity id=us.getIdentity();
+    if (id.getSigType() != SigType.DSA_SHA1) {
+      String v=toAddress.getOption("router.version");
+      if (v != null && VersionComparator.comp(v,MIN_SIGTYPE_VERSION) < 0) {
+        markUnreachable(peer);
+        return null;
+      }
+    }
   }
   if (!allowConnection()) {
     if (_log.shouldLog(Log.WARN))     _log.warn("no bid when trying to send to " + peer + ", max connection limit reached");
