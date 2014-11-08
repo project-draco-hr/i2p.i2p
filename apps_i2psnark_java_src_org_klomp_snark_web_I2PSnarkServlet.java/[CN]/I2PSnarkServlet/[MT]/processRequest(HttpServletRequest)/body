@@ -17,15 +17,41 @@
   if ("Add".equals(action)) {
     String newURL=req.getParameter("nofilter_newURL");
     if (newURL != null) {
+      String newDir=req.getParameter("nofilter_newDir");
+      File dir=null;
+      if (newDir != null) {
+        newDir=newDir.trim();
+        if (newDir.length() > 0) {
+          dir=new SecureFile(newDir);
+          if (!dir.isAbsolute()) {
+            _manager.addMessage(_("Data directory must be an absolute path") + ": " + dir);
+            return;
+          }
+          if (!dir.isDirectory() && !dir.mkdirs()) {
+            _manager.addMessage(_("Data directory cannot be created") + ": " + dir);
+            return;
+          }
+          Collection<Snark> snarks=_manager.getTorrents();
+          for (          Snark s : snarks) {
+            Storage storage=s.getStorage();
+            if (storage == null)             continue;
+            File sbase=storage.getBase();
+            if (isParentOf(sbase,dir)) {
+              _manager.addMessage(_("Cannot add torrent {0} inside another torrent: {1}",dir.getAbsolutePath(),sbase));
+              return;
+            }
+          }
+        }
+      }
       if (newURL.startsWith("http://")) {
-        FetchAndAdd fetch=new FetchAndAdd(_context,_manager,newURL);
+        FetchAndAdd fetch=new FetchAndAdd(_context,_manager,newURL,dir);
         _manager.addDownloader(fetch);
       }
  else       if (newURL.startsWith(MagnetURI.MAGNET) || newURL.startsWith(MagnetURI.MAGGOT)) {
-        addMagnet(newURL);
+        addMagnet(newURL,dir);
       }
  else       if (newURL.length() == 40 && newURL.replaceAll("[a-fA-F0-9]","").length() == 0) {
-        addMagnet(MagnetURI.MAGNET_FULL + newURL);
+        addMagnet(MagnetURI.MAGNET_FULL + newURL,dir);
       }
  else {
         _manager.addMessage(_("Invalid URL: Must start with \"http://\", \"{0}\", or \"{1}\"",MagnetURI.MAGNET,MagnetURI.MAGGOT));
