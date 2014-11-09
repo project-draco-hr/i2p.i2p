@@ -25,6 +25,16 @@
   _context.jobQueue().addJob(new UpdateRoutingKeyModifierJob(_context));
   warmupCrypto();
   _context.blocklist().startup();
+synchronized (_configFileLock) {
+    if (!_config.containsKey(PROP_IB_RANDOM_KEY)) {
+      byte rk[]=new byte[32];
+      _context.random().nextBytes(rk);
+      _config.put(PROP_IB_RANDOM_KEY,Base64.encode(rk));
+      _context.random().nextBytes(rk);
+      _config.put(PROP_OB_RANDOM_KEY,Base64.encode(rk));
+      saveConfig();
+    }
+  }
   long before=System.currentTimeMillis();
   _context.clock().getTimestamper().waitForInitialization();
   long waited=System.currentTimeMillis() - before;
