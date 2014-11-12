@@ -6,8 +6,16 @@
   if (action.equals("start"))   _pendingPluginClients.put(pluginName,new ConcurrentHashSet<SimpleTimer2.TimedEvent>());
   for (  ClientAppConfig app : apps) {
     if (action.equals("stop")) {
-      ClientApp ca=ctx.routerAppManager().getClientApp(app.className,LoadClientAppsJob.parseArgs(app.args));
-      if (ca != null && ca.getState() == ClientAppState.RUNNING) {
+      String[] argVal=LoadClientAppsJob.parseArgs(app.args);
+      for (int i=0; i < argVal.length; i++) {
+        if (argVal[i].indexOf("$") >= 0) {
+          argVal[i]=argVal[i].replace("$I2P",ctx.getBaseDir().getAbsolutePath());
+          argVal[i]=argVal[i].replace("$CONFIG",ctx.getConfigDir().getAbsolutePath());
+          argVal[i]=argVal[i].replace("$PLUGIN",pluginDir.getAbsolutePath());
+        }
+      }
+      ClientApp ca=ctx.routerAppManager().getClientApp(app.className,argVal);
+      if (ca != null) {
         try {
           ca.shutdown(LoadClientAppsJob.parseArgs(app.stopargs));
         }
