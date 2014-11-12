@@ -1,0 +1,20 @@
+{
+  if ((g1.getRepresentation() != GroupElement.Representation.P2 && g1.getRepresentation() != GroupElement.Representation.P3) || (g2.getRepresentation() != GroupElement.Representation.P2 && g2.getRepresentation() != GroupElement.Representation.P3)) {
+    throw new IllegalArgumentException("g1 and g2 must have representation P2 or P3");
+  }
+  final BigInteger g1X=toBigInteger(g1.getX().toByteArray());
+  final BigInteger g1Y=toBigInteger(g1.getY().toByteArray());
+  final BigInteger g1Z=toBigInteger(g1.getZ().toByteArray());
+  final BigInteger g2X=toBigInteger(g2.getX().toByteArray());
+  final BigInteger g2Y=toBigInteger(g2.getY().toByteArray());
+  final BigInteger g2Z=toBigInteger(g2.getZ().toByteArray());
+  final BigInteger g1x=g1X.multiply(g1Z.modInverse(getQ())).mod(getQ());
+  final BigInteger g1y=g1Y.multiply(g1Z.modInverse(getQ())).mod(getQ());
+  final BigInteger g2x=g2X.multiply(g2Z.modInverse(getQ())).mod(getQ());
+  final BigInteger g2y=g2Y.multiply(g2Z.modInverse(getQ())).mod(getQ());
+  BigInteger dx1x2y1y2=d.multiply(g1x).multiply(g2x).multiply(g1y).multiply(g2y).mod(getQ());
+  BigInteger x3=g1x.multiply(g2y).add(g2x.multiply(g1y)).multiply(BigInteger.ONE.add(dx1x2y1y2).modInverse(getQ())).mod(getQ());
+  BigInteger y3=g1x.multiply(g2x).add(g1y.multiply(g2y)).multiply(BigInteger.ONE.subtract(dx1x2y1y2).modInverse(getQ())).mod(getQ());
+  BigInteger t3=x3.multiply(y3).mod(getQ());
+  return GroupElement.p3(g1.getCurve(),toFieldElement(x3),toFieldElement(y3),getField().ONE,toFieldElement(t3));
+}

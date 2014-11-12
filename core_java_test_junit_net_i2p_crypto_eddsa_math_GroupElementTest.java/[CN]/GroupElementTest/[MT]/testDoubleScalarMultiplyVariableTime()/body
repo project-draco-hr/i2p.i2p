@@ -1,0 +1,20 @@
+{
+  byte[] zero=Utils.hexToBytes("0000000000000000000000000000000000000000000000000000000000000000");
+  byte[] one=Utils.hexToBytes("0100000000000000000000000000000000000000000000000000000000000000");
+  byte[] two=Utils.hexToBytes("0200000000000000000000000000000000000000000000000000000000000000");
+  byte[] a=Utils.hexToBytes("d072f8dd9c07fa7bc8d22a4b325d26301ee9202f6db89aa7c3731529e37e437c");
+  GroupElement A=new GroupElement(curve,Utils.hexToBytes("d4cf8595571830644bd14af416954d09ab7159751ad9e0f7a6cbd92379e71a66"));
+  GroupElement B=ed25519.getB();
+  GroupElement geZero=curve.getZero(GroupElement.Representation.P3);
+  geZero.precompute(false);
+  assertThat(geZero.doubleScalarMultiplyVariableTime(geZero,zero,zero),is(equalTo(geZero)));
+  assertThat(B.doubleScalarMultiplyVariableTime(geZero,zero,zero),is(equalTo(geZero)));
+  assertThat(B.doubleScalarMultiplyVariableTime(geZero,one,zero),is(equalTo(geZero)));
+  assertThat(B.doubleScalarMultiplyVariableTime(geZero,one,one),is(equalTo(B)));
+  assertThat(B.doubleScalarMultiplyVariableTime(B,one,one),is(equalTo(B.dbl())));
+  assertThat(B.doubleScalarMultiplyVariableTime(B,one,two),is(equalTo(B.dbl().toP3().add(B.toCached()))));
+  assertThat(B.doubleScalarMultiplyVariableTime(B,two,two),is(equalTo(B.dbl().toP3().dbl())));
+  assertThat(B.doubleScalarMultiplyVariableTime(B,zero,a),is(equalTo(A)));
+  assertThat(B.doubleScalarMultiplyVariableTime(B,a,zero),is(equalTo(A)));
+  assertThat(B.doubleScalarMultiplyVariableTime(B,a,a),is(equalTo(A.dbl())));
+}
