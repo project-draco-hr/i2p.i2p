@@ -1,13 +1,17 @@
 {
   if (args.length == 0 || args.length > 2) {
-    l.log("close [forced] <jobnumber>|all\n" + "   stop running tasks. either only one or all.\n" + "   use 'forced' to also stop tasks with active connections.\n"+ "   use the 'list' command to show the job numbers");
+    l.log("close [forced|destroy] <jobnumber>|all\n" + "   stop running tasks. either only one or all.\n" + "   use 'forced' to also stop tasks with active connections.\n"+ "   use the 'list' command to show the job numbers");
     notifyEvent("closeResult","error");
   }
  else {
     int argindex=0;
-    boolean forced=false;
+    CloseMode mode=CloseMode.NORMAL;
     if (args[argindex].equalsIgnoreCase("forced")) {
-      forced=true;
+      mode=CloseMode.FORCED;
+      argindex++;
+    }
+ else     if (args[argindex].equalsIgnoreCase("destroy")) {
+      mode=CloseMode.DESTROY;
       argindex++;
     }
     if (args[argindex].equalsIgnoreCase("all")) {
@@ -16,7 +20,7 @@
         if (_log.shouldLog(Log.INFO))         _log.info(getPrefix() + " runClose(all) no tasks");
       }
       for (      I2PTunnelTask t : tasks) {
-        if (!closetask(t,forced,l)) {
+        if (!closetask(t,mode,l)) {
           notifyEvent("closeResult","error");
           error=true;
         }
@@ -27,7 +31,7 @@
     }
  else {
       try {
-        if (!closetask(Integer.parseInt(args[argindex]),forced,l)) {
+        if (!closetask(Integer.parseInt(args[argindex]),mode,l)) {
           notifyEvent("closeResult","error");
         }
  else {

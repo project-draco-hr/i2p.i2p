@@ -12,15 +12,19 @@ synchronized (lock) {
       return false;
     }
     l.log("Stopping tunnels for server at " + this.remoteHost + ':'+ this.remotePort);
+    open=false;
     try {
-      if (i2pss != null)       i2pss.close();
-      getTunnel().removeSession(sockMgr.getSession());
-      sockMgr.getSession().destroySession();
+      if (i2pss != null) {
+        i2pss.close();
+        i2pss=null;
+      }
+      I2PSession session=sockMgr.getSession();
+      getTunnel().removeSession(session);
+      session.destroySession();
     }
  catch (    I2PException ex) {
       _log.error("Error destroying the session",ex);
     }
-    open=false;
     if (_usePool && _executor != null) {
       _executor.setRejectedExecutionHandler(new ThreadPoolExecutor.DiscardPolicy());
       _executor.shutdownNow();
