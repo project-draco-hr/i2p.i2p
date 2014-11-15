@@ -24,11 +24,11 @@
     SessionKey layerKey=hopConfig.getLayerKey();
     SessionKey ivKey=hopConfig.getIVKey();
     SessionKey replyKey=hopConfig.getReplyKey();
-    byte iv[]=hopConfig.getReplyIV().getData();
-    if ((iv == null) || (iv.length != BuildRequestRecord.IV_SIZE)) {
+    byte iv[]=hopConfig.getReplyIV();
+    if (iv == null) {
       iv=new byte[BuildRequestRecord.IV_SIZE];
       ctx.random().nextBytes(iv);
-      hopConfig.getReplyIV().setData(iv);
+      hopConfig.setReplyIV(iv);
     }
     boolean isInGW=(cfg.isInbound() && (hop == 0));
     boolean isOutEnd=(!cfg.isInbound() && (hop + 1 >= cfg.getLength()));
@@ -39,8 +39,7 @@
  else {
       nextMsgId=ctx.random().nextLong(I2NPMessage.MAX_ID_VALUE);
     }
-    BuildRequestRecord rec=new BuildRequestRecord();
-    rec.createRecord(ctx,recvTunnelId,peer,nextTunnelId,nextPeer,nextMsgId,layerKey,ivKey,replyKey,iv,isInGW,isOutEnd);
+    BuildRequestRecord rec=new BuildRequestRecord(ctx,recvTunnelId,peer,nextTunnelId,nextPeer,nextMsgId,layerKey,ivKey,replyKey,iv,isInGW,isOutEnd);
     return rec;
   }
  else {

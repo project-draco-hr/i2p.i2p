@@ -1,14 +1,17 @@
 {
-  byte encrypted[]=new byte[TunnelBuildMessage.RECORD_SIZE];
+  EncryptedBuildRecord erec;
   if (peerKey != null) {
     BuildRequestRecord req=null;
     if ((!cfg.isInbound()) && (hop + 1 == cfg.getLength()))     req=createUnencryptedRecord(ctx,cfg,hop,replyRouter,replyTunnel);
  else     req=createUnencryptedRecord(ctx,cfg,hop,null,-1);
+    if (req == null)     throw new IllegalArgumentException("hop bigger than config");
     Hash peer=cfg.getPeer(hop);
-    req.encryptRecord(ctx,peerKey,peer,encrypted,0);
+    erec=req.encryptRecord(ctx,peerKey,peer);
   }
  else {
+    byte encrypted[]=new byte[TunnelBuildMessage.RECORD_SIZE];
     ctx.random().nextBytes(encrypted);
+    erec=new EncryptedBuildRecord(encrypted);
   }
-  msg.setRecord(recordNum,new ByteArray(encrypted));
+  msg.setRecord(recordNum,erec);
 }
