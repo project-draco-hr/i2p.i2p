@@ -1,0 +1,20 @@
+{
+  final boolean shouldBeNegative=(bytes[31] >> 7) != 0;
+  bytes[31]&=0x7f;
+  final BigInteger y=MathUtils.toBigInteger(bytes);
+  final BigInteger u=y.multiply(y).subtract(BigInteger.ONE).mod(getQ());
+  final BigInteger v=d.multiply(y).multiply(y).add(BigInteger.ONE).mod(getQ());
+  final BigInteger tmp=u.multiply(v.pow(7)).modPow(BigInteger.ONE.shiftLeft(252).subtract(new BigInteger("3")),getQ()).mod(getQ());
+  BigInteger x=tmp.multiply(u).multiply(v.pow(3)).mod(getQ());
+  if (!v.multiply(x).multiply(x).subtract(u).mod(getQ()).equals(BigInteger.ZERO)) {
+    if (!v.multiply(x).multiply(x).add(u).mod(getQ()).equals(BigInteger.ZERO)) {
+      throw new IllegalArgumentException("not a valid GroupElement");
+    }
+    x=x.multiply(toBigInteger(curve.getI())).mod(getQ());
+  }
+  final boolean isNegative=x.mod(new BigInteger("2")).equals(BigInteger.ONE);
+  if ((shouldBeNegative && !isNegative) || (!shouldBeNegative && isNegative)) {
+    x=x.negate().mod(getQ());
+  }
+  return GroupElement.p3(curve,toFieldElement(x),toFieldElement(y),getField().ONE,toFieldElement(x.multiply(y).mod(getQ())));
+}

@@ -1,5 +1,5 @@
 {
-  I2PServerSocket i2pS_S=sockMgr.getServerSocket();
+  i2pss=sockMgr.getServerSocket();
   if (_log.shouldLog(Log.WARN)) {
     if (_usePool)     _log.warn("Starting executor with " + getHandlerCount() + " threads max");
  else     _log.warn("Threads disabled, running blockingHandles inline");
@@ -9,7 +9,9 @@
   }
   while (open) {
     try {
-      final I2PSocket i2ps=i2pS_S.accept();
+      I2PServerSocket ci2pss=i2pss;
+      if (ci2pss == null)       throw new I2PException("I2PServerSocket closed");
+      final I2PSocket i2ps=ci2pss.accept();
       if (i2ps == null)       throw new I2PException("I2PServerSocket closed");
       if (_usePool) {
         try {
@@ -35,11 +37,8 @@
     }
 catch (    ConnectException ce) {
       if (_log.shouldLog(Log.ERROR))       _log.error("Error accepting",ce);
-      try {
-        Thread.sleep(500);
-      }
- catch (      InterruptedException ie) {
-      }
+      open=false;
+      break;
     }
 catch (    SocketTimeoutException ste) {
     }
@@ -52,5 +51,5 @@ catch (    Exception e) {
       }
     }
   }
-  if (_executor != null)   _executor.shutdownNow();
+  if (_executor != null && !_executor.isTerminating() && !_executor.isShutdown())   _executor.shutdownNow();
 }

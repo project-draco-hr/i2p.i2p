@@ -7,17 +7,12 @@
   System.setProperty("jetty.class.path",_context.getBaseDir() + "/lib/routerconsole.jar");
   _server=new Server();
   _server.setGracefulShutdown(1000);
-  try {
-    ThreadPool ctp=new CustomThreadPoolExecutor();
-    _server.setThreadPool(ctp);
-  }
- catch (  Throwable t) {
-    System.out.println("INFO: Jetty concurrent ThreadPool unavailable, using QueuedThreadPool");
-    QueuedThreadPool qtp=new QueuedThreadPool(MAX_THREADS);
-    qtp.setMinThreads(MIN_THREADS);
-    qtp.setMaxIdleTimeMs(MAX_IDLE_TIME);
-    _server.setThreadPool(qtp);
-  }
+  LinkedBlockingQueue<Runnable> lbq=new LinkedBlockingQueue<Runnable>(4 * MAX_THREADS);
+  QueuedThreadPool qtp=new QueuedThreadPool(lbq);
+  qtp.setMaxIdleTimeMs(MAX_IDLE_TIME);
+  qtp.setName(THREAD_NAME);
+  qtp.setDaemon(true);
+  _server.setThreadPool(qtp);
   HandlerCollection hColl=new HandlerCollection();
   ContextHandlerCollection chColl=new ContextHandlerCollection();
   _server.setHandler(hColl);
@@ -129,6 +124,8 @@
         SslContextFactory sslFactory=new SslContextFactory(keyStore.getAbsolutePath());
         sslFactory.setKeyStorePassword(_context.getProperty(PROP_KEYSTORE_PASSWORD,DEFAULT_KEYSTORE_PASSWORD));
         sslFactory.setKeyManagerPassword(_context.getProperty(PROP_KEY_PASSWORD,"thisWontWork"));
+        sslFactory.addExcludeProtocols(I2PSSLSocketFactory.EXCLUDE_PROTOCOLS.toArray(new String[I2PSSLSocketFactory.EXCLUDE_PROTOCOLS.size()]));
+        sslFactory.addExcludeCipherSuites(I2PSSLSocketFactory.INCLUDE_CIPHERS.toArray(new String[I2PSSLSocketFactory.EXCLUDE_CIPHERS.size()]));
         StringTokenizer tok=new StringTokenizer(_sslListenHost," ,");
         while (tok.hasMoreTokens()) {
           String host=tok.nextToken().trim();
@@ -183,6 +180,8 @@
       System.err.println("Unable to bind routerconsole to any address on port " + _listenPort + (sslPort > 0 ? (" or SSL port " + sslPort) : ""));
       return;
     }
+    qtp.setMinThreads(MIN_THREADS + (2 * boundAddresses));
+    qtp.setMaxThreads(MAX_THREADS + (2 * boundAddresses));
     File tmpdir=new SecureDirectory(workDir,ROUTERCONSOLE + "-" + (_listenPort != null ? _listenPort : _sslListenPort));
     tmpdir.mkdir();
     rootServletHandler=new ServletHandler();

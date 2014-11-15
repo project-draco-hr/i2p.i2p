@@ -6,16 +6,23 @@
   int recent=0;
   int tags=0;
   int toRemove=overage * 2;
-  _log.log(Log.CRIT,"TOO MANY SESSION TAGS! Starting cleanup, overage = " + overage);
+  _log.logAlways(Log.WARN,"TOO MANY SESSION TAGS! Starting cleanup, overage = " + overage);
   List<TagSet> removed=new ArrayList<TagSet>(toRemove);
 synchronized (_inboundTagSets) {
     for (    TagSet set : _inboundTagSets.values()) {
       int size=set.getTags().size();
       if (size > 1000)       absurd++;
       if (size > 100)       large++;
-      if (now >= set.getDate())       old++;
- else       if (set.getDate() - now > 10 * 60 * 1000)       recent++;
-      if ((removed.size() < (toRemove)) || (now >= set.getDate()))       removed.add(set);
+      if (set.getDate() - now < 3 * 60 * 1000) {
+        old++;
+        removed.add(set);
+        continue;
+      }
+ else       if (set.getDate() - now > 8 * 60 * 1000) {
+        recent++;
+        continue;
+      }
+      if (removed.size() < toRemove)       removed.add(set);
     }
     for (int i=0; i < removed.size(); i++) {
       TagSet cur=removed.get(i);
@@ -25,5 +32,5 @@ synchronized (_inboundTagSets) {
       }
     }
   }
-  if (_log.shouldLog(Log.CRIT))   _log.log(Log.CRIT,"TOO MANY SESSION TAGS!  removing " + removed + " tag sets arbitrarily, with "+ tags+ " tags,"+ "where there are "+ old+ " long lasting sessions, "+ recent+ " ones created in the last minute, and "+ large+ " sessions with more than 100 tags (and "+ absurd+ " with more than 1000!), leaving a total of "+ _inboundTagSets.size()+ " tags behind");
+  _log.logAlways(Log.WARN,"TOO MANY SESSION TAGS!  removed " + removed.size() + " tag sets arbitrarily, with "+ tags+ " tags,"+ "where there are "+ old+ " long lasting sessions, "+ recent+ " ones created in the last few minutes, and "+ large+ " sessions with more than 100 tags (and "+ absurd+ " with more than 1000!), leaving a total of "+ _inboundTagSets.size()+ " tags behind");
 }

@@ -2,14 +2,14 @@
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Accept(" + timeoutMs + ") called");
   long expiration=timeoutMs + _context.clock().now();
   while (true) {
-    if ((timeoutMs > 0) && (expiration < _context.clock().now()))     return null;
+    if ((timeoutMs > 0) && (expiration < _context.clock().now()))     throw new SocketTimeoutException("accept() timed out");
     if (!_active) {
       while (true) {
         Packet packet=_synQueue.poll();
         if (packet == null || packet.getOptionalDelay() == PoisonPacket.POISON_MAX_DELAY_REQUEST)         break;
         sendReset(packet);
       }
-      return null;
+      throw new ConnectException("ServerSocket closed");
     }
     Packet syn=null;
     while (_active && syn == null) {
@@ -19,6 +19,9 @@
           syn=_synQueue.take();
         }
  catch (        InterruptedException ie) {
+          ConnectException ce=new ConnectException("Interrupted accept()");
+          ce.initCause(ie);
+          throw ce;
         }
       }
  else {
@@ -28,12 +31,15 @@
           syn=_synQueue.poll(remaining,TimeUnit.MILLISECONDS);
         }
  catch (        InterruptedException ie) {
+          ConnectException ce=new ConnectException("Interrupted accept()");
+          ce.initCause(ie);
+          throw ce;
         }
         break;
       }
     }
     if (syn != null) {
-      if (syn.getOptionalDelay() == PoisonPacket.POISON_MAX_DELAY_REQUEST)       return null;
+      if (syn.getOptionalDelay() == PoisonPacket.POISON_MAX_DELAY_REQUEST)       throw new ConnectException("ServerSocket closed");
       if (syn.isFlagSet(Packet.FLAG_SYNCHRONIZE)) {
         Destination from=syn.getOptionalFrom();
         if (from == null) {

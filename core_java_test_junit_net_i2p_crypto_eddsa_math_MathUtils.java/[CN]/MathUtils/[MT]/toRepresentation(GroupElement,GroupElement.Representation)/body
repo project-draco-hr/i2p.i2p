@@ -1,0 +1,43 @@
+{
+  BigInteger x;
+  BigInteger y;
+  final BigInteger gX=toBigInteger(g.getX().toByteArray());
+  final BigInteger gY=toBigInteger(g.getY().toByteArray());
+  final BigInteger gZ=toBigInteger(g.getZ().toByteArray());
+  final BigInteger gT=null == g.getT() ? null : toBigInteger(g.getT().toByteArray());
+switch (g.getRepresentation()) {
+case P2:
+case P3:
+    x=gX.multiply(gZ.modInverse(getQ())).mod(getQ());
+  y=gY.multiply(gZ.modInverse(getQ())).mod(getQ());
+break;
+case P1P1:
+x=gX.multiply(gZ.modInverse(getQ())).mod(getQ());
+y=gY.multiply(gT.modInverse(getQ())).mod(getQ());
+break;
+case CACHED:
+x=gX.subtract(gY).multiply(gZ.multiply(new BigInteger("2")).modInverse(getQ())).mod(getQ());
+y=gX.add(gY).multiply(gZ.multiply(new BigInteger("2")).modInverse(getQ())).mod(getQ());
+break;
+case PRECOMP:
+x=gX.subtract(gY).multiply(new BigInteger("2").modInverse(getQ())).mod(getQ());
+y=gX.add(gY).multiply(new BigInteger("2").modInverse(getQ())).mod(getQ());
+break;
+default :
+throw new UnsupportedOperationException();
+}
+switch (repr) {
+case P2:
+return GroupElement.p2(curve,toFieldElement(x),toFieldElement(y),getField().ONE);
+case P3:
+return GroupElement.p3(curve,toFieldElement(x),toFieldElement(y),getField().ONE,toFieldElement(x.multiply(y).mod(getQ())));
+case P1P1:
+return GroupElement.p1p1(curve,toFieldElement(x),toFieldElement(y),getField().ONE,getField().ONE);
+case CACHED:
+return GroupElement.cached(curve,toFieldElement(y.add(x).mod(getQ())),toFieldElement(y.subtract(x).mod(getQ())),getField().ONE,toFieldElement(d.multiply(new BigInteger("2")).multiply(x).multiply(y).mod(getQ())));
+case PRECOMP:
+return GroupElement.precomp(curve,toFieldElement(y.add(x).mod(getQ())),toFieldElement(y.subtract(x).mod(getQ())),toFieldElement(d.multiply(new BigInteger("2")).multiply(x).multiply(y).mod(getQ())));
+default :
+throw new UnsupportedOperationException();
+}
+}

@@ -2,14 +2,14 @@
   while (_state == State.IB_INIT && src.hasRemaining()) {
     byte c=src.get();
     _X[_received++]=c;
-    if (_received >= XY_SIZE)     _state=State.IB_GOT_X;
+    if (_received >= XY_SIZE)     changeState(State.IB_GOT_X);
   }
   while (_state == State.IB_GOT_X && src.hasRemaining()) {
     int i=_received - XY_SIZE;
     _received++;
     byte c=src.get();
     _hX_xor_bobIdentHash[i]=c;
-    if (i >= HXY_SIZE - 1)     _state=State.IB_GOT_HX;
+    if (i >= HXY_SIZE - 1)     changeState(State.IB_GOT_HX);
   }
   if (_state == State.IB_GOT_HX) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug(prefix() + "Enough data for a DH received");
@@ -57,7 +57,7 @@
       byte write[]=new byte[XY_SIZE + HXY_TSB_PAD_SIZE];
       System.arraycopy(_Y,0,write,0,XY_SIZE);
       System.arraycopy(_e_hXY_tsB,0,write,XY_SIZE,HXY_TSB_PAD_SIZE);
-      _state=State.IB_SENT_Y;
+      changeState(State.IB_SENT_Y);
       _transport.getPumper().wantsWrite(_con,write);
       if (!src.hasRemaining())       return;
     }
@@ -87,7 +87,7 @@
         }
         if (_log.shouldLog(Log.DEBUG))         _log.debug(prefix() + "got the RI size: " + sz);
         _aliceIdentSize=sz;
-        _state=State.IB_GOT_RI_SIZE;
+        changeState(State.IB_GOT_RI_SIZE);
       }
       try {
         _sz_aliceIdent_tsA_padding_aliceSig.write(_curDecrypted);
@@ -106,7 +106,7 @@
           fail("Unsupported sig type");
           return;
         }
-        _state=State.IB_GOT_RI;
+        changeState(State.IB_GOT_RI);
         _sz_aliceIdent_tsA_padding_aliceSigSize=2 + _aliceIdentSize + 4+ type.getSigLen();
         int rem=(_sz_aliceIdent_tsA_padding_aliceSigSize % AES_SIZE);
         int padding=0;
