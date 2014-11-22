@@ -8,15 +8,29 @@
     Set<Hash> exclude=getExclude(settings.isInbound(),false);
     Set<Hash> matches=new HashSet<Hash>(length);
     if (length == 1) {
+      Set<Hash> moreExclude=getClosestHopExclude(settings.isInbound());
+      if (moreExclude != null)       exclude.addAll(moreExclude);
       ctx.profileOrganizer().selectFastPeers(length,exclude,matches,0);
       matches.remove(ctx.routerHash());
       rv=new ArrayList<Hash>(matches);
     }
  else {
       rv=new ArrayList<Hash>(length + 1);
+      Set<Hash> firstHopExclude;
       if (!settings.isInbound()) {
+        Set<Hash> moreExclude=getClosestHopExclude(false);
+        if (moreExclude != null) {
+          moreExclude.addAll(exclude);
+          firstHopExclude=moreExclude;
+        }
+ else {
+          firstHopExclude=exclude;
+        }
       }
-      ctx.profileOrganizer().selectFastPeers(1,exclude,matches,settings.getRandomKey(),length == 2 ? 2 : 4);
+ else {
+        firstHopExclude=exclude;
+      }
+      ctx.profileOrganizer().selectFastPeers(1,firstHopExclude,matches,settings.getRandomKey(),length == 2 ? 2 : 4);
       matches.remove(ctx.routerHash());
       exclude.addAll(matches);
       rv.addAll(matches);
@@ -36,6 +50,8 @@
         matches.clear();
       }
       if (settings.isInbound()) {
+        Set<Hash> moreExclude=getClosestHopExclude(true);
+        if (moreExclude != null)         exclude.addAll(moreExclude);
       }
       ctx.profileOrganizer().selectFastPeers(1,exclude,matches,settings.getRandomKey(),length == 2 ? 3 : 5);
       matches.remove(ctx.routerHash());
