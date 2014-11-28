@@ -2,17 +2,26 @@
   this.recv=recv;
   _log=I2PAppContext.getGlobalContext().logManager().getLog(getClass());
   boolean canReceive;
+  boolean startAcceptor;
   if (dir.equals("BOTH")) {
     canCreate=true;
     canReceive=true;
+    startAcceptor=true;
+  }
+ else   if (dir.equals("__v3__")) {
+    canCreate=true;
+    canReceive=true;
+    startAcceptor=false;
   }
  else   if (dir.equals("CREATE")) {
     canCreate=true;
     canReceive=false;
+    startAcceptor=false;
   }
  else   if (dir.equals("RECEIVE")) {
     canCreate=false;
     canReceive=true;
+    startAcceptor=true;
   }
  else {
     _log.error("BUG! Wrong direction passed to SAMStreamSession: " + dir);
@@ -42,7 +51,7 @@
   }
   socketMgr.addDisconnectListener(new DisconnectListener());
   forceFlush=Boolean.parseBoolean(allprops.getProperty(PROP_FORCE_FLUSH,DEFAULT_FORCE_FLUSH));
-  if (canReceive) {
+  if (startAcceptor) {
     server=new SAMStreamSessionServer();
     Thread t=new I2PAppThread(server,"SAMStreamSessionServer");
     t.start();
