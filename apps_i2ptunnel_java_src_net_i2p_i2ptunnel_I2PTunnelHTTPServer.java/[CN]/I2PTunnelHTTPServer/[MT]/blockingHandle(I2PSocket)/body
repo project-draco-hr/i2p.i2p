@@ -69,14 +69,14 @@
     if (alt)     headers.remove("X-Accept-encoding");
     String modifiedHeader=formatHeaders(headers,command);
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Modified header: [" + modifiedHeader + "]");
+    Runnable t;
     if (allowGZIP && useGZIP) {
-      I2PAppThread req=new I2PAppThread(new CompressedRequestor(s,socket,modifiedHeader,getTunnel().getContext(),_log),Thread.currentThread().getName() + ".hc");
-      req.start();
+      t=new CompressedRequestor(s,socket,modifiedHeader,getTunnel().getContext(),_log);
     }
  else {
-      Thread t=new I2PTunnelRunner(s,socket,slock,null,modifiedHeader.getBytes(),null,(I2PTunnelRunner.FailCallback)null);
-      t.start();
+      t=new I2PTunnelRunner(s,socket,slock,null,modifiedHeader.getBytes(),null,(I2PTunnelRunner.FailCallback)null);
     }
+    _clientExecutor.execute(t);
     long afterHandle=getTunnel().getContext().clock().now();
     long timeToHandle=afterHandle - afterAccept;
     getTunnel().getContext().statManager().addRateData("i2ptunnel.httpserver.blockingHandleTime",timeToHandle,0);
