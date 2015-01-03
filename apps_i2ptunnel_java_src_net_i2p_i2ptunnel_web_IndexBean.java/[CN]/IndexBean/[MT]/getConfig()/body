@@ -83,6 +83,20 @@
       _context.random().nextBytes(rk);
       config.setProperty(p,Base64.encode(rk));
     }
+    p=OPT + "i2cp.leaseSetSigningPrivateKey";
+    Destination dest=getDestination(_tunnel);
+    if (dest != null && !config.containsKey(p)) {
+      try {
+        SigType type=dest.getSigType();
+        SimpleDataStructure keys[]=KeyGenerator.getInstance().generateSigningKeys(type);
+        config.setProperty(p,type.name() + ':' + keys[1].toBase64());
+        p=OPT + "i2cp.leaseSetPrivateKey";
+        keys=KeyGenerator.getInstance().generatePKIKeys();
+        config.setProperty(p,"ELGAMAL_2048:" + keys[1].toBase64());
+      }
+ catch (      GeneralSecurityException gse) {
+      }
+    }
   }
   return config;
 }

@@ -1,13 +1,54 @@
 {
-  leaseSet.setDestination(session.getMyDestination());
-  LeaseInfo li=_existingLeaseSets.get(session.getMyDestination());
+  Destination dest=session.getMyDestination();
+  leaseSet.setDestination(dest);
+  LeaseInfo li=_existingLeaseSets.get(dest);
   if (li == null) {
-    li=new LeaseInfo(session.getMyDestination());
-    _existingLeaseSets.put(session.getMyDestination(),li);
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Creating new leaseInfo keys for " + session.getMyDestination().calculateHash().toBase64());
+    String spk=session.getOptions().getProperty("i2cp.leaseSetPrivateKey");
+    String sspk=session.getOptions().getProperty("i2cp.leaseSetSigningPrivateKey");
+    PrivateKey privKey=null;
+    SigningPrivateKey signingPrivKey=null;
+    boolean useOldKeys;
+    if (spk != null && sspk != null) {
+      useOldKeys=true;
+      int colon=sspk.indexOf(':');
+      SigType type=dest.getSigType();
+      if (colon > 0) {
+        String stype=sspk.substring(0,colon);
+        SigType t=SigType.parseSigType(stype);
+        if (t == type)         sspk=sspk.substring(colon + 1);
+ else         useOldKeys=false;
+      }
+      colon=spk.indexOf(':');
+      if (colon >= 0)       spk=spk.substring(colon + 1);
+      if (useOldKeys) {
+        try {
+          signingPrivKey=new SigningPrivateKey(type);
+          signingPrivKey.fromBase64(sspk);
+        }
+ catch (        DataFormatException iae) {
+          useOldKeys=false;
+        }
+      }
+      if (useOldKeys) {
+        try {
+          privKey=new PrivateKey();
+          privKey.fromBase64(spk);
+        }
+ catch (        DataFormatException iae) {
+          useOldKeys=false;
+        }
+      }
+    }
+ else {
+      useOldKeys=false;
+    }
+    if (useOldKeys)     li=new LeaseInfo(privKey,signingPrivKey);
+ else     li=new LeaseInfo(dest);
+    _existingLeaseSets.put(dest,li);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Creating new leaseInfo keys for " + dest + " using configured private keys? "+ useOldKeys);
   }
  else {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Caching the old leaseInfo keys for " + session.getMyDestination().calculateHash().toBase64());
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Caching the old leaseInfo keys for " + dest);
   }
   leaseSet.setEncryptionKey(li.getPublicKey());
   leaseSet.setSigningKey(li.getSigningPublicKey());
