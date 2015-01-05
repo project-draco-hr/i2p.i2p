@@ -1,29 +1,22 @@
 {
-synchronized (_lock) {
-    try {
-      readBlocklistFile(_file);
-    }
- catch (    OutOfMemoryError oom) {
-      _log.log(Log.CRIT,"OOM processing the blocklist");
-      disable();
-      return;
-    }
+  allocate(_files);
+  if (_blocklist == null)   return;
+  int ccount=process();
+  if (_blocklist == null)   return;
+  if (ccount <= 0) {
+    disable();
+    return;
   }
-  for (  Hash peer : _peerBlocklist.keySet()) {
-    String reason;
-    String comment=_peerBlocklist.get(peer);
-    if (comment != null)     reason=_x("Banned by router hash: {0}");
- else     reason=_x("Banned by router hash");
-    _context.banlist().banlistRouterForever(peer,reason,comment);
+  merge(ccount);
+  if (_log.shouldLog(Log.WARN)) {
+    if (_blocklistSize <= 0)     return;
+    FloodfillNetworkDatabaseFacade fndf=(FloodfillNetworkDatabaseFacade)_context.netDb();
+    int count=0;
+    for (    RouterInfo ri : fndf.getKnownRouterData()) {
+      Hash peer=ri.getIdentity().getHash();
+      if (isBlocklisted(peer))       count++;
+    }
+    if (count > 0)     _log.warn("Blocklisted " + count + " routers in the netDb");
   }
   _peerBlocklist=null;
-  if (_blocklistSize <= 0)   return;
-  FloodfillNetworkDatabaseFacade fndf=(FloodfillNetworkDatabaseFacade)_context.netDb();
-  int count=0;
-  for (Iterator<RouterInfo> iter=fndf.getKnownRouterData().iterator(); iter.hasNext(); ) {
-    RouterInfo ri=iter.next();
-    Hash peer=ri.getIdentity().getHash();
-    if (isBlocklisted(peer))     count++;
-  }
-  if (count > 0 && _log.shouldLog(Log.WARN))   _log.warn("Blocklisted " + count + " routers in the netDb.");
 }

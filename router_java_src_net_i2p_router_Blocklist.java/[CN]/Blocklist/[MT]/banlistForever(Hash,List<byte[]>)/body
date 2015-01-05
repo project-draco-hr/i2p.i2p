@@ -1,9 +1,15 @@
 {
-  String file=_context.getProperty(PROP_BLOCKLIST_FILE,BLOCKLIST_FILE_DEFAULT);
-  File BLFile=new File(file);
-  if (!BLFile.isAbsolute())   BLFile=new File(_context.getConfigDir(),file);
-  if (BLFile == null || (!BLFile.exists()) || BLFile.length() <= 0) {
-    if (_log.shouldLog(Log.ERROR))     _log.error("Blocklist file not found: " + file);
+  File blFile=null;
+  String file=_context.getProperty(PROP_BLOCKLIST_FILE);
+  if (file != null) {
+    blFile=new File(file);
+    if (!blFile.isAbsolute())     blFile=new File(_context.getConfigDir(),file);
+    if (!blFile.exists())     blFile=null;
+  }
+  if (blFile == null)   blFile=new File(_context.getBaseDir(),BLOCKLIST_FILE_DEFAULT);
+  if ((!blFile.exists()) || blFile.length() <= 0) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Banlisting " + peer);
+    _context.banlist().banlistRouterForever(peer,"Banned");
     return;
   }
   for (Iterator<byte[]> iter=ips.iterator(); iter.hasNext(); ) {
@@ -11,7 +17,7 @@
     int ipint=toInt(ip);
     BufferedReader br=null;
     try {
-      br=new BufferedReader(new InputStreamReader(new FileInputStream(BLFile),"UTF-8"));
+      br=new BufferedReader(new InputStreamReader(new FileInputStream(blFile),"UTF-8"));
       String buf=null;
       while ((buf=br.readLine()) != null) {
         Entry e=parse(buf,false);
@@ -32,7 +38,7 @@
       }
     }
  catch (    IOException ioe) {
-      if (_log.shouldLog(Log.WARN))       _log.warn("Error reading the BLFile",ioe);
+      if (_log.shouldLog(Log.WARN))       _log.warn("Error reading the blocklist file",ioe);
     }
  finally {
       if (br != null)       try {
