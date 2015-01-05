@@ -1,8 +1,12 @@
 {
-  String osName=System.getProperty("os.name");
   waitForServer(url);
   if (validateUrlFormat(url)) {
-    if (osName.toLowerCase(Locale.US).indexOf("mac") > -1) {
+    String cbrowser=_context.getProperty(PROP_BROWSER);
+    if (cbrowser != null) {
+      return openUrl(url,cbrowser);
+    }
+    if (SystemVersion.isMac()) {
+      String osName=System.getProperty("os.name");
       if (osName.toLowerCase(Locale.US).startsWith("mac os x")) {
         if (_shellCommand.executeSilentAndWaitTimed("open " + url,5))         return true;
       }
@@ -14,7 +18,7 @@
  else     if (SystemVersion.isWindows()) {
       String browserString="\"C:\\Program Files\\Internet Explorer\\iexplore.exe\" -nohome";
       BufferedReader bufferedReader=null;
-      File foo=new File(I2PAppContext.getGlobalContext().getTempDir(),"browser.reg");
+      File foo=new File(_context.getTempDir(),"browser.reg");
       _shellCommand.executeSilentAndWait("regedit /E \"" + foo.getAbsolutePath() + "\" \"HKEY_CLASSES_ROOT\\http\\shell\\open\\command\"");
       try {
         bufferedReader=new BufferedReader(new InputStreamReader(new FileInputStream(foo),"UTF-16"));
