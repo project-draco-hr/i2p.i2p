@@ -1,16 +1,25 @@
 {
   NewsMetadata rv=new NewsMetadata();
   Node n=feed.getNode("title");
-  if (n != null)   rv.feedTitle=n.getValue();
+  if (n != null) {
+    rv.feedTitle=n.getValue();
+    if (rv.feedTitle != null)     rv.feedTitle=rv.feedTitle.trim();
+  }
   n=feed.getNode("subtitle");
-  if (n != null)   rv.feedSubtitle=n.getValue();
+  if (n != null) {
+    rv.feedSubtitle=n.getValue();
+    if (rv.feedSubtitle != null)     rv.feedSubtitle=rv.feedTitle.trim();
+  }
   n=feed.getNode("id");
-  if (n != null)   rv.feedID=n.getValue();
+  if (n != null) {
+    rv.feedID=n.getValue();
+    if (rv.feedTitle != null)     rv.feedTitle=rv.feedTitle.trim();
+  }
   n=feed.getNode("updated");
   if (n != null) {
     String v=n.getValue();
     if (v != null) {
-      long time=RFC3339Date.parse3339Date(v);
+      long time=RFC3339Date.parse3339Date(v.trim());
       if (time > 0)       rv.feedUpdated=time;
     }
   }
@@ -21,15 +30,18 @@
     NewsMetadata.Release release=new NewsMetadata.Release();
     String a=r.getAttributeValue("date");
     if (a.length() > 0) {
-      long time=RFC3339Date.parse3339Date(a);
+      long time=RFC3339Date.parse3339Date(a.trim());
       if (time > 0)       release.date=time;
     }
     a=r.getAttributeValue("minVersion");
-    if (a.length() > 0)     release.minVersion=a;
+    if (a.length() > 0)     release.minVersion=a.trim();
     a=r.getAttributeValue("minJavaVersion");
-    if (a.length() > 0)     release.minJavaVersion=a;
+    if (a.length() > 0)     release.minJavaVersion=a.trim();
     n=r.getNode("i2p:version");
-    if (n != null)     release.i2pVersion=n.getValue();
+    if (n != null) {
+      release.i2pVersion=n.getValue();
+      if (release.i2pVersion != null)       release.i2pVersion=release.i2pVersion.trim();
+    }
     List<NewsMetadata.Update> updates=new ArrayList<NewsMetadata.Update>();
     List<Node> updateNodes=getNodes(r,"i2p:update");
     if (updateNodes.size() == 0)     throw new I2PParserException("no updates in release");
@@ -39,14 +51,14 @@
       if (type.isEmpty())       throw new I2PParserException("update with no type");
       if (types.contains(type))       throw new I2PParserException("update with duplicate type");
       NewsMetadata.Update update=new NewsMetadata.Update();
-      update.type=type;
+      update.type=type.trim();
       types.add(type);
       int totalSources=0;
       Node t=u.getNode("i2p:torrent");
       if (t != null) {
         String href=t.getAttributeValue("href");
         if (href.length() > 0) {
-          update.torrent=href;
+          update.torrent=href.trim();
           totalSources+=1;
         }
       }
