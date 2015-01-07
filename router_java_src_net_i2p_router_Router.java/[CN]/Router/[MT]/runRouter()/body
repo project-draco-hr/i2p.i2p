@@ -1,5 +1,8 @@
 {
-  if (_isAlive)   throw new IllegalStateException();
+synchronized (_stateLock) {
+    if (_state != State.INITIALIZED)     throw new IllegalStateException();
+    changeState(State.STARTING_1);
+  }
   String last=_config.get("router.previousFullVersion");
   if (last != null) {
     _eventLog.addEvent(EventLog.UPDATED,"from " + last + " to "+ RouterVersion.FULL_VERSION);
@@ -7,7 +10,7 @@
   }
   _eventLog.addEvent(EventLog.STARTED,RouterVersion.FULL_VERSION);
   startupStuff();
-  _isAlive=true;
+  changeState(State.STARTING_2);
   _started=_context.clock().now();
   try {
     Runtime.getRuntime().addShutdownHook(_shutdownHook);
@@ -39,5 +42,6 @@ synchronized (_configFileLock) {
   _context.clock().getTimestamper().waitForInitialization();
   long waited=System.currentTimeMillis() - before;
   if (_log.shouldLog(Log.INFO))   _log.info("Waited " + waited + "ms to initialize");
+  changeState(State.STARTING_3);
   _context.jobQueue().addJob(new StartupJob(_context));
 }

@@ -63,6 +63,31 @@ return;
 cfg.getTunnelPool().addTunnel(cfg);
 _exec.buildComplete(cfg,cfg.getTunnelPool());
 _exec.buildSuccessful(cfg);
+if (cfg.getTunnelPool().getSettings().isExploratory()) {
+boolean isIn=cfg.isInbound();
+synchronized (_startupLock) {
+switch (_explState) {
+case NONE:
+if (isIn) _explState=ExplState.IB;
+ else _explState=ExplState.OB;
+break;
+case IB:
+if (!isIn) {
+_explState=ExplState.BOTH;
+_context.router().setExplTunnelsReady();
+}
+break;
+case OB:
+if (isIn) {
+_explState=ExplState.BOTH;
+_context.router().setExplTunnelsReady();
+}
+break;
+case BOTH:
+break;
+}
+}
+}
 ExpireJob expireJob=new ExpireJob(_context,cfg,cfg.getTunnelPool());
 cfg.setExpireJob(expireJob);
 _context.jobQueue().addJob(expireJob);
