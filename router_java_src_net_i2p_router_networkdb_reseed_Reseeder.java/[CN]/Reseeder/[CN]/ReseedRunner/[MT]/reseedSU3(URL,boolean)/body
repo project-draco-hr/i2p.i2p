@@ -7,11 +7,19 @@
   try {
     _checker.setStatus(_("Reseeding: fetching seed URL."));
     System.err.println("Reseeding from " + seedURL);
+    long startTime=System.currentTimeMillis();
     contentRaw=fetchURL(seedURL);
+    long totalTime=System.currentTimeMillis() - startTime;
     if (contentRaw == null) {
       _log.warn("Failed reading seed URL: " + seedURL);
       System.err.println("Reseed got no router infos from " + seedURL);
       return 0;
+    }
+    if (totalTime > 0) {
+      long sz=contentRaw.length();
+      long bw=1000 * sz / totalTime;
+      _bandwidths.add(Long.valueOf(bw));
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Rcvd " + sz + " bytes in "+ totalTime+ " ms from "+ seedURL);
     }
     SU3File su3=new SU3File(_context,contentRaw);
     zip=new File(_context.getTempDir(),"reseed-" + _context.random().nextInt() + ".zip");
