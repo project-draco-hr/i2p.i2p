@@ -8,6 +8,7 @@
   int found=0;
   long inactivityCutoff=_context.clock().now() - (UDPTransport.EXPIRE_TIMEOUT / 2);
   if (sz <= howMany + 2)   inactivityCutoff-=UDPTransport.EXPIRE_TIMEOUT / 4;
+  List<Introducer> introducers=new ArrayList<Introducer>(howMany);
   for (int i=0; i < sz && found < howMany; i++) {
     PeerState cur=peers.get((start + i) % sz);
     RouterInfo ri=_context.netDb().lookupRouterInfoLocally(cur.getRemotePeer());
@@ -36,11 +37,16 @@
     UDPAddress ura=new UDPAddress(ra);
     byte[] ikey=ura.getIntroKey();
     if (ikey == null)     continue;
-    ssuOptions.setProperty(UDPAddress.PROP_INTRO_HOST_PREFIX + found,Addresses.toString(ip));
-    ssuOptions.setProperty(UDPAddress.PROP_INTRO_PORT_PREFIX + found,String.valueOf(port));
-    ssuOptions.setProperty(UDPAddress.PROP_INTRO_KEY_PREFIX + found,Base64.encode(ikey));
-    ssuOptions.setProperty(UDPAddress.PROP_INTRO_TAG_PREFIX + found,String.valueOf(cur.getTheyRelayToUsAs()));
+    introducers.add(new Introducer(ip,port,ikey,cur.getTheyRelayToUsAs()));
     found++;
+  }
+  Collections.sort(introducers);
+  for (int i=0; i < found; i++) {
+    Introducer in=introducers.get(i);
+    ssuOptions.setProperty(UDPAddress.PROP_INTRO_HOST_PREFIX + i,in.sip);
+    ssuOptions.setProperty(UDPAddress.PROP_INTRO_PORT_PREFIX + i,in.sport);
+    ssuOptions.setProperty(UDPAddress.PROP_INTRO_KEY_PREFIX + i,in.skey);
+    ssuOptions.setProperty(UDPAddress.PROP_INTRO_TAG_PREFIX + i,in.stag);
   }
   pingIntroducers();
   return found;
