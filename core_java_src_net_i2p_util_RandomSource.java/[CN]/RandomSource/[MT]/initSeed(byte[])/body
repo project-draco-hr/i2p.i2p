@@ -1,10 +1,22 @@
 {
   boolean ok=false;
+  final byte[] tbuf=new byte[buf.length];
+  Thread t=new I2PThread(new SecureRandomInit(tbuf),"SecureRandomInit",true);
+  t.start();
   try {
-    SecureRandom.getInstance("SHA1PRNG").nextBytes(buf);
-    ok=true;
+    t.join(10 * 1000);
+synchronized (tbuf) {
+      for (int i=0; i < tbuf.length; i++) {
+        if (tbuf[i] != 0) {
+          ok=true;
+          break;
+        }
+      }
+      if (ok)       System.arraycopy(tbuf,0,buf,0,buf.length);
+ else       System.out.println("SecureRandom init failed or took too long");
+    }
   }
- catch (  NoSuchAlgorithmException e) {
+ catch (  InterruptedException ie) {
   }
   ok=seedFromFile(new File("/dev/urandom"),buf) || ok;
   File localFile=new File(_context.getConfigDir(),SEEDFILE);
