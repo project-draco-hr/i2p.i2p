@@ -13,8 +13,22 @@
       }
       return;
     }
-    if (_context.blocklist().isBlocklisted(chan.socket().getInetAddress().getAddress())) {
+    byte[] ip=chan.socket().getInetAddress().getAddress();
+    if (_context.blocklist().isBlocklisted(ip)) {
       if (_log.shouldLog(Log.WARN))       _log.warn("Receive session request from blocklisted IP: " + chan.socket().getInetAddress());
+      try {
+        chan.close();
+      }
+ catch (      IOException ioe) {
+      }
+      return;
+    }
+    ByteArray ba=new ByteArray(ip);
+    int count=_blockedIPs.count(ba);
+    if (count > 0) {
+      count=_blockedIPs.increment(ba);
+      if (_log.shouldLog(Log.WARN))       _log.warn("Blocking accept of IP with count " + count + ": "+ Addresses.toString(ip));
+      _context.statManager().addRateData("ntcp.dropInboundNoMessage",count);
       try {
         chan.close();
       }
