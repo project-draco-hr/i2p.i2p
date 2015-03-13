@@ -1,0 +1,36 @@
+{
+  if (_isIdle && _log.shouldLog(Log.INFO))   _log.info("Restoring tunnels on activity");
+  _isIdle=false;
+  Map<String,String> opts=_util.getI2CPOptions();
+  String i=opts.get("inbound.quantity");
+  if (i == null)   i="3";
+  String o=opts.get("outbound.quantity");
+  if (o == null)   o="3";
+  String ib=opts.get("inbound.backupQuantity");
+  if (ib == null)   ib="0";
+  String ob=opts.get("outbound.backupQuantity");
+  if (ob == null)   ob="0";
+  int in, out;
+  try {
+    in=Integer.parseInt(i);
+  }
+ catch (  NumberFormatException nfe) {
+    in=3;
+  }
+  try {
+    out=Integer.parseInt(o);
+  }
+ catch (  NumberFormatException nfe) {
+    out=3;
+  }
+  int target=Math.max(peerCount / 2,2);
+  if (target < in && in > 2) {
+    in=target;
+    i=Integer.toString(in);
+  }
+  if (target < out && out > 2) {
+    out=target;
+    o=Integer.toString(out);
+  }
+  if (!(_lastIn.equals(i) && _lastOut.equals(o)))   setTunnels(i,o,ib,ob);
+}
