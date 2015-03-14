@@ -1,0 +1,35 @@
+{
+  List<String> msgs;
+  TunnelController cur=getController(tcg,tunnel);
+  if (cur == null) {
+    msgs=new ArrayList<>();
+    msgs.add("Invalid tunnel number");
+    return msgs;
+  }
+  msgs=tcg.removeController(cur);
+  msgs.addAll(saveConfig(context,tcg));
+  String pk=cur.getPrivKeyFile();
+  if (pk == null)   pk=config.getPrivKeyFile();
+  if (pk != null && pk.startsWith("i2ptunnel") && pk.endsWith("-privKeys.dat") && ((!TunnelController.isClient(cur.getType())) || cur.getPersistentClientKey())) {
+    File pkf=new File(context.getConfigDir(),pk);
+    if (pkf.exists()) {
+      String name=cur.getName();
+      if (name == null) {
+        name=cur.getDescription();
+        if (name == null) {
+          name=cur.getType();
+          if (name == null)           name=Long.toString(context.clock().now());
+        }
+      }
+      name=name.replace(' ','_').replace(':','_').replace("..","_").replace('/','_').replace('\\','_');
+      name="i2ptunnel-deleted-" + name + '-'+ context.clock().now()+ "-privkeys.dat";
+      File backupDir=new SecureFile(context.getConfigDir(),TunnelController.KEY_BACKUP_DIR);
+      File to;
+      if (backupDir.isDirectory() || backupDir.mkdir())       to=new File(backupDir,name);
+ else       to=new File(context.getConfigDir(),name);
+      boolean success=FileUtil.rename(pkf,to);
+      if (success)       msgs.add("Private key file " + pkf.getAbsolutePath() + " renamed to "+ to.getAbsolutePath());
+    }
+  }
+  return msgs;
+}
