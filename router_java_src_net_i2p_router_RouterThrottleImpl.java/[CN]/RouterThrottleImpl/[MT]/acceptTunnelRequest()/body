@@ -8,6 +8,13 @@
     setTunnelStatus(_x("Rejecting tunnels: Starting up"));
     return TunnelHistory.TUNNEL_REJECT_BANDWIDTH;
   }
+  long lag=_context.jobQueue().getMaxLag();
+  if (lag > JOB_LAG_LIMIT_TUNNEL) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Refusing tunnel request, as the job lag is " + lag);
+    _context.statManager().addRateData("router.throttleTunnelCause",lag);
+    setTunnelStatus(_x("Rejecting tunnels: High job lag"));
+    return TunnelHistory.TUNNEL_REJECT_BANDWIDTH;
+  }
   RateAverages ra=RateAverages.getTemp();
   RateStat rs=_context.statManager().getRate("transport.sendProcessingTime");
   Rate r=null;
