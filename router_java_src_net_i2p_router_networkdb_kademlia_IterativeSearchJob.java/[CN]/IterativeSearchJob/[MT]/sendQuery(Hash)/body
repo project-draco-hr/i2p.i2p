@@ -1,25 +1,37 @@
 {
   TunnelManagerFacade tm=getContext().tunnelManager();
+  RouterInfo ri=getContext().netDb().lookupRouterInfoLocally(peer);
   TunnelInfo outTunnel;
   TunnelInfo replyTunnel;
   boolean isClientReplyTunnel;
+  boolean isDirect;
   if (_fromLocalDest != null) {
     outTunnel=tm.selectOutboundTunnel(_fromLocalDest,peer);
     if (outTunnel == null)     outTunnel=tm.selectOutboundExploratoryTunnel(peer);
     replyTunnel=tm.selectInboundTunnel(_fromLocalDest,peer);
     isClientReplyTunnel=replyTunnel != null;
     if (!isClientReplyTunnel)     replyTunnel=tm.selectInboundExploratoryTunnel(peer);
+    isDirect=false;
+  }
+ else   if ((!_isLease) && ri != null && getContext().commSystem().isEstablished(peer)) {
+    outTunnel=null;
+    replyTunnel=null;
+    isClientReplyTunnel=false;
+    isDirect=true;
+    getContext().statManager().addRateData("netDb.RILookupDirect",1);
   }
  else {
     outTunnel=tm.selectOutboundExploratoryTunnel(peer);
     replyTunnel=tm.selectInboundExploratoryTunnel(peer);
     isClientReplyTunnel=false;
+    isDirect=false;
+    getContext().statManager().addRateData("netDb.RILookupDirect",0);
   }
-  if ((replyTunnel == null) || (outTunnel == null)) {
+  if ((!isDirect) && (replyTunnel == null || outTunnel == null)) {
     failed();
     return;
   }
-  if (outTunnel.getLength() <= 1) {
+  if (outTunnel != null && outTunnel.getLength() <= 1) {
     if (peer.equals(_key)) {
       failed(peer,false);
       if (_log.shouldLog(Log.WARN))       _log.warn(getJobId() + ": not doing zero-hop self-lookup of " + peer);
@@ -32,9 +44,14 @@
     }
   }
   DatabaseLookupMessage dlm=new DatabaseLookupMessage(getContext(),true);
-  dlm.setFrom(replyTunnel.getPeer(0));
+  if (isDirect) {
+    dlm.setFrom(getContext().routerHash());
+  }
+ else {
+    dlm.setFrom(replyTunnel.getPeer(0));
+    dlm.setReplyTunnel(replyTunnel.getReceiveTunnelId(0));
+  }
   dlm.setMessageExpiration(getContext().clock().now() + SINGLE_SEARCH_MSG_TIME);
-  dlm.setReplyTunnel(replyTunnel.getReceiveTunnelId(0));
   dlm.setSearchKey(_key);
   dlm.setSearchType(_isLease ? DatabaseLookupMessage.Type.LS : DatabaseLookupMessage.Type.RI);
   if (_log.shouldLog(Log.INFO)) {
@@ -42,13 +59,14 @@
 synchronized (this) {
       tries=_unheardFrom.size() + _failedPeers.size();
     }
-    _log.info(getJobId() + ": ISJ try " + tries+ " for "+ (_isLease ? "LS " : "RI ")+ _key+ " to "+ peer+ " reply via client tunnel? "+ isClientReplyTunnel);
+    _log.info(getJobId() + ": ISJ try " + tries+ " for "+ (_isLease ? "LS " : "RI ")+ _key+ " to "+ peer+ " direct? "+ isDirect+ " reply via client tunnel? "+ isClientReplyTunnel);
   }
   long now=getContext().clock().now();
   _sentTime.put(peer,Long.valueOf(now));
   I2NPMessage outMsg=null;
-  if (_isLease || getContext().getProperty(PROP_ENCRYPT_RI,DEFAULT_ENCRYPT_RI)) {
-    RouterInfo ri=getContext().netDb().lookupRouterInfoLocally(peer);
+  if (isDirect) {
+  }
+ else   if (_isLease || getContext().getProperty(PROP_ENCRYPT_RI,DEFAULT_ENCRYPT_RI)) {
     if (ri != null) {
       if (DatabaseLookupMessage.supportsEncryptedReplies(ri)) {
         MessageWrapper.OneTimeSession sess;
@@ -68,7 +86,13 @@ synchronized (this) {
     }
   }
   if (outMsg == null)   outMsg=dlm;
-  getContext().tunnelDispatcher().dispatchOutbound(outMsg,outTunnel.getSendTunnelId(0),peer);
+  if (isDirect) {
+    OutNetMessage m=new OutNetMessage(getContext(),outMsg,outMsg.getMessageExpiration(),OutNetMessage.PRIORITY_MY_NETDB_LOOKUP,ri);
+    getContext().commSystem().processMessage(m);
+  }
+ else {
+    getContext().tunnelDispatcher().dispatchOutbound(outMsg,outTunnel.getSendTunnelId(0),peer);
+  }
   Job j=new IterativeTimeoutJob(getContext(),peer,this);
   long expire=Math.min(_expiration,now + SINGLE_SEARCH_TIME);
   j.getTiming().setStartAfter(expire);
