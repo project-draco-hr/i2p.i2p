@@ -8,25 +8,45 @@
   Device embDev;
   Service embService;
   byte fileByte[]=new byte[0];
+  String contentType=null;
+  String contentLanguage=null;
   if (isDescriptionURI(uri) == true) {
     String localAddr=httpReq.getLocalAddress();
     if ((localAddr == null) || (localAddr.length() <= 0))     localAddr=HostInterface.getInterface();
+    contentType=XML.DEFAULT_CONTENT_TYPE;
+    contentLanguage=XML.DEFAULT_CONTENT_LANGUAGE;
     fileByte=getDescriptionData(localAddr);
   }
  else   if ((embDev=getDeviceByDescriptionURI(uri)) != null) {
     String localAddr=httpReq.getLocalAddress();
+    contentType=XML.DEFAULT_CONTENT_TYPE;
+    contentLanguage=XML.DEFAULT_CONTENT_LANGUAGE;
     fileByte=embDev.getDescriptionData(localAddr);
   }
  else   if ((embService=getServiceBySCPDURL(uri)) != null) {
+    contentType=XML.DEFAULT_CONTENT_TYPE;
+    contentLanguage=XML.DEFAULT_CONTENT_LANGUAGE;
     fileByte=embService.getSCPDData();
+  }
+ else   if (isIconBytesURI(uri) == true) {
+    Icon devIcon=getIconByURI(uri);
+    if (devIcon != null) {
+      contentType=devIcon.getMimeType();
+      fileByte=devIcon.getBytes();
+    }
   }
  else {
     httpReq.returnBadRequest();
     return;
   }
   HTTPResponse httpRes=new HTTPResponse();
-  if (FileUtil.isXMLFileName(uri) == true)   httpRes.setContentType(XML.CONTENT_TYPE);
   httpRes.setStatusCode(HTTPStatus.OK);
+  if (contentType != null) {
+    httpRes.setContentType(contentType);
+  }
+  if (contentLanguage != null) {
+    httpRes.setContentLanguage(contentLanguage);
+  }
   httpRes.setContent(fileByte);
   httpReq.post(httpRes);
 }
