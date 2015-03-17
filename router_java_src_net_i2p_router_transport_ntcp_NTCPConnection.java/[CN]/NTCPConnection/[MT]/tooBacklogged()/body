@@ -1,24 +1,19 @@
 {
   long queueTime=queueTime();
   if (queueTime <= 0)   return false;
-  int size=0;
-  boolean currentOutboundSet=false;
-synchronized (_outbound) {
-    size=_outbound.size();
-    currentOutboundSet=(_currentOutbound != null);
-  }
+  boolean currentOutboundSet=_currentOutbound != null;
   if (getUptime() < 10 * 1000)   return false;
   if (queueTime > 5 * 1000) {
-    int writeBufs=0;
-synchronized (_writeBufs) {
-      writeBufs=_writeBufs.size();
+    int size=_outbound.size();
+    if (_log.shouldLog(Log.WARN)) {
+      int writeBufs=_writeBufs.size();
+      try {
+        _log.warn("Too backlogged: queue time " + queueTime + " and the size is "+ size+ ", wantsWrite? "+ (0 != (_conKey.interestOps() & SelectionKey.OP_WRITE))+ ", currentOut set? "+ currentOutboundSet+ ", writeBufs: "+ writeBufs+ " on "+ toString());
+      }
+ catch (      Exception e) {
+      }
     }
-    if (_log.shouldLog(Log.WARN))     try {
-      _log.warn("Too backlogged: queue time " + queueTime + " and the size is "+ size+ ", wantsWrite? "+ (0 != (_conKey.interestOps() & SelectionKey.OP_WRITE))+ ", currentOut set? "+ currentOutboundSet+ ", writeBufs: "+ writeBufs+ " on "+ toString());
-    }
- catch (    Exception e) {
-    }
-    _context.statManager().addRateData("ntcp.sendBacklogTime",queueTime,size);
+    _context.statManager().addRateData("ntcp.sendBacklogTime",queueTime);
     return true;
   }
  else {

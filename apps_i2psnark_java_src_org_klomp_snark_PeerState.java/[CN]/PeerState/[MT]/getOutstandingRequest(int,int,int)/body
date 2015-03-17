@@ -1,27 +1,26 @@
 {
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("getChunk(" + piece + ","+ begin+ ","+ length+ ") "+ peer);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("got start of Chunk(" + piece + ","+ begin+ ","+ length+ ") from "+ peer);
   int r=getFirstOutstandingRequest(piece);
   if (r == -1) {
     if (_log.shouldLog(Log.INFO))     _log.info("Unrequested 'piece: " + piece + ", "+ begin+ ", "+ length+ "' received from "+ peer);
-    downloaded=0;
     return null;
   }
   Request req;
 synchronized (this) {
-    req=(Request)outstandingRequests.get(r);
-    while (req.piece == piece && req.off != begin && r < outstandingRequests.size() - 1) {
+    req=outstandingRequests.get(r);
+    while (req.getPiece() == piece && req.off != begin && r < outstandingRequests.size() - 1) {
       r++;
-      req=(Request)outstandingRequests.get(r);
+      req=outstandingRequests.get(r);
     }
-    if (req.piece != piece || req.off != begin || req.len != length) {
+    if (req.getPiece() != piece || req.off != begin || req.len != length) {
       if (_log.shouldLog(Log.INFO))       _log.info("Unrequested or unneeded 'piece: " + piece + ", "+ begin+ ", "+ length+ "' received from "+ peer);
-      downloaded=0;
       return null;
     }
+    pendingRequest=req;
     if (r != 0) {
       if (_log.shouldLog(Log.WARN))       _log.warn("Some requests dropped, got " + req + ", wanted for peer: "+ peer);
       for (int i=0; i < r; i++) {
-        Request dropReq=(Request)outstandingRequests.remove(0);
+        Request dropReq=outstandingRequests.remove(0);
         outstandingRequests.add(dropReq);
         if (!choked)         out.sendRequest(dropReq);
         if (_log.shouldLog(Log.WARN))         _log.warn("dropped " + dropReq + " with peer "+ peer);
@@ -30,6 +29,5 @@ synchronized (this) {
     outstandingRequests.remove(0);
   }
   addRequest();
-  pendingRequest=req;
   return req;
 }

@@ -1,13 +1,6 @@
 {
-  if (!beginMarkingLiveliness(envProps)) {
-    System.err.println("ERROR: There appears to be another router already running!");
-    System.err.println("       Please make sure to shut down old instances before starting up");
-    System.err.println("       a new one.  If you are positive that no other instance is running,");
-    System.err.println("       please delete the file " + getPingFile(envProps));
-    System.exit(-1);
-  }
   _gracefulExitCode=-1;
-  _config=new Properties();
+  _config=new ConcurrentHashMap();
   if (configFilename == null) {
     if (envProps != null) {
       _configFilename=envProps.getProperty(PROP_CONFIG_FILE);
@@ -17,47 +10,45 @@
  else {
     _configFilename=configFilename;
   }
+  String migrate=System.getProperty("i2p.dir.migrate");
+  boolean migrateFiles=Boolean.valueOf(migrate).booleanValue();
+  String userDir=WorkingDir.getWorkingDir(envProps,migrateFiles);
+  File cf=new File(_configFilename);
+  if (!cf.isAbsolute()) {
+    cf=new File(userDir,_configFilename);
+    _configFilename=cf.getAbsolutePath();
+  }
   readConfig();
-  if (envProps == null) {
-    envProps=_config;
+  if (envProps == null)   envProps=new Properties();
+  envProps.putAll(_config);
+  if (envProps.getProperty("i2p.dir.config") == null)   envProps.setProperty("i2p.dir.config",userDir);
+  envProps.setProperty("i2p.systemTimeZone",originalTimeZoneID);
+  List<RouterContext> contexts=RouterContext.getContexts();
+  if (contexts.isEmpty()) {
+    RouterContext.killGlobalContext();
+  }
+ else   if (System.getProperty("java.vendor").contains("Android")) {
+    System.err.println("Warning: Killing " + contexts.size() + " other routers in this JVM");
+    contexts.clear();
+    RouterContext.killGlobalContext();
   }
  else {
-    for (Iterator iter=_config.keySet().iterator(); iter.hasNext(); ) {
-      String k=(String)iter.next();
-      String v=_config.getProperty(k);
-      envProps.setProperty(k,v);
-    }
+    System.err.println("Warning: " + contexts.size() + " other routers in this JVM");
   }
   _context=new RouterContext(this,envProps);
-  _routerInfo=null;
-  _higherVersionSeen=false;
-  _log=_context.logManager().getLog(Router.class);
-  _log.info("New router created with config file " + _configFilename);
-  _sessionKeyPersistenceHelper=new SessionKeyPersistenceHelper(_context);
-  _killVMOnEnd=true;
-  _oomListener=new I2PThread.OOMEventListener(){
-    public void outOfMemory(    OutOfMemoryError oom){
-      _log.log(Log.CRIT,"Thread ran out of memory",oom);
-      for (int i=0; i < 5; i++) {
-        try {
-          _log.log(Log.CRIT,"free mem: " + Runtime.getRuntime().freeMemory() + " total mem: "+ Runtime.getRuntime().totalMemory());
-          break;
-        }
- catch (        OutOfMemoryError oome) {
-        }
-      }
-      shutdown(EXIT_OOM);
-    }
+  if (!isOnlyRouterRunning()) {
+    System.err.println("ERROR: There appears to be another router already running!");
+    System.err.println("       Please make sure to shut down old instances before starting up");
+    System.err.println("       a new one.  If you are positive that no other instance is running,");
+    System.err.println("       please delete the file " + getPingFile().getAbsolutePath());
+    System.exit(-1);
   }
-;
-  _shutdownHook=new ShutdownHook(_context);
-  _gracefulShutdownDetector=new I2PThread(new GracefulShutdown());
-  _gracefulShutdownDetector.setDaemon(true);
-  _gracefulShutdownDetector.setName("Graceful shutdown hook");
-  _gracefulShutdownDetector.start();
-  I2PThread watchdog=new I2PThread(new RouterWatchdog(_context));
-  watchdog.setName("RouterWatchdog");
-  watchdog.setDaemon(true);
-  watchdog.start();
-  _shutdownTasks=new HashSet(0);
+  if (_config.get("router.firstVersion") == null) {
+    _config.put("router.firstVersion",RouterVersion.VERSION);
+    String now=Long.toString(System.currentTimeMillis());
+    _config.put("router.firstInstalled",now);
+    _config.put("router.updateLastInstalled",now);
+    _config.put("router.previousVersion",RouterVersion.VERSION);
+    saveConfig();
+  }
 }

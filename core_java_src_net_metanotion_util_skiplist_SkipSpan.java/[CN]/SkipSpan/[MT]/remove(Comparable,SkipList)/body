@@ -1,0 +1,63 @@
+{
+  if (nKeys == 0) {
+    return null;
+  }
+  if (keys[nKeys - 1].compareTo(key) < 0) {
+    if (next == null) {
+      return null;
+    }
+    return next.remove(key,sl);
+  }
+  int loc=binarySearch(key);
+  if (loc < 0) {
+    return null;
+  }
+  Object o=vals[loc];
+  Object[] res=new Object[2];
+  res[0]=o;
+  sl.delItem();
+  if (nKeys == 1) {
+    if ((this.prev == null) && (this.next != null)) {
+      res[1]=this.next;
+      for (int i=0; i < next.nKeys; i++) {
+        keys[i]=next.keys[i];
+        vals[i]=next.vals[i];
+      }
+      nKeys=next.nKeys;
+      SkipSpan nn=next.next;
+      next.killInstance();
+      if (nn != null) {
+        nn.prev=this;
+        nn.flush();
+      }
+      this.next=nn;
+      this.flush();
+    }
+ else {
+      if (this.prev != null) {
+        this.prev.next=this.next;
+        this.prev.flush();
+      }
+      if (this.next != null) {
+        this.next.prev=this.prev;
+        this.next.flush();
+        this.next=null;
+      }
+      if (this.prev != null) {
+        this.prev=null;
+        this.killInstance();
+        res[1]=this;
+      }
+ else {
+        this.flush();
+        res[1]=null;
+      }
+      nKeys=0;
+    }
+  }
+ else {
+    pushTogether(loc);
+    this.flush();
+  }
+  return res;
+}

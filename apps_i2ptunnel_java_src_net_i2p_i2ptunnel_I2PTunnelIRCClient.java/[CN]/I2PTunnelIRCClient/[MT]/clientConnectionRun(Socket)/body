@@ -1,19 +1,28 @@
 {
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("got a connection.");
-  Destination dest=pickDestination();
+  if (_log.shouldLog(Log.INFO))   _log.info("New connection local addr is: " + s.getLocalAddress() + " from: "+ s.getInetAddress());
+  Destination clientDest=pickDestination();
   I2PSocket i2ps=null;
   try {
-    i2ps=createI2PSocket(dest);
+    i2ps=createI2PSocket(clientDest);
     i2ps.setReadTimeout(readTimeout);
     StringBuffer expectedPong=new StringBuffer();
-    Thread in=new I2PThread(new IrcInboundFilter(s,i2ps,expectedPong));
+    DCCHelper dcc=_dccEnabled ? new DCC(s.getLocalAddress().getAddress()) : null;
+    Thread in=new I2PAppThread(new IrcInboundFilter(s,i2ps,expectedPong,_log,dcc),"IRC Client " + __clientId + " in",true);
     in.start();
-    Thread out=new I2PThread(new IrcOutboundFilter(s,i2ps,expectedPong));
+    Thread out=new I2PAppThread(new IrcOutboundFilter(s,i2ps,expectedPong,_log,dcc),"IRC Client " + __clientId + " out",true);
     out.start();
   }
- catch (  Exception ex) {
+ catch (  I2PException ex) {
     if (_log.shouldLog(Log.ERROR))     _log.error("Error connecting",ex);
-    l.log(ex.getMessage());
+    closeSocket(s);
+    if (i2ps != null) {
+synchronized (sockLock) {
+        mySockets.remove(sockLock);
+      }
+    }
+  }
+catch (  Exception ex) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Error connecting",ex);
     closeSocket(s);
     if (i2ps != null) {
 synchronized (sockLock) {

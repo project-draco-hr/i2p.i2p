@@ -1,23 +1,48 @@
 {
   if (_context.getProperty(Router.PROP_SHUTDOWN_IN_PROGRESS) != null) {
     if (_log.shouldLog(Log.WARN))     _log.warn("Refusing tunnel request since we are shutting down ASAP");
-    setTunnelStatus("Rejecting tunnels: Shutting down");
+    setShutdownStatus();
     return TunnelHistory.TUNNEL_REJECT_BANDWIDTH;
   }
-  if (_context.router().getUptime() < 20 * 60 * 1000)   return TunnelHistory.TUNNEL_REJECT_BANDWIDTH;
-  long lag=_context.jobQueue().getMaxLag();
+  if (_context.router().getUptime() < REJECT_STARTUP_TIME) {
+    setTunnelStatus(_x("Rejecting tunnels: Starting up"));
+    return TunnelHistory.TUNNEL_REJECT_BANDWIDTH;
+  }
   RateStat rs=_context.statManager().getRate("transport.sendProcessingTime");
   Rate r=null;
   if (rs != null)   r=rs.getRate(60 * 1000);
-  double processTime=(r != null ? r.getAverageValue() : 0);
-  if (processTime > 5000) {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Refusing tunnel request with the job lag of " + lag + "since the 1 minute message processing time is too slow ("+ processTime+ ")");
-    _context.statManager().addRateData("router.throttleTunnelProcessingTime1m",(long)processTime,(long)processTime);
-    setTunnelStatus("Rejecting tunnels: High message delay");
-    return TunnelHistory.TUNNEL_REJECT_TRANSIENT_OVERLOAD;
+  if (r != null) {
+    double totalSendProcessingTimeEvents=r.getCurrentEventCount() + r.getLastEventCount();
+    double avgSendProcessingTime=0;
+    double currentSendProcessingTime=0;
+    double lastSendProcessingTime=0;
+    if (r.getCurrentEventCount() > 0) {
+      currentSendProcessingTime=r.getCurrentTotalValue() / r.getCurrentEventCount();
+    }
+    if (r.getLastEventCount() > 0) {
+      lastSendProcessingTime=r.getLastTotalValue() / r.getLastEventCount();
+    }
+    if (totalSendProcessingTimeEvents > 0) {
+      avgSendProcessingTime=(r.getCurrentTotalValue() + r.getLastTotalValue()) / totalSendProcessingTimeEvents;
+    }
+ else {
+      avgSendProcessingTime=r.getAverageValue();
+      if (_log.shouldLog(Log.WARN)) {
+        _log.warn("No events occurred. Using 1 minute average to look at message delay.");
+      }
+    }
+    int maxProcessingTime=_context.getProperty(PROP_MAX_PROCESSINGTIME,DEFAULT_MAX_PROCESSINGTIME);
+    if ((avgSendProcessingTime > maxProcessingTime * 0.9 || currentSendProcessingTime > maxProcessingTime || lastSendProcessingTime > maxProcessingTime)) {
+      if (_log.shouldLog(Log.WARN)) {
+        _log.warn("Refusing tunnel request due to sendProcessingTime of " + avgSendProcessingTime + " ms over the last two minutes, which is too much.");
+      }
+      setTunnelStatus(_x("Rejecting tunnels: High message delay"));
+      return TunnelHistory.TUNNEL_REJECT_BANDWIDTH;
+    }
   }
   int numTunnels=_context.tunnelManager().getParticipatingCount();
-  if (numTunnels > getMinThrottleTunnels()) {
+  int maxTunnels=_context.getProperty(PROP_MAX_TUNNELS,DEFAULT_MAX_TUNNELS);
+  if ((numTunnels > getMinThrottleTunnels()) && (DEFAULT_MAX_TUNNELS <= maxTunnels)) {
     double tunnelGrowthFactor=getTunnelGrowthFactor();
     Rate avgTunnels=_context.statManager().getRate("tunnel.participatingTunnels").getRate(10 * 60 * 1000);
     if (avgTunnels != null) {
@@ -36,7 +61,7 @@
  else {
           if (_log.shouldLog(Log.WARN))           _log.warn("Probabalistically refusing tunnel request (avg=" + avg + " current="+ numTunnels+ ")");
           _context.statManager().addRateData("router.throttleTunnelProbTooFast",(long)(numTunnels - avg),0);
-          setTunnelStatus("Rejecting " + (100 - (int)probAccept * 100) + "% of tunnels: High number of requests");
+          setTunnelStatus(_x("Rejecting most tunnels: High number of requests"));
           return TunnelHistory.TUNNEL_REJECT_PROBABALISTIC_REJECT;
         }
       }
@@ -61,21 +86,14 @@
       if (v < probAccept * 100) {
         if (_log.shouldLog(Log.INFO))         _log.info("Probabalistically accept tunnel request (p=" + probAccept + " v="+ v+ " test time avg 1m="+ avg1m+ " 10m="+ avg10m+ ")");
       }
- else       if (false) {
-        if (_log.shouldLog(Log.WARN))         _log.warn("Probabalistically refusing tunnel request (test time avg 1m=" + avg1m + " 10m="+ avg10m+ ")");
-        _context.statManager().addRateData("router.throttleTunnelProbTestSlow",(long)(avg1m - avg10m),0);
-        setTunnelStatus("Rejecting " + ((int)probAccept * 100) + "% of tunnels: High test time");
-        return TunnelHistory.TUNNEL_REJECT_PROBABALISTIC_REJECT;
-      }
     }
  else {
     }
   }
-  int max=_context.getProperty(PROP_MAX_TUNNELS,DEFAULT_MAX_TUNNELS);
-  if (numTunnels >= max) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("Refusing tunnel request since we are already participating in " + numTunnels + " (our max is "+ max+ ")");
+  if (numTunnels >= maxTunnels) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Refusing tunnel request since we are already participating in " + numTunnels + " (our max is "+ maxTunnels+ ")");
     _context.statManager().addRateData("router.throttleTunnelMaxExceeded",numTunnels,0);
-    setTunnelStatus("Rejecting tunnels: Limit reached");
+    setTunnelStatus(_x("Rejecting tunnels: Limit reached"));
     return TunnelHistory.TUNNEL_REJECT_BANDWIDTH;
   }
   rs=_context.statManager().getRate("tunnel.participatingMessageCount");
@@ -90,7 +108,7 @@
     }
   }
   if (messagesPerTunnel < DEFAULT_MESSAGES_PER_TUNNEL_ESTIMATE)   messagesPerTunnel=DEFAULT_MESSAGES_PER_TUNNEL_ESTIMATE;
-  double bytesAllocated=messagesPerTunnel * numTunnels * net.i2p.router.tunnel.TrivialPreprocessor.PREPROCESSED_SIZE;
+  double bytesAllocated=messagesPerTunnel * numTunnels * PREPROCESSED_SIZE;
   if (!allowTunnel(bytesAllocated,numTunnels)) {
     _context.statManager().addRateData("router.throttleTunnelBandwidthExceeded",(long)bytesAllocated,0);
     return TunnelHistory.TUNNEL_REJECT_BANDWIDTH;

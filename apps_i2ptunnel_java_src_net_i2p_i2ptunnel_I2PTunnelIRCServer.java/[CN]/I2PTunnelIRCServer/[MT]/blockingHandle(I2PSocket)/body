@@ -1,0 +1,53 @@
+{
+  if (_log.shouldLog(Log.INFO))   _log.info("Incoming connection to '" + toString() + "' port "+ socket.getLocalPort()+ " from: "+ socket.getPeerDestination().calculateHash()+ " port "+ socket.getPort());
+  try {
+    String modifiedRegistration;
+    if (!this.method.equals("webirc")) {
+      socket.setReadTimeout(HEADER_TIMEOUT);
+      InputStream in=socket.getInputStream();
+      modifiedRegistration=filterRegistration(in,cloakDest(socket.getPeerDestination()));
+      socket.setReadTimeout(readTimeout);
+    }
+ else {
+      StringBuffer buf=new StringBuffer("WEBIRC ");
+      buf.append(this.webircPassword);
+      buf.append(" cgiirc ");
+      buf.append(cloakDest(socket.getPeerDestination()));
+      buf.append(' ');
+      buf.append(this.webircSpoofIP);
+      buf.append("\r\n");
+      modifiedRegistration=buf.toString();
+    }
+    Socket s=new Socket(remoteHost,remotePort);
+    new I2PTunnelRunner(s,socket,slock,null,modifiedRegistration.getBytes(),null);
+  }
+ catch (  SocketException ex) {
+    try {
+      socket.getOutputStream().write(ERR_UNAVAILABLE);
+    }
+ catch (    IOException ioe) {
+    }
+    try {
+      socket.close();
+    }
+ catch (    IOException ioe) {
+    }
+    if (_log.shouldLog(Log.ERROR))     _log.error("Error connecting to IRC server " + remoteHost + ':'+ remotePort,ex);
+  }
+catch (  IOException ex) {
+    try {
+      socket.close();
+    }
+ catch (    IOException ioe) {
+    }
+    if (_log.shouldLog(Log.WARN))     _log.warn("Error while receiving the new IRC Connection",ex);
+  }
+catch (  OutOfMemoryError oom) {
+    try {
+      socket.close();
+    }
+ catch (    IOException ioe) {
+    }
+    if (_log.shouldLog(Log.ERROR))     _log.error("OOM in IRC server",oom);
+  }
+}

@@ -1,0 +1,161 @@
+{
+  _shutdownInProgress=true;
+  _log.log(Log.CRIT,"Starting final shutdown(" + exitCode + ')');
+  if (_killVMOnEnd) {
+    try {
+      (new Spinner()).start();
+    }
+ catch (    Throwable t) {
+    }
+  }
+  ((RouterClock)_context.clock()).removeShiftListener(this);
+  _isAlive=false;
+  _context.random().saveSeed();
+  I2PThread.removeOOMEventListener(_oomListener);
+  for (  Runnable task : _context.getShutdownTasks()) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Running shutdown task " + task.getClass());
+    try {
+      Thread t=new Thread(task,"Shutdown task " + task.getClass().getName());
+      t.setDaemon(true);
+      t.start();
+      try {
+        t.join(10 * 1000);
+      }
+ catch (      InterruptedException ie) {
+      }
+      if (t.isAlive())       _log.logAlways(Log.WARN,"Shutdown task took more than 10 seconds to run: " + task.getClass());
+    }
+ catch (    Throwable t) {
+      _log.log(Log.CRIT,"Error running shutdown task",t);
+    }
+  }
+  if (!RouterVersion.VERSION.equals(_config.get("router.previousVersion"))) {
+    saveConfig("router.previousVersion",RouterVersion.VERSION);
+  }
+  _context.removeShutdownTasks();
+  try {
+    _context.clientManager().shutdown();
+  }
+ catch (  Throwable t) {
+    _log.error("Error shutting down the client manager",t);
+  }
+  try {
+    _context.namingService().shutdown();
+  }
+ catch (  Throwable t) {
+    _log.error("Error shutting down the naming service",t);
+  }
+  try {
+    _context.jobQueue().shutdown();
+  }
+ catch (  Throwable t) {
+    _log.error("Error shutting down the job queue",t);
+  }
+  try {
+    _context.statPublisher().shutdown();
+  }
+ catch (  Throwable t) {
+    _log.error("Error shutting down the stats publisher",t);
+  }
+  try {
+    _context.tunnelManager().shutdown();
+  }
+ catch (  Throwable t) {
+    _log.error("Error shutting down the tunnel manager",t);
+  }
+  try {
+    _context.tunnelDispatcher().shutdown();
+  }
+ catch (  Throwable t) {
+    _log.error("Error shutting down the tunnel dispatcher",t);
+  }
+  try {
+    _context.netDb().shutdown();
+  }
+ catch (  Throwable t) {
+    _log.error("Error shutting down the networkDb",t);
+  }
+  try {
+    _context.commSystem().shutdown();
+  }
+ catch (  Throwable t) {
+    _log.error("Error shutting down the comm system",t);
+  }
+  try {
+    _context.bandwidthLimiter().shutdown();
+  }
+ catch (  Throwable t) {
+    _log.error("Error shutting down the comm system",t);
+  }
+  try {
+    _context.peerManager().shutdown();
+  }
+ catch (  Throwable t) {
+    _log.error("Error shutting down the peer manager",t);
+  }
+  try {
+    _context.messageRegistry().shutdown();
+  }
+ catch (  Throwable t) {
+    _log.error("Error shutting down the message registry",t);
+  }
+  try {
+    _context.messageValidator().shutdown();
+  }
+ catch (  Throwable t) {
+    _log.error("Error shutting down the message validator",t);
+  }
+  try {
+    _context.inNetMessagePool().shutdown();
+  }
+ catch (  Throwable t) {
+    _log.error("Error shutting down the inbound net pool",t);
+  }
+  try {
+    _context.clientMessagePool().shutdown();
+  }
+ catch (  Throwable t) {
+    _log.error("Error shutting down the client msg pool",t);
+  }
+  try {
+    _context.sessionKeyManager().shutdown();
+  }
+ catch (  Throwable t) {
+    _log.error("Error shutting down the session key manager",t);
+  }
+  try {
+    _context.messageHistory().shutdown();
+  }
+ catch (  Throwable t) {
+    _log.error("Error shutting down the message history logger",t);
+  }
+  try {
+    _context.statManager().shutdown();
+  }
+ catch (  Throwable t) {
+    _log.error("Error shutting down the stats manager",t);
+  }
+  _context.deleteTempDir();
+  List<RouterContext> contexts=RouterContext.getContexts();
+  contexts.remove(_context);
+  try {
+    _context.elGamalEngine().shutdown();
+  }
+ catch (  Throwable t) {
+    _log.log(Log.CRIT,"Error shutting elGamal",t);
+  }
+  if (contexts.isEmpty()) {
+  }
+ else {
+    _log.logAlways(Log.WARN,"Warning - " + contexts.size() + " routers remaining in this JVM, not releasing all resources");
+  }
+  try {
+    ((FortunaRandomSource)_context.random()).shutdown();
+  }
+ catch (  Throwable t) {
+    _log.log(Log.CRIT,"Error shutting random()",t);
+  }
+  _watchdog.shutdown();
+  _watchdogThread.interrupt();
+  finalShutdown(exitCode);
+}

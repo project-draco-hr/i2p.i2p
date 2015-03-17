@@ -1,13 +1,23 @@
 {
-  killKeys();
-  try {
-    for (Iterator iter=_shutdownTasks.iterator(); iter.hasNext(); ) {
-      Runnable task=(Runnable)iter.next();
-      task.run();
+  if (_shutdownHook != null) {
+    try {
+      Runtime.getRuntime().removeShutdownHook(_shutdownHook);
+    }
+ catch (    IllegalStateException ise) {
     }
   }
- catch (  Throwable t) {
-    _log.log(Log.CRIT,"Error running shutdown task",t);
+  killKeys();
+  for (  Runnable task : _context.getShutdownTasks()) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Running shutdown task " + task.getClass());
+    try {
+      task.run();
+    }
+ catch (    Throwable t) {
+      _log.log(Log.CRIT,"Error running shutdown task",t);
+    }
   }
+  _context.removeShutdownTasks();
+  if (_context.hasWrapper())   _log.log(Log.CRIT,"Restarting with new router identity");
+ else   _log.log(Log.CRIT,"Shutting down because old router identity was invalid - restart I2P");
   finalShutdown(EXIT_HARD_RESTART);
 }

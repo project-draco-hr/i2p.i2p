@@ -1,0 +1,38 @@
+{
+  super(localPort + " (uninitialized)",notifyThis,tunnel);
+  chained=true;
+  sockMgr=sktMgr;
+  _clientId=clientId;
+  this.localPort=localPort;
+  this.l=l;
+  _ownDest=true;
+  _context=tunnel.getContext();
+  _context.statManager().createRateStat("i2ptunnel.client.closeBacklog","How many pending sockets remain when we close one due to backlog?","I2PTunnel",new long[]{60 * 1000,10 * 60 * 1000,60 * 60 * 1000});
+  _context.statManager().createRateStat("i2ptunnel.client.closeNoBacklog","How many pending sockets remain when it was removed prior to backlog timeout?","I2PTunnel",new long[]{60 * 1000,10 * 60 * 1000,60 * 60 * 1000});
+  _context.statManager().createRateStat("i2ptunnel.client.manageTime","How long it takes to accept a socket and fire it into an i2ptunnel runner (or queue it for the pool)?","I2PTunnel",new long[]{60 * 1000,10 * 60 * 1000,60 * 60 * 1000});
+  _context.statManager().createRateStat("i2ptunnel.client.buildRunTime","How long it takes to run a queued socket into an i2ptunnel runner?","I2PTunnel",new long[]{60 * 1000,10 * 60 * 1000,60 * 60 * 1000});
+  _log=_context.logManager().getLog(getClass());
+synchronized (_executorLock) {
+    if (_executor == null)     _executor=new CustomThreadPoolExecutor();
+  }
+  Thread t=new I2PAppThread(this,"Client " + tunnel.listenHost + ':'+ localPort);
+  t.start();
+  open=true;
+synchronized (this) {
+    while (!listenerReady && open) {
+      try {
+        wait();
+      }
+ catch (      InterruptedException e) {
+      }
+    }
+  }
+  if (open && listenerReady) {
+    l.log("Client ready, listening on " + tunnel.listenHost + ':'+ localPort);
+    notifyEvent("openBaseClientResult","ok");
+  }
+ else {
+    l.log("Client error for " + tunnel.listenHost + ':'+ localPort+ ", check logs");
+    notifyEvent("openBaseClientResult","error");
+  }
+}

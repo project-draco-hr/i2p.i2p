@@ -2,13 +2,12 @@
   String fmt=config.getProperty(PROP_FORMAT,DEFAULT_FORMAT);
   _format=fmt.toCharArray();
   String df=config.getProperty(PROP_DATEFORMAT,DEFAULT_DATEFORMAT);
-  _dateFormatPattern=df;
-  _dateFormat=new SimpleDateFormat(df);
+  setDateFormat(df);
   String disp=config.getProperty(PROP_DISPLAYONSCREEN);
   if (disp == null)   _displayOnScreen=DEFAULT_DISPLAYONSCREEN;
  else {
-    if ("TRUE".equals(disp.toUpperCase().trim()))     _displayOnScreen=true;
- else     if ("YES".equals(disp.toUpperCase().trim()))     _displayOnScreen=true;
+    if ("TRUE".equals(disp.toUpperCase(Locale.US).trim()))     _displayOnScreen=true;
+ else     if ("YES".equals(disp.toUpperCase(Locale.US).trim()))     _displayOnScreen=true;
  else     _displayOnScreen=false;
   }
   String filenameOverride=_context.getProperty(FILENAME_OVERRIDE_PROP);
@@ -17,7 +16,6 @@
   _fileSize=getFileSize(config.getProperty(PROP_FILESIZE,DEFAULT_FILESIZE));
   _rotationLimit=-1;
   try {
-    String str=config.getProperty(PROP_ROTATIONLIMIT);
     _rotationLimit=Integer.parseInt(config.getProperty(PROP_ROTATIONLIMIT,DEFAULT_ROTATIONLIMIT));
   }
  catch (  NumberFormatException nfe) {
@@ -28,14 +26,16 @@
   _onScreenLimit=Log.getLevel(config.getProperty(PROP_DISPLAYONSCREENLEVEL,DEFAULT_ONSCREENLEVEL));
   try {
     String str=config.getProperty(PROP_CONSOLEBUFFERSIZE);
-    if (str == null)     _consoleBufferSize=DEFAULT_CONSOLEBUFFERSIZE;
- else     _consoleBufferSize=Integer.parseInt(str);
+    if (str != null)     _consoleBufferSize=Integer.parseInt(str);
   }
  catch (  NumberFormatException nfe) {
-    System.err.println("Invalid console buffer size");
-    nfe.printStackTrace();
-    _consoleBufferSize=DEFAULT_CONSOLEBUFFERSIZE;
   }
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Log set to use the base log file as " + _baseLogfilename);
+  try {
+    String str=config.getProperty(PROP_LOG_BUFFER_SIZE);
+    if (str != null)     _logBufferSize=Integer.parseInt(str);
+  }
+ catch (  NumberFormatException nfe) {
+  }
+  _dropOnOverflow=Boolean.valueOf(config.getProperty(PROP_DROP)).booleanValue();
   parseLimits(config);
 }

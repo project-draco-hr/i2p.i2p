@@ -1,17 +1,11 @@
 {
-  if (false)   return ByteBuffer.allocate(BUF_SIZE);
-  ByteBuffer rv=null;
-synchronized (_bufCache) {
-    if (_bufCache.size() > 0)     rv=(ByteBuffer)_bufCache.remove(0);
-  }
-  if (rv == null) {
-    rv=ByteBuffer.allocate(BUF_SIZE);
-    NUM_BUFS=++__liveBufs;
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("creating a new read buffer " + System.identityHashCode(rv) + " with "+ __liveBufs+ " live: "+ rv);
-    _context.statManager().addRateData("ntcp.liveReadBufs",NUM_BUFS,0);
+  ByteBuffer rv=_bufCache.poll();
+  if (rv == null || rv.isDirect() != _useDirect) {
+    if (_useDirect)     rv=ByteBuffer.allocateDirect(BUF_SIZE);
+ else     rv=ByteBuffer.allocate(BUF_SIZE);
+    _numBufs++;
   }
  else {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("acquiring existing read buffer " + System.identityHashCode(rv) + " with "+ __liveBufs+ " live: "+ rv);
   }
   return rv;
 }

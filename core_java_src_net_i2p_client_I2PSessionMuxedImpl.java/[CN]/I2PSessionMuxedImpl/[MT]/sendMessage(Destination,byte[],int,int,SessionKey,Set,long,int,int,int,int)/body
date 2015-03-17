@@ -1,0 +1,13 @@
+{
+  if (isClosed())   throw new I2PSessionException("Already closed");
+  updateActivity();
+  boolean sc=shouldCompress(size);
+  if (sc)   payload=DataHelper.compress(payload,offset,size);
+ else   payload=DataHelper.compress(payload,offset,size,DataHelper.NO_COMPRESSION);
+  setProto(payload,proto);
+  setFromPort(payload,fromPort);
+  setToPort(payload,toPort);
+  _context.statManager().addRateData("i2cp.tx.msgCompressed",payload.length,0);
+  _context.statManager().addRateData("i2cp.tx.msgExpanded",size,0);
+  return sendBestEffort(dest,payload,expires,flags);
+}

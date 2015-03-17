@@ -6,16 +6,10 @@
  catch (  UnknownHostException uhe) {
     return null;
   }
-  UDPPacket packet=UDPPacket.acquire(_context,false);
+  UDPPacket packet=buildPacketHeader(PEER_RELAY_RESPONSE_FLAG_BYTE);
   byte data[]=packet.getPacket().getData();
-  Arrays.fill(data,0,data.length,(byte)0x0);
-  int off=UDPPacket.MAC_SIZE + UDPPacket.IV_SIZE;
-  data[off]=PEER_RELAY_RESPONSE_FLAG_BYTE;
-  off++;
-  long now=_context.clock().now() / 1000;
-  DataHelper.toLong(data,off,4,now);
-  off+=4;
-  if (_log.shouldLog(Log.INFO))   _log.info("Sending relay response to " + alice + " for "+ charlie+ " with alice's intro key "+ aliceIntroKey.toBase64());
+  int off=HEADER_SIZE;
+  if (_log.shouldLog(Log.INFO))   _log.info("Sending relay response to " + alice + " for "+ charlie+ " with alice's intro key "+ aliceIntroKey);
   byte charlieIP[]=charlie.getRemoteIP();
   DataHelper.toLong(data,off,1,charlieIP.length);
   off++;
@@ -36,6 +30,6 @@
   packet.getPacket().setLength(off);
   authenticate(packet,aliceIntroKey,aliceIntroKey);
   setTo(packet,aliceAddr,alice.getPort());
-  packet.setMessageType(44);
+  packet.setMessageType(TYPE_RESP);
   return packet;
 }

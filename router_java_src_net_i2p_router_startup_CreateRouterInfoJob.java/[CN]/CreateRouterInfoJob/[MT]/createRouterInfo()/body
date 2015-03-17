@@ -8,7 +8,6 @@
     stats.setProperty(RouterInfo.PROP_NETWORK_ID,Router.NETWORK_ID + "");
     getContext().router().addCapabilities(info);
     info.setOptions(stats);
-    info.setPeers(new HashSet());
     info.setPublished(getCurrentPublishDate(getContext()));
     RouterIdentity ident=new RouterIdentity();
     Certificate cert=getContext().router().createCertificate();
@@ -27,13 +26,14 @@
     ident.setSigningPublicKey(signingPubKey);
     info.setIdentity(ident);
     info.sign(signingPrivKey);
-    String infoFilename=getContext().router().getConfigSetting(Router.PROP_INFO_FILENAME);
-    if (infoFilename == null)     infoFilename=Router.PROP_INFO_FILENAME_DEFAULT;
-    fos1=new FileOutputStream(infoFilename);
+    if (!info.isValid())     throw new DataFormatException("RouterInfo we just built is invalid: " + info);
+    String infoFilename=getContext().getProperty(Router.PROP_INFO_FILENAME,Router.PROP_INFO_FILENAME_DEFAULT);
+    File ifile=new File(getContext().getRouterDir(),infoFilename);
+    fos1=new SecureFileOutputStream(ifile);
     info.writeBytes(fos1);
-    String keyFilename=getContext().router().getConfigSetting(Router.PROP_KEYS_FILENAME);
-    if (keyFilename == null)     keyFilename=Router.PROP_KEYS_FILENAME_DEFAULT;
-    fos2=new FileOutputStream(keyFilename);
+    String keyFilename=getContext().getProperty(Router.PROP_KEYS_FILENAME,Router.PROP_KEYS_FILENAME_DEFAULT);
+    File kfile=new File(getContext().getRouterDir(),keyFilename);
+    fos2=new SecureFileOutputStream(kfile);
     privkey.writeBytes(fos2);
     signingPrivKey.writeBytes(fos2);
     pubkey.writeBytes(fos2);
@@ -42,13 +42,13 @@
     getContext().keyManager().setSigningPublicKey(signingPubKey);
     getContext().keyManager().setPrivateKey(privkey);
     getContext().keyManager().setPublicKey(pubkey);
-    _log.info("Router info created and stored at " + infoFilename + " with private keys stored at "+ keyFilename+ " ["+ info+ "]");
+    _log.info("Router info created and stored at " + ifile.getAbsolutePath() + " with private keys stored at "+ kfile.getAbsolutePath()+ " ["+ info+ "]");
   }
  catch (  DataFormatException dfe) {
-    _log.error("Error building the new router information",dfe);
+    _log.log(Log.CRIT,"Error building the new router information",dfe);
   }
 catch (  IOException ioe) {
-    _log.error("Error writing out the new router information",ioe);
+    _log.log(Log.CRIT,"Error writing out the new router information",ioe);
   }
  finally {
     if (fos1 != null)     try {

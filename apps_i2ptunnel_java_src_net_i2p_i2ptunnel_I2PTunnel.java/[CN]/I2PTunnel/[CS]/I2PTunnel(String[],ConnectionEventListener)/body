@@ -1,12 +1,11 @@
 {
+  super();
   _context=I2PAppContext.getGlobalContext();
   _tunnelId=++__tunnelId;
   _log=_context.logManager().getLog(I2PTunnel.class);
-  _event=new EventDispatcherImpl();
-  Properties p=new Properties();
-  p.putAll(System.getProperties());
+  Properties p=_context.getProperties();
   _clientOptions=p;
-  _sessions=new ArrayList(1);
+  _sessions=new CopyOnWriteArraySet();
   addConnectionEventListener(lsnr);
   boolean gui=true;
   boolean checkRunByE=true;
@@ -59,7 +58,13 @@
         System.out.print("I2PTunnel>");
         String cmd=r.readLine();
         if (cmd == null)         break;
-        runCommand(cmd,this);
+        if (cmd.length() <= 0)         continue;
+        try {
+          runCommand(cmd,this);
+        }
+ catch (        Throwable t) {
+          t.printStackTrace();
+        }
       }
     }
  catch (    IOException ex) {

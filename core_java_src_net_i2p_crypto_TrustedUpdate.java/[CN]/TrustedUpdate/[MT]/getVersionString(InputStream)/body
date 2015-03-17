@@ -1,0 +1,28 @@
+{
+  try {
+    long skipped=inputStream.skip(Signature.SIGNATURE_BYTES);
+    if (skipped != Signature.SIGNATURE_BYTES)     return "";
+    byte[] data=new byte[VERSION_BYTES];
+    int bytesRead=DataHelper.read(inputStream,data);
+    if (bytesRead != VERSION_BYTES) {
+      return "";
+    }
+    for (int i=0; i < VERSION_BYTES; i++)     if (data[i] == 0x00) {
+      return new String(data,0,i,"UTF-8");
+    }
+    return new String(data,"UTF-8");
+  }
+ catch (  UnsupportedEncodingException uee) {
+    throw new RuntimeException("wtf, your JVM doesnt support utf-8? " + uee.getMessage());
+  }
+catch (  IOException ioe) {
+    return "";
+  }
+ finally {
+    if (inputStream != null)     try {
+      inputStream.close();
+    }
+ catch (    IOException ioe) {
+    }
+  }
+}

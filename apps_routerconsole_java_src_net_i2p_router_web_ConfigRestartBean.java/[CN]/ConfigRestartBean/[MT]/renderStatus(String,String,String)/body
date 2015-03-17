@@ -2,47 +2,51 @@
   RouterContext ctx=ContextHelper.getContext(null);
   String systemNonce=getNonce();
   if ((nonce != null) && (systemNonce.equals(nonce)) && (action != null)) {
-    if ("shutdownImmediate".equals(action)) {
-      ctx.router().addShutdownTask(new ConfigServiceHandler.UpdateWrapperManagerTask(Router.EXIT_HARD));
-      ctx.router().shutdown(Router.EXIT_HARD);
+    if ("shutdownImmediate".equals(action) || _("Shutdown immediately",ctx).equals(action)) {
+      if (ctx.hasWrapper())       ConfigServiceHandler.registerWrapperNotifier(ctx,Router.EXIT_HARD,false);
+      ctx.router().shutdownGracefully(Router.EXIT_HARD);
     }
- else     if ("cancelShutdown".equals(action)) {
+ else     if ("cancelShutdown".equals(action) || _("Cancel shutdown",ctx).equals(action) || _("Cancel restart",ctx).equals(action)) {
       ctx.router().cancelGracefulShutdown();
     }
- else     if ("restartImmediate".equals(action)) {
-      ctx.router().addShutdownTask(new ConfigServiceHandler.UpdateWrapperManagerTask(Router.EXIT_HARD_RESTART));
-      ctx.router().shutdown(Router.EXIT_HARD_RESTART);
+ else     if ("restartImmediate".equals(action) || _("Restart immediately",ctx).equals(action)) {
+      if (ctx.hasWrapper())       ConfigServiceHandler.registerWrapperNotifier(ctx,Router.EXIT_HARD_RESTART,false);
+      ctx.router().shutdownGracefully(Router.EXIT_HARD_RESTART);
     }
- else     if ("restart".equals(action)) {
-      ctx.router().addShutdownTask(new ConfigServiceHandler.UpdateWrapperManagerTask(Router.EXIT_GRACEFUL_RESTART));
+ else     if ("restart".equals(action) || _("Restart",ctx).equals(action)) {
+      if (ctx.hasWrapper())       ConfigServiceHandler.registerWrapperNotifier(ctx,Router.EXIT_GRACEFUL_RESTART,false);
       ctx.router().shutdownGracefully(Router.EXIT_GRACEFUL_RESTART);
     }
- else     if ("shutdown".equals(action)) {
-      ctx.router().addShutdownTask(new ConfigServiceHandler.UpdateWrapperManagerTask(Router.EXIT_GRACEFUL));
+ else     if ("shutdown".equals(action) || _("Shutdown",ctx).equals(action)) {
+      if (ctx.hasWrapper())       ConfigServiceHandler.registerWrapperNotifier(ctx,Router.EXIT_GRACEFUL,false);
       ctx.router().shutdownGracefully();
     }
   }
   boolean shuttingDown=isShuttingDown(ctx);
   boolean restarting=isRestarting(ctx);
   long timeRemaining=ctx.router().getShutdownTimeRemaining();
-  if (shuttingDown) {
-    if (timeRemaining <= 0) {
-      return "<b>Shutdown imminent</b>";
-    }
- else {
-      return "<b>Shutdown in " + DataHelper.formatDuration(timeRemaining) + "</b><br />"+ buttons(urlBase,systemNonce,"shutdownImmediate,Shutdown immediately,cancelShutdown,Cancel shutdown");
-    }
+  StringBuilder buf=new StringBuilder(128);
+  if ((shuttingDown || restarting) && timeRemaining <= 0) {
+    buf.append("<h4>");
+    if (restarting)     buf.append(_("Restart imminent",ctx));
+ else     buf.append(_("Shutdown imminent",ctx));
+    buf.append("</h4>");
+  }
+ else   if (shuttingDown) {
+    buf.append("<h4>");
+    buf.append(_("Shutdown in {0}",DataHelper.formatDuration2(timeRemaining),ctx));
+    buf.append("</h4><hr>");
+    buttons(ctx,buf,urlBase,systemNonce,SET1);
   }
  else   if (restarting) {
-    if (timeRemaining <= 0) {
-      return "<b>Restart imminent</b>";
-    }
- else {
-      return "<b>Restart in " + DataHelper.formatDuration(timeRemaining) + "</b><br />"+ buttons(urlBase,systemNonce,"restartImmediate,Restart immediately,cancelShutdown,Cancel restart");
-    }
+    buf.append("<h4>");
+    buf.append(_("Restart in {0}",DataHelper.formatDuration2(timeRemaining),ctx));
+    buf.append("</h4><hr>");
+    buttons(ctx,buf,urlBase,systemNonce,SET2);
   }
  else {
-    if (System.getProperty("wrapper.version") != null)     return buttons(urlBase,systemNonce,"restart,Restart,shutdown,Shutdown");
- else     return buttons(urlBase,systemNonce,"shutdown,Shutdown");
+    if (ctx.hasWrapper())     buttons(ctx,buf,urlBase,systemNonce,SET3);
+ else     buttons(ctx,buf,urlBase,systemNonce,SET4);
   }
+  return buf.toString();
 }

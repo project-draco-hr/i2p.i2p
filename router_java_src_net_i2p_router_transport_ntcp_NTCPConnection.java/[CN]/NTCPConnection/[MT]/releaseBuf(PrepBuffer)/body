@@ -1,28 +1,4 @@
 {
   buf.init();
-  long lifetime=buf.lifetime();
-  int extra=0;
-  boolean cached=false;
-synchronized (_bufs) {
-    if (_bufs.size() < NUM_PREP_BUFS) {
-      extra=_bufs.size();
-      _bufs.add(buf);
-      cached=true;
-      if (extra > 5) {
-        __consecutiveExtra++;
-        if (__consecutiveExtra >= 20) {
-          NUM_PREP_BUFS=Math.max(NUM_PREP_BUFS - 1,MIN_PREP_BUFS);
-          __consecutiveExtra=0;
-        }
-      }
-    }
- else {
-      buf.unencrypted=null;
-      buf.base=null;
-      buf.pad=null;
-      buf.crc=null;
-      --__liveBufs;
-    }
-  }
-  if (cached && _log.shouldLog(Log.DEBUG))   _log.debug("releasing cached buffer with " + __liveBufs + " live after "+ lifetime);
+  _bufs.offer(buf);
 }

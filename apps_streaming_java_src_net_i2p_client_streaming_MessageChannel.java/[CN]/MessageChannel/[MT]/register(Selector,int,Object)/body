@@ -1,0 +1,43 @@
+{
+  this.sel=sel;
+  this.provider=sel.provider();
+  this.lock=lock;
+  this._isRegistered=true;
+  final MessageChannel that=this;
+  SelectionKey key=new AbstractSelectionKey(){
+    int operations=ops;
+    @Override public SelectableChannel channel(){
+      return that;
+    }
+    @Override public Selector selector(){
+      return sel;
+    }
+    @Override public int interestOps(){
+      return this.operations;
+    }
+    @Override public SelectionKey interestOps(    int ops){
+      this.operations=ops;
+      return this;
+    }
+    @Override public int readyOps(){
+      int readyOps=0;
+      if ((operations & OP_READ) != 0) {
+        try {
+          if (in.available() > 0) {
+            readyOps|=OP_READ;
+          }
+        }
+ catch (        IOException ex) {
+        }
+      }
+      if ((operations & OP_WRITE) != 0) {
+        if (!out.getClosed())         readyOps|=OP_WRITE;
+      }
+      return readyOps;
+    }
+  }
+;
+  key.attach(lock);
+  sel.keys().add(key);
+  return key;
+}

@@ -1,16 +1,21 @@
 {
   _context=context;
   _log=_context.logManager().getLog(TrustedUpdate.class);
-  _trustedKeys=new ArrayList();
+  _trustedKeys=new HashMap(4);
   String propertyTrustedKeys=context.getProperty(PROP_TRUSTED_KEYS);
   if ((propertyTrustedKeys != null) && (propertyTrustedKeys.length() > 0)) {
     StringTokenizer propertyTrustedKeysTokens=new StringTokenizer(propertyTrustedKeys," ,\r\n");
-    while (propertyTrustedKeysTokens.hasMoreTokens())     _trustedKeys.add(propertyTrustedKeysTokens.nextToken().trim());
+    while (propertyTrustedKeysTokens.hasMoreTokens()) {
+      String key=propertyTrustedKeysTokens.nextToken().trim();
+      String name=DEFAULT_KEYS.get(key);
+      if (name == null)       name="";
+      addKey(key,name);
+    }
   }
  else {
-    _trustedKeys.add(DEFAULT_TRUSTED_KEY);
-    _trustedKeys.add(DEFAULT_TRUSTED_KEY2);
-    _trustedKeys.add(DEFAULT_TRUSTED_KEY3);
+    for (    Map.Entry<String,String> e : DEFAULT_KEYS.entrySet()) {
+      addKey(e.getKey(),e.getValue());
+    }
   }
   if (_log.shouldLog(Log.DEBUG))   _log.debug("TrustedUpdate created, trusting " + _trustedKeys.size() + " keys.");
 }

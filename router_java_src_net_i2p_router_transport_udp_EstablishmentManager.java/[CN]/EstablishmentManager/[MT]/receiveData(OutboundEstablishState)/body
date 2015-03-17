@@ -1,14 +1,15 @@
 {
   state.dataReceived();
-synchronized (_outboundStates) {
-    _outboundStates.remove(state.getRemoteHostId());
-    if (_queuedOutbound.size() > 0) {
-      List queued=(List)_queuedOutbound.remove(state.getRemoteHostId());
-      if (queued != null) {
-        for (int i=0; i < queued.size(); i++)         state.addMessage((OutNetMessage)queued.get(i));
+  _outboundStates.remove(state.getRemoteHostId());
+  List<OutNetMessage> queued=_queuedOutbound.remove(state.getRemoteHostId());
+  if (queued != null) {
+synchronized (queued) {
+      for (      OutNetMessage m : queued) {
+        state.addMessage(m);
       }
     }
   }
+  locked_admitQueued();
   if (_log.shouldLog(Log.INFO))   _log.info("Outbound established completely!  yay: " + state);
   PeerState peer=handleCompletelyEstablished(state);
   notifyActivity();

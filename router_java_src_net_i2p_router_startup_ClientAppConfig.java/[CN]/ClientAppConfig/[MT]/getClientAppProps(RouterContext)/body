@@ -1,12 +1,16 @@
 {
   Properties rv=new Properties();
-  String clientConfigFile=ctx.getProperty(PROP_CLIENT_CONFIG_FILENAME,DEFAULT_CLIENT_CONFIG_FILENAME);
-  File cfgFile=new File(clientConfigFile);
-  if (!cfgFile.exists())   return ctx.router().getConfigMap();
+  File cfgFile=configFile(ctx);
+  if (!cfgFile.exists()) {
+    System.out.println("Warning - No client config file " + cfgFile.getAbsolutePath());
+    rv.putAll(ctx.router().getConfigMap());
+    return rv;
+  }
   try {
     DataHelper.loadProps(rv,cfgFile);
   }
  catch (  IOException ioe) {
+    System.out.println("Error loading the client app properties from " + cfgFile.getAbsolutePath() + ' '+ ioe);
   }
   return rv;
 }

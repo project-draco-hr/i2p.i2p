@@ -4,48 +4,59 @@
   try {
     int read=con.getChannel().read(buf);
     if (read == -1) {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("EOF on " + con);
-      _context.statManager().addRateData("ntcp.readEOF",1,0);
       con.close();
       releaseBuf(buf);
     }
  else     if (read == 0) {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("nothing to read for " + con + ", but stay interested");
-      key.interestOps(key.interestOps() | SelectionKey.OP_READ);
       releaseBuf(buf);
-    }
- else     if (read > 0) {
-      byte data[]=new byte[read];
-      buf.flip();
-      buf.get(data);
-      releaseBuf(buf);
-      ByteBuffer rbuf=ByteBuffer.wrap(data);
-      FIFOBandwidthLimiter.Request req=_context.bandwidthLimiter().requestInbound(read,"NTCP read",null,null);
-      if (req.getPendingInboundRequested() > 0) {
-        key.interestOps(key.interestOps() & ~SelectionKey.OP_READ);
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("bw throttled reading for " + con + ", so we don't want to read anymore");
-        _context.statManager().addRateData("ntcp.queuedRecv",read,0);
-        con.queuedRecv(rbuf,req);
+      int consec=con.gotZeroRead();
+      if (consec >= 5) {
+        _context.statManager().addRateData("ntcp.zeroReadDrop",1);
+        if (_log.shouldLog(Log.WARN))         _log.warn("Fail safe zero read close " + con);
+        con.close();
       }
  else {
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("not bw throttled reading for " + con);
-        key.interestOps(key.interestOps() | SelectionKey.OP_READ);
-        con.recv(rbuf);
+        _context.statManager().addRateData("ntcp.zeroRead",consec);
+        if (_log.shouldLog(Log.INFO))         _log.info("nothing to read for " + con + ", but stay interested");
+      }
+    }
+ else     if (read > 0) {
+      con.clearZeroRead();
+      buf.flip();
+      FIFOBandwidthLimiter.Request req=_context.bandwidthLimiter().requestInbound(read,"NTCP read");
+      if (req.getPendingInboundRequested() > 0) {
+        key.interestOps(key.interestOps() & ~SelectionKey.OP_READ);
+        _context.statManager().addRateData("ntcp.queuedRecv",read);
+        con.queuedRecv(buf,req);
+      }
+ else {
+        con.recv(buf);
+        _context.statManager().addRateData("ntcp.read",read);
       }
     }
   }
  catch (  CancelledKeyException cke) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("error reading",cke);
+    releaseBuf(buf);
+    if (_log.shouldLog(Log.WARN))     _log.warn("error reading on " + con,cke);
     con.close();
-    _context.statManager().addRateData("ntcp.readError",1,0);
-    if (buf != null)     releaseBuf(buf);
+    _context.statManager().addRateData("ntcp.readError",1);
   }
 catch (  IOException ioe) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("error reading",ioe);
+    releaseBuf(buf);
+    if (_log.shouldLog(Log.INFO))     _log.info("error reading on " + con,ioe);
+    if (con.isEstablished()) {
+      _context.statManager().addRateData("ntcp.readError",1);
+    }
+ else {
+      _context.statManager().addRateData("ntcp.connectFailedTimeoutIOE",1);
+      RouterIdentity rem=con.getRemotePeer();
+      if (rem != null && !con.isInbound())       _transport.markUnreachable(rem.calculateHash());
+    }
     con.close();
-    _context.statManager().addRateData("ntcp.readError",1,0);
-    if (buf != null)     releaseBuf(buf);
   }
 catch (  NotYetConnectedException nyce) {
+    releaseBuf(buf);
+    key.interestOps(key.interestOps() & ~SelectionKey.OP_READ);
+    if (_log.shouldLog(Log.WARN))     _log.warn("error reading on " + con,nyce);
   }
 }

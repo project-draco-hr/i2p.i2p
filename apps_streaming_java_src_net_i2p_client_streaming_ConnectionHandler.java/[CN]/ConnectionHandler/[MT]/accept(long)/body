@@ -6,7 +6,7 @@
     if (!_active) {
       while (true) {
         Packet packet=_synQueue.poll();
-        if (packet == null || packet.getOptionalDelay() == PoisonPacket.MAX_DELAY_REQUEST)         break;
+        if (packet == null || packet.getOptionalDelay() == PoisonPacket.POISON_MAX_DELAY_REQUEST)         break;
         sendReset(packet);
       }
       return null;
@@ -33,8 +33,20 @@
       }
     }
     if (syn != null) {
-      if (syn.getOptionalDelay() == PoisonPacket.MAX_DELAY_REQUEST)       return null;
+      if (syn.getOptionalDelay() == PoisonPacket.POISON_MAX_DELAY_REQUEST)       return null;
       if (syn.isFlagSet(Packet.FLAG_SYNCHRONIZE)) {
+        Destination from=syn.getOptionalFrom();
+        if (from == null) {
+          if (_log.shouldLog(Log.WARN))           _log.warn("Dropping SYN packet with no FROM: " + syn);
+          continue;
+        }
+        Connection oldcon=_manager.getConnectionByOutboundId(syn.getReceiveStreamId());
+        if (oldcon != null) {
+          if (from.equals(oldcon.getRemotePeer())) {
+            if (_log.shouldLog(Log.WARN))             _log.warn("Dropping dup SYN: " + syn);
+            continue;
+          }
+        }
         Connection con=_manager.receiveConnection(syn);
         if (con != null)         return con;
       }

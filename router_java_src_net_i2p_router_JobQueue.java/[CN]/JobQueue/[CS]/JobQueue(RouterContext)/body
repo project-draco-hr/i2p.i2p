@@ -4,15 +4,12 @@
   _context.statManager().createRateStat("jobQueue.readyJobs","How many ready and waiting jobs there are?","JobQueue",new long[]{60 * 1000l,60 * 60 * 1000l,24 * 60 * 60* 1000l});
   _context.statManager().createRateStat("jobQueue.droppedJobs","How many jobs do we drop due to insane overload?","JobQueue",new long[]{60 * 1000l,60 * 60 * 1000l,24 * 60 * 60* 1000l});
   _alive=true;
-  _readyJobs=new ArrayList(16);
-  _timedJobs=new ArrayList(64);
+  _readyJobs=new LinkedBlockingQueue();
+  _timedJobs=new TreeSet(new JobComparator());
   _jobLock=new Object();
-  _queueRunners=new HashMap();
-  _jobStats=Collections.synchronizedSortedMap(new TreeMap());
-  _allowParallelOperation=false;
+  _queueRunners=new ConcurrentHashMap(RUNNERS);
+  _jobStats=new ConcurrentHashMap();
   _pumper=new QueuePumper();
-  I2PThread pumperThread=new I2PThread(_pumper);
-  pumperThread.setDaemon(true);
-  pumperThread.setName("QueuePumper");
+  I2PThread pumperThread=new I2PThread(_pumper,"Job Queue Pumper",true);
   pumperThread.start();
 }

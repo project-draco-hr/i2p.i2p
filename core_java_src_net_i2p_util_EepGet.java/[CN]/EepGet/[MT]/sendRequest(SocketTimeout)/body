@@ -22,28 +22,24 @@
  catch (  IOException ioe) {
   }
   if (_shouldProxy) {
-    _proxy=new Socket(_proxyHost,_proxyPort);
+    _proxy=InternalSocket.getSocket(_proxyHost,_proxyPort);
   }
  else {
-    try {
-      URL url=new URL(_actualURL);
-      if ("http".equals(url.getProtocol())) {
-        String host=url.getHost();
-        int port=url.getPort();
-        if (port == -1)         port=80;
-        _proxy=new Socket(host,port);
-      }
- else {
-        throw new IOException("URL is not supported:" + _actualURL);
-      }
+    URL url=new URL(_actualURL);
+    if ("http".equals(url.getProtocol())) {
+      String host=url.getHost();
+      int port=url.getPort();
+      if (port == -1)       port=80;
+      _proxy=new Socket(host,port);
     }
- catch (    MalformedURLException mue) {
-      throw new IOException("Request URL is invalid");
+ else {
+      throw new IOException("URL is not supported:" + _actualURL);
     }
   }
   _proxyIn=_proxy.getInputStream();
+  if (!(_proxy instanceof InternalSocket))   _proxyIn=new BufferedInputStream(_proxyIn);
   _proxyOut=_proxy.getOutputStream();
-  timeout.setSocket(_proxy);
+  if (timeout != null)   timeout.setSocket(_proxy);
   _proxyOut.write(DataHelper.getUTF8(req));
   _proxyOut.flush();
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Request flushed");

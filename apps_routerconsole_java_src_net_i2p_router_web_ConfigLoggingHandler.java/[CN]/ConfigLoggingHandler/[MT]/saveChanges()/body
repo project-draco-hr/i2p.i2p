@@ -1,20 +1,22 @@
 {
   boolean shouldSave=false;
-  if (_levels != null) {
+  if ((_levels != null && _levels.length() > 0) || _newLogClass != null) {
     try {
       Properties props=new Properties();
-      props.load(new ByteArrayInputStream(_levels.getBytes()));
+      if (_levels != null)       props.load(new ByteArrayInputStream(_levels.getBytes()));
+      if (_newLogClass != null)       props.setProperty(_newLogClass,_newLogLevel);
       _context.logManager().setLimits(props);
       shouldSave=true;
-      addFormNotice("Log limits updated");
+      addFormNotice(_("Log overrides updated"));
     }
  catch (    IOException ioe) {
       _context.logManager().getLog(ConfigLoggingHandler.class).error("Error reading from the props?",ioe);
       addFormError("Error updating the log limits - levels not valid");
     }
   }
- else {
+ else   if (!_context.logManager().getLimits().isEmpty()) {
     _context.logManager().setLimits(null);
+    shouldSave=true;
     addFormNotice("Log limits cleared");
   }
   if (_defaultLevel != null) {
@@ -27,7 +29,7 @@
       addFormNotice("Default log level updated from " + oldDefault + " to "+ _defaultLevel);
     }
   }
-  if (_dateFormat != null) {
+  if (_dateFormat != null && !_dateFormat.equals(_context.logManager().getDateFormatPattern())) {
     boolean valid=_context.logManager().setDateFormat(_dateFormat);
     if (valid) {
       shouldSave=true;
@@ -77,7 +79,7 @@
   }
   if (shouldSave) {
     boolean saved=_context.logManager().saveConfig();
-    if (saved)     addFormNotice("Log configuration saved and applied successfully");
- else     addFormNotice("Error saving the configuration (applied but not saved) - please see the error logs");
+    if (saved)     addFormNotice(_("Log configuration saved"));
+ else     addFormError("Error saving the configuration (applied but not saved) - please see the error logs");
   }
 }

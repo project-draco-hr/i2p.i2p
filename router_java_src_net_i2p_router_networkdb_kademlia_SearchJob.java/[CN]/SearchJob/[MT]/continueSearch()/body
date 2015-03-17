@@ -13,14 +13,14 @@
   Set attempted=_state.getAttempted();
   while (sent <= 0) {
     boolean onlyFloodfill=true;
-    if (_floodfillPeersExhausted && onlyFloodfill && _state.getPending().size() <= 0) {
+    if (_floodfillPeersExhausted && onlyFloodfill && _state.getPending().isEmpty()) {
       if (_log.shouldLog(Log.WARN))       _log.warn(getJobId() + ": no non-floodfill peers left, and no more pending.  Searched: " + _state.getAttempted().size()+ " failed: "+ _state.getFailed().size());
       fail();
       return;
     }
     List closestHashes=getClosestRouters(_state.getTarget(),toCheck,attempted);
-    if ((closestHashes == null) || (closestHashes.size() <= 0)) {
-      if (_state.getPending().size() <= 0) {
+    if ((closestHashes == null) || (closestHashes.isEmpty())) {
+      if (_state.getPending().isEmpty()) {
         if (_log.shouldLog(Log.INFO))         _log.info(getJobId() + ": No peers left, and none pending!  Already searched: " + _state.getAttempted().size()+ " failed: "+ _state.getFailed().size());
         fail();
       }
@@ -34,12 +34,12 @@
       attempted.addAll(closestHashes);
       for (Iterator iter=closestHashes.iterator(); iter.hasNext(); ) {
         Hash peer=(Hash)iter.next();
-        DataStructure ds=_facade.getDataStore().get(peer);
+        DatabaseEntry ds=_facade.getDataStore().get(peer);
         if (ds == null) {
           if (_log.shouldLog(Log.INFO))           _log.info("Next closest peer " + peer + " was only recently referred to us, sending a search for them");
           getContext().netDb().lookupRouterInfo(peer,null,null,_timeoutMs);
         }
- else         if (!(ds instanceof RouterInfo)) {
+ else         if (!(ds.getType() == DatabaseEntry.KEY_TYPE_ROUTERINFO)) {
           if (_log.shouldLog(Log.WARN))           _log.warn(getJobId() + ": Error selecting closest hash that wasnt a router! " + peer+ " : "+ ds.getClass().getName());
           _state.replyTimeout(peer);
         }

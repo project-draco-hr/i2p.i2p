@@ -1,18 +1,21 @@
 {
   _context=context;
-  _handlerJobBuilders=new HandlerJobBuilder[32];
-  _pendingDataMessages=new ArrayList(16);
-  _pendingDataMessagesFrom=new ArrayList(16);
-  _pendingGatewayMessages=new ArrayList(16);
-  _shortCircuitDataJob=new SharedShortCircuitDataJob(context);
-  _shortCircuitGatewayJob=new SharedShortCircuitGatewayJob(context);
+  _handlerJobBuilders=new HandlerJobBuilder[MAX_I2NP_MESSAGE_TYPE + 1];
+  if (DISPATCH_DIRECT) {
+    _pendingDataMessages=null;
+    _pendingDataMessagesFrom=null;
+    _pendingGatewayMessages=null;
+  }
+ else {
+    _pendingDataMessages=new ArrayList(16);
+    _pendingDataMessagesFrom=new ArrayList(16);
+    _pendingGatewayMessages=new ArrayList(16);
+    _shortCircuitDataJob=new SharedShortCircuitDataJob(context);
+    _shortCircuitGatewayJob=new SharedShortCircuitGatewayJob(context);
+  }
   _log=_context.logManager().getLog(InNetMessagePool.class);
-  _alive=false;
-  _context.statManager().createRateStat("inNetPool.dropped","How often do we drop a message","InNetPool",new long[]{60 * 1000l,60 * 60 * 1000l,24 * 60 * 60* 1000l});
-  _context.statManager().createRateStat("inNetPool.droppedDeliveryStatusDelay","How long after a delivery status message is created do we receive it back again (for messages that are too slow to be handled)","InNetPool",new long[]{60 * 1000l,60 * 60 * 1000l,24 * 60 * 60* 1000l});
-  _context.statManager().createRateStat("inNetPool.duplicate","How often do we receive a duplicate message","InNetPool",new long[]{60 * 1000l,60 * 60 * 1000l,24 * 60 * 60* 1000l});
-  _context.statManager().createRateStat("inNetPool.droppedTunnelCreateStatusMessage","How often we drop a slow-to-arrive tunnel request response","InNetPool",new long[]{60 * 60 * 1000l,24 * 60 * 60* 1000l});
-  _context.statManager().createRateStat("inNetPool.droppedDbLookupResponseMessage","How often we drop a slow-to-arrive db search response","InNetPool",new long[]{60 * 60 * 1000l,24 * 60 * 60* 1000l});
-  _context.statManager().createRateStat("pool.dispatchDataTime","How long a tunnel dispatch takes","Tunnels",new long[]{10 * 60 * 1000l,60 * 60 * 1000l,24 * 60 * 60* 1000l});
-  _context.statManager().createRateStat("pool.dispatchGatewayTime","How long a tunnel gateway dispatch takes","Tunnels",new long[]{10 * 60 * 1000l,60 * 60 * 1000l,24 * 60 * 60* 1000l});
+  _context.statManager().createRateStat("inNetPool.dropped","How often do we drop a message","InNetPool",new long[]{60 * 60 * 1000l});
+  _context.statManager().createRateStat("inNetPool.droppedDeliveryStatusDelay","How long after a delivery status message is created do we receive it back again (for messages that are too slow to be handled)","InNetPool",new long[]{60 * 60 * 1000l});
+  _context.statManager().createRateStat("inNetPool.duplicate","How often do we receive a duplicate message","InNetPool",new long[]{60 * 60 * 1000l});
+  _context.statManager().createRateStat("inNetPool.droppedDbLookupResponseMessage","How often we drop a slow-to-arrive db search response","InNetPool",new long[]{60 * 60 * 1000l});
 }

@@ -1,13 +1,5 @@
 {
-  String port=_context.getProperty(PROP_EXTERNAL_PORT);
-  if (port != null) {
-    try {
-      _externalListenPort=Integer.parseInt(port);
-    }
- catch (    NumberFormatException nfe) {
-      _externalListenPort=-1;
-    }
-  }
+  _externalListenPort=_context.getProperty(PROP_EXTERNAL_PORT,-1);
   if (explicitAddressSpecified()) {
     try {
       String host=_context.getProperty(PROP_EXTERNAL_HOST);
@@ -34,13 +26,18 @@
       _introducersSelectedOn=_context.clock().now();
       introducersIncluded=true;
     }
+ else {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Need introducers but we don't know any");
+    }
   }
   if (introducersRequired)   options.setProperty(UDPAddress.PROP_CAPACITY,"" + UDPAddress.CAPACITY_TESTING);
  else   options.setProperty(UDPAddress.PROP_CAPACITY,"" + UDPAddress.CAPACITY_TESTING + UDPAddress.CAPACITY_INTRODUCER);
+  if (_mtu < PeerState.LARGE_MTU)   options.setProperty(UDPAddress.PROP_MTU,Integer.toString(_mtu));
   if (directIncluded || introducersIncluded) {
-    options.setProperty(UDPAddress.PROP_INTRO_KEY,_introKey.toBase64());
+    if (_introKey != null)     options.setProperty(UDPAddress.PROP_INTRO_KEY,_introKey.toBase64());
     RouterAddress addr=new RouterAddress();
-    addr.setCost(5);
+    if (ADJUST_COST && !haveCapacity(91))     addr.setCost(DEFAULT_COST + 1);
+ else     addr.setCost(DEFAULT_COST);
     addr.setExpiration(null);
     addr.setTransportStyle(STYLE);
     addr.setOptions(options);

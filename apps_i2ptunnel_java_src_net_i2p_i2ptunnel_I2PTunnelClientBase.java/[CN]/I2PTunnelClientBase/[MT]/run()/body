@@ -6,17 +6,13 @@
 synchronized (this) {
         notifyAll();
       }
-synchronized (_waitingSockets) {
-        _waitingSockets.notifyAll();
-      }
       return;
     }
     ss=new ServerSocket(localPort,0,addr);
     if (localPort == 0) {
       localPort=ss.getLocalPort();
     }
-    notifyEvent("clientLocalPort",new Integer(ss.getLocalPort()));
-    l.log("Listening for clients on port " + localPort + " of "+ getTunnel().listenHost);
+    notifyEvent("clientLocalPort",Integer.valueOf(ss.getLocalPort()));
 synchronized (this) {
       listenerReady=true;
       notify();
@@ -30,17 +26,16 @@ synchronized (startLock) {
         }
       }
     }
-    while (true) {
+    while (open) {
       Socket s=ss.accept();
-      long before=System.currentTimeMillis();
       manageConnection(s);
-      long total=System.currentTimeMillis() - before;
-      _context.statManager().addRateData("i2ptunnel.client.manageTime",total,total);
     }
   }
  catch (  IOException ex) {
-    _log.error("Error listening for connections on " + localPort,ex);
-    notifyEvent("openBaseClientResult","error");
+    if (open) {
+      _log.error("Error listening for connections on " + localPort,ex);
+      notifyEvent("openBaseClientResult","error");
+    }
 synchronized (sockLock) {
       mySockets.clear();
     }
@@ -48,8 +43,5 @@ synchronized (sockLock) {
 synchronized (this) {
       notifyAll();
     }
-  }
-synchronized (_waitingSockets) {
-    _waitingSockets.notifyAll();
   }
 }

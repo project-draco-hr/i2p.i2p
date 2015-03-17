@@ -1,0 +1,21 @@
+{
+  if (message == null)   return false;
+  if (message instanceof DatabaseStoreMessage) {
+    DatabaseStoreMessage dsm=(DatabaseStoreMessage)message;
+    if (_search.getKey().equals(dsm.getKey())) {
+      _matchFound=true;
+      return true;
+    }
+  }
+ else   if (message instanceof DatabaseSearchReplyMessage) {
+    DatabaseSearchReplyMessage dsrm=(DatabaseSearchReplyMessage)message;
+    if (_search.getKey().equals(dsrm.getSearchKey())) {
+      if (_log.shouldLog(Log.INFO)) {
+        Hash from=dsrm.getFromHash();
+        _log.info(_search.getJobId() + ": Processing DSRM via IterativeLookupJob, apparently from " + from);
+      }
+      _context.jobQueue().addJob(new IterativeLookupJob(_context,dsrm,_search));
+    }
+  }
+  return false;
+}

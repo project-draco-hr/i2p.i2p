@@ -13,13 +13,25 @@
     out=new DataOutputStream(clientSock.getOutputStream());
   }
  catch (  IOException e) {
-    throw new SOCKSException("Connection error (" + e.getMessage() + ")");
+    throw new SOCKSException("Connection error: " + e);
   }
   I2PSocket destSock;
   try {
-    if (connHostName.toLowerCase().endsWith(".i2p")) {
+    if (connHostName.toLowerCase(Locale.US).endsWith(".i2p")) {
       _log.debug("connecting to " + connHostName + "...");
-      destSock=t.createI2PSocket(I2PTunnel.destFromName(connHostName));
+      Destination dest=I2PAppContext.getGlobalContext().namingService().lookup(connHostName);
+      if (dest == null) {
+        try {
+          sendRequestReply(Reply.HOST_UNREACHABLE,AddressType.DOMAINNAME,null,"0.0.0.0",0,out);
+        }
+ catch (        IOException ioe) {
+        }
+        throw new SOCKSException("Host not found");
+      }
+      Properties overrides=new Properties();
+      I2PSocketOptions sktOpts=t.buildOptions(overrides);
+      sktOpts.setPort(connPort);
+      destSock=t.createI2PSocket(I2PAppContext.getGlobalContext().namingService().lookup(connHostName),sktOpts);
     }
  else     if ("localhost".equals(connHostName) || "127.0.0.1".equals(connHostName)) {
       String err="No localhost accesses allowed through the Socks Proxy";
@@ -31,19 +43,9 @@
       }
       throw new SOCKSException(err);
     }
- else     if (connPort == 80) {
-      String err="No handler for HTTP outproxy implemented";
-      _log.error(err);
-      try {
-        sendRequestReply(Reply.CONNECTION_NOT_ALLOWED_BY_RULESET,AddressType.DOMAINNAME,null,"0.0.0.0",0,out);
-      }
- catch (      IOException ioe) {
-      }
-      throw new SOCKSException(err);
-    }
  else {
       List<String> proxies=t.getProxies(connPort);
-      if (proxies == null || proxies.size() <= 0) {
+      if (proxies == null || proxies.isEmpty()) {
         String err="No outproxy configured for port " + connPort + " and no default configured either";
         _log.error(err);
         try {
@@ -55,13 +57,24 @@
       }
       int p=I2PAppContext.getGlobalContext().random().nextInt(proxies.size());
       String proxy=proxies.get(p);
-      _log.debug("connecting to port " + connPort + " proxy "+ proxy+ " for "+ connHostName+ "...");
-      destSock=t.createI2PSocket(I2PTunnel.destFromName(proxy));
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("connecting to proxy " + proxy + " for "+ connHostName+ " port "+ connPort);
+      try {
+        destSock=outproxyConnect(t,proxy);
+      }
+ catch (      SOCKSException se) {
+        try {
+          sendRequestReply(Reply.HOST_UNREACHABLE,AddressType.DOMAINNAME,null,"0.0.0.0",0,out);
+        }
+ catch (        IOException ioe) {
+        }
+        throw se;
+      }
     }
     confirmConnection();
     _log.debug("connection confirmed - exchanging data...");
   }
  catch (  DataFormatException e) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("socks error",e);
     try {
       sendRequestReply(Reply.HOST_UNREACHABLE,AddressType.DOMAINNAME,null,"0.0.0.0",0,out);
     }
@@ -70,28 +83,31 @@
     throw new SOCKSException("Error in destination format");
   }
 catch (  SocketException e) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("socks error",e);
     try {
       sendRequestReply(Reply.HOST_UNREACHABLE,AddressType.DOMAINNAME,null,"0.0.0.0",0,out);
     }
  catch (    IOException ioe) {
     }
-    throw new SOCKSException("Error connecting (" + e.getMessage() + ")");
+    throw new SOCKSException("Error connecting: " + e);
   }
 catch (  IOException e) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("socks error",e);
     try {
       sendRequestReply(Reply.HOST_UNREACHABLE,AddressType.DOMAINNAME,null,"0.0.0.0",0,out);
     }
  catch (    IOException ioe) {
     }
-    throw new SOCKSException("Error connecting (" + e.getMessage() + ")");
+    throw new SOCKSException("Error connecting: " + e);
   }
 catch (  I2PException e) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("socks error",e);
     try {
       sendRequestReply(Reply.HOST_UNREACHABLE,AddressType.DOMAINNAME,null,"0.0.0.0",0,out);
     }
  catch (    IOException ioe) {
     }
-    throw new SOCKSException("Error connecting (" + e.getMessage() + ")");
+    throw new SOCKSException("Error connecting: " + e);
   }
   return destSock;
 }

@@ -1,0 +1,26 @@
+{
+  expireOutbound();
+  if (_outgoing.size() >= MAX_OUTGOING_PENDING || _active.size() >= MAX_OUTGOING_ACTIVE) {
+    _log.error("Too many outgoing DCC, max is " + MAX_OUTGOING_PENDING + '/'+ MAX_OUTGOING_ACTIVE+ " pending/active");
+    return -1;
+  }
+  InetAddress ia;
+  try {
+    ia=InetAddress.getByAddress(ip);
+  }
+ catch (  UnknownHostException uhe) {
+    return -1;
+  }
+  int limit=i2pPort > 0 ? 10 : 1;
+  LocalAddress client=new LocalAddress(ia,port,getTunnel().getContext().clock().now() + OUTBOUND_EXPIRE);
+  for (int i=0; i < limit; i++) {
+    int iport;
+    if (i2pPort > 0)     iport=i2pPort;
+ else     iport=MIN_I2P_PORT + getTunnel().getContext().random().nextInt(1 + MAX_I2P_PORT - MIN_I2P_PORT);
+    if (_active.containsKey(Integer.valueOf(iport)))     continue;
+    LocalAddress old=_outgoing.putIfAbsent(Integer.valueOf(iport),client);
+    if (old != null)     continue;
+    return iport;
+  }
+  return -1;
+}

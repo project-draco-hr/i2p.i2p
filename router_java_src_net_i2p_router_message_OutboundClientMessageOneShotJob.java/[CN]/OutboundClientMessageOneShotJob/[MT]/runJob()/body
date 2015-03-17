@@ -1,20 +1,22 @@
 {
-  if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": Send outbound client message job beginning");
-  long timeoutMs=_overallExpiration - getContext().clock().now();
-  if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": preparing to search for the leaseSet for " + _toString);
+  long now=getContext().clock().now();
+  if (now >= _overallExpiration) {
+    dieFatal();
+    return;
+  }
+  long timeoutMs=_overallExpiration - now;
   Hash key=_to.calculateHash();
   SendJob success=new SendJob(getContext());
-  LookupLeaseSetFailedJob failed=new LookupLeaseSetFailedJob(getContext());
-  LeaseSet ls=getContext().netDb().lookupLeaseSetLocally(key);
-  if (ls != null) {
+  _leaseSet=getContext().netDb().lookupLeaseSetLocally(key);
+  if (_leaseSet != null) {
     getContext().statManager().addRateData("client.leaseSetFoundLocally",1,0);
-    _leaseSetLookupBegin=-1;
     if (_log.shouldLog(Log.DEBUG))     _log.debug(getJobId() + ": Send outbound client message - leaseSet found locally for " + _toString);
     success.runJob();
   }
  else {
     _leaseSetLookupBegin=getContext().clock().now();
     if (_log.shouldLog(Log.DEBUG))     _log.debug(getJobId() + ": Send outbound client message - sending off leaseSet lookup job for " + _toString);
+    LookupLeaseSetFailedJob failed=new LookupLeaseSetFailedJob(getContext());
     getContext().netDb().lookupLeaseSet(key,success,failed,timeoutMs);
   }
 }

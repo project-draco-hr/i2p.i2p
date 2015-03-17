@@ -1,39 +1,40 @@
 {
   _isRunning=true;
-  List wanted=new ArrayList(8);
-  List pools=new ArrayList(8);
-  int pendingRemaining=0;
-  long afterBuildReal=0;
-  long afterHandleInbound=0;
-  while (!_manager.isShutdown()) {
+  List<TunnelPool> wanted=new ArrayList(MAX_CONCURRENT_BUILDS);
+  List<TunnelPool> pools=new ArrayList(8);
+  while (_isRunning && !_manager.isShutdown()) {
     try {
-      _repoll=pendingRemaining > 0;
+      _repoll=false;
       _manager.listPools(pools);
       for (int i=0; i < pools.size(); i++) {
-        TunnelPool pool=(TunnelPool)pools.get(i);
+        TunnelPool pool=pools.get(i);
         if (!pool.isAlive())         continue;
         int howMany=pool.countHowManyToBuild();
         for (int j=0; j < howMany; j++)         wanted.add(pool);
       }
-      _handler.handleInboundReplies();
       int allowed=allowed();
       allowed=buildZeroHopTunnels(wanted,allowed);
-      int realBuilt=0;
       TunnelManagerFacade mgr=_context.tunnelManager();
-      if ((mgr == null) || (mgr.selectInboundTunnel() == null) || (mgr.selectOutboundTunnel() == null)) {
+      if ((mgr == null) || (mgr.getFreeTunnelCount() <= 0) || (mgr.getOutboundTunnelCount() <= 0)) {
 synchronized (_currentlyBuilding) {
           if (!_repoll) {
-            if (_log.shouldLog(Log.DEBUG))             _log.debug("No tunnel to build with (allowed=" + allowed + ", wanted="+ wanted.size()+ ", pending="+ pendingRemaining+ "), wait for a while");
-            _currentlyBuilding.wait(1 * 1000 + _context.random().nextInt(1 * 1000));
+            if (_log.shouldLog(Log.DEBUG))             _log.debug("No tunnel to build with (allowed=" + allowed + ", wanted="+ wanted.size()+ "), wait for a while");
+            try {
+              _currentlyBuilding.wait(1 * 1000 + _context.random().nextInt(1 * 1000));
+            }
+ catch (            InterruptedException ie) {
+            }
           }
         }
       }
  else {
-        if ((allowed > 0) && (wanted.size() > 0)) {
+        if ((allowed > 0) && (!wanted.isEmpty())) {
           Collections.shuffle(wanted,_context.random());
+          Collections.sort(wanted,new TunnelPoolComparator());
           if (allowed > 2)           allowed=2;
-          for (int i=0; (i < allowed) && (wanted.size() > 0); i++) {
-            TunnelPool pool=(TunnelPool)wanted.remove(0);
+          for (int i=0; (i < allowed) && (!wanted.isEmpty()); i++) {
+            TunnelPool pool=wanted.remove(0);
+            long bef=System.currentTimeMillis();
             PooledTunnelCreatorConfig cfg=pool.configureNewTunnel();
             if (cfg != null) {
               if (cfg.getLength() <= 1 && !pool.needFallback()) {
@@ -42,13 +43,10 @@ synchronized (_currentlyBuilding) {
                 pool.buildComplete(cfg);
                 continue;
               }
+              long pTime=System.currentTimeMillis() - bef;
+              _context.statManager().addRateData("tunnel.buildConfigTime",pTime,0);
               if (_log.shouldLog(Log.DEBUG))               _log.debug("Configuring new tunnel " + i + " for "+ pool+ ": "+ cfg);
-synchronized (_currentlyBuilding) {
-                _currentlyBuilding.add(cfg);
-              }
               buildTunnel(pool,cfg);
-              realBuilt++;
-              _handler.handleInboundReplies();
             }
  else {
               i--;
@@ -65,15 +63,11 @@ synchronized (_currentlyBuilding) {
  catch (        InterruptedException ie) {
         }
       }
-      afterBuildReal=System.currentTimeMillis();
-      pendingRemaining=_handler.handleInboundRequests();
-      afterHandleInbound=System.currentTimeMillis();
-      if (pendingRemaining > 0)       _context.statManager().addRateData("tunnel.pendingRemaining",pendingRemaining,afterHandleInbound - afterBuildReal);
       wanted.clear();
       pools.clear();
     }
- catch (    Exception e) {
-      if (_log.shouldLog(Log.CRIT))       _log.log(Log.CRIT,"B0rked in the tunnel builder",e);
+ catch (    RuntimeException e) {
+      _log.log(Log.CRIT,"B0rked in the tunnel builder",e);
     }
   }
   if (_log.shouldLog(Log.WARN))   _log.warn("Done building");

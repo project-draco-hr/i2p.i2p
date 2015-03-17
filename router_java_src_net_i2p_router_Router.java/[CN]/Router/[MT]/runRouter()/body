@@ -1,22 +1,23 @@
 {
+  if (_isAlive)   throw new IllegalStateException();
+  startupStuff();
   _isAlive=true;
   _started=_context.clock().now();
-  Runtime.getRuntime().addShutdownHook(_shutdownHook);
+  try {
+    Runtime.getRuntime().addShutdownHook(_shutdownHook);
+  }
+ catch (  IllegalStateException ise) {
+  }
   I2PThread.addOOMEventListener(_oomListener);
   _context.keyManager().startup();
-  readConfig();
   setupHandlers();
-  if (ALLOW_DYNAMIC_KEYS) {
-    if ("true".equalsIgnoreCase(_context.getProperty(Router.PROP_HIDDEN,"false")))     killKeys();
-  }
   _context.messageValidator().startup();
   _context.tunnelDispatcher().startup();
   _context.inNetMessagePool().startup();
   startupQueue();
-  SimpleScheduler.getInstance().addPeriodicEvent(new CoalesceStatsEvent(_context),20 * 1000);
+  _context.simpleScheduler().addPeriodicEvent(new CoalesceStatsEvent(_context),COALESCE_TIME);
   _context.jobQueue().addJob(new UpdateRoutingKeyModifierJob(_context));
   warmupCrypto();
-  _sessionKeyPersistenceHelper.startup();
   _context.blocklist().startup();
   long before=System.currentTimeMillis();
   _context.clock().getTimestamper().waitForInitialization();

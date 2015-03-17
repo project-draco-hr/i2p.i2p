@@ -1,5 +1,8 @@
 {
   if (!open)   return true;
+  if (task != null) {
+    task.close(forced);
+  }
 synchronized (lock) {
     if (!forced && sockMgr.listSockets().size() != 0) {
       l.log("There are still active connections!");
@@ -8,7 +11,7 @@ synchronized (lock) {
       }
       return false;
     }
-    l.log("Shutting down server " + toString());
+    l.log("Stopping tunnels for server at " + this.remoteHost + ':'+ this.remotePort);
     try {
       if (i2pss != null)       i2pss.close();
       getTunnel().removeSession(sockMgr.getSession());
@@ -16,10 +19,12 @@ synchronized (lock) {
     }
  catch (    I2PException ex) {
       _log.error("Error destroying the session",ex);
-      System.exit(1);
     }
-    l.log("Server shut down.");
     open=false;
+    if (_usePool && _executor != null) {
+      _executor.setRejectedExecutionHandler(new ThreadPoolExecutor.DiscardPolicy());
+      _executor.shutdownNow();
+    }
     return true;
   }
 }

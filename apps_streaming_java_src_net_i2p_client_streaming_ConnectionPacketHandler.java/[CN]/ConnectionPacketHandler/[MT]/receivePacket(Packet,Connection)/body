@@ -2,7 +2,7 @@
   boolean ok=verifyPacket(packet,con);
   if (!ok) {
     boolean isTooFast=con.getSendStreamId() <= 0;
-    if ((!packet.isFlagSet(Packet.FLAG_RESET)) && (!isTooFast) && (_log.shouldLog(Log.ERROR)))     _log.error("Packet does NOT verify: " + packet + " on "+ con);
+    if ((!packet.isFlagSet(Packet.FLAG_RESET)) && (!isTooFast) && (_log.shouldLog(Log.WARN)))     _log.warn("Packet does NOT verify: " + packet + " on "+ con);
     packet.releasePayload();
     return;
   }
@@ -43,16 +43,18 @@
       choke=true;
     }
   }
-  long ready=con.getInputStream().getHighestReadyBockId();
-  int available=con.getOptions().getInboundBufferSize() - con.getInputStream().getTotalReadySize();
-  int allowedBlocks=available / con.getOptions().getMaxMessageSize();
-  if ((packet.getPayloadSize() > 0) && (packet.getSequenceNum() > ready + allowedBlocks)) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("Inbound buffer exceeded on connection " + con + " ("+ ready+ "/"+ (ready + allowedBlocks)+ "/"+ available+ ": dropping "+ packet);
-    ack(con,packet.getAckThrough(),packet.getNacks(),null,false,choke);
-    con.getOptions().setChoke(61 * 1000);
-    packet.releasePayload();
-    con.ackImmediately();
-    return;
+  if (packet.getPayloadSize() > 0) {
+    long ready=con.getInputStream().getHighestReadyBockId();
+    int available=con.getOptions().getInboundBufferSize() - con.getInputStream().getTotalReadySize();
+    int allowedBlocks=available / con.getOptions().getMaxMessageSize();
+    if (packet.getSequenceNum() > ready + allowedBlocks) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Inbound buffer exceeded on connection " + con + " ("+ ready+ "/"+ (ready + allowedBlocks)+ "/"+ available+ ": dropping "+ packet);
+      ack(con,packet.getAckThrough(),packet.getNacks(),null,false,choke);
+      con.getOptions().setChoke(61 * 1000);
+      packet.releasePayload();
+      con.ackImmediately();
+      return;
+    }
   }
   con.getOptions().setChoke(0);
   _context.statManager().addRateData("stream.con.receiveMessageSize",packet.getPayloadSize(),0);
@@ -66,9 +68,7 @@
     con.getInputStream().notifyActivity();
     isNew=false;
   }
-  if ((packet.getSequenceNum() == 0) && (packet.getPayloadSize() > 0)) {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("seq=0 && size=" + packet.getPayloadSize() + ": isNew? "+ isNew+ " packet: "+ packet+ " con: "+ con);
-  }
+  if (_log.shouldLog(Log.DEBUG))   _log.debug((isNew ? "New" : "Dup or ack-only") + " inbound packet on " + con+ ": "+ packet);
   if (packet.isFlagSet(Packet.FLAG_CLOSE) && packet.isFlagSet(Packet.FLAG_SIGNATURE_INCLUDED))   con.closeReceived();
   boolean fastAck=false;
   boolean ackOnly=false;
@@ -77,7 +77,7 @@
     con.incrementBytesReceived(packet.getPayloadSize());
     if (packet.isFlagSet(Packet.FLAG_DELAY_REQUESTED) && (packet.getOptionalDelay() <= 0)) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Scheduling immediate ack for " + packet);
-      con.setNextSendTime(_context.clock().now() + con.getOptions().getSendAckDelay());
+      con.setNextSendTime(_context.clock().now() + 250);
     }
  else {
       int delay=con.getOptions().getSendAckDelay();
@@ -91,7 +91,7 @@
       _context.statManager().addRateData("stream.con.receiveDuplicateSize",packet.getPayloadSize(),0);
       con.incrementDupMessagesReceived(1);
       if (_log.shouldLog(Log.WARN))       _log.warn("congestion.. dup " + packet);
-      SimpleScheduler.getInstance().addEvent(new AckDup(con),con.getOptions().getSendAckDelay());
+      _context.simpleScheduler().addEvent(new AckDup(con),con.getOptions().getSendAckDelay());
     }
  else {
       if (packet.isFlagSet(Packet.FLAG_SYNCHRONIZE)) {

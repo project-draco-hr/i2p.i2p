@@ -1,18 +1,24 @@
 {
-  String newsURL=_context.getProperty(ConfigUpdateHandler.PROP_NEWS_URL,ConfigUpdateHandler.DEFAULT_NEWS_URL);
+  String newsURL=ConfigUpdateHelper.getNewsURL(_context);
   boolean shouldProxy=Boolean.valueOf(_context.getProperty(ConfigUpdateHandler.PROP_SHOULD_PROXY,ConfigUpdateHandler.DEFAULT_SHOULD_PROXY)).booleanValue();
   String proxyHost=_context.getProperty(ConfigUpdateHandler.PROP_PROXY_HOST,ConfigUpdateHandler.DEFAULT_PROXY_HOST);
-  String port=_context.getProperty(ConfigUpdateHandler.PROP_PROXY_PORT,ConfigUpdateHandler.DEFAULT_PROXY_PORT);
-  File tempFile=new File(TEMP_NEWS_FILE);
-  if (tempFile.exists())   tempFile.delete();
-  int proxyPort=-1;
+  int proxyPort=ConfigUpdateHandler.proxyPort(_context);
+  if (_tempFile.exists())   _tempFile.delete();
   try {
-    proxyPort=Integer.parseInt(port);
     EepGet get=null;
-    if (shouldProxy)     get=new EepGet(_context,true,proxyHost,proxyPort,2,TEMP_NEWS_FILE,newsURL,true,null,_lastModified);
- else     get=new EepGet(_context,false,null,0,0,TEMP_NEWS_FILE,newsURL,true,null,_lastModified);
+    if (shouldProxy)     get=new EepGet(_context,true,proxyHost,proxyPort,0,_tempFile.getAbsolutePath(),newsURL,true,null,_lastModified);
+ else     get=new EepGet(_context,false,null,0,0,_tempFile.getAbsolutePath(),newsURL,true,null,_lastModified);
     get.addStatusListener(this);
-    if (get.fetch())     _lastModified=get.getLastModified();
+    if (get.fetch()) {
+      _lastModified=get.getLastModified();
+      _invalidated=false;
+    }
+ else {
+      _tempFile.delete();
+      get=new EepGet(_context,true,proxyHost,proxyPort,0,_tempFile.getAbsolutePath(),BACKUP_NEWS_URL,true,null,_lastModified);
+      get.addStatusListener(this);
+      if (get.fetch())       _lastModified=get.getLastModified();
+    }
   }
  catch (  Throwable t) {
     _log.error("Error fetching the news",t);

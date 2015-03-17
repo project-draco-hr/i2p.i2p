@@ -1,17 +1,17 @@
 {
   try {
-    List records=_manager._removeAll();
+    Queue<LogRecord> records=_manager.getQueue();
     if (records == null)     return;
-    for (int i=0; i < records.size(); i++) {
-      LogRecord rec=(LogRecord)records.get(i);
-      writeRecord(rec);
-    }
-    if (records.size() > 0) {
+    if (!records.isEmpty()) {
+      LogRecord rec;
+      while ((rec=records.poll()) != null) {
+        writeRecord(rec);
+      }
       try {
-        _currentOut.flush();
+        if (_currentOut != null)         _currentOut.flush();
       }
  catch (      IOException ioe) {
-        System.err.println("Error flushing the records");
+        if (_write && ++_diskFullMessageCount < MAX_DISKFULL_MESSAGES)         System.err.println("Error writing the router log - disk full? " + ioe);
       }
     }
   }
@@ -22,7 +22,7 @@
     if (shouldWait) {
       try {
 synchronized (this) {
-          this.wait(10 * 1000);
+          this.wait(FLUSH_INTERVAL);
         }
       }
  catch (      InterruptedException ie) {

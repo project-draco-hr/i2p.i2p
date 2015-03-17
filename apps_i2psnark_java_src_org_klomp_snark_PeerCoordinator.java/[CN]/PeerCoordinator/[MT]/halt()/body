@@ -1,16 +1,21 @@
 {
   halted=true;
-  List removed=new ArrayList();
+  List<Peer> removed=new ArrayList();
 synchronized (peers) {
     timer.cancel();
     removed.addAll(peers);
     peers.clear();
     peerCount=0;
   }
-  while (removed.size() > 0) {
-    Peer peer=(Peer)removed.remove(0);
+  while (!removed.isEmpty()) {
+    Peer peer=removed.remove(0);
     peer.disconnect();
     removePeerFromPieces(peer);
   }
-  savedRequest=null;
+synchronized (partialPieces) {
+    for (    PartialPiece pp : partialPieces) {
+      pp.release();
+    }
+    partialPieces.clear();
+  }
 }

@@ -1,12 +1,18 @@
 {
   _context=context;
   _log=_context.logManager().getLog(getClass());
-  _initialized=false;
   _peerSelector=createPeerSelector();
   _publishingLeaseSets=new HashMap(8);
-  _lastExploreNew=0;
   _activeRequests=new HashMap(8);
   _enforceNetId=DEFAULT_ENFORCE_NETID;
-  context.statManager().createRateStat("netDb.lookupLeaseSetDeferred","how many lookups are deferred for a single leaseSet lookup?","NetworkDatabase",new long[]{60 * 1000,5 * 60 * 1000});
-  context.statManager().createRateStat("netDb.exploreKeySet","how many keys are queued for exploration?","NetworkDatabase",new long[]{10 * 60 * 1000});
+  _reseedChecker=new ReseedChecker(context);
+  context.statManager().createRateStat("netDb.lookupDeferred","how many lookups are deferred?","NetworkDatabase",new long[]{60 * 60 * 1000});
+  context.statManager().createRateStat("netDb.exploreKeySet","how many keys are queued for exploration?","NetworkDatabase",new long[]{60 * 60 * 1000});
+  context.statManager().createRateStat("netDb.storeRouterInfoSent","How many routerInfo store messages have we sent?","NetworkDatabase",new long[]{60 * 60 * 1000l});
+  context.statManager().createRateStat("netDb.storeLeaseSetSent","How many leaseSet store messages have we sent?","NetworkDatabase",new long[]{60 * 60 * 1000l});
+  context.statManager().createRateStat("netDb.storePeers","How many peers each netDb must be sent to before success?","NetworkDatabase",new long[]{60 * 60 * 1000l});
+  context.statManager().createRateStat("netDb.storeFailedPeers","How many peers each netDb must be sent to before failing completely?","NetworkDatabase",new long[]{60 * 60 * 1000l});
+  context.statManager().createRateStat("netDb.ackTime","How long does it take for a peer to ack a netDb store?","NetworkDatabase",new long[]{60 * 60 * 1000l});
+  context.statManager().createRateStat("netDb.replyTimeout","How long after a netDb send does the timeout expire (when the peer doesn't reply in time)?","NetworkDatabase",new long[]{60 * 60 * 1000l});
+  context.statManager().createRateStat("netDb.republishLeaseSetCount","How often we republish a leaseSet?","NetworkDatabase",new long[]{60 * 60 * 1000l});
 }

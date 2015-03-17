@@ -1,16 +1,10 @@
 {
-  UDPPacket packet=UDPPacket.acquire(_context,false);
+  UDPPacket packet=buildPacketHeader(PEER_RELAY_REQUEST_FLAG_BYTE);
   byte data[]=packet.getPacket().getData();
-  Arrays.fill(data,0,data.length,(byte)0x0);
-  int off=UDPPacket.MAC_SIZE + UDPPacket.IV_SIZE;
+  int off=HEADER_SIZE;
   byte ourIP[]=getOurExplicitIP();
   int ourPort=getOurExplicitPort();
-  data[off]=PEER_RELAY_REQUEST_FLAG_BYTE;
-  off++;
-  long now=_context.clock().now() / 1000;
-  DataHelper.toLong(data,off,4,now);
   if (_log.shouldLog(Log.INFO))   _log.info("Sending intro relay request to " + introHost + ":"+ introPort);
-  off+=4;
   DataHelper.toLong(data,off,4,introTag);
   off+=4;
   if (ourIP != null) {
@@ -27,7 +21,6 @@
   off+=2;
   DataHelper.toLong(data,off,1,0);
   off++;
-  off+=0;
   System.arraycopy(ourIntroKey.getData(),0,data,off,SessionKey.KEYSIZE_BYTES);
   off+=SessionKey.KEYSIZE_BYTES;
   if (_log.shouldLog(Log.DEBUG))   _log.debug("wrote alice intro key: " + Base64.encode(data,off - SessionKey.KEYSIZE_BYTES,SessionKey.KEYSIZE_BYTES) + " with nonce "+ introNonce+ " size="+ (off + 4 + (16 - (off + 4) % 16))+ " and data: "+ Base64.encode(data,0,off));
@@ -37,6 +30,6 @@
   packet.getPacket().setLength(off);
   if (encrypt)   authenticate(packet,new SessionKey(introKey),new SessionKey(introKey));
   setTo(packet,introHost,introPort);
-  packet.setMessageType(46);
+  packet.setMessageType(TYPE_RREQ);
   return packet;
 }

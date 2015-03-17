@@ -1,21 +1,20 @@
 {
   InboundMessageState message=null;
-  ByteArray buf=_cache.acquire();
+  ByteArray buf=new ByteArray(new byte[I2NPMessage.MAX_SIZE]);
   while (_alive) {
     int expired=0;
     long expiredLifetime=0;
-    int remaining=0;
     try {
-synchronized (_completeMessages) {
-        while (message == null) {
-          if (_completeMessages.size() > 0)           message=(InboundMessageState)_completeMessages.remove(_completeMessages.size() - 1);
- else           _completeMessages.wait(5000);
-          if ((message != null) && (message.isExpired())) {
-            expiredLifetime+=message.getLifetime();
-            message=null;
-            expired++;
-          }
-          remaining=_completeMessages.size();
+      while (message == null) {
+        message=_completeMessages.take();
+        if ((message != null) && (message.getMessageId() == POISON_IMS)) {
+          message=null;
+          break;
+        }
+        if ((message != null) && (message.isExpired())) {
+          expiredLifetime+=message.getLifetime();
+          message=null;
+          expired++;
         }
       }
     }
@@ -23,14 +22,9 @@ synchronized (_completeMessages) {
     }
     if (expired > 0)     _context.statManager().addRateData("udp.inboundExpired",expired,expiredLifetime);
     if (message != null) {
-      long before=System.currentTimeMillis();
-      if (remaining > 0)       _context.statManager().addRateData("udp.inboundRemaining",remaining,0);
       int size=message.getCompleteSize();
-      if (_log.shouldLog(Log.INFO))       _log.info("Full message received (" + message.getMessageId() + ") after "+ message.getLifetime());
-      long afterRead=-1;
       try {
         I2NPMessage msg=readMessage(buf,message,handler);
-        afterRead=System.currentTimeMillis();
         if (msg != null)         _transport.messageReceived(msg,null,message.getFrom(),message.getLifetime(),size);
       }
  catch (      RuntimeException re) {
@@ -38,10 +32,6 @@ synchronized (_completeMessages) {
         continue;
       }
       message=null;
-      long after=System.currentTimeMillis();
-      if (afterRead - before > 100)       _context.statManager().addRateData("udp.inboundReadTime",afterRead - before,remaining);
-      if (after - afterRead > 100)       _context.statManager().addRateData("udp.inboundReceiveProcessTime",after - afterRead,remaining);
     }
   }
-  _cache.release(buf,false);
 }

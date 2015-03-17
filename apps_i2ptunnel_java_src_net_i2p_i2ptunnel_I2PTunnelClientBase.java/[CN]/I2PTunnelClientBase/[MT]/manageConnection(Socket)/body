@@ -1,12 +1,23 @@
 {
   if (s == null)   return;
-  if (_numConnectionBuilders <= 0) {
-    new I2PThread(new BlockingRunner(s),"Clinet run").start();
+  ThreadPoolExecutor tpe=_executor;
+  if (tpe == null) {
+    _log.error("No executor for socket!");
+    try {
+      s.close();
+    }
+ catch (    IOException ioe) {
+    }
     return;
   }
-  if (_maxWaitTime > 0)   SimpleScheduler.getInstance().addEvent(new CloseEvent(s),_maxWaitTime);
-synchronized (_waitingSockets) {
-    _waitingSockets.add(s);
-    _waitingSockets.notifyAll();
+  try {
+    tpe.execute(new BlockingRunner(s));
+  }
+ catch (  RejectedExecutionException ree) {
+    try {
+      s.close();
+    }
+ catch (    IOException ioe) {
+    }
   }
 }

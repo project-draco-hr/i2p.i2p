@@ -2,27 +2,18 @@
   long now=now();
   long time=now - _lastStatsUpdated;
   if (time >= 1000) {
-    long totS=_totalAllocatedOutboundBytes;
-    long totR=_totalAllocatedInboundBytes;
+    long totS=_totalAllocatedOutboundBytes.get();
+    long totR=_totalAllocatedInboundBytes.get();
     long sent=totS - _lastTotalSent;
     long recv=totR - _lastTotalReceived;
     _lastTotalSent=totS;
     _lastTotalReceived=totR;
     _lastStatsUpdated=now;
-    if (_sendBps <= 0)     _sendBps=((float)sent * 1000f) / (float)time;
- else     _sendBps=(0.9f) * _sendBps + (0.1f) * ((float)sent * 1000f) / (float)time;
-    if (_recvBps <= 0)     _recvBps=((float)recv * 1000f) / (float)time;
- else     _recvBps=(0.9f) * _recvBps + (0.1f) * ((float)recv * 1000) / (float)time;
-    if (_log.shouldLog(Log.WARN)) {
-      _context.statManager().getStatLog().addData("bw","bw.sendBps1s",(long)_sendBps,sent);
-      _context.statManager().getStatLog().addData("bw","bw.recvBps1s",(long)_recvBps,recv);
-    }
-    _sendBps15s=(0.955f) * _sendBps15s + (0.045f) * ((float)sent * 1000f) / (float)time;
-    _recvBps15s=(0.955f) * _recvBps15s + (0.045f) * ((float)recv * 1000) / (float)time;
-    if (_log.shouldLog(Log.WARN)) {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("BW15: time = " + time + " sent: "+ _sendBps+ " recv: "+ _recvBps);
-      _context.statManager().getStatLog().addData("bw","bw.sendBps15s",(long)_sendBps15s,sent);
-      _context.statManager().getStatLog().addData("bw","bw.recvBps15s",(long)_recvBps15s,recv);
-    }
+    if (_sendBps <= 0)     _sendBps=(sent * 1000f) / time;
+ else     _sendBps=(0.9f) * _sendBps + (0.1f) * (sent * 1000f) / time;
+    if (_recvBps <= 0)     _recvBps=(recv * 1000f) / time;
+ else     _recvBps=(0.9f) * _recvBps + (0.1f) * ((float)recv * 1000) / time;
+    _sendBps15s=(0.955f) * _sendBps15s + (0.045f) * (sent * 1000f) / time;
+    _recvBps15s=(0.955f) * _recvBps15s + (0.045f) * ((float)recv * 1000) / time;
   }
 }

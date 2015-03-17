@@ -1,49 +1,48 @@
 {
+  int loopCount=0;
   long lastFailsafeIteration=System.currentTimeMillis();
-  List bufList=new ArrayList(16);
   while (_alive && _selector.isOpen()) {
     try {
-      runDelayedEvents(bufList);
-      int count=0;
+      loopCount++;
+      runDelayedEvents();
       try {
-        count=_selector.select(200);
-      }
- catch (      IOException ioe) {
-        if (_log.shouldLog(Log.WARN))         _log.warn("Error selecting",ioe);
-      }
-      if (count <= 0)       continue;
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("select returned " + count);
-      Set selected=null;
-      try {
-        selected=_selector.selectedKeys();
+        int count=_selector.select(SELECTOR_LOOP_DELAY);
+        if (count > 0) {
+          Set<SelectionKey> selected=_selector.selectedKeys();
+          processKeys(selected);
+          selected.clear();
+        }
       }
  catch (      ClosedSelectorException cse) {
         continue;
       }
-      processKeys(selected);
-      selected.clear();
+catch (      IOException ioe) {
+        if (_log.shouldLog(Log.WARN))         _log.warn("Error selecting",ioe);
+      }
       if (lastFailsafeIteration + FAILSAFE_ITERATION_FREQ < System.currentTimeMillis()) {
         lastFailsafeIteration=System.currentTimeMillis();
         try {
-          Set all=_selector.keys();
+          Set<SelectionKey> all=_selector.keys();
+          _context.statManager().addRateData("ntcp.pumperKeySetSize",all.size());
+          _context.statManager().addRateData("ntcp.pumperLoopsPerSecond",loopCount / (FAILSAFE_ITERATION_FREQ / 1000));
+          loopCount=0;
           int failsafeWrites=0;
           int failsafeCloses=0;
           int failsafeInvalid=0;
           if (_transport.haveCapacity())           _expireIdleWriteTime=Math.min(_expireIdleWriteTime + 1000,MAX_EXPIRE_IDLE_TIME);
  else           _expireIdleWriteTime=Math.max(_expireIdleWriteTime - 3000,MIN_EXPIRE_IDLE_TIME);
-          for (Iterator iter=all.iterator(); iter.hasNext(); ) {
+          for (          SelectionKey key : all) {
             try {
-              SelectionKey key=(SelectionKey)iter.next();
               Object att=key.attachment();
               if (!(att instanceof NTCPConnection))               continue;
               NTCPConnection con=(NTCPConnection)att;
               if ((!key.isValid()) && (!((SocketChannel)key.channel()).isConnectionPending()) && con.getTimeSinceCreated() > 2 * NTCPTransport.ESTABLISH_TIMEOUT) {
-                if (_log.shouldLog(Log.WARN))                 _log.warn("Invalid key " + con);
+                if (_log.shouldLog(Log.INFO))                 _log.info("Removing invalid key for " + con);
                 con.close();
                 failsafeInvalid++;
                 continue;
               }
-              if ((con.getWriteBufCount() > 0) && ((key.interestOps() & SelectionKey.OP_WRITE) == 0)) {
+              if ((!con.isWriteBufEmpty()) && ((key.interestOps() & SelectionKey.OP_WRITE) == 0)) {
                 key.interestOps(SelectionKey.OP_WRITE | key.interestOps());
                 failsafeWrites++;
               }
@@ -55,25 +54,29 @@
  catch (            CancelledKeyException cke) {
             }
           }
-          if (failsafeWrites > 0)           _context.statManager().addRateData("ntcp.failsafeWrites",failsafeWrites,0);
-          if (failsafeCloses > 0)           _context.statManager().addRateData("ntcp.failsafeCloses",failsafeCloses,0);
-          if (failsafeInvalid > 0)           _context.statManager().addRateData("ntcp.failsafeInvalid",failsafeInvalid,0);
+          if (failsafeWrites > 0)           _context.statManager().addRateData("ntcp.failsafeWrites",failsafeWrites);
+          if (failsafeCloses > 0)           _context.statManager().addRateData("ntcp.failsafeCloses",failsafeCloses);
+          if (failsafeInvalid > 0)           _context.statManager().addRateData("ntcp.failsafeInvalid",failsafeInvalid);
         }
  catch (        ClosedSelectorException cse) {
           continue;
         }
       }
+      boolean newUseDirect=_context.getBooleanProperty(PROP_DIRECT);
+      if (_useDirect != newUseDirect) {
+        _useDirect=newUseDirect;
+        _bufCache.clear();
+      }
     }
  catch (    RuntimeException re) {
-      _log.log(Log.CRIT,"Error in the event pumper",re);
+      _log.error("Error in the event pumper",re);
     }
   }
   try {
     if (_selector.isOpen()) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Closing down the event pumper with selection keys remaining");
-      Set keys=_selector.keys();
-      for (Iterator iter=keys.iterator(); iter.hasNext(); ) {
-        SelectionKey key=(SelectionKey)iter.next();
+      Set<SelectionKey> keys=_selector.keys();
+      for (      SelectionKey key : keys) {
         try {
           Object att=key.attachment();
           if (att instanceof ServerSocketChannel) {
@@ -100,16 +103,9 @@
  catch (  Exception e) {
     _log.error("Error closing keys on pumper shutdown",e);
   }
-synchronized (_wantsConRegister) {
-    _wantsConRegister.clear();
-  }
-synchronized (_wantsRead) {
-    _wantsRead.clear();
-  }
-synchronized (_wantsRegister) {
-    _wantsRegister.clear();
-  }
-synchronized (_wantsWrite) {
-    _wantsWrite.clear();
-  }
+  _wantsConRegister.clear();
+  _wantsRead.clear();
+  _wantsRegister.clear();
+  _wantsWrite.clear();
+  _bufCache.clear();
 }

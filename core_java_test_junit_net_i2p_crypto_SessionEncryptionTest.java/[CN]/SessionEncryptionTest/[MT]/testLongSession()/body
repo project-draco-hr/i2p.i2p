@@ -1,0 +1,31 @@
+{
+  Object keys[]=KeyGenerator.getInstance().generatePKIKeypair();
+  PublicKey pubKey=(PublicKey)keys[0];
+  PrivateKey privKey=(PrivateKey)keys[1];
+  SessionKey curKey=_context.sessionKeyManager().createSession(pubKey);
+  for (int i=0; i < 1000; i++) {
+    Set tags=null;
+    SessionKey nextKey=null;
+    curKey=_context.sessionKeyManager().getCurrentKey(pubKey);
+    SessionTag curTag=_context.sessionKeyManager().consumeNextAvailableTag(pubKey,curKey);
+    int availTags=_context.sessionKeyManager().getAvailableTags(pubKey,curKey);
+    if ((availTags < 1)) {
+      tags=generateNewTags(50);
+    }
+    if (i % 50 == 0)     nextKey=KeyGenerator.getInstance().generateSessionKey();
+    byte[] msg=("msg " + i).getBytes();
+    byte emsg[]=_context.elGamalAESEngine().encrypt(msg,pubKey,curKey,tags,curTag,nextKey,64);
+    byte dmsg[]=_context.elGamalAESEngine().decrypt(emsg,privKey);
+    assertTrue(DataHelper.eq(dmsg,msg));
+    if ((tags != null) && (tags.size() > 0)) {
+      if (nextKey == null) {
+        TagSetHandle tsh=_context.sessionKeyManager().tagsDelivered(pubKey,curKey,tags);
+        _context.sessionKeyManager().tagsAcked(pubKey,curKey,tsh);
+      }
+ else {
+        TagSetHandle tsh=_context.sessionKeyManager().tagsDelivered(pubKey,nextKey,tags);
+        _context.sessionKeyManager().tagsAcked(pubKey,nextKey,tsh);
+      }
+    }
+  }
+}

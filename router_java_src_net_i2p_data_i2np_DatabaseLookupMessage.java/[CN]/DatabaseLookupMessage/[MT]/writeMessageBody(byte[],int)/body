@@ -14,16 +14,17 @@
  else {
     out[curIndex++]=DataHelper.BOOLEAN_FALSE;
   }
-  if ((_dontIncludePeers == null) || (_dontIncludePeers.size() <= 0)) {
+  if ((_dontIncludePeers == null) || (_dontIncludePeers.isEmpty())) {
     out[curIndex++]=0x0;
     out[curIndex++]=0x0;
   }
  else {
-    byte len[]=DataHelper.toLong(2,_dontIncludePeers.size());
+    int size=_dontIncludePeers.size();
+    if (size > MAX_NUM_PEERS)     throw new I2NPMessageException("Too many peers: " + size);
+    byte len[]=DataHelper.toLong(2,size);
     out[curIndex++]=len[0];
     out[curIndex++]=len[1];
-    for (Iterator iter=_dontIncludePeers.iterator(); iter.hasNext(); ) {
-      Hash peer=(Hash)iter.next();
+    for (    Hash peer : _dontIncludePeers) {
       System.arraycopy(peer.getData(),0,out,curIndex,Hash.HASH_LENGTH);
       curIndex+=Hash.HASH_LENGTH;
     }

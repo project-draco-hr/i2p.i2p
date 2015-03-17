@@ -3,15 +3,23 @@
     dos.writeInt(0);
     return;
   }
+  if (data == null && dataLoader != null) {
+    data=dataLoader.loadData(piece,begin,length);
+    if (data == null)     return;
+  }
   int datalen=1;
   if (type == HAVE || type == REQUEST || type == PIECE || type == CANCEL)   datalen+=4;
   if (type == REQUEST || type == PIECE || type == CANCEL)   datalen+=4;
   if (type == REQUEST || type == CANCEL)   datalen+=4;
-  if (type == BITFIELD || type == PIECE)   datalen+=len;
+  if (type == EXTENSION)   datalen+=1;
+  if (type == PORT)   datalen+=2;
+  if (type == BITFIELD || type == PIECE || type == EXTENSION)   datalen+=len;
   dos.writeInt(datalen);
   dos.writeByte(type & 0xFF);
   if (type == HAVE || type == REQUEST || type == PIECE || type == CANCEL)   dos.writeInt(piece);
   if (type == REQUEST || type == PIECE || type == CANCEL)   dos.writeInt(begin);
   if (type == REQUEST || type == CANCEL)   dos.writeInt(length);
-  if (type == BITFIELD || type == PIECE)   dos.write(data,off,len);
+  if (type == EXTENSION)   dos.writeByte((byte)piece & 0xff);
+  if (type == PORT)   dos.writeShort(piece & 0xffff);
+  if (type == BITFIELD || type == PIECE || type == EXTENSION)   dos.write(data,off,len);
 }

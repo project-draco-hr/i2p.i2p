@@ -2,48 +2,35 @@
   if (slistener == null)   slistener=this;
   completeListener=complistener;
   _util=util;
+  _log=util.getContext().logManager().getLog(Snark.class);
   _peerCoordinatorSet=peerCoordinatorSet;
   acceptor=connectionAcceptor;
   this.torrent=torrent;
   this.rootDataDir=rootDir;
   stopped=true;
   activity="Network setup";
-  byte snark=(((3 + 7 + 10) * (1000 - 8)) / 992) - 17;
-  id=new byte[20];
-  Random random=new Random();
-  int i;
-  for (i=0; i < 9; i++)   id[i]=0;
-  id[i++]=snark;
-  id[i++]=snark;
-  id[i++]=snark;
-  while (i < 20)   id[i++]=(byte)random.nextInt(256);
-  debug("My peer id: " + PeerID.idencode(id),Snark.INFO);
-  int port;
-  IOException lastException=null;
+  id=generateID();
+  if (_log.shouldLog(Log.INFO))   _log.info("My peer id: " + PeerID.idencode(id));
   meta=null;
   File f=null;
   InputStream in=null;
+  byte[] x_infoHash=null;
   try {
     f=new File(torrent);
     if (f.exists())     in=new FileInputStream(f);
  else {
-      activity="Getting torrent";
-      File torrentFile=_util.get(torrent,3);
-      if (torrentFile == null) {
-        fatal("Unable to fetch " + torrent);
-        if (false)         return;
-      }
- else {
-        torrentFile.deleteOnExit();
-        in=new FileInputStream(torrentFile);
-      }
+      throw new IOException("not found");
     }
-    meta=new MetaInfo(new BDecoder(in));
+    meta=new MetaInfo(in);
+    x_infoHash=meta.getInfoHash();
   }
  catch (  IOException ioe) {
     if (f != null && f.exists())     if (ip == null)     fatal("'" + torrent + "' exists,"+ " but is not a valid torrent metainfo file."+ System.getProperty("line.separator"),ioe);
  else     fatal("I2PSnark does not support creating and tracking a torrent at the moment");
  else     fatal("Cannot open '" + torrent + "'",ioe);
+  }
+catch (  OutOfMemoryError oom) {
+    fatal("ERROR - Out of memory, cannot create torrent " + torrent + ": "+ oom.getMessage());
   }
  finally {
     if (in != null)     try {
@@ -52,7 +39,8 @@
  catch (    IOException ioe) {
     }
   }
-  debug(meta.toString(),INFO);
+  infoHash=x_infoHash;
+  if (_log.shouldLog(Log.INFO))   _log.info(meta.toString());
   if (storage == null) {
     try {
       activity="Checking storage";
@@ -71,7 +59,7 @@
  catch (      IOException ioee) {
         ioee.printStackTrace();
       }
-      fatal("Could not create storage",ioe);
+      fatal("Could not check or create storage",ioe);
     }
   }
   if (start)   startTorrent();

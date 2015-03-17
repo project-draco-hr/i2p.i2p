@@ -1,13 +1,13 @@
 {
-  if (_settings.getDestination() != null) {
-    if (!_context.clientManager().isLocal(_settings.getDestination()))     return 0;
+  if (!isAlive()) {
+    return 0;
   }
-  int wanted=getSettings().getBackupQuantity() + getSettings().getQuantity();
+  int wanted=getAdjustedTotalQuantity();
   boolean allowZeroHop=((getSettings().getLength() + getSettings().getLengthVariance()) <= 0);
   int avg=0;
   RateStat rs=_context.statManager().getRate(buildRateName());
   if (rs == null) {
-    _context.statManager().createRateStat(buildRateName(),"Tunnel Build Frequency","Tunnels",new long[]{TUNNEL_LIFETIME});
+    _context.statManager().createRequiredRateStat(buildRateName(),"Tunnel Build Frequency","Tunnels",new long[]{TUNNEL_LIFETIME});
     rs=_context.statManager().getRate(buildRateName());
   }
   if (rs != null) {
@@ -26,7 +26,7 @@
 synchronized (_tunnels) {
       expireTime=new int[_tunnels.size()];
       for (int i=0; i < _tunnels.size(); i++) {
-        TunnelInfo info=(TunnelInfo)_tunnels.get(i);
+        TunnelInfo info=_tunnels.get(i);
         if (allowZeroHop || (info.getLength() > 1)) {
           int timeToExpire=(int)(info.getExpiration() - now);
           if (timeToExpire > 0 && timeToExpire < avg) {
@@ -80,9 +80,8 @@ synchronized (_inProgress) {
   int expireLater=0;
   int fallback=0;
 synchronized (_tunnels) {
-    boolean enough=_tunnels.size() > wanted;
     for (int i=0; i < _tunnels.size(); i++) {
-      TunnelInfo info=(TunnelInfo)_tunnels.get(i);
+      TunnelInfo info=_tunnels.get(i);
       if (allowZeroHop || (info.getLength() > 1)) {
         long timeToExpire=info.getExpiration() - expireAfter;
         if (timeToExpire <= 0) {
@@ -114,8 +113,8 @@ synchronized (_tunnels) {
   int inProgress=0;
 synchronized (_inProgress) {
     inProgress=_inProgress.size();
-    for (int i=0; i < _inProgress.size(); i++) {
-      PooledTunnelCreatorConfig cfg=(PooledTunnelCreatorConfig)_inProgress.get(i);
+    for (int i=0; i < inProgress; i++) {
+      PooledTunnelCreatorConfig cfg=_inProgress.get(i);
       if (cfg.getLength() <= 1)       fallback++;
     }
   }

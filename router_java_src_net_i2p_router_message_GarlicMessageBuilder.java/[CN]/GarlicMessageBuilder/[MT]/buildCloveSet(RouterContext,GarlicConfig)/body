@@ -13,14 +13,12 @@
       for (int i=0; i < config.getCloveCount(); i++) {
         GarlicConfig c=config.getClove(i);
         if (c instanceof PayloadGarlicConfig) {
-          log.debug("Subclove IS a payload garlic clove");
           cloves[i]=buildClove(ctx,(PayloadGarlicConfig)c);
         }
  else {
           log.debug("Subclove IS NOT a payload garlic clove");
           cloves[i]=buildClove(ctx,c);
         }
-        if (cloves[i] == null)         throw new DataFormatException("Unable to build clove");
       }
       int len=1;
       for (int i=0; i < cloves.length; i++)       len+=cloves[i].length;
@@ -28,16 +26,17 @@
       DataHelper.writeLong(baos,1,cloves.length);
       for (int i=0; i < cloves.length; i++)       baos.write(cloves[i]);
     }
-    if (baos == null)     new ByteArrayOutputStream(16);
     config.getCertificate().writeBytes(baos);
     DataHelper.writeLong(baos,4,config.getId());
     DataHelper.writeLong(baos,DataHelper.DATE_LENGTH,config.getExpiration());
   }
  catch (  IOException ioe) {
     log.error("Error building the clove set",ioe);
+    throw new IllegalArgumentException("Error building the clove set",ioe);
   }
 catch (  DataFormatException dfe) {
     log.error("Error building the clove set",dfe);
+    throw new IllegalArgumentException("Error building the clove set",dfe);
   }
   return baos.toByteArray();
 }

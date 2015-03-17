@@ -1,0 +1,51 @@
+{
+  buf.append("<table>\n" + "<tr><th>Job</th><th>Runs</th>" + "<th>Time</th><th><i>Avg</i></th><th><i>Max</i></th><th><i>Min</i></th>"+ "<th>Pending</th><th><i>Avg</i></th><th><i>Max</i></th><th><i>Min</i></th></tr>\n");
+  long totRuns=0;
+  long totExecTime=0;
+  long avgExecTime=0;
+  long maxExecTime=-1;
+  long minExecTime=-1;
+  long totPendingTime=0;
+  long avgPendingTime=0;
+  long maxPendingTime=-1;
+  long minPendingTime=-1;
+  List<JobStats> tstats=new ArrayList(_context.jobQueue().getJobStats());
+  Collections.sort(tstats,new JobStatsComparator());
+  for (  JobStats stats : tstats) {
+    buf.append("<tr>");
+    buf.append("<td><b>").append(stats.getName()).append("</b></td>");
+    buf.append("<td align=\"right\">").append(stats.getRuns()).append("</td>");
+    buf.append("<td align=\"right\">").append(DataHelper.formatDuration2(stats.getTotalTime())).append("</td>");
+    buf.append("<td align=\"right\">").append(DataHelper.formatDuration2(stats.getAvgTime())).append("</td>");
+    buf.append("<td align=\"right\">").append(DataHelper.formatDuration2(stats.getMaxTime())).append("</td>");
+    buf.append("<td align=\"right\">").append(DataHelper.formatDuration2(stats.getMinTime())).append("</td>");
+    buf.append("<td align=\"right\">").append(DataHelper.formatDuration2(stats.getTotalPendingTime())).append("</td>");
+    buf.append("<td align=\"right\">").append(DataHelper.formatDuration2(stats.getAvgPendingTime())).append("</td>");
+    buf.append("<td align=\"right\">").append(DataHelper.formatDuration2(stats.getMaxPendingTime())).append("</td>");
+    buf.append("<td align=\"right\">").append(DataHelper.formatDuration2(stats.getMinPendingTime())).append("</td>");
+    buf.append("</tr>\n");
+    totRuns+=stats.getRuns();
+    totExecTime+=stats.getTotalTime();
+    if (stats.getMaxTime() > maxExecTime)     maxExecTime=stats.getMaxTime();
+    if ((minExecTime < 0) || (minExecTime > stats.getMinTime()))     minExecTime=stats.getMinTime();
+    totPendingTime+=stats.getTotalPendingTime();
+    if (stats.getMaxPendingTime() > maxPendingTime)     maxPendingTime=stats.getMaxPendingTime();
+    if ((minPendingTime < 0) || (minPendingTime > stats.getMinPendingTime()))     minPendingTime=stats.getMinPendingTime();
+  }
+  if (totRuns != 0) {
+    if (totExecTime != 0)     avgExecTime=totExecTime / totRuns;
+    if (totPendingTime != 0)     avgPendingTime=totPendingTime / totRuns;
+  }
+  buf.append("<tr class=\"tablefooter\">");
+  buf.append("<td><b>").append("SUMMARY").append("</b></td>");
+  buf.append("<td align=\"right\">").append(totRuns).append("</td>");
+  buf.append("<td align=\"right\">").append(DataHelper.formatDuration2(totExecTime)).append("</td>");
+  buf.append("<td align=\"right\">").append(DataHelper.formatDuration2(avgExecTime)).append("</td>");
+  buf.append("<td align=\"right\">").append(DataHelper.formatDuration2(maxExecTime)).append("</td>");
+  buf.append("<td align=\"right\">").append(DataHelper.formatDuration2(minExecTime)).append("</td>");
+  buf.append("<td align=\"right\">").append(DataHelper.formatDuration2(totPendingTime)).append("</td>");
+  buf.append("<td align=\"right\">").append(DataHelper.formatDuration2(avgPendingTime)).append("</td>");
+  buf.append("<td align=\"right\">").append(DataHelper.formatDuration2(maxPendingTime)).append("</td>");
+  buf.append("<td align=\"right\">").append(DataHelper.formatDuration2(minPendingTime)).append("</td>");
+  buf.append("</tr></table></div>\n");
+}

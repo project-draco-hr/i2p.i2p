@@ -1,0 +1,32 @@
+{
+  if (_facade.isInitialized()) {
+    if (_routers == null) {
+      _routers=_facade.getFloodfillPeers();
+      int ff=_routers.size();
+      Set<Hash> all=_facade.getAllRouters();
+      all.removeAll(_routers);
+      int non=all.size();
+      _routers.addAll(all);
+      if (_log.shouldLog(Log.INFO))       _log.info("To check: " + ff + " floodfills and "+ non+ " non-floodfills");
+    }
+    if (_routers.isEmpty()) {
+      if (_log.shouldLog(Log.INFO))       _log.info("Finished");
+      return;
+    }
+    long expire=getContext().clock().now() - EXPIRE;
+    for (Iterator<Hash> iter=_routers.iterator(); iter.hasNext(); ) {
+      Hash h=iter.next();
+      iter.remove();
+      if (h.equals(getContext().routerHash()))       continue;
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Checking " + h);
+      RouterInfo ri=_facade.lookupRouterInfoLocally(h);
+      if (ri == null)       continue;
+      if (ri.getPublished() < expire) {
+        if (_log.shouldLog(Log.INFO))         _log.info("Refreshing " + h);
+        _facade.search(h,null,null,15 * 1000,false);
+        break;
+      }
+    }
+  }
+  requeue(RERUN_DELAY_MS);
+}

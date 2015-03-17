@@ -1,14 +1,8 @@
 {
-  UDPPacket packet=UDPPacket.acquire(_context,false);
+  UDPPacket packet=buildPacketHeader(PEER_TEST_FLAG_BYTE);
   byte data[]=packet.getPacket().getData();
-  Arrays.fill(data,0,data.length,(byte)0x0);
-  int off=UDPPacket.MAC_SIZE + UDPPacket.IV_SIZE;
-  data[off]=PEER_TEST_FLAG_BYTE;
-  off++;
-  long now=_context.clock().now() / 1000;
-  DataHelper.toLong(data,off,4,now);
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Sending peer test " + nonce + " to Bob with time = "+ new Date(now * 1000));
-  off+=4;
+  int off=HEADER_SIZE;
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Sending peer test " + nonce + " to Bob");
   DataHelper.toLong(data,off,4,nonce);
   off+=4;
   DataHelper.toLong(data,off,1,0);
@@ -21,6 +15,6 @@
   packet.getPacket().setLength(off);
   authenticate(packet,toCipherKey,toMACKey);
   setTo(packet,toIP,toPort);
-  packet.setMessageType(50);
+  packet.setMessageType(TYPE_TFA);
   return packet;
 }

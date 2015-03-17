@@ -1,7 +1,14 @@
 {
   _alive=false;
-synchronized (_peersToACK) {
-    _peersToACK.clear();
-    _peersToACK.notifyAll();
+  PeerState poison=new PeerState(_context,_transport,null,0,null,false);
+  poison.setTheyRelayToUsAs(POISON_PS);
+  _peersToACK.offer(poison);
+  for (int i=1; i <= 5 && !_peersToACK.isEmpty(); i++) {
+    try {
+      Thread.sleep(i * 50);
+    }
+ catch (    InterruptedException ie) {
+    }
   }
+  _peersToACK.clear();
 }

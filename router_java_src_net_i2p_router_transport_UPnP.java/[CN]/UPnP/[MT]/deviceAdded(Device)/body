@@ -1,27 +1,23 @@
 {
 synchronized (lock) {
     if (isDisabled) {
-      _log.warn("Plugin has been disabled previously, ignoring new device.");
+      if (_log.shouldLog(Log.WARN))       _log.warn("Plugin has been disabled previously, ignoring new device.");
       return;
     }
   }
-  if (!ROUTER_DEVICE.equals(dev.getDeviceType()) || !dev.isRootDevice())   return;
- else   if (isNATPresent()) {
-    _log.error("We got a second IGD on the network! the plugin doesn't handle that: let's disable it.");
-    isDisabled=true;
-synchronized (lock) {
-      _router=null;
-      _service=null;
-    }
-    stop();
+  if (!ROUTER_DEVICE.equals(dev.getDeviceType()) || !dev.isRootDevice()) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("UP&P non-IGD device found, ignoring : " + dev.getFriendlyName());
     return;
   }
-  _log.warn("UP&P IGD found : " + dev.getFriendlyName());
+ else   if (isNATPresent()) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("UP&P ignoring additional IGD device found: " + dev.getFriendlyName() + " UDN: "+ dev.getUDN());
+    return;
+  }
+  if (_log.shouldLog(Log.WARN))   _log.warn("UP&P IGD found : " + dev.getFriendlyName() + " UDN: "+ dev.getUDN()+ " lease time: "+ dev.getLeaseTime());
 synchronized (lock) {
     _router=dev;
   }
   discoverService();
-  stop();
 synchronized (lock) {
     if (_service == null) {
       _log.error("The IGD device we got isn't suiting our needs, let's disable the plugin");
@@ -29,6 +25,7 @@ synchronized (lock) {
       _router=null;
       return;
     }
+    subscribe(_service);
   }
   registerPortMappings();
 }

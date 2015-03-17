@@ -1,0 +1,17 @@
+{
+  ByteBuffer inBuf=ByteBuffer.allocateDirect(SAMRawSession.RAW_SIZE_MAX + 1024);
+  while (!Thread.interrupted()) {
+    inBuf.clear();
+    try {
+      server.receive(inBuf);
+    }
+ catch (    IOException e) {
+      break;
+    }
+    inBuf.flip();
+    ByteBuffer outBuf=ByteBuffer.wrap(new byte[inBuf.remaining()]);
+    outBuf.put(inBuf);
+    outBuf.flip();
+    new I2PAppThread(new MessageDispatcher(outBuf.array()),"MessageDispatcher").start();
+  }
+}

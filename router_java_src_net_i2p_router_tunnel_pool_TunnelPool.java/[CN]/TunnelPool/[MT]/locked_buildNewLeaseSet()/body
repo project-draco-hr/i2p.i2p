@@ -1,15 +1,24 @@
 {
   if (!_alive)   return null;
-  int wanted=_settings.getQuantity();
+  int wanted=Math.min(_settings.getQuantity(),LeaseSet.MAX_LEASES);
   if (_tunnels.size() < wanted) {
     if (_log.shouldLog(Log.WARN))     _log.warn(toString() + ": Not enough tunnels (" + _tunnels.size()+ ", wanted "+ wanted+ ")");
-    if (_tunnels.size() <= 0)     return null;
+    if (_tunnels.isEmpty())     return null;
   }
   long expireAfter=_context.clock().now();
-  TreeSet leases=new TreeSet(new LeaseComparator());
+  TunnelInfo zeroHopTunnel=null;
+  Lease zeroHopLease=null;
+  TreeSet<Lease> leases=new TreeSet(new LeaseComparator());
   for (int i=0; i < _tunnels.size(); i++) {
-    TunnelInfo tunnel=(TunnelInfo)_tunnels.get(i);
+    TunnelInfo tunnel=_tunnels.get(i);
     if (tunnel.getExpiration() <= expireAfter)     continue;
+    if (tunnel.getLength() <= 1) {
+      if (zeroHopTunnel != null) {
+        if (zeroHopTunnel.getExpiration() > tunnel.getExpiration())         continue;
+        if (zeroHopLease != null)         leases.remove(zeroHopLease);
+      }
+      zeroHopTunnel=tunnel;
+    }
     TunnelId inId=tunnel.getReceiveTunnelId(0);
     Hash gw=tunnel.getPeer(0);
     if ((inId == null) || (gw == null)) {
@@ -21,15 +30,16 @@
     lease.setTunnelId(inId);
     lease.setGateway(gw);
     leases.add(lease);
+    if (tunnel.getLength() <= 1)     zeroHopLease=lease;
   }
   if (leases.size() < wanted) {
     if (_log.shouldLog(Log.WARN))     _log.warn(toString() + ": Not enough leases (" + leases.size()+ ", wanted "+ wanted+ ")");
-    if (leases.size() <= 0)     return null;
+    if (leases.isEmpty())     return null;
   }
   LeaseSet ls=new LeaseSet();
-  Iterator iter=leases.iterator();
+  Iterator<Lease> iter=leases.iterator();
   int count=Math.min(leases.size(),wanted);
-  for (int i=0; i < count; i++)   ls.addLease((Lease)iter.next());
+  for (int i=0; i < count; i++)   ls.addLease(iter.next());
   if (_log.shouldLog(Log.INFO))   _log.info(toString() + ": built new leaseSet: " + ls);
   return ls;
 }

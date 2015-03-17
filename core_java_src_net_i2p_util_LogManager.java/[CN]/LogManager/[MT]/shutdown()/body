@@ -1,4 +1,23 @@
 {
-  _log.log(Log.WARN,"Shutting down logger");
-  _writer.flushRecords(false);
+  if (_writer != null) {
+synchronized (_writer) {
+      _writer.notifyAll();
+    }
+    if (!_records.isEmpty()) {
+      try {
+        Thread.sleep(250);
+      }
+ catch (      InterruptedException ie) {
+      }
+    }
+    _writer.flushRecords(false);
+    _writer.stopWriting();
+synchronized (_writer) {
+      _writer.notifyAll();
+    }
+  }
+  _records.clear();
+  _limits.clear();
+  _logs.clear();
+  _consoleBuffer.clear();
 }

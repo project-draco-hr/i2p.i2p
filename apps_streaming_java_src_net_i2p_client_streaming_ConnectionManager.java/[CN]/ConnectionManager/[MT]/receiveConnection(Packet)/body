@@ -1,27 +1,31 @@
 {
-  Connection con=new Connection(_context,this,_schedulerChooser,_outboundQueue,_conPacketHandler,new ConnectionOptions(_defaultOptions));
+  ConnectionOptions opts=new ConnectionOptions(_defaultOptions);
+  opts.setPort(synPacket.getRemotePort());
+  opts.setLocalPort(synPacket.getLocalPort());
+  Connection con=new Connection(_context,this,_schedulerChooser,_timer,_outboundQueue,_conPacketHandler,opts);
   _tcbShare.updateOptsFromShare(con);
   con.setInbound();
   long receiveId=_context.random().nextLong(Packet.MAX_STREAM_ID - 1) + 1;
   boolean reject=false;
   int active=0;
   int total=0;
-synchronized (_connectionLock) {
-    total=_connectionByInboundId.size();
-    for (Iterator iter=_connectionByInboundId.values().iterator(); iter.hasNext(); ) {
-      if (((Connection)iter.next()).getIsConnected())       active++;
-    }
-    if (locked_tooManyStreams()) {
+  if (locked_tooManyStreams()) {
+    _log.logAlways(Log.WARN,"Refusing connection since we have exceeded our max of " + _maxConcurrentStreams + " connections");
+    reject=true;
+  }
+ else {
+    String why=shouldRejectConnection(synPacket);
+    if (why != null) {
+      _log.logAlways(Log.WARN,"Refusing connection since peer is " + why + (synPacket.getOptionalFrom() == null ? "" : ": " + synPacket.getOptionalFrom().calculateHash().toBase64()));
       reject=true;
     }
  else {
       while (true) {
-        Connection oldCon=(Connection)_connectionByInboundId.put(new Long(receiveId),con);
+        Connection oldCon=_connectionByInboundId.putIfAbsent(Long.valueOf(receiveId),con);
         if (oldCon == null) {
           break;
         }
  else {
-          _connectionByInboundId.put(new Long(receiveId),oldCon);
           receiveId=_context.random().nextLong(Packet.MAX_STREAM_ID - 1) + 1;
         }
       }
@@ -29,7 +33,6 @@ synchronized (_connectionLock) {
   }
   _context.statManager().addRateData("stream.receiveActive",active,total);
   if (reject) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("Refusing connection since we have exceeded our max of " + _maxConcurrentStreams + " connections");
     PacketLocal reply=new PacketLocal(_context,synPacket.getOptionalFrom());
     reply.setFlag(Packet.FLAG_RESET);
     reply.setFlag(Packet.FLAG_SIGNATURE_INCLUDED);
@@ -45,9 +48,7 @@ synchronized (_connectionLock) {
     con.getPacketHandler().receivePacket(synPacket,con);
   }
  catch (  I2PException ie) {
-synchronized (_connectionLock) {
-      _connectionByInboundId.remove(new Long(receiveId));
-    }
+    _connectionByInboundId.remove(Long.valueOf(receiveId));
     return null;
   }
   _context.statManager().addRateData("stream.connectionReceived",1,0);

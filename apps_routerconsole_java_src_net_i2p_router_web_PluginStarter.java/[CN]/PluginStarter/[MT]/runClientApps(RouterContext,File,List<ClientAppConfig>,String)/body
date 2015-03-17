@@ -1,0 +1,71 @@
+{
+  Log log=ctx.logManager().getLog(PluginStarter.class);
+  String pluginName=pluginDir.getName();
+  if (!pluginThreadGroups.containsKey(pluginName))   pluginThreadGroups.put(pluginName,new ThreadGroup(pluginName));
+  ThreadGroup pluginThreadGroup=pluginThreadGroups.get(pluginName);
+  if (action.equals("start"))   pluginJobs.put(pluginName,new ConcurrentHashSet<Job>());
+  for (  ClientAppConfig app : apps) {
+    if (action.equals("start") && app.disabled)     continue;
+    String argVal[];
+    if (action.equals("start")) {
+      argVal=LoadClientAppsJob.parseArgs(app.args);
+    }
+ else {
+      String args;
+      if (action.equals("stop"))       args=app.stopargs;
+ else       if (action.equals("uninstall"))       args=app.uninstallargs;
+ else       throw new IllegalArgumentException("bad action");
+      if (args == null || args.length() <= 0)       continue;
+      argVal=LoadClientAppsJob.parseArgs(args);
+    }
+    for (int i=0; i < argVal.length; i++) {
+      if (argVal[i].indexOf("$") >= 0) {
+        argVal[i]=argVal[i].replace("$I2P",ctx.getBaseDir().getAbsolutePath());
+        argVal[i]=argVal[i].replace("$CONFIG",ctx.getConfigDir().getAbsolutePath());
+        argVal[i]=argVal[i].replace("$PLUGIN",pluginDir.getAbsolutePath());
+      }
+    }
+    ClassLoader cl=null;
+    if (app.classpath != null) {
+      String cp=new String(app.classpath);
+      if (cp.indexOf("$") >= 0) {
+        cp=cp.replace("$I2P",ctx.getBaseDir().getAbsolutePath());
+        cp=cp.replace("$CONFIG",ctx.getConfigDir().getAbsolutePath());
+        cp=cp.replace("$PLUGIN",pluginDir.getAbsolutePath());
+      }
+      String clCacheKey=pluginName + app.className + app.args;
+      if (!action.equals("start"))       cl=_clCache.get(clCacheKey);
+      if (cl == null) {
+        URL[] urls=classpathToURLArray(cp,app.clientName,log);
+        if (urls != null) {
+          cl=new URLClassLoader(urls,ClassLoader.getSystemClassLoader());
+          if (action.equals("start"))           _clCache.put(clCacheKey,cl);
+        }
+      }
+    }
+    if (app.delay < 0 && action.equals("start")) {
+      LoadClientAppsJob.runClientInline(app.className,app.clientName,argVal,log,cl);
+    }
+ else     if (app.delay == 0 || !action.equals("start")) {
+      LoadClientAppsJob.testClient(app.className,cl);
+      LoadClientAppsJob.runClient(app.className,app.clientName,argVal,log,pluginThreadGroup,cl);
+    }
+ else {
+      try {
+        LoadClientAppsJob.testClient(app.className,cl);
+      }
+ catch (      ClassNotFoundException ex) {
+        if (app.delay > 1) {
+          Thread.sleep(2000);
+        }
+ else {
+          Thread.sleep(1000);
+        }
+      }
+      LoadClientAppsJob.testClient(app.className,cl);
+      Job job=new LoadClientAppsJob.DelayedRunClient(ctx,app.className,app.clientName,argVal,app.delay,pluginThreadGroup,cl);
+      ctx.jobQueue().addJob(job);
+      pluginJobs.get(pluginName).add(job);
+    }
+  }
+}

@@ -1,8 +1,10 @@
 {
   PeerProfile prof=_context.profileOrganizer().getProfile(peer);
   double responseTime=MAX_PER_PEER_TIMEOUT;
-  if (prof != null)   responseTime=prof.getDbResponseTime().getLifetimeAverageValue();
-  if (responseTime < MIN_PER_PEER_TIMEOUT)   responseTime=MIN_PER_PEER_TIMEOUT;
- else   if (responseTime > MAX_PER_PEER_TIMEOUT)   responseTime=MAX_PER_PEER_TIMEOUT;
-  return 4 * (int)responseTime;
+  if (prof != null && prof.getIsExpandedDB()) {
+    responseTime=prof.getDbResponseTime().getRate(24 * 60 * 60* 1000l).getAverageValue();
+    if (responseTime <= 0 || responseTime > MAX_PER_PEER_TIMEOUT)     responseTime=MAX_PER_PEER_TIMEOUT;
+ else     if (responseTime < MIN_PER_PEER_TIMEOUT)     responseTime=MIN_PER_PEER_TIMEOUT;
+  }
+  return TIMEOUT_MULTIPLIER * (int)responseTime;
 }

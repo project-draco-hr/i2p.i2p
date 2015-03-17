@@ -2,45 +2,51 @@
   byte peerInfoHash[]=null;
   if (in instanceof BufferedInputStream) {
     in.mark(LOOKAHEAD_SIZE);
-    peerInfoHash=readHash(in);
+    long timeout=socket.getReadTimeout();
+    socket.setReadTimeout(HASH_READ_TIMEOUT);
+    try {
+      peerInfoHash=readHash(in);
+    }
+ catch (    IOException ioe) {
+      throw new ProtocolException(ioe.toString());
+    }
+    socket.setReadTimeout(timeout);
     in.reset();
   }
  else {
     try {
       peerInfoHash=readHash(in);
-      _log.info("infohash read from " + socket.getPeerDestination().calculateHash().toBase64() + ": "+ Base64.encode(peerInfoHash));
+      if (_log.shouldLog(Log.INFO))       _log.info("infohash read from " + socket.getPeerDestination().calculateHash().toBase64() + ": "+ Base64.encode(peerInfoHash));
     }
  catch (    IOException ioe) {
-      _log.info("Unable to read the infohash from " + socket.getPeerDestination().calculateHash().toBase64());
+      if (_log.shouldLog(Log.INFO))       _log.info("Unable to read the infohash from " + socket.getPeerDestination().calculateHash().toBase64());
       throw ioe;
     }
     in=new SequenceInputStream(new ByteArrayInputStream(peerInfoHash),in);
   }
   if (coordinator != null) {
-    MetaInfo meta=coordinator.getMetaInfo();
-    if (DataHelper.eq(meta.getInfoHash(),peerInfoHash)) {
+    if (DataHelper.eq(coordinator.getInfoHash(),peerInfoHash)) {
       if (coordinator.needPeers()) {
-        Peer peer=new Peer(socket,in,out,coordinator.getID(),coordinator.getMetaInfo());
+        Peer peer=new Peer(socket,in,out,coordinator.getID(),coordinator.getInfoHash(),coordinator.getMetaInfo());
         coordinator.addPeer(peer);
       }
  else       socket.close();
     }
  else {
-      throw new IOException("Peer wants another torrent (" + Base64.encode(peerInfoHash) + ") while we only support ("+ Base64.encode(meta.getInfoHash())+ ")");
+      throw new IOException("Peer wants another torrent (" + Base64.encode(peerInfoHash) + ") while we only support ("+ Base64.encode(coordinator.getInfoHash())+ ")");
     }
   }
  else {
-    for (Iterator iter=coordinators.iterator(); iter.hasNext(); ) {
-      PeerCoordinator cur=(PeerCoordinator)iter.next();
-      MetaInfo meta=cur.getMetaInfo();
-      if (DataHelper.eq(meta.getInfoHash(),peerInfoHash)) {
+    PeerCoordinator cur=coordinators.get(peerInfoHash);
+    if (cur != null) {
+      if (DataHelper.eq(cur.getInfoHash(),peerInfoHash)) {
         if (cur.needPeers()) {
-          Peer peer=new Peer(socket,in,out,cur.getID(),cur.getMetaInfo());
+          Peer peer=new Peer(socket,in,out,cur.getID(),cur.getInfoHash(),cur.getMetaInfo());
           cur.addPeer(peer);
           return;
         }
  else {
-          if (_log.shouldLog(Log.DEBUG))           _log.debug("Rejecting new peer for " + cur.snark.torrent);
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("Rejecting new peer for " + cur.getName());
           socket.close();
           return;
         }

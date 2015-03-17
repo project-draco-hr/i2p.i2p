@@ -3,29 +3,15 @@
   offset++;
   I2NPMessageImpl msg=(I2NPMessageImpl)createMessage(ctx,type);
   if (msg == null)   throw new I2NPMessageException("Unknown message type: " + type);
-  if (RAW_FULL_SIZE) {
-    try {
-      msg.readBytes(buffer,type,offset);
-    }
- catch (    IOException ioe) {
-      throw new I2NPMessageException("Error reading the " + msg,ioe);
-    }
-    msg.read();
-    return msg;
-  }
   try {
-    long expiration=DataHelper.fromLong(buffer,offset,4) * 1000;
+    long expiration=(DataHelper.fromLong(buffer,offset,4) * 1000) + 500;
     offset+=4;
     int dataSize=len - 1 - 4;
     msg.readMessage(buffer,offset,dataSize,type,handler);
     msg.setMessageExpiration(expiration);
-    msg.read();
     return msg;
   }
- catch (  IOException ioe) {
-    throw new I2NPMessageException("IO error reading raw message",ioe);
-  }
-catch (  IllegalArgumentException iae) {
+ catch (  IllegalArgumentException iae) {
     throw new I2NPMessageException("Corrupt message (negative expiration)",iae);
   }
 }

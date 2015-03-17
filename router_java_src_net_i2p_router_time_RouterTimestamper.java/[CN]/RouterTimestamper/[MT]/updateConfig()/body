@@ -1,0 +1,32 @@
+{
+  String serverList=_context.getProperty(PROP_SERVER_LIST);
+  if ((serverList == null) || (serverList.trim().length() <= 0)) {
+    serverList=DEFAULT_SERVER_LIST;
+    String country=_context.getProperty(PROP_IP_COUNTRY);
+    if (country == null) {
+      country=Locale.getDefault().getCountry();
+      if (country != null)       country=country.toLowerCase(Locale.US);
+    }
+    if (country != null && country.length() > 0) {
+      _priorityServers=new ArrayList(3);
+      for (int i=0; i < 3; i++)       _priorityServers.add(i + "." + country+ ".pool.ntp.org");
+    }
+ else {
+      _priorityServers=null;
+    }
+  }
+ else {
+    _priorityServers=null;
+  }
+  _servers.clear();
+  StringTokenizer tok=new StringTokenizer(serverList,", ");
+  while (tok.hasMoreTokens()) {
+    String val=tok.nextToken();
+    val=val.trim();
+    if (val.length() > 0)     _servers.add(val);
+  }
+  _queryFrequency=Math.max(MIN_QUERY_FREQUENCY,_context.getProperty(PROP_QUERY_FREQUENCY,DEFAULT_QUERY_FREQUENCY));
+  String disabled=_context.getProperty(PROP_DISABLED,DEFAULT_DISABLED);
+  _disabled=Boolean.valueOf(disabled).booleanValue();
+  _concurringServers=Math.min(4,Math.max(1,_context.getProperty(PROP_CONCURRING_SERVERS,DEFAULT_CONCURRING_SERVERS)));
+}

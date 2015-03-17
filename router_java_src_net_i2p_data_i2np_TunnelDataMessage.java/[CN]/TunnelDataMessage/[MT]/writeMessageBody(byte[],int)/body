@@ -1,10 +1,14 @@
 {
-  if ((_tunnelId <= 0) || (_data == null))   throw new I2NPMessageException("Not enough data to write out (id=" + _tunnelId + " data="+ _data+ ")");
+  if ((_tunnelId <= 0) || (_data == null))   throw new I2NPMessageException("Not enough data to write out (id=" + _tunnelId + ")");
   if (_data.length <= 0)   throw new I2NPMessageException("Not enough data to write out (data.length=" + _data.length + ")");
+  if (_hadCache && _dataBuf == null) {
+    I2NPMessageException e=new I2NPMessageException("TDM data buf use after free");
+    _log.error("TDM boom",e);
+    throw e;
+  }
   DataHelper.toLong(out,curIndex,4,_tunnelId);
   curIndex+=4;
   System.arraycopy(_data,0,out,curIndex,DATA_SIZE);
   curIndex+=_data.length;
-  if (PIPELINED_CACHE)   _cache.release(_dataBuf);
   return curIndex;
 }

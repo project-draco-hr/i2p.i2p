@@ -1,0 +1,77 @@
+{
+  String listname=FALLBACK_LIST;
+  String search=null;
+  String startsWith=null;
+  String beginWith=null;
+  int limit=Integer.MAX_VALUE;
+  int skip=0;
+  if (options != null) {
+    String ln=options.getProperty("list");
+    if (ln != null)     listname=ln;
+    search=options.getProperty("search");
+    startsWith=options.getProperty("startsWith");
+    beginWith=options.getProperty("beginWith");
+    if (beginWith == null && startsWith != null) {
+      if (startsWith.equals("[0-9]"))       beginWith="0";
+ else       beginWith=startsWith;
+    }
+    String lim=options.getProperty("limit");
+    try {
+      limit=Integer.parseInt(lim);
+    }
+ catch (    NumberFormatException nfe) {
+    }
+    String sk=options.getProperty("skip");
+    try {
+      skip=Integer.parseInt(sk);
+    }
+ catch (    NumberFormatException nfe) {
+    }
+  }
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Searching " + listname + " beginning with "+ beginWith+ " starting with "+ startsWith+ " search string "+ search+ " limit="+ limit+ " skip="+ skip);
+synchronized (_bf) {
+    if (_isClosed)     return Collections.EMPTY_MAP;
+    try {
+      SkipList sl=_bf.getIndex(listname,_stringSerializer,_destSerializer);
+      if (sl == null) {
+        if (_log.shouldLog(Log.WARN))         _log.warn("No skiplist found for lookup in " + listname);
+        return Collections.EMPTY_MAP;
+      }
+      SkipIterator iter;
+      if (beginWith != null)       iter=sl.find(beginWith);
+ else       iter=sl.iterator();
+      Map<String,Destination> rv=new HashMap();
+      for (int i=0; i < skip && iter.hasNext(); i++) {
+        iter.next();
+      }
+      for (int i=0; i < limit && iter.hasNext(); ) {
+        String key=(String)iter.nextKey();
+        if (startsWith != null) {
+          if (startsWith.equals("[0-9]")) {
+            if (key.charAt(0) > '9')             break;
+          }
+ else           if (!key.startsWith(startsWith)) {
+            break;
+          }
+        }
+        DestEntry de=(DestEntry)iter.next();
+        if (!validate(key,de,listname))         continue;
+        if (search != null && key.indexOf(search) < 0)         continue;
+        rv.put(key,de.dest);
+        i++;
+      }
+      return rv;
+    }
+ catch (    IOException ioe) {
+      _log.error("DB lookup error",ioe);
+      return Collections.EMPTY_MAP;
+    }
+catch (    RuntimeException re) {
+      _log.error("DB lookup error",re);
+      return Collections.EMPTY_MAP;
+    }
+ finally {
+      deleteInvalid();
+    }
+  }
+}

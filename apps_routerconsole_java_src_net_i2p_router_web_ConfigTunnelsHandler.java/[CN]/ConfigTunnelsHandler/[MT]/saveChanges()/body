@@ -1,7 +1,7 @@
 {
-  _log=_context.logManager().getLog(ConfigTunnelsHandler.class);
   boolean saveRequired=false;
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Saving changes, with props = " + _settings);
+  Map<String,String> changes=new HashMap();
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Saving changes, with props = " + _settings + ".");
   int updated=0;
   int index=0;
   while (true) {
@@ -20,7 +20,7 @@
         client.fromBase64(poolName);
       }
  catch (      DataFormatException dfe) {
-        addFormError("Internal error (pool name could not resolve - " + poolName + ")");
+        addFormError("Internal error (pool name could not resolve - " + poolName + ").");
         index++;
         continue;
       }
@@ -28,7 +28,7 @@
       out=_context.tunnelManager().getOutboundSettings(client);
     }
     if ((in == null) || (out == null)) {
-      addFormError("Internal error (pool settings cound not be found for " + poolName + ")");
+      addFormError("Internal error (pool settings cound not be found for " + poolName + ").");
       index++;
       continue;
     }
@@ -41,14 +41,14 @@
     in.setBackupQuantity(getInt(_settings.get(index + ".backupInbound")));
     out.setBackupQuantity(getInt(_settings.get(index + ".backupOutbound")));
     if ("exploratory".equals(poolName)) {
-      _context.router().setConfigSetting(TunnelPoolSettings.PREFIX_INBOUND_EXPLORATORY + TunnelPoolSettings.PROP_LENGTH,in.getLength() + "");
-      _context.router().setConfigSetting(TunnelPoolSettings.PREFIX_OUTBOUND_EXPLORATORY + TunnelPoolSettings.PROP_LENGTH,out.getLength() + "");
-      _context.router().setConfigSetting(TunnelPoolSettings.PREFIX_INBOUND_EXPLORATORY + TunnelPoolSettings.PROP_LENGTH_VARIANCE,in.getLengthVariance() + "");
-      _context.router().setConfigSetting(TunnelPoolSettings.PREFIX_OUTBOUND_EXPLORATORY + TunnelPoolSettings.PROP_LENGTH_VARIANCE,out.getLengthVariance() + "");
-      _context.router().setConfigSetting(TunnelPoolSettings.PREFIX_INBOUND_EXPLORATORY + TunnelPoolSettings.PROP_QUANTITY,in.getQuantity() + "");
-      _context.router().setConfigSetting(TunnelPoolSettings.PREFIX_OUTBOUND_EXPLORATORY + TunnelPoolSettings.PROP_QUANTITY,out.getQuantity() + "");
-      _context.router().setConfigSetting(TunnelPoolSettings.PREFIX_INBOUND_EXPLORATORY + TunnelPoolSettings.PROP_BACKUP_QUANTITY,in.getBackupQuantity() + "");
-      _context.router().setConfigSetting(TunnelPoolSettings.PREFIX_OUTBOUND_EXPLORATORY + TunnelPoolSettings.PROP_BACKUP_QUANTITY,out.getBackupQuantity() + "");
+      changes.put(TunnelPoolSettings.PREFIX_INBOUND_EXPLORATORY + TunnelPoolSettings.PROP_LENGTH,in.getLength() + "");
+      changes.put(TunnelPoolSettings.PREFIX_OUTBOUND_EXPLORATORY + TunnelPoolSettings.PROP_LENGTH,out.getLength() + "");
+      changes.put(TunnelPoolSettings.PREFIX_INBOUND_EXPLORATORY + TunnelPoolSettings.PROP_LENGTH_VARIANCE,in.getLengthVariance() + "");
+      changes.put(TunnelPoolSettings.PREFIX_OUTBOUND_EXPLORATORY + TunnelPoolSettings.PROP_LENGTH_VARIANCE,out.getLengthVariance() + "");
+      changes.put(TunnelPoolSettings.PREFIX_INBOUND_EXPLORATORY + TunnelPoolSettings.PROP_QUANTITY,in.getQuantity() + "");
+      changes.put(TunnelPoolSettings.PREFIX_OUTBOUND_EXPLORATORY + TunnelPoolSettings.PROP_QUANTITY,out.getQuantity() + "");
+      changes.put(TunnelPoolSettings.PREFIX_INBOUND_EXPLORATORY + TunnelPoolSettings.PROP_BACKUP_QUANTITY,in.getBackupQuantity() + "");
+      changes.put(TunnelPoolSettings.PREFIX_OUTBOUND_EXPLORATORY + TunnelPoolSettings.PROP_BACKUP_QUANTITY,out.getBackupQuantity() + "");
     }
     if ("exploratory".equals(poolName)) {
       if (_log.shouldLog(Log.DEBUG)) {
@@ -70,10 +70,10 @@
     saveRequired=true;
     index++;
   }
-  if (updated > 0)   addFormNotice("Updated settings for " + updated + " pools");
+  if (updated > 0)   addFormNotice(_("Updated settings for all pools."));
   if (saveRequired) {
-    boolean saved=_context.router().saveConfig();
-    if (saved)     addFormNotice("Exploratory tunnel configuration saved successfully");
- else     addFormNotice("Error saving the configuration (applied but not saved) - please see the error logs");
+    boolean saved=_context.router().saveConfig(changes,null);
+    if (saved)     addFormNotice(_("Exploratory tunnel configuration saved successfully."));
+ else     addFormError(_("Error saving the configuration (applied but not saved) - please see the error logs."));
   }
 }

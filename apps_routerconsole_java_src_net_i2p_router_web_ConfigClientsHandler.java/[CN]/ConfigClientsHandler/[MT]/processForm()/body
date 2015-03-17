@@ -1,11 +1,34 @@
 {
-  if (_action.startsWith("Save Client")) {
+  if (_action.length() <= 0) {
+    String url=getJettyString("pluginURL");
+    if (url != null && url.length() > 0)     _action="Install Plugin";
+ else     _action="Save Client Configuration";
+  }
+  if (_action.equals(_("Save Client Configuration"))) {
     saveClientChanges();
+    return;
   }
- else   if (_action.startsWith("Save WebApp")) {
+  if (_action.equals(_("Save Interface Configuration"))) {
+    saveInterfaceChanges();
+    return;
+  }
+  if (_action.equals(_("Save WebApp Configuration"))) {
     saveWebAppChanges();
+    return;
   }
- else   if (_action.startsWith("Start ")) {
+  if (_action.equals(_("Save Plugin Configuration"))) {
+    savePluginChanges();
+    return;
+  }
+  if (_action.equals(_("Install Plugin"))) {
+    installPlugin();
+    return;
+  }
+  if (_action.equals(_("Update All Installed Plugins"))) {
+    updateAllPlugins();
+    return;
+  }
+  if (_action.startsWith("Start ")) {
     String app=_action.substring(6);
     int appnum=-1;
     try {
@@ -13,10 +36,100 @@
     }
  catch (    NumberFormatException nfe) {
     }
-    if (appnum >= 0)     startClient(appnum);
- else     startWebApp(app);
+    if (appnum >= 0) {
+      startClient(appnum);
+    }
+ else {
+      List<String> plugins=PluginStarter.getPlugins();
+      if (plugins.contains(app))       startPlugin(app);
+ else       startWebApp(app);
+    }
+    return;
+  }
+  if (_action.startsWith("Delete ")) {
+    String app=_action.substring(7);
+    int appnum=-1;
+    try {
+      appnum=Integer.parseInt(app);
+    }
+ catch (    NumberFormatException nfe) {
+    }
+    if (appnum >= 0) {
+      deleteClient(appnum);
+    }
+ else {
+      try {
+        PluginStarter.stopPlugin(_context,app);
+      }
+ catch (      ClassNotFoundException cnfe) {
+      }
+catch (      Throwable e) {
+        addFormError(_("Error stopping plugin {0}",app) + ": " + e);
+        _log.error("Error stopping plugin " + app,e);
+      }
+      try {
+        PluginStarter.deletePlugin(_context,app);
+        addFormNotice(_("Deleted plugin {0}",app));
+      }
+ catch (      Throwable e) {
+        addFormError(_("Error deleting plugin {0}",app) + ": " + e);
+        _log.error("Error deleting plugin " + app,e);
+      }
+    }
+    return;
+  }
+  if (_action.startsWith("Stop ")) {
+    String app=_action.substring(5);
+    int appnum=-1;
+    try {
+      appnum=Integer.parseInt(app);
+    }
+ catch (    NumberFormatException nfe) {
+    }
+    if (appnum >= 0) {
+      stopClient(appnum);
+    }
+ else {
+      try {
+        PluginStarter.stopPlugin(_context,app);
+        addFormNotice(_("Stopped plugin {0}",app));
+      }
+ catch (      Throwable e) {
+        addFormError(_("Error stopping plugin {0}",app) + ": " + e);
+        _log.error("Error stopping plugin " + app,e);
+      }
+    }
+    return;
+  }
+  if (_action.startsWith("Update ")) {
+    String app=_action.substring(7);
+    updatePlugin(app);
+    return;
+  }
+  if (_action.startsWith("Check ")) {
+    String app=_action.substring(6);
+    checkPlugin(app);
+    return;
+  }
+  String xStart=_("Start");
+  if (_action.toLowerCase(Locale.US).startsWith(xStart + "<span class=hide> ") && _action.toLowerCase(Locale.US).endsWith("</span>")) {
+    String app=_action.substring(xStart.length() + 18,_action.length() - 7);
+    int appnum=-1;
+    try {
+      appnum=Integer.parseInt(app);
+    }
+ catch (    NumberFormatException nfe) {
+    }
+    if (appnum >= 0) {
+      startClient(appnum);
+    }
+ else {
+      List<String> plugins=PluginStarter.getPlugins();
+      if (plugins.contains(app))       startPlugin(app);
+ else       startWebApp(app);
+    }
   }
  else {
-    addFormError("Unsupported " + _action);
+    addFormError(_("Unsupported") + ' ' + _action+ '.');
   }
 }

@@ -3,24 +3,27 @@
   dout=new DataOutputStream(out);
   dout.write(19);
   dout.write("BitTorrent protocol".getBytes("UTF-8"));
-  byte[] zeros=new byte[8];
-  dout.write(zeros);
-  byte[] shared_hash=metainfo.getInfoHash();
-  dout.write(shared_hash);
+  long myOptions=OPTION_EXTENSION;
+  dout.writeLong(myOptions);
+  dout.write(infohash);
   dout.write(my_id);
   dout.flush();
-  _log.debug("Wrote my shared hash and ID to " + toString());
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Wrote my shared hash and ID to " + toString());
   byte b=din.readByte();
   if (b != 19)   throw new IOException("Handshake failure, expected 19, got " + (b & 0xff) + " on "+ sock);
   byte[] bs=new byte[19];
   din.readFully(bs);
   String bittorrentProtocol=new String(bs,"UTF-8");
   if (!"BitTorrent protocol".equals(bittorrentProtocol))   throw new IOException("Handshake failure, expected " + "'Bittorrent protocol', got '" + bittorrentProtocol + "'");
-  din.readFully(zeros);
+  options=din.readLong();
   bs=new byte[20];
   din.readFully(bs);
-  if (!Arrays.equals(shared_hash,bs))   throw new IOException("Unexpected MetaInfo hash");
+  if (!Arrays.equals(infohash,bs))   throw new IOException("Unexpected MetaInfo hash");
   din.readFully(bs);
-  _log.debug("Read the remote side's hash and peerID fully from " + toString());
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Read the remote side's hash and peerID fully from " + toString());
+  if (DataHelper.eq(my_id,bs))   throw new IOException("Connected to myself");
+  if (options != 0) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Peer supports options 0x" + Long.toString(options,16) + ": "+ toString());
+  }
   return bs;
 }

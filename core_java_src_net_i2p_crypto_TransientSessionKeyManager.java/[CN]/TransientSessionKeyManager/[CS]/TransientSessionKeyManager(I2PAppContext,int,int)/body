@@ -1,0 +1,14 @@
+{
+  super(context);
+  if (tagsToSend <= 0 || tagsToSend > 128 || lowThreshold <= 0 || lowThreshold > 128)   throw new IllegalArgumentException();
+  _tagsToSend=tagsToSend;
+  _lowThreshold=lowThreshold;
+  _log=context.logManager().getLog(TransientSessionKeyManager.class);
+  _context=context;
+  _outboundSessions=new HashMap(64);
+  _inboundTagSets=new HashMap(128);
+  context.statManager().createRateStat("crypto.sessionTagsExpired","How many tags/sessions are expired?","Encryption",new long[]{10 * 60 * 1000,60 * 60 * 1000,3 * 60 * 60* 1000});
+  context.statManager().createRateStat("crypto.sessionTagsRemaining","How many tags/sessions are remaining after a cleanup?","Encryption",new long[]{10 * 60 * 1000,60 * 60 * 1000,3 * 60 * 60* 1000});
+  _alive=true;
+  _context.simpleScheduler().addEvent(new CleanupEvent(),60 * 1000);
+}

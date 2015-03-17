@@ -1,43 +1,28 @@
 {
-  List floodfillPeers=_facade.getFloodfillPeers();
-  if (floodfillPeers.size() <= 3)   _shouldProcessDSRM=true;
-  if (floodfillPeers.size() <= 0) {
-    if (_log.shouldLog(Log.ERROR))     _log.error("Running netDb searches against the floodfill peers, but we don't know any");
+  List<Hash> floodfillPeers;
+  KBucketSet ks=_facade.getKBuckets();
+  if (ks != null) {
+    Hash rkey=getContext().routingKeyGenerator().getRoutingKey(_key);
+    floodfillPeers=((FloodfillPeerSelector)_facade.getPeerSelector()).selectFloodfillParticipants(rkey,MIN_FOR_NO_DSRM,ks);
+  }
+ else {
+    floodfillPeers=Collections.EMPTY_LIST;
+  }
+  _shouldProcessDSRM=floodfillPeers.size() < MIN_FOR_NO_DSRM || getContext().routingKeyGenerator().getLastChanged() > getContext().clock().now() - 60 * 60 * 1000;
+  if (floodfillPeers.isEmpty()) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Running netDb searches against the floodfill peers, but we don't know any");
     floodfillPeers=new ArrayList(_facade.getAllRouters());
-    if (floodfillPeers.size() <= 0) {
+    if (floodfillPeers.isEmpty()) {
       if (_log.shouldLog(Log.ERROR))       _log.error("We don't know any peers at all");
       failed();
       return;
     }
-  }
-  OutNetMessage out=getContext().messageRegistry().registerPending(_replySelector,_onReply,_onTimeout,_timeoutMs);
-synchronized (_out) {
-    _out.add(out);
-  }
-  if (floodfillPeers.size() > CONCURRENT_SEARCHES) {
     Collections.shuffle(floodfillPeers,getContext().random());
-    List ffp=new ArrayList(floodfillPeers.size());
-    int failcount=0;
-    long before=getContext().clock().now() - 30 * 60 * 1000;
-    for (int i=0; i < floodfillPeers.size(); i++) {
-      Hash peer=(Hash)floodfillPeers.get(i);
-      PeerProfile profile=getContext().profileOrganizer().getProfile(peer);
-      if (profile == null || profile.getLastHeardFrom() < before || profile.getIsFailing() || getContext().shitlist().isShitlisted(peer) || getContext().commSystem().wasUnreachable(peer)) {
-        failcount++;
-        ffp.add(peer);
-      }
- else       ffp.add(0,peer);
-    }
-    if (floodfillPeers.size() - failcount <= 2)     _shouldProcessDSRM=true;
-    if (_log.shouldLog(Log.INFO) && failcount > 0)     _log.info(getJobId() + ": " + failcount+ " of "+ floodfillPeers.size()+ " floodfills are not heard from, unprofiled, failing, unreachable or shitlisted");
-    floodfillPeers=ffp;
   }
- else {
-    _shouldProcessDSRM=true;
-  }
+  _out=getContext().messageRegistry().registerPending(_replySelector,_onReply,_onTimeout,_timeoutMs);
   int count=0;
   for (int i=0; _lookupsRemaining < CONCURRENT_SEARCHES && i < floodfillPeers.size(); i++) {
-    Hash peer=(Hash)floodfillPeers.get(i);
+    Hash peer=floodfillPeers.get(i);
     if (peer.equals(getContext().routerHash()))     continue;
     DatabaseLookupMessage dlm=new DatabaseLookupMessage(getContext(),true);
     TunnelInfo replyTunnel=getContext().tunnelManager().selectInboundTunnel();
@@ -46,20 +31,21 @@ synchronized (_out) {
       failed();
       return;
     }
+    if (outTunnel.getLength() <= 1 && peer.equals(_key) && floodfillPeers.size() > 1)     continue;
 synchronized (_unheardFrom) {
       _unheardFrom.add(peer);
     }
     dlm.setFrom(replyTunnel.getPeer(0));
-    dlm.setMessageExpiration(getContext().clock().now() + 10 * 1000);
+    dlm.setMessageExpiration(getContext().clock().now() + SINGLE_SEARCH_MSG_TIME);
     dlm.setReplyTunnel(replyTunnel.getReceiveTunnelId(0));
     dlm.setSearchKey(_key);
-    if (_log.shouldLog(Log.INFO))     _log.info(getJobId() + ": Floodfill search for " + _key.toBase64()+ " to "+ peer.toBase64());
+    if (_log.shouldLog(Log.INFO))     _log.info(getJobId() + ": Floodfill search for " + _key+ " to "+ peer);
     getContext().tunnelDispatcher().dispatchOutbound(dlm,outTunnel.getSendTunnelId(0),peer);
     count++;
     _lookupsRemaining++;
   }
   if (count <= 0) {
-    if (_log.shouldLog(Log.INFO))     _log.info(getJobId() + ": Floodfill search for " + _key.toBase64()+ " had no peers to send to");
+    if (_log.shouldLog(Log.INFO))     _log.info(getJobId() + ": Floodfill search for " + _key+ " had no peers to send to");
     failed();
   }
 }

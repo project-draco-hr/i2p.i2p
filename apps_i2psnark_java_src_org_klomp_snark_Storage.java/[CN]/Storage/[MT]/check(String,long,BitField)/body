@@ -1,9 +1,12 @@
 {
-  File base=new File(rootDir,filterName(metainfo.getName()));
+  File base;
+  boolean areFilesPublic=_util.getFilesPublic();
+  if (areFilesPublic)   base=new File(rootDir,filterName(metainfo.getName()));
+ else   base=new SecureFile(rootDir,filterName(metainfo.getName()));
   boolean useSavedBitField=savedTime > 0 && savedBitField != null;
-  List files=metainfo.getFiles();
+  List<List<String>> files=metainfo.getFiles();
   if (files == null) {
-    _util.debug("Creating/Checking file: " + base,Snark.NOTICE);
+    if (_log.shouldLog(Log.INFO))     _log.info("Creating/Checking file: " + base);
     if (!base.createNewFile() && !base.exists())     throw new IOException("Could not create file " + base);
     lengths=new long[1];
     rafs=new RandomAccessFile[1];
@@ -11,6 +14,7 @@
     RAFlock=new Object[1];
     RAFtime=new long[1];
     RAFfile=new File[1];
+    isSparse=new boolean[1];
     lengths[0]=metainfo.getTotalLength();
     RAFlock[0]=new Object();
     RAFfile[0]=base;
@@ -21,9 +25,9 @@
     names[0]=base.getName();
   }
  else {
-    _util.debug("Creating/Checking directory: " + base,Snark.NOTICE);
+    if (_log.shouldLog(Log.INFO))     _log.info("Creating/Checking directory: " + base);
     if (!base.mkdir() && !base.isDirectory())     throw new IOException("Could not create directory " + base);
-    List ls=metainfo.getLengths();
+    List<Long> ls=metainfo.getLengths();
     int size=files.size();
     long total=0;
     lengths=new long[size];
@@ -32,14 +36,29 @@
     RAFlock=new Object[size];
     RAFtime=new long[size];
     RAFfile=new File[size];
+    isSparse=new boolean[size];
     for (int i=0; i < size; i++) {
-      File f=createFileFromNames(base,(List)files.get(i));
-      lengths[i]=((Long)ls.get(i)).longValue();
+      List<String> path=files.get(i);
+      File f=createFileFromNames(base,path,areFilesPublic);
+      for (int j=0; j < i; j++) {
+        if (f.equals(RAFfile[j])) {
+          path=new ArrayList(path);
+          int last=path.size() - 1;
+          String lastPath=path.get(last);
+          int dot=lastPath.lastIndexOf('.');
+          if (dot >= 0)           lastPath=lastPath.substring(0,dot) + '_' + lastPath.substring(dot);
+ else           lastPath='_' + lastPath;
+          path.set(last,lastPath);
+          f=createFileFromNames(base,path,areFilesPublic);
+          j=0;
+        }
+      }
+      lengths[i]=ls.get(i).longValue();
       RAFlock[i]=new Object();
       RAFfile[i]=f;
       total+=lengths[i];
       if (useSavedBitField) {
-        long lm=base.lastModified();
+        long lm=f.lastModified();
         if (lm <= 0 || lm > savedTime)         useSavedBitField=false;
       }
       names[i]=f.getName();
@@ -51,12 +70,17 @@
     bitfield=savedBitField;
     needed=metainfo.getPieces() - bitfield.count();
     _probablyComplete=complete();
-    _util.debug("Found saved state and files unchanged, skipping check",Snark.NOTICE);
+    if (_log.shouldLog(Log.INFO))     _log.info("Found saved state and files unchanged, skipping check");
   }
  else {
     changed=true;
-    checkCreateFiles();
+    checkCreateFiles(false);
   }
-  if (complete())   _util.debug("Torrent is complete",Snark.NOTICE);
- else   _util.debug("Still need " + needed + " out of "+ metainfo.getPieces()+ " pieces",Snark.NOTICE);
+  if (complete()) {
+    if (_log.shouldLog(Log.INFO))     _log.info("Torrent is complete");
+  }
+ else {
+    if (files != null)     priorities=new int[files.size()];
+    if (_log.shouldLog(Log.INFO))     _log.info("Still need " + needed + " out of "+ metainfo.getPieces()+ " pieces");
+  }
 }

@@ -1,18 +1,13 @@
 {
-  int total=0;
-  List msgs=_outboundMessages;
   if (_dead)   return null;
-synchronized (msgs) {
-    int size=msgs.size();
-    for (int i=0; i < size; i++) {
-      OutboundMessageState state=(OutboundMessageState)msgs.get(i);
+synchronized (_outboundMessages) {
+    for (    OutboundMessageState state : _outboundMessages) {
       if (locked_shouldSend(state)) {
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("Allocate sending to " + _remotePeer.toBase64() + ": "+ state.getMessageId());
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Allocate sending to " + _remotePeer + ": "+ state.getMessageId());
         return state;
       }
     }
-    total=msgs.size();
   }
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Nothing to send to " + _remotePeer.toBase64() + ", with "+ total+ " remaining");
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Nothing to send to " + _remotePeer + ", with "+ _outboundMessages.size()+ " remaining");
   return null;
 }

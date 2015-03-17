@@ -1,12 +1,11 @@
 {
-  if (_log.shouldLog(Log.WARN))   _log.warn("decrypting lease: " + _destination.calculateHash());
   int size=_leases.size();
   if (size < 2)   throw new DataFormatException("Bad number of leases for decryption");
   int datalen=DATA_LEN * size;
   ByteArrayOutputStream baos=new ByteArrayOutputStream(datalen);
   for (int i=0; i < size; i++) {
-    ((Lease)_leases.get(i)).getGateway().writeBytes(baos);
-    ((Lease)_leases.get(i)).getTunnelId().writeBytes(baos);
+    _leases.get(i).getGateway().writeBytes(baos);
+    _leases.get(i).getTunnelId().writeBytes(baos);
   }
   byte[] iv=new byte[IV_LEN];
   System.arraycopy(_destination.getPublicKey().getData(),0,iv,0,IV_LEN);
@@ -25,7 +24,7 @@
     TunnelId t=new TunnelId();
     t.readBytes(bais);
     l.setTunnelId(t);
-    l.setEndDate(((Lease)_leases.get(i)).getEndDate());
+    l.setEndDate(_leases.get(i).getEndDate());
     _decryptedLeases.add(l);
   }
 }

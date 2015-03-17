@@ -11,26 +11,22 @@
   _transport.removeCon(this);
   _transport.getReader().connectionClosed(this);
   _transport.getWriter().connectionClosed(this);
-  List reqs=null;
-synchronized (_bwRequests) {
-    if (_bwRequests.size() > 0) {
-      reqs=new ArrayList(_bwRequests);
-      _bwRequests.clear();
-    }
+  for (Iterator<FIFOBandwidthLimiter.Request> iter=_bwRequests.iterator(); iter.hasNext(); ) {
+    iter.next().abort();
   }
-  if (reqs != null)   for (Iterator iter=reqs.iterator(); iter.hasNext(); )   ((FIFOBandwidthLimiter.Request)iter.next()).abort();
-  List msgs=null;
-synchronized (_outbound) {
-    msgs=new ArrayList(_outbound);
-    _outbound.clear();
+  _bwRequests.clear();
+  _writeBufs.clear();
+  ByteBuffer bb;
+  while ((bb=_readBufs.poll()) != null) {
+    EventPumper.releaseBuf(bb);
   }
-  for (int i=0; i < msgs.size(); i++) {
-    OutNetMessage msg=(OutNetMessage)msgs.get(i);
+  OutNetMessage msg;
+  while ((msg=_outbound.poll()) != null) {
     Object buf=msg.releasePreparationBuffer();
     if (buf != null)     releaseBuf((PrepBuffer)buf);
     _transport.afterSend(msg,false,allowRequeue,msg.getLifetime());
   }
-  OutNetMessage msg=_currentOutbound;
+  msg=_currentOutbound;
   if (msg != null) {
     Object buf=msg.releasePreparationBuffer();
     if (buf != null)     releaseBuf((PrepBuffer)buf);

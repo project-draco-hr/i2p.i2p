@@ -1,17 +1,15 @@
 {
-  List peers=null;
   int start=_context.random().nextInt(Integer.MAX_VALUE);
-synchronized (_inbound) {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Picking inbound out of " + _inbound.size());
-    if (_inbound.size() <= 0)     return 0;
-    peers=new ArrayList(_inbound);
-  }
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Picking inbound out of " + _inbound.size());
+  if (_inbound.isEmpty())   return 0;
+  List<PeerState> peers=new ArrayList(_inbound);
   int sz=peers.size();
   start=start % sz;
   int found=0;
   long inactivityCutoff=_context.clock().now() - (UDPTransport.EXPIRE_TIMEOUT / 2);
+  if (sz <= howMany + 2)   inactivityCutoff-=UDPTransport.EXPIRE_TIMEOUT / 4;
   for (int i=0; i < sz && found < howMany; i++) {
-    PeerState cur=(PeerState)peers.get((start + i) % sz);
+    PeerState cur=peers.get((start + i) % sz);
     RouterInfo ri=_context.netDb().lookupRouterInfoLocally(cur.getRemotePeer());
     if (ri == null) {
       if (_log.shouldLog(Log.INFO))       _log.info("Picked peer has no local routerInfo: " + cur);
@@ -22,11 +20,11 @@ synchronized (_inbound) {
       if (_log.shouldLog(Log.INFO))       _log.info("Picked peer has no SSU address: " + ri);
       continue;
     }
-    if (_context.profileOrganizer().isFailing(cur.getRemotePeer()) || _context.shitlist().isShitlisted(cur.getRemotePeer()) || _transport.wasUnreachable(cur.getRemotePeer())) {
+    if (_context.shitlist().isShitlisted(cur.getRemotePeer()) || _transport.wasUnreachable(cur.getRemotePeer())) {
       if (_log.shouldLog(Log.INFO))       _log.info("Peer is failing, shistlisted or was unreachable: " + cur);
       continue;
     }
-    if (cur.getLastReceiveTime() < inactivityCutoff || cur.getLastSendTime() < inactivityCutoff) {
+    if (cur.getLastReceiveTime() < inactivityCutoff && cur.getLastSendTime() < inactivityCutoff) {
       if (_log.shouldLog(Log.INFO))       _log.info("Peer is idle too long: " + cur);
       continue;
     }
@@ -39,15 +37,6 @@ synchronized (_inbound) {
     ssuOptions.setProperty(UDPAddress.PROP_INTRO_TAG_PREFIX + found,String.valueOf(cur.getTheyRelayToUsAs()));
     found++;
   }
-  long pingCutoff=_context.clock().now() - (2 * 60 * 60* 1000);
-  inactivityCutoff=_context.clock().now() - (UDPTransport.EXPIRE_TIMEOUT / 4);
-  for (int i=0; i < sz; i++) {
-    PeerState cur=(PeerState)peers.get(i);
-    if (cur.getIntroducerTime() > pingCutoff && cur.getLastSendTime() < inactivityCutoff) {
-      if (_log.shouldLog(Log.INFO))       _log.info("Pinging introducer: " + cur);
-      cur.setLastSendTime(_context.clock().now());
-      _transport.send(_builder.buildPing(cur));
-    }
-  }
+  pingIntroducers();
   return found;
 }

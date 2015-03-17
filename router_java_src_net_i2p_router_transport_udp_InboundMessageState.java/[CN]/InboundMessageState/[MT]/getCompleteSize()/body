@@ -1,7 +1,13 @@
 {
   if (_completeSize < 0) {
+    if (_lastFragment < 0)     throw new IllegalStateException("last fragment not set");
+    if (_released)     throw new IllegalStateException("SSU IMS 2 Use after free");
     int size=0;
-    for (int i=0; i <= _lastFragment; i++)     size+=_fragments[i].getValid();
+    for (int i=0; i <= _lastFragment; i++) {
+      ByteArray frag=_fragments[i];
+      if (frag == null)       throw new IllegalStateException("null fragment " + i + '/'+ _lastFragment);
+      size+=frag.getValid();
+    }
     _completeSize=size;
   }
   return _completeSize;

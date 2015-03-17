@@ -1,0 +1,76 @@
+{
+  _mark=_pos;
+  if (_pos >= _avail)   fill();
+  if (_pos >= _avail)   return -1;
+  byte b;
+  boolean cr=_lastCr;
+  boolean lf=false;
+  _lastCr=false;
+  int len=0;
+  LineLoop:   while (_pos <= _avail) {
+    while (_pos == _avail) {
+      if (_eof || (_mark == 0 && _contents == _buf.length)) {
+        _lastCr=!_eof && _buf[_avail - 1] == CR;
+        cr=true;
+        lf=true;
+        break LineLoop;
+      }
+      if (cr && in.available() == 0 && !_seenCrLf) {
+        _lastCr=true;
+        cr=true;
+        lf=true;
+        break LineLoop;
+      }
+ else {
+        _pos=_mark;
+        fill();
+        _pos=len;
+        cr=false;
+      }
+    }
+    b=_buf[_pos++];
+switch (b) {
+case LF:
+      if (cr)       _seenCrLf=true;
+    lf=true;
+  break LineLoop;
+case CR:
+if (cr) {
+  if (_pos > 1) {
+    _pos--;
+    break LineLoop;
+  }
+}
+cr=true;
+break;
+default :
+if (cr) {
+if (_pos == 1) cr=false;
+ else {
+_pos--;
+break LineLoop;
+}
+}
+len++;
+if (len == maxLen) {
+if (_mark != 0 && _pos + 2 >= _avail && _avail < _buf.length) fill();
+if (_pos < _avail && _buf[_pos] == CR) {
+cr=true;
+_pos++;
+}
+if (_pos < _avail && _buf[_pos] == LF) {
+lf=true;
+_pos++;
+}
+if (!cr && !lf) {
+lf=true;
+cr=true;
+}
+break LineLoop;
+}
+break;
+}
+}
+if (!cr && !lf && len == 0) len=-1;
+return len;
+}

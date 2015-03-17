@@ -2,26 +2,27 @@
   if (ackThrough < 0)   return false;
   boolean firstAck=isNew && con.getHighestAckedThrough() < 0;
   int numResends=0;
-  List acked=null;
-  if ((packet != null) && (packet.getSendStreamId() > 0) && (packet.getReceiveStreamId() > 0)&& (con != null)&& (con.getSendStreamId() > 0)&& (con.getReceiveStreamId() > 0)&& (!DataHelper.eq(packet.getSendStreamId(),Packet.STREAM_ID_UNKNOWN))&& (!DataHelper.eq(packet.getReceiveStreamId(),Packet.STREAM_ID_UNKNOWN))&& (!DataHelper.eq(con.getSendStreamId(),Packet.STREAM_ID_UNKNOWN))&& (!DataHelper.eq(con.getReceiveStreamId(),Packet.STREAM_ID_UNKNOWN)))   acked=con.ackPackets(ackThrough,nacks);
+  List<PacketLocal> acked=null;
+  if ((packet != null) && (packet.getSendStreamId() > 0) && (packet.getReceiveStreamId() > 0)&& (con != null)&& (con.getSendStreamId() > 0)&& (con.getReceiveStreamId() > 0)&& (packet.getSendStreamId() != Packet.STREAM_ID_UNKNOWN)&& (packet.getReceiveStreamId() != Packet.STREAM_ID_UNKNOWN)&& (con.getSendStreamId() != Packet.STREAM_ID_UNKNOWN)&& (con.getReceiveStreamId() != Packet.STREAM_ID_UNKNOWN))   acked=con.ackPackets(ackThrough,nacks);
  else   return false;
-  if ((acked != null) && (acked.size() > 0)) {
+  if ((acked != null) && (!acked.isEmpty())) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug(acked.size() + " of our packets acked with " + packet);
     int highestRTT=-1;
     for (int i=0; i < acked.size(); i++) {
-      PacketLocal p=(PacketLocal)acked.get(i);
+      PacketLocal p=acked.get(i);
       if (p.getAckTime() > highestRTT) {
         highestRTT=p.getAckTime();
       }
       _context.statManager().addRateData("stream.sendsBeforeAck",p.getNumSends(),p.getAckTime());
       if (p.getNumSends() > 1)       numResends++;
-      if ((p.getKeyUsed() != null) && (p.getTagsSent() != null) && (p.getTagsSent().size() > 0)) {
-        _context.sessionKeyManager().tagsDelivered(p.getTo().getPublicKey(),p.getKeyUsed(),p.getTagsSent());
-      }
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Packet acked after " + p.getAckTime() + "ms: "+ p);
     }
     if (highestRTT > 0) {
+      int oldrtt=con.getOptions().getRTT();
+      int oldrto=con.getOptions().getRTO();
+      int olddev=con.getOptions().getRTTDev();
       con.getOptions().updateRTT(highestRTT);
+      if (_log.shouldLog(Log.INFO))       _log.info("acked: " + acked.size() + " highestRTT: "+ highestRTT+ " RTT: "+ oldrtt+ " -> "+ con.getOptions().getRTT()+ " RTO: "+ oldrto+ " -> "+ con.getOptions().getRTO()+ " Dev: "+ olddev+ " -> "+ con.getOptions().getRTTDev());
       if (firstAck) {
         if (con.isInbound())         _context.statManager().addRateData("stream.con.initialRTT.in",highestRTT,0);
  else         _context.statManager().addRateData("stream.con.initialRTT.out",highestRTT,0);

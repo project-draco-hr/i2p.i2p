@@ -1,5 +1,7 @@
 {
-  UDPPacket packet=UDPPacket.acquire(_context,false);
+  UDPPacket packet=buildPacketHeader(SESSION_REQUEST_FLAG_BYTE);
+  byte data[]=packet.getPacket().getData();
+  int off=HEADER_SIZE;
   byte toIP[]=state.getSentIP();
   if ((_transport != null) && (!_transport.isValid(toIP))) {
     packet.release();
@@ -14,15 +16,7 @@
     packet.release();
     return null;
   }
-  byte data[]=packet.getPacket().getData();
-  Arrays.fill(data,0,data.length,(byte)0x0);
-  int off=UDPPacket.MAC_SIZE + UDPPacket.IV_SIZE;
-  data[off]=SESSION_REQUEST_FLAG_BYTE;
-  off++;
-  long now=_context.clock().now() / 1000;
-  DataHelper.toLong(data,off,4,now);
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Sending request with time = " + new Date(now * 1000));
-  off+=4;
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Sending request");
   System.arraycopy(state.getSentX(),0,data,off,state.getSentX().length);
   off+=state.getSentX().length;
   DataHelper.toLong(data,off,1,state.getSentIP().length);
@@ -35,6 +29,6 @@
   packet.getPacket().setLength(off);
   authenticate(packet,state.getIntroKey(),state.getIntroKey());
   setTo(packet,to,state.getSentPort());
-  packet.setMessageType(52);
+  packet.setMessageType(TYPE_SREQ);
   return packet;
 }

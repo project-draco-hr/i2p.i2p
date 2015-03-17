@@ -1,21 +1,25 @@
 {
   TreeMap transports=new TreeMap();
-  for (int i=0; i < _transports.size(); i++) {
-    Transport t=(Transport)_transports.get(i);
+  for (  Transport t : _transports.values()) {
     transports.put(t.getStyle(),t);
   }
   for (Iterator iter=transports.values().iterator(); iter.hasNext(); ) {
     Transport t=(Transport)iter.next();
     t.renderStatusHTML(out,urlBase,sortFlags);
   }
-  StringBuffer buf=new StringBuffer(4 * 1024);
-  buf.append("Listening on: <br /><pre>\n");
-  for (int i=0; i < _transports.size(); i++) {
-    Transport t=(Transport)_transports.get(i);
-    if (t.getCurrentAddress() != null)     buf.append(t.getCurrentAddress()).append("\n\n");
- else     buf.append(t.getStyle()).append(" is used for outbound connections only\n\n");
+  if (!_transports.isEmpty()) {
+    out.write(getTransportsLegend());
+  }
+  StringBuilder buf=new StringBuilder(4 * 1024);
+  buf.append("<h3>").append(_("Router Transport Addresses")).append("</h3><pre>\n");
+  for (  Transport t : _transports.values()) {
+    if (t.getCurrentAddress() != null)     buf.append(t.getCurrentAddress());
+ else     buf.append(_("{0} is used for outbound connections only",t.getStyle()));
+    buf.append("\n\n");
   }
   buf.append("</pre>\n");
   out.write(buf.toString());
+  if (_upnpManager != null)   out.write(_upnpManager.renderStatusHTML());
+  buf.append("</p>\n");
   out.flush();
 }

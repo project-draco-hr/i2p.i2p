@@ -1,26 +1,25 @@
 {
   byte elgSrcData[]=new byte[SessionKey.KEYSIZE_BYTES + 32 + 158];
   System.arraycopy(key.getData(),0,elgSrcData,0,SessionKey.KEYSIZE_BYTES);
-  byte preIV[]=new byte[32];
-  _context.random().nextBytes(preIV);
-  System.arraycopy(preIV,0,elgSrcData,SessionKey.KEYSIZE_BYTES,32);
-  byte rnd[]=new byte[158];
-  _context.random().nextBytes(rnd);
-  System.arraycopy(rnd,0,elgSrcData,SessionKey.KEYSIZE_BYTES + 32,158);
+  _context.random().nextBytes(elgSrcData,SessionKey.KEYSIZE_BYTES,32 + 158);
+  byte preIV[]=SimpleByteCache.acquire(32);
+  System.arraycopy(elgSrcData,SessionKey.KEYSIZE_BYTES,preIV,0,32);
   long before=_context.clock().now();
   byte elgEncr[]=_context.elGamalEngine().encrypt(elgSrcData,target);
-  long after=_context.clock().now();
-  if (_log.shouldLog(Log.INFO))   _log.info("elgEngine.encrypt of the session key took " + (after - before) + "ms");
+  if (_log.shouldLog(Log.INFO)) {
+    long after=_context.clock().now();
+    _log.info("elgEngine.encrypt of the session key took " + (after - before) + "ms");
+  }
   if (elgEncr.length < 514) {
     byte elg[]=new byte[514];
     int diff=elg.length - elgEncr.length;
     System.arraycopy(elgEncr,0,elg,diff,elgEncr.length);
     elgEncr=elg;
   }
-  Hash ivHash=_context.sha().calculateHash(preIV);
-  byte iv[]=new byte[16];
-  System.arraycopy(ivHash.getData(),0,iv,0,16);
+  byte[] iv=halfHash(preIV);
+  SimpleByteCache.release(preIV);
   byte aesEncr[]=encryptAESBlock(data,key,iv,tagsForDelivery,newKey,paddedSize);
+  SimpleByteCache.release(iv);
   byte rv[]=new byte[elgEncr.length + aesEncr.length];
   System.arraycopy(elgEncr,0,rv,0,elgEncr.length);
   System.arraycopy(aesEncr,0,rv,elgEncr.length,aesEncr.length);

@@ -6,7 +6,7 @@
   try {
     fis=new FileInputStream(getFileName());
     addressbook.load(fis);
-    LinkedList list=new LinkedList();
+    LinkedList<AddressBean> list=new LinkedList();
     Enumeration e=addressbook.keys();
     while (e.hasMoreElements()) {
       String name=(String)e.nextElement();
@@ -16,7 +16,7 @@
           char first=name.charAt(0);
           if (first < '0' || first > '9')           continue;
         }
- else         if (!name.toLowerCase().startsWith(filter.toLowerCase())) {
+ else         if (!name.toLowerCase(Locale.US).startsWith(filter.toLowerCase(Locale.US))) {
           continue;
         }
       }
@@ -27,14 +27,10 @@
       }
       list.addLast(new AddressBean(name,destination));
     }
-    if (filter != null && filter.length() > 0)     message="Filtered l";
- else     message="L";
-    message+="ist contains " + list.size() + " entries";
-    if (list.size() > 300)     message+=", displaying the first 300.";
- else     message+=".";
-    Object array[]=list.toArray();
+    AddressBean array[]=list.toArray(new AddressBean[list.size()]);
     Arrays.sort(array,sorter);
     entries=array;
+    message=generateLoadMessage();
   }
  catch (  Exception e) {
     Debug.debug(e.getClass().getName() + ": " + e.getMessage());

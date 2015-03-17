@@ -7,27 +7,34 @@
   int peersize=0;
 synchronized (peers) {
     peersize=peers.size();
-    need_more=(!peer.isConnected()) && peersize < _util.getMaxConnections();
+    need_more=(!peer.isConnected()) && peersize < getMaxConnections();
     Peer old=peerIDInList(peer.getPeerID(),peers);
-    need_more=need_more && ((old == null) || (old.getInactiveTime() > 8 * 60 * 1000));
+    need_more=need_more && ((old == null) || (old.getInactiveTime() > MAX_INACTIVE));
   }
   if (need_more) {
-    _log.debug("Adding a peer " + peer.getPeerID().getAddress().calculateHash().toBase64() + " for "+ metainfo.getName(),new Exception("add/run"));
+    if (_log.shouldLog(Log.DEBUG)) {
+      String name;
+      if (metainfo == null)       name="Magnet";
+ else       name=metainfo.getName();
+      _log.debug("Adding a peer " + peer.getPeerID().toString() + " for "+ name,new Exception("add/run"));
+    }
     final PeerListener listener=this;
-    final BitField bitfield=storage.getBitField();
+    final BitField bitfield;
+    if (storage != null)     bitfield=storage.getBitField();
+ else     bitfield=null;
     Runnable r=new Runnable(){
       public void run(){
-        peer.runConnection(_util,listener,bitfield);
+        peer.runConnection(_util,listener,bitfield,magnetState);
       }
     }
 ;
-    String threadName=peer.toString();
+    String threadName="Snark peer " + peer.toString();
     new I2PAppThread(r,threadName).start();
     return true;
   }
   if (_log.shouldLog(Log.DEBUG)) {
     if (peer.isConnected())     _log.info("Add peer already connected: " + peer);
- else     _log.info("Connections: " + peersize + "/"+ _util.getMaxConnections()+ " not accepting extra peer: "+ peer);
+ else     _log.info("Connections: " + peersize + "/"+ getMaxConnections()+ " not accepting extra peer: "+ peer);
   }
   return false;
 }

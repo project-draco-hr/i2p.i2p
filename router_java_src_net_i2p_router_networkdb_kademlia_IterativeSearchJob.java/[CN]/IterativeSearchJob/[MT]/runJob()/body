@@ -1,0 +1,37 @@
+{
+  List<Hash> floodfillPeers;
+  KBucketSet ks=_facade.getKBuckets();
+  if (ks != null) {
+    floodfillPeers=((FloodfillPeerSelector)_facade.getPeerSelector()).selectFloodfillParticipants(_rkey,TOTAL_SEARCH_LIMIT,ks);
+  }
+ else {
+    floodfillPeers=new ArrayList(TOTAL_SEARCH_LIMIT);
+  }
+  if (floodfillPeers.isEmpty()) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Running netDb searches against the floodfill peers, but we don't know any");
+    List<Hash> all=new ArrayList(_facade.getAllRouters());
+    if (all.isEmpty()) {
+      if (_log.shouldLog(Log.ERROR))       _log.error("We don't know any peers at all");
+      failed();
+      return;
+    }
+    Iterator<Hash> iter=new RandomIterator(all);
+    for (int i=0; iter.hasNext() && i < MAX_NON_FF; i++) {
+      floodfillPeers.add(iter.next());
+    }
+  }
+  _toTry.addAll(floodfillPeers);
+  _toTry.remove(getContext().routerHash());
+  _toTry.remove(_key);
+  if (_toTry.isEmpty()) {
+    if (_log.shouldLog(Log.WARN))     _log.warn(getJobId() + ": Iterative search for " + _key+ " had no peers to send to");
+    failed();
+    return;
+  }
+  MessageSelector replySelector=new IterativeLookupSelector(getContext(),this);
+  ReplyJob onReply=new FloodOnlyLookupMatchJob(getContext(),this);
+  Job onTimeout=new FloodOnlyLookupTimeoutJob(getContext(),this);
+  _out=getContext().messageRegistry().registerPending(replySelector,onReply,onTimeout,_timeoutMs);
+  if (_log.shouldLog(Log.INFO))   _log.info(getJobId() + ": Iterative search for " + _key+ " (rkey "+ _rkey+ ") timeout "+ DataHelper.formatDuration(_timeoutMs)+ " toTry: "+ DataHelper.toString(_toTry));
+  retry();
+}

@@ -1,0 +1,38 @@
+{
+  if (_outputStream != null) {
+  }
+ else {
+    File outFile=new File(_outputFile);
+    if (outFile.exists())     _alreadyTransferred=outFile.length();
+  }
+  String req=getRequest();
+  URL url=new URL(_actualURL);
+  String host=null;
+  int port=0;
+  if ("https".equals(url.getProtocol())) {
+    host=url.getHost();
+    port=url.getPort();
+    if (port == -1)     port=443;
+    if (_sslContext != null)     _proxy=_sslContext.getSocketFactory().createSocket(host,port);
+ else     _proxy=SSLSocketFactory.getDefault().createSocket(host,port);
+  }
+ else {
+    throw new IOException("Only https supported: " + _actualURL);
+  }
+  _proxyIn=_proxy.getInputStream();
+  _proxyOut=_proxy.getOutputStream();
+  try {
+    _proxyOut.write(DataHelper.getUTF8(req));
+    _proxyOut.flush();
+  }
+ catch (  SSLHandshakeException sslhe) {
+    _log.error("SSL negotiation error with " + host + ':'+ port+ " - self-signed certificate or untrusted certificate authority?",sslhe);
+    if (_saveCerts && _stm != null)     saveCerts(host,_stm);
+ else     if (_commandLine) {
+      System.out.println("FAILED (probably due to untrusted certificates) - Run with -s option to save certificates");
+    }
+    throw sslhe;
+  }
+  _proxyIn=new BufferedInputStream(_proxyIn);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Request flushed");
+}

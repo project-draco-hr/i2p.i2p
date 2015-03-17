@@ -1,0 +1,28 @@
+{
+  KBucket bucket;
+  getReadLock();
+  try {
+    bucket=getBucket(peer);
+  }
+  finally {
+    releaseReadLock();
+  }
+  if (bucket != null) {
+    if (bucket.add(peer)) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Peer " + peer + " added to bucket "+ bucket);
+      if (shouldSplit(bucket)) {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Splitting bucket " + bucket);
+        split(bucket.getRangeBegin());
+      }
+      return true;
+    }
+ else {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Peer " + peer + " NOT added to bucket "+ bucket);
+      return false;
+    }
+  }
+ else {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Failed to add, probably us: " + peer);
+    return false;
+  }
+}

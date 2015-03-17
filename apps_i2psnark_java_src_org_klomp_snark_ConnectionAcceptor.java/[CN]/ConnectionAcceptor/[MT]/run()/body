@@ -27,18 +27,36 @@
         }
       }
  else {
-        Thread t=new I2PAppThread(new Handler(socket),"Connection-" + socket);
+        if (socket.getPeerDestination().equals(_util.getMyDestination())) {
+          _log.error("Incoming connection from myself");
+          try {
+            socket.close();
+          }
+ catch (          IOException ioe) {
+          }
+          continue;
+        }
+        if (_badCounter.count(socket.getPeerDestination().calculateHash()) >= MAX_BAD) {
+          if (_log.shouldLog(Log.WARN))           _log.warn("Rejecting connection from " + socket.getPeerDestination().calculateHash() + " after "+ MAX_BAD+ " failures");
+          try {
+            socket.close();
+          }
+ catch (          IOException ioe) {
+          }
+          continue;
+        }
+        Thread t=new I2PAppThread(new Handler(socket),"I2PSnark incoming connection");
         t.start();
       }
     }
  catch (    I2PException ioe) {
       if (!socketChanged) {
-        _util.debug("Error while accepting: " + ioe,Snark.ERROR);
+        _log.error("Error while accepting",ioe);
         stop=true;
       }
     }
 catch (    IOException ioe) {
-      _util.debug("Error while accepting: " + ioe,Snark.ERROR);
+      _log.error("Error while accepting",ioe);
       stop=true;
     }
   }

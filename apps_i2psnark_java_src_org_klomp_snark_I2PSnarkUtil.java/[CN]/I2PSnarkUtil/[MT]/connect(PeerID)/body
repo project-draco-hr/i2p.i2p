@@ -1,20 +1,19 @@
 {
-  Hash dest=peer.getAddress().calculateHash();
-synchronized (_shitlist) {
-    if (_shitlist.contains(dest))     throw new IOException("Not trying to contact " + dest.toBase64() + ", as they are shitlisted");
-  }
+  I2PSocketManager mgr=_manager;
+  if (mgr == null)   throw new IOException("No socket manager");
+  Destination addr=peer.getAddress();
+  if (addr == null)   throw new IOException("Null address");
+  if (addr.equals(getMyDestination()))   throw new IOException("Attempt to connect to myself");
+  Hash dest=addr.calculateHash();
+  if (_shitlist.contains(dest))   throw new IOException("Not trying to contact " + dest.toBase64() + ", as they are shitlisted");
   try {
-    I2PSocket rv=_manager.connect(peer.getAddress());
-    if (rv != null) synchronized (_shitlist) {
-      _shitlist.remove(dest);
-    }
+    I2PSocket rv=_manager.connect(addr);
+    if (rv != null)     _shitlist.remove(dest);
     return rv;
   }
  catch (  I2PException ie) {
-synchronized (_shitlist) {
-      _shitlist.add(dest);
-    }
-    SimpleScheduler.getInstance().addEvent(new Unshitlist(dest),10 * 60 * 1000);
+    _shitlist.add(dest);
+    _context.simpleScheduler().addEvent(new Unshitlist(dest),10 * 60 * 1000);
     throw new IOException("Unable to reach the peer " + peer + ": "+ ie.getMessage());
   }
 }

@@ -2,41 +2,35 @@
   _expectedCrc=DataHelper.fromLong(buf,buf.length - 4,4);
   _crc.update(buf,0,buf.length - 4);
   long val=_crc.getValue();
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("CRC value computed: " + val + " expected: "+ _expectedCrc+ " size: "+ _size);
   if (val == _expectedCrc) {
     try {
       I2NPMessageHandler h=acquireHandler(_context);
-      I2NPMessage read=h.readMessage(_dataBuf.bais);
+      h.readMessage(_dataBuf.data,0,_size);
+      I2NPMessage read=h.lastRead();
       long timeToRecv=System.currentTimeMillis() - _stateBegin;
       releaseHandler(h);
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("I2NP message " + _messagesRead + "/"+ (read != null ? read.getUniqueId() : 0)+ " received after "+ timeToRecv+ " with "+ _size+ "/"+ (_blocks * 16)+ " bytes on "+ toString());
-      _context.statManager().addRateData("ntcp.receiveTime",timeToRecv,timeToRecv);
-      _context.statManager().addRateData("ntcp.receiveSize",_size,timeToRecv);
+      if (_log.shouldLog(Log.INFO))       _log.info("I2NP message " + _messagesRead + "/"+ (read != null ? read.getUniqueId() : 0)+ " received after "+ timeToRecv+ " with "+ _size+ "/"+ (_blocks * 16)+ " bytes on "+ NTCPConnection.this.toString());
+      _context.statManager().addRateData("ntcp.receiveTime",timeToRecv);
+      _context.statManager().addRateData("ntcp.receiveSize",_size);
       if (read != null) {
         _transport.messageReceived(read,_remotePeer,null,timeToRecv,_size);
         if (_messagesRead <= 0)         enqueueInfoMessage();
         _lastReceiveTime=System.currentTimeMillis();
         _messagesRead++;
       }
-      init();
     }
- catch (    IOException ioe) {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Error parsing I2NP message",ioe);
-      _context.statManager().addRateData("ntcp.corruptI2NPIOE",1,getUptime());
-      close();
-      return;
-    }
-catch (    I2NPMessageException ime) {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Error parsing I2NP message",ime);
-      _context.statManager().addRateData("ntcp.corruptI2NPIME",1,getUptime());
-      close();
-      return;
+ catch (    I2NPMessageException ime) {
+      if (_log.shouldLog(Log.WARN)) {
+        _log.warn("Error parsing I2NP message",ime);
+        _log.warn("DUMP:\n" + HexDump.dump(_dataBuf.data,0,_size));
+        _log.warn("RAW:\n" + Base64.encode(_dataBuf.data,0,_size));
+      }
+      _context.statManager().addRateData("ntcp.corruptI2NPIME",1);
     }
   }
  else {
-    if (_log.shouldLog(Log.ERROR))     _log.error("CRC incorrect for message " + _messagesRead + " (calc="+ val+ " expected="+ _expectedCrc+ ") size="+ _size+ " blocks "+ _blocks);
-    _context.statManager().addRateData("ntcp.corruptI2NPCRC",1,getUptime());
-    close();
-    return;
+    if (_log.shouldLog(Log.WARN))     _log.warn("CRC incorrect for message " + _messagesRead + " (calc="+ val+ " expected="+ _expectedCrc+ ") size="+ _size+ " blocks "+ _blocks);
+    _context.statManager().addRateData("ntcp.corruptI2NPCRC",1);
   }
+  init();
 }

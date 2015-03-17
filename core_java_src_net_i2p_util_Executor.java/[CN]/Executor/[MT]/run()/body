@@ -2,12 +2,12 @@
   while (runn.getAnswer()) {
     SimpleTimer.TimedEvent evt=null;
 synchronized (_readyEvents) {
-      if (_readyEvents.size() <= 0)       try {
+      if (_readyEvents.isEmpty())       try {
         _readyEvents.wait();
       }
  catch (      InterruptedException ie) {
       }
-      if (_readyEvents.size() > 0)       evt=(SimpleTimer.TimedEvent)_readyEvents.remove(0);
+      if (!_readyEvents.isEmpty())       evt=_readyEvents.remove(0);
     }
     if (evt != null) {
       long before=_context.clock().now();
@@ -15,10 +15,10 @@ synchronized (_readyEvents) {
         evt.timeReached();
       }
  catch (      Throwable t) {
-        log("wtf, event borked: " + evt,t);
+        _log.error("Executing task " + evt + " exited unexpectedly, please report",t);
       }
       long time=_context.clock().now() - before;
-      if ((time > 1000) && (_log != null) && (_log.shouldLog(Log.WARN)))       _log.warn("wtf, event execution took " + time + ": "+ evt);
+      if ((time > 1000) && (_log.shouldLog(Log.WARN)))       _log.warn("wtf, event execution took " + time + ": "+ evt);
     }
   }
 }

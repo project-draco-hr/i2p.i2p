@@ -1,0 +1,56 @@
+{
+  String hash=info.getIdentity().getHash().toBase64();
+  buf.append("<table><tr><th><a name=\"").append(hash.substring(0,6)).append("\" ></a>");
+  if (isUs) {
+    buf.append("<a name=\"our-info\" ></a><b>" + _("Our info") + ": ").append(hash).append("</b></th></tr><tr><td>\n");
+  }
+ else {
+    buf.append("<b>" + _("Peer info for") + ":</b> ").append(hash).append("\n");
+    if (!full) {
+      buf.append("[<a href=\"netdb?r=").append(hash.substring(0,6)).append("\" >").append(_("Full entry")).append("</a>]");
+    }
+    buf.append("</th></tr><tr><td>\n");
+  }
+  long age=_context.clock().now() - info.getPublished();
+  if (isUs && _context.router().isHidden()) {
+    buf.append("<b>").append(_("Hidden")).append(", ").append(_("Updated")).append(":</b> ").append(_("{0} ago",DataHelper.formatDuration2(age))).append("<br>\n");
+  }
+ else   if (age > 0) {
+    buf.append("<b>").append(_("Published")).append(":</b> ").append(_("{0} ago",DataHelper.formatDuration2(age))).append("<br>\n");
+  }
+ else {
+    buf.append("<b>" + _("Published") + ":</b> in ").append(DataHelper.formatDuration2(0 - age)).append("???<br>\n");
+  }
+  buf.append("<b>" + _("Address(es)") + ":</b> ");
+  String country=_context.commSystem().getCountry(info.getIdentity().getHash());
+  if (country != null) {
+    buf.append("<img height=\"11\" width=\"16\" alt=\"").append(country.toUpperCase(Locale.US)).append('\"');
+    buf.append(" title=\"").append(_(_context.commSystem().getCountryName(country))).append('\"');
+    buf.append(" src=\"/flags.jsp?c=").append(country).append("\"> ");
+  }
+  for (Iterator iter=info.getAddresses().iterator(); iter.hasNext(); ) {
+    RouterAddress addr=(RouterAddress)iter.next();
+    String style=addr.getTransportStyle();
+    buf.append("<b>").append(DataHelper.stripHTML(style)).append(":</b> ");
+    int cost=addr.getCost();
+    if (!((style.equals("SSU") && cost == 5) || (style.equals("NTCP") && cost == 10)))     buf.append('[').append(_("cost")).append('=').append("" + cost).append("] ");
+    Map p=addr.getOptionsMap();
+    for (    Map.Entry e : (Set<Map.Entry>)p.entrySet()) {
+      String name=(String)e.getKey();
+      String val=(String)e.getValue();
+      buf.append('[').append(_(DataHelper.stripHTML(name))).append('=').append(DataHelper.stripHTML(val)).append("] ");
+    }
+  }
+  buf.append("</td></tr>\n");
+  if (full) {
+    buf.append("<tr><td>" + _("Stats") + ": <br><code>");
+    Map p=info.getOptionsMap();
+    for (    Map.Entry e : (Set<Map.Entry>)p.entrySet()) {
+      String key=(String)e.getKey();
+      String val=(String)e.getValue();
+      buf.append(DataHelper.stripHTML(key)).append(" = ").append(DataHelper.stripHTML(val)).append("<br>\n");
+    }
+    buf.append("</code></td></tr>\n");
+  }
+  buf.append("</table>\n");
+}

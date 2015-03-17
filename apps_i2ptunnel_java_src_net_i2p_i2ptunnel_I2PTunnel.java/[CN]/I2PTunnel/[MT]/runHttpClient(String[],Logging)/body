@@ -1,19 +1,19 @@
 {
   if (args.length >= 1 && args.length <= 3) {
-    int port=-1;
+    int clientPort=-1;
     try {
-      port=Integer.parseInt(args[0]);
+      clientPort=Integer.parseInt(args[0]);
     }
  catch (    NumberFormatException nfe) {
       l.log("invalid port");
       _log.error(getPrefix() + "Port specified is not valid: " + args[0],nfe);
       notifyEvent("httpclientTaskId",Integer.valueOf(-1));
-      return;
     }
+    if (clientPort <= 0)     throw new IllegalArgumentException(getPrefix() + "Bad port " + args[0]);
     String proxy="";
     boolean isShared=true;
     if (args.length > 1) {
-      if ("true".equalsIgnoreCase(args[1].trim())) {
+      if (Boolean.valueOf(args[1].trim()).booleanValue()) {
         isShared=true;
         if (args.length == 3)         proxy=args[2];
       }
@@ -35,14 +35,16 @@
     I2PTunnelTask task;
     ownDest=!isShared;
     try {
-      task=new I2PTunnelHTTPClient(port,l,ownDest,proxy,(EventDispatcher)this,this);
+      task=new I2PTunnelHTTPClient(clientPort,l,ownDest,proxy,this,this);
       addtask(task);
       notifyEvent("httpclientTaskId",Integer.valueOf(task.getId()));
     }
  catch (    IllegalArgumentException iae) {
-      _log.error(getPrefix() + "Invalid I2PTunnel config to create an httpclient [" + host+ ":"+ port+ "]",iae);
-      l.log("Invalid I2PTunnel configuration [" + host + ":"+ port+ "]");
+      String msg="Invalid I2PTunnel configuration to create an HTTP Proxy connecting to the router at " + host + ':'+ port+ " and listening on "+ listenHost+ ':'+ clientPort;
+      _log.error(getPrefix() + msg,iae);
+      l.log(msg);
       notifyEvent("httpclientTaskId",Integer.valueOf(-1));
+      throw iae;
     }
   }
  else {

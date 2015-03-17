@@ -1,0 +1,44 @@
+{
+  try {
+    if (props == null) {
+      notifyStreamResult(true,"I2P_ERROR","No parameters specified in STREAM CONNECT message");
+      _log.debug("No parameters specified in STREAM CONNECT message");
+      return false;
+    }
+    boolean verbose=props.getProperty("SILENT","false").equals("false");
+    String dest=props.getProperty("DESTINATION");
+    if (dest == null) {
+      notifyStreamResult(verbose,"I2P_ERROR","Destination not specified in RAW SEND message");
+      _log.debug("Destination not specified in RAW SEND message");
+      return false;
+    }
+    props.remove("DESTINATION");
+    try {
+      streamSession.connect(this,dest,props);
+      return true;
+    }
+ catch (    DataFormatException e) {
+      _log.debug("Invalid destination in STREAM CONNECT message");
+      notifyStreamResult(verbose,"INVALID_KEY",null);
+    }
+catch (    ConnectException e) {
+      _log.debug("STREAM CONNECT failed: " + e.getMessage());
+      notifyStreamResult(verbose,"CONNECTION_REFUSED",null);
+    }
+catch (    NoRouteToHostException e) {
+      _log.debug("STREAM CONNECT failed: " + e.getMessage());
+      notifyStreamResult(verbose,"CANT_REACH_PEER",null);
+    }
+catch (    InterruptedIOException e) {
+      _log.debug("STREAM CONNECT failed: " + e.getMessage());
+      notifyStreamResult(verbose,"TIMEOUT",null);
+    }
+catch (    I2PException e) {
+      _log.debug("STREAM CONNECT failed: " + e.getMessage());
+      notifyStreamResult(verbose,"I2P_ERROR",e.getMessage());
+    }
+  }
+ catch (  IOException e) {
+  }
+  return false;
+}

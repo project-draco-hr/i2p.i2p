@@ -1,30 +1,3 @@
 {
-  int remaining=-1;
-  long lifetime=-1;
-  boolean added=false;
-  int removed=0;
-  while ((_keepRunning) && (remaining < 0)) {
-synchronized (_outboundQueue) {
-      UDPPacket head=null;
-      if (_outboundQueue.size() > 0) {
-        head=(UDPPacket)_outboundQueue.get(0);
-        while (head.getLifetime() > MAX_HEAD_LIFETIME) {
-          _outboundQueue.remove(0);
-          removed++;
-          if (_outboundQueue.size() > 0)           head=(UDPPacket)_outboundQueue.get(0);
- else           break;
-        }
-      }
-      lifetime=packet.getLifetime();
-      _outboundQueue.add(packet);
-      added=true;
-      remaining=_outboundQueue.size();
-      _outboundQueue.notifyAll();
-    }
-  }
-  _context.statManager().addRateData("udp.sendQueueSize",remaining,lifetime);
-  if (!added)   _context.statManager().addRateData("udp.sendQueueFailed",remaining,lifetime);
-  if (removed > 0)   _context.statManager().addRateData("udp.sendQueueTrimmed",removed,remaining);
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Added the packet onto the queue with " + remaining + " remaining and a lifetime of "+ lifetime);
-  return remaining;
+  return add(packet);
 }

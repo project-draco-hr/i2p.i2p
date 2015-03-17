@@ -6,9 +6,18 @@
   }
   String type=getType();
   if ((type == null) || (type.length() <= 0)) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("Cannot start the tunnel - no type specified");
+    if (_log.shouldLog(Log.ERROR))     _log.error("Cannot start the tunnel - no type specified");
     return;
   }
+  if (type.endsWith("server") || getPersistentClientKey()) {
+    boolean ok=createPrivateKey();
+    if (!ok) {
+      log("Failed to start tunnel " + getName() + " as the private key file could not be created");
+      return;
+    }
+  }
+  setI2CPOptions();
+  setSessionOptions();
   if ("httpclient".equals(type)) {
     startHttpClient();
   }
@@ -18,11 +27,17 @@
  else   if ("sockstunnel".equals(type)) {
     startSocksClient();
   }
+ else   if ("socksirctunnel".equals(type)) {
+    startSocksIRCClient();
+  }
  else   if ("connectclient".equals(type)) {
     startConnectClient();
   }
  else   if ("client".equals(type)) {
     startClient();
+  }
+ else   if ("streamrclient".equals(type)) {
+    startStreamrClient();
   }
  else   if ("server".equals(type)) {
     startServer();
@@ -30,7 +45,19 @@
  else   if ("httpserver".equals(type)) {
     startHttpServer();
   }
+ else   if ("httpbidirserver".equals(type)) {
+    startHttpBidirServer();
+  }
+ else   if ("ircserver".equals(type)) {
+    startIrcServer();
+  }
+ else   if ("streamrserver".equals(type)) {
+    startStreamrServer();
+  }
  else {
     if (_log.shouldLog(Log.ERROR))     _log.error("Cannot start tunnel - unknown type [" + type + "]");
+    return;
   }
+  acquire();
+  _running=true;
 }

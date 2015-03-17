@@ -1,26 +1,38 @@
 {
   String keyfile=DEFAULT_SAM_KEYFILE;
   int port=SAM_LISTENPORT;
-  String host="0.0.0.0";
+  String host=DEFAULT_TCP_HOST;
   Properties opts=null;
   if (args.length > 0) {
-    keyfile=args[0];
-    int portIndex=1;
     try {
-      port=Integer.parseInt(args[portIndex]);
-    }
- catch (    NumberFormatException nfe) {
-      host=args[1];
-      portIndex++;
+      opts=parseOptions(args,0);
+      keyfile=args[0];
+      int portIndex=1;
       try {
-        port=Integer.parseInt(args[portIndex]);
+        if (args.length > portIndex)         port=Integer.parseInt(args[portIndex]);
       }
- catch (      NumberFormatException nfe1) {
-        usage();
-        return;
+ catch (      NumberFormatException nfe) {
+        host=args[portIndex];
+        portIndex++;
+        try {
+          if (args.length > portIndex)           port=Integer.parseInt(args[portIndex]);
+        }
+ catch (        NumberFormatException nfe1) {
+          try {
+            port=Integer.parseInt(opts.getProperty(SAMBridge.PROP_TCP_PORT,SAMBridge.DEFAULT_TCP_PORT));
+            host=opts.getProperty(SAMBridge.PROP_TCP_HOST,SAMBridge.DEFAULT_TCP_HOST);
+          }
+ catch (          NumberFormatException e) {
+            usage();
+            return;
+          }
+        }
       }
     }
-    opts=parseOptions(args,portIndex + 1);
+ catch (    HelpRequested e) {
+      usage();
+      return;
+    }
   }
   SAMBridge bridge=new SAMBridge(host,port,opts,keyfile);
   I2PAppThread t=new I2PAppThread(bridge,"SAMListener");

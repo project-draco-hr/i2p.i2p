@@ -1,14 +1,14 @@
 {
-  if (_log.shouldLog(Log.INFO))   _log.info("Joining as inbound gateway: " + cfg);
+  if (_log.shouldLog(Log.INFO))   _log.info("Joining as IBGW: " + cfg);
   TunnelGateway.QueuePreprocessor preproc=createPreprocessor(cfg);
   TunnelGateway.Sender sender=new InboundSender(_context,cfg);
   TunnelGateway.Receiver receiver=new InboundGatewayReceiver(_context,cfg);
-  TunnelGateway gw=new PumpedTunnelGateway(_context,preproc,sender,receiver,_pumper);
+  TunnelGateway gw=new ThrottledPumpedTunnelGateway(_context,preproc,sender,receiver,_pumper,cfg);
   TunnelId recvId=cfg.getReceiveTunnel();
   _inboundGateways.put(recvId,gw);
   _participatingConfig.put(recvId,cfg);
   _context.messageHistory().tunnelJoined("inboundGateway",cfg);
-  _context.statManager().addRateData("tunnel.joinInboundGateway",1,0);
+  _context.statManager().addRateData("tunnel.joinInboundGateway",1);
   if (cfg.getExpiration() > _lastParticipatingExpiration)   _lastParticipatingExpiration=cfg.getExpiration();
   _leaveJob.add(cfg);
 }

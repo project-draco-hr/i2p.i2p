@@ -1,32 +1,70 @@
 {
-  StringBuffer buf=new StringBuffer(1024);
-  buf.append("<h2>IP Blocklist</h2>");
-  Set singles=new TreeSet();
-synchronized (_singleIPBlocklist) {
-    singles.addAll(_singleIPBlocklist);
-  }
-  if (singles.size() > 0) {
-    buf.append("<table><tr><td><b>Transient IPs</b></td></tr>");
-    for (Iterator iter=singles.iterator(); iter.hasNext(); ) {
-      int ip=((Integer)iter.next()).intValue();
-      buf.append("<tr><td align=right>").append(toStr(ip)).append("</td></tr>\n");
+  Set<Integer> singles=new TreeSet();
+  singles.addAll(_singleIPBlocklist);
+  if (!singles.isEmpty()) {
+    out.write("<table><tr><th align=\"center\" colspan=\"2\"><b>");
+    out.write(_("IPs Banned Until Restart"));
+    out.write("</b></td></tr>");
+    for (    Integer ii : singles) {
+      int ip=ii.intValue();
+      if (ip < 0)       continue;
+      out.write("<tr><td align=\"center\" width=\"50%\">");
+      out.write(toStr(ip));
+      out.write("</td><td width=\"50%\">&nbsp;</td></tr>\n");
     }
-    buf.append("</table>");
+    for (    Integer ii : singles) {
+      int ip=ii.intValue();
+      if (ip >= 0)       break;
+      out.write("<tr><td align=\"center\" width=\"50%\">");
+      out.write(toStr(ip));
+      out.write("</td><td width=\"50%\">&nbsp;</td></tr>\n");
+    }
+    out.write("</table>");
   }
   if (_blocklistSize > 0) {
-    buf.append("<table><tr><td align=center colspan=2><b>IPs from Blocklist File</b></td></tr><tr><td align=center><b>From</b></td><td align=center><b>To</b></td></tr>");
-    for (int i=0; i < _blocklistSize; i++) {
+    out.write("<table><tr><th align=\"center\" colspan=\"2\"><b>");
+    out.write(_("IPs Permanently Banned"));
+    out.write("</b></th></tr><tr><td align=\"center\" width=\"50%\"><b>");
+    out.write(_("From"));
+    out.write("</b></td><td align=\"center\" width=\"50%\"><b>");
+    out.write(_("To"));
+    out.write("</b></td></tr>");
+    int max=Math.min(_blocklistSize,MAX_DISPLAY);
+    int displayed=0;
+    for (int i=0; i < max; i++) {
       int from=getFrom(_blocklist[i]);
-      buf.append("<tr><td align=right>").append(toStr(from)).append("</td><td align=right>");
+      if (from < 0)       continue;
+      out.write("<tr><td align=\"center\" width=\"50%\">");
+      out.write(toStr(from));
+      out.write("</td><td align=\"center\" width=\"50%\">");
       int to=getTo(_blocklist[i]);
-      if (to != from)       buf.append(toStr(to)).append("</td></tr>\n");
- else       buf.append("&nbsp</td></tr>\n");
+      if (to != from) {
+        out.write(toStr(to));
+        out.write("</td></tr>\n");
+      }
+ else       out.write("&nbsp;</td></tr>\n");
+      displayed++;
     }
-    buf.append("</table>");
+    for (int i=0; i < max && displayed++ < max; i++) {
+      int from=getFrom(_blocklist[i]);
+      if (from >= 0)       break;
+      out.write("<tr><td align=\"center\" width=\"50%\">");
+      out.write(toStr(from));
+      out.write("</td><td align=\"center\" width=\"50%\">");
+      int to=getTo(_blocklist[i]);
+      if (to != from) {
+        out.write(toStr(to));
+        out.write("</td></tr>\n");
+      }
+ else       out.write("&nbsp;</td></tr>\n");
+    }
+    if (_blocklistSize > MAX_DISPLAY)     out.write("<tr><th colspan=2>First " + MAX_DISPLAY + " displayed, see the "+ BLOCKLIST_FILE_DEFAULT+ " file for the full list</th></tr>");
+    out.write("</table>");
   }
  else {
-    buf.append("<br>No blocklist file entries");
+    out.write("<br><i>");
+    out.write(_("none"));
+    out.write("</i>");
   }
-  out.write(buf.toString());
   out.flush();
 }

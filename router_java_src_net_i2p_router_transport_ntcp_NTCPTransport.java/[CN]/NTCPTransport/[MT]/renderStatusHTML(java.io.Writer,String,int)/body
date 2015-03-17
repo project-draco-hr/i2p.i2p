@@ -4,109 +4,72 @@ synchronized (_conLock) {
     peers.addAll(_conByIdent.values());
   }
   long offsetTotal=0;
-  int bpsIn=0;
-  int bpsOut=0;
-  long uptimeMsTotal=0;
-  long sendTotal=0;
-  long recvTotal=0;
-  int numPeers=0;
-  int readingPeers=0;
-  int writingPeers=0;
   float bpsSend=0;
   float bpsRecv=0;
   long totalUptime=0;
   long totalSend=0;
   long totalRecv=0;
-  StringBuffer buf=new StringBuffer(512);
-  buf.append("<b id=\"ntcpcon\">NTCP connections: ").append(peers.size());
-  buf.append(" limit: ").append(getMaxConnections());
-  buf.append(" timeout: ").append(DataHelper.formatDuration(_pumper.getIdleTimeout()));
-  buf.append("</b><br />\n");
-  buf.append("<table border=\"1\">\n");
-  buf.append(" <tr><td><b><a href=\"#def.peer\">peer</a></b></td>");
-  buf.append("     <td><b>dir</b></td>");
-  buf.append("     <td align=\"right\"><b><a href=\"#def.idle\">idle</a></b></td>");
-  buf.append("     <td align=\"right\"><b><a href=\"#def.rate\">in/out</a></b></td>");
-  buf.append("     <td align=\"right\"><b><a href=\"#def.up\">up</a></b></td>");
-  buf.append("     <td align=\"right\"><b><a href=\"#def.skew\">skew</a></b></td>");
-  buf.append("     <td align=\"right\"><b><a href=\"#def.send\">send</a></b></td>");
-  buf.append("     <td align=\"right\"><b><a href=\"#def.recv\">recv</a></b></td>");
-  buf.append("     <td><b>out queue</b></td>");
-  buf.append("     <td><b>backlogged?</b></td>");
-  buf.append("     <td><b>reading?</b></td>");
-  buf.append(" </tr>\n");
+  StringBuilder buf=new StringBuilder(512);
+  buf.append("<h3 id=\"ntcpcon\">").append(_("NTCP connections")).append(": ").append(peers.size());
+  buf.append(". ").append(_("Limit")).append(": ").append(getMaxConnections());
+  buf.append(". ").append(_("Timeout")).append(": ").append(DataHelper.formatDuration2(_pumper.getIdleTimeout()));
+  buf.append(".</h3>\n" + "<table>\n" + "<tr><th><a href=\"#def.peer\">").append(_("Peer")).append("</a></th>" + "<th>").append(_("Dir")).append("</th>" + "<th align=\"right\"><a href=\"#def.idle\">").append(_("Idle")).append("</a></th>" + "<th align=\"right\"><a href=\"#def.rate\">").append(_("In/Out")).append("</a></th>" + "<th align=\"right\"><a href=\"#def.up\">").append(_("Up")).append("</a></th>" + "<th align=\"right\"><a href=\"#def.skew\">").append(_("Skew")).append("</a></th>" + "<th align=\"right\"><a href=\"#def.send\">").append(_("TX")).append("</a></th>" + "<th align=\"right\"><a href=\"#def.recv\">").append(_("RX")).append("</a></th>" + "<th>").append(_("Out Queue")).append("</th>" + "<th>").append(_("Backlogged?")).append("</th>" + " </tr>\n");
   out.write(buf.toString());
   buf.setLength(0);
   for (Iterator iter=peers.iterator(); iter.hasNext(); ) {
     NTCPConnection con=(NTCPConnection)iter.next();
-    String name=con.getRemotePeer().calculateHash().toBase64().substring(0,6);
-    buf.append("<tr><td><code><a href=\"netdb.jsp?r=").append(name).append("\">").append(name);
-    buf.append("</code></td><td align=\"center\"><code>");
-    if (con.isInbound())     buf.append("in");
- else     buf.append("out");
-    buf.append("</code></td><td align=\"right\"><code>");
-    buf.append(con.getTimeSinceReceive() / 1000);
-    buf.append("s/").append(con.getTimeSinceSend() / 1000);
-    buf.append("s</code></td><td align=\"right\"><code>");
-    if (con.getTimeSinceReceive() < 10 * 1000) {
-      buf.append(formatRate(con.getRecvRate() / 1024));
-      bpsRecv+=con.getRecvRate();
+    buf.append("<tr><td class=\"cells\" align=\"left\" nowrap>");
+    buf.append(_context.commSystem().renderPeerHTML(con.getRemotePeer().calculateHash()));
+    buf.append("</td><td class=\"cells\" align=\"center\">");
+    if (con.isInbound())     buf.append("<img src=\"/themes/console/images/inbound.png\" alt=\"Inbound\" title=\"").append(_("Inbound")).append("\"/>");
+ else     buf.append("<img src=\"/themes/console/images/outbound.png\" alt=\"Outbound\" title=\"").append(_("Outbound")).append("\"/>");
+    buf.append("</td><td class=\"cells\" align=\"right\">");
+    buf.append(DataHelper.formatDuration2(con.getTimeSinceReceive()));
+    buf.append(THINSP).append(DataHelper.formatDuration2(con.getTimeSinceSend()));
+    buf.append("</td><td class=\"cells\" align=\"right\">");
+    if (con.getTimeSinceReceive() < 2 * 60 * 1000) {
+      float r=con.getRecvRate();
+      buf.append(formatRate(r / 1024));
+      bpsRecv+=r;
     }
  else {
       buf.append(formatRate(0));
     }
-    buf.append("/");
-    if (con.getTimeSinceSend() < 10 * 1000) {
-      buf.append(formatRate(con.getSendRate() / 1024));
-      bpsSend+=con.getSendRate();
+    buf.append(THINSP);
+    if (con.getTimeSinceSend() < 2 * 60 * 1000) {
+      float r=con.getSendRate();
+      buf.append(formatRate(r / 1024));
+      bpsSend+=r;
     }
  else {
       buf.append(formatRate(0));
     }
-    buf.append("KBps");
-    buf.append("</code></td><td align=\"right\"><code>").append(DataHelper.formatDuration(con.getUptime()));
+    buf.append("</td><td class=\"cells\" align=\"right\">").append(DataHelper.formatDuration2(con.getUptime()));
     totalUptime+=con.getUptime();
     offsetTotal=offsetTotal + con.getClockSkew();
-    buf.append("</code></td><td align=\"right\"><code>").append(con.getClockSkew());
-    buf.append("s</code></td><td align=\"right\"><code>").append(con.getMessagesSent());
+    buf.append("</td><td class=\"cells\" align=\"right\">").append(DataHelper.formatDuration2(1000 * con.getClockSkew()));
+    buf.append("</td><td class=\"cells\" align=\"right\">").append(con.getMessagesSent());
     totalSend+=con.getMessagesSent();
-    buf.append("</code></td><td align=\"right\"><code>").append(con.getMessagesReceived());
+    buf.append("</td><td class=\"cells\" align=\"right\">").append(con.getMessagesReceived());
     totalRecv+=con.getMessagesReceived();
     long outQueue=con.getOutboundQueueSize();
-    if (outQueue <= 0) {
-      buf.append("</code></td><td align=\"right\"><code>No messages");
-    }
- else {
-      buf.append("</code></td><td align=\"right\"><code>").append(outQueue).append(" message");
-      if (outQueue > 1)       buf.append("s");
-      writingPeers++;
-    }
-    buf.append("</code></td><td align=\"center\"><code>").append(con.getConsecutiveBacklog() > 0 ? "true" : "false");
-    long readTime=con.getReadTime();
-    if (readTime <= 0) {
-      buf.append("</code></td><td align=\"center\"><code>No");
-    }
- else {
-      buf.append("</code></td><td><code>For ").append(DataHelper.formatDuration(readTime));
-      readingPeers++;
-    }
-    buf.append("</code></td></tr>\n");
+    buf.append("</td><td class=\"cells\" align=\"center\">").append(outQueue);
+    buf.append("</td><td class=\"cells\" align=\"center\">");
+    if (con.getConsecutiveBacklog() > 0)     buf.append("&#x2713;");
+ else     buf.append("&nbsp;");
+    buf.append("</td></tr>\n");
     out.write(buf.toString());
     buf.setLength(0);
   }
-  if (peers.size() > 0) {
-    buf.append("<tr><td colspan=\"11\"><hr /></td></tr>\n");
-    buf.append("<tr><td>").append(peers.size()).append(" peers</td><td>&nbsp;</td><td>&nbsp;");
-    buf.append("</td><td align=\"right\">").append(formatRate(bpsRecv / 1024)).append("/").append(formatRate(bpsSend / 1024)).append("KBps");
-    buf.append("</td><td align=\"right\">").append(DataHelper.formatDuration(totalUptime / peers.size()));
-    buf.append("</td><td align=\"right\">").append(peers.size() > 0 ? DataHelper.formatDuration(offsetTotal * 1000 / peers.size()) : "0ms");
-    buf.append("</td><td align=\"right\">").append(totalSend).append("</td><td align=\"right\">").append(totalRecv);
-    buf.append("</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;");
-    buf.append("</td></tr>\n");
+  if (!peers.isEmpty()) {
+    buf.append("<tr class=\"tablefooter\"><td align=\"center\"><b>").append(peers.size()).append(' ').append(_("peers")).append("</b></td><td>&nbsp;</td><td>&nbsp;");
+    buf.append("</td><td align=\"center\"><b>").append(formatRate(bpsRecv / 1024)).append(THINSP).append(formatRate(bpsSend / 1024)).append("</b>");
+    buf.append("</td><td align=\"center\"><b>").append(DataHelper.formatDuration2(totalUptime / peers.size()));
+    buf.append("</b></td><td align=\"center\"><b>").append(DataHelper.formatDuration2(offsetTotal * 1000 / peers.size()));
+    buf.append("</b></td><td align=\"center\"><b>").append(totalSend).append("</b></td><td align=\"center\"><b>").append(totalRecv);
+    buf.append("</b></td><td>&nbsp;</td><td>&nbsp;</td></tr>\n");
   }
   buf.append("</table>\n");
-  buf.append("Peers currently reading I2NP messages: ").append(readingPeers).append("<br />\n");
-  buf.append("Peers currently writing I2NP messages: ").append(writingPeers).append("<br />\n");
   out.write(buf.toString());
   buf.setLength(0);
 }

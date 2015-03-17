@@ -1,0 +1,60 @@
+{
+  UDPPacket packet=buildPacketHeader((byte)(UDPPacket.PAYLOAD_TYPE_DATA << 4));
+  byte data[]=packet.getPacket().getData();
+  int off=HEADER_SIZE;
+  StringBuilder msg=null;
+  if (_log.shouldLog(Log.DEBUG)) {
+    msg=new StringBuilder(128);
+    msg.append("building ACK packet to ").append(peer.getRemotePeer().toBase64().substring(0,6));
+  }
+  int fullACKCount=0;
+  int partialACKCount=0;
+  for (int i=0; i < ackBitfields.size(); i++) {
+    if (ackBitfields.get(i).receivedComplete())     fullACKCount++;
+ else     partialACKCount++;
+  }
+  if (fullACKCount > ABSOLUTE_MAX_ACKS || partialACKCount > ABSOLUTE_MAX_ACKS)   throw new IllegalArgumentException("Too many acks full/partial " + fullACKCount + '/'+ partialACKCount);
+  if (fullACKCount > 0)   data[off]|=UDPPacket.DATA_FLAG_EXPLICIT_ACK;
+  if (partialACKCount > 0)   data[off]|=UDPPacket.DATA_FLAG_ACK_BITFIELDS;
+  off++;
+  if (fullACKCount > 0) {
+    DataHelper.toLong(data,off,1,fullACKCount);
+    off++;
+    for (int i=0; i < ackBitfields.size(); i++) {
+      ACKBitfield bf=ackBitfields.get(i);
+      if (bf.receivedComplete()) {
+        DataHelper.toLong(data,off,4,bf.getMessageId());
+        off+=4;
+        if (msg != null)         msg.append(" full ack: ").append(bf.getMessageId());
+      }
+    }
+  }
+  if (partialACKCount > 0) {
+    DataHelper.toLong(data,off,1,partialACKCount);
+    off++;
+    for (int i=0; i < ackBitfields.size(); i++) {
+      ACKBitfield bitfield=ackBitfields.get(i);
+      if (bitfield.receivedComplete())       continue;
+      DataHelper.toLong(data,off,4,bitfield.getMessageId());
+      off+=4;
+      int bits=bitfield.fragmentCount();
+      int size=(bits / 7) + 1;
+      for (int curByte=0; curByte < size; curByte++) {
+        if (curByte + 1 < size)         data[off]|=(byte)(1 << 7);
+        for (int curBit=0; curBit < 7; curBit++) {
+          if (bitfield.received(curBit + 7 * curByte))           data[off]|=(byte)(1 << curBit);
+        }
+        off++;
+      }
+      if (msg != null)       msg.append(" partial ack: ").append(bitfield);
+    }
+  }
+  DataHelper.toLong(data,off,1,0);
+  off++;
+  if (msg != null)   _log.debug(msg.toString());
+  if ((off % 16) != 0)   off+=16 - (off % 16);
+  packet.getPacket().setLength(off);
+  authenticate(packet,peer.getCurrentCipherKey(),peer.getCurrentMACKey());
+  setTo(packet,peer.getRemoteIPAddress(),peer.getRemotePort());
+  return packet;
+}

@@ -1,14 +1,12 @@
 {
-  Log rv=null;
   String scope=Log.getScope(name,cls);
   boolean isNew=false;
-synchronized (_logs) {
-    rv=(Log)_logs.get(scope);
-    if (rv == null) {
-      rv=new Log(this,cls,name);
-      _logs.put(scope,rv);
-      isNew=true;
-    }
+  Log rv=_logs.get(scope);
+  if (rv == null) {
+    rv=new Log(this,cls,name);
+    Log old=_logs.putIfAbsent(scope,rv);
+    isNew=old == null;
+    if (!isNew)     rv=old;
   }
   if (isNew)   updateLimit(rv);
   return rv;

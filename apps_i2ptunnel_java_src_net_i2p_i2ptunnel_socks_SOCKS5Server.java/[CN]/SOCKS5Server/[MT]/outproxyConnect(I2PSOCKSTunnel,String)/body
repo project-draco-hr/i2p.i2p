@@ -1,0 +1,116 @@
+{
+  Properties overrides=new Properties();
+  overrides.setProperty("option.i2p.streaming.connectDelay","1000");
+  I2PSocketOptions proxyOpts=tun.buildOptions(overrides);
+  Destination dest=I2PAppContext.getGlobalContext().namingService().lookup(proxy);
+  if (dest == null)   throw new SOCKSException("Outproxy not found");
+  I2PSocket destSock=tun.createI2PSocket(I2PAppContext.getGlobalContext().namingService().lookup(proxy),proxyOpts);
+  try {
+    DataOutputStream out=new DataOutputStream(destSock.getOutputStream());
+    boolean authAvail=Boolean.valueOf(props.getProperty(I2PTunnelHTTPClientBase.PROP_OUTPROXY_AUTH)).booleanValue();
+    String configUser=null;
+    String configPW=null;
+    if (authAvail) {
+      configUser=props.getProperty(I2PTunnelHTTPClientBase.PROP_OUTPROXY_USER_PREFIX + proxy);
+      configPW=props.getProperty(I2PTunnelHTTPClientBase.PROP_OUTPROXY_PW_PREFIX + proxy);
+      if (configUser == null || configPW == null) {
+        configUser=props.getProperty(I2PTunnelHTTPClientBase.PROP_OUTPROXY_USER);
+        configPW=props.getProperty(I2PTunnelHTTPClientBase.PROP_OUTPROXY_PW);
+        if (configUser == null || configPW == null)         authAvail=false;
+      }
+    }
+    out.writeByte(SOCKS_VERSION_5);
+    if (authAvail) {
+      out.writeByte(2);
+      out.writeByte(Method.NO_AUTH_REQUIRED);
+      out.writeByte(Method.USERNAME_PASSWORD);
+    }
+ else {
+      out.writeByte(1);
+      out.writeByte(Method.NO_AUTH_REQUIRED);
+    }
+    out.flush();
+    DataInputStream in=new DataInputStream(destSock.getInputStream());
+    int hisVersion=in.readByte();
+    if (hisVersion != SOCKS_VERSION_5)     throw new SOCKSException("SOCKS Outproxy is not Version 5");
+    int method=in.readByte();
+    if (method == Method.NO_AUTH_REQUIRED) {
+    }
+ else     if (method == Method.USERNAME_PASSWORD) {
+      if (authAvail) {
+        out.writeByte(AUTH_VERSION);
+        byte[] user=configUser.getBytes("UTF-8");
+        byte[] pw=configPW.getBytes("UTF-8");
+        out.writeByte(user.length);
+        out.write(user);
+        out.writeByte(pw.length);
+        out.write(pw);
+        out.flush();
+        if (in.readByte() != AUTH_VERSION)         throw new SOCKSException("Bad auth version from outproxy");
+        if (in.readByte() != AUTH_SUCCESS)         throw new SOCKSException("Outproxy authorization failure");
+      }
+ else {
+        throw new SOCKSException("Outproxy requires authorization, please configure username/password");
+      }
+    }
+ else {
+      throw new SOCKSException("Outproxy authorization failure");
+    }
+    out.writeByte(SOCKS_VERSION_5);
+    out.writeByte(Command.CONNECT);
+    out.writeByte(0);
+    out.writeByte(addressType);
+    if (addressType == AddressType.IPV4) {
+      out.write(InetAddress.getByName(connHostName).getAddress());
+    }
+ else     if (addressType == AddressType.DOMAINNAME) {
+      byte[] d=connHostName.getBytes("ISO-8859-1");
+      out.writeByte(d.length);
+      out.write(d);
+    }
+ else {
+      throw new SOCKSException("Unknown address type for outproxy?");
+    }
+    out.writeShort(connPort);
+    out.flush();
+    hisVersion=in.readByte();
+    if (hisVersion != SOCKS_VERSION_5)     throw new SOCKSException("Outproxy response is not Version 5");
+    int reply=in.readByte();
+    in.readByte();
+    int type=in.readByte();
+    int count=0;
+    if (type == AddressType.IPV4) {
+      count=4;
+    }
+ else     if (type == AddressType.DOMAINNAME) {
+      count=in.readUnsignedByte();
+    }
+ else     if (type == AddressType.IPV6) {
+      count=16;
+    }
+ else {
+      throw new SOCKSException("Unsupported address type in outproxy response");
+    }
+    byte[] addr=new byte[count];
+    in.readFully(addr);
+    in.readUnsignedShort();
+    if (reply != Reply.SUCCEEDED)     throw new SOCKSException("Outproxy rejected request, response = " + reply);
+  }
+ catch (  IOException e) {
+    try {
+      destSock.close();
+    }
+ catch (    IOException ioe) {
+    }
+    throw e;
+  }
+catch (  SOCKSException e) {
+    try {
+      destSock.close();
+    }
+ catch (    IOException ioe) {
+    }
+    throw e;
+  }
+  return destSock;
+}

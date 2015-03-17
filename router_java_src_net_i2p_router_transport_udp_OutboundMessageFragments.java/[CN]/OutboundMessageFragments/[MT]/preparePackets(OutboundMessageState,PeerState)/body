@@ -2,24 +2,28 @@
   if ((state != null) && (peer != null)) {
     int fragments=state.getFragmentCount();
     if (fragments < 0)     return null;
-    List msgIds=peer.getCurrentFullACKs();
-    if (msgIds == null)     msgIds=new ArrayList();
-    List partialACKBitfields=new ArrayList();
+    List<Long> msgIds=peer.getCurrentFullACKs();
+    int newFullAckCount=msgIds.size();
+    msgIds.addAll(peer.getCurrentResendACKs());
+    List<ACKBitfield> partialACKBitfields=new ArrayList();
     peer.fetchPartialACKs(partialACKBitfields);
     int piggybackedPartialACK=partialACKBitfields.size();
-    List remaining=new ArrayList(msgIds);
+    List<Long> remaining=new ArrayList(msgIds);
     int sparseCount=0;
     UDPPacket rv[]=new UDPPacket[fragments];
     for (int i=0; i < fragments; i++) {
       if (state.needsSending(i)) {
+        int before=remaining.size();
         try {
-          rv[i]=_builder.buildPacket(state,i,peer,remaining,partialACKBitfields);
+          rv[i]=_builder.buildPacket(state,i,peer,remaining,newFullAckCount,partialACKBitfields);
         }
  catch (        ArrayIndexOutOfBoundsException aioobe) {
           _log.log(Log.CRIT,"Corrupt trying to build a packet - please tell jrandom: " + partialACKBitfields + " / "+ remaining+ " / "+ msgIds);
           sparseCount++;
           continue;
         }
+        int after=remaining.size();
+        newFullAckCount=Math.max(0,newFullAckCount - (before - after));
         if (rv[i] == null) {
           sparseCount++;
           continue;
@@ -37,7 +41,7 @@
     int piggybackedAck=0;
     if (msgIds.size() != remaining.size()) {
       for (int i=0; i < msgIds.size(); i++) {
-        Long id=(Long)msgIds.get(i);
+        Long id=msgIds.get(i);
         if (!remaining.contains(id)) {
           peer.removeACKMessage(id);
           piggybackedAck++;
@@ -52,7 +56,6 @@
     if (state.getPushCount() > 1) {
       int toSend=fragments - sparseCount;
       peer.messageRetransmitted(toSend);
-      _packetsRetransmitted+=toSend;
       _context.statManager().addRateData("udp.peerPacketsRetransmitted",peer.getPacketsRetransmitted(),peer.getPacketsTransmitted());
       _context.statManager().addRateData("udp.packetsRetransmitted",state.getLifetime(),peer.getPacketsTransmitted());
       if (_log.shouldLog(Log.INFO))       _log.info("Retransmitting " + state + " to "+ peer);

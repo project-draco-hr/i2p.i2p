@@ -1,5 +1,17 @@
 {
-  if ((_client != null) && (msg.getType() != DeliveryStatusMessage.MESSAGE_TYPE) && (msg.getType() != GarlicMessage.MESSAGE_TYPE)&& (msg.getType() != TunnelBuildReplyMessage.MESSAGE_TYPE)) {
+  if ((_client != null) && (msg.getType() == DatabaseSearchReplyMessage.MESSAGE_TYPE) && (_client.equals(((DatabaseSearchReplyMessage)msg).getSearchKey()))) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Removing replies from a DSRM down a tunnel for " + _client.toBase64() + ": "+ msg);
+    DatabaseSearchReplyMessage orig=(DatabaseSearchReplyMessage)msg;
+    DatabaseSearchReplyMessage newMsg=new DatabaseSearchReplyMessage(_context);
+    newMsg.setFromHash(orig.getFromHash());
+    newMsg.setSearchKey(orig.getSearchKey());
+    msg=newMsg;
+  }
+ else   if ((_client != null) && (msg.getType() == DatabaseStoreMessage.MESSAGE_TYPE) && (((DatabaseStoreMessage)msg).getEntry().getType() == DatabaseEntry.KEY_TYPE_ROUTERINFO)) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Dropping DSM down a tunnel for " + _client.toBase64() + ": "+ msg);
+    return;
+  }
+ else   if ((_client != null) && (msg.getType() != DeliveryStatusMessage.MESSAGE_TYPE) && (msg.getType() != GarlicMessage.MESSAGE_TYPE)&& ((msg.getType() != DatabaseStoreMessage.MESSAGE_TYPE) || (!_client.equals(((DatabaseStoreMessage)msg).getKey())) || (((DatabaseStoreMessage)msg).getReplyToken() != 0))&& (msg.getType() != TunnelBuildReplyMessage.MESSAGE_TYPE)&& (msg.getType() != VariableTunnelBuildReplyMessage.MESSAGE_TYPE)) {
     _context.statManager().addRateData("tunnel.dropDangerousClientTunnelMessage",1,msg.getType());
     _log.error("Dropped dangerous message down a tunnel for " + _client.toBase64() + ": "+ msg,new Exception("cause"));
     return;

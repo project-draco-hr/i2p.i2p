@@ -1,20 +1,19 @@
 {
   long now=now();
   double correctedTotalValue;
-synchronized (_lock) {
+synchronized (this) {
     long measuredPeriod=now - _lastCoalesceDate;
     if (measuredPeriod < _period - SLACK) {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("not coalescing, measuredPeriod = " + measuredPeriod + " period = "+ _period);
       return;
     }
     double periodFactor=measuredPeriod / (double)_period;
     _lastTotalValue=_currentTotalValue / periodFactor;
-    _lastEventCount=(long)(0.499999 + (_currentEventCount / periodFactor));
+    _lastEventCount=(int)(0.499999 + (_currentEventCount / periodFactor));
     _lastTotalEventTime=(long)(_currentTotalEventTime / periodFactor);
     _lastCoalesceDate=now;
     if (_currentEventCount == 0)     correctedTotalValue=0;
  else     correctedTotalValue=_currentTotalValue * (_lastEventCount / (double)_currentEventCount);
-    if (_lastTotalValue > _extremeTotalValue) {
+    if (_lastTotalValue >= _extremeTotalValue) {
       _extremeTotalValue=_lastTotalValue;
       _extremeEventCount=_lastEventCount;
       _extremeTotalEventTime=_lastTotalEventTime;

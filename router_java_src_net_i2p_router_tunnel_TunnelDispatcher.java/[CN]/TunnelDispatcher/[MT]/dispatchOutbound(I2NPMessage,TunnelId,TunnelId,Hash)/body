@@ -11,22 +11,20 @@
  else     if (msg.getMessageExpiration() < before) {
       if (_log.shouldLog(Log.WARN))       _log.warn("why are you sending a tunnel message that expired " + (before - msg.getMessageExpiration()) + "ms ago? "+ msg,new Exception("cause"));
     }
+ else     if (msg.getMessageExpiration() > before + MAX_FUTURE_EXPIRATION) {
+      if (_log.shouldLog(Log.ERROR))       _log.error("why are you sending a tunnel message that expires " + (msg.getMessageExpiration() - before) + "ms from now? "+ msg,new Exception("cause"));
+      return;
+    }
     long tid1=outboundTunnel.getTunnelId();
     long tid2=(targetTunnel != null ? targetTunnel.getTunnelId() : -1);
     _context.messageHistory().tunnelDispatched(msg.getUniqueId(),tid1,tid2,targetPeer,"outbound gateway");
     gw.add(msg,targetPeer,targetTunnel);
-    if (targetTunnel == null)     _context.statManager().addRateData("tunnel.dispatchOutboundPeer",1,0);
- else     _context.statManager().addRateData("tunnel.dispatchOutboundTunnel",1,0);
+    if (targetTunnel == null)     _context.statManager().addRateData("tunnel.dispatchOutboundPeer",1);
+ else     _context.statManager().addRateData("tunnel.dispatchOutboundTunnel",1);
   }
  else {
     _context.messageHistory().droppedTunnelGatewayMessageUnknown(msg.getUniqueId(),outboundTunnel.getTunnelId());
-    int level=(_context.router().getUptime() > 10 * 60 * 1000 ? Log.ERROR : Log.WARN);
+    int level=Log.WARN;
     if (_log.shouldLog(level))     _log.log(level,"no matching outbound tunnel for id=" + outboundTunnel + ": existing = "+ _outboundGateways.size(),new Exception("src"));
   }
-  long dispatchTime=_context.clock().now() - before;
-  if (dispatchTime > 1000) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("wtf, took " + dispatchTime + " to dispatch "+ msg+ " out "+ outboundTunnel+ " in "+ gw);
-  }
-  if (gw instanceof TunnelGatewayZeroHop)   _context.statManager().addRateData("tunnel.dispatchOutboundZeroHopTime",dispatchTime,dispatchTime);
- else   _context.statManager().addRateData("tunnel.dispatchOutboundTime",dispatchTime,dispatchTime);
 }

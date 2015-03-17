@@ -4,11 +4,9 @@
   long beforeLock=_context.clock().now();
   long afterChecked=-1;
   long delayAmount=-1;
-  if (_queue.size() > 10000)   System.out.println("foo!");
 synchronized (_queue) {
-    if (_queue.size() > 10000)     System.out.println("foo!");
     afterChecked=_context.clock().now();
-    if (_queue.size() > 0) {
+    if (!_queue.isEmpty()) {
       if ((remaining > 0) && (_log.shouldLog(Log.DEBUG)))       _log.debug("Remaining before delayed flush preprocessing: " + _queue);
       wantRequeue=_preprocessor.preprocessQueue(_queue,_sender,_receiver);
       if (wantRequeue)       delayAmount=_preprocessor.getDelayAmount();
@@ -16,7 +14,7 @@ synchronized (_queue) {
     }
     remaining=_queue.size();
   }
-  if (wantRequeue)   FlushTimer.getInstance().addEvent(_delayedFlush,delayAmount);
+  if (wantRequeue)   _context.simpleTimer().addEvent(_delayedFlush,delayAmount);
  else   _lastFlush=_context.clock().now();
   _context.statManager().addRateData("tunnel.lockedGatewayCheck",afterChecked - beforeLock,remaining);
 }

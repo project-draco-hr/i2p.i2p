@@ -1,8 +1,7 @@
 {
-  File cfgFile=new File(_location);
+  File cfgFile=_locationFile;
   if (!cfgFile.exists()) {
     if (!_alreadyNoticedMissingConfig) {
-      if (_log.shouldLog(Log.WARN))       _log.warn("Log file " + _location + " does not exist");
       _alreadyNoticedMissingConfig=true;
     }
     parseConfig(new Properties());
@@ -11,26 +10,15 @@
   }
   _alreadyNoticedMissingConfig=false;
   if ((_configLastRead > 0) && (_configLastRead >= cfgFile.lastModified())) {
-    if (_log.shouldLog(Log.INFO))     _log.info("Short circuiting config read (last read: " + (_context.clock().now() - _configLastRead) + "ms ago, config file modified "+ (_context.clock().now() - cfgFile.lastModified())+ "ms ago");
     return;
   }
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Loading config from " + _location);
   Properties p=new Properties();
-  FileInputStream fis=null;
   try {
-    fis=new FileInputStream(cfgFile);
-    p.load(fis);
+    DataHelper.loadProps(p,cfgFile);
     _configLastRead=_context.clock().now();
   }
  catch (  IOException ioe) {
-    System.err.println("Error loading logger config from " + new File(_location).getAbsolutePath());
-  }
- finally {
-    if (fis != null)     try {
-      fis.close();
-    }
- catch (    IOException ioe) {
-    }
+    System.err.println("Error loading logger config from " + cfgFile.getAbsolutePath());
   }
   parseConfig(p);
   updateLimits();

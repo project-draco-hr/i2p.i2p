@@ -1,0 +1,33 @@
+{
+  p.setProperty("logger.record.net.i2p.util.LogSettings",Log.toLevelString(Log.WARN));
+  p.setProperty("logger.minimumOnScreenLevel",Log.toLevelString(Log.DEBUG));
+  DataHelper.storeProps(p,f);
+  _context.logManager().rereadConfig();
+  PipedInputStream pin=new PipedInputStream();
+  BufferedReader in=new BufferedReader(new InputStreamReader(pin));
+  PrintStream systemOut=System.out;
+  PrintStream pout=new PrintStream(new PipedOutputStream(pin));
+  System.setOut(pout);
+  try {
+    log.debug("WARN" + ": debug");
+    log.info("WARN" + ": info");
+    log.warn("WARN" + ": warn");
+    log.error("WARN" + ": error");
+    log.log(Log.CRIT,"WARN" + ": crit");
+    try {
+      Thread.sleep(12 * 1000);
+    }
+ catch (    InterruptedException ie) {
+    }
+    for (int i=0; i < 3; i++)     pout.println("");
+    pout.flush();
+    String l1=in.readLine();
+    String l2=in.readLine();
+    String l3=in.readLine();
+    assertTrue(l1.matches(".*WARN: warn") && l2.matches(".*WARN: error") && l3.matches(".*WARN: crit"));
+  }
+  finally {
+    System.setOut(systemOut);
+    pout.close();
+  }
+}

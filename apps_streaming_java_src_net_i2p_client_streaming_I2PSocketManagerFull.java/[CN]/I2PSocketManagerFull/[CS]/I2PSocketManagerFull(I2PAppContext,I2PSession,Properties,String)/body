@@ -1,4 +1,22 @@
 {
-  this();
-  init(context,session,opts,name);
+  _context=context;
+  _session=session;
+  _log=_context.logManager().getLog(I2PSocketManagerFull.class);
+  _maxStreams=-1;
+  try {
+    String num=(opts != null ? opts.getProperty(PROP_MAX_STREAMS,"-1") : "-1");
+    _maxStreams=Integer.parseInt(num);
+  }
+ catch (  NumberFormatException nfe) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Invalid max # of concurrent streams, defaulting to unlimited",nfe);
+    _maxStreams=-1;
+  }
+  _name=name + " " + (++__managerId);
+  _acceptTimeout=ACCEPT_TIMEOUT_DEFAULT;
+  _defaultOptions=new ConnectionOptions(opts);
+  _connectionManager=new ConnectionManager(_context,_session,_maxStreams,_defaultOptions);
+  _serverSocket=new I2PServerSocketFull(this);
+  if (_log.shouldLog(Log.INFO)) {
+    _log.info("Socket manager created.  \ndefault options: " + _defaultOptions + "\noriginal properties: "+ opts);
+  }
 }

@@ -1,15 +1,17 @@
 {
   boolean removed=false;
 synchronized (_fragmentedMessages) {
-    removed=(null != _fragmentedMessages.remove(new Long(_msg.getMessageId())));
+    removed=(null != _fragmentedMessages.remove(Long.valueOf(_msg.getMessageId())));
   }
-  if (removed && !_msg.getReleased()) {
-    _failed++;
-    noteFailure(_msg.getMessageId(),_msg.toString());
-    if (_log.shouldLog(Log.WARN))     _log.warn("Dropped failed fragmented message: " + _msg);
-    _context.statManager().addRateData("tunnel.fragmentedDropped",_msg.getFragmentCount(),_msg.getLifetime());
-    _msg.failed();
-  }
+synchronized (_msg) {
+    if (removed && !_msg.getReleased()) {
+      _failed++;
+      noteFailure(_msg.getMessageId(),_msg.toString());
+      if (_log.shouldLog(Log.WARN))       _log.warn("Dropped incomplete fragmented message: " + _msg);
+      _context.statManager().addRateData("tunnel.fragmentedDropped",_msg.getFragmentCount(),_msg.getLifetime());
+      _msg.failed();
+    }
  else {
+    }
   }
 }

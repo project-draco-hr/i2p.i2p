@@ -1,27 +1,29 @@
 {
   _log.info("Starting up the kademlia network database");
   RouterInfo ri=_context.router().getRouterInfo();
-  String dbDir=_context.router().getConfigSetting(PROP_DB_DIR);
-  if (dbDir == null) {
-    _log.info("No DB dir specified [" + PROP_DB_DIR + "], using ["+ DEFAULT_DB_DIR+ "]");
-    dbDir=DEFAULT_DB_DIR;
-  }
+  String dbDir=_context.getProperty(PROP_DB_DIR,DEFAULT_DB_DIR);
   String enforce=_context.getProperty(PROP_ENFORCE_NETID);
   if (enforce != null)   _enforceNetId=Boolean.valueOf(enforce).booleanValue();
  else   _enforceNetId=DEFAULT_ENFORCE_NETID;
   _kb=new KBucketSet(_context,ri.getIdentity().getHash());
-  _ds=new PersistentDataStore(_context,dbDir,this);
-  _exploreKeys=new HashSet(64);
+  try {
+    _ds=new PersistentDataStore(_context,dbDir,this);
+  }
+ catch (  IOException ioe) {
+    throw new RuntimeException("Unable to initialize netdb storage",ioe);
+  }
   _dbDir=dbDir;
   createHandlers();
   _initialized=true;
   _started=System.currentTimeMillis();
-  _context.jobQueue().addJob(new ExpireLeasesJob(_context,this));
-  if (!_quiet) {
+  Job elj=new ExpireLeasesJob(_context,this);
+  elj.getTiming().setStartAfter(_context.clock().now() + 2 * 60 * 1000);
+  _context.jobQueue().addJob(elj);
+  if (!QUIET) {
     if (_exploreJob == null)     _exploreJob=new StartExplorersJob(_context,this);
     _exploreJob.getTiming().setStartAfter(_context.clock().now() + EXPLORE_JOB_DELAY);
     _context.jobQueue().addJob(_exploreJob);
-    if (_harvestJob == null && "true".equals(_context.getProperty(HarvesterJob.PROP_ENABLED)))     _harvestJob=new HarvesterJob(_context,this);
+    if (_harvestJob == null && _context.getBooleanProperty(HarvesterJob.PROP_ENABLED))     _harvestJob=new HarvesterJob(_context,this);
     _context.jobQueue().addJob(_harvestJob);
   }
  else {
@@ -29,12 +31,5 @@
     _log.warn("This should NOT be used in production");
   }
   Job plrij=new PublishLocalRouterInfoJob(_context);
-  plrij.getTiming().setStartAfter(_context.clock().now() + PUBLISH_JOB_DELAY);
   _context.jobQueue().addJob(plrij);
-  try {
-    publish(ri);
-  }
- catch (  IllegalArgumentException iae) {
-    _context.router().rebuildRouterInfo(true);
-  }
 }

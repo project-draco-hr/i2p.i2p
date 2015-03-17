@@ -1,5 +1,4 @@
 {
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("prepare next write w/ isInbound? " + _isInbound + " established? "+ _established);
   if (!_isInbound && !_established) {
     if (_establishState == null) {
       _establishState=new EstablishState(_context,_transport,this);
@@ -12,43 +11,46 @@
   }
   if (_nextMetaTime <= System.currentTimeMillis()) {
     sendMeta();
-    _nextMetaTime=System.currentTimeMillis() + META_FREQUENCY + _context.random().nextInt(META_FREQUENCY);
+    _nextMetaTime=System.currentTimeMillis() + (META_FREQUENCY / 2) + _context.random().nextInt(META_FREQUENCY);
   }
   OutNetMessage msg=null;
 synchronized (_outbound) {
     if (_currentOutbound != null) {
-      if (_log.shouldLog(Log.WARN))       _log.warn("attempt for multiple outbound messages with " + System.identityHashCode(_currentOutbound) + " already waiting and "+ _outbound.size()+ " queued");
+      if (_log.shouldLog(Log.INFO))       _log.info("attempt for multiple outbound messages with " + System.identityHashCode(_currentOutbound) + " already waiting and "+ _outbound.size()+ " queued");
       return;
     }
     if (queueTime() > 3 * 1000) {
-      msg=(OutNetMessage)_outbound.remove(0);
+      msg=_outbound.poll();
+      if (msg == null)       return;
     }
  else {
-      Iterator it=_outbound.iterator();
+      int slot=0;
+      Iterator<OutNetMessage> it=_outbound.iterator();
       for (int i=0; it.hasNext() && i < 75; i++) {
-        OutNetMessage mmsg=(OutNetMessage)it.next();
-        if (msg == null || mmsg.getPriority() > msg.getPriority())         msg=mmsg;
+        OutNetMessage mmsg=it.next();
+        if (msg == null || mmsg.getPriority() > msg.getPriority()) {
+          msg=mmsg;
+          slot=i;
+        }
       }
       if (msg == null)       return;
-      if (_log.shouldLog(Log.INFO))       _log.info("Type " + msg.getMessage().getType() + " pri "+ msg.getPriority()+ " slot "+ _outbound.indexOf(msg));
-      _outbound.remove(msg);
+      if (_log.shouldLog(Log.INFO))       _log.info("Type " + msg.getMessage().getType() + " pri "+ msg.getPriority()+ " slot "+ slot);
+      boolean removed=_outbound.remove(msg);
+      if ((!removed) && _log.shouldLog(Log.WARN))       _log.warn("Already removed??? " + msg.getMessage().getType());
     }
     _currentOutbound=msg;
   }
-  msg.beginTransmission();
-  long begin=System.currentTimeMillis();
   PrepBuffer buf=(PrepBuffer)msg.releasePreparationBuffer();
-  if (buf == null)   throw new RuntimeException("buf is null for " + msg);
+  if (buf == null) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Null prep buf for " + msg);
+    return;
+  }
   _context.aes().encrypt(buf.unencrypted,0,buf.encrypted,0,_sessionKey,_prevWriteEnd,0,buf.unencryptedLength);
   System.arraycopy(buf.encrypted,buf.encrypted.length - 16,_prevWriteEnd,0,_prevWriteEnd.length);
-  long encryptedTime=System.currentTimeMillis();
   _transport.getPumper().wantsWrite(this,buf.encrypted);
-  long wantsTime=System.currentTimeMillis();
   releaseBuf(buf);
-  long releaseTime=System.currentTimeMillis();
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("prepared outbound " + System.identityHashCode(msg) + " encrypted="+ (encryptedTime - begin)+ " wantsWrite="+ (wantsTime - encryptedTime)+ " releaseBuf="+ (releaseTime - wantsTime));
   if (_nextInfoTime <= System.currentTimeMillis()) {
     enqueueInfoMessage();
-    _nextInfoTime=System.currentTimeMillis() + INFO_FREQUENCY + _context.random().nextInt(INFO_FREQUENCY);
+    _nextInfoTime=System.currentTimeMillis() + (INFO_FREQUENCY / 2) + _context.random().nextInt(INFO_FREQUENCY);
   }
 }

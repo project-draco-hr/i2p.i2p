@@ -1,0 +1,59 @@
+{
+  if (log.shouldLog(Log.DEBUG))   log.debug("Got metadata msg from " + peer);
+  try {
+    InputStream is=new ByteArrayInputStream(bs);
+    BDecoder dec=new BDecoder(is);
+    BEValue bev=dec.bdecodeMap();
+    Map<String,BEValue> map=bev.getMap();
+    int type=map.get("msg_type").getInt();
+    int piece=map.get("piece").getInt();
+    MagnetState state=peer.getMagnetState();
+    if (type == TYPE_REQUEST) {
+      if (log.shouldLog(Log.DEBUG))       log.debug("Got request for " + piece + " from: "+ peer);
+      byte[] pc;
+synchronized (state) {
+        pc=state.getChunk(piece);
+      }
+      sendPiece(peer,piece,pc);
+      peer.uploaded(pc.length);
+      listener.uploaded(peer,pc.length);
+    }
+ else     if (type == TYPE_DATA) {
+      int size=map.get("total_size").getInt();
+      if (log.shouldLog(Log.DEBUG))       log.debug("Got data for " + piece + " length "+ size+ " from: "+ peer);
+      boolean done;
+      int chk=-1;
+synchronized (state) {
+        if (state.isComplete())         return;
+        int len=is.available();
+        if (len != size) {
+          if (log.shouldLog(Log.WARN))           log.warn("total_size " + size + " but avail data "+ len);
+        }
+        peer.downloaded(len);
+        listener.downloaded(peer,len);
+        done=state.saveChunk(piece,bs,bs.length - len,len);
+        if (log.shouldLog(Log.INFO))         log.info("Got chunk " + piece + " from "+ peer);
+        if (!done)         chk=state.getNextRequest();
+      }
+      if (done) {
+        if (log.shouldLog(Log.WARN))         log.warn("Got last chunk from " + peer);
+      }
+ else {
+        if (log.shouldLog(Log.INFO))         log.info("Request chunk " + chk + " from "+ peer);
+        sendRequest(peer,chk);
+      }
+    }
+ else     if (type == TYPE_REJECT) {
+      if (log.shouldLog(Log.WARN))       log.warn("Got reject msg from " + peer);
+      peer.disconnect(false);
+    }
+ else {
+      if (log.shouldLog(Log.WARN))       log.warn("Got unknown metadata msg from " + peer);
+      peer.disconnect(false);
+    }
+  }
+ catch (  Exception e) {
+    if (log.shouldLog(Log.INFO))     log.info("Metadata ext. msg. exception from " + peer,e);
+    peer.disconnect(false);
+  }
+}

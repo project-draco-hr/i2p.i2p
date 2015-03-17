@@ -1,29 +1,41 @@
 {
+  setOpening(true);
   _closed=false;
   _availabilityNotifier.stopNotifying();
-  I2PThread notifier=new I2PThread(_availabilityNotifier);
-  notifier.setName("Notifier " + _myDestination.calculateHash().toBase64().substring(0,4));
-  notifier.setDaemon(true);
-  notifier.start();
   if ((_options != null) && (I2PClient.PROP_RELIABILITY_GUARANTEED.equals(_options.getProperty(I2PClient.PROP_RELIABILITY,I2PClient.PROP_RELIABILITY_BEST_EFFORT)))) {
     if (_log.shouldLog(Log.ERROR))     _log.error("I2CP guaranteed delivery mode has been removed, using best effort.");
   }
   long startConnect=_context.clock().now();
   try {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug(getPrefix() + "connect begin to " + _hostname+ ":"+ _portNum);
-    _socket=new Socket(_hostname,_portNum);
-    _out=_socket.getOutputStream();
-synchronized (_out) {
-      _out.write(I2PClient.PROTOCOL_BYTE);
+    if (_context.isRouterContext()) {
+      InternalClientManager mgr=_context.internalClientManager();
+      if (mgr == null)       throw new I2PSessionException("Router is not ready for connections");
+      _queue=mgr.connect();
+      _reader=new QueuedI2CPMessageReader(_queue,this);
     }
-    InputStream in=_socket.getInputStream();
-    _reader=new I2CPMessageReader(in,this);
+ else {
+      if (Boolean.valueOf(_options.getProperty(PROP_ENABLE_SSL)).booleanValue())       _socket=I2CPSSLSocketFactory.createSocket(_context,_hostname,_portNum);
+ else       _socket=new Socket(_hostname,_portNum);
+      _out=_socket.getOutputStream();
+      _out.write(I2PClient.PROTOCOL_BYTE);
+      _out.flush();
+      _writer=new ClientWriterRunner(_out,this);
+      InputStream in=new BufferedInputStream(_socket.getInputStream(),BUF_SIZE);
+      _reader=new I2CPMessageReader(in,this);
+    }
+    Thread notifier=new I2PAppThread(_availabilityNotifier,"ClientNotifier " + getPrefix(),true);
+    notifier.start();
     if (_log.shouldLog(Log.DEBUG))     _log.debug(getPrefix() + "before startReading");
     _reader.startReading();
     if (_log.shouldLog(Log.DEBUG))     _log.debug(getPrefix() + "Before getDate");
-    sendMessage(new GetDateMessage());
+    sendMessage(new GetDateMessage(CoreVersion.VERSION));
     if (_log.shouldLog(Log.DEBUG))     _log.debug(getPrefix() + "After getDate / begin waiting for a response");
+    int waitcount=0;
     while (!_dateReceived) {
+      if (waitcount++ > 30) {
+        closeSocket();
+        throw new IOException("No handshake received from the router");
+      }
       try {
 synchronized (_dateReceivedLock) {
           _dateReceivedLock.wait(1000);
@@ -36,7 +48,17 @@ synchronized (_dateReceivedLock) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug(getPrefix() + "Before producer.connect()");
     _producer.connect(this);
     if (_log.shouldLog(Log.DEBUG))     _log.debug(getPrefix() + "After  producer.connect()");
+    waitcount=0;
     while (_leaseSet == null) {
+      if (waitcount++ > 5 * 60) {
+        try {
+          _producer.disconnect(this);
+        }
+ catch (        I2PSessionException ipe) {
+        }
+        closeSocket();
+        throw new IOException("No tunnels built after waiting 5 minutes. Your network connection may be down, or there is severe network congestion.");
+      }
 synchronized (_leaseSetWait) {
         try {
           _leaseSetWait.wait(1000);
@@ -48,13 +70,17 @@ synchronized (_leaseSetWait) {
     long connected=_context.clock().now();
     if (_log.shouldLog(Log.INFO))     _log.info(getPrefix() + "Lease set created with inbound tunnels after " + (connected - startConnect)+ "ms - ready to participate in the network!");
     startIdleMonitor();
+    startVerifyUsage();
+    setOpening(false);
   }
  catch (  UnknownHostException uhe) {
     _closed=true;
-    throw new I2PSessionException(getPrefix() + "Invalid session configuration",uhe);
+    setOpening(false);
+    throw new I2PSessionException(getPrefix() + "Cannot connect to the router on " + _hostname+ ':'+ _portNum,uhe);
   }
 catch (  IOException ioe) {
     _closed=true;
-    throw new I2PSessionException(getPrefix() + "Problem connecting to " + _hostname+ " on port "+ _portNum,ioe);
+    setOpening(false);
+    throw new I2PSessionException(getPrefix() + "Cannot connect to the router on " + _hostname+ ':'+ _portNum,ioe);
   }
 }

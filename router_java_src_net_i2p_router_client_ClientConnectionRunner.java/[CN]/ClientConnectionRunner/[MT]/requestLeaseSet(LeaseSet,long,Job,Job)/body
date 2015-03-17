@@ -5,14 +5,16 @@
     return;
   }
   int leases=set.getLeaseCount();
-  if (_currentLeaseSet != null && _currentLeaseSet.getLeaseCount() == leases) {
-    for (int i=0; i < leases; i++) {
-      if (!_currentLeaseSet.getLease(i).getTunnelId().equals(set.getLease(i).getTunnelId()))       break;
-      if (!_currentLeaseSet.getLease(i).getGateway().equals(set.getLease(i).getGateway()))       break;
-      if (i == leases - 1) {
-        if (_log.shouldLog(Log.INFO))         _log.info("Requested leaseSet hasn't changed");
-        if (onCreateJob != null)         _context.jobQueue().addJob(onCreateJob);
-        return;
+synchronized (this) {
+    if (_currentLeaseSet != null && _currentLeaseSet.getLeaseCount() == leases) {
+      for (int i=0; i < leases; i++) {
+        if (!_currentLeaseSet.getLease(i).getTunnelId().equals(set.getLease(i).getTunnelId()))         break;
+        if (!_currentLeaseSet.getLease(i).getGateway().equals(set.getLease(i).getGateway()))         break;
+        if (i == leases - 1) {
+          if (_log.shouldLog(Log.INFO))           _log.info("Requested leaseSet hasn't changed");
+          if (onCreateJob != null)           _context.jobQueue().addJob(onCreateJob);
+          return;
+        }
       }
     }
   }
@@ -28,7 +30,7 @@ synchronized (this) {
       if (((requested != null) && (requested.getEarliestLeaseDate() > ours)) || ((granted != null) && (granted.getEarliestLeaseDate() > ours))) {
       }
  else {
-        SimpleScheduler.getInstance().addEvent(new Rerequest(set,expirationTime,onCreateJob,onFailedJob),3 * 1000);
+        _context.simpleScheduler().addEvent(new Rerequest(set,expirationTime,onCreateJob,onFailedJob),3 * 1000);
       }
       return;
     }

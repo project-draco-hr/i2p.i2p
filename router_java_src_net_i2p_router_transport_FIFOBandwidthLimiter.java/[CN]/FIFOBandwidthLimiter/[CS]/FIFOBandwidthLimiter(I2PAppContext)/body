@@ -5,23 +5,13 @@
   _context.statManager().createRateStat("bwLimiter.pendingInboundRequests","How many inbound requests are ahead of the current one (ignoring ones with 0)?","BandwidthLimiter",new long[]{60 * 1000l,5 * 60 * 1000l,10 * 60 * 1000l,60 * 60 * 1000l});
   _context.statManager().createRateStat("bwLimiter.outboundDelayedTime","How long it takes to honor an outbound request (ignoring ones with that go instantly)?","BandwidthLimiter",new long[]{60 * 1000l,5 * 60 * 1000l,10 * 60 * 1000l,60 * 60 * 1000l});
   _context.statManager().createRateStat("bwLimiter.inboundDelayedTime","How long it takes to honor an inbound request (ignoring ones with that go instantly)?","BandwidthLimiter",new long[]{60 * 1000l,5 * 60 * 1000l,10 * 60 * 1000l,60 * 60 * 1000l});
-  if (_log.shouldLog(Log.WARN)) {
-    _context.statManager().createRateStat("bw.sendBps1s","How fast we are transmitting for the 1s quantization (period is the number of bytes transmitted)?","Bandwidth",new long[]{60 * 1000l,10 * 60 * 1000l});
-    _context.statManager().createRateStat("bw.recvBps1s","How fast we are receiving for the 1s quantization (period is the number of bytes transmitted)?","Bandwidth",new long[]{60 * 1000l,10 * 60 * 1000l});
-    _context.statManager().createRateStat("bw.sendBps15s","How fast we are transmitting for the 15s quantization (period is the number of bytes transmitted)?","Bandwidth",new long[]{60 * 1000l,10 * 60 * 1000l});
-    _context.statManager().createRateStat("bw.recvBps15s","How fast we are receiving for the 15s quantization (period is the number of bytes transmitted)?","Bandwidth",new long[]{60 * 1000l,10 * 60 * 1000l});
-  }
   _pendingInboundRequests=new ArrayList(16);
   _pendingOutboundRequests=new ArrayList(16);
-  _lastTotalSent=_totalAllocatedOutboundBytes;
-  _lastTotalReceived=_totalAllocatedInboundBytes;
-  _sendBps=0;
-  _recvBps=0;
+  _lastTotalSent=_totalAllocatedOutboundBytes.get();
+  _lastTotalReceived=_totalAllocatedInboundBytes.get();
   _lastStatsUpdated=now();
   _refiller=new FIFOBandwidthRefiller(_context,this);
-  I2PThread t=new I2PThread(_refiller);
-  t.setName("BWRefiller" + (++__id));
-  t.setDaemon(true);
-  t.setPriority(I2PThread.NORM_PRIORITY - 1);
-  t.start();
+  _refillerThread=new I2PThread(_refiller,"BWRefiller",true);
+  _refillerThread.setPriority(I2PThread.NORM_PRIORITY - 1);
+  _refillerThread.start();
 }

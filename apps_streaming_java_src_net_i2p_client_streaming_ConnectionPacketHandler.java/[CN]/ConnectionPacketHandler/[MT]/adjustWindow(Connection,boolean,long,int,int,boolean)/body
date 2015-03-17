@@ -10,7 +10,7 @@
     congested=true;
   }
   long lowest=con.getHighestAckedThrough();
-  if (lowest >= con.getCongestionWindowEnd()) {
+  if (lowest >= con.getCongestionWindowEnd() || acked > 1 || con.getUnackedPacketsSent() > 0) {
     int oldWindow=con.getOptions().getWindowSize();
     int newWindowSize=oldWindow;
     int trend=con.getOptions().getRTTTrend();
@@ -23,20 +23,22 @@
  else         newWindowSize+=acked / factor;
         if (_log.shouldLog(Log.DEBUG))         _log.debug("slow start acks = " + acked + " for "+ con);
       }
- else       if (trend < 0) {
-        newWindowSize++;
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("trend < 0 for " + con);
-      }
  else {
         int shouldIncrement=_context.random().nextInt(con.getOptions().getCongestionAvoidanceGrowthRateFactor() * newWindowSize);
-        if (shouldIncrement < acked)         newWindowSize+=1;
+        if (shouldIncrement < acked)         newWindowSize++;
         if (_log.shouldLog(Log.DEBUG))         _log.debug("cong. avoid acks = " + acked + " for "+ con);
       }
+    }
+ else {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("No change to window: " + con.getOptions().getWindowSize() + " congested? "+ congested+ " acked: "+ acked+ " resends: "+ numResends);
     }
     if (newWindowSize <= 0)     newWindowSize=1;
     con.getOptions().setWindowSize(newWindowSize);
     con.setCongestionWindowEnd(newWindowSize + lowest);
     if (_log.shouldLog(Log.DEBUG))     _log.debug("New window size " + newWindowSize + "/"+ oldWindow+ "/"+ con.getOptions().getWindowSize()+ " congestionSeenAt: "+ con.getLastCongestionSeenAt()+ " (#resends: "+ numResends+ ") for "+ con);
+  }
+ else {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("No change to window: " + con.getOptions().getWindowSize() + " highestAckedThrough: "+ lowest+ " congestionWindowEnd: "+ con.getCongestionWindowEnd()+ " acked: "+ acked+ " unacked: "+ con.getUnackedPacketsSent());
   }
   con.windowAdjusted();
   return congested;

@@ -1,10 +1,9 @@
 {
-  ArrayList matchedSelectors=null;
-  ArrayList removedSelectors=null;
+  List<MessageSelector> matchedSelectors=null;
+  List<MessageSelector> removedSelectors=null;
 synchronized (_selectors) {
     for (int i=0; i < _selectors.size(); i++) {
-      MessageSelector sel=(MessageSelector)_selectors.get(i);
-      if (sel == null)       continue;
+      MessageSelector sel=_selectors.get(i);
       boolean isMatch=sel.isMatch(message);
       if (isMatch) {
         if (matchedSelectors == null)         matchedSelectors=new ArrayList(1);
@@ -18,11 +17,10 @@ synchronized (_selectors) {
       }
     }
   }
-  List rv=null;
+  List<OutNetMessage> rv=null;
   if (matchedSelectors != null) {
     rv=new ArrayList(matchedSelectors.size());
-    for (int i=0; i < matchedSelectors.size(); i++) {
-      MessageSelector sel=(MessageSelector)matchedSelectors.get(i);
+    for (    MessageSelector sel : matchedSelectors) {
       boolean removed=false;
       OutNetMessage msg=null;
       List msgs=null;
@@ -40,20 +38,16 @@ synchronized (_selectorToMessage) {
           if (msg != null)           rv.add(msg);
         }
  else         if (o instanceof List) {
-          msgs=(List)o;
+          msgs=(List<OutNetMessage>)o;
           if (msgs != null)           rv.addAll(msgs);
         }
       }
       if (removed) {
         if (msg != null) {
-synchronized (_activeMessages) {
-            _activeMessages.remove(msg);
-          }
+          _activeMessages.remove(msg);
         }
  else         if (msgs != null) {
-synchronized (_activeMessages) {
-            _activeMessages.removeAll(msgs);
-          }
+          _activeMessages.removeAll(msgs);
         }
       }
     }

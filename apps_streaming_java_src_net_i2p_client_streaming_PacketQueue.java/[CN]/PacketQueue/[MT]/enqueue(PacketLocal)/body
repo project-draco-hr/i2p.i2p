@@ -1,14 +1,10 @@
 {
   packet.prepare();
-  SessionKey keyUsed=packet.getKeyUsed();
-  if (keyUsed == null)   keyUsed=new SessionKey();
-  Set tagsSent=packet.getTagsSent();
-  if (tagsSent == null)   tagsSent=new HashSet(0);
   String conStr=null;
   if (_log.shouldLog(Log.DEBUG))   conStr=(packet.getConnection() != null ? packet.getConnection().toString() : "");
   if (packet.getAckTime() > 0) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Not resending " + packet);
-    return;
+    return false;
   }
  else {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Sending... " + packet);
@@ -25,13 +21,13 @@
  else     size=packet.writePacket(buf,0);
     long writeTime=System.currentTimeMillis() - beforeWrite;
     if ((writeTime > 1000) && (_log.shouldLog(Log.WARN)))     _log.warn("took " + writeTime + "ms to write the packet: "+ packet);
-    if (packet.getAckTime() > 0)     return;
+    if (packet.getAckTime() > 0)     return false;
     begin=_context.clock().now();
     long expires=0;
     Connection.ResendPacketEvent rpe=(Connection.ResendPacketEvent)packet.getResendEvent();
     if (rpe != null)     expires=rpe.getNextSendTime() - 500;
-    if (expires > 0)     sent=_session.sendMessage(packet.getTo(),buf,0,size,keyUsed,tagsSent,expires);
- else     sent=_session.sendMessage(packet.getTo(),buf,0,size,keyUsed,tagsSent);
+    if (expires > 0)     sent=_session.sendMessage(packet.getTo(),buf,0,size,null,null,expires,I2PSession.PROTO_STREAMING,packet.getLocalPort(),packet.getRemotePort());
+ else     sent=_session.sendMessage(packet.getTo(),buf,0,size,null,null,I2PSession.PROTO_STREAMING,packet.getLocalPort(),packet.getRemotePort());
     end=_context.clock().now();
     if ((end - begin > 1000) && (_log.shouldLog(Log.WARN)))     _log.warn("Took " + (end - begin) + "ms to sendMessage(...) "+ packet);
     _context.statManager().addRateData("stream.con.sendMessageSize",size,packet.getLifetime());
@@ -52,11 +48,9 @@
     if (c != null)     c.disconnect(false);
   }
  else {
-    packet.setKeyUsed(keyUsed);
-    packet.setTagsSent(tagsSent);
     packet.incrementSends();
     if (_log.shouldLog(Log.DEBUG)) {
-      String msg="SEND " + packet + (tagsSent.size() > 0 ? " with " + tagsSent.size() + " tags" : "")+ " send # "+ packet.getNumSends()+ " sendTime: "+ (end - begin)+ " con: "+ conStr;
+      String msg="SEND " + packet + " send # "+ packet.getNumSends()+ " sendTime: "+ (end - begin)+ " con: "+ conStr;
       _log.debug(msg);
     }
     Connection c=packet.getConnection();
@@ -72,4 +66,5 @@
  else   if (packet.isFlagSet(Packet.FLAG_RESET)) {
     packet.releasePayload();
   }
+  return sent;
 }

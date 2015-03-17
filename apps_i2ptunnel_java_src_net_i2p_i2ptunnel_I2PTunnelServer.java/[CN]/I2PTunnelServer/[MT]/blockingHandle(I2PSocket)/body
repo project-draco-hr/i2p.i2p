@@ -1,4 +1,5 @@
 {
+  if (_log.shouldLog(Log.INFO))   _log.info("Incoming connection to '" + toString() + "' port "+ socket.getLocalPort()+ " from: "+ socket.getPeerDestination().calculateHash()+ " port "+ socket.getPort());
   long afterAccept=I2PAppContext.getGlobalContext().clock().now();
   long afterSocket=-1;
   try {
@@ -6,19 +7,19 @@
     Socket s=new Socket(remoteHost,remotePort);
     afterSocket=I2PAppContext.getGlobalContext().clock().now();
     new I2PTunnelRunner(s,socket,slock,null,null);
+    long afterHandle=I2PAppContext.getGlobalContext().clock().now();
+    long timeToHandle=afterHandle - afterAccept;
+    if ((timeToHandle > 1000) && (_log.shouldLog(Log.WARN)))     _log.warn("Took a while to handle the request for " + remoteHost + ':'+ remotePort+ " ["+ timeToHandle+ ", socket create: "+ (afterSocket - afterAccept)+ "]");
   }
  catch (  SocketException ex) {
     try {
       socket.close();
     }
  catch (    IOException ioe) {
-      _log.error("Error while closing the received i2p con",ex);
     }
+    if (_log.shouldLog(Log.ERROR))     _log.error("Error connecting to server " + remoteHost + ':'+ remotePort,ex);
   }
 catch (  IOException ex) {
     _log.error("Error while waiting for I2PConnections",ex);
   }
-  long afterHandle=I2PAppContext.getGlobalContext().clock().now();
-  long timeToHandle=afterHandle - afterAccept;
-  if (timeToHandle > 1000)   _log.warn("Took a while to handle the request [" + timeToHandle + ", socket create: "+ (afterSocket - afterAccept)+ "]");
 }

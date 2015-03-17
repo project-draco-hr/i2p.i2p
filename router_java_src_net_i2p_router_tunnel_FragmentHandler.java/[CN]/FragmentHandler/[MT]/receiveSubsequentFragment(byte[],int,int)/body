@@ -8,34 +8,34 @@
   int size=(int)DataHelper.fromLong(preprocessed,offset,2);
   offset+=2;
   if (messageId < 0)   throw new RuntimeException("Preprocessed message was invalid [messageId =" + messageId + " size="+ size+ " offset="+ offset+ " fragment="+ fragmentNum);
-  boolean isNew=false;
   FragmentedMessage msg=null;
 synchronized (_fragmentedMessages) {
-    msg=(FragmentedMessage)_fragmentedMessages.get(new Long(messageId));
+    msg=_fragmentedMessages.get(Long.valueOf(messageId));
     if (msg == null) {
       msg=new FragmentedMessage(_context);
-      _fragmentedMessages.put(new Long(messageId),msg);
-      isNew=true;
+      _fragmentedMessages.put(Long.valueOf(messageId),msg);
     }
   }
-  boolean ok=msg.receive(messageId,fragmentNum,preprocessed,offset,size,isLast);
-  if (!ok)   return -1;
-  if (msg.isComplete()) {
+synchronized (msg) {
+    boolean ok=msg.receive(messageId,fragmentNum,preprocessed,offset,size,isLast);
+    if (!ok)     return -1;
+    if (msg.isComplete()) {
 synchronized (_fragmentedMessages) {
-      _fragmentedMessages.remove(new Long(messageId));
+        _fragmentedMessages.remove(Long.valueOf(messageId));
+      }
+      if (msg.getExpireEvent() != null)       SimpleTimer.getInstance().removeEvent(msg.getExpireEvent());
+      _context.statManager().addRateData("tunnel.fragmentedComplete",msg.getFragmentCount(),msg.getLifetime());
+      receiveComplete(msg);
     }
-    if (msg.getExpireEvent() != null)     SimpleTimer.getInstance().removeEvent(msg.getExpireEvent());
-    _context.statManager().addRateData("tunnel.fragmentedComplete",msg.getFragmentCount(),msg.getLifetime());
-    receiveComplete(msg);
-  }
  else {
-    noteReception(msg.getMessageId(),fragmentNum,msg);
-  }
-  if (isNew && !msg.isComplete()) {
-    RemoveFailed evt=new RemoveFailed(msg);
-    msg.setExpireEvent(evt);
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("In " + MAX_DEFRAGMENT_TIME + " dropping "+ msg.getMessageId()+ "/"+ fragmentNum);
-    SimpleTimer.getInstance().addEvent(evt,MAX_DEFRAGMENT_TIME);
+      noteReception(msg.getMessageId(),fragmentNum,msg);
+      if (msg.getExpireEvent() == null) {
+        RemoveFailed evt=new RemoveFailed(msg);
+        msg.setExpireEvent(evt);
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("In " + MAX_DEFRAGMENT_TIME + " dropping "+ msg.getMessageId()+ "/"+ fragmentNum);
+        SimpleTimer.getInstance().addEvent(evt,MAX_DEFRAGMENT_TIME);
+      }
+    }
   }
   offset+=size;
   return offset;

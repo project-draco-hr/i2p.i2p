@@ -1,5 +1,6 @@
 {
   if (_log.shouldLog(Log.DEBUG))   _log.debug(peer + " rcv request(" + piece+ ", "+ begin+ ", "+ length+ ") ");
+  if (metainfo == null)   return;
   if (choking) {
     if (_log.shouldLog(Log.INFO))     _log.info("Request received, but choking " + peer);
     return;
@@ -12,15 +13,6 @@
     if (_log.shouldLog(Log.WARN))     _log.warn("Discarding request over pipeline limit from " + peer);
     return;
   }
-  byte[] pieceBytes=listener.gotRequest(peer,piece,begin,length);
-  if (pieceBytes == null) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("Got request for unknown piece: " + piece);
-    return;
-  }
-  if (length != pieceBytes.length) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("Got out of range 'request: " + piece + ", "+ begin+ ", "+ length+ "' message from "+ peer);
-    return;
-  }
-  if (_log.shouldLog(Log.INFO))   _log.info("Sending (" + piece + ", "+ begin+ ", "+ length+ ")"+ " to "+ peer);
-  out.sendPiece(piece,begin,length,pieceBytes);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Queueing (" + piece + ", "+ begin+ ", "+ length+ ")"+ " to "+ peer);
+  out.sendPiece(piece,begin,length,this);
 }

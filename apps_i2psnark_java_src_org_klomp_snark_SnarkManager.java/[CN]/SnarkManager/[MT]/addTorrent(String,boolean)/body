@@ -1,9 +1,9 @@
 {
   if ((!dontAutoStart) && !_util.connected()) {
-    addMessage("Connecting to I2P");
+    addMessage(_("Connecting to I2P"));
     boolean ok=_util.connect();
     if (!ok) {
-      addMessage("Error connecting to I2P - check your I2CP settings");
+      addMessage(_("Error connecting to I2P - check your I2CP settings!"));
       return;
     }
   }
@@ -13,13 +13,13 @@
   }
  catch (  IOException ioe) {
     _log.error("Unable to add the torrent " + filename,ioe);
-    addMessage("ERR: Could not add the torrent '" + filename + "': "+ ioe.getMessage());
+    addMessage(_("Error: Could not add the torrent {0}",filename) + ": " + ioe.getMessage());
     return;
   }
   File dataDir=getDataDir();
   Snark torrent=null;
 synchronized (_snarks) {
-    torrent=(Snark)_snarks.get(filename);
+    torrent=_snarks.get(filename);
   }
   if (torrent == null) {
 synchronized (_addSnarkLock) {
@@ -29,10 +29,40 @@ synchronized (_snarks) {
       FileInputStream fis=null;
       try {
         fis=new FileInputStream(sfile);
+      }
+ catch (      IOException ioe) {
+        addMessage(_("Cannot open \"{0}\"",sfile.getName()) + ": " + ioe.getMessage());
+        return;
+      }
+      try {
         MetaInfo info=new MetaInfo(fis);
-        fis.close();
-        fis=null;
-        String rejectMessage=locked_validateTorrent(info);
+        try {
+          fis.close();
+          fis=null;
+        }
+ catch (        IOException e) {
+        }
+        Snark snark=getTorrentByInfoHash(info.getInfoHash());
+        if (snark != null) {
+          addMessage(_("Torrent with this info hash is already running: {0}",snark.getBaseName()));
+          return;
+        }
+        if (!TrackerClient.isValidAnnounce(info.getAnnounce())) {
+          if (info.isPrivate()) {
+            addMessage(_("ERROR - No I2P trackers in private torrent \"{0}\"",info.getName()));
+          }
+ else           if (_util.shouldUseOpenTrackers() && _util.getOpenTrackers() != null) {
+            addMessage(_("Warning - No I2P trackers in \"{0}\", will announce to I2P open trackers and DHT only.",info.getName()));
+          }
+ else           if (_util.getDHT() != null) {
+            addMessage(_("Warning - No I2P trackers in \"{0}\", and open trackers are disabled, will announce to DHT only.",info.getName()));
+          }
+ else {
+            addMessage(_("Warning - No I2P trackers in \"{0}\", and DHT and open trackers are disabled, you should enable open trackers or DHT before starting the torrent.",info.getName()));
+            dontAutoStart=true;
+          }
+        }
+        String rejectMessage=validateTorrent(info);
         if (rejectMessage != null) {
           sfile.delete();
           addMessage(rejectMessage);
@@ -40,15 +70,19 @@ synchronized (_snarks) {
         }
  else {
           torrent=new Snark(_util,filename,null,-1,null,null,this,_peerCoordinatorSet,_connectionAcceptor,false,dataDir.getPath());
-          torrent.completeListener=this;
+          loadSavedFilePriorities(torrent);
 synchronized (_snarks) {
             _snarks.put(filename,torrent);
           }
         }
       }
  catch (      IOException ioe) {
-        addMessage("Torrent in " + sfile.getName() + " is invalid: "+ ioe.getMessage());
+        addMessage(_("Torrent in \"{0}\" is invalid",sfile.getName()) + ": " + ioe.getMessage());
         if (sfile.exists())         sfile.delete();
+        return;
+      }
+catch (      OutOfMemoryError oom) {
+        addMessage(_("ERROR - Out of memory, cannot create torrent from {0}",sfile.getName()) + ": " + oom.getMessage());
         return;
       }
  finally {
@@ -63,12 +97,11 @@ synchronized (_snarks) {
  else {
     return;
   }
-  File f=new File(filename);
   if (!dontAutoStart && shouldAutoStart()) {
     torrent.startTorrent();
-    addMessage("Torrent added and started: '" + f.getName() + "'");
+    addMessage(_("Torrent added and started: \"{0}\"",torrent.getBaseName()));
   }
  else {
-    addMessage("Torrent added: '" + f.getName() + "'");
+    addMessage(_("Torrent added: \"{0}\"",torrent.getBaseName()));
   }
 }

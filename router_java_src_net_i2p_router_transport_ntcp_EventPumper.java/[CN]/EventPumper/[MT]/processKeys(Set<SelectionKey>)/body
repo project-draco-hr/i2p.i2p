@@ -1,0 +1,28 @@
+{
+  for (  SelectionKey key : selected) {
+    try {
+      int ops=key.readyOps();
+      boolean accept=(ops & SelectionKey.OP_ACCEPT) != 0;
+      boolean connect=(ops & SelectionKey.OP_CONNECT) != 0;
+      boolean read=(ops & SelectionKey.OP_READ) != 0;
+      boolean write=(ops & SelectionKey.OP_WRITE) != 0;
+      if (accept) {
+        _context.statManager().addRateData("ntcp.accept",1);
+        processAccept(key);
+      }
+      if (connect) {
+        key.interestOps(key.interestOps() & ~SelectionKey.OP_CONNECT);
+        processConnect(key);
+      }
+      if (read) {
+        processRead(key);
+      }
+      if (write) {
+        processWrite(key);
+      }
+    }
+ catch (    CancelledKeyException cke) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("key cancelled");
+    }
+  }
+}

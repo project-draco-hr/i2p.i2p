@@ -2,14 +2,14 @@
   if (_finished)   return;
   _finished=true;
   long sendTime=getContext().clock().now() - _start;
-  if (_log.shouldLog(Log.INFO))   _log.info(OutboundClientMessageOneShotJob.this.getJobId() + ": SUCCESS!  msg " + _clientMessageId+ " sent after "+ sendTime+ "ms");
-  if ((_key != null) && (_tags != null) && (_tags.size() > 0)) {
-    if (_leaseSet != null)     getContext().sessionKeyManager().tagsDelivered(_leaseSet.getEncryptionKey(),_key,_tags);
+  if (_log.shouldLog(Log.INFO))   _log.info(OutboundClientMessageOneShotJob.this.getJobId() + ": SUCCESS!  msg " + _clientMessageId+ " acked by DSM after "+ sendTime+ "ms");
+  if (_key != null && _tags != null && _leaseSet != null) {
+    SessionKeyManager skm=getContext().clientManager().getClientSessionKeyManager(_from.calculateHash());
+    if (skm != null)     skm.tagsAcked(_leaseSet.getEncryptionKey(),_key,_tags);
   }
   long dataMsgId=_cloveId;
   getContext().messageHistory().sendPayloadMessage(dataMsgId,true,sendTime);
   getContext().clientManager().messageDeliveryStatusUpdate(_from,_clientMessageId,true);
-  _lease.setNumSuccess(_lease.getNumSuccess() + 1);
   int size=_clientMessageSize;
   getContext().statManager().addRateData("client.sendAckTime",sendTime,0);
   getContext().statManager().addRateData("client.sendMessageSize",_clientMessageSize,sendTime);

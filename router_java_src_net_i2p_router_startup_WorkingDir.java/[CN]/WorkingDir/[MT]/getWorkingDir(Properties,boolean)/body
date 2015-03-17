@@ -1,0 +1,97 @@
+{
+  String dir=null;
+  if (envProps != null)   dir=envProps.getProperty(PROP_WORKING_DIR);
+  if (dir == null)   dir=System.getProperty(PROP_WORKING_DIR);
+  boolean isWindows=System.getProperty("os.name").startsWith("Win");
+  File dirf=null;
+  if (dir != null) {
+    dirf=new SecureDirectory(dir);
+  }
+ else {
+    String home=System.getProperty("user.home");
+    if (isWindows) {
+      String appdata=System.getenv("APPDATA");
+      if (appdata != null)       home=appdata;
+      dirf=new SecureDirectory(home,WORKING_DIR_DEFAULT_WINDOWS);
+    }
+ else {
+      if (DAEMON_USER.equals(System.getProperty("user.name")))       dirf=new SecureDirectory(home,WORKING_DIR_DEFAULT_DAEMON);
+ else       dirf=new SecureDirectory(home,WORKING_DIR_DEFAULT);
+    }
+  }
+  String cwd=null;
+  if (envProps != null)   cwd=envProps.getProperty(PROP_BASE_DIR);
+  if (cwd == null) {
+    cwd=System.getProperty(PROP_BASE_DIR);
+    if (cwd == null)     cwd=System.getProperty("user.dir");
+  }
+  File oldDirf=new File(cwd);
+  File test=new File(oldDirf,"hosts.txt");
+  if (!test.exists()) {
+    setupSystemOut(cwd);
+    System.err.println("ERROR - Cannot find I2P installation in " + cwd + " - Will probably be just a router with no apps or console at all!");
+    return cwd;
+  }
+  try {
+    if (oldDirf.getCanonicalPath().equals(dirf.getCanonicalPath())) {
+      setupSystemOut(cwd);
+      return cwd;
+    }
+  }
+ catch (  IOException ioe) {
+  }
+  String rv=dirf.getAbsolutePath();
+  if (dirf.exists()) {
+    if (dirf.isDirectory()) {
+      if (isSetup(dirf)) {
+        setupSystemOut(rv);
+        return rv;
+      }
+    }
+ else {
+      setupSystemOut(null);
+      System.err.println("Wanted to use " + rv + " for a working directory but it is not a directory");
+      return cwd;
+    }
+  }
+  test=new File(oldDirf,"router.keys");
+  boolean oldInstall=test.exists();
+  if (!oldInstall) {
+    test=new File(oldDirf,"logs");
+    oldInstall=test.exists();
+  }
+  if (oldInstall && !migrateOldConfig) {
+    setupSystemOut(cwd);
+    return cwd;
+  }
+  boolean migrateOldData=false;
+  if (!dirf.exists() && !dirf.mkdir()) {
+    setupSystemOut(null);
+    System.err.println("Wanted to use " + rv + " for a working directory but could not create it");
+    return cwd;
+  }
+  setupSystemOut(dirf.getAbsolutePath());
+  if (migrateOldData)   System.err.println("Migrating data files to new user directory " + rv);
+ else   System.err.println("Setting up new user directory " + rv);
+  boolean success=migrate(MIGRATE_BASE,oldDirf,dirf);
+  File oldEep=new File(oldDirf,"eepsite");
+  File newEep=new File(dirf,"eepsite");
+  String newPath=newEep.getAbsolutePath() + File.separatorChar;
+  success&=migrateJettyXml(oldEep,newEep,"jetty.xml","./eepsite/",newPath);
+  success&=migrateJettyXml(oldEep,newEep,"jetty-ssl.xml","./eepsite/",newPath);
+  success&=migrateJettyXml(oldEep,newEep,"contexts/base-context.xml","./eepsite/",newPath);
+  success&=migrateJettyXml(oldEep,newEep,"contexts/cgi-context.xml","./eepsite/",newPath);
+  success&=migrateClientsConfig(oldDirf,dirf);
+  success&=(new SecureDirectory(dirf,"docs")).mkdir();
+  touchRecursive(new File(dirf,"eepsite/docroot"),EEPSITE_TIMESTAMP);
+  if (success) {
+    System.err.println("Successfully copied data files to new user directory " + rv);
+    return rv;
+  }
+ else {
+    System.err.println("FAILED copy of some or all data files to new directory " + rv);
+    System.err.println("Check logs for details");
+    System.err.println("Continung to use data files in old directory " + cwd);
+    return cwd;
+  }
+}

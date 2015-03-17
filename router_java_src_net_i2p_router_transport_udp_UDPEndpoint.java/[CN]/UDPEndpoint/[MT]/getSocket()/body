@@ -1,0 +1,29 @@
+{
+  DatagramSocket socket=null;
+  int port=_listenPort;
+  for (int i=0; i < MAX_PORT_RETRIES; i++) {
+    if (port <= 0) {
+      int minPort=_context.getProperty(PROP_MIN_PORT,MIN_RANDOM_PORT);
+      int maxPort=_context.getProperty(PROP_MAX_PORT,MAX_RANDOM_PORT);
+      port=minPort + _context.random().nextInt(maxPort - minPort);
+    }
+    try {
+      if (_bindAddress == null)       socket=new DatagramSocket(port);
+ else       socket=new DatagramSocket(port,_bindAddress);
+      break;
+    }
+ catch (    SocketException se) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Binding to port " + port + " failed: "+ se);
+    }
+    port=-1;
+  }
+  if (socket == null) {
+    _log.log(Log.CRIT,"SSU Unable to bind to a port on " + _bindAddress);
+  }
+ else   if (port != _listenPort) {
+    if (_listenPort > 0)     _log.error("SSU Unable to bind to requested port " + _listenPort + ", using random port "+ port);
+ else     _log.logAlways(Log.INFO,"UDP selected random port " + port);
+  }
+  _listenPort=port;
+  return socket;
+}

@@ -1,6 +1,6 @@
 {
   RouterInfo ri=new RouterInfo(getContext().router().getRouterInfo());
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Old routerInfo contains " + ri.getAddresses().size() + " addresses and "+ ri.getOptions().size()+ " options");
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Old routerInfo contains " + ri.getAddresses().size() + " addresses and "+ ri.getOptionsMap().size()+ " options");
   Properties stats=getContext().statPublisher().publishStatistics();
   stats.setProperty(RouterInfo.PROP_NETWORK_ID,"" + Router.NETWORK_ID);
   try {
@@ -16,17 +16,23 @@
     }
     ri.sign(key);
     getContext().router().setRouterInfo(ri);
-    if (_log.shouldLog(Log.INFO))     _log.info("Newly updated routerInfo is published with " + stats.size() + "/"+ ri.getOptions().size()+ " options on "+ new Date(ri.getPublished()));
+    if (_log.shouldLog(Log.INFO))     _log.info("Newly updated routerInfo is published with " + stats.size() + "/"+ ri.getOptionsMap().size()+ " options on "+ new Date(ri.getPublished()));
     try {
       getContext().netDb().publish(ri);
     }
  catch (    IllegalArgumentException iae) {
-      _log.log(Log.CRIT,"Error publishing our identity - corrupt?",iae);
+      _log.log(Log.CRIT,"Error publishing our identity - corrupt? Restart required",iae);
       getContext().router().rebuildNewIdentity();
     }
   }
  catch (  DataFormatException dfe) {
     _log.error("Error signing the updated local router info!",dfe);
   }
-  requeue((PUBLISH_DELAY / 2) + getContext().random().nextInt((int)PUBLISH_DELAY));
+  if (_notFirstTime) {
+    requeue((PUBLISH_DELAY * 3 / 4) + getContext().random().nextInt((int)PUBLISH_DELAY / 2));
+  }
+ else {
+    requeue(FIRST_TIME_DELAY);
+    _notFirstTime=true;
+  }
 }

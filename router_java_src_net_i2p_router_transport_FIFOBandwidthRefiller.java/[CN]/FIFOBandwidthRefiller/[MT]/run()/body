@@ -1,13 +1,14 @@
 {
   _lastRefillTime=_limiter.now();
-  List buffer=new ArrayList(2);
-  while (true) {
+  List<FIFOBandwidthLimiter.Request> buffer=new ArrayList(2);
+  while (_isRunning) {
     long now=_limiter.now();
     if (now >= _lastCheckConfigTime + _configCheckPeriodMs) {
       checkConfig();
       now=_limiter.now();
       _lastCheckConfigTime=now;
     }
+    updateParticipating(now);
     boolean updated=updateQueues(buffer,now);
     if (updated) {
       _lastRefillTime=now;

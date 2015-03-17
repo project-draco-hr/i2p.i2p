@@ -9,12 +9,21 @@
     if (_log.shouldLog(Log.INFO))     _log.info("request headers: " + _headers);
     serverout.write(_headers.getBytes());
     browserin=_browser.getInputStream();
-    I2PThread sender=new I2PThread(new Sender(serverout,browserin,"server: browser to server"),Thread.currentThread().getName() + "hcs");
+    I2PAppThread sender=new I2PAppThread(new Sender(serverout,browserin,"server: browser to server",_log),Thread.currentThread().getName() + "hcs");
     sender.start();
     browserout=_browser.getOutputStream();
-    serverin=_webserver.getInputStream();
+    try {
+      serverin=new BufferedInputStream(_webserver.getInputStream(),BUF_SIZE);
+    }
+ catch (    NullPointerException npe) {
+      throw new IOException("getInputStream NPE");
+    }
     CompressedResponseOutputStream compressedOut=new CompressedResponseOutputStream(browserout);
-    Sender s=new Sender(compressedOut,serverin,"server: server to browser");
+    StringBuilder command=new StringBuilder(128);
+    Map<String,List<String>> headers=readHeaders(serverin,command,SERVER_SKIPHEADERS,_ctx);
+    String modifiedHeaders=formatHeaders(headers,command);
+    compressedOut.write(modifiedHeaders.getBytes());
+    Sender s=new Sender(compressedOut,serverin,"server: server to browser",_log);
     if (_log.shouldLog(Log.INFO))     _log.info("Before pumping the compressed response");
     s.run();
     if (_log.shouldLog(Log.INFO))     _log.info("After pumping the compressed response: " + compressedOut.getTotalRead() + "/"+ compressedOut.getTotalCompressed());

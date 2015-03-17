@@ -1,30 +1,19 @@
 {
   if (bytes > 0) {
     _receiveBytes+=bytes;
-    if (isForACK)     _receiveACKBytes+=bytes;
   }
  else {
-    if (true || _retransmissionPeriodStart + 1000 < _context.clock().now()) {
-      _packetsReceivedDuplicate++;
-    }
- else {
-      _retransmissionPeriodStart=_context.clock().now();
-      _packetsReceivedDuplicate=1;
-    }
+    _packetsReceivedDuplicate++;
   }
   long now=_context.clock().now();
   long duration=now - _receivePeriodBegin;
   if (duration >= 1000) {
-    _receiveBps=(int)(0.9f * (float)_receiveBps + 0.1f * ((float)_receiveBytes * (1000f / (float)duration)));
-    if (isForACK)     _receiveACKBps=(int)(0.9f * (float)_receiveACKBps + 0.1f * ((float)_receiveACKBytes * (1000f / (float)duration)));
-    _receiveACKBytes=0;
+    _receiveBps=(int)(0.9f * _receiveBps + 0.1f * (_receiveBytes * (1000f / duration)));
     _receiveBytes=0;
     _receivePeriodBegin=now;
     _context.statManager().addRateData("udp.receiveBps",_receiveBps,0);
   }
-synchronized (_currentACKs) {
-    if (_wantACKSendSince <= 0)     _wantACKSendSince=now;
-    if (!_currentACKs.contains(messageId))     _currentACKs.add(messageId);
-  }
+  if (_wantACKSendSince <= 0)   _wantACKSendSince=now;
+  _currentACKs.add(messageId);
   _messagesReceived++;
 }

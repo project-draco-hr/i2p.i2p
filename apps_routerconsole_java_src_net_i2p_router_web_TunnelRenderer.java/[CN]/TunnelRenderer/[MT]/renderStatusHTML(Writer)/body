@@ -1,0 +1,68 @@
+{
+  out.write("<div class=\"wideload\"><h2><a name=\"exploratory\" ></a>" + _("Exploratory tunnels") + " (<a href=\"/configtunnels#exploratory\">"+ _("configure")+ "</a>)</h2>\n");
+  renderPool(out,_context.tunnelManager().getInboundExploratoryPool(),_context.tunnelManager().getOutboundExploratoryPool());
+  List<Hash> destinations=null;
+  Map<Hash,TunnelPool> clientInboundPools=_context.tunnelManager().getInboundClientPools();
+  Map<Hash,TunnelPool> clientOutboundPools=_context.tunnelManager().getOutboundClientPools();
+  destinations=new ArrayList(clientInboundPools.keySet());
+  for (int i=0; i < destinations.size(); i++) {
+    Hash client=destinations.get(i);
+    TunnelPool in=null;
+    TunnelPool outPool=null;
+    in=clientInboundPools.get(client);
+    outPool=clientOutboundPools.get(client);
+    String name=(in != null ? in.getSettings().getDestinationNickname() : null);
+    if ((name == null) && (outPool != null))     name=outPool.getSettings().getDestinationNickname();
+    if (name == null)     name=client.toBase64().substring(0,4);
+    out.write("<h2><a name=\"" + client.toBase64().substring(0,4) + "\" ></a>"+ _("Client tunnels for")+ ' '+ _(name));
+    if (_context.clientManager().isLocal(client))     out.write(" (<a href=\"/configtunnels#" + client.toBase64().substring(0,4) + "\">"+ _("configure")+ "</a>)</h2>\n");
+ else     out.write(" (" + _("dead") + ")</h2>\n");
+    renderPool(out,in,outPool);
+  }
+  List participating=_context.tunnelDispatcher().listParticipatingTunnels();
+  Collections.sort(participating,new TunnelComparator());
+  out.write("<h2><a name=\"participating\"></a>" + _("Participating tunnels") + "</h2><table>\n");
+  out.write("<tr><th>" + _("Receive on") + "</th><th>"+ _("From")+ "</th><th>"+ _("Send on")+ "</th><th>"+ _("To")+ "</th><th>"+ _("Expiration")+ "</th>"+ "<th>"+ _("Usage")+ "</th><th>"+ _("Rate")+ "</th><th>"+ _("Role")+ "</th></tr>\n");
+  long processed=0;
+  RateStat rs=_context.statManager().getRate("tunnel.participatingMessageCount");
+  if (rs != null)   processed=(long)rs.getRate(10 * 60 * 1000).getLifetimeTotalValue();
+  int inactive=0;
+  int displayed=0;
+  for (int i=0; i < participating.size(); i++) {
+    HopConfig cfg=(HopConfig)participating.get(i);
+    long count=cfg.getProcessedMessagesCount();
+    if (count <= 0) {
+      inactive++;
+      continue;
+    }
+    processed+=count;
+    if (++displayed > DISPLAY_LIMIT)     continue;
+    out.write("<tr>");
+    if (cfg.getReceiveTunnel() != null)     out.write("<td class=\"cells\" align=\"center\">" + cfg.getReceiveTunnel().getTunnelId() + "</td>");
+ else     out.write("<td class=\"cells\" align=\"center\">n/a</td>");
+    if (cfg.getReceiveFrom() != null)     out.write("<td class=\"cells\" align=\"center\">" + netDbLink(cfg.getReceiveFrom()) + "</td>");
+ else     out.write("<td class=\"cells\">&nbsp;</td>");
+    if (cfg.getSendTunnel() != null)     out.write("<td class=\"cells\" align=\"center\">" + cfg.getSendTunnel().getTunnelId() + "</td>");
+ else     out.write("<td class=\"cells\">&nbsp;</td>");
+    if (cfg.getSendTo() != null)     out.write("<td class=\"cells\" align=\"center\">" + netDbLink(cfg.getSendTo()) + "</td>");
+ else     out.write("<td class=\"cells\">&nbsp;</td>");
+    long timeLeft=cfg.getExpiration() - _context.clock().now();
+    if (timeLeft > 0)     out.write("<td class=\"cells\" align=\"center\">" + DataHelper.formatDuration2(timeLeft) + "</td>");
+ else     out.write("<td class=\"cells\" align=\"center\">(" + _("grace period") + ")</td>");
+    out.write("<td class=\"cells\" align=\"center\">" + cfg.getProcessedMessagesCount() + " KB</td>");
+    int lifetime=(int)((_context.clock().now() - cfg.getCreation()) / 1000);
+    if (lifetime <= 0)     lifetime=1;
+    if (lifetime > 10 * 60)     lifetime=10 * 60;
+    int bps=1024 * cfg.getProcessedMessagesCount() / lifetime;
+    out.write("<td class=\"cells\" align=\"center\">" + bps + " Bps</td>");
+    if (cfg.getSendTo() == null)     out.write("<td class=\"cells\" align=\"center\">" + _("Outbound Endpoint") + "</td>");
+ else     if (cfg.getReceiveFrom() == null)     out.write("<td class=\"cells\" align=\"center\">" + _("Inbound Gateway") + "</td>");
+ else     out.write("<td class=\"cells\" align=\"center\">" + _("Participant") + "</td>");
+    out.write("</tr>\n");
+  }
+  out.write("</table>\n");
+  if (displayed > DISPLAY_LIMIT)   out.write("<div class=\"statusnotes\"><b>" + _("Limited display to the {0} tunnels with the highest usage",DISPLAY_LIMIT) + "</b></div>\n");
+  out.write("<div class=\"statusnotes\"><b>" + _("Inactive participating tunnels") + ": "+ inactive+ "</b></div>\n");
+  out.write("<div class=\"statusnotes\"><b>" + _("Lifetime bandwidth usage") + ": "+ DataHelper.formatSize2(processed * 1024)+ "B</b></div>\n");
+  out.write("</div>");
+}

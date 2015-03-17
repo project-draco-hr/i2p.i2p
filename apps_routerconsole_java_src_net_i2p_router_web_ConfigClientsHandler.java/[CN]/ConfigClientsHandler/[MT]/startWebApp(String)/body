@@ -1,20 +1,17 @@
 {
-  Collection c=Server.getHttpServers();
-  for (int i=0; i < c.size(); i++) {
-    Server s=(Server)c.toArray()[i];
-    HttpListener[] hl=s.getListeners();
-    for (int j=0; j < hl.length; j++) {
-      if (hl[j].getPort() == 7657) {
-        try {
-          s.addWebApplication("/" + app,"./webapps/" + app + ".war").start();
-          addFormNotice("WebApp <a href=\"/" + app + "/\">"+ app+ "<a> started");
-        }
- catch (        Exception ioe) {
-          addFormError("Failed to start " + app + " "+ ioe);
-        }
-        return;
-      }
+  ContextHandlerCollection s=WebAppStarter.getConsoleServer();
+  if (s != null) {
+    try {
+      File path=new File(_context.getBaseDir(),"webapps");
+      path=new File(path,app + ".war");
+      WebAppStarter.startWebApp(_context,s,app,path.getAbsolutePath());
+      addFormNotice(_("WebApp") + " <a href=\"/" + app+ "/\">"+ _(app)+ "</a> "+ _("started")+ '.');
     }
+ catch (    Throwable e) {
+      addFormError(_("Failed to start") + ' ' + _(app)+ " "+ e+ '.');
+      _log.error("Failed to start webapp " + app,e);
+    }
+    return;
   }
-  addFormError("Failed to find server");
+  addFormError(_("Failed to find server."));
 }

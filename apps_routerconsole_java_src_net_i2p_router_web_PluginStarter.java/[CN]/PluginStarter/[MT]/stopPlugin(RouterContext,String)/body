@@ -1,0 +1,29 @@
+{
+  Log log=ctx.logManager().getLog(PluginStarter.class);
+  File pluginDir=new File(ctx.getConfigDir(),PluginUpdateHandler.PLUGIN_DIR + '/' + appName);
+  if ((!pluginDir.exists()) || (!pluginDir.isDirectory())) {
+    log.error("Cannot stop nonexistent plugin: " + appName);
+    return false;
+  }
+  File clientConfig=new File(pluginDir,"clients.config");
+  if (clientConfig.exists()) {
+    Properties props=new Properties();
+    DataHelper.loadProps(props,clientConfig);
+    List<ClientAppConfig> clients=ClientAppConfig.getClientApps(clientConfig);
+    runClientApps(ctx,pluginDir,clients,"stop");
+  }
+  if (pluginWars.containsKey(appName)) {
+    Iterator<String> wars=pluginWars.get(appName).iterator();
+    while (wars.hasNext()) {
+      String warName=wars.next();
+      WebAppStarter.stopWebApp(warName);
+    }
+    pluginWars.get(appName).clear();
+  }
+  Properties props=pluginProperties(ctx,appName);
+  String name=ConfigClientsHelper.stripHTML(props,"consoleLinkName_" + Messages.getLanguage(ctx));
+  if (name == null)   name=ConfigClientsHelper.stripHTML(props,"consoleLinkName");
+  if (name != null && name.length() > 0)   NavHelper.unregisterApp(name);
+  if (log.shouldLog(Log.WARN))   log.warn("Stopping plugin: " + appName);
+  return true;
+}

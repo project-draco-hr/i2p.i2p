@@ -1,13 +1,11 @@
 {
-  Set keys=_facade.getDataStore().getKeys();
-  Set toExpire=new HashSet(128);
-  for (Iterator iter=keys.iterator(); iter.hasNext(); ) {
-    Hash key=(Hash)iter.next();
-    Object obj=_facade.getDataStore().get(key);
-    if (obj instanceof LeaseSet) {
+  Set<Hash> toExpire=new HashSet(128);
+  for (  Map.Entry<Hash,DatabaseEntry> entry : _facade.getDataStore().getMapEntries()) {
+    DatabaseEntry obj=entry.getValue();
+    if (obj.getType() == DatabaseEntry.KEY_TYPE_LEASESET) {
       LeaseSet ls=(LeaseSet)obj;
-      if (!ls.isCurrent(Router.CLOCK_FUDGE_FACTOR))       toExpire.add(key);
- else       _log.debug("Lease " + ls.getDestination().calculateHash() + " is current, no need to expire");
+      if (!ls.isCurrent(Router.CLOCK_FUDGE_FACTOR))       toExpire.add(entry.getKey());
+ else       if (_log.shouldLog(Log.DEBUG))       _log.debug("Lease " + ls.getDestination().calculateHash() + " is current, no need to expire");
     }
   }
   return toExpire;

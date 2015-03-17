@@ -1,15 +1,17 @@
 {
   int rv=0;
+  boolean newAck=false;
   if (data.readACKsIncluded()) {
-    int fragments=0;
     int ackCount=data.readACKCount();
     if (ackCount > 0) {
       rv+=ackCount;
       _context.statManager().addRateData("udp.receivedACKs",ackCount,0);
       for (int i=0; i < ackCount; i++) {
         long id=data.readACK(i);
-        if (_log.shouldLog(Log.INFO))         _log.info("Full ACK of message " + id + " received!");
-        fragments+=_outbound.acked(id,from.getRemotePeer());
+        if (from.acked(id)) {
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("First full ACK of message " + id + " received from "+ from.getRemotePeer());
+          newAck=true;
+        }
       }
     }
  else {
@@ -21,12 +23,18 @@
     if (bitfields != null) {
       rv+=bitfields.length;
       for (int i=0; i < bitfields.length; i++) {
-        if (_log.shouldLog(Log.INFO))         _log.info("Partial ACK received: " + bitfields[i]);
-        _outbound.acked(bitfields[i],from.getRemotePeer());
+        if (from.acked(bitfields[i])) {
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("Final partial ACK received: " + bitfields[i] + " from "+ from.getRemotePeer());
+          newAck=true;
+        }
+ else         if (_log.shouldLog(Log.DEBUG)) {
+          _log.debug("Partial ACK received: " + bitfields[i] + " from "+ from.getRemotePeer());
+        }
       }
     }
   }
   if (data.readECN())   from.ECNReceived();
  else   from.dataReceived();
+  if (newAck && from.getOutboundMessageCount() > 0)   _outbound.add(from);
   return rv;
 }

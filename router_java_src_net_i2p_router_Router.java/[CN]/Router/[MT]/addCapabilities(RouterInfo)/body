@@ -1,8 +1,12 @@
 {
   int bwLim=Math.min(_context.bandwidthLimiter().getInboundKBytesPerSecond(),_context.bandwidthLimiter().getOutboundKBytesPerSecond());
-  bwLim=(int)(((float)bwLim) * getSharePercentage());
+  bwLim=(int)(bwLim * getSharePercentage());
   if (_log.shouldLog(Log.INFO))   _log.info("Adding capabilities w/ bw limit @ " + bwLim,new Exception("caps"));
-  if (bwLim < 12) {
+  String force=_context.getProperty(PROP_FORCE_BWCLASS);
+  if (force != null && force.length() > 0) {
+    ri.addCapability(force.charAt(0));
+  }
+ else   if (bwLim < 12) {
     ri.addCapability(CAPABILITY_BW12);
   }
  else   if (bwLim <= 32) {
@@ -17,10 +21,9 @@
  else {
     ri.addCapability(CAPABILITY_BW256);
   }
-  if (FloodfillNetworkDatabaseFacade.floodfillEnabled(_context))   ri.addCapability(FloodfillNetworkDatabaseFacade.CAPACITY_FLOODFILL);
-  if ("true".equalsIgnoreCase(_context.getProperty(Router.PROP_HIDDEN,"false")))   ri.addCapability(RouterInfo.CAPABILITY_HIDDEN);
-  String forceUnreachable=_context.getProperty(PROP_FORCE_UNREACHABLE);
-  if ((forceUnreachable != null) && ("true".equalsIgnoreCase(forceUnreachable))) {
+  if (FloodfillNetworkDatabaseFacade.floodfillEnabled(_context) && !_context.getBooleanProperty("router.hideFloodfillParticipant"))   ri.addCapability(FloodfillNetworkDatabaseFacade.CAPABILITY_FLOODFILL);
+  if (_context.getBooleanProperty(PROP_HIDDEN))   ri.addCapability(RouterInfo.CAPABILITY_HIDDEN);
+  if (_context.getBooleanProperty(PROP_FORCE_UNREACHABLE)) {
     ri.addCapability(CAPABILITY_UNREACHABLE);
     return;
   }

@@ -1,6 +1,6 @@
 {
   String fileNames[]=dir.list(TorrentFilenameFilter.instance());
-  List foundNames=new ArrayList(0);
+  List<String> foundNames=new ArrayList(0);
   if (fileNames != null) {
     for (int i=0; i < fileNames.length; i++) {
       try {
@@ -11,21 +11,32 @@
       }
     }
   }
-  Set existingNames=listTorrentFiles();
+  Set<String> existingNames=listTorrentFiles();
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("DirMon found: " + DataHelper.toString(foundNames) + " existing: "+ DataHelper.toString(existingNames));
   for (int i=0; i < foundNames.size(); i++) {
     if (existingNames.contains(foundNames.get(i))) {
     }
  else {
-      if (shouldAutoStart() && !_util.connect())       addMessage("Unable to connect to I2P");
-      addTorrent((String)foundNames.get(i),!shouldAutoStart());
+      if (shouldAutoStart() && !_util.connect())       addMessage(_("Unable to connect to I2P!"));
+      try {
+        addTorrent(foundNames.get(i),!shouldAutoStart());
+      }
+ catch (      Exception e) {
+        addMessage(_("Unable to add {0}",foundNames.get(i)) + ": " + e);
+      }
     }
   }
+  existingNames.removeAll(_magnets);
   for (Iterator iter=existingNames.iterator(); iter.hasNext(); ) {
     String name=(String)iter.next();
     if (foundNames.contains(name)) {
     }
  else {
-      stopTorrent(name,true);
+      try {
+        stopTorrent(name,true);
+      }
+ catch (      Exception e) {
+      }
     }
   }
 }

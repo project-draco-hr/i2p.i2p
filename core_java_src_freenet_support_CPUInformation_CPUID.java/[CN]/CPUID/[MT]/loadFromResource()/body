@@ -1,49 +1,12 @@
 {
-  String resourceName=getResourceName();
-  if (resourceName == null)   return false;
-  URL resource=CPUID.class.getClassLoader().getResource(resourceName);
-  if (resource == null) {
-    if (_doLog)     System.err.println("ERROR: Resource name [" + resourceName + "] was not found");
-    return false;
+  String resourceName=getResourceName64();
+  if (resourceName != null) {
+    boolean success=extractLoadAndCopy(resourceName);
+    if (success)     return true;
   }
-  File outFile=null;
-  FileOutputStream fos=null;
-  try {
-    InputStream libStream=resource.openStream();
-    outFile=new File(libPrefix + "jcpuid" + libSuffix);
-    fos=new FileOutputStream(outFile);
-    byte buf[]=new byte[4096 * 1024];
-    while (true) {
-      int read=libStream.read(buf);
-      if (read < 0)       break;
-      fos.write(buf,0,read);
-    }
-    fos.close();
-    fos=null;
-    System.load(outFile.getAbsolutePath());
-    return true;
-  }
- catch (  UnsatisfiedLinkError ule) {
-    if (_doLog) {
-      System.err.println("ERROR: The resource " + resourceName + " was not a valid library for this platform");
-      ule.printStackTrace();
-    }
-    return false;
-  }
-catch (  IOException ioe) {
-    if (_doLog) {
-      System.err.println("ERROR: Problem writing out the temporary native library data");
-      ioe.printStackTrace();
-    }
-    return false;
-  }
- finally {
-    if (fos != null) {
-      try {
-        fos.close();
-      }
- catch (      IOException ioe) {
-      }
-    }
-  }
+  resourceName=getResourceName();
+  boolean success=extractLoadAndCopy(resourceName);
+  if (success)   return true;
+  if (_doLog)   System.err.println("WARNING: Resource name [" + resourceName + "] was not found");
+  return false;
 }

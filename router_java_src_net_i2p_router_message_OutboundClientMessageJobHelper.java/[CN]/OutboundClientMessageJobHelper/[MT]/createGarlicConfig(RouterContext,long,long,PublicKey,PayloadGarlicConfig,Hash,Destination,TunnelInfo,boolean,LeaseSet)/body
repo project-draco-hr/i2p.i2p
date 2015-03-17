@@ -1,8 +1,7 @@
 {
   Log log=ctx.logManager().getLog(OutboundClientMessageJobHelper.class);
-  if (log.shouldLog(Log.DEBUG))   log.debug("Reply token: " + replyToken);
+  if (replyToken >= 0 && log.shouldLog(Log.DEBUG))   log.debug("Reply token: " + replyToken);
   GarlicConfig config=new GarlicConfig();
-  config.addClove(dataClove);
   if (requireAck) {
     PayloadGarlicConfig ackClove=buildAckClove(ctx,from,replyTunnel,replyToken,expiration);
     if (ackClove == null)     return null;
@@ -12,20 +11,14 @@
     PayloadGarlicConfig leaseSetClove=buildLeaseSetClove(ctx,expiration,bundledReplyLeaseSet);
     config.addClove(leaseSetClove);
   }
+  config.addClove(dataClove);
   DeliveryInstructions instructions=new DeliveryInstructions();
   instructions.setDeliveryMode(DeliveryInstructions.DELIVERY_MODE_LOCAL);
-  instructions.setDelayRequested(false);
-  instructions.setDelaySeconds(0);
-  instructions.setEncrypted(false);
-  instructions.setEncryptionKey(null);
-  instructions.setRouter(null);
-  instructions.setTunnelId(null);
-  config.setCertificate(new Certificate(Certificate.CERTIFICATE_TYPE_NULL,null));
+  config.setCertificate(Certificate.NULL_CERT);
   config.setDeliveryInstructions(instructions);
   config.setId(ctx.random().nextLong(I2NPMessage.MAX_ID_VALUE));
   config.setExpiration(expiration);
   config.setRecipientPublicKey(recipientPK);
-  config.setRequestAck(false);
   if (log.shouldLog(Log.INFO))   log.info("Creating garlic config to be encrypted to " + recipientPK + " for destination "+ dest.calculateHash().toBase64());
   return config;
 }

@@ -1,0 +1,63 @@
+{
+  if (_outputStream == null) {
+    File outFile=new File(_outputFile);
+    if (outFile.exists())     _alreadyTransferred=outFile.length();
+  }
+  if (_proxyIn != null)   try {
+    _proxyIn.close();
+  }
+ catch (  IOException ioe) {
+  }
+  if (_proxyOut != null)   try {
+    _proxyOut.close();
+  }
+ catch (  IOException ioe) {
+  }
+  if (_socket != null)   try {
+    _socket.close();
+  }
+ catch (  IOException ioe) {
+  }
+  try {
+    URL url=new URL(_actualURL);
+    if ("http".equals(url.getProtocol())) {
+      String host=url.getHost();
+      int port=url.getPort();
+      if (port <= 0 || port > 65535)       port=80;
+      if ("i2p".equals(host)) {
+        String file=url.getFile();
+        try {
+          int slash=1 + file.substring(1).indexOf("/");
+          host=file.substring(1,slash);
+          _actualURL="http://" + host + file.substring(slash);
+        }
+ catch (        IndexOutOfBoundsException ioobe) {
+          throw new IOException("Bad /i2p/ format: " + _actualURL);
+        }
+      }
+      Destination dest=_context.namingService().lookup(host);
+      if (dest == null)       throw new UnknownHostException("Unknown or non-i2p host");
+      Properties props=new Properties();
+      props.setProperty(I2PSocketOptions.PROP_CONNECT_TIMEOUT,"" + CONNECT_TIMEOUT);
+      props.setProperty(I2PSocketOptions.PROP_READ_TIMEOUT,"" + INACTIVITY_TIMEOUT);
+      props.setProperty(PROP_CONNECT_DELAY,CONNECT_DELAY);
+      I2PSocketOptions opts=_socketManager.buildOptions(props);
+      opts.setPort(port);
+      _socket=_socketManager.connect(dest,opts);
+    }
+ else {
+      throw new IOException("Unsupported protocol: " + _actualURL);
+    }
+  }
+ catch (  MalformedURLException mue) {
+    throw new IOException("Request URL is invalid: " + _actualURL);
+  }
+catch (  I2PException ie) {
+    throw new IOException(ie.toString());
+  }
+  _proxyIn=_socket.getInputStream();
+  _proxyOut=_socket.getOutputStream();
+  String req=getRequest();
+  _proxyOut.write(DataHelper.getUTF8(req));
+  _proxyOut.flush();
+}

@@ -10,15 +10,10 @@
     leaseSet.addLease(lease);
   }
   leaseSet.setDestination(session.getMyDestination());
-  LeaseInfo li=null;
-synchronized (_existingLeaseSets) {
-    if (_existingLeaseSets.containsKey(session.getMyDestination()))     li=(LeaseInfo)_existingLeaseSets.get(session.getMyDestination());
-  }
+  LeaseInfo li=_existingLeaseSets.get(session.getMyDestination());
   if (li == null) {
     li=new LeaseInfo(session.getMyDestination());
-synchronized (_existingLeaseSets) {
-      _existingLeaseSets.put(session.getMyDestination(),li);
-    }
+    _existingLeaseSets.put(session.getMyDestination(),li);
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Creating new leaseInfo keys for " + session.getMyDestination().calculateHash().toBase64());
   }
  else {
@@ -26,7 +21,7 @@ synchronized (_existingLeaseSets) {
   }
   leaseSet.setEncryptionKey(li.getPublicKey());
   leaseSet.setSigningKey(li.getSigningPublicKey());
-  boolean encrypt=Boolean.valueOf(session.getOptions().getProperty("i2cp.encryptLeaseset")).booleanValue();
+  boolean encrypt=Boolean.valueOf(session.getOptions().getProperty("i2cp.encryptLeaseSet")).booleanValue();
   String sk=session.getOptions().getProperty("i2cp.leaseSetKey");
   if (encrypt && sk != null) {
     SessionKey key=new SessionKey();

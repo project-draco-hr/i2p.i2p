@@ -1,8 +1,8 @@
 {
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("processing accept");
   ServerSocketChannel servChan=(ServerSocketChannel)key.attachment();
   try {
     SocketChannel chan=servChan.accept();
+    if (chan == null)     return;
     chan.configureBlocking(false);
     if (!_transport.allowConnection()) {
       if (_log.shouldLog(Log.WARN))       _log.warn("Receive session request but at connection limit: " + chan.socket().getInetAddress());
@@ -22,11 +22,11 @@
       }
       return;
     }
+    chan.socket().setKeepAlive(true);
     SelectionKey ckey=chan.register(_selector,SelectionKey.OP_READ);
-    NTCPConnection con=new NTCPConnection(_context,_transport,chan,ckey);
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("new NTCP connection established: " + con);
+    new NTCPConnection(_context,_transport,chan,ckey);
   }
  catch (  IOException ioe) {
-    if (_log.shouldLog(Log.ERROR))     _log.error("Error accepting",ioe);
+    _log.error("Error accepting",ioe);
   }
 }

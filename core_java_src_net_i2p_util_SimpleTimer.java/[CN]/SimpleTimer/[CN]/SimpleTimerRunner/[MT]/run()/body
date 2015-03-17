@@ -1,5 +1,5 @@
 {
-  List eventsToFire=new ArrayList(1);
+  List<TimedEvent> eventsToFire=new ArrayList(1);
   while (runn.getAnswer()) {
     try {
 synchronized (_events) {
@@ -7,12 +7,12 @@ synchronized (_events) {
         long nextEventDelay=-1;
         Object nextEvent=null;
         while (runn.getAnswer()) {
-          if (_events.size() <= 0) {
+          if (_events.isEmpty()) {
             break;
           }
-          Long when=(Long)_events.firstKey();
+          Long when=_events.firstKey();
           if (when.longValue() <= now) {
-            TimedEvent evt=(TimedEvent)_events.remove(when);
+            TimedEvent evt=_events.remove(when);
             if (evt != null) {
               _eventTimes.remove(evt);
               eventsToFire.add(evt);
@@ -24,7 +24,7 @@ synchronized (_events) {
             break;
           }
         }
-        if (eventsToFire.size() <= 0) {
+        if (eventsToFire.isEmpty()) {
           if (nextEventDelay != -1) {
             if (_log.shouldLog(Log.DEBUG))             _log.debug("Next event in " + nextEventDelay + ": "+ nextEvent);
             _events.wait(nextEventDelay);
@@ -61,7 +61,7 @@ synchronized (_readyEvents) {
  else {
       _occurredTime=now;
       if (_occurredEventCount > 2500) {
-        StringBuffer buf=new StringBuffer(128);
+        StringBuilder buf=new StringBuilder(128);
         buf.append("Too many simpleTimerJobs (").append(_occurredEventCount);
         buf.append(") in a second!");
         _log.log(Log.WARN,buf.toString());

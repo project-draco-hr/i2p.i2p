@@ -1,0 +1,44 @@
+{
+  int size=128 + rec.getMessage().length();
+  if (rec.getThrowable() != null)   size+=512;
+  StringBuilder buf=new StringBuilder(size);
+  char format[]=manager.getFormat();
+  for (int i=0; i < format.length; ++i) {
+switch (format[i]) {
+case LogManager.DATE:
+      if (showDate)       buf.append(getWhen(manager,rec));
+ else       if (i + 1 < format.length && format[i + 1] == ' ')       i++;
+    break;
+case LogManager.CLASS:
+  buf.append(getWhere(rec));
+break;
+case LogManager.THREAD:
+buf.append(getThread(rec));
+break;
+case LogManager.PRIORITY:
+buf.append(getPriority(rec,manager.getContext()));
+break;
+case LogManager.MESSAGE:
+buf.append(getWhat(rec));
+break;
+default :
+buf.append(format[i]);
+break;
+}
+}
+buf.append(NL);
+if (rec.getThrowable() != null) {
+ByteArrayOutputStream baos=new ByteArrayOutputStream(512);
+PrintWriter pw=new PrintWriter(baos,true);
+rec.getThrowable().printStackTrace(pw);
+try {
+pw.flush();
+baos.flush();
+}
+ catch (IOException ioe) {
+}
+byte tb[]=baos.toByteArray();
+buf.append(new String(tb));
+}
+return buf.toString();
+}

@@ -3,11 +3,12 @@
   String filename=getPrivKeyFile();
   if ((filename == null) || (filename.trim().length() <= 0)) {
     log("No filename specified for the private key");
-    return;
+    return false;
   }
   File keyFile=new File(getPrivKeyFile());
+  if (!keyFile.isAbsolute())   keyFile=new File(I2PAppContext.getGlobalContext().getConfigDir(),getPrivKeyFile());
   if (keyFile.exists()) {
-    return;
+    return true;
   }
  else {
     File parent=keyFile.getParentFile();
@@ -15,7 +16,7 @@
   }
   FileOutputStream fos=null;
   try {
-    fos=new FileOutputStream(keyFile);
+    fos=new SecureFileOutputStream(keyFile);
     Destination dest=client.createDestination(fos);
     String destStr=dest.toBase64();
     log("Private key created and saved in " + keyFile.getAbsolutePath());
@@ -25,10 +26,12 @@
  catch (  I2PException ie) {
     if (_log.shouldLog(Log.ERROR))     _log.error("Error creating new destination",ie);
     log("Error creating new destination: " + ie.getMessage());
+    return false;
   }
 catch (  IOException ioe) {
     if (_log.shouldLog(Log.ERROR))     _log.error("Error creating writing the destination to " + keyFile.getAbsolutePath(),ioe);
     log("Error writing the keys to " + keyFile.getAbsolutePath());
+    return false;
   }
  finally {
     if (fos != null)     try {
@@ -37,4 +40,5 @@ catch (  IOException ioe) {
  catch (    IOException ioe) {
     }
   }
+  return true;
 }

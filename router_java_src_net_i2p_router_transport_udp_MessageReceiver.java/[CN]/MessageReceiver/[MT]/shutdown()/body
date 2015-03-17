@@ -1,7 +1,16 @@
 {
   _alive=false;
-synchronized (_completeMessages) {
-    _completeMessages.clear();
-    _completeMessages.notifyAll();
+  _completeMessages.clear();
+  for (int i=0; i < _threadCount; i++) {
+    InboundMessageState ims=new InboundMessageState(_context,POISON_IMS,null);
+    _completeMessages.offer(ims);
   }
+  for (int i=1; i <= 5 && !_completeMessages.isEmpty(); i++) {
+    try {
+      Thread.sleep(i * 50);
+    }
+ catch (    InterruptedException ie) {
+    }
+  }
+  _completeMessages.clear();
 }

@@ -1,0 +1,81 @@
+{
+  byte[] ip1;
+  byte[] ip2;
+  int start1=0;
+  int end1=buf.length();
+  if (end1 <= 0)   return null;
+  if (end1 <= 0)   return null;
+  int start2=-1;
+  int mask=-1;
+  String comment=null;
+  int index=buf.indexOf("#");
+  if (index == 0)   return null;
+  index=buf.lastIndexOf(":");
+  if (index >= 0) {
+    comment=buf.substring(0,index);
+    start1=index + 1;
+  }
+  if (end1 - start1 == 44 && buf.substring(start1).indexOf(".") < 0) {
+    byte b[]=Base64.decode(buf.substring(start1));
+    if (b != null)     return new Entry(comment,Hash.create(b),null,null);
+  }
+  index=buf.indexOf("-",start1);
+  if (index >= 0) {
+    end1=index;
+    start2=index + 1;
+  }
+ else {
+    index=buf.indexOf("/",start1);
+    if (index >= 0) {
+      end1=index;
+      mask=index + 1;
+    }
+  }
+  if (end1 - start1 <= 0)   return null;
+  try {
+    InetAddress pi=InetAddress.getByName(buf.substring(start1,end1));
+    if (pi == null)     return null;
+    ip1=pi.getAddress();
+    if (ip1.length != 4)     throw new UnknownHostException();
+    if (start2 >= 0) {
+      pi=InetAddress.getByName(buf.substring(start2));
+      if (pi == null)       return null;
+      ip2=pi.getAddress();
+      if (ip2.length != 4)       throw new UnknownHostException();
+      if ((ip1[0] & 0xff) < 0x80 && (ip2[0] & 0xff) >= 0x80) {
+        if (_wrapSave == null) {
+          _wrapSave=new Entry(comment,null,new byte[]{(byte)0x80,0,0,0},new byte[]{ip2[0],ip2[1],ip2[2],ip2[3]});
+          ip2=new byte[]{127,(byte)0xff,(byte)0xff,(byte)0xff};
+        }
+ else         throw new NumberFormatException();
+      }
+      for (int i=0; i < 4; i++) {
+        if ((ip2[i] & 0xff) > (ip1[i] & 0xff))         break;
+        if ((ip2[i] & 0xff) < (ip1[i] & 0xff))         throw new NumberFormatException();
+      }
+    }
+ else     if (mask >= 0) {
+      int m=Integer.parseInt(buf.substring(mask));
+      if (m < 3 || m > 32)       throw new NumberFormatException();
+      ip2=new byte[4];
+      for (int i=0; i < 4; i++)       ip2[i]=ip1[i];
+      for (int i=0; i < 32 - m; i++)       ip2[(31 - i) / 8]|=(0x01 << (i % 8));
+    }
+ else {
+      ip2=ip1;
+    }
+  }
+ catch (  UnknownHostException uhe) {
+    if (bitch && _log.shouldLog(Log.ERROR))     _log.error("Format error in the blocklist file: " + buf);
+    return null;
+  }
+catch (  NumberFormatException nfe) {
+    if (bitch && _log.shouldLog(Log.ERROR))     _log.error("Format error in the blocklist file: " + buf);
+    return null;
+  }
+catch (  IndexOutOfBoundsException ioobe) {
+    if (bitch && _log.shouldLog(Log.ERROR))     _log.error("Format error in the blocklist file: " + buf);
+    return null;
+  }
+  return new Entry(comment,null,ip1,ip2);
+}

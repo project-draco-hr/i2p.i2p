@@ -1,4 +1,5 @@
 {
+  if (!_keepRunning)   return 0;
   if (_log.shouldLog(Log.INFO))   _log.info("Received: " + packet);
   RemoteHostId from=packet.getRemoteHost();
   if (_transport.isInDropList(from)) {
@@ -11,30 +12,33 @@
   boolean rejected=false;
   int queueSize=0;
   long headPeriod=0;
-synchronized (_inboundQueue) {
-    queueSize=_inboundQueue.size();
-    if (queueSize > 0) {
-      headPeriod=((UDPPacket)_inboundQueue.get(0)).getLifetime();
-      if (headPeriod > MAX_QUEUE_PERIOD) {
-        rejected=true;
-        _inboundQueue.notifyAll();
-      }
+  UDPPacket head=_inboundQueue.peek();
+  if (head != null) {
+    headPeriod=head.getLifetime();
+    if (headPeriod > MAX_QUEUE_PERIOD) {
+      rejected=true;
     }
-    if (!rejected) {
-      _inboundQueue.add(packet);
-      _inboundQueue.notifyAll();
-      return queueSize + 1;
+  }
+  if (!rejected) {
+    try {
+      _inboundQueue.put(packet);
     }
+ catch (    InterruptedException ie) {
+      packet.release();
+      _keepRunning=false;
+    }
+    return 0;
   }
   packet.release();
   _context.statManager().addRateData("udp.droppedInbound",queueSize,headPeriod);
   if (_log.shouldLog(Log.WARN)) {
-    StringBuffer msg=new StringBuffer();
+    queueSize=_inboundQueue.size();
+    StringBuilder msg=new StringBuilder();
     msg.append("Dropping inbound packet with ");
     msg.append(queueSize);
     msg.append(" queued for ");
     msg.append(headPeriod);
-    if (_transport != null)     msg.append(" packet handlers: ").append(_transport.getPacketHandlerStatus());
+    msg.append(" packet handlers: ").append(_transport.getPacketHandlerStatus());
     _log.warn(msg.toString());
   }
   return queueSize;

@@ -5,22 +5,20 @@
   long longInactivityCutoff=_context.clock().now() - EXPIRE_TIMEOUT;
   long pingCutoff=_context.clock().now() - (2 * 60 * 60* 1000);
   _expireBuffer.clear();
-synchronized (_expirePeers) {
-    int sz=_expirePeers.size();
-    for (int i=0; i < sz; i++) {
-      PeerState peer=(PeerState)_expirePeers.get(i);
-      long inactivityCutoff;
-      if (peer.getWeRelayToThemAs() > 0 || peer.getIntroducerTime() > pingCutoff)       inactivityCutoff=longInactivityCutoff;
- else       inactivityCutoff=shortInactivityCutoff;
-      if ((peer.getLastReceiveTime() < inactivityCutoff) && (peer.getLastSendTime() < inactivityCutoff)) {
-        _expireBuffer.add(peer);
-        _expirePeers.remove(i);
-        i--;
-        sz--;
-      }
+  for (Iterator<PeerState> iter=_expirePeers.iterator(); iter.hasNext(); ) {
+    PeerState peer=iter.next();
+    long inactivityCutoff;
+    if (peer.getWeRelayToThemAs() > 0 || peer.getIntroducerTime() > pingCutoff)     inactivityCutoff=longInactivityCutoff;
+ else     inactivityCutoff=shortInactivityCutoff;
+    if ((peer.getLastReceiveTime() < inactivityCutoff) && (peer.getLastSendTime() < inactivityCutoff)) {
+      _expireBuffer.add(peer);
+      iter.remove();
     }
   }
-  for (int i=0; i < _expireBuffer.size(); i++)   dropPeer((PeerState)_expireBuffer.get(i),false,"idle too long");
+  for (  PeerState peer : _expireBuffer) {
+    sendDestroy(peer);
+    dropPeer(peer,false,"idle too long");
+  }
   _expireBuffer.clear();
   if (_alive)   SimpleTimer.getInstance().addEvent(ExpirePeerEvent.this,30 * 1000);
 }

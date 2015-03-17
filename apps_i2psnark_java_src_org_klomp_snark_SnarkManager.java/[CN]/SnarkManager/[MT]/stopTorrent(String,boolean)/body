@@ -5,22 +5,22 @@
   }
  catch (  IOException ioe) {
     _log.error("Unable to remove the torrent " + filename,ioe);
-    addMessage("ERR: Could not remove the torrent '" + filename + "': "+ ioe.getMessage());
+    addMessage(_("Error: Could not remove the torrent {0}",filename) + ": " + ioe.getMessage());
     return null;
   }
   int remaining=0;
   Snark torrent=null;
 synchronized (_snarks) {
-    if (shouldRemove)     torrent=(Snark)_snarks.remove(filename);
- else     torrent=(Snark)_snarks.get(filename);
+    if (shouldRemove)     torrent=_snarks.remove(filename);
+ else     torrent=_snarks.get(filename);
     remaining=_snarks.size();
   }
   if (torrent != null) {
-    boolean wasStopped=torrent.stopped;
+    boolean wasStopped=torrent.isStopped();
     torrent.stopTorrent();
     if (remaining == 0) {
     }
-    if (!wasStopped)     addMessage("Torrent stopped: '" + sfile.getName() + "'");
+    if (!wasStopped)     addMessage(_("Torrent stopped: \"{0}\"",torrent.getBaseName()));
   }
   return torrent;
 }

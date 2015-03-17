@@ -1,7 +1,8 @@
 {
   _context=ctx;
-  _log=ctx.logManager().getLog(getClass());
-  _wantsPumping=new ArrayList(64);
-  _stop=false;
-  for (int i=0; i < 4; i++)   new I2PThread(this,"GW pumper " + i,true).start();
+  _wantsPumping=new LinkedBlockingQueue();
+  long maxMemory=Runtime.getRuntime().maxMemory();
+  if (maxMemory == Long.MAX_VALUE)   maxMemory=96 * 1024 * 1024l;
+  _pumpers=(int)Math.max(MIN_PUMPERS,Math.min(MAX_PUMPERS,1 + (maxMemory / (32 * 1024 * 1024))));
+  for (int i=0; i < _pumpers; i++)   new I2PThread(this,"Tunnel GW pumper " + (i + 1) + '/'+ _pumpers,true).start();
 }

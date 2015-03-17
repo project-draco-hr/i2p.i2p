@@ -1,12 +1,10 @@
 {
-  int total=0;
-  long lag=-1;
-synchronized (_completeMessages) {
-    _completeMessages.add(state);
-    total=_completeMessages.size();
-    if (total > 1)     lag=((InboundMessageState)_completeMessages.get(0)).getLifetime();
-    _completeMessages.notifyAll();
+  if (_alive) {
+    try {
+      _completeMessages.put(state);
+    }
+ catch (    InterruptedException ie) {
+      _alive=false;
+    }
   }
-  if (total > 1)   _context.statManager().addRateData("udp.inboundReady",total,0);
-  if (lag > 1000)   _context.statManager().addRateData("udp.inboundLag",lag,total);
 }

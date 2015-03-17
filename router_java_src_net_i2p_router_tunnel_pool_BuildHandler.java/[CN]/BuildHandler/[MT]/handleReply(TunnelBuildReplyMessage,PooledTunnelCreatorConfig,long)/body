@@ -1,14 +1,14 @@
 {
   long requestedOn=cfg.getExpiration() - 10 * 60 * 1000;
   long rtt=_context.clock().now() - requestedOn;
-  if (_log.shouldLog(Log.DEBUG))   _log.debug(msg.getUniqueId() + ": Handling the reply after " + rtt+ ", delayed "+ delay+ " waiting for "+ cfg);
-  BuildReplyHandler handler=new BuildReplyHandler();
-  List order=cfg.getReplyOrder();
-  int statuses[]=handler.decrypt(_context,msg,cfg,order);
+  if (_log.shouldLog(Log.INFO))   _log.info(msg.getUniqueId() + ": Handling the reply after " + rtt+ ", delayed "+ delay+ " waiting for "+ cfg);
+  List<Integer> order=cfg.getReplyOrder();
+  int statuses[]=BuildReplyHandler.decrypt(_context,msg,cfg,order);
   if (statuses != null) {
     boolean allAgree=true;
     for (int i=0; i < cfg.getLength(); i++) {
       Hash peer=cfg.getPeer(i);
+      if (peer.equals(_context.routerHash()))       continue;
       int record=order.indexOf(Integer.valueOf(i));
       if (record < 0) {
         _log.error("Bad status index " + i);
@@ -16,19 +16,17 @@
         return;
       }
       int howBad=statuses[record];
-      if (!peer.toBase64().equals(_context.routerHash().toBase64())) {
-        RouterInfo ri=_context.netDb().lookupRouterInfoLocally(peer);
-        String bwTier="Unknown";
-        if (ri != null)         bwTier=ri.getBandwidthTier();
- else         if (_log.shouldLog(Log.WARN))         _log.warn("Failed detecting bwTier, null routerInfo for: " + peer);
-        if (howBad == 0) {
-          _context.statManager().addRateData("tunnel.tierAgree" + bwTier,1,0);
-        }
- else {
-          _context.statManager().addRateData("tunnel.tierReject" + bwTier,1,0);
-        }
-        if (_log.shouldLog(Log.INFO))         _log.info(msg.getUniqueId() + ": Peer " + peer.toBase64()+ " replied with status "+ howBad);
+      RouterInfo ri=_context.netDb().lookupRouterInfoLocally(peer);
+      String bwTier="Unknown";
+      if (ri != null)       bwTier=ri.getBandwidthTier();
+ else       if (_log.shouldLog(Log.WARN))       _log.warn("Failed detecting bwTier, null routerInfo for: " + peer);
+      if (howBad == 0) {
+        _context.statManager().addRateData("tunnel.tierAgree" + bwTier,1,0);
       }
+ else {
+        _context.statManager().addRateData("tunnel.tierReject" + bwTier,1,0);
+      }
+      if (_log.shouldLog(Log.INFO))       _log.info(msg.getUniqueId() + ": Peer " + peer+ " replied with status "+ howBad);
       if (howBad == 0) {
         _context.profileManager().tunnelJoined(peer,rtt);
       }
@@ -52,11 +50,11 @@ _context.profileManager().tunnelRejected(peer,rtt,howBad);
 _context.messageHistory().tunnelParticipantRejected(peer,"peer rejected after " + rtt + " with "+ howBad+ ": "+ cfg.toString());
 }
 }
-_exec.buildComplete(cfg,cfg.getTunnelPool());
 if (allAgree) {
 if (cfg.isInbound()) _context.tunnelDispatcher().joinInbound(cfg);
  else _context.tunnelDispatcher().joinOutbound(cfg);
 cfg.getTunnelPool().addTunnel(cfg);
+_exec.buildComplete(cfg,cfg.getTunnelPool());
 _exec.buildSuccessful(cfg);
 ExpireJob expireJob=new ExpireJob(_context,cfg,cfg.getTunnelPool());
 cfg.setExpireJob(expireJob);
@@ -65,12 +63,14 @@ if (cfg.getDestination() == null) _context.statManager().addRateData("tunnel.bui
  else _context.statManager().addRateData("tunnel.buildClientSuccess",rtt,rtt);
 }
  else {
+_exec.buildComplete(cfg,cfg.getTunnelPool());
 if (cfg.getDestination() == null) _context.statManager().addRateData("tunnel.buildExploratoryReject",rtt,rtt);
  else _context.statManager().addRateData("tunnel.buildClientReject",rtt,rtt);
 }
 }
  else {
 if (_log.shouldLog(Log.WARN)) _log.warn(msg.getUniqueId() + ": Tunnel reply could not be decrypted for tunnel " + cfg);
+_context.statManager().addRateData("tunnel.corruptBuildReply",1,0);
 _exec.buildComplete(cfg,cfg.getTunnelPool());
 }
 }

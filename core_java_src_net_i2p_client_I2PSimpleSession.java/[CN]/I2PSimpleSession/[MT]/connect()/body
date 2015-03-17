@@ -1,26 +1,30 @@
 {
   _closed=false;
-  _availabilityNotifier.stopNotifying();
-  I2PThread notifier=new I2PThread(_availabilityNotifier);
-  notifier.setName("Simple Notifier");
-  notifier.setDaemon(true);
-  notifier.start();
   try {
-    _socket=new Socket(_hostname,_portNum);
-    _out=_socket.getOutputStream();
-synchronized (_out) {
-      _out.write(I2PClient.PROTOCOL_BYTE);
+    if (_context.isRouterContext()) {
+      InternalClientManager mgr=_context.internalClientManager();
+      if (mgr == null)       throw new I2PSessionException("Router is not ready for connections");
+      _queue=mgr.connect();
+      _reader=new QueuedI2CPMessageReader(_queue,this);
     }
-    InputStream in=_socket.getInputStream();
-    _reader=new I2CPMessageReader(in,this);
+ else {
+      if (Boolean.valueOf(getOptions().getProperty(PROP_ENABLE_SSL)).booleanValue())       _socket=I2CPSSLSocketFactory.createSocket(_context,_hostname,_portNum);
+ else       _socket=new Socket(_hostname,_portNum);
+      _out=_socket.getOutputStream();
+      _out.write(I2PClient.PROTOCOL_BYTE);
+      _out.flush();
+      _writer=new ClientWriterRunner(_out,this);
+      InputStream in=new BufferedInputStream(_socket.getInputStream(),BUF_SIZE);
+      _reader=new I2CPMessageReader(in,this);
+    }
     _reader.startReading();
   }
  catch (  UnknownHostException uhe) {
     _closed=true;
-    throw new I2PSessionException(getPrefix() + "Bad host ",uhe);
+    throw new I2PSessionException(getPrefix() + "Cannot connect to the router on " + _hostname+ ':'+ _portNum,uhe);
   }
 catch (  IOException ioe) {
     _closed=true;
-    throw new I2PSessionException(getPrefix() + "Problem connecting to " + _hostname+ " on port "+ _portNum,ioe);
+    throw new I2PSessionException(getPrefix() + "Cannot connect to the router on " + _hostname+ ':'+ _portNum,ioe);
   }
 }

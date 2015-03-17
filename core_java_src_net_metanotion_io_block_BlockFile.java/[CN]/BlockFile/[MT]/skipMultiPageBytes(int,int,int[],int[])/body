@@ -1,0 +1,26 @@
+{
+  int pageCounter=curPageOff[0];
+  int curNextPage=nextPage[0];
+  int curPage=page;
+  int dct=0;
+  while (dct < length) {
+    int len=PAGESIZE - pageCounter;
+    if (len <= 0) {
+      if (curNextPage <= 0)       throw new IOException("not enough pages to skip");
+      BlockFile.pageSeek(this.file,curNextPage);
+      int magic=this.file.readInt();
+      if (magic != MAGIC_CONT)       throw new IOException("Bad SkipSpan continuation magic number 0x" + Integer.toHexString(magic) + " on page "+ curNextPage);
+      curPage=curNextPage;
+      curNextPage=this.file.readUnsignedInt();
+      pageCounter=BSkipSpan.CONT_HEADER_LEN;
+      len=PAGESIZE - pageCounter;
+    }
+    int res=Math.min(len,length - dct);
+    this.file.skipBytes(res);
+    pageCounter+=res;
+    dct+=res;
+  }
+  nextPage[0]=curNextPage;
+  curPageOff[0]=pageCounter;
+  return curPage;
+}

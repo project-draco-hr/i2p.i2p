@@ -1,24 +1,19 @@
 {
-synchronized (_queueRunners) {
-    if ((_queueRunners.size() > 0) && (!_allowParallelOperation))     return;
-    if (_queueRunners.size() < numThreads) {
-      if (_log.shouldLog(Log.INFO))       _log.info("Increasing the number of queue runners from " + _queueRunners.size() + " to "+ numThreads);
-      for (int i=_queueRunners.size(); i < numThreads; i++) {
-        JobQueueRunner runner=new JobQueueRunner(_context,i);
-        _queueRunners.put(Integer.valueOf(i),runner);
-        Thread t=new I2PThread(runner);
-        t.setName("JobQueue" + (_runnerId++));
-        t.setDaemon(false);
-        t.start();
-      }
+  if ((!_queueRunners.isEmpty()) && (!_allowParallelOperation))   return;
+  if (_queueRunners.size() < numThreads) {
+    if (_log.shouldLog(Log.INFO))     _log.info("Increasing the number of queue runners from " + _queueRunners.size() + " to "+ numThreads);
+    for (int i=_queueRunners.size(); i < numThreads; i++) {
+      JobQueueRunner runner=new JobQueueRunner(_context,i);
+      _queueRunners.put(Integer.valueOf(i),runner);
+      Thread t=new I2PThread(runner,"JobQueue " + (++_runnerId) + '/'+ numThreads,false);
+      t.start();
     }
- else     if (_queueRunners.size() == numThreads) {
-      for (Iterator iter=_queueRunners.values().iterator(); iter.hasNext(); ) {
-        JobQueueRunner runner=(JobQueueRunner)iter.next();
-        runner.startRunning();
-      }
+  }
+ else   if (_queueRunners.size() == numThreads) {
+    for (    JobQueueRunner runner : _queueRunners.values()) {
+      runner.startRunning();
     }
+  }
  else {
-    }
   }
 }

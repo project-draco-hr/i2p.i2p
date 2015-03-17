@@ -1,25 +1,20 @@
 {
   if (!forceReinitialize)   return;
-  if (_context.router() == null)   return;
   if (_context.router().getRouterInfo() == null) {
-    _reinitializeJob.getTiming().setStartAfter(_context.clock().now() + 5000);
+    _reinitializeJob.getTiming().setStartAfter(_context.clock().now() + 15 * 1000);
     _context.jobQueue().addJob(_reinitializeJob);
   }
  else {
-    String filename=null;
-    filename=_context.router().getConfigSetting(PROP_MESSAGE_HISTORY_FILENAME);
-    if ((filename == null) || (filename.trim().length() <= 0))     filename=DEFAULT_MESSAGE_HISTORY_FILENAME;
-    _doLog=DEFAULT_KEEP_MESSAGE_HISTORY;
-    _historyFile=filename;
     _localIdent=getName(_context.routerHash());
-    _unwrittenEntries=new ArrayList(64);
     updateSettings();
     if (_firstPass) {
       File f=new File(_historyFile);
+      if (!f.isAbsolute())       f=new File(_context.getLogDir(),_historyFile);
       f.delete();
+      _writeJob.getTiming().setStartAfter(_context.clock().now() + WRITE_DELAY);
+      _context.jobQueue().addJob(_writeJob);
+      _firstPass=false;
     }
-    _firstPass=false;
-    addEntry(getPrefix() + "** Router initialized (started up or changed identities)");
-    _context.jobQueue().addJob(_writeJob);
+    if (_doLog)     addEntry(getPrefix() + "** Router initialized (started up or changed identities)");
   }
 }

@@ -1,6 +1,6 @@
 {
-  if (tagsForDelivery == null)   tagsForDelivery=EMPTY_SET;
-  int size=2 + tagsForDelivery.size() + SessionTag.BYTE_LENGTH * tagsForDelivery.size() + 4 + Hash.HASH_LENGTH + (newKey == null ? 1 : 1 + SessionKey.KEYSIZE_BYTES) + data.length;
+  if (tagsForDelivery == null)   tagsForDelivery=Collections.EMPTY_SET;
+  int size=2 + SessionTag.BYTE_LENGTH * tagsForDelivery.size() + 4 + Hash.HASH_LENGTH + (newKey == null ? 1 : 1 + SessionKey.KEYSIZE_BYTES) + data.length;
   int totalSize=size + getPaddingSize(size,paddedSize);
   byte aesData[]=new byte[totalSize + prefixBytes];
   int cur=prefixBytes;
@@ -13,8 +13,7 @@
   }
   DataHelper.toLong(aesData,cur,4,data.length);
   cur+=4;
-  Hash hash=_context.sha().calculateHash(data);
-  System.arraycopy(hash.getData(),0,aesData,cur,Hash.HASH_LENGTH);
+  _context.sha().calculateHash(data,0,data.length,aesData,cur);
   cur+=Hash.HASH_LENGTH;
   if (newKey == null) {
     aesData[cur++]=0x00;

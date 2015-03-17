@@ -11,6 +11,11 @@
   int padding=0;
   while (preprocessed[offset] != (byte)0x00) {
     offset++;
+    if (offset >= TrivialPreprocessor.PREPROCESSED_SIZE) {
+      _cache.release(new ByteArray(preprocessed));
+      _context.statManager().addRateData("tunnel.corruptMessage",1,1);
+      return;
+    }
     padding++;
   }
   offset++;
@@ -37,7 +42,6 @@ catch (  NullPointerException npe) {
 catch (  RuntimeException e) {
     if (_log.shouldLog(Log.ERROR))     _log.error("Corrupt fragment received: offset = " + offset,e);
     _context.statManager().addRateData("tunnel.corruptMessage",1,1);
-    throw e;
   }
  finally {
     _cache.release(new ByteArray(preprocessed));

@@ -1,20 +1,16 @@
 {
   UDPPacket packet=null;
-  while ((_keepRunning) && (packet == null)) {
+  while ((_keepRunning) && (packet == null || packet.getLifetime() > MAX_HEAD_LIFETIME)) {
+    if (packet != null) {
+      _context.statManager().addRateData("udp.sendQueueTrimmed",1,0);
+      packet.release();
+    }
     try {
-synchronized (_outboundQueue) {
-        if (_outboundQueue.size() <= 0) {
-          _outboundQueue.notifyAll();
-          _outboundQueue.wait();
-        }
- else {
-          packet=(UDPPacket)_outboundQueue.remove(0);
-          _outboundQueue.notifyAll();
-        }
-      }
+      packet=_outboundQueue.take();
     }
  catch (    InterruptedException ie) {
     }
+    if (packet != null && packet.getMessageType() == TYPE_POISON)     return null;
   }
   return packet;
 }

@@ -1,0 +1,21 @@
+{
+  StringBuilder buf=new StringBuilder(4 * 1024);
+  if (".".equals(routerPrefix)) {
+    renderRouterInfo(buf,_context.router().getRouterInfo(),true,true);
+  }
+ else {
+    boolean notFound=true;
+    Set routers=_context.netDb().getRouters();
+    for (Iterator iter=routers.iterator(); iter.hasNext(); ) {
+      RouterInfo ri=(RouterInfo)iter.next();
+      Hash key=ri.getIdentity().getHash();
+      if (key.toBase64().startsWith(routerPrefix)) {
+        renderRouterInfo(buf,ri,false,true);
+        notFound=false;
+      }
+    }
+    if (notFound)     buf.append(_("Router") + ' ').append(routerPrefix).append(' ' + _("not found in network database"));
+  }
+  out.write(buf.toString());
+  out.flush();
+}

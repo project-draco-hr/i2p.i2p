@@ -1,28 +1,20 @@
 {
   if (_manager == null) {
-    if (_log.shouldLog(Log.INFO))     _log.info("Returning null for framed averege peer clock skew (no transport manager)!");
-    return null;
+    return _context.clock().getOffset();
   }
   Vector skews=_manager.getClockSkews();
-  if (skews == null) {
-    if (_log.shouldLog(Log.ERROR))     _log.error("Returning null for framed average peer clock skew (no data)!");
-    return null;
-  }
-  if (skews.size() < 20) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("Returning null for framed average peer clock skew (only " + skews.size() + " peers)!");
-    return null;
+  if (skews == null || skews.isEmpty() || (skews.size() < 5 && _context.clock().getUpdatedSuccessfully())) {
+    return _context.clock().getOffset();
   }
   Collections.sort(skews);
-  int frameSize=(skews.size() * percentToInclude / 100);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Clock skews: " + skews);
+  int frameSize=Math.max((skews.size() * percentToInclude / 100),1);
   int first=(skews.size() / 2) - (frameSize / 2);
-  int last=(skews.size() / 2) + (frameSize / 2);
+  int last=Math.min((skews.size() / 2) + (frameSize / 2),skews.size() - 1);
   long sum=0;
-  for (int i=first; i < last; i++) {
+  for (int i=first; i <= last; i++) {
     long value=((Long)(skews.get(i))).longValue();
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Adding clock skew " + i + " valued "+ value+ " s.");
     sum=sum + value;
   }
-  Long framedAverageClockSkew=new Long(sum / frameSize);
-  if (_log.shouldLog(Log.INFO))   _log.info("Our framed average peer clock skew is " + framedAverageClockSkew + " s.");
-  return framedAverageClockSkew;
+  return sum * 1000 / frameSize;
 }

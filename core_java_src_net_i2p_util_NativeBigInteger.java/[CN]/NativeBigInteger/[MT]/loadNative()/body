@@ -1,58 +1,32 @@
 {
   try {
     String wantedProp=System.getProperty("jbigi.enable","true");
-    boolean wantNative="true".equalsIgnoreCase(wantedProp);
+    boolean wantNative=Boolean.valueOf(wantedProp).booleanValue();
     if (wantNative) {
+      debug("trying loadGeneric");
       boolean loaded=loadGeneric("jbigi");
       if (loaded) {
         _nativeOk=true;
-        if (_doLog)         System.err.println("INFO: Locally optimized native BigInteger loaded from the library path");
+        info("Locally optimized native BigInteger library loaded from file");
       }
  else {
-        loaded=loadFromResource("jbigi");
-        if (loaded) {
-          _nativeOk=true;
-          if (_doLog)           System.err.println("INFO: Locally optimized native BigInteger loaded from resource");
-        }
- else {
-          loaded=loadFromResource(true);
-          if (loaded) {
+        List<String> toTry=getResourceList();
+        debug("loadResource list to try is: " + toTry);
+        for (        String s : toTry) {
+          debug("trying loadResource " + s);
+          if (loadFromResource(s)) {
             _nativeOk=true;
-            if (_doLog)             System.err.println("INFO: Optimized native BigInteger library '" + getResourceName(true) + "' loaded from resource");
-          }
- else {
-            loaded=loadGeneric(true);
-            if (loaded) {
-              _nativeOk=true;
-              if (_doLog)               System.err.println("INFO: Optimized native BigInteger library '" + getMiddleName(true) + "' loaded from somewhere in the path");
-            }
- else {
-              loaded=loadFromResource(false);
-              if (loaded) {
-                _nativeOk=true;
-                if (_doLog)                 System.err.println("INFO: Non-optimized native BigInteger library '" + getResourceName(false) + "' loaded from resource");
-              }
- else {
-                loaded=loadGeneric(false);
-                if (loaded) {
-                  _nativeOk=true;
-                  if (_doLog)                   System.err.println("INFO: Non-optimized native BigInteger library '" + getMiddleName(false) + "' loaded from somewhere in the path");
-                }
- else {
-                  _nativeOk=false;
-                }
-              }
-            }
+            info("Native BigInteger library " + s + " loaded from resource");
+            break;
           }
         }
       }
     }
-    if (_doLog && !_nativeOk)     System.err.println("INFO: Native BigInteger library jbigi not loaded - using pure java");
+    if (!_nativeOk) {
+      warn("Native BigInteger library jbigi not loaded - using pure Java - " + "poor performance may result - see http://www.i2p2.i2p/jbigi for help");
+    }
   }
  catch (  Exception e) {
-    if (_doLog) {
-      System.err.println("INFO: Native BigInteger library jbigi not loaded, reason: '" + e.getMessage() + "' - using pure java");
-      e.printStackTrace();
-    }
+    warn("Native BigInteger library jbigi not loaded, using pure java",e);
   }
 }

@@ -24,33 +24,39 @@ synchronized (sendQueue) {
             if (nm.type == Message.PIECE) {
               if (state.choking) {
                 it.remove();
-                SimpleTimer.getInstance().removeEvent(nm.expireEvent);
               }
               nm=null;
             }
  else             if (nm.type == Message.REQUEST && state.choked) {
               it.remove();
-              SimpleTimer.getInstance().removeEvent(nm.expireEvent);
               nm=null;
             }
             if (m == null && nm != null) {
               m=nm;
-              SimpleTimer.getInstance().removeEvent(nm.expireEvent);
               it.remove();
             }
           }
-          if (m == null && sendQueue.size() > 0) {
-            m=(Message)sendQueue.remove(0);
-            SimpleTimer.getInstance().removeEvent(m.expireEvent);
+          if (m == null && !sendQueue.isEmpty()) {
+            m=sendQueue.remove(0);
           }
         }
       }
       if (m != null) {
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("Send " + peer + ": "+ m+ " on "+ peer.metainfo.getName());
-        m.sendMessage(dout);
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Send " + peer + ": "+ m);
         lastSent=System.currentTimeMillis();
         if (m.type == Message.CHOKE)         removeMessage(Message.PIECE);
-        if (m.type == Message.PIECE)         state.uploaded(m.len);
+        int remainder=0;
+        if (m.type == Message.PIECE) {
+          if (m.len <= PeerState.PARTSIZE) {
+            state.uploaded(m.len);
+          }
+ else {
+            state.uploaded(PeerState.PARTSIZE);
+            remainder=m.len - PeerState.PARTSIZE;
+          }
+        }
+        m.sendMessage(dout);
+        if (remainder > 0)         state.uploaded(remainder);
         m=null;
       }
     }

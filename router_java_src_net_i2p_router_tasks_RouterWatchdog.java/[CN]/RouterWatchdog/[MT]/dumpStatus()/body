@@ -1,0 +1,32 @@
+{
+  if (_log.shouldLog(Log.ERROR)) {
+    _log.error("Ready and waiting jobs: " + _context.jobQueue().getReadyCount());
+    _log.error("Job lag: " + _context.jobQueue().getMaxLag());
+    _log.error("Participating tunnel count: " + _context.tunnelManager().getParticipatingCount());
+    RateStat rs=_context.statManager().getRate("transport.sendProcessingTime");
+    Rate r=null;
+    if (rs != null)     r=rs.getRate(60 * 1000);
+    double processTime=(r != null ? r.getAverageValue() : 0);
+    _log.error("1minute send processing time: " + processTime);
+    rs=_context.statManager().getRate("bw.sendBps");
+    r=null;
+    if (rs != null)     r=rs.getRate(60 * 1000);
+    double bps=(r != null ? r.getAverageValue() : 0);
+    _log.error("Outbound send rate: " + bps + " Bps");
+    long max=Runtime.getRuntime().maxMemory();
+    long used=Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+    _log.error("Memory: " + DataHelper.formatSize(used) + '/'+ DataHelper.formatSize(max));
+    if (_consecutiveErrors == 1) {
+      _log.log(Log.CRIT,"Router appears hung, or there is severe network congestion.  Watchdog starts barking!");
+      if (_context.hasWrapper() && !System.getProperty("os.name").startsWith("Win")) {
+        ShellCommand sc=new ShellCommand();
+        File i2pr=new File(_context.getBaseDir(),"i2prouter");
+        String[] args=new String[2];
+        args[0]=i2pr.getAbsolutePath();
+        args[1]="dump";
+        boolean success=sc.executeSilentAndWaitTimed(args,10);
+        if (success)         _log.log(Log.CRIT,"Threads dumped to wrapper log");
+      }
+    }
+  }
+}

@@ -1,4 +1,13 @@
 {
-  if (_log.shouldLog(Log.WARN))   _log.warn("Timeout: found? " + _found,getAddedBy());
-  if (!_found)   testFailed(getContext().clock().now() - _started);
+  if (_log.shouldLog(Log.WARN))   _log.warn("Timeout: found? " + _found);
+  if (!_found) {
+    if (_cfg.isInbound() && !_pool.getSettings().isExploratory()) {
+      SessionKeyManager skm=getContext().clientManager().getClientSessionKeyManager(_pool.getSettings().getDestination());
+      if (skm != null)       skm.consumeTag(_encryptTag);
+    }
+ else {
+      getContext().sessionKeyManager().consumeTag(_encryptTag);
+    }
+    testFailed(getContext().clock().now() - _started);
+  }
 }

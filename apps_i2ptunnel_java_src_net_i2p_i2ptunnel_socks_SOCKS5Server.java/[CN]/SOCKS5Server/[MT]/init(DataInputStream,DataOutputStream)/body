@@ -1,18 +1,21 @@
 {
-  int nMethods=in.readByte() & 0xff;
-  boolean methodOk=false;
+  int nMethods=in.readUnsignedByte();
   int method=Method.NO_ACCEPTABLE_METHODS;
   for (int i=0; i < nMethods; ++i) {
-    method=in.readByte() & 0xff;
-    if (method == Method.NO_AUTH_REQUIRED) {
-      break;
+    int meth=in.readUnsignedByte();
+    if (((!authRequired) && meth == Method.NO_AUTH_REQUIRED) || (authRequired && meth == Method.USERNAME_PASSWORD)) {
+      method=meth;
     }
   }
-  boolean canContinue=false;
 switch (method) {
+case Method.USERNAME_PASSWORD:
+    _log.debug("username/password authentication required");
+  sendInitReply(Method.USERNAME_PASSWORD,out);
+verifyPassword(in,out);
+return;
 case Method.NO_AUTH_REQUIRED:
-    _log.debug("no authentication required");
-  sendInitReply(Method.NO_AUTH_REQUIRED,out);
+_log.debug("no authentication required");
+sendInitReply(Method.NO_AUTH_REQUIRED,out);
 return;
 default :
 _log.debug("no suitable authentication methods found (" + Integer.toHexString(method) + ")");

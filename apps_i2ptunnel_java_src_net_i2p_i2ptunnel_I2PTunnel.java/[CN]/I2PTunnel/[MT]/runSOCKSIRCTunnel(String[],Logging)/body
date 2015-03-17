@@ -1,0 +1,36 @@
+{
+  if (args.length >= 1 && args.length <= 3) {
+    int _port=-1;
+    try {
+      _port=Integer.parseInt(args[0]);
+    }
+ catch (    NumberFormatException nfe) {
+      l.log("invalid port");
+      _log.error(getPrefix() + "Port specified is not valid: " + args[0],nfe);
+      notifyEvent("sockstunnelTaskId",Integer.valueOf(-1));
+    }
+    if (_port <= 0)     throw new IllegalArgumentException(getPrefix() + "Bad port " + args[0]);
+    boolean isShared=false;
+    if (args.length == 2)     isShared=Boolean.valueOf(args[1].trim()).booleanValue();
+    ownDest=!isShared;
+    String privateKeyFile=null;
+    if (args.length == 3)     privateKeyFile=args[2];
+    try {
+      I2PTunnelTask task=new I2PSOCKSIRCTunnel(_port,l,ownDest,this,this,privateKeyFile);
+      addtask(task);
+      notifyEvent("sockstunnelTaskId",Integer.valueOf(task.getId()));
+    }
+ catch (    IllegalArgumentException iae) {
+      String msg="Invalid I2PTunnel configuration to create a SOCKS IRC Proxy connecting to the router at " + host + ':'+ port+ " and listening on "+ listenHost+ ':'+ _port;
+      _log.error(getPrefix() + msg,iae);
+      l.log(msg);
+      notifyEvent("sockstunnelTaskId",Integer.valueOf(-1));
+      throw iae;
+    }
+  }
+ else {
+    l.log("socksirctunnel <port> [<sharedClient> [<privKeyFile>]]");
+    l.log("  creates a tunnel for SOCKS IRC.");
+    notifyEvent("sockstunnelTaskId",Integer.valueOf(-1));
+  }
+}

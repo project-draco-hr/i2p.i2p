@@ -1,0 +1,27 @@
+{
+  Long id=Long.valueOf(_context.random().nextLong(Packet.MAX_STREAM_ID - 1) + 1);
+  PacketLocal packet=new PacketLocal(_context,peer);
+  packet.setSendStreamId(id.longValue());
+  packet.setFlag(Packet.FLAG_ECHO);
+  packet.setFlag(Packet.FLAG_SIGNATURE_INCLUDED);
+  packet.setOptionalFrom(_session.getMyDestination());
+  PingRequest req=new PingRequest(peer,packet,notifier);
+  _pendingPings.put(id,req);
+  _outboundQueue.enqueue(packet);
+  packet.releasePayload();
+  if (blocking) {
+synchronized (req) {
+      if (!req.pongReceived())       try {
+        req.wait(timeoutMs);
+      }
+ catch (      InterruptedException ie) {
+      }
+    }
+    _pendingPings.remove(id);
+  }
+ else {
+    SimpleTimer.getInstance().addEvent(new PingFailed(id,notifier),timeoutMs);
+  }
+  boolean ok=req.pongReceived();
+  return ok;
+}

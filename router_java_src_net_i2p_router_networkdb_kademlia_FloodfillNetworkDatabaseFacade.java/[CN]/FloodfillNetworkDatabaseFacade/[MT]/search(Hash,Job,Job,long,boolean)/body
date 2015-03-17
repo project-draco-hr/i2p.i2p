@@ -3,9 +3,9 @@
   boolean isNew=false;
   FloodSearchJob searchJob=null;
 synchronized (_activeFloodQueries) {
-    searchJob=(FloodSearchJob)_activeFloodQueries.get(key);
+    searchJob=_activeFloodQueries.get(key);
     if (searchJob == null) {
-      searchJob=new FloodOnlySearchJob(_context,this,key,onFindJob,onFailedLookupJob,(int)timeoutMs,isLease);
+      searchJob=new IterativeSearchJob(_context,this,key,onFindJob,onFailedLookupJob,(int)timeoutMs,isLease);
       _activeFloodQueries.put(key,searchJob);
       isNew=true;
     }
@@ -15,9 +15,9 @@ synchronized (_activeFloodQueries) {
     _context.jobQueue().addJob(searchJob);
   }
  else {
-    if (_log.shouldLog(Log.INFO))     _log.info("Deferring flood search for " + key.toBase64() + " with "+ onFindJob);
+    if (_log.shouldLog(Log.INFO))     _log.info("Deferring flood search for " + key.toBase64() + " with "+ _activeFloodQueries.size()+ " in progress");
     searchJob.addDeferred(onFindJob,onFailedLookupJob,timeoutMs,isLease);
-    _context.statManager().addRateData("netDb.lookupLeaseSetDeferred",1,searchJob.getExpiration() - _context.clock().now());
+    _context.statManager().addRateData("netDb.lookupDeferred",1,searchJob.getExpiration() - _context.clock().now());
   }
   return null;
 }

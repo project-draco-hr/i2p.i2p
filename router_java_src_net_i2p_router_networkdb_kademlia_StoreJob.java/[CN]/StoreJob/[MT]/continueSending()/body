@@ -6,11 +6,10 @@
     return;
   }
   if (toCheck > getParallelization())   toCheck=getParallelization();
-  List closestHashes;
-  if (_state.getData() instanceof RouterInfo)   closestHashes=getMostReliableRouters(_state.getTarget(),toCheck,_state.getAttempted());
- else   closestHashes=getClosestRouters(_state.getTarget(),toCheck,_state.getAttempted());
-  if ((closestHashes == null) || (closestHashes.size() <= 0)) {
-    if (_state.getPending().size() <= 0) {
+  List<Hash> closestHashes;
+  closestHashes=getClosestFloodfillRouters(_state.getTarget(),toCheck,_state.getAttempted());
+  if ((closestHashes == null) || (closestHashes.isEmpty())) {
+    if (_state.getPending().isEmpty()) {
       if (_log.shouldLog(Log.INFO))       _log.info(getJobId() + ": No more peers left and none pending");
       fail();
     }
@@ -21,20 +20,15 @@
   }
  else {
     if (_log.shouldLog(Log.INFO))     _log.info(getJobId() + ": Continue sending key " + _state.getTarget()+ " after "+ _state.getAttempted().size()+ " tries to "+ closestHashes);
-    for (Iterator iter=closestHashes.iterator(); iter.hasNext(); ) {
-      Hash peer=(Hash)iter.next();
-      DataStructure ds=_facade.getDataStore().get(peer);
-      if ((ds == null) || !(ds instanceof RouterInfo)) {
+    for (Iterator<Hash> iter=closestHashes.iterator(); iter.hasNext(); ) {
+      Hash peer=iter.next();
+      DatabaseEntry ds=_facade.getDataStore().get(peer);
+      if ((ds == null) || !(ds.getType() == DatabaseEntry.KEY_TYPE_ROUTERINFO)) {
         if (_log.shouldLog(Log.INFO))         _log.info(getJobId() + ": Error selecting closest hash that wasnt a router! " + peer+ " : "+ ds);
         _state.addSkipped(peer);
       }
  else {
         int peerTimeout=_facade.getPeerTimeout(peer);
-        PeerProfile prof=getContext().profileOrganizer().getProfile(peer);
-        if (prof != null) {
-          RateStat failing=prof.getDBHistory().getFailedLookupRate();
-          Rate failed=failing.getRate(60 * 60 * 1000);
-        }
         _state.addPending(peer);
         sendStore((RouterInfo)ds,peerTimeout);
       }

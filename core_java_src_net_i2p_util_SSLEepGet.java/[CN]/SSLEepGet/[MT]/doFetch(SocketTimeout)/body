@@ -1,0 +1,95 @@
+{
+  _headersRead=false;
+  _aborted=false;
+  try {
+    readHeaders();
+  }
+  finally {
+    _headersRead=true;
+  }
+  if (_aborted)   throw new IOException("Timed out reading the HTTP headers");
+  if (timeout != null) {
+    timeout.resetTimer();
+    if (_fetchInactivityTimeout > 0)     timeout.setInactivityTimeout(_fetchInactivityTimeout);
+ else     timeout.setInactivityTimeout(60 * 1000);
+  }
+  if (_redirectLocation != null) {
+    throw new IOException("Server redirect to " + _redirectLocation + " not allowed");
+  }
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Headers read completely, reading " + _bytesRemaining);
+  boolean strictSize=(_bytesRemaining >= 0);
+  Thread pusher=null;
+  _decompressException=null;
+  if (_isGzippedResponse) {
+    PipedInputStream pi=BigPipedInputStream.getInstance();
+    PipedOutputStream po=new PipedOutputStream(pi);
+    pusher=new I2PAppThread(new Gunzipper(pi,_out),"EepGet Decompressor");
+    _out=po;
+    pusher.start();
+  }
+  int remaining=(int)_bytesRemaining;
+  byte buf[]=new byte[16 * 1024];
+  while (_keepFetching && ((remaining > 0) || !strictSize) && !_aborted) {
+    int toRead=buf.length;
+    if (strictSize && toRead > remaining)     toRead=remaining;
+    int read=_proxyIn.read(buf,0,toRead);
+    if (read == -1)     break;
+    if (timeout != null)     timeout.resetTimer();
+    _out.write(buf,0,read);
+    _bytesTransferred+=read;
+    remaining-=read;
+    if (remaining == 0 && _encodingChunked) {
+      int char1=_proxyIn.read();
+      if (char1 == '\r') {
+        int char2=_proxyIn.read();
+        if (char2 == '\n') {
+          remaining=(int)readChunkLength();
+        }
+ else {
+          _out.write(char1);
+          _out.write(char2);
+          _bytesTransferred+=2;
+          remaining-=2;
+          read+=2;
+        }
+      }
+ else {
+        _out.write(char1);
+        _bytesTransferred++;
+        remaining--;
+        read++;
+      }
+    }
+    if (timeout != null)     timeout.resetTimer();
+    if (_bytesRemaining >= read)     _bytesRemaining-=read;
+    if (read > 0) {
+      for (int i=0; i < _listeners.size(); i++)       _listeners.get(i).bytesTransferred(_alreadyTransferred,read,_bytesTransferred,_encodingChunked ? -1 : _bytesRemaining,_url);
+      _alreadyTransferred+=read;
+    }
+  }
+  if (_out != null)   _out.close();
+  _out=null;
+  if (_isGzippedResponse) {
+    try {
+      pusher.join();
+    }
+ catch (    InterruptedException ie) {
+    }
+    pusher=null;
+    if (_decompressException != null) {
+      _keepFetching=false;
+      throw _decompressException;
+    }
+  }
+  if (_aborted)   throw new IOException("Timed out reading the HTTP data");
+  if (timeout != null)   timeout.cancel();
+  if (_transferFailed) {
+    for (int i=0; i < _listeners.size(); i++)     _listeners.get(i).attemptFailed(_url,_bytesTransferred,_bytesRemaining,_currentAttempt,_numRetries,new Exception("Attempt failed"));
+  }
+ else   if ((_bytesRemaining == -1) || (remaining == 0)) {
+    for (int i=0; i < _listeners.size(); i++)     _listeners.get(i).transferComplete(_alreadyTransferred,_bytesTransferred,_encodingChunked ? -1 : _bytesRemaining,_url,_outputFile,_notModified);
+  }
+ else {
+    throw new IOException("Disconnection on attempt " + _currentAttempt + " after "+ _bytesTransferred);
+  }
+}

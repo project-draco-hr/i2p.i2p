@@ -1,0 +1,16 @@
+{
+  Long mid=Long.valueOf(msg.getMessageId());
+  _availableMessages.put(mid,msg);
+  long id=msg.getMessageId();
+  byte data[]=msg.getPayload().getUnencryptedData();
+  if ((data == null) || (data.length <= 0)) {
+    if (_log.shouldLog(Log.CRIT))     _log.log(Log.CRIT,getPrefix() + "addNewMessage of a message with no unencrypted data",new Exception("Empty message"));
+    return;
+  }
+  int size=data.length;
+  if (size < 10) {
+    _log.error(getPrefix() + "length too short for gzip header: " + size);
+    return;
+  }
+  ((MuxedAvailabilityNotifier)_availabilityNotifier).available(id,size,getProto(msg),getFromPort(msg),getToPort(msg));
+}

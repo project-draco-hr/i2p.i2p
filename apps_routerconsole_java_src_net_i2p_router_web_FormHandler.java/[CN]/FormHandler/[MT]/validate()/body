@@ -9,18 +9,23 @@
     _valid=false;
     return;
   }
+  if (_method != null && !"POST".equals(_method)) {
+    addFormError("Invalid form submission, requires POST not " + _method);
+    _valid=false;
+    return;
+  }
   String sharedNonce=System.getProperty("router.consoleNonce");
   if ((sharedNonce != null) && (sharedNonce.equals(_nonce))) {
     return;
   }
-  String nonce=System.getProperty(getClass().getName() + ".nonce");
-  String noncePrev=System.getProperty(getClass().getName() + ".noncePrev");
+  String nonce=System.getProperty(getClass().getName() + NONCE_SUFFIX);
+  String noncePrev=nonce + PREV_SUFFIX;
   if (((nonce == null) || (!_nonce.equals(nonce))) && ((noncePrev == null) || (!_nonce.equals(noncePrev)))) {
     String expected=_context.getProperty("consolePassword");
     if ((expected != null) && (expected.trim().length() > 0) && (expected.equals(_passphrase))) {
     }
  else {
-      addFormError("Invalid nonce, are you being spoofed?");
+      addFormError(_("Invalid form submission, probably because you used the 'back' or 'reload' button on your browser. Please resubmit."));
       _valid=false;
     }
   }

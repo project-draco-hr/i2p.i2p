@@ -1,37 +1,42 @@
 {
-  List rv=null;
+  List<ACKBitfield> rv=new ArrayList(MAX_RESEND_ACKS);
   int bytesRemaining=countMaxACKData();
-synchronized (_currentACKs) {
-    rv=new ArrayList(16);
-    int oldIndex=_currentACKsResend.size();
-    while ((bytesRemaining >= 4) && (_currentACKs.size() > 0)) {
-      Long val=(Long)_currentACKs.remove(0);
-      long id=val.longValue();
-      rv.add(new FullACKBitfield(id));
-      _currentACKsResend.add(val);
+  int resendSize=_currentACKsResend.size();
+  int maxResendAcks;
+  if (bytesRemaining < MIN_MTU)   maxResendAcks=MAX_RESEND_ACKS_SMALL;
+ else   maxResendAcks=MAX_RESEND_ACKS_LARGE;
+  List<Long> randomResends=new ArrayList(_currentACKsResend);
+  Iterator<Long> iter=_currentACKs.iterator();
+  while (bytesRemaining >= 4 && iter.hasNext()) {
+    Long val=iter.next();
+    iter.remove();
+    long id=val.longValue();
+    rv.add(new FullACKBitfield(id));
+    _currentACKsResend.offer(val);
+    bytesRemaining-=4;
+  }
+  if (_currentACKs.isEmpty())   _wantACKSendSince=-1;
+  if (alwaysIncludeRetransmissions || !rv.isEmpty()) {
+    int oldIndex=Math.min(resendSize,maxResendAcks);
+    if (oldIndex > 0 && oldIndex < resendSize)     Collections.shuffle(randomResends,_context.random());
+    iter=randomResends.iterator();
+    while (bytesRemaining >= 4 && oldIndex-- > 0 && iter.hasNext()) {
+      Long cur=iter.next();
+      long c=cur.longValue();
+      FullACKBitfield bf=new FullACKBitfield(c);
+      rv.add(bf);
       bytesRemaining-=4;
     }
-    if (_currentACKs.size() <= 0)     _wantACKSendSince=-1;
-    if (alwaysIncludeRetransmissions || rv.size() > 0) {
-      for (int i=0; (i < oldIndex) && (bytesRemaining >= 4); i++) {
-        Long cur=(Long)_currentACKsResend.get(i);
-        long c=cur.longValue();
-        FullACKBitfield bf=new FullACKBitfield(c);
-        rv.add(bf);
-        bytesRemaining-=4;
-      }
-    }
-    while (_currentACKsResend.size() > MAX_RESEND_ACKS)     _currentACKsResend.remove(0);
   }
+  while (_currentACKsResend.size() > MAX_RESEND_ACKS)   _currentACKsResend.poll();
   int partialIncluded=0;
   if (bytesRemaining > 4) {
-    List partial=new ArrayList();
+    List<ACKBitfield> partial=new ArrayList();
     fetchPartialACKs(partial);
     for (int i=0; (bytesRemaining > 4) && (i < partial.size()); i++) {
-      ACKBitfield bitfield=(ACKBitfield)partial.get(i);
+      ACKBitfield bitfield=partial.get(i);
       int bytes=(bitfield.fragmentCount() / 7) + 1;
       if (bytesRemaining > bytes + 4) {
-        if (rv == null)         rv=new ArrayList(partial.size());
         rv.add(bitfield);
         bytesRemaining-=bytes + 4;
         partialIncluded++;
@@ -41,7 +46,6 @@ synchronized (_currentACKs) {
     }
   }
   _lastACKSend=_context.clock().now();
-  if (rv == null)   rv=Collections.EMPTY_LIST;
   if (partialIncluded > 0)   _context.statManager().addRateData("udp.sendACKPartial",partialIncluded,rv.size() - partialIncluded);
   return rv;
 }

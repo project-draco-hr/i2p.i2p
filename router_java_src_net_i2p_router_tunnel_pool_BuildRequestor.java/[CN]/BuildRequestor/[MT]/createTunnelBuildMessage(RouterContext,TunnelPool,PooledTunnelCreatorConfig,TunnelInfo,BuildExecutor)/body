@@ -2,24 +2,56 @@
   Log log=ctx.logManager().getLog(BuildRequestor.class);
   long replyTunnel=0;
   Hash replyRouter=null;
+  boolean useVariable=SEND_VARIABLE && cfg.getLength() <= SHORT_RECORDS;
   if (cfg.isInbound()) {
-    replyTunnel=0;
     replyRouter=ctx.routerHash();
+    if (useVariable) {
+      if (!supportsVariable(ctx,pairedTunnel.getPeer(pairedTunnel.getLength() - 1))) {
+        useVariable=false;
+      }
+ else {
+        for (int i=0; i < cfg.getLength() - 1; i++) {
+          if (!supportsVariable(ctx,cfg.getPeer(i))) {
+            useVariable=false;
+            break;
+          }
+        }
+      }
+    }
   }
  else {
     replyTunnel=pairedTunnel.getReceiveTunnelId(0).getTunnelId();
     replyRouter=pairedTunnel.getPeer(0);
+    if (useVariable) {
+      if (!supportsVariable(ctx,replyRouter)) {
+        useVariable=false;
+      }
+ else {
+        for (int i=1; i < cfg.getLength() - 1; i++) {
+          if (!supportsVariable(ctx,cfg.getPeer(i))) {
+            useVariable=false;
+            break;
+          }
+        }
+      }
+    }
   }
-  BuildMessageGenerator gen=new BuildMessageGenerator();
-  TunnelBuildMessage msg=new TunnelBuildMessage(ctx);
-  long replyMessageId=ctx.random().nextLong(I2NPMessage.MAX_ID_VALUE);
-  cfg.setReplyMessageId(replyMessageId);
-  List order=new ArrayList(ORDER);
+  TunnelBuildMessage msg;
+  List<Integer> order;
+  if (useVariable) {
+    msg=new VariableTunnelBuildMessage(ctx,SHORT_RECORDS);
+    order=new ArrayList(SHORT_ORDER);
+    if (log.shouldLog(Log.INFO))     log.info("Using new VTBM");
+  }
+ else {
+    msg=new TunnelBuildMessage(ctx);
+    order=new ArrayList(ORDER);
+  }
   Collections.shuffle(order,ctx.random());
   cfg.setReplyOrder(order);
   if (log.shouldLog(Log.DEBUG))   log.debug("Build order: " + order + " for "+ cfg);
-  for (int i=0; i < BuildMessageGenerator.ORDER.length; i++) {
-    int hop=((Integer)order.get(i)).intValue();
+  for (int i=0; i < msg.getRecordCount(); i++) {
+    int hop=order.get(i).intValue();
     PublicKey key=null;
     if (BuildMessageGenerator.isBlank(cfg,hop)) {
     }
@@ -27,16 +59,16 @@
       Hash peer=cfg.getPeer(hop);
       RouterInfo peerInfo=ctx.netDb().lookupRouterInfoLocally(peer);
       if (peerInfo == null) {
-        if (log.shouldLog(Log.ERROR))         log.error("Peer selected for hop " + i + "/"+ hop+ " was not found locally: "+ peer.toBase64()+ " for "+ cfg);
+        if (log.shouldLog(Log.WARN))         log.warn("Peer selected for hop " + i + "/"+ hop+ " was not found locally: "+ peer.toBase64()+ " for "+ cfg);
         return null;
       }
  else {
         key=peerInfo.getIdentity().getPublicKey();
       }
     }
-    if (log.shouldLog(Log.DEBUG))     log.debug(cfg.getReplyMessageId() + ": record " + i+ "/"+ hop+ " has key "+ key+ " for "+ cfg);
-    gen.createRecord(i,hop,msg,cfg,replyRouter,replyTunnel,ctx,key);
+    if (log.shouldLog(Log.DEBUG))     log.debug(cfg.getReplyMessageId() + ": record " + i+ "/"+ hop+ " has key "+ key);
+    BuildMessageGenerator.createRecord(i,hop,msg,cfg,replyRouter,replyTunnel,ctx,key);
   }
-  gen.layeredEncrypt(ctx,msg,cfg,order);
+  BuildMessageGenerator.layeredEncrypt(ctx,msg,cfg,order);
   return msg;
 }

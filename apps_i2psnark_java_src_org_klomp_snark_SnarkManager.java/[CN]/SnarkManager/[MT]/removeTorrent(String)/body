@@ -1,9 +1,12 @@
 {
-  Snark torrent=stopTorrent(filename,true);
-  if (torrent != null) {
+  Snark torrent;
+synchronized (_snarks) {
+    torrent=stopTorrent(filename,true);
+    if (torrent == null)     return;
     File torrentFile=new File(filename);
     torrentFile.delete();
-    if (torrent.storage != null)     removeTorrentStatus(torrent.storage.getMetaInfo());
-    addMessage("Torrent removed: '" + torrentFile.getName() + "'");
   }
+  Storage storage=torrent.getStorage();
+  if (storage != null)   removeTorrentStatus(storage.getMetaInfo());
+  addMessage(_("Torrent removed: \"{0}\"",torrent.getBaseName()));
 }

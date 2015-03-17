@@ -3,34 +3,43 @@
     while (_alive) {
       long now=_context.clock().now();
       long timeToWait=-1;
-      ArrayList toAdd=null;
       try {
 synchronized (_jobLock) {
-          for (int i=0; i < _timedJobs.size(); i++) {
-            Job j=(Job)_timedJobs.get(i);
+          Job lastJob=null;
+          long lastTime=Long.MIN_VALUE;
+          for (Iterator<Job> iter=_timedJobs.iterator(); iter.hasNext(); ) {
+            Job j=iter.next();
             long timeLeft=j.getTiming().getStartAfter() - now;
+            if (lastJob != null && lastTime > j.getTiming().getStartAfter()) {
+              _log.error("Job " + lastJob + " out of order with job "+ j+ " difference of "+ DataHelper.formatDuration(lastTime - j.getTiming().getStartAfter()));
+            }
+            lastJob=j;
+            lastTime=lastJob.getTiming().getStartAfter();
             if (timeLeft <= 0) {
               if (j instanceof JobImpl)               ((JobImpl)j).madeReady();
-              if (toAdd == null)               toAdd=new ArrayList(4);
-              toAdd.add(j);
-              _timedJobs.remove(i);
-              i--;
+              _readyJobs.offer(j);
+              iter.remove();
             }
  else {
-              if ((timeToWait <= 0) || (timeLeft < timeToWait))               timeToWait=timeLeft;
+              timeToWait=timeLeft;
+              if (timeToWait > 10 * 1000 && iter.hasNext()) {
+                if (_log.shouldLog(Log.INFO))                 _log.info("Failsafe re-sort job " + j + " with delay "+ DataHelper.formatDuration(timeToWait));
+                iter.remove();
+                Job nextJob=iter.next();
+                _timedJobs.add(j);
+                long nextTimeLeft=nextJob.getTiming().getStartAfter() - now;
+                if (timeToWait > nextTimeLeft) {
+                  _log.error("Job " + j + " out of order with job "+ nextJob+ " difference of "+ DataHelper.formatDuration(timeToWait - nextTimeLeft));
+                  timeToWait=Math.max(10,nextTimeLeft);
+                }
+              }
+              break;
             }
           }
-          if (toAdd != null) {
-            if (_log.shouldLog(Log.DEBUG))             _log.debug("Not waiting - we have " + toAdd.size() + " newly ready jobs");
-            for (int i=0; i < toAdd.size(); i++)             _readyJobs.add(toAdd.get(i));
-            _jobLock.notifyAll();
-          }
- else {
-            if (timeToWait < 0)             timeToWait=30 * 1000;
- else             if (timeToWait < 10)             timeToWait=10;
- else             if (timeToWait > 10 * 1000)             timeToWait=10 * 1000;
-            _jobLock.wait(timeToWait);
-          }
+          if (timeToWait < 0)           timeToWait=1000;
+ else           if (timeToWait < 10)           timeToWait=10;
+ else           if (timeToWait > 10 * 1000)           timeToWait=10 * 1000;
+          _jobLock.wait(timeToWait);
         }
       }
  catch (      InterruptedException ie) {

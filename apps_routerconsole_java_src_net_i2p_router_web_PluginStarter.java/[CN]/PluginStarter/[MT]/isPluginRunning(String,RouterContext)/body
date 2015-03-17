@@ -1,0 +1,20 @@
+{
+  Log log=ctx.logManager().getLog(PluginStarter.class);
+  boolean isJobRunning=false;
+  if (pluginJobs.containsKey(pluginName))   for (  Job job : pluginJobs.get(pluginName))   if (ctx.jobQueue().isJobActive(job)) {
+    isJobRunning=true;
+    break;
+  }
+  boolean isWarRunning=false;
+  if (pluginWars.containsKey(pluginName)) {
+    Iterator<String> it=pluginWars.get(pluginName).iterator();
+    while (it.hasNext() && !isWarRunning) {
+      String warName=it.next();
+      if (WebAppStarter.isWebAppRunning(warName)) {
+        isWarRunning=true;
+      }
+    }
+  }
+  if (log.shouldLog(Log.DEBUG))   log.debug("plugin name = <" + pluginName + ">; threads running? "+ isClientThreadRunning(pluginName)+ "; webapp runing? "+ isWarRunning+ "; jobs running? "+ isJobRunning);
+  return isClientThreadRunning(pluginName) || isWarRunning || isJobRunning;
+}

@@ -1,0 +1,38 @@
+{
+  Log log=ctx.logManager().getLog(PluginStarter.class);
+  File pluginDir=new File(ctx.getConfigDir(),PluginUpdateHandler.PLUGIN_DIR + '/' + appName);
+  if ((!pluginDir.exists()) || (!pluginDir.isDirectory())) {
+    log.error("Cannot delete nonexistent plugin: " + appName);
+    return false;
+  }
+  File clientConfig=new File(pluginDir,"clients.config");
+  if (clientConfig.exists()) {
+    Properties props=new Properties();
+    DataHelper.loadProps(props,clientConfig);
+    List<ClientAppConfig> clients=ClientAppConfig.getClientApps(clientConfig);
+    runClientApps(ctx,pluginDir,clients,"uninstall");
+  }
+  File dir=new File(pluginDir,"console/themes");
+  File[] tfiles=dir.listFiles();
+  if (tfiles != null) {
+    String current=ctx.getProperty(CSSHelper.PROP_THEME_NAME);
+    Map<String,String> changes=new HashMap();
+    List<String> removes=new ArrayList();
+    for (int i=0; i < tfiles.length; i++) {
+      String name=tfiles[i].getName();
+      if (tfiles[i].isDirectory() && (!Arrays.asList(STANDARD_THEMES).contains(tfiles[i]))) {
+        removes.add(ConfigUIHelper.PROP_THEME_PFX + name);
+        if (name.equals(current))         changes.put(CSSHelper.PROP_THEME_NAME,CSSHelper.DEFAULT_THEME);
+      }
+    }
+    ctx.router().saveConfig(changes,removes);
+  }
+  FileUtil.rmdir(pluginDir,false);
+  Properties props=pluginProperties();
+  for (Iterator iter=props.keySet().iterator(); iter.hasNext(); ) {
+    String name=(String)iter.next();
+    if (name.startsWith(PREFIX + appName + '.'))     iter.remove();
+  }
+  storePluginProperties(props);
+  return true;
+}

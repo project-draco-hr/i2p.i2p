@@ -1,0 +1,20 @@
+{
+  if (_xorCache == null)   throw new IllegalStateException("To use the cache, you must first prepare it");
+  byte[] distance=_xorCache.get(key);
+  if (distance == null) {
+synchronized (_xorCache) {
+      int toRemove=_xorCache.size() + 1 - MAX_CACHED_XOR;
+      if (toRemove > 0) {
+        Set keys=new HashSet(toRemove);
+        int removed=0;
+        for (Iterator iter=_xorCache.keySet().iterator(); iter.hasNext() && removed < toRemove; removed++)         keys.add(iter.next());
+        for (Iterator iter=keys.iterator(); iter.hasNext(); )         _xorCache.remove(iter.next());
+      }
+      distance=DataHelper.xor(key.getData(),getData());
+      _xorCache.put(key,distance);
+    }
+  }
+ else {
+  }
+  return distance;
+}

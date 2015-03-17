@@ -1,0 +1,27 @@
+{
+  for (  Snark snark : _snarks.values()) {
+    if (DataHelper.eq(infoHash,snark.getInfoHash())) {
+      if (snark.isStarting() || !snark.isStopped()) {
+        addMessage("Torrent already started");
+        return;
+      }
+      boolean connected=_util.connected();
+      if ((!connected) && !_util.isConnecting())       addMessage(_("Opening the I2P tunnel"));
+      addMessage(_("Starting up torrent {0}",snark.getBaseName()));
+      if (connected) {
+        snark.startTorrent();
+      }
+ else {
+        snark.setStarting();
+        (new I2PAppThread(new ThreadedStarter(snark),"TorrentStarter",true)).start();
+        try {
+          Thread.sleep(200);
+        }
+ catch (        InterruptedException ie) {
+        }
+      }
+      return;
+    }
+  }
+  addMessage("Torrent not found?");
+}

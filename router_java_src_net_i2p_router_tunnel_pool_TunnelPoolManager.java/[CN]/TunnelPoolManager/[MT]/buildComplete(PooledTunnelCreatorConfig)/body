@@ -1,20 +1,14 @@
 {
-  buildComplete();
-  if (_loadTestManager != null)   _loadTestManager.addTunnelTestCandidate(cfg);
-  if (cfg.getLength() > 1) {
+  if (cfg.getLength() > 1 && (!_context.router().gracefulShutdownInProgress()) && !_context.getBooleanPropertyDefaultTrue("router.disableTunnelTesting")) {
     TunnelPool pool=cfg.getTunnelPool();
     if (pool == null) {
       _log.error("How does this not have a pool?  " + cfg,new Exception("baf"));
       if (cfg.getDestination() != null) {
         if (cfg.isInbound()) {
-synchronized (_clientInboundPools) {
-            pool=(TunnelPool)_clientInboundPools.get(cfg.getDestination());
-          }
+          pool=_clientInboundPools.get(cfg.getDestination());
         }
  else {
-synchronized (_clientOutboundPools) {
-            pool=(TunnelPool)_clientOutboundPools.get(cfg.getDestination());
-          }
+          pool=_clientOutboundPools.get(cfg.getDestination());
         }
       }
  else {

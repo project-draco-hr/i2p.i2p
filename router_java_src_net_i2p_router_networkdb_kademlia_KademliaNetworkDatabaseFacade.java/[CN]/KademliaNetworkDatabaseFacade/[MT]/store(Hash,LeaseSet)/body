@@ -1,24 +1,17 @@
 {
   if (!_initialized)   return null;
-  LeaseSet rv=(LeaseSet)_ds.get(key);
-  if ((rv != null) && (rv.equals(leaseSet))) {
-    return rv;
+  LeaseSet rv=null;
+  try {
+    rv=(LeaseSet)_ds.get(key);
+    if ((rv != null) && (rv.equals(leaseSet))) {
+      return rv;
+    }
+  }
+ catch (  ClassCastException cce) {
+    throw new IllegalArgumentException("Attempt to replace RI with " + leaseSet);
   }
   String err=validate(key,leaseSet);
   if (err != null)   throw new IllegalArgumentException("Invalid store attempt - " + err);
   _ds.put(key,leaseSet);
-  if (rv != null) {
-    for (int i=0; i < rv.getLeaseCount(); i++) {
-      Lease old=rv.getLease(i);
-      for (int j=0; j < leaseSet.getLeaseCount(); j++) {
-        Lease cur=leaseSet.getLease(j);
-        if (cur.getTunnelId().getTunnelId() == old.getTunnelId().getTunnelId()) {
-          cur.setNumFailure(old.getNumFailure());
-          cur.setNumSuccess(old.getNumSuccess());
-          break;
-        }
-      }
-    }
-  }
   return rv;
 }

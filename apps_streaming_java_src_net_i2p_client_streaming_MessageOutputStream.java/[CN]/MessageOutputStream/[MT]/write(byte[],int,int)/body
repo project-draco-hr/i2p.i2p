@@ -26,10 +26,7 @@ synchronized (_dataLock) {
         remaining-=toWrite;
         cur+=toWrite;
         _valid=_buf.length;
-        if (_dataReceiver == null) {
-          throwAnyError();
-          return;
-        }
+        if (_log.shouldLog(Log.INFO))         _log.info("write() direct valid = " + _valid);
         ws=_dataReceiver.writeData(_buf,0,_valid);
         _written+=_valid;
         _valid=0;
@@ -39,11 +36,15 @@ synchronized (_dataLock) {
       }
     }
     if (ws != null) {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Waiting " + _writeTimeout + "ms for accept of "+ ws);
+      if (_log.shouldLog(Log.INFO))       _log.info("Waiting " + _writeTimeout + "ms for accept of "+ ws);
       ws.waitForAccept(_writeTimeout);
       if (!ws.writeAccepted()) {
+        if (_log.shouldLog(Log.WARN))         _log.warn("Write not accepted of " + ws);
         if (_writeTimeout > 0)         throw new InterruptedIOException("Write not accepted within timeout: " + ws);
  else         throw new IOException("Write not accepted into the queue: " + ws);
+      }
+ else {
+        if (_log.shouldLog(Log.INFO))         _log.info("After waitForAccept of " + ws);
       }
     }
  else {
@@ -51,7 +52,6 @@ synchronized (_dataLock) {
     }
   }
   long elapsed=_context.clock().now() - begin;
-  if ((elapsed > 10 * 1000) && (_log.shouldLog(Log.DEBUG)))   _log.debug("wtf, took " + elapsed + "ms to write to the stream?",new Exception("foo"));
+  if ((elapsed > 10 * 1000) && (_log.shouldLog(Log.INFO)))   _log.info("wtf, took " + elapsed + "ms to write to the stream?",new Exception("foo"));
   throwAnyError();
-  updateBps(len);
 }

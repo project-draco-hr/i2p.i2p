@@ -1,0 +1,19 @@
+{
+  _completed++;
+  try {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("RECV unfrag(" + len + ')');
+    I2NPMessageHandler h=new I2NPMessageHandler(_context);
+    h.readMessage(data,offset,len);
+    I2NPMessage m=h.lastRead();
+    noteReception(m.getUniqueId(),0,"complete: ");
+    noteCompletion(m.getUniqueId());
+    _receiver.receiveComplete(m,router,tunnelId);
+  }
+ catch (  I2NPMessageException ime) {
+    if (_log.shouldLog(Log.WARN)) {
+      _log.warn("Error receiving unfragmented message (corrupt?)",ime);
+      _log.warn("DUMP:\n" + HexDump.dump(data,offset,len));
+      _log.warn("RAW:\n" + Base64.encode(data,offset,len));
+    }
+  }
+}

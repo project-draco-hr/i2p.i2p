@@ -2,15 +2,15 @@
   DeliveryInstructions instructions=new DeliveryInstructions();
   instructions.setDeliveryMode(DeliveryInstructions.DELIVERY_MODE_LOCAL);
   PayloadGarlicConfig payload=new PayloadGarlicConfig();
-  payload.setCertificate(new Certificate(Certificate.CERTIFICATE_TYPE_NULL,null));
+  payload.setCertificate(Certificate.NULL_CERT);
   payload.setId(getContext().random().nextLong(I2NPMessage.MAX_ID_VALUE));
   payload.setPayload(m);
   payload.setRecipient(getContext().router().getRouterInfo());
   payload.setDeliveryInstructions(instructions);
-  payload.setRequestAck(false);
   payload.setExpiration(m.getMessageExpiration());
   SessionKey encryptKey=getContext().keyGenerator().generateSessionKey();
   SessionTag encryptTag=new SessionTag(true);
+  _encryptTag=encryptTag;
   SessionKey sentKey=new SessionKey();
   Set sentTags=null;
   GarlicMessage msg=GarlicMessageBuilder.buildMessage(getContext(),payload,sentKey,sentTags,getContext().keyManager().getPublicKey(),encryptKey,encryptTag);
@@ -20,7 +20,13 @@
   }
   Set encryptTags=new HashSet(1);
   encryptTags.add(encryptTag);
-  getContext().sessionKeyManager().tagsReceived(encryptKey,encryptTags);
+  if (_cfg.isInbound() && !_pool.getSettings().isExploratory()) {
+    SessionKeyManager skm=getContext().clientManager().getClientSessionKeyManager(_pool.getSettings().getDestination());
+    if (skm != null)     skm.tagsReceived(encryptKey,encryptTags);
+  }
+ else {
+    getContext().sessionKeyManager().tagsReceived(encryptKey,encryptTags);
+  }
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Sending garlic test of " + _outTunnel + " / "+ _replyTunnel);
   getContext().tunnelDispatcher().dispatchOutbound(msg,_outTunnel.getSendTunnelId(0),_replyTunnel.getReceiveTunnelId(0),_replyTunnel.getPeer(0));
 }

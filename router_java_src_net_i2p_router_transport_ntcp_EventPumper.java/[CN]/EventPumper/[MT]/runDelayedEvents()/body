@@ -1,0 +1,80 @@
+{
+  NTCPConnection con;
+  while ((con=_wantsRead.poll()) != null) {
+    SelectionKey key=con.getKey();
+    try {
+      key.interestOps(key.interestOps() | SelectionKey.OP_READ);
+    }
+ catch (    CancelledKeyException cke) {
+    }
+catch (    IllegalArgumentException iae) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("gnu?",iae);
+    }
+  }
+  if (!_wantsWrite.isEmpty()) {
+    for (Iterator<NTCPConnection> iter=_wantsWrite.iterator(); iter.hasNext(); ) {
+      con=iter.next();
+      iter.remove();
+      SelectionKey key=con.getKey();
+      try {
+        key.interestOps(key.interestOps() | SelectionKey.OP_WRITE);
+      }
+ catch (      CancelledKeyException cke) {
+      }
+catch (      IllegalArgumentException iae) {
+        if (_log.shouldLog(Log.WARN))         _log.warn("gnu?",iae);
+      }
+    }
+  }
+  ServerSocketChannel chan;
+  while ((chan=_wantsRegister.poll()) != null) {
+    try {
+      SelectionKey key=chan.register(_selector,SelectionKey.OP_ACCEPT);
+      key.attach(chan);
+    }
+ catch (    ClosedChannelException cce) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Error registering",cce);
+    }
+  }
+  while ((con=_wantsConRegister.poll()) != null) {
+    try {
+      SelectionKey key=con.getChannel().register(_selector,SelectionKey.OP_CONNECT);
+      key.attach(con);
+      con.setKey(key);
+      try {
+        NTCPAddress naddr=con.getRemoteAddress();
+        if (naddr.getPort() <= 0)         throw new IOException("Invalid NTCP address: " + naddr);
+        InetSocketAddress saddr=new InetSocketAddress(naddr.getHost(),naddr.getPort());
+        boolean connected=con.getChannel().connect(saddr);
+        if (connected) {
+          _context.statManager().addRateData("ntcp.connectImmediate",1);
+          key.interestOps(SelectionKey.OP_READ);
+          processConnect(key);
+        }
+      }
+ catch (      IOException ioe) {
+        if (_log.shouldLog(Log.WARN))         _log.warn("error connecting",ioe);
+        _context.statManager().addRateData("ntcp.connectFailedIOE",1);
+        _transport.markUnreachable(con.getRemotePeer().calculateHash());
+        con.close(true);
+      }
+catch (      UnresolvedAddressException uae) {
+        if (_log.shouldLog(Log.WARN))         _log.warn("unresolved address connecting",uae);
+        _context.statManager().addRateData("ntcp.connectFailedUnresolved",1);
+        _transport.markUnreachable(con.getRemotePeer().calculateHash());
+        con.close(true);
+      }
+catch (      CancelledKeyException cke) {
+        con.close(false);
+      }
+    }
+ catch (    ClosedChannelException cce) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Error registering",cce);
+    }
+  }
+  long now=System.currentTimeMillis();
+  if (_lastExpired + 1000 <= now) {
+    expireTimedOut();
+    _lastExpired=now;
+  }
+}

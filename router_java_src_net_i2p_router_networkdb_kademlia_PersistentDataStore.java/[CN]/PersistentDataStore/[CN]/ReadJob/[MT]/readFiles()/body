@@ -1,22 +1,20 @@
 {
   int routerCount=0;
-  try {
-    File dbDir=getDbDir();
-    File routerInfoFiles[]=dbDir.listFiles(RouterInfoFilter.getInstance());
-    if (routerInfoFiles != null) {
-      routerCount+=routerInfoFiles.length;
-      if (routerInfoFiles.length > 5)       _alreadyWarned=false;
-      for (int i=0; i < routerInfoFiles.length; i++) {
-        Hash key=getRouterInfoHash(routerInfoFiles[i].getName());
-        if ((key != null) && (!isKnown(key)))         PersistentDataStore.this._context.jobQueue().addJob(new ReadRouterJob(routerInfoFiles[i],key));
+  File routerInfoFiles[]=_dbDir.listFiles(RouterInfoFilter.getInstance());
+  if (routerInfoFiles != null) {
+    routerCount+=routerInfoFiles.length;
+    if (routerInfoFiles.length > 5)     _alreadyWarned=false;
+    for (int i=0; i < routerInfoFiles.length; i++) {
+      if (!_context.router().isAlive())       break;
+      Hash key=getRouterInfoHash(routerInfoFiles[i].getName());
+      if ((key != null) && (!isKnown(key))) {
+        (new ReadRouterJob(routerInfoFiles[i],key)).runJob();
       }
     }
   }
- catch (  IOException ioe) {
-    _log.error("Error reading files in the db dir",ioe);
-  }
-  if ((routerCount <= 5) && (!_alreadyWarned)) {
-    _log.error("Very few routerInfo files remaining - please reseed");
+  if (!_alreadyWarned) {
+    _facade.reseedChecker().checkReseed(routerCount);
     _alreadyWarned=true;
+    _initialized=true;
   }
 }

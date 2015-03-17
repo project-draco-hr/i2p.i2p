@@ -9,15 +9,20 @@
     return;
   }
   if (!_context.clientManager().shouldPublishLeaseSet(h))   return;
+  if (_context.router().gracefulShutdownInProgress()) {
+    int code=_context.router().scheduledGracefulExitCode();
+    if (code == Router.EXIT_GRACEFUL || code == Router.EXIT_HARD)     return;
+  }
   RepublishLeaseSetJob j=null;
 synchronized (_publishingLeaseSets) {
-    j=(RepublishLeaseSetJob)_publishingLeaseSets.get(h);
+    j=_publishingLeaseSets.get(h);
     if (j == null) {
       j=new RepublishLeaseSetJob(_context,this,h);
       _publishingLeaseSets.put(h,j);
     }
   }
-  long nextTime=Math.max(j.lastPublished() + j.REPUBLISH_LEASESET_TIMEOUT,_context.clock().now() + PUBLISH_DELAY);
+  long nextTime=Math.max(j.lastPublished() + RepublishLeaseSetJob.REPUBLISH_LEASESET_TIMEOUT,_context.clock().now() + PUBLISH_DELAY);
+  _context.jobQueue().removeJob(j);
   j.getTiming().setStartAfter(nextTime);
   _context.jobQueue().addJob(j);
 }

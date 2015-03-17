@@ -1,14 +1,19 @@
 {
-synchronized (_lock) {
+synchronized (this) {
     long now=now();
     long interval=now - _lastEvent;
-    if (interval >= _period)     interval=_period - 1;
+    if (interval > _period)     interval=_period;
  else     if (interval <= 0)     interval=1;
-    double oldWeight=1 - (interval / (float)_period);
-    double newWeight=(interval / (float)_period);
-    double oldInterval=_avgInterval * oldWeight;
-    double newInterval=interval * newWeight;
-    _avgInterval=oldInterval + newInterval;
+    if (interval >= _period && !eventOccurred) {
+      _avgInterval=_period + 1;
+    }
+ else {
+      double oldWeight=1 - (interval / (float)_period);
+      double newWeight=(interval / (float)_period);
+      double oldInterval=_avgInterval * oldWeight;
+      double newInterval=interval * newWeight;
+      _avgInterval=oldInterval + newInterval;
+    }
     if ((_avgInterval < _minAverageInterval) || (_minAverageInterval <= 0))     _minAverageInterval=_avgInterval;
     if (eventOccurred) {
       _lastEvent=now;

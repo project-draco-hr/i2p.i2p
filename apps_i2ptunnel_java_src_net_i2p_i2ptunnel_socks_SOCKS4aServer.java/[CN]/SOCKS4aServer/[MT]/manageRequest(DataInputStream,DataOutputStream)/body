@@ -1,0 +1,36 @@
+{
+  int command=in.readByte() & 0xff;
+switch (command) {
+case Command.CONNECT:
+    break;
+case Command.BIND:
+  _log.debug("BIND command is not supported!");
+sendRequestReply(Reply.CONNECTION_REFUSED,InetAddress.getByName("127.0.0.1"),0,out);
+throw new SOCKSException("BIND command not supported");
+default :
+_log.debug("unknown command in request (" + Integer.toHexString(command) + ")");
+sendRequestReply(Reply.CONNECTION_REFUSED,InetAddress.getByName("127.0.0.1"),0,out);
+throw new SOCKSException("Invalid command in request");
+}
+connPort=in.readUnsignedShort();
+if (connPort == 0) {
+_log.debug("trying to connect to TCP port 0?  Dropping!");
+sendRequestReply(Reply.CONNECTION_REFUSED,InetAddress.getByName("127.0.0.1"),0,out);
+throw new SOCKSException("Invalid port number in request");
+}
+connHostName=new String("");
+boolean alreadyWarned=false;
+for (int i=0; i < 4; ++i) {
+int octet=in.readByte() & 0xff;
+connHostName+=Integer.toString(octet);
+if (i != 3) {
+connHostName+=".";
+if (octet != 0 && !alreadyWarned) {
+_log.warn("IPV4 address type in request: " + connHostName + ". Is your client secure?");
+alreadyWarned=true;
+}
+}
+}
+readString(in);
+if (connHostName.startsWith("0.0.0.") && !connHostName.equals("0.0.0.0")) connHostName=readString(in);
+}

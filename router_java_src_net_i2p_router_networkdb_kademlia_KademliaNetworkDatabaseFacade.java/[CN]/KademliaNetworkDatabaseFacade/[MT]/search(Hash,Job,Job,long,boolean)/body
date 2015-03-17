@@ -3,7 +3,7 @@
   boolean isNew=true;
   SearchJob searchJob=null;
 synchronized (_activeRequests) {
-    searchJob=(SearchJob)_activeRequests.get(key);
+    searchJob=_activeRequests.get(key);
     if (searchJob == null) {
       searchJob=new SearchJob(_context,this,key,onFindJob,onFailedLookupJob,timeoutMs,true,isLease);
       _activeRequests.put(key,searchJob);
@@ -19,7 +19,7 @@ synchronized (_activeRequests) {
  else {
     if (_log.shouldLog(Log.INFO))     _log.info("Deferring search for " + key.toBase64() + " with "+ onFindJob);
     int deferred=searchJob.addDeferred(onFindJob,onFailedLookupJob,timeoutMs,isLease);
-    _context.statManager().addRateData("netDb.lookupLeaseSetDeferred",deferred,searchJob.getExpiration() - _context.clock().now());
+    _context.statManager().addRateData("netDb.lookupDeferred",deferred,searchJob.getExpiration() - _context.clock().now());
   }
   return searchJob;
 }

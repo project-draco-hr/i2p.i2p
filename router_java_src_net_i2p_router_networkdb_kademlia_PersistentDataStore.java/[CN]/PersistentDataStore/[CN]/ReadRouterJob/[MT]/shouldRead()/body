@@ -1,13 +1,13 @@
 {
-  DataStructure data=get(_key);
+  DatabaseEntry data=get(_key,false);
   if (data == null)   return true;
-  if (data instanceof RouterInfo) {
-    long knownDate=((RouterInfo)data).getPublished();
+  if (data.getType() == DatabaseEntry.KEY_TYPE_ROUTERINFO) {
+    _knownDate=((RouterInfo)data).getPublished();
     long fileDate=_routerFile.lastModified();
-    if (fileDate > knownDate)     return true;
- else     return false;
+    return fileDate > _knownDate + (60 * 60 * 1000);
   }
  else {
-    return true;
+    _log.error("Prevented LS overwrite by RI " + _key + " from "+ _routerFile);
+    return false;
   }
 }

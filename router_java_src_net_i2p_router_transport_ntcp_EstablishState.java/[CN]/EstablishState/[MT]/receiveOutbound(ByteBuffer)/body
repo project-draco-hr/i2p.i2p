@@ -39,13 +39,19 @@
         return;
       }
       _tsB=DataHelper.fromLong(hXY_tsB,Hash.HASH_LENGTH,4);
-      _tsA=_context.clock().now() / 1000;
+      _tsA=(_context.clock().now() + 500) / 1000;
       if (_log.shouldLog(Log.DEBUG))       _log.debug(prefix() + "h(X+Y) is correct, tsA-tsB=" + (_tsA - _tsB));
       long diff=1000 * Math.abs(_tsA - _tsB);
-      if (diff >= Router.CLOCK_FUDGE_FACTOR) {
+      if (!_context.clock().getUpdatedSuccessfully()) {
+        _context.clock().setOffset(1000 * (_tsB - _tsA),true);
+        _tsA=_tsB;
+        if (diff != 0)         _log.logAlways(Log.WARN,"NTP failure, NTCP adjusting clock by " + DataHelper.formatDuration(diff));
+      }
+ else       if (diff >= Router.CLOCK_FUDGE_FACTOR) {
         _context.statManager().addRateData("ntcp.invalidOutboundSkew",diff,0);
         _transport.markReachable(_con.getRemotePeer().calculateHash(),false);
-        _context.shitlist().shitlistRouter(_con.getRemotePeer().calculateHash(),"Outbound clock skew of " + diff + " ms");
+        _context.shitlist().shitlistRouter(DataHelper.formatDuration(diff),_con.getRemotePeer().calculateHash(),_x("Excessive clock skew: {0}"));
+        _transport.setLastBadSkew(_tsA - _tsB);
         fail("Clocks too skewed (" + diff + " ms)",null,true);
         return;
       }
@@ -69,9 +75,7 @@
       DataHelper.toLong(preEncrypt,0,2,ident.length);
       System.arraycopy(ident,0,preEncrypt,2,ident.length);
       DataHelper.toLong(preEncrypt,2 + ident.length,4,_tsA);
-      byte pad[]=new byte[padding];
-      _context.random().nextBytes(pad);
-      System.arraycopy(pad,0,preEncrypt,2 + ident.length + 4,padding);
+      if (padding > 0)       _context.random().nextBytes(preEncrypt,2 + ident.length + 4,padding);
       System.arraycopy(sig.getData(),0,preEncrypt,2 + ident.length + 4+ padding,Signature.SIGNATURE_BYTES);
       _prevEncrypted=new byte[preEncrypt.length];
       _context.aes().encrypt(preEncrypt,0,_prevEncrypted,0,_dh.getSessionKey(),_hX_xor_bobIdentHash,_hX_xor_bobIdentHash.length - 16,preEncrypt.length);
@@ -116,7 +120,6 @@
         if (!_verified) {
           _context.statManager().addRateData("ntcp.invalidSignature",1,0);
           fail("Signature was invalid - attempt to spoof " + _con.getRemotePeer().calculateHash().toBase64() + "?");
-          return;
         }
  else {
           if (_log.shouldLog(Log.DEBUG))           _log.debug(prefix() + "signature verified from Bob.  done!");
@@ -126,8 +129,10 @@
           byte nextReadIV[]=new byte[16];
           System.arraycopy(_e_bobSig,_e_bobSig.length - 16,nextReadIV,0,nextReadIV.length);
           _con.finishOutboundEstablishment(_dh.getSessionKey(),(_tsA - _tsB),nextWriteIV,nextReadIV);
-          return;
+          InetAddress ia=_con.getChannel().socket().getInetAddress();
+          if (ia != null)           _transport.setIP(_con.getRemotePeer().calculateHash(),ia.getAddress());
         }
+        return;
       }
     }
   }

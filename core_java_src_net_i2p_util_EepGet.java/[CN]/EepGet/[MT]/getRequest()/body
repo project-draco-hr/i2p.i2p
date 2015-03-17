@@ -1,5 +1,5 @@
 {
-  StringBuffer buf=new StringBuffer(512);
+  StringBuilder buf=new StringBuilder(2048);
   boolean post=false;
   if ((_postData != null) && (_postData.length() > 0))   post=true;
   URL url=new URL(_actualURL);
@@ -8,7 +8,7 @@
   int port=url.getPort();
   String path=url.getPath();
   String query=url.getQuery();
-  if (query != null)   path=path + "?" + query;
+  if (query != null)   path=path + '?' + query;
   if (!path.startsWith("/"))   path="/" + path;
   if ((port == 80) || (port == 443) || (port <= 0))   path=proto + "://" + host+ path;
  else   path=proto + "://" + host+ ":"+ port+ path;
@@ -25,11 +25,8 @@
     buf.append(_alreadyTransferred);
     buf.append("-\r\n");
   }
-  buf.append("Accept-Encoding: \r\n");
-  buf.append("X-Accept-Encoding: x-i2p-gzip;q=1.0, identity;q=0.5, deflate;q=0, gzip;q=0, *;q=0\r\n");
   if (!_allowCaching) {
-    buf.append("Cache-control: no-cache\r\n");
-    buf.append("Pragma: no-cache\r\n");
+    buf.append("Cache-control: no-cache\r\n" + "Pragma: no-cache\r\n");
   }
   if ((_etag != null) && (_alreadyTransferred <= 0)) {
     buf.append("If-None-Match: ");
@@ -42,7 +39,15 @@
     buf.append("\r\n");
   }
   if (post)   buf.append("Content-length: ").append(_postData.length()).append("\r\n");
-  buf.append("Connection: close\r\n\r\n");
+  buf.append("Accept-Encoding: ");
+  if ((!_shouldProxy) && (!path.endsWith(".gz")) && (!path.endsWith(".tgz")))   buf.append("gzip");
+  buf.append("\r\nUser-Agent: " + USER_AGENT + "\r\n"+ "Connection: close\r\n");
+  if (_extraHeaders != null) {
+    for (    String hdr : _extraHeaders) {
+      buf.append(hdr).append("\r\n");
+    }
+  }
+  buf.append("\r\n");
   if (post)   buf.append(_postData);
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Request: [" + buf.toString() + "]");
   return buf.toString();

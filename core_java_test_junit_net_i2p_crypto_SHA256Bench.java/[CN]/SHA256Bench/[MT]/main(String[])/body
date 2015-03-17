@@ -1,0 +1,69 @@
+{
+  Hash asdfs=SHA256Generator.getInstance().calculateHash("qwerty".getBytes());
+  int times=100;
+  long shorttime=0;
+  long medtime=0;
+  long longtime=0;
+  long minShort=0;
+  long maxShort=0;
+  long minMed=0;
+  long maxMed=0;
+  long minLong=0;
+  long maxLong=0;
+  long shorttime1=0;
+  long medtime1=0;
+  long longtime1=0;
+  long minShort1=0;
+  long maxShort1=0;
+  long minMed1=0;
+  long maxMed1=0;
+  long minLong1=0;
+  long maxLong1=0;
+  byte[] smess=new String("abc").getBytes();
+  StringBuilder buf=new StringBuilder();
+  for (int x=0; x < 10 * 1024; x++) {
+    buf.append("a");
+  }
+  byte[] mmess=buf.toString().getBytes();
+  buf=new StringBuilder();
+  for (int x=0; x < 1000000; x++) {
+    buf.append("a");
+  }
+  byte[] lmess=buf.toString().getBytes();
+  SHA256Generator.getInstance().calculateHash(smess);
+  SHA256Generator.getInstance().calculateHash(mmess);
+  SHA256Generator.getInstance().calculateHash(lmess);
+  for (int x=0; x < times; x++) {
+    long startshort=System.currentTimeMillis();
+    boolean cacheOnly=false;
+    Hash s=cacheOnly ? null : SHA256Generator.getInstance().calculateHash(smess);
+    long endshortstartmed=System.currentTimeMillis();
+    Hash m=cacheOnly ? null : SHA256Generator.getInstance().calculateHash(mmess);
+    long endmedstartlong=System.currentTimeMillis();
+    Hash l=cacheOnly ? null : SHA256Generator.getInstance().calculateHash(lmess);
+    long endlong=System.currentTimeMillis();
+    shorttime+=endshortstartmed - startshort;
+    medtime+=endmedstartlong - endshortstartmed;
+    longtime+=endlong - endmedstartlong;
+    if ((minShort == 0) && (minMed == 0) && (minLong == 0)) {
+      minShort=endshortstartmed - startshort;
+      maxShort=endshortstartmed - startshort;
+      minMed=endmedstartlong - endshortstartmed;
+      maxMed=endmedstartlong - endshortstartmed;
+      minLong=endlong - endmedstartlong;
+      maxLong=endlong - endmedstartlong;
+    }
+ else {
+      if (minShort > endshortstartmed - startshort)       minShort=endshortstartmed - startshort;
+      if (maxShort < endshortstartmed - startshort)       maxShort=endshortstartmed - startshort;
+      if (minMed > endmedstartlong - endshortstartmed)       minMed=endmedstartlong - endshortstartmed;
+      if (maxMed < endmedstartlong - endshortstartmed)       maxMed=endmedstartlong - endshortstartmed;
+      if (minLong > endlong - endmedstartlong)       minLong=endlong - endmedstartlong;
+      if (maxLong < endlong - endmedstartlong)       maxLong=endlong - endmedstartlong;
+    }
+  }
+  System.out.println();
+  System.out.println("Short Message Time Average  : " + (shorttime / times) + "\ttotal: "+ shorttime+ "\tmin: "+ minShort+ "\tmax: "+ maxShort+ "\tBps: "+ (shorttime == 0 ? "NaN" : "" + (times * smess.length) / shorttime));
+  System.out.println("Medium Message Time Average : " + (medtime / times) + "\ttotal: "+ medtime+ "\tmin: "+ minMed+ "\tmax: "+ maxMed+ "\tBps: "+ (medtime == 0 ? "NaN" : "" + (times * mmess.length * 1000) / medtime));
+  System.out.println("Long Message Time Average   : " + (longtime / times) + "\ttotal: "+ longtime+ "\tmin: "+ minLong+ "\tmax: "+ maxLong+ "\tBps: "+ (longtime == 0 ? "NaN" : "" + (times * lmess.length * 1000) / longtime));
+}

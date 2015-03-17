@@ -1,0 +1,27 @@
+{
+  List<Log> logs=_context.logManager().getLogs();
+  Set limits=_context.logManager().getLimits().keySet();
+  TreeSet<String> sortedLogs=new TreeSet();
+  for (  Log log : logs) {
+    String name=log.getName();
+    if (!limits.contains(name))     sortedLogs.add(name);
+    int dots=0;
+    int lastdot=-1;
+    int nextdot=0;
+    while ((nextdot=name.indexOf('.',lastdot + 1)) > 0) {
+      if (++dots >= 3) {
+        String subst=name.substring(0,nextdot);
+        if (!limits.contains(subst))         sortedLogs.add(subst);
+      }
+      lastdot=nextdot;
+    }
+  }
+  StringBuilder buf=new StringBuilder(65536);
+  buf.append("<select name=\"newlogclass\">\n" + "<option value=\"\" selected=\"selected\">").append(_("Select a class to add")).append("</option>\n");
+  for (  String l : sortedLogs) {
+    buf.append("<option value=\"").append(l).append("\">").append(l).append("</option>\n");
+  }
+  buf.append("</select>\n");
+  buf.append(getLogLevelBox("newloglevel","WARN",false));
+  return buf.toString();
+}

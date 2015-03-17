@@ -1,14 +1,23 @@
 {
   long beforeBuild=System.currentTimeMillis();
+  if (cfg.getLength() > 1) {
+    cfg.setReplyMessageId(_context.random().nextLong(I2NPMessage.MAX_ID_VALUE));
+    if (addToBuilding(cfg)) {
+      _log.error("Dup reply ID: " + cfg.getReplyMessageId());
+      return;
+    }
+  }
   BuildRequestor.request(_context,pool,cfg,this);
   long buildTime=System.currentTimeMillis() - beforeBuild;
-  if (cfg.getLength() <= 1)   _context.statManager().addRateData("tunnel.buildRequestZeroHopTime",buildTime,buildTime);
- else   _context.statManager().addRateData("tunnel.buildRequestTime",buildTime,buildTime);
+  if (cfg.getLength() <= 1)   _context.statManager().addRateData("tunnel.buildRequestZeroHopTime",buildTime,0);
+ else   _context.statManager().addRateData("tunnel.buildRequestTime",buildTime,0);
   long id=cfg.getReplyMessageId();
   if (id > 0) {
 synchronized (_recentBuildIds) {
-      while (_recentBuildIds.size() > 64)       _recentBuildIds.remove(0);
-      _recentBuildIds.add(new Long(id));
+      if (_recentBuildIds.size() > 98) {
+        for (int i=0; i < 32; i++)         _recentBuildIds.remove(0);
+      }
+      _recentBuildIds.add(Long.valueOf(id));
     }
   }
 }

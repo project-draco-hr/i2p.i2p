@@ -1,0 +1,21 @@
+{
+synchronized (_pendingInboundRequests) {
+    if (_inboundUnlimited) {
+      locked_satisfyInboundUnlimited(satisfied);
+    }
+ else {
+      if (_availableInbound.get() > 0) {
+        locked_satisfyInboundAvailable(satisfied);
+      }
+ else {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Still denying the " + _pendingInboundRequests.size() + " pending inbound requests (status: "+ getStatus().toString()+ ", longest waited "+ locked_getLongestInboundWait()+ " in)");
+      }
+    }
+  }
+  if (satisfied != null) {
+    for (int i=0; i < satisfied.size(); i++) {
+      SimpleRequest creq=(SimpleRequest)satisfied.get(i);
+      creq.notifyAllocation();
+    }
+  }
+}

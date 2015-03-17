@@ -10,9 +10,15 @@
     loadProps(props,file);
     long lastSentToSuccessfully=getLong(props,"lastSentToSuccessfully");
     if (isExpired(lastSentToSuccessfully)) {
-      if (_log.shouldLog(Log.WARN))       _log.warn("Dropping old profile for " + file.getName() + ", since we haven't heard from them in a long time");
+      if (_log.shouldLog(Log.INFO))       _log.info("Dropping old profile " + file.getName() + ", since we haven't heard from them in a long time");
       file.delete();
       return null;
+    }
+ else     if (file.getName().endsWith(OLD_SUFFIX)) {
+      String newName=file.getAbsolutePath();
+      newName=newName.substring(0,newName.length() - OLD_SUFFIX.length()) + SUFFIX;
+      boolean success=file.renameTo(new File(newName));
+      if (!success)       file.delete();
     }
     profile.setCapacityBonus(getLong(props,"capacityBonus"));
     profile.setIntegrationBonus(getLong(props,"integrationBonus"));
@@ -27,21 +33,19 @@
     profile.setPeakTunnelThroughputKBps(getDouble(props,"tunnelPeakTunnelThroughput"));
     profile.setPeakTunnel1mThroughputKBps(getDouble(props,"tunnelPeakTunnel1mThroughput"));
     profile.getTunnelHistory().load(props);
-    profile.getDBHistory().load(props);
-    profile.getCommError().load(props,"commError",true);
-    profile.getDbIntroduction().load(props,"dbIntroduction",true);
-    profile.getDbResponseTime().load(props,"dbResponseTime",true);
-    profile.getReceiveSize().load(props,"receiveSize",true);
-    profile.getSendFailureSize().load(props,"sendFailureSize",true);
-    profile.getSendSuccessSize().load(props,"sendSuccessSize",true);
+    if (getLong(props,"dbHistory.successfulLookups") > 1 || getLong(props,"dbHistory.failedlLokups") > 1) {
+      profile.expandDBProfile();
+      profile.getDBHistory().load(props);
+      profile.getDbIntroduction().load(props,"dbIntroduction",true);
+      profile.getDbResponseTime().load(props,"dbResponseTime",true);
+    }
     profile.getTunnelCreateResponseTime().load(props,"tunnelCreateResponseTime",true);
     profile.getTunnelTestResponseTime().load(props,"tunnelTestResponseTime",true);
-    profile.getTunnelTestResponseTimeSlow().load(props,"tunnelTestResponseTimeSlow",true);
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Loaded the profile for " + peer.toBase64() + " from "+ file.getName());
     return profile;
   }
- catch (  IllegalArgumentException iae) {
-    _log.error("Error loading profile from " + file.getName(),iae);
+ catch (  Exception e) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Error loading properties from " + file.getAbsolutePath(),e);
     file.delete();
     return null;
   }

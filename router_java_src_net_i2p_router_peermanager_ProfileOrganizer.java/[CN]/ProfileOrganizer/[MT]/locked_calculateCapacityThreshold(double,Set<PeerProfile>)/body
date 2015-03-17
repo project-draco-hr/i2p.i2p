@@ -1,0 +1,36 @@
+{
+  int numNotFailing=reordered.size();
+  double meanCapacity=avg(totalCapacity,numNotFailing);
+  int minHighCapacityPeers=getMinimumHighCapacityPeers();
+  int numExceedingMean=0;
+  double thresholdAtMedian=0;
+  double thresholdAtMinHighCap=0;
+  double thresholdAtLowest=CapacityCalculator.GROWTH_FACTOR;
+  int cur=0;
+  for (Iterator<PeerProfile> iter=reordered.iterator(); iter.hasNext(); ) {
+    PeerProfile profile=iter.next();
+    double val=profile.getCapacityValue();
+    if (val > meanCapacity)     numExceedingMean++;
+    if (cur == reordered.size() / 2)     thresholdAtMedian=val;
+    if (cur == minHighCapacityPeers - 1)     thresholdAtMinHighCap=val;
+    if (cur == reordered.size() - 1)     thresholdAtLowest=val;
+    cur++;
+  }
+  if (numExceedingMean >= minHighCapacityPeers) {
+    if (_log.shouldLog(Log.INFO))     _log.info("Our average capacity is doing well [" + meanCapacity + "], and includes "+ numExceedingMean);
+    _thresholdCapacityValue=meanCapacity;
+  }
+ else   if (meanCapacity > thresholdAtMedian && reordered.size() / 2 > minHighCapacityPeers) {
+    if (_log.shouldLog(Log.INFO))     _log.info("Our average capacity [" + meanCapacity + "] is greater than the median,"+ " so threshold is that reqd to get the min high cap peers "+ thresholdAtMinHighCap);
+    _thresholdCapacityValue=thresholdAtMinHighCap;
+  }
+ else   if (reordered.size() / 2 >= minHighCapacityPeers) {
+    if (_log.shouldLog(Log.INFO))     _log.info("Our average capacity [" + meanCapacity + "] is skewed under the median,"+ " so use the median threshold "+ thresholdAtMedian);
+    _thresholdCapacityValue=thresholdAtMedian;
+  }
+ else {
+    if (_log.shouldLog(Log.INFO))     _log.info("Our average capacity is doing well [" + meanCapacity + "], but there aren't enough of them "+ numExceedingMean);
+    _thresholdCapacityValue=Math.max(thresholdAtMinHighCap,thresholdAtLowest);
+  }
+  if (_thresholdCapacityValue <= CapacityCalculator.GROWTH_FACTOR)   _thresholdCapacityValue=CapacityCalculator.GROWTH_FACTOR + 0.0001;
+}

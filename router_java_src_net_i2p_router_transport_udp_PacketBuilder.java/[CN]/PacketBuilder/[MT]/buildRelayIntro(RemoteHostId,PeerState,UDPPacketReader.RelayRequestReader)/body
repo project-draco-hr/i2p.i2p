@@ -1,14 +1,8 @@
 {
-  UDPPacket packet=UDPPacket.acquire(_context,false);
+  UDPPacket packet=buildPacketHeader(PEER_RELAY_INTRO_FLAG_BYTE);
   byte data[]=packet.getPacket().getData();
-  Arrays.fill(data,0,data.length,(byte)0x0);
-  int off=UDPPacket.MAC_SIZE + UDPPacket.IV_SIZE;
-  data[off]=PEER_RELAY_INTRO_FLAG_BYTE;
-  off++;
-  long now=_context.clock().now() / 1000;
-  DataHelper.toLong(data,off,4,now);
+  int off=HEADER_SIZE;
   if (_log.shouldLog(Log.INFO))   _log.info("Sending intro to " + charlie + " for "+ alice);
-  off+=4;
   byte ip[]=alice.getIP();
   DataHelper.toLong(data,off,1,ip.length);
   off++;
@@ -27,6 +21,6 @@
   packet.getPacket().setLength(off);
   authenticate(packet,charlie.getCurrentCipherKey(),charlie.getCurrentMACKey());
   setTo(packet,charlie.getRemoteIPAddress(),charlie.getRemotePort());
-  packet.setMessageType(45);
+  packet.setMessageType(TYPE_INTRO);
   return packet;
 }

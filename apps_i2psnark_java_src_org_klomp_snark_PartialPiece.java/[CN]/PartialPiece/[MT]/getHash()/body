@@ -1,0 +1,22 @@
+{
+  MessageDigest sha1=SHA1.getInstance();
+  if (bs != null) {
+    sha1.update(bs);
+  }
+ else {
+    int read=0;
+    byte[] buf=new byte[Math.min(pclen,16384)];
+synchronized (this) {
+      if (raf == null)       throw new IOException();
+      raf.seek(0);
+      while (read < pclen) {
+        int rd=raf.read(buf,0,Math.min(buf.length,pclen - read));
+        if (rd < 0)         break;
+        read+=rd;
+        sha1.update(buf,0,rd);
+      }
+    }
+    if (read < pclen)     throw new IOException();
+  }
+  return sha1.digest();
+}

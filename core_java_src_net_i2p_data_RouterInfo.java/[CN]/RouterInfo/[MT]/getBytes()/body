@@ -1,30 +1,28 @@
 {
   if (_byteified != null)   return _byteified;
   if (_identity == null)   throw new DataFormatException("Router identity isn't set? wtf!");
-  if (_addresses == null)   throw new DataFormatException("Router addressess isn't set? wtf!");
-  if (_peers == null)   throw new DataFormatException("Router peers isn't set? wtf!");
-  if (_options == null)   throw new DataFormatException("Router options isn't set? wtf!");
-  long before=Clock.getInstance().now();
-  ByteArrayOutputStream out=new ByteArrayOutputStream(6 * 1024);
+  ByteArrayOutputStream out=new ByteArrayOutputStream(2 * 1024);
   try {
     _identity.writeBytes(out);
-    DataHelper.writeDate(out,new Date(_published));
-    if (isHidden()) {
+    DataHelper.writeLong(out,8,_published);
+    int sz=_addresses.size();
+    if (sz <= 0 || isHidden()) {
       DataHelper.writeLong(out,1,0);
     }
  else {
-      DataHelper.writeLong(out,1,_addresses.size());
-      List addresses=DataHelper.sortStructures(_addresses);
-      for (Iterator iter=addresses.iterator(); iter.hasNext(); ) {
-        RouterAddress addr=(RouterAddress)iter.next();
+      DataHelper.writeLong(out,1,sz);
+      for (      RouterAddress addr : _addresses) {
         addr.writeBytes(out);
       }
     }
-    DataHelper.writeLong(out,1,_peers.size());
-    List peers=DataHelper.sortStructures(_peers);
-    for (Iterator iter=peers.iterator(); iter.hasNext(); ) {
-      Hash peerHash=(Hash)iter.next();
-      peerHash.writeBytes(out);
+    int psz=_peers == null ? 0 : _peers.size();
+    DataHelper.writeLong(out,1,psz);
+    if (psz > 0) {
+      Collection<Hash> peers=_peers;
+      if (psz > 1)       peers=(Collection<Hash>)DataHelper.sortStructures(peers);
+      for (      Hash peerHash : peers) {
+        peerHash.writeBytes(out);
+      }
     }
     DataHelper.writeProperties(out,_options);
   }
@@ -32,8 +30,6 @@
     throw new DataFormatException("IO Error getting bytes",ioe);
   }
   byte data[]=out.toByteArray();
-  long after=Clock.getInstance().now();
-  _log.debug("getBytes()  took " + (after - before) + "ms");
-  _byteified=data;
+  if (CACHE_ALL || _shouldCache)   _byteified=data;
   return data;
 }

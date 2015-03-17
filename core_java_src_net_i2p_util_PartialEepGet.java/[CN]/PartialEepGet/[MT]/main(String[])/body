@@ -1,0 +1,55 @@
+{
+  String proxyHost="127.0.0.1";
+  int proxyPort=4444;
+  long size=56;
+  String url=null;
+  try {
+    for (int i=0; i < args.length; i++) {
+      if (args[i].equals("-p")) {
+        proxyHost=args[i + 1].substring(0,args[i + 1].indexOf(':'));
+        String port=args[i + 1].substring(args[i + 1].indexOf(':') + 1);
+        proxyPort=Integer.parseInt(port);
+        i++;
+      }
+ else       if (args[i].equals("-l")) {
+        size=Long.parseLong(args[i + 1]);
+        i++;
+      }
+ else       if (args[i].startsWith("-")) {
+        usage();
+        return;
+      }
+ else {
+        url=args[i];
+      }
+    }
+  }
+ catch (  Exception e) {
+    e.printStackTrace();
+    usage();
+    return;
+  }
+  if (url == null) {
+    usage();
+    return;
+  }
+  String saveAs=suggestName(url);
+  OutputStream out;
+  try {
+    out=new FileOutputStream(saveAs);
+  }
+ catch (  IOException ioe) {
+    System.err.println("Failed to create output file " + saveAs);
+    return;
+  }
+  EepGet get=new PartialEepGet(I2PAppContext.getGlobalContext(),proxyHost,proxyPort,out,url,size);
+  get.addStatusListener(get.new CLIStatusListener(1024,40));
+  if (get.fetch(45 * 1000,-1,60 * 1000)) {
+    System.err.println("Last-Modified: " + get.getLastModified());
+    System.err.println("Etag: " + get.getETag());
+  }
+ else {
+    System.err.println("Failed " + url);
+    System.exit(1);
+  }
+}

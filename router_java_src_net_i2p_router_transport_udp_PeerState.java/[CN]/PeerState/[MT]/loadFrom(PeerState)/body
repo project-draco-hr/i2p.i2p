@@ -5,28 +5,21 @@
   _slowStartThreshold=oldPeer._slowStartThreshold;
   _sendWindowBytes=oldPeer._sendWindowBytes;
   oldPeer._dead=true;
-  List tmp=new ArrayList();
-synchronized (oldPeer._currentACKs) {
-    tmp.addAll(oldPeer._currentACKs);
-    oldPeer._currentACKs.clear();
+  List<Long> tmp=new ArrayList();
+  for (  Long l : oldPeer._currentACKs) {
+    tmp.add(l);
   }
+  oldPeer._currentACKs.clear();
   if (!_dead) {
-synchronized (_currentACKs) {
-      _currentACKs.addAll(tmp);
-    }
+    _currentACKs.addAll(tmp);
   }
   tmp.clear();
-synchronized (oldPeer._currentACKsResend) {
-    tmp.addAll(oldPeer._currentACKsResend);
-    oldPeer._currentACKsResend.clear();
-  }
+  tmp.addAll(oldPeer._currentACKsResend);
+  oldPeer._currentACKsResend.clear();
   if (!_dead) {
-synchronized (_currentACKsResend) {
-      _currentACKsResend.addAll(tmp);
-    }
+    _currentACKsResend.addAll(tmp);
   }
-  tmp.clear();
-  Map msgs=new HashMap();
+  Map<Long,InboundMessageState> msgs=new HashMap();
 synchronized (oldPeer._inboundMessages) {
     msgs.putAll(oldPeer._inboundMessages);
     oldPeer._inboundMessages.clear();
@@ -37,18 +30,18 @@ synchronized (_inboundMessages) {
     }
   }
   msgs.clear();
+  List<OutboundMessageState> tmp2=new ArrayList();
   OutboundMessageState retransmitter=null;
 synchronized (oldPeer._outboundMessages) {
-    tmp.addAll(oldPeer._outboundMessages);
+    tmp2.addAll(oldPeer._outboundMessages);
     oldPeer._outboundMessages.clear();
     retransmitter=oldPeer._retransmitter;
     oldPeer._retransmitter=null;
   }
   if (!_dead) {
 synchronized (_outboundMessages) {
-      _outboundMessages.addAll(tmp);
+      _outboundMessages.addAll(tmp2);
       _retransmitter=retransmitter;
     }
   }
-  tmp.clear();
 }

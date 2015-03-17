@@ -1,13 +1,17 @@
 {
-  List n;
+  List<Hash> n;
   int count;
-synchronized (_reorganizeLock) {
+  getReadLock();
+  try {
     count=_notFailingPeers.size();
     n=new ArrayList(_notFailingPeers.keySet());
   }
-  List l=new ArrayList(count / 4);
-  for (Iterator iter=n.iterator(); iter.hasNext(); ) {
-    Hash peer=(Hash)iter.next();
+  finally {
+    releaseReadLock();
+  }
+  List<Hash> l=new ArrayList(count / 4);
+  for (Iterator<Hash> iter=n.iterator(); iter.hasNext(); ) {
+    Hash peer=iter.next();
     if (_context.commSystem().wasUnreachable(peer))     l.add(peer);
  else {
       RouterInfo info=_context.netDb().lookupRouterInfoLocally(peer);
@@ -17,15 +21,14 @@ synchronized (_reorganizeLock) {
  else {
           RouterAddress ra=info.getTargetAddress("SSU");
           if (ra == null) {
-            l.add(peer);
+            if (info.getTargetAddress("NTCP") == null)             l.add(peer);
             continue;
           }
-          Properties props=ra.getOptions();
-          if (props != null && props.getProperty("ihost0") != null)           l.add(peer);
+          if (ra.getOption("ihost0") != null)           l.add(peer);
         }
       }
     }
   }
-  if (_log.shouldLog(Log.INFO))   _log.info("Unreachable: " + l);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Unreachable: " + l);
   return l;
 }

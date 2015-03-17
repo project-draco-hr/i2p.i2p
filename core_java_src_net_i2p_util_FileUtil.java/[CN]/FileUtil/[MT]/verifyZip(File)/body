@@ -1,0 +1,48 @@
+{
+  ZipFile zip=null;
+  try {
+    byte buf[]=new byte[16 * 1024];
+    zip=new ZipFile(zipfile);
+    Enumeration entries=zip.entries();
+    boolean p200TestRequired=true;
+    while (entries.hasMoreElements()) {
+      ZipEntry entry=(ZipEntry)entries.nextElement();
+      if (entry.getName().indexOf("..") != -1) {
+        return false;
+      }
+      if (entry.isDirectory()) {
+      }
+ else {
+        if (p200TestRequired && (entry.getName().endsWith(".jar.pack") || entry.getName().endsWith(".war.pack"))) {
+          if (!isPack200Supported()) {
+            System.err.println("ERROR: Zip verify failed, your JVM does not support unpack200");
+            return false;
+          }
+          p200TestRequired=false;
+        }
+        try {
+          InputStream in=zip.getInputStream(entry);
+          while ((in.read(buf)) != -1) {
+          }
+          in.close();
+        }
+ catch (        IOException ioe) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+ catch (  IOException ioe) {
+    return false;
+  }
+ finally {
+    if (zip != null) {
+      try {
+        zip.close();
+      }
+ catch (      IOException ioe) {
+      }
+    }
+  }
+}

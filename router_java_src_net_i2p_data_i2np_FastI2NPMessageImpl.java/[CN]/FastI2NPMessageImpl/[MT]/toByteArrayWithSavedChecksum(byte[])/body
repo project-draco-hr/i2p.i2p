@@ -1,0 +1,35 @@
+{
+  try {
+    int writtenLen=writeMessageBody(buffer,HEADER_LENGTH);
+    if (VERIFY_TEST) {
+      byte[] h=SimpleByteCache.acquire(32);
+      _context.sha().calculateHash(buffer,HEADER_LENGTH,writtenLen - HEADER_LENGTH,h,0);
+      if (h[0] != _checksum) {
+        _log.log(Log.CRIT,"Please report " + getClass().getSimpleName() + " size "+ writtenLen+ " saved c/s "+ Integer.toHexString(_checksum & 0xff)+ " calc "+ Integer.toHexString(h[0] & 0xff),new Exception());
+        _log.log(Log.CRIT,"DUMP:\n" + HexDump.dump(buffer,HEADER_LENGTH,writtenLen - HEADER_LENGTH));
+        _log.log(Log.CRIT,"RAW:\n" + Base64.encode(buffer,HEADER_LENGTH,writtenLen - HEADER_LENGTH));
+        _checksum=h[0];
+      }
+ else       if (_log.shouldLog(Log.INFO)) {
+        _log.info("Using saved c/s " + getClass().getSimpleName() + ' '+ _checksum);
+      }
+      SimpleByteCache.release(h);
+    }
+    int payloadLen=writtenLen - HEADER_LENGTH;
+    int off=0;
+    DataHelper.toLong(buffer,off,1,getType());
+    off+=1;
+    DataHelper.toLong(buffer,off,4,_uniqueId);
+    off+=4;
+    DataHelper.toLong(buffer,off,DataHelper.DATE_LENGTH,_expiration);
+    off+=DataHelper.DATE_LENGTH;
+    DataHelper.toLong(buffer,off,2,payloadLen);
+    off+=2;
+    buffer[off]=_checksum;
+    return writtenLen;
+  }
+ catch (  I2NPMessageException ime) {
+    _context.logManager().getLog(getClass()).log(Log.CRIT,"Error writing",ime);
+    throw new IllegalStateException("Unable to serialize the message " + getClass().getSimpleName(),ime);
+  }
+}

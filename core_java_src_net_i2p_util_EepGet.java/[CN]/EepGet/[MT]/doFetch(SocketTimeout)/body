@@ -8,31 +8,29 @@
     _headersRead=true;
   }
   if (_aborted)   throw new IOException("Timed out reading the HTTP headers");
-  timeout.resetTimer();
-  if (_fetchInactivityTimeout > 0)   timeout.setInactivityTimeout(_fetchInactivityTimeout);
- else   timeout.setInactivityTimeout(60 * 1000);
+  if (timeout != null) {
+    timeout.resetTimer();
+    if (_fetchInactivityTimeout > 0)     timeout.setInactivityTimeout(_fetchInactivityTimeout);
+ else     timeout.setInactivityTimeout(INACTIVITY_TIMEOUT);
+  }
   if (_redirectLocation != null) {
-    try {
-      URL oldURL=new URL(_actualURL);
-      String query=oldURL.getQuery();
-      if (query == null)       query="";
-      if (_redirectLocation.startsWith("http://")) {
-        if ((_redirectLocation.indexOf('?') < 0) && (query.length() > 0))         _actualURL=_redirectLocation + "?" + query;
- else         _actualURL=_redirectLocation;
-      }
- else {
-        URL url=new URL(_actualURL);
-        if (_redirectLocation.startsWith("/"))         _actualURL="http://" + url.getHost() + ":"+ url.getPort()+ _redirectLocation;
- else         _actualURL="http://" + url.getHost() + ":"+ url.getPort()+ "/"+ _redirectLocation;
-        if ((_actualURL.indexOf('?') < 0) && (query.length() > 0))         _actualURL=_actualURL + "?" + query;
-      }
+    if (_redirectLocation.startsWith("http://")) {
+      _actualURL=_redirectLocation;
     }
- catch (    MalformedURLException mue) {
-      throw new IOException("Redirected from an invalid URL");
+ else {
+      URL url=new URL(_actualURL);
+      if (_redirectLocation.startsWith("/"))       _actualURL="http://" + url.getHost() + ":"+ url.getPort()+ _redirectLocation;
+ else       _actualURL="http://" + url.getHost() + ":"+ url.getPort()+ "/"+ _redirectLocation;
     }
     _redirects++;
     if (_redirects > 5)     throw new IOException("Too many redirects: to " + _redirectLocation);
     if (_log.shouldLog(Log.INFO))     _log.info("Redirecting to " + _redirectLocation);
+    _bytesRemaining=-1;
+    _redirectLocation=null;
+    _etag=null;
+    _lastModified=null;
+    _contentType=null;
+    _encodingChunked=false;
     sendRequest(timeout);
     doFetch(timeout);
     return;
@@ -41,14 +39,23 @@
   boolean strictSize=(_bytesRemaining >= 0);
   if ((_minSize > 0) && (_bytesRemaining < _minSize))   throw new IOException("HTTP response size " + _bytesRemaining + " violates minimum of "+ _minSize+ " bytes");
   if ((_maxSize > -1) && (_bytesRemaining > _maxSize))   throw new IOException("HTTP response size " + _bytesRemaining + " violates maximum of "+ _maxSize+ " bytes");
+  Thread pusher=null;
+  _decompressException=null;
+  if (_isGzippedResponse) {
+    PipedInputStream pi=BigPipedInputStream.getInstance();
+    PipedOutputStream po=new PipedOutputStream(pi);
+    pusher=new I2PAppThread(new Gunzipper(pi,_out),"EepGet Decompressor");
+    _out=po;
+    pusher.start();
+  }
   int remaining=(int)_bytesRemaining;
-  byte buf[]=new byte[1024];
+  byte buf[]=new byte[16 * 1024];
   while (_keepFetching && ((remaining > 0) || !strictSize) && !_aborted) {
     int toRead=buf.length;
     if (strictSize && toRead > remaining)     toRead=remaining;
     int read=_proxyIn.read(buf,0,toRead);
     if (read == -1)     break;
-    timeout.resetTimer();
+    if (timeout != null)     timeout.resetTimer();
     _out.write(buf,0,read);
     _bytesTransferred+=read;
     if ((_maxSize > -1) && (_alreadyTransferred + read > _maxSize))     throw new IOException("Bytes transferred " + (_alreadyTransferred + read) + " violates maximum of "+ _maxSize+ " bytes");
@@ -75,26 +82,38 @@
         read++;
       }
     }
-    timeout.resetTimer();
+    if (timeout != null)     timeout.resetTimer();
     if (_bytesRemaining >= read)     _bytesRemaining-=read;
     if (read > 0) {
-      for (int i=0; i < _listeners.size(); i++)       ((StatusListener)_listeners.get(i)).bytesTransferred(_alreadyTransferred,read,_bytesTransferred,_encodingChunked ? -1 : _bytesRemaining,_url);
+      for (int i=0; i < _listeners.size(); i++)       _listeners.get(i).bytesTransferred(_alreadyTransferred,read,_bytesTransferred,_encodingChunked ? -1 : _bytesRemaining,_url);
       _alreadyTransferred+=read;
     }
   }
   if (_out != null)   _out.close();
   _out=null;
+  if (_isGzippedResponse) {
+    try {
+      pusher.join();
+    }
+ catch (    InterruptedException ie) {
+    }
+    pusher=null;
+    if (_decompressException != null) {
+      _keepFetching=false;
+      throw _decompressException;
+    }
+  }
   if (_aborted)   throw new IOException("Timed out reading the HTTP data");
-  timeout.cancel();
+  if (timeout != null)   timeout.cancel();
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Done transferring " + _bytesTransferred + " (ok? "+ !_transferFailed+ ")");
   if (_transferFailed) {
-    for (int i=0; i < _listeners.size(); i++)     ((StatusListener)_listeners.get(i)).attemptFailed(_url,_bytesTransferred,_bytesRemaining,_currentAttempt,_numRetries,new Exception("Attempt failed"));
+    for (int i=0; i < _listeners.size(); i++)     _listeners.get(i).attemptFailed(_url,_bytesTransferred,_bytesRemaining,_currentAttempt,_numRetries,new Exception("Attempt failed"));
   }
  else   if ((_minSize > 0) && (_alreadyTransferred < _minSize)) {
     throw new IOException("Bytes transferred " + _alreadyTransferred + " violates minimum of "+ _minSize+ " bytes");
   }
  else   if ((_bytesRemaining == -1) || (remaining == 0)) {
-    for (int i=0; i < _listeners.size(); i++)     ((StatusListener)_listeners.get(i)).transferComplete(_alreadyTransferred,_bytesTransferred,_encodingChunked ? -1 : _bytesRemaining,_url,_outputFile,_notModified);
+    for (int i=0; i < _listeners.size(); i++)     _listeners.get(i).transferComplete(_alreadyTransferred,_bytesTransferred,_encodingChunked ? -1 : _bytesRemaining,_url,_outputFile,_notModified);
   }
  else {
     throw new IOException("Disconnection on attempt " + _currentAttempt + " after "+ _bytesTransferred);

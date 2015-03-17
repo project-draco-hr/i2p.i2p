@@ -14,7 +14,7 @@
   RemoteHostId to=null;
   InetAddress remAddr=addr.getHostAddress();
   int port=addr.getPort();
-  if ((remAddr != null) && (port > 0)) {
+  if (remAddr != null && port > 0 && port <= 65535) {
     to=new RemoteHostId(remAddr.getAddress(),port);
     if (!_transport.isValid(to.getIP())) {
       _transport.failed(msg,"Remote peer's IP isn't valid");
@@ -31,37 +31,62 @@
   int deferred=0;
   boolean rejected=false;
   int queueCount=0;
-synchronized (_outboundStates) {
-    state=(OutboundEstablishState)_outboundStates.get(to);
-    if (state == null) {
-      if (_outboundStates.size() >= getMaxConcurrentEstablish()) {
-        List queued=(List)_queuedOutbound.get(to);
-        if (queued == null) {
-          queued=new ArrayList(1);
-          if (_queuedOutbound.size() > MAX_QUEUED_OUTBOUND) {
-            rejected=true;
-          }
- else {
-            _queuedOutbound.put(to,queued);
-          }
-        }
-        queueCount=queued.size();
-        if ((queueCount < MAX_QUEUED_PER_PEER) && (!rejected))         queued.add(msg);
-        deferred=_queuedOutbound.size();
+  state=_outboundStates.get(to);
+  if (state == null) {
+    if (_outboundStates.size() >= getMaxConcurrentEstablish()) {
+      if (_queuedOutbound.size() >= MAX_QUEUED_OUTBOUND) {
+        rejected=true;
       }
  else {
-        state=new OutboundEstablishState(_context,remAddr,port,msg.getTarget().getIdentity(),new SessionKey(addr.getIntroKey()),addr);
-        _outboundStates.put(to,state);
-        SimpleScheduler.getInstance().addEvent(new Expire(to,state),10 * 1000);
+        if (_log.shouldLog(Log.WARN))         _log.warn("Queueing outbound establish, increase " + PROP_MAX_CONCURRENT_ESTABLISH);
+        List<OutNetMessage> newQueued=new ArrayList(MAX_QUEUED_PER_PEER);
+        List<OutNetMessage> queued=_queuedOutbound.putIfAbsent(to,newQueued);
+        if (queued == null)         queued=newQueued;
+synchronized (queued) {
+          queueCount=queued.size();
+          if (queueCount < MAX_QUEUED_PER_PEER) {
+            queued.add(msg);
+            queueCount++;
+          }
+          deferred=_queuedOutbound.size();
+        }
       }
     }
-    if (state != null) {
-      state.addMessage(msg);
-      List queued=(List)_queuedOutbound.remove(to);
-      if (queued != null)       for (int i=0; i < queued.size(); i++)       state.addMessage((OutNetMessage)queued.get(i));
+ else {
+      byte[] keyBytes=addr.getIntroKey();
+      if (keyBytes == null) {
+        _transport.markUnreachable(msg.getTarget().getIdentity().calculateHash());
+        _transport.failed(msg,"Peer has no key, cannot establish");
+        return;
+      }
+      SessionKey sessionKey;
+      try {
+        sessionKey=new SessionKey(keyBytes);
+      }
+ catch (      IllegalArgumentException iae) {
+        _transport.markUnreachable(msg.getTarget().getIdentity().calculateHash());
+        _transport.failed(msg,"Peer has bad key, cannot establish");
+        return;
+      }
+      state=new OutboundEstablishState(_context,remAddr,port,msg.getTarget().getIdentity(),sessionKey,addr,_transport.getDHBuilder());
+      OutboundEstablishState oldState=_outboundStates.putIfAbsent(to,state);
+      boolean isNew=oldState == null;
+      if (!isNew)       state=oldState;
+    }
+  }
+  if (state != null) {
+    state.addMessage(msg);
+    List<OutNetMessage> queued=_queuedOutbound.remove(to);
+    if (queued != null) {
+synchronized (queued) {
+        for (        OutNetMessage m : queued) {
+          state.addMessage(m);
+        }
+      }
     }
   }
   if (rejected) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Rejecting outbound establish");
     _transport.failed(msg,"Too many pending outbound connections");
     _context.statManager().addRateData("udp.establishRejected",deferred,0);
     return;
@@ -71,7 +96,7 @@ synchronized (_outboundStates) {
     _context.statManager().addRateData("udp.establishOverflow",queueCount,deferred);
     return;
   }
-  if (deferred > 0)   msg.timestamp("too many deferred establishers: " + deferred);
- else   if (state != null)   msg.timestamp("establish state already waiting " + state.getLifetime());
+  if (deferred > 0)   msg.timestamp("too many deferred establishers");
+ else   if (state != null)   msg.timestamp("establish state already waiting");
   notifyActivity();
 }

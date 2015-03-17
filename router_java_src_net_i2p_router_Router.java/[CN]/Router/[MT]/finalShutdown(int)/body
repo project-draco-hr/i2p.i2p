@@ -1,21 +1,35 @@
 {
-  _log.log(Log.CRIT,"Shutdown(" + exitCode + ") complete",new Exception("Shutdown"));
+  clearCaches();
+  _log.log(Log.CRIT,"Shutdown(" + exitCode + ") complete");
   try {
     _context.logManager().shutdown();
   }
  catch (  Throwable t) {
   }
   if (ALLOW_DYNAMIC_KEYS) {
-    if ("true".equalsIgnoreCase(_context.getProperty(PROP_DYNAMIC_KEYS,"false")))     killKeys();
+    if (_context.getBooleanProperty(PROP_DYNAMIC_KEYS))     killKeys();
   }
-  File f=new File(getPingFile());
+  File f=getPingFile();
   f.delete();
+  if (RouterContext.getContexts().isEmpty())   RouterContext.killGlobalContext();
+  for (  Runnable task : _context.getFinalShutdownTasks()) {
+    try {
+      task.run();
+    }
+ catch (    Throwable t) {
+      System.err.println("Running final shutdown task " + t);
+    }
+  }
+  _context.getFinalShutdownTasks().clear();
   if (_killVMOnEnd) {
     try {
       Thread.sleep(1000);
     }
  catch (    InterruptedException ie) {
     }
-    Runtime.getRuntime().halt(exitCode);
+    Runtime.getRuntime().exit(exitCode);
+  }
+ else   if (System.getProperty("java.vendor").contains("Android")) {
+    Runtime.getRuntime().gc();
   }
 }

@@ -1,0 +1,24 @@
+{
+synchronized (this.socketServerLock) {
+    if (this.socketServer != null) {
+      _log.debug("a socket server is already defined for this destination");
+      throw new SAMException("a socket server is already defined for this destination");
+    }
+    this.socketServer=this.socketMgr.getServerSocket();
+  }
+  I2PSocket i2ps;
+  i2ps=this.socketServer.accept();
+synchronized (this.socketServerLock) {
+    this.socketServer=null;
+  }
+  SAMv3Handler.SessionRecord rec=SAMv3Handler.sSessionsHash.get(nick);
+  if (rec == null || i2ps == null)   throw new InterruptedIOException();
+  if (verbose)   handler.notifyStreamIncomingConnection(i2ps.getPeerDestination());
+  handler.stealSocket();
+  ReadableByteChannel fromClient=handler.getClientSocket();
+  ReadableByteChannel fromI2P=Channels.newChannel(i2ps.getInputStream());
+  WritableByteChannel toClient=handler.getClientSocket();
+  WritableByteChannel toI2P=Channels.newChannel(i2ps.getOutputStream());
+  (new Thread(rec.getThreadGroup(),new I2PAppThread(new Pipe(fromClient,toI2P,"SAMPipeClientToI2P"),"SAMPipeClientToI2P"),"SAMPipeClientToI2P")).start();
+  (new Thread(rec.getThreadGroup(),new I2PAppThread(new Pipe(fromI2P,toClient,"SAMPipeI2PToClient"),"SAMPipeI2PToClient"),"SAMPipeI2PToClient")).start();
+}

@@ -1,0 +1,34 @@
+{
+  for (int i=0; i < _pendingInboundRequests.size(); i++) {
+    if (_availableInbound.get() <= 0)     break;
+    SimpleRequest req=(SimpleRequest)_pendingInboundRequests.get(i);
+    long waited=now() - req.getRequestTime();
+    if (req.getAborted()) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Aborting inbound request to " + req.getRequestName() + " (total "+ req.getTotalInboundRequested()+ " bytes, waited "+ waited+ "ms) pending "+ _pendingInboundRequests.size());
+      _pendingInboundRequests.remove(i);
+      i--;
+      continue;
+    }
+    if ((req.getAllocationsSinceWait() > 0) && (req.getCompleteListener() == null)) {
+      continue;
+    }
+    int requested=req.getPendingInboundRequested();
+    int avi=_availableInbound.get();
+    int allocated;
+    if (avi >= requested)     allocated=requested;
+ else     allocated=avi;
+    _availableInbound.addAndGet(0 - allocated);
+    _totalAllocatedInboundBytes.addAndGet(allocated);
+    req.allocateBytes(allocated,0);
+    satisfied.add(req);
+    if (req.getPendingInboundRequested() > 0) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Allocating " + allocated + " bytes inbound as a partial grant to "+ req.getRequestName()+ " (wanted "+ req.getTotalInboundRequested()+ " bytes, waited "+ waited+ "ms) pending "+ _pendingInboundRequests.size()+ ", longest waited "+ locked_getLongestInboundWait()+ " in");
+    }
+ else {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Allocating " + allocated + " bytes inbound to finish the partial grant to "+ req.getRequestName()+ " (total "+ req.getTotalInboundRequested()+ " bytes, waited "+ waited+ "ms) pending "+ _pendingInboundRequests.size()+ ", longest waited "+ locked_getLongestInboundWait()+ " out");
+      _pendingInboundRequests.remove(i);
+      i--;
+      if (waited > 10)       _context.statManager().addRateData("bwLimiter.inboundDelayedTime",waited,waited);
+    }
+  }
+}

@@ -1,26 +1,15 @@
 {
-  if (packet == null)   return 0;
+  if (packet == null || !_keepRunning)   return 0;
   int size=0;
-  long lifetime=-1;
-  int removed=0;
-synchronized (_outboundQueue) {
-    lifetime=packet.getLifetime();
-    UDPPacket head=null;
-    if (_outboundQueue.size() > 0) {
-      head=(UDPPacket)_outboundQueue.get(0);
-      while (head.getLifetime() > MAX_HEAD_LIFETIME) {
-        _outboundQueue.remove(0);
-        removed++;
-        if (_outboundQueue.size() > 0)         head=(UDPPacket)_outboundQueue.get(0);
- else         break;
-      }
-    }
-    _outboundQueue.add(packet);
-    size=_outboundQueue.size();
-    _outboundQueue.notifyAll();
+  int psz=packet.getPacket().getLength();
+  if (psz > PeerState.LARGE_MTU) {
+    _log.error("Dropping large UDP packet " + psz + " bytes: "+ packet);
+    return 0;
   }
-  _context.statManager().addRateData("udp.sendQueueSize",size,lifetime);
-  if (removed > 0)   _context.statManager().addRateData("udp.sendQueueTrimmed",removed,size);
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Added the packet onto the queue with " + size + " remaining and a lifetime of "+ lifetime);
+  _outboundQueue.offer(packet);
+  if (_log.shouldLog(Log.DEBUG)) {
+    size=_outboundQueue.size();
+    _log.debug("Added the packet onto the queue with " + size + " remaining and a lifetime of "+ packet.getLifetime());
+  }
   return size;
 }

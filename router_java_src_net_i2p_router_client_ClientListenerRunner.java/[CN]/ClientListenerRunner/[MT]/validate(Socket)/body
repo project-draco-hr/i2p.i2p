@@ -1,13 +1,17 @@
 {
   try {
-    socket.setSoTimeout(CONNECT_TIMEOUT);
-    int read=socket.getInputStream().read();
-    if (read != I2PClient.PROTOCOL_BYTE)     return false;
-    socket.setSoTimeout(0);
-    return true;
+    InputStream is=socket.getInputStream();
+    for (int i=0; i < CONNECT_TIMEOUT / LOOP_DELAY; i++) {
+      if (is.available() > 0)       return is.read() == I2PClient.PROTOCOL_BYTE;
+      try {
+        Thread.sleep(LOOP_DELAY);
+      }
+ catch (      InterruptedException ie) {
+      }
+    }
   }
  catch (  IOException ioe) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("Peer did not authenticate themselves as I2CP quickly enough, dropping");
-    return false;
   }
+  if (_log.shouldLog(Log.WARN))   _log.warn("Peer did not authenticate themselves as I2CP quickly enough, dropping");
+  return false;
 }

@@ -1,77 +1,287 @@
 {
-  File workDir=new File("work");
+  File workDir=new SecureDirectory(I2PAppContext.getGlobalContext().getTempDir(),"jetty-work");
   boolean workDirRemoved=FileUtil.rmdir(workDir,false);
   if (!workDirRemoved)   System.err.println("ERROR: Unable to remove Jetty temporary work directory");
   boolean workDirCreated=workDir.mkdirs();
   if (!workDirCreated)   System.err.println("ERROR: Unable to create Jetty temporary work directory");
+  System.setProperty("org.mortbay.log.class","net.i2p.jetty.I2PLogger");
+  System.setProperty("jetty.class.path",I2PAppContext.getGlobalContext().getBaseDir() + "/lib/routerconsole.jar");
   _server=new Server();
+  _server.setGracefulShutdown(1000);
+  try {
+    ThreadPool ctp=new CustomThreadPoolExecutor();
+    ctp.prestartAllCoreThreads();
+    _server.setThreadPool(ctp);
+  }
+ catch (  Throwable t) {
+    System.out.println("INFO: Jetty concurrent ThreadPool unavailable, using QueuedThreadPool");
+    QueuedThreadPool qtp=new QueuedThreadPool(MAX_THREADS);
+    qtp.setMinThreads(MIN_THREADS);
+    qtp.setMaxIdleTimeMs(MAX_IDLE_TIME);
+    _server.setThreadPool(qtp);
+  }
+  HandlerCollection hColl=new HandlerCollection();
+  ContextHandlerCollection chColl=new ContextHandlerCollection();
+  _server.addHandler(hColl);
+  hColl.addHandler(chColl);
+  hColl.addHandler(new DefaultHandler());
+  String log=I2PAppContext.getGlobalContext().getProperty("routerconsole.log");
+  if (log != null) {
+    File logFile=new File(log);
+    if (!logFile.isAbsolute())     logFile=new File(I2PAppContext.getGlobalContext().getLogDir(),"logs/" + log);
+    try {
+      RequestLogHandler rhl=new RequestLogHandler();
+      rhl.setRequestLog(new NCSARequestLog(logFile.getAbsolutePath()));
+      hColl.addHandler(rhl);
+    }
+ catch (    Exception ioe) {
+      System.err.println("ERROR: Unable to create Jetty log: " + ioe);
+    }
+  }
   boolean rewrite=false;
   Properties props=webAppProperties();
-  if (props.size() <= 0) {
+  if (props.isEmpty()) {
     props.setProperty(PREFIX + ROUTERCONSOLE + ENABLED,"true");
     rewrite=true;
   }
+  File app=new File(_webAppsDir);
+  if (!app.isAbsolute()) {
+    app=new File(I2PAppContext.getGlobalContext().getBaseDir(),_webAppsDir);
+    try {
+      _webAppsDir=app.getCanonicalPath();
+    }
+ catch (    IOException ioe) {
+    }
+  }
+  if (!_webAppsDir.endsWith("/"))   _webAppsDir+='/';
+  WebAppContext rootWebApp=null;
+  ServletHandler rootServletHandler=null;
+  List<Connector> connectors=new ArrayList(4);
   try {
-    _server.addListener(_listenHost + ':' + _listenPort);
-    _server.setRootWebApp(ROUTERCONSOLE);
-    WebApplicationContext wac=_server.addWebApplication("/",_webAppsDir + ROUTERCONSOLE + ".war");
-    initialize(wac);
+    int boundAddresses=0;
+    Set addresses=Addresses.getAllAddresses();
+    boolean hasIPV4=addresses.contains("0.0.0.0");
+    boolean hasIPV6=addresses.contains("0:0:0:0:0:0:0:0");
+    int lport=0;
+    if (_listenPort != null) {
+      try {
+        lport=Integer.parseInt(_listenPort);
+      }
+ catch (      NumberFormatException nfe) {
+      }
+      if (lport <= 0)       System.err.println("Bad routerconsole port " + _listenPort);
+    }
+    if (lport > 0) {
+      StringTokenizer tok=new StringTokenizer(_listenHost," ,");
+      while (tok.hasMoreTokens()) {
+        String host=tok.nextToken().trim();
+        try {
+          InetAddress test=InetAddress.getByName(host);
+          if ((!hasIPV6) && (!(test instanceof Inet4Address)))           throw new IOException("IPv6 addresses unsupported");
+          if ((!hasIPV4) && (test instanceof Inet4Address))           throw new IOException("IPv4 addresses unsupported");
+          ServerSocket testSock=null;
+          try {
+            testSock=new ServerSocket();
+            InetSocketAddress isa=new InetSocketAddress(host,0);
+            testSock.bind(isa);
+          }
+  finally {
+            if (testSock != null)             try {
+              testSock.close();
+            }
+ catch (            IOException ioe) {
+            }
+          }
+          SelectChannelConnector lsnr=new SelectChannelConnector();
+          lsnr.setHost(host);
+          lsnr.setPort(lport);
+          lsnr.setMaxIdleTime(90 * 1000);
+          lsnr.setName("ConsoleSocket");
+          lsnr.setUseDirectBuffers(false);
+          connectors.add(lsnr);
+          boundAddresses++;
+        }
+ catch (        Exception ioe) {
+          System.err.println("Unable to bind routerconsole to " + host + " port "+ _listenPort+ ": "+ ioe);
+          System.err.println("You may ignore this warning if the console is still available at http://localhost:" + _listenPort);
+        }
+      }
+      I2PAppContext.getGlobalContext().portMapper().register(PortMapper.SVC_CONSOLE,lport);
+    }
+    int sslPort=0;
+    if (_sslListenPort != null) {
+      try {
+        sslPort=Integer.parseInt(_sslListenPort);
+      }
+ catch (      NumberFormatException nfe) {
+      }
+      if (sslPort <= 0)       System.err.println("Bad routerconsole SSL port " + _sslListenPort);
+    }
+    if (sslPort > 0) {
+      I2PAppContext ctx=I2PAppContext.getGlobalContext();
+      File keyStore=new File(ctx.getConfigDir(),"keystore/console.ks");
+      if (verifyKeyStore(keyStore)) {
+        StringTokenizer tok=new StringTokenizer(_sslListenHost," ,");
+        while (tok.hasMoreTokens()) {
+          String host=tok.nextToken().trim();
+          try {
+            InetAddress test=InetAddress.getByName(host);
+            if ((!hasIPV6) && (!(test instanceof Inet4Address)))             throw new IOException("IPv6 addresses unsupported");
+            if ((!hasIPV4) && (test instanceof Inet4Address))             throw new IOException("IPv4 addresses unsupported");
+            ServerSocket testSock=null;
+            try {
+              testSock=new ServerSocket();
+              InetSocketAddress isa=new InetSocketAddress(host,0);
+              testSock.bind(isa);
+            }
+  finally {
+              if (testSock != null)               try {
+                testSock.close();
+              }
+ catch (              IOException ioe) {
+              }
+            }
+            SslSelectChannelConnector ssll=new SslSelectChannelConnector();
+            ssll.setHost(host);
+            ssll.setPort(sslPort);
+            ssll.setKeystore(keyStore.getAbsolutePath());
+            ssll.setPassword(ctx.getProperty(PROP_KEYSTORE_PASSWORD,DEFAULT_KEYSTORE_PASSWORD));
+            ssll.setKeyPassword(ctx.getProperty(PROP_KEY_PASSWORD,"thisWontWork"));
+            ssll.setMaxIdleTime(90 * 1000);
+            ssll.setName("ConsoleSocket");
+            ssll.setUseDirectBuffers(false);
+            connectors.add(ssll);
+            boundAddresses++;
+          }
+ catch (          Exception e) {
+            System.err.println("Unable to bind routerconsole to " + host + " port "+ sslPort+ " for SSL: "+ e);
+            System.err.println("You may ignore this warning if the console is still available at https://localhost:" + sslPort);
+          }
+        }
+        I2PAppContext.getGlobalContext().portMapper().register(PortMapper.SVC_HTTPS_CONSOLE,sslPort);
+      }
+ else {
+        System.err.println("Unable to create or access keystore for SSL: " + keyStore.getAbsolutePath());
+      }
+    }
+    if (boundAddresses <= 0) {
+      System.err.println("Unable to bind routerconsole to any address on port " + _listenPort + (sslPort > 0 ? (" or SSL port " + sslPort) : ""));
+      return;
+    }
+    rootWebApp=new LocaleWebAppHandler(I2PAppContext.getGlobalContext(),"/",_webAppsDir + ROUTERCONSOLE + ".war");
+    File tmpdir=new SecureDirectory(workDir,ROUTERCONSOLE + "-" + (_listenPort != null ? _listenPort : _sslListenPort));
+    tmpdir.mkdir();
+    rootWebApp.setTempDirectory(tmpdir);
+    rootWebApp.setExtractWAR(false);
+    rootWebApp.setSessionHandler(new SessionHandler());
+    rootServletHandler=new ServletHandler();
+    rootWebApp.setServletHandler(rootServletHandler);
+    initialize(rootWebApp);
+    chColl.addHandler(rootWebApp);
+  }
+ catch (  Exception ioe) {
+    ioe.printStackTrace();
+  }
+  try {
+    _server.start();
+  }
+ catch (  Throwable me) {
+    System.err.println("Error starting the Router Console server: " + me);
+    me.printStackTrace();
+  }
+  if (_server.isRunning()) {
+    boolean error=false;
+    for (    Connector conn : connectors) {
+      try {
+        _server.addConnector(conn);
+        conn.start();
+      }
+ catch (      Throwable me) {
+        try {
+          _server.removeConnector(conn);
+        }
+ catch (        Throwable t) {
+          t.printStackTrace();
+        }
+        System.err.println("WARNING: Error starting " + conn + ": "+ me);
+        me.printStackTrace();
+        error=true;
+      }
+    }
+    if (error) {
+      System.err.println("WARNING: Error starting one or more listeners of the Router Console server.\n" + "If your console is still accessible at http://127.0.0.1:7657/,\n" + "this may be a problem only with binding to the IPV6 address ::1.\n"+ "If so, you may ignore this error, or remove the\n"+ "\"::1,\" in the \"clientApp.0.args\" line of the clients.config file.");
+    }
+  }
+  List<String> notStarted=new ArrayList();
+  if (_server.isRunning()) {
     File dir=new File(_webAppsDir);
     String fileNames[]=dir.list(WarFilenameFilter.instance());
     if (fileNames != null) {
       for (int i=0; i < fileNames.length; i++) {
-        try {
-          String appName=fileNames[i].substring(0,fileNames[i].lastIndexOf(".war"));
-          String enabled=props.getProperty(PREFIX + appName + ENABLED);
-          if (!"false".equals(enabled)) {
+        String appName=fileNames[i].substring(0,fileNames[i].lastIndexOf(".war"));
+        String enabled=props.getProperty(PREFIX + appName + ENABLED);
+        if (!"false".equals(enabled)) {
+          try {
             String path=new File(dir,fileNames[i]).getCanonicalPath();
-            wac=_server.addWebApplication("/" + appName,path);
-            initialize(wac);
+            WebAppStarter.startWebApp(I2PAppContext.getGlobalContext(),chColl,appName,path);
             if (enabled == null) {
               props.setProperty(PREFIX + appName + ENABLED,"true");
               rewrite=true;
             }
           }
+ catch (          Throwable t) {
+            System.err.println("ERROR: Failed to start " + appName + ' '+ t);
+            t.printStackTrace();
+            notStarted.add(appName);
+          }
         }
- catch (        IOException ioe) {
-          System.err.println("Error resolving '" + fileNames[i] + "' in '"+ dir);
+ else {
+          notStarted.add(appName);
         }
       }
     }
   }
- catch (  IOException ioe) {
-    ioe.printStackTrace();
+ else {
+    System.err.println("ERROR: Router console did not start, not starting webapps");
   }
   if (rewrite)   storeWebAppProperties(props);
-  try {
-    _server.start();
-  }
- catch (  Exception me) {
-    me.printStackTrace();
-  }
-  try {
-    SysTray tray=SysTray.getInstance();
-  }
- catch (  Throwable t) {
-    t.printStackTrace();
-  }
-  File noReseedFile=new File(new File(System.getProperty("user.home")),".i2pnoreseed");
-  File noReseedFileAlt1=new File(new File(System.getProperty("user.home")),"noreseed.i2p");
-  File noReseedFileAlt2=new File(".i2pnoreseed");
-  File noReseedFileAlt3=new File("noreseed.i2p");
-  if (!noReseedFile.exists() && !noReseedFileAlt1.exists() && !noReseedFileAlt2.exists()&& !noReseedFileAlt3.exists()) {
-    File netDb=new File("netDb");
-    String names[]=(netDb.exists() ? netDb.list() : null);
-    if ((names == null) || (names.length < 15)) {
-      ReseedHandler reseedHandler=new ReseedHandler();
-      reseedHandler.requestReseed();
+  if (rootServletHandler != null && notStarted.size() > 0) {
+    ServletHolder noWebApp=rootServletHandler.getServlet("net.i2p.router.web.jsp.nowebapp_jsp");
+    for (int i=0; i < notStarted.size(); i++) {
+      try {
+        if (noWebApp != null) {
+          String path='/' + notStarted.get(i);
+          rootServletHandler.addServletWithMapping(noWebApp,path + ".jsp");
+          rootServletHandler.addServletWithMapping(noWebApp,path + "/*");
+        }
+ else {
+          System.err.println("Can't find nowebapp.jsp?");
+        }
+      }
+ catch (      Throwable me) {
+        System.err.println(me);
+        me.printStackTrace();
+      }
     }
   }
-  NewsFetcher fetcher=NewsFetcher.getInstance(I2PAppContext.getGlobalContext());
-  I2PThread t=new I2PThread(fetcher,"NewsFetcher");
-  t.setDaemon(true);
+  Thread t=new I2PAppThread(new StatSummarizer(),"StatSummarizer",true);
+  t.setPriority(Thread.NORM_PRIORITY - 1);
   t.start();
-  I2PThread st=new I2PThread(new StatSummarizer(),"StatSummarizer");
-  st.setDaemon(true);
-  st.start();
+  List<RouterContext> contexts=RouterContext.listContexts();
+  if (contexts != null) {
+    RouterContext ctx=contexts.get(0);
+    NewsFetcher fetcher=NewsFetcher.getInstance(ctx);
+    Thread newsThread=new I2PAppThread(fetcher,"NewsFetcher",true);
+    newsThread.setPriority(Thread.NORM_PRIORITY - 1);
+    newsThread.start();
+    if (PluginStarter.pluginsEnabled(ctx)) {
+      t=new I2PAppThread(new PluginStarter(ctx),"PluginStarter",true);
+      t.setPriority(Thread.NORM_PRIORITY - 1);
+      t.start();
+      ctx.addShutdownTask(new PluginStopper(ctx));
+    }
+    ctx.addShutdownTask(new NewsShutdown(fetcher,newsThread));
+    ctx.addShutdownTask(new ServerShutdown());
+    ConfigServiceHandler.registerSignalHandler(ctx);
+  }
 }

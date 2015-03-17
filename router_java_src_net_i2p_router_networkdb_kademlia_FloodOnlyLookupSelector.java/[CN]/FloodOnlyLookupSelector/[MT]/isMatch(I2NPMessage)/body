@@ -11,10 +11,17 @@
  else   if (message instanceof DatabaseSearchReplyMessage) {
     DatabaseSearchReplyMessage dsrm=(DatabaseSearchReplyMessage)message;
     if (_search.getKey().equals(dsrm.getSearchKey())) {
-      _search.decrementRemaining(dsrm.getFromHash());
       _context.profileManager().dbLookupReply(dsrm.getFromHash(),0,dsrm.getNumReplies(),0,0,System.currentTimeMillis() - _search.getCreated());
-      if (_search.getLookupsRemaining() <= 0)       return true;
- else       return false;
+      if (_search.shouldProcessDSRM()) {
+        if (_log.shouldLog(Log.INFO))         _log.info(_search.getJobId() + ": Processing DSRM via SingleLookupJob, apparently from " + dsrm.getFromHash());
+        _context.jobQueue().addJob(new SingleLookupJob(_context,dsrm));
+      }
+ else       if (_log.shouldLog(Log.INFO)) {
+        int remaining=_search.getLookupsRemaining();
+        _log.info(_search.getJobId() + ": got a DSRM apparently from " + dsrm.getFromHash()+ " when we were looking for "+ _search.getKey()+ ", with "+ remaining+ " outstanding searches");
+      }
+      int remaining=_search.decrementRemaining(dsrm.getFromHash());
+      return remaining <= 0;
     }
   }
   return false;

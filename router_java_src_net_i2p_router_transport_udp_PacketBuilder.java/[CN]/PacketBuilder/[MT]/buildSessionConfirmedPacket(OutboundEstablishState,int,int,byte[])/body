@@ -1,5 +1,7 @@
 {
-  UDPPacket packet=UDPPacket.acquire(_context,false);
+  UDPPacket packet=buildPacketHeader(SESSION_CONFIRMED_FLAG_BYTE);
+  byte data[]=packet.getPacket().getData();
+  int off=HEADER_SIZE;
   InetAddress to=null;
   try {
     to=InetAddress.getByAddress(state.getSentIP());
@@ -9,14 +11,6 @@
     packet.release();
     return null;
   }
-  byte data[]=packet.getPacket().getData();
-  Arrays.fill(data,0,data.length,(byte)0x0);
-  int off=UDPPacket.MAC_SIZE + UDPPacket.IV_SIZE;
-  data[off]=SESSION_CONFIRMED_FLAG_BYTE;
-  off++;
-  long now=_context.clock().now() / 1000;
-  DataHelper.toLong(data,off,4,now);
-  off+=4;
   data[off]|=fragmentNum << 4;
   data[off]|=(numFragments & 0xF);
   off++;
@@ -39,15 +33,14 @@
       off++;
     }
     System.arraycopy(state.getSentSignature().getData(),0,data,off,Signature.SIGNATURE_BYTES);
-    packet.getPacket().setLength(off + Signature.SIGNATURE_BYTES);
-    authenticate(packet,state.getCipherKey(),state.getMACKey());
+    off+=Signature.SIGNATURE_BYTES;
   }
  else {
     if ((off % 16) != 0)     off+=16 - (off % 16);
-    packet.getPacket().setLength(off);
-    authenticate(packet,state.getCipherKey(),state.getMACKey());
   }
+  packet.getPacket().setLength(off);
+  authenticate(packet,state.getCipherKey(),state.getMACKey());
   setTo(packet,to,state.getSentPort());
-  packet.setMessageType(51);
+  packet.setMessageType(TYPE_CONF);
   return packet;
 }

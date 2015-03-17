@@ -1,0 +1,21 @@
+{
+  runn=new SimpleStore(true);
+  _log=context.logManager().getLog(SimpleTimer.class);
+  _events=new TreeMap();
+  _eventTimes=new HashMap(256);
+  _readyEvents=new ArrayList(4);
+  I2PThread runner=new I2PThread(new SimpleTimerRunner());
+  runner.setName(name);
+  runner.setDaemon(true);
+  runner.start();
+  long maxMemory=Runtime.getRuntime().maxMemory();
+  if (maxMemory == Long.MAX_VALUE)   maxMemory=128 * 1024 * 1024l;
+  int threads=(int)Math.max(MIN_THREADS,Math.min(MAX_THREADS,1 + (maxMemory / (32 * 1024 * 1024))));
+  for (int i=1; i <= threads; i++) {
+    I2PThread executor=new I2PThread(new Executor(context,_log,_readyEvents,runn));
+    executor.setName(name + "Executor " + i+ '/'+ threads);
+    executor.setDaemon(true);
+    executor.start();
+  }
+  context.addShutdownTask(new Shutdown());
+}

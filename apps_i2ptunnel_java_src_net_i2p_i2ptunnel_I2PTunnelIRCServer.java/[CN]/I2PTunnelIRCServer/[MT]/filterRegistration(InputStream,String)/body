@@ -1,0 +1,30 @@
+{
+  StringBuilder buf=new StringBuilder(128);
+  int lineCount=0;
+  while (true) {
+    String s=DataHelper.readLine(in);
+    if (s == null)     throw new IOException("EOF reached before the end of the headers [" + buf.toString() + "]");
+    if (++lineCount > 10)     throw new IOException("Too many lines before USER or SERVER, giving up");
+    s=s.trim();
+    String field[]=s.split(" ",5);
+    String command;
+    int idx=0;
+    try {
+      if (field[0].charAt(0) == ':')       idx++;
+      command=field[idx++].toUpperCase(Locale.US);
+    }
+ catch (    IndexOutOfBoundsException ioobe) {
+      throw new IOException("Dropping defective message: [" + s + ']');
+    }
+    if ("USER".equals(command)) {
+      if (field.length < idx + 4)       throw new IOException("Too few parameters in USER message: " + s);
+      buf.append("USER ").append(field[idx]).append(' ').append(newHostname);
+      buf.append(' ');
+      buf.append(field[idx + 2]).append(' ').append(field[idx + 3]).append("\r\n");
+      break;
+    }
+    buf.append(s).append("\r\n");
+    if ("SERVER".equals(command))     break;
+  }
+  return buf.toString();
+}

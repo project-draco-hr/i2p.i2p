@@ -1,0 +1,36 @@
+{
+  Hash from=_dsrm.getFromHash();
+  int limit=Math.min(_dsrm.getNumReplies(),SingleLookupJob.MAX_TO_FOLLOW);
+  int newPeers=0;
+  int oldPeers=0;
+  int invalidPeers=0;
+  for (int i=0; i < limit; i++) {
+    Hash peer=_dsrm.getReply(i);
+    if (peer.equals(getContext().routerHash())) {
+      oldPeers++;
+      continue;
+    }
+    if (peer.equals(from)) {
+      invalidPeers++;
+      continue;
+    }
+    RouterInfo ri=getContext().netDb().lookupRouterInfoLocally(peer);
+    if (ri == null) {
+      getContext().jobQueue().addJob(new IterativeFollowupJob(getContext(),peer,from,_search));
+      newPeers++;
+    }
+ else     if (ri.getPublished() < getContext().clock().now() - 60 * 60 * 1000 || !FloodfillNetworkDatabaseFacade.isFloodfill(ri)) {
+      getContext().jobQueue().addJob(new IterativeFollowupJob(getContext(),peer,peer,_search));
+      oldPeers++;
+    }
+ else {
+      _search.newPeerToTry(peer);
+      oldPeers++;
+    }
+  }
+  long timeSent=_search.timeSent(from);
+  if (timeSent > 0) {
+    getContext().profileManager().dbLookupReply(from,newPeers,oldPeers,invalidPeers,0,getContext().clock().now() - timeSent);
+  }
+  _search.failed(_dsrm.getFromHash(),false);
+}

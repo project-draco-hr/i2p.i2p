@@ -1,52 +1,85 @@
 {
+  if (_log.shouldLog(Log.INFO))   _log.info("Incoming connection to '" + toString() + "' port "+ socket.getLocalPort()+ " from: "+ socket.getPeerDestination().calculateHash()+ " port "+ socket.getPort());
   long afterAccept=getTunnel().getContext().clock().now();
   long afterSocket=-1;
   try {
-    socket.setReadTimeout(5 * 1000);
+    socket.setReadTimeout(HEADER_TIMEOUT);
     InputStream in=socket.getInputStream();
-    StringBuffer command=new StringBuffer(128);
-    Properties headers=readHeaders(in,command);
-    headers.setProperty(HASH_HEADER,socket.getPeerDestination().calculateHash().toBase64());
-    if ((_spoofHost != null) && (_spoofHost.trim().length() > 0))     headers.setProperty("Host",_spoofHost);
-    headers.setProperty("Connection","close");
-    String enc=headers.getProperty("Accept-encoding");
-    String altEnc=headers.getProperty("X-Accept-encoding");
-    headers.setProperty("Accept-encoding","");
-    String modifiedHeader=formatHeaders(headers,command);
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Modified header: [" + modifiedHeader + "]");
+    StringBuilder command=new StringBuilder(128);
+    Map<String,List<String>> headers=readHeaders(in,command,CLIENT_SKIPHEADERS,getTunnel().getContext());
+    addEntry(headers,HASH_HEADER,socket.getPeerDestination().calculateHash().toBase64());
+    addEntry(headers,DEST32_HEADER,Base32.encode(socket.getPeerDestination().calculateHash().getData()) + ".b32.i2p");
+    addEntry(headers,DEST64_HEADER,socket.getPeerDestination().toBase64());
+    Properties opts=getTunnel().getClientOptions();
+    String spoofHost;
+    int ourPort=socket.getLocalPort();
+    if (ourPort != 80 && ourPort > 0 && ourPort <= 65535 && opts != null) {
+      String portSpoof=opts.getProperty("spoofedHost." + ourPort);
+      if (portSpoof != null)       spoofHost=portSpoof.trim();
+ else       spoofHost=_spoofHost;
+    }
+ else {
+      spoofHost=_spoofHost;
+    }
+    if (spoofHost != null)     setEntry(headers,"Host",spoofHost);
+    setEntry(headers,"Connection","close");
+    String enc=getEntryOrNull(headers,"Accept-encoding");
+    String altEnc=getEntryOrNull(headers,"X-Accept-encoding");
+    setEntry(headers,"Accept-encoding","");
     socket.setReadTimeout(readTimeout);
     Socket s=new Socket(remoteHost,remotePort);
     afterSocket=getTunnel().getContext().clock().now();
-    Properties opts=getTunnel().getClientOptions();
     boolean allowGZIP=true;
     if (opts != null) {
       String val=opts.getProperty("i2ptunnel.gzip");
       if ((val != null) && (!Boolean.valueOf(val).booleanValue()))       allowGZIP=false;
     }
     if (_log.shouldLog(Log.INFO))     _log.info("HTTP server encoding header: " + enc + "/"+ altEnc);
-    boolean useGZIP=((enc != null) && (enc.indexOf("x-i2p-gzip") >= 0));
-    if ((!useGZIP) && (altEnc != null) && (altEnc.indexOf("x-i2p-gzip") >= 0))     useGZIP=true;
+    boolean alt=(altEnc != null) && (altEnc.indexOf("x-i2p-gzip") >= 0);
+    boolean useGZIP=alt || ((enc != null) && (enc.indexOf("x-i2p-gzip") >= 0));
+    if (alt)     headers.remove("X-Accept-encoding");
+    String modifiedHeader=formatHeaders(headers,command);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Modified header: [" + modifiedHeader + "]");
     if (allowGZIP && useGZIP) {
-      I2PThread req=new I2PThread(new CompressedRequestor(s,socket,modifiedHeader),Thread.currentThread().getName() + ".hc");
+      I2PAppThread req=new I2PAppThread(new CompressedRequestor(s,socket,modifiedHeader,getTunnel().getContext(),_log),Thread.currentThread().getName() + ".hc");
       req.start();
     }
  else {
       new I2PTunnelRunner(s,socket,slock,null,modifiedHeader.getBytes(),null);
     }
+    long afterHandle=getTunnel().getContext().clock().now();
+    long timeToHandle=afterHandle - afterAccept;
+    getTunnel().getContext().statManager().addRateData("i2ptunnel.httpserver.blockingHandleTime",timeToHandle,0);
+    if ((timeToHandle > 1000) && (_log.shouldLog(Log.WARN)))     _log.warn("Took a while to handle the request for " + remoteHost + ':'+ remotePort+ " ["+ timeToHandle+ ", socket create: "+ (afterSocket - afterAccept)+ "]");
   }
  catch (  SocketException ex) {
+    try {
+      socket.getOutputStream().write(ERR_UNAVAILABLE);
+    }
+ catch (    IOException ioe) {
+    }
     try {
       socket.close();
     }
  catch (    IOException ioe) {
-      if (_log.shouldLog(Log.ERROR))       _log.error("Error while closing the received i2p con",ex);
     }
+    int level=getTunnel().getContext().clock().now() - _startedOn > START_INTERVAL ? Log.ERROR : Log.WARN;
+    if (_log.shouldLog(level))     _log.log(level,"Error connecting to HTTP server " + remoteHost + ':'+ remotePort,ex);
   }
 catch (  IOException ex) {
+    try {
+      socket.close();
+    }
+ catch (    IOException ioe) {
+    }
     if (_log.shouldLog(Log.WARN))     _log.warn("Error while receiving the new HTTP request",ex);
   }
-  long afterHandle=getTunnel().getContext().clock().now();
-  long timeToHandle=afterHandle - afterAccept;
-  getTunnel().getContext().statManager().addRateData("i2ptunnel.httpserver.blockingHandleTime",timeToHandle,0);
-  if ((timeToHandle > 1000) && (_log.shouldLog(Log.WARN)))   _log.warn("Took a while to handle the request [" + timeToHandle + ", socket create: "+ (afterSocket - afterAccept)+ "]");
+catch (  OutOfMemoryError oom) {
+    try {
+      socket.close();
+    }
+ catch (    IOException ioe) {
+    }
+    if (_log.shouldLog(Log.ERROR))     _log.error("OOM in HTTP server",oom);
+  }
 }

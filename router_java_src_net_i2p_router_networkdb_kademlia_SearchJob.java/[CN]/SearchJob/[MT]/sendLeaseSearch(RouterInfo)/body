@@ -1,25 +1,26 @@
 {
-  TunnelInfo inTunnel=getInboundTunnelId();
+  Hash to=router.getIdentity().getHash();
+  TunnelInfo inTunnel=getContext().tunnelManager().selectInboundExploratoryTunnel(to);
   if (inTunnel == null) {
     _log.warn("No tunnels to get search replies through!  wtf!");
     getContext().jobQueue().addJob(new FailedJob(getContext(),router));
     return;
   }
   TunnelId inTunnelId=inTunnel.getReceiveTunnelId(0);
-  int timeout=getPerPeerTimeoutMs(router.getIdentity().getHash());
+  int timeout=getPerPeerTimeoutMs(to);
   long expiration=getContext().clock().now() + timeout;
   DatabaseLookupMessage msg=buildMessage(inTunnelId,inTunnel.getPeer(0),expiration);
-  TunnelInfo outTunnel=getOutboundTunnelId();
+  TunnelInfo outTunnel=getContext().tunnelManager().selectOutboundExploratoryTunnel(to);
   if (outTunnel == null) {
     _log.warn("No tunnels to send search out through!  wtf!");
     getContext().jobQueue().addJob(new FailedJob(getContext(),router));
     return;
   }
   TunnelId outTunnelId=outTunnel.getSendTunnelId(0);
-  if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": Sending search to " + router.getIdentity().getHash().toBase64()+ " for "+ msg.getSearchKey().toBase64()+ " w/ replies through ["+ msg.getFrom().toBase64()+ "] via tunnel ["+ msg.getReplyTunnel()+ "]");
+  if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": Sending search to " + to+ " for "+ msg.getSearchKey().toBase64()+ " w/ replies through ["+ msg.getFrom().toBase64()+ "] via tunnel ["+ msg.getReplyTunnel()+ "]");
   SearchMessageSelector sel=new SearchMessageSelector(getContext(),router,_expiration,_state);
   SearchUpdateReplyFoundJob reply=new SearchUpdateReplyFoundJob(getContext(),router,_state,_facade,this,outTunnel,inTunnel);
   if (FloodfillNetworkDatabaseFacade.isFloodfill(router))   _floodfillSearchesOutstanding++;
   getContext().messageRegistry().registerPending(sel,reply,new FailedJob(getContext(),router),timeout);
-  getContext().tunnelDispatcher().dispatchOutbound(msg,outTunnelId,router.getIdentity().getHash());
+  getContext().tunnelDispatcher().dispatchOutbound(msg,outTunnelId,to);
 }

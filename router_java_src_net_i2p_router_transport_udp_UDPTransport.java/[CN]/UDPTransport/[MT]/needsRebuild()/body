@@ -5,15 +5,13 @@
     RouterAddress addr=_externalAddress;
     UDPAddress ua=new UDPAddress(addr);
     int valid=0;
-    Hash peerHash=new Hash();
     for (int i=0; i < ua.getIntroducerCount(); i++) {
-      peerHash.setData(ua.getIntroducerKey(i));
-      PeerState peer=getPeerState(peerHash);
+      PeerState peer=getPeerState(Hash.create(ua.getIntroducerKey(i)));
       if (peer != null)       valid++;
     }
     if (valid >= PUBLIC_RELAY_COUNT) {
       if (_introducersSelectedOn < _context.clock().now() - 10 * 60 * 1000) {
-        if (_log.shouldLog(Log.WARN))         _log.warn("Our introducers are valid, but thy havent changed in a while, so lets rechoose");
+        if (_log.shouldLog(Log.WARN))         _log.warn("Our introducers are valid, but havent changed in a while, so lets rechoose");
         return true;
       }
  else {
@@ -22,7 +20,7 @@
       }
     }
  else {
-      if (_log.shouldLog(Log.INFO))       _log.info("Our introducers are not valid (" + valid + ")");
+      if (_log.shouldLog(Log.INFO))       _log.info("Need more introducers (have " + valid + " need "+ PUBLIC_RELAY_COUNT+ ')');
       return true;
     }
   }
@@ -45,7 +43,6 @@
           rv=true;
         }
  else {
-          _log.info("Our direct SSU info is initialized");
         }
       }
     }

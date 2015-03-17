@@ -1,0 +1,35 @@
+{
+  int active=getContext().commSystem().countActivePeers();
+  getContext().statManager().addRateData("router.activePeers",active,60 * 1000);
+  int activeSend=getContext().commSystem().countActiveSendPeers();
+  getContext().statManager().addRateData("router.activeSendPeers",activeSend,60 * 1000);
+  int fast=getContext().profileOrganizer().countFastPeers();
+  getContext().statManager().addRateData("router.fastPeers",fast,60 * 1000);
+  int highCap=getContext().profileOrganizer().countHighCapacityPeers();
+  getContext().statManager().addRateData("router.highCapacityPeers",highCap,60 * 1000);
+  getContext().statManager().addRateData("bw.sendRate",(long)getContext().bandwidthLimiter().getSendBps());
+  getContext().statManager().addRateData("bw.recvRate",(long)getContext().bandwidthLimiter().getReceiveBps());
+  long used=Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory();
+  getContext().statManager().addRateData("router.memoryUsed",used);
+  if (_maxMemory - used < LOW_MEMORY_THRESHOLD)   Router.clearCaches();
+  getContext().tunnelDispatcher().updateParticipatingStats(Router.COALESCE_TIME);
+  getContext().statManager().coalesceStats();
+  RateStat receiveRate=getContext().statManager().getRate("transport.receiveMessageSize");
+  if (receiveRate != null) {
+    Rate rate=receiveRate.getRate(60 * 1000);
+    if (rate != null) {
+      double bytes=rate.getLastTotalValue();
+      double bps=(bytes * 1000.0d) / rate.getPeriod();
+      getContext().statManager().addRateData("bw.receiveBps",(long)bps,60 * 1000);
+    }
+  }
+  RateStat sendRate=getContext().statManager().getRate("transport.sendMessageSize");
+  if (sendRate != null) {
+    Rate rate=sendRate.getRate(60 * 1000);
+    if (rate != null) {
+      double bytes=rate.getLastTotalValue();
+      double bps=(bytes * 1000.0d) / rate.getPeriod();
+      getContext().statManager().addRateData("bw.sendBps",(long)bps,60 * 1000);
+    }
+  }
+}

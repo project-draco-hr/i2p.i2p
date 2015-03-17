@@ -1,26 +1,6 @@
 {
   Properties clientApps=getClientAppProps(ctx);
-  List rv=new ArrayList(5);
-  int i=0;
-  while (true) {
-    String className=clientApps.getProperty(PREFIX + i + ".main");
-    if (className == null)     break;
-    String clientName=clientApps.getProperty(PREFIX + i + ".name");
-    String args=clientApps.getProperty(PREFIX + i + ".args");
-    String delayStr=clientApps.getProperty(PREFIX + i + ".delay");
-    String onBoot=clientApps.getProperty(PREFIX + i + ".onBoot");
-    String disabled=clientApps.getProperty(PREFIX + i + ".startOnLoad");
-    i++;
-    boolean dis=disabled != null && "false".equals(disabled);
-    boolean onStartup=false;
-    if (onBoot != null)     onStartup="true".equals(onBoot) || "yes".equals(onBoot);
-    long delay=(onStartup ? 0 : STARTUP_DELAY);
-    if (delayStr != null && !onStartup)     try {
-      delay=1000 * Integer.parseInt(delayStr);
-    }
- catch (    NumberFormatException nfe) {
-    }
-    rv.add(new ClientAppConfig(className,clientName,args,delay,dis));
-  }
+  List<ClientAppConfig> rv=getClientApps(clientApps);
+  MigrateJetty.migrate(ctx,rv);
   return rv;
 }

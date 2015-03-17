@@ -12,27 +12,32 @@
   }
   LeaseSet ls=getContext().netDb().lookupLeaseSetLocally(_message.getSearchKey());
   if (ls != null) {
-    boolean publish=getContext().clientManager().shouldPublishLeaseSet(_message.getSearchKey());
-    if (publish && (answerAllQueries() || ls.getReceivedAsPublished())) {
+    boolean isLocal=getContext().clientManager().isLocal(ls.getDestination());
+    boolean shouldPublishLocal=isLocal && getContext().clientManager().shouldPublishLeaseSet(_message.getSearchKey());
+    if (ls.getReceivedAsPublished()) {
+      if (_log.shouldLog(Log.INFO))       _log.info("We have the published LS " + _message.getSearchKey().toBase64() + ", answering query");
       getContext().statManager().addRateData("netDb.lookupsMatchedReceivedPublished",1,0);
       sendData(_message.getSearchKey(),ls,fromKey,_message.getReplyTunnel());
     }
- else {
-      Set routerInfoSet=getContext().netDb().findNearestRouters(_message.getSearchKey(),CLOSENESS_THRESHOLD,_message.getDontIncludePeers());
-      if (getContext().clientManager().isLocal(ls.getDestination())) {
-        if (publish && weAreClosest(routerInfoSet)) {
-          getContext().statManager().addRateData("netDb.lookupsMatchedLocalClosest",1,0);
-          sendData(_message.getSearchKey(),ls,fromKey,_message.getReplyTunnel());
-        }
- else {
-          getContext().statManager().addRateData("netDb.lookupsMatchedLocalNotClosest",1,0);
-          sendClosest(_message.getSearchKey(),routerInfoSet,fromKey,_message.getReplyTunnel());
-        }
+ else     if (shouldPublishLocal && answerAllQueries()) {
+      Set<Hash> closestHashes=getContext().netDb().findNearestRouters(_message.getSearchKey(),CLOSENESS_THRESHOLD,null);
+      if (weAreClosest(closestHashes)) {
+        if (_log.shouldLog(Log.INFO))         _log.info("We have local LS " + _message.getSearchKey().toBase64() + ", answering query, in our keyspace");
+        getContext().statManager().addRateData("netDb.lookupsMatchedLocalClosest",1,0);
+        sendData(_message.getSearchKey(),ls,fromKey,_message.getReplyTunnel());
       }
  else {
-        getContext().statManager().addRateData("netDb.lookupsMatchedRemoteNotClosest",1,0);
-        sendClosest(_message.getSearchKey(),routerInfoSet,fromKey,_message.getReplyTunnel());
+        if (_log.shouldLog(Log.INFO))         _log.info("We have local LS " + _message.getSearchKey().toBase64() + ", NOT answering query, out of our keyspace");
+        getContext().statManager().addRateData("netDb.lookupsMatchedLocalNotClosest",1,0);
+        Set<Hash> routerHashSet=getNearestRouters();
+        sendClosest(_message.getSearchKey(),routerHashSet,fromKey,_message.getReplyTunnel());
       }
+    }
+ else {
+      if (_log.shouldLog(Log.INFO))       _log.info("We have LS " + _message.getSearchKey().toBase64() + ", NOT answering query - local? "+ isLocal+ " shouldPublish? "+ shouldPublishLocal+ " RAP? "+ ls.getReceivedAsPublished()+ " RAR? "+ ls.getReceivedAsReply());
+      getContext().statManager().addRateData("netDb.lookupsMatchedRemoteNotClosest",1,0);
+      Set<Hash> routerHashSet=getNearestRouters();
+      sendClosest(_message.getSearchKey(),routerHashSet,fromKey,_message.getReplyTunnel());
     }
   }
  else {
@@ -40,8 +45,8 @@
     if ((info != null) && (info.isCurrent(EXPIRE_DELAY))) {
       if ((info.getIdentity().isHidden()) || (isUnreachable(info) && !publishUnreachable())) {
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Not answering a query for a netDb peer who isn't reachable");
-        Set us=new HashSet(1);
-        us.add(getContext().router().getRouterInfo());
+        Set<Hash> us=new HashSet<Hash>(1);
+        us.add(getContext().routerHash());
         sendClosest(_message.getSearchKey(),us,fromKey,_message.getReplyTunnel());
       }
  else {
@@ -50,9 +55,9 @@
       }
     }
  else {
-      Set routerInfoSet=getContext().netDb().findNearestRouters(_message.getSearchKey(),MAX_ROUTERS_RETURNED,_message.getDontIncludePeers());
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("We do not have key " + _message.getSearchKey().toBase64() + " locally.  sending back "+ routerInfoSet.size()+ " peers to "+ fromKey.toBase64());
-      sendClosest(_message.getSearchKey(),routerInfoSet,fromKey,_message.getReplyTunnel());
+      Set<Hash> routerHashSet=getNearestRouters();
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("We do not have key " + _message.getSearchKey().toBase64() + " locally.  sending back "+ routerHashSet.size()+ " peers to "+ fromKey.toBase64());
+      sendClosest(_message.getSearchKey(),routerHashSet,fromKey,_message.getReplyTunnel());
     }
   }
 }

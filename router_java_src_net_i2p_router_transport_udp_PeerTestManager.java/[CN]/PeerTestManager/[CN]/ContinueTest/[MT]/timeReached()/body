@@ -1,21 +1,23 @@
 {
-  PeerTestState state=_currentTest;
-  if (state == null) {
-    return;
-  }
- else   if (expired()) {
-    testComplete(true);
-  }
- else   if (_context.clock().now() - state.getLastSendTime() >= RESEND_TIMEOUT) {
-    if (state.getReceiveBobTime() <= 0) {
-      sendTestToBob();
+synchronized (PeerTestManager.this) {
+    PeerTestState state=_currentTest;
+    if (state == null) {
+      return;
     }
- else     if (state.getReceiveCharlieTime() <= 0) {
-      sendTestToBob();
+ else     if (expired()) {
+      testComplete(true);
     }
+ else     if (_context.clock().now() - state.getLastSendTime() >= RESEND_TIMEOUT) {
+      if (state.getReceiveBobTime() <= 0) {
+        sendTestToBob();
+      }
+ else       if (state.getReceiveCharlieTime() <= 0) {
+        sendTestToBob();
+      }
  else {
-      sendTestToCharlie();
+        sendTestToCharlie();
+      }
+      _context.simpleScheduler().addEvent(ContinueTest.this,RESEND_TIMEOUT);
     }
-    SimpleScheduler.getInstance().addEvent(ContinueTest.this,RESEND_TIMEOUT);
   }
 }

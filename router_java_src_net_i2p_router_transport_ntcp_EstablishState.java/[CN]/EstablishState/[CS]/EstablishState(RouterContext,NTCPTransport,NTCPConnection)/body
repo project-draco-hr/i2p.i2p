@@ -3,25 +3,19 @@
   _log=ctx.logManager().getLog(getClass());
   _transport=transport;
   _con=con;
-  _verified=false;
-  _corrupt=false;
-  _confirmWritten=false;
-  _dh=new DHSessionKeyBuilder();
+  _dh=_transport.getDHBuilder();
+  _hX_xor_bobIdentHash=new byte[Hash.HASH_LENGTH];
   if (_con.isInbound()) {
     _X=new byte[256];
-    _hX_xor_bobIdentHash=new byte[Hash.HASH_LENGTH];
     _sz_aliceIdent_tsA_padding_aliceSig=new ByteArrayOutputStream(512);
   }
  else {
     _X=_dh.getMyPublicValueBytes();
     _Y=new byte[256];
-    _hX_xor_bobIdentHash=new byte[Hash.HASH_LENGTH];
     byte hx[]=ctx.sha().calculateHash(_X).getData();
     DataHelper.xor(hx,0,con.getRemotePeer().calculateHash().getData(),0,_hX_xor_bobIdentHash,0,hx.length);
   }
   _prevEncrypted=new byte[16];
   _curEncrypted=new byte[16];
-  _curEncryptedOffset=0;
   _curDecrypted=new byte[16];
-  _received=0;
 }

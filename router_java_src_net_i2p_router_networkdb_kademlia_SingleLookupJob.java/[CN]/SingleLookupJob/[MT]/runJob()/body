@@ -1,8 +1,12 @@
 {
   Hash from=_dsrm.getFromHash();
-  for (int i=0; i < _dsrm.getNumReplies(); i++) {
+  int limit=Math.min(_dsrm.getNumReplies(),MAX_TO_FOLLOW);
+  for (int i=0; i < limit; i++) {
     Hash peer=_dsrm.getReply(i);
     if (peer.equals(getContext().routerHash()))     continue;
-    if (getContext().netDb().lookupRouterInfoLocally(peer) == null)     getContext().jobQueue().addJob(new SingleSearchJob(getContext(),peer,from));
+    if (peer.equals(from))     continue;
+    RouterInfo ri=getContext().netDb().lookupRouterInfoLocally(peer);
+    if (ri == null)     getContext().jobQueue().addJob(new SingleSearchJob(getContext(),peer,from));
+ else     if (ri.getPublished() < getContext().clock().now() - 60 * 60 * 1000 || !FloodfillNetworkDatabaseFacade.isFloodfill(ri))     getContext().jobQueue().addJob(new SingleSearchJob(getContext(),peer,peer));
   }
 }

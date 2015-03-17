@@ -1,4 +1,5 @@
 {
+  if (StatSummarizer.isDisabled())   return "";
   try {
     List listeners=StatSummarizer.instance().getListeners();
     TreeSet ordered=new TreeSet(new AlphaComparator());
@@ -12,17 +13,17 @@
  else       if (title.equals("bw.recvRate"))       hasRx=true;
     }
     if (hasTx && hasRx && !_showEvents) {
-      _out.write("<a href=\"viewstat.jsp?stat=bw.combined" + "&amp;periodCount=" + (3 * _periodCount) + "&amp;width="+ (3 * _width)+ "&amp;height="+ (3 * _height)+ "\" />");
-      _out.write("<img width=\"" + (_width + 83) + "\" height=\""+ (_height + 92)+ "\" src=\"viewstat.jsp?stat=bw.combined"+ "&amp;periodCount="+ _periodCount+ "&amp;width="+ _width+ "&amp;height="+ (_height - 14)+ "\" title=\"Combined bandwidth graph\" /></a>\n");
+      _out.write("<a href=\"viewstat?stat=bw.combined" + "&amp;periodCount=" + (3 * _periodCount) + "&amp;width="+ (3 * _width)+ "&amp;height="+ (3 * _height)+ "\">");
+      String title=_("Combined bandwidth graph");
+      _out.write("<img class=\"statimage\"" + " src=\"viewstat.jsp?stat=bw.combined" + "&amp;periodCount=" + _periodCount + "&amp;width="+ _width+ "&amp;height="+ (_height - 13)+ "\" alt=\""+ title+ "\" title=\""+ title+ "\"></a>\n");
     }
     for (Iterator iter=ordered.iterator(); iter.hasNext(); ) {
       SummaryListener lsnr=(SummaryListener)iter.next();
       Rate r=lsnr.getRate();
-      String title=r.getRateStat().getName() + " for " + DataHelper.formatDuration(_periodCount * r.getPeriod());
-      _out.write("<a href=\"viewstat.jsp?stat=" + r.getRateStat().getName() + "&amp;showEvents="+ _showEvents+ "&amp;period="+ r.getPeriod()+ "&amp;periodCount="+ (3 * _periodCount)+ "&amp;width="+ (3 * _width)+ "&amp;height="+ (3 * _height)+ "\" />");
-      _out.write("<img border=\"0\" width=\"" + (_width + 83) + "\" height=\""+ (_height + 92)+ "\" src=\"viewstat.jsp?stat="+ r.getRateStat().getName()+ "&amp;showEvents="+ _showEvents+ "&amp;period="+ r.getPeriod()+ "&amp;periodCount="+ _periodCount+ "&amp;width="+ _width+ "&amp;height="+ _height+ "\" title=\""+ title+ "\" /></a>\n");
+      String title=_("{0} for {1}",r.getRateStat().getName(),DataHelper.formatDuration2(_periodCount * r.getPeriod()));
+      _out.write("<a href=\"graph?stat=" + r.getRateStat().getName() + '.'+ r.getPeriod()+ "&amp;c="+ (3 * _periodCount)+ "&amp;w="+ (3 * _width)+ "&amp;h="+ (3 * _height)+ (_showEvents ? "&amp;showEvents=1" : "")+ "\">");
+      _out.write("<img class=\"statimage\" border=\"0\"" + " src=\"viewstat.jsp?stat=" + r.getRateStat().getName() + "&amp;showEvents="+ _showEvents+ "&amp;period="+ r.getPeriod()+ "&amp;periodCount="+ _periodCount+ "&amp;width="+ _width+ "&amp;height="+ _height+ "\" alt=\""+ title+ "\" title=\""+ title+ "\"></a>\n");
     }
-    if (_refreshDelaySeconds > 0)     _out.write("<meta http-equiv=\"refresh\" content=\"" + _refreshDelaySeconds + "\" />\n");
   }
  catch (  IOException ioe) {
     ioe.printStackTrace();

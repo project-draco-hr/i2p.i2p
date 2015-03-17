@@ -3,39 +3,84 @@
   if (action != null) {
     if (lastSerial != null && serial != null && serial.compareTo(lastSerial) == 0) {
       boolean changed=false;
-      if (action.compareToIgnoreCase("add") == 0) {
+      if (action.equals(_("Add")) || action.equals(_("Replace"))) {
         if (addressbook != null && hostname != null && destination != null) {
-          addressbook.put(hostname,destination);
-          changed=true;
-          message+="Destination added.<br/>";
+          try {
+            String host=AddressBean.toASCII(hostname);
+            String displayHost=host.equals(hostname) ? hostname : hostname + " (" + host+ ')';
+            String oldDest=(String)addressbook.get(host);
+            if (destination.equals(oldDest)) {
+              message=_("Host name {0} is already in address book, unchanged.",displayHost);
+            }
+ else             if (oldDest != null && !action.equals(_("Replace"))) {
+              message=_("Host name {0} is already in address book with a different destination. Click \"Replace\" to overwrite.",displayHost);
+            }
+ else {
+              boolean valid=true;
+              try {
+                new Destination(destination);
+              }
+ catch (              DataFormatException dfe) {
+                valid=false;
+              }
+              if (valid) {
+                addressbook.put(host,destination);
+                changed=true;
+                if (oldDest == null)                 message=_("Destination added for {0}.",displayHost);
+ else                 message=_("Destination changed for {0}.",displayHost);
+                if (!host.endsWith(".i2p"))                 message+="<br>" + _("Warning - host name does not end with \".i2p\"");
+                hostname=null;
+                destination=null;
+              }
+ else {
+                message=_("Invalid Base 64 destination.");
+              }
+            }
+          }
+ catch (          IllegalArgumentException iae) {
+            message=iae.getMessage();
+            if (message == null)             message=_("Invalid host name \"{0}\".",hostname);
+          }
         }
+ else {
+          message=_("Please enter a host name and destination");
+        }
+        search=null;
       }
-      if (action.compareToIgnoreCase("delete") == 0) {
-        Iterator it=deletionMarks.iterator();
+ else       if (action.equals(_("Delete Selected")) || action.equals(_("Delete Entry"))) {
+        String name=null;
         int deleted=0;
-        while (it.hasNext()) {
-          String name=(String)it.next();
-          addressbook.remove(name);
-          changed=true;
-          deleted++;
+        for (        String n : deletionMarks) {
+          addressbook.remove(n);
+          String uni=AddressBean.toUnicode(n);
+          String displayHost=uni.equals(n) ? n : uni + " (" + n+ ')';
+          if (deleted++ == 0) {
+            changed=true;
+            name=displayHost;
+          }
         }
         if (changed) {
-          message+="" + deleted + " destination(s) deleted.<br/>";
+          if (deleted == 1)           message=_("Destination {0} deleted.",name);
+ else           message=ngettext("1 destination deleted.","{0} destinations deleted.",deleted);
         }
+ else {
+          message=_("No entries selected to delete.");
+        }
+        if (action.equals(_("Delete Entry")))         search=null;
       }
       if (changed) {
         try {
           save();
-          message+="Addressbook saved.<br/>";
+          message+="<br>" + _("Address book saved.");
         }
  catch (        Exception e) {
           Debug.debug(e.getClass().getName() + ": " + e.getMessage());
-          message+="ERROR: Could not write addressbook file.<br/>";
+          message+="<br>" + _("ERROR: Could not write addressbook file.");
         }
       }
     }
  else {
-      message+="Invalid nonce. Are you being spoofed?";
+      message=_("Invalid form submission, probably because you used the \"back\" or \"reload\" button on your browser. Please resubmit.");
     }
   }
   action=null;

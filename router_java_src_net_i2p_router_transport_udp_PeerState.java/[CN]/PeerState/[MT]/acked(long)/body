@@ -1,13 +1,11 @@
 {
+  if (_dead)   return false;
   OutboundMessageState state=null;
-  List msgs=_outboundMessages;
-  if (_dead)   return 0;
-synchronized (msgs) {
-    int sz=msgs.size();
-    for (int i=0; i < sz; i++) {
-      state=(OutboundMessageState)msgs.get(i);
+synchronized (_outboundMessages) {
+    for (Iterator<OutboundMessageState> iter=_outboundMessages.iterator(); iter.hasNext(); ) {
+      state=iter.next();
       if (state.getMessageId() == messageId) {
-        msgs.remove(i);
+        iter.remove();
         break;
       }
  else {
@@ -18,7 +16,7 @@ synchronized (msgs) {
   }
   if (state != null) {
     int numSends=state.getMaxSends();
-    if (_log.shouldLog(Log.INFO))     _log.info("Received ack of " + messageId + " by "+ _remotePeer.toBase64()+ " after "+ state.getLifetime()+ " and "+ numSends+ " sends");
+    if (_log.shouldLog(Log.INFO))     _log.info("Received ack of " + messageId + " by "+ _remotePeer+ " after "+ state.getLifetime()+ " and "+ numSends+ " sends");
     _context.statManager().addRateData("udp.sendConfirmTime",state.getLifetime(),state.getLifetime());
     if (state.getFragmentCount() > 1)     _context.statManager().addRateData("udp.sendConfirmFragments",state.getFragmentCount(),state.getLifetime());
     if (numSends > 1)     _context.statManager().addRateData("udp.sendConfirmVolley",numSends,state.getFragmentCount());
@@ -26,10 +24,9 @@ synchronized (msgs) {
     int numFragments=state.getFragmentCount();
     messageACKed(numFragments * state.getFragmentSize(),state.getLifetime(),numSends);
     state.releaseResources();
-    return numFragments;
   }
  else {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Received an ACK for a message not pending: " + messageId);
-    return 0;
   }
+  return state != null;
 }

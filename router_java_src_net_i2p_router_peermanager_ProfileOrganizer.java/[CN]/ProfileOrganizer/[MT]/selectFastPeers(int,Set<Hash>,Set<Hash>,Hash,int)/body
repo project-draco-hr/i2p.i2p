@@ -1,0 +1,22 @@
+{
+  getReadLock();
+  try {
+    if (subTierMode > 0) {
+      int sz=_fastPeers.size();
+      if (sz < 6 || (subTierMode >= 4 && sz < 12))       subTierMode=0;
+    }
+    if (subTierMode > 0)     locked_selectPeers(_fastPeers,howMany,exclude,matches,randomKey,subTierMode);
+ else     locked_selectPeers(_fastPeers,howMany,exclude,matches,2);
+  }
+  finally {
+    releaseReadLock();
+  }
+  if (matches.size() < howMany) {
+    if (_log.shouldLog(Log.INFO))     _log.info("selectFastPeers(" + howMany + "), not enough fast ("+ matches.size()+ ") going on to highCap");
+    selectHighCapacityPeers(howMany,exclude,matches,2);
+  }
+ else {
+    if (_log.shouldLog(Log.INFO))     _log.info("selectFastPeers(" + howMany + "), found enough fast ("+ matches.size()+ ")");
+  }
+  return;
+}

@@ -2,14 +2,20 @@
   long now=_context.clock().now();
   _lastUsed=now;
 synchronized (_tagSets) {
-    while (_tagSets.size() > 0) {
-      TagSet set=(TagSet)_tagSets.get(0);
+    while (!_tagSets.isEmpty()) {
+      TagSet set=_tagSets.get(0);
       if (set.getDate() + SESSION_TAG_DURATION_MS > now) {
         SessionTag tag=set.consumeNext();
-        if (tag != null)         return tag;
+        if (tag != null) {
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("OB Tag consumed: " + tag + " from: "+ set);
+          return tag;
+        }
+ else         if (_log.shouldLog(Log.INFO)) {
+          _log.info("Removing empty " + set);
+        }
       }
  else {
-        if (_log.shouldLog(Log.INFO))         _log.info("TagSet from " + new Date(set.getDate()) + " expired");
+        if (_log.shouldLog(Log.INFO))         _log.info("Expired " + set);
       }
       _tagSets.remove(0);
     }

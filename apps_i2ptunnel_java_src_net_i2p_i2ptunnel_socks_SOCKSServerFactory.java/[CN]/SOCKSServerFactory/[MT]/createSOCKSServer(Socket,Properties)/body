@@ -1,0 +1,32 @@
+{
+  SOCKSServer serv;
+  try {
+    DataInputStream in=new DataInputStream(s.getInputStream());
+    int socksVer=in.readByte();
+switch (socksVer) {
+case 0x04:
+      if (Boolean.valueOf(props.getProperty(I2PTunnelHTTPClientBase.PROP_AUTH)).booleanValue() && props.containsKey(I2PTunnelHTTPClientBase.PROP_USER) && props.containsKey(I2PTunnelHTTPClientBase.PROP_PW)) {
+        throw new SOCKSException("SOCKS 4/4a not supported when authorization is required");
+      }
+    serv=new SOCKS4aServer(s);
+  break;
+case 0x05:
+serv=new SOCKS5Server(s,props);
+break;
+case 'C':
+case 'G':
+case 'H':
+case 'P':
+DataOutputStream out=new DataOutputStream(s.getOutputStream());
+out.write(ERR_REQUEST_DENIED.getBytes());
+throw new SOCKSException("HTTP request to socks");
+default :
+throw new SOCKSException("SOCKS protocol version not supported (" + Integer.toHexString(socksVer) + ")");
+}
+}
+ catch (IOException e) {
+_log.debug("error reading SOCKS protocol version");
+throw new SOCKSException("Connection error (" + e.getMessage() + ")");
+}
+return serv;
+}

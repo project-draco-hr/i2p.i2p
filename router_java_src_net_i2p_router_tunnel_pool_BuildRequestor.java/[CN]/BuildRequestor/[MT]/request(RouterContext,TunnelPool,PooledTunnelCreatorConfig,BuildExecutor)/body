@@ -7,18 +7,19 @@
   Log log=ctx.logManager().getLog(BuildRequestor.class);
   cfg.setTunnelPool(pool);
   TunnelInfo pairedTunnel=null;
+  Hash farEnd=cfg.getFarEnd();
   if (pool.getSettings().isExploratory() || !usePairedTunnels(ctx)) {
-    if (pool.getSettings().isInbound())     pairedTunnel=ctx.tunnelManager().selectOutboundTunnel();
- else     pairedTunnel=ctx.tunnelManager().selectInboundTunnel();
+    if (pool.getSettings().isInbound())     pairedTunnel=ctx.tunnelManager().selectOutboundExploratoryTunnel(farEnd);
+ else     pairedTunnel=ctx.tunnelManager().selectInboundExploratoryTunnel(farEnd);
   }
  else {
-    if (pool.getSettings().isInbound())     pairedTunnel=ctx.tunnelManager().selectOutboundTunnel(pool.getSettings().getDestination());
- else     pairedTunnel=ctx.tunnelManager().selectInboundTunnel(pool.getSettings().getDestination());
+    if (pool.getSettings().isInbound())     pairedTunnel=ctx.tunnelManager().selectOutboundTunnel(pool.getSettings().getDestination(),farEnd);
+ else     pairedTunnel=ctx.tunnelManager().selectInboundTunnel(pool.getSettings().getDestination(),farEnd);
   }
   if (pairedTunnel == null) {
     if (log.shouldLog(Log.WARN))     log.warn("Couldn't find a paired tunnel for " + cfg + ", fall back on exploratory tunnels for pairing");
-    if (!pool.getSettings().isExploratory() && usePairedTunnels(ctx))     if (pool.getSettings().isInbound())     pairedTunnel=ctx.tunnelManager().selectOutboundTunnel();
- else     pairedTunnel=ctx.tunnelManager().selectInboundTunnel();
+    if (!pool.getSettings().isExploratory() && usePairedTunnels(ctx))     if (pool.getSettings().isInbound())     pairedTunnel=ctx.tunnelManager().selectOutboundExploratoryTunnel(farEnd);
+ else     pairedTunnel=ctx.tunnelManager().selectInboundExploratoryTunnel(farEnd);
   }
   if (pairedTunnel == null) {
     if (log.shouldLog(Log.ERROR))     log.error("Tunnel build failed, as we couldn't find a paired tunnel for " + cfg);
@@ -29,20 +30,20 @@
   TunnelBuildMessage msg=createTunnelBuildMessage(ctx,pool,cfg,pairedTunnel,exec);
   long createTime=System.currentTimeMillis() - beforeCreate;
   if (msg == null) {
-    if (log.shouldLog(Log.ERROR))     log.error("Tunnel build failed, as we couldn't create the tunnel build message for " + cfg);
+    if (log.shouldLog(Log.WARN))     log.warn("Tunnel build failed, as we couldn't create the tunnel build message for " + cfg);
     exec.buildComplete(cfg,pool);
     return;
   }
-  cfg.setPairedTunnel(pairedTunnel);
   long beforeDispatch=System.currentTimeMillis();
   if (cfg.isInbound()) {
-    if (log.shouldLog(Log.DEBUG))     log.debug("Sending the tunnel build request " + msg.getUniqueId() + " out the tunnel "+ pairedTunnel+ " to "+ cfg.getPeer(0).toBase64()+ " for "+ cfg+ " waiting for the reply of "+ cfg.getReplyMessageId());
+    if (log.shouldLog(Log.INFO))     log.info("Sending the tunnel build request " + msg.getUniqueId() + " out the tunnel "+ pairedTunnel+ " to "+ cfg.getPeer(0).toBase64()+ " for "+ cfg+ " waiting for the reply of "+ cfg.getReplyMessageId());
     ctx.tunnelDispatcher().dispatchOutbound(msg,pairedTunnel.getSendTunnelId(0),cfg.getPeer(0));
   }
  else {
-    if (log.shouldLog(Log.DEBUG))     log.debug("Sending the tunnel build request directly to " + cfg.getPeer(1).toBase64() + " for "+ cfg+ " waiting for the reply of "+ cfg.getReplyMessageId()+ " with msgId="+ msg.getUniqueId());
+    if (log.shouldLog(Log.INFO))     log.info("Sending the tunnel build request directly to " + cfg.getPeer(1).toBase64() + " for "+ cfg+ " waiting for the reply of "+ cfg.getReplyMessageId()+ " with msgId="+ msg.getUniqueId());
     OutNetMessage outMsg=new OutNetMessage(ctx);
-    outMsg.setExpiration(msg.getMessageExpiration());
+    msg.setMessageExpiration(ctx.clock().now() + BUILD_MSG_TIMEOUT + ctx.random().nextLong(20 * 1000));
+    outMsg.setExpiration(ctx.clock().now() + FIRST_HOP_TIMEOUT);
     outMsg.setMessage(msg);
     outMsg.setPriority(PRIORITY);
     RouterInfo peer=ctx.netDb().lookupRouterInfoLocally(cfg.getPeer(1));

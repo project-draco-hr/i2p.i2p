@@ -1,51 +1,13 @@
 {
-  long end=_context.clock().now() - 60 * 1000;
-  if (periodCount <= 0)   periodCount=SummaryListener.PERIODS;
-  if (periodCount > SummaryListener.PERIODS)   periodCount=SummaryListener.PERIODS;
-  long period=60 * 1000;
-  long start=end - period * periodCount;
   try {
-    RrdGraphDef def=new RrdGraphDef();
-    def.setTimePeriod(start / 1000,0);
-    def.setBaseValue(1024);
-    String title="Bandwidth usage";
-    if (!hideTitle)     def.setTitle(title);
-    String sendName=SummaryListener.createName(_context,"bw.sendRate.60000");
-    String recvName=SummaryListener.createName(_context,"bw.recvRate.60000");
-    def.datasource(sendName,sendName,sendName,"AVERAGE","MEMORY");
-    def.datasource(recvName,recvName,recvName,"AVERAGE","MEMORY");
-    def.area(sendName,Color.BLUE,"Outbound bytes/sec");
-    def.line(recvName,Color.RED,"Inbound bytes/sec@r",3);
-    if (!hideLegend) {
-      def.gprint(sendName,"AVERAGE","out average: @2@sbytes/sec");
-      def.gprint(sendName,"MAX"," max: @2@sbytes/sec@r");
-      def.gprint(recvName,"AVERAGE","in average:  @2@sbytes/sec");
-      def.gprint(recvName,"MAX"," max: @2@sbytes/sec@r");
+    try {
+      _sem.acquire();
     }
-    if (!showCredit)     def.setShowSignature(false);
-    if (hideLegend)     def.setShowLegend(false);
-    if (hideGrid) {
-      def.setGridX(false);
-      def.setGridY(false);
+ catch (    InterruptedException ie) {
     }
-    def.setAntiAliasing(false);
-    RrdGraph graph=new RrdGraph(def);
-    byte data[]=null;
-    if ((width <= 0) || (height <= 0))     data=graph.getPNGBytes();
- else     data=graph.getPNGBytes(width,height);
-    out.write(data);
-    return true;
+    return locked_renderRatePng(out,width,height,hideLegend,hideGrid,hideTitle,showEvents,periodCount,showCredit);
   }
- catch (  RrdException re) {
-    _log.error("Error rendering",re);
-    throw new IOException("Error plotting: " + re.getMessage());
-  }
-catch (  IOException ioe) {
-    _log.error("Error rendering",ioe);
-    throw ioe;
-  }
-catch (  OutOfMemoryError oom) {
-    _log.error("Error rendering",oom);
-    throw new IOException("Error plotting: " + oom.getMessage());
+  finally {
+    _sem.release();
   }
 }

@@ -1,20 +1,12 @@
 {
+  getContext().jobQueue().allowParallelOperation();
+  startupDb();
+  getContext().jobQueue().addJob(new BootPeerManagerJob(getContext()));
   getContext().commSystem().startup();
   getContext().tunnelManager().startup();
-  getContext().peerManager().startup();
-  Job bootDb=new BootNetworkDbJob(getContext());
-  boolean useTrusted=false;
-  String useTrustedStr=getContext().router().getConfigSetting(PROP_USE_TRUSTED_LINKS);
-  if (useTrustedStr != null) {
-    useTrusted=Boolean.TRUE.toString().equalsIgnoreCase(useTrustedStr);
-  }
-  if (useTrusted) {
-    _log.debug("Using trusted links...");
-    getContext().jobQueue().addJob(new BuildTrustedLinksJob(getContext(),bootDb));
-    return;
-  }
- else {
-    _log.debug("Not using trusted links - boot db");
-    getContext().jobQueue().addJob(bootDb);
-  }
+  getContext().jobQueue().addJob(new StartAcceptingClientsJob(getContext()));
+  Job j=new ReadConfigJob(getContext());
+  j.getTiming().setStartAfter(getContext().clock().now() + 60 * 1000);
+  getContext().jobQueue().addJob(j);
+  ((RouterClock)getContext().clock()).addShiftListener(getContext().router());
 }

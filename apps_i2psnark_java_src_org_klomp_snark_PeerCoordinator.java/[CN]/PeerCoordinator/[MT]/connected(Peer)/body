@@ -6,7 +6,7 @@
   Peer toDisconnect=null;
 synchronized (peers) {
     Peer old=peerIDInList(peer.getPeerID(),peers);
-    if ((old != null) && (old.getInactiveTime() > 8 * 60 * 1000)) {
+    if ((old != null) && (old.getInactiveTime() > MAX_INACTIVE)) {
       if (_log.shouldLog(Log.WARN))       _log.warn("Remomving old peer: " + peer + ": "+ old+ ", inactive for "+ old.getInactiveTime());
       peers.remove(old);
       toDisconnect=old;
@@ -16,13 +16,19 @@ synchronized (peers) {
       if (_log.shouldLog(Log.WARN))       _log.warn("Already connected to: " + peer + ": "+ old+ ", inactive for "+ old.getInactiveTime());
       peer.disconnect(false);
     }
- else     if (peers.size() >= _util.getMaxConnections()) {
+ else     if (peers.size() >= getMaxConnections()) {
       if (_log.shouldLog(Log.WARN))       _log.warn("Already at MAX_CONNECTIONS in connected() with peer: " + peer);
       peer.disconnect(false);
     }
  else {
-      if (_log.shouldLog(Log.INFO))       _log.info("New connection to peer: " + peer + " for "+ metainfo.getName());
-      peers.add(0,peer);
+      if (_log.shouldLog(Log.INFO)) {
+        String name;
+        if (metainfo == null)         name="Magnet";
+ else         name=metainfo.getName();
+        _log.info("New connection to peer: " + peer + " for "+ name);
+      }
+      if (metainfo != null)       peer.setMetaInfo(metainfo);
+      peers.add(peer);
       peerCount=peers.size();
       unchokePeer();
       if (listener != null)       listener.peerChange(this,peer);

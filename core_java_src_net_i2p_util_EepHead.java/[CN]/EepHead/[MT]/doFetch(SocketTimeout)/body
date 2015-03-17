@@ -1,0 +1,47 @@
+{
+  _headersRead=false;
+  _aborted=false;
+  try {
+    readHeaders();
+  }
+  finally {
+    _headersRead=true;
+  }
+  if (_aborted)   throw new IOException("Timed out reading the HTTP headers");
+  timeout.resetTimer();
+  if (_fetchInactivityTimeout > 0)   timeout.setInactivityTimeout(_fetchInactivityTimeout);
+ else   timeout.setInactivityTimeout(60 * 1000);
+  if (_redirectLocation != null) {
+    if (_redirectLocation.startsWith("http://")) {
+      _actualURL=_redirectLocation;
+    }
+ else {
+      URL url=new URL(_actualURL);
+      if (_redirectLocation.startsWith("/"))       _actualURL="http://" + url.getHost() + ":"+ url.getPort()+ _redirectLocation;
+ else       _actualURL="http://" + url.getHost() + ":"+ url.getPort()+ "/"+ _redirectLocation;
+    }
+    _redirects++;
+    if (_redirects > 5)     throw new IOException("Too many redirects: to " + _redirectLocation);
+    if (_log.shouldLog(Log.INFO))     _log.info("Redirecting to " + _redirectLocation);
+    _bytesRemaining=-1;
+    _redirectLocation=null;
+    _etag=null;
+    _lastModified=null;
+    _contentType=null;
+    _encodingChunked=false;
+    sendRequest(timeout);
+    doFetch(timeout);
+    return;
+  }
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Headers read completely");
+  if (_out != null)   _out.close();
+  _out=null;
+  if (_aborted)   throw new IOException("Timed out reading the HTTP data");
+  timeout.cancel();
+  if (_transferFailed) {
+    for (int i=0; i < _listeners.size(); i++)     _listeners.get(i).attemptFailed(_url,0,0,_currentAttempt,_numRetries,new Exception("Attempt failed"));
+  }
+ else {
+    for (int i=0; i < _listeners.size(); i++)     _listeners.get(i).transferComplete(0,0,0,_url,"dummy",false);
+  }
+}

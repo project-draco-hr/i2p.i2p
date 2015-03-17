@@ -1,0 +1,15 @@
+{
+synchronized (_outboundSessions) {
+    OutboundSession sess=_outboundSessions.get(target);
+    if (sess != null) {
+      long now=_context.clock().now();
+      if (sess.getLastUsedDate() < now - SESSION_LIFETIME_MAX_MS)       sess=null;
+    }
+    if (sess == null) {
+      SessionKey key=_context.keyGenerator().generateSessionKey();
+      sess=createAndReturnSession(target,key);
+      return key;
+    }
+    return sess.getCurrentKey();
+  }
+}

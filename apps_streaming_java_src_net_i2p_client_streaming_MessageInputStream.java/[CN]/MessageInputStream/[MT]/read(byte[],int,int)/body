@@ -5,10 +5,10 @@
   if (_readTimeout > 0)   expiration=_readTimeout + System.currentTimeMillis();
 synchronized (_dataLock) {
     for (int i=0; i < length; i++) {
-      if ((_readyDataBlocks.size() <= 0) && (i == 0)) {
-        while (_readyDataBlocks.size() <= 0) {
-          if (_locallyClosed)           throw new IOException("Already closed, you wanker");
-          if ((_notYetReadyBlocks.size() <= 0) && (_closeReceived)) {
+      if ((_readyDataBlocks.isEmpty()) && (i == 0)) {
+        while (_readyDataBlocks.isEmpty()) {
+          if (_locallyClosed)           throw new IOException("Already closed");
+          if ((_notYetReadyBlocks.isEmpty()) && (_closeReceived)) {
             if (_log.shouldLog(Log.INFO))             _log.info("read(...," + offset + ", "+ length+ ")["+ i+ "] got EOF after "+ _readTotal+ " "+ toString());
             return -1;
           }
@@ -37,7 +37,7 @@ synchronized (_dataLock) {
               if (_log.shouldLog(Log.DEBUG))               _log.debug("read(...," + offset + ", "+ length+ ")["+ i+ ") with nonblocking setup: "+ toString());
               return i;
             }
-            if (_readyDataBlocks.size() <= 0) {
+            if (_readyDataBlocks.isEmpty()) {
               if ((_readTimeout > 0) && (expiration < System.currentTimeMillis())) {
                 if (_log.shouldLog(Log.INFO))                 _log.info("read(...," + offset + ", "+ length+ ")["+ i+ ") expired: "+ toString());
                 return i;
@@ -47,19 +47,17 @@ synchronized (_dataLock) {
         }
         i--;
       }
- else       if (_readyDataBlocks.size() <= 0) {
+ else       if (_readyDataBlocks.isEmpty()) {
         if (_log.shouldLog(Log.DEBUG))         _log.debug("read(...," + offset + ", "+ length+ ")["+ i+ "] no more ready blocks, returning");
         return i;
       }
  else {
-        ByteArray cur=(ByteArray)_readyDataBlocks.get(0);
+        ByteArray cur=_readyDataBlocks.get(0);
         byte rv=cur.getData()[cur.getOffset() + _readyDataBlockIndex];
         _readyDataBlockIndex++;
-        boolean removed=false;
         if (cur.getValid() <= _readyDataBlockIndex) {
           _readyDataBlockIndex=0;
           _readyDataBlocks.remove(0);
-          removed=true;
         }
         _readTotal++;
         target[offset + i]=rv;
@@ -69,6 +67,6 @@ synchronized (_dataLock) {
       }
     }
   }
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("read(...," + offset + ", "+ length+ ") read fully total read: "+ _readTotal);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("read(byte[]," + offset + ','+ length+ ") read fully; total read: "+ _readTotal);
   return length;
 }
