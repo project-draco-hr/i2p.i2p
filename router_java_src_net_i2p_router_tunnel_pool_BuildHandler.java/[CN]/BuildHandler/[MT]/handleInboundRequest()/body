@@ -18,5 +18,12 @@
     _context.throttle().setTunnelStatus(_x("Dropping tunnel requests: Too slow"));
     return;
   }
+  long lag=_context.jobQueue().getMaxLag();
+  if (lag > JOB_LAG_LIMIT_TUNNEL) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Dropping tunnel request, as the job lag is " + lag);
+    _context.statManager().addRateData("router.throttleTunnelCause",lag);
+    _context.throttle().setTunnelStatus(_x("Dropping tunnel requests: High job lag"));
+    return;
+  }
   handleRequest(state);
 }
