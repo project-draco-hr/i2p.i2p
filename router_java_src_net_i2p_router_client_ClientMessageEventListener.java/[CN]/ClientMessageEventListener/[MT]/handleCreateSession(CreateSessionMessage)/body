@@ -1,10 +1,11 @@
 {
   SessionConfig in=message.getSessionConfig();
+  Destination dest=in.getDestination();
   if (in.verifySignature()) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Signature verified correctly on create session message");
   }
  else {
-    int itype=in.getDestination().getCertificate().getCertificateType();
+    int itype=dest.getCertificate().getCertificateType();
     SigType stype=SigType.getByCode(itype);
     if (stype == null || !stype.isAvailable()) {
       _log.error("Client requested unsupported signature type " + itype);
@@ -18,16 +19,17 @@
   }
   Properties inProps=in.getOptions();
   if (!checkAuth(inProps))   return;
-  SessionId id=_runner.getSessionId();
+  SessionId id=_runner.getSessionId(dest.calculateHash());
   if (id != null) {
     _runner.disconnectClient("Already have session " + id);
     return;
   }
-  SessionConfig cfg=new SessionConfig(in.getDestination());
+  SessionConfig cfg=new SessionConfig(dest);
   cfg.setSignature(in.getSignature());
   Properties props=new Properties();
   props.putAll(in.getOptions());
   cfg.setOptions(props);
+  boolean isPrimary=_runner.getSessionIds().isEmpty();
   int status=_runner.sessionEstablished(cfg);
   if (status != SessionStatusMessage.STATUS_CREATED) {
     if (_log.shouldLog(Log.ERROR))     _log.error("Session establish failed: code = " + status);
@@ -38,7 +40,22 @@
     _runner.disconnectClient(msg);
     return;
   }
-  sendStatusMessage(status);
-  if (_log.shouldLog(Log.INFO))   _log.info("Session " + _runner.getSessionId() + " established for "+ _runner.getDestHash());
-  startCreateSessionJob();
+  sendStatusMessage(id,status);
+  if (_log.shouldLog(Log.INFO))   _log.info("Session " + id + " established for "+ dest.calculateHash());
+  if (isPrimary) {
+    startCreateSessionJob(cfg);
+  }
+ else {
+    SessionConfig pcfg=_runner.getPrimaryConfig();
+    if (pcfg != null) {
+      ClientTunnelSettings settings=new ClientTunnelSettings(dest.calculateHash());
+      props.putAll(pcfg.getOptions());
+      props.putAll(props);
+      settings.readFromProperties(props);
+      boolean ok=_context.tunnelManager().addAlias(dest,settings,pcfg.getDestination());
+      if (!ok) {
+        _log.error("Add alias failed");
+      }
+    }
+  }
 }

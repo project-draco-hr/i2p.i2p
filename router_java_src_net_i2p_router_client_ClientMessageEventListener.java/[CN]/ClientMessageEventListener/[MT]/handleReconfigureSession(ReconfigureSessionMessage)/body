@@ -1,18 +1,25 @@
 {
-  if (_log.shouldLog(Log.INFO))   _log.info("Updating options - old: " + _runner.getConfig() + " new: "+ message.getSessionConfig());
-  if (!message.getSessionConfig().getDestination().equals(_runner.getConfig().getDestination())) {
+  SessionId id=message.getSessionId();
+  SessionConfig config=_runner.getConfig(id);
+  if (config == null) {
+    _log.error("Unknown session");
+    sendStatusMessage(id,SessionStatusMessage.STATUS_INVALID);
+    return;
+  }
+  if (_log.shouldLog(Log.INFO))   _log.info("Updating options - old: " + _runner.getConfig(id) + " new: "+ message.getSessionConfig());
+  if (!message.getSessionConfig().getDestination().equals(config.getDestination())) {
     _log.error("Dest mismatch");
-    sendStatusMessage(SessionStatusMessage.STATUS_INVALID);
+    sendStatusMessage(id,SessionStatusMessage.STATUS_INVALID);
     _runner.stopRunning();
     return;
   }
-  _runner.getConfig().getOptions().putAll(message.getSessionConfig().getOptions());
-  Hash dest=_runner.getDestHash();
+  Hash dest=config.getDestination().calculateHash();
+  config.getOptions().putAll(message.getSessionConfig().getOptions());
   ClientTunnelSettings settings=new ClientTunnelSettings(dest);
   Properties props=new Properties();
-  props.putAll(_runner.getConfig().getOptions());
+  props.putAll(config.getOptions());
   settings.readFromProperties(props);
   _context.tunnelManager().setInboundSettings(dest,settings.getInboundSettings());
   _context.tunnelManager().setOutboundSettings(dest,settings.getOutboundSettings());
-  sendStatusMessage(SessionStatusMessage.STATUS_UPDATED);
+  sendStatusMessage(id,SessionStatusMessage.STATUS_UPDATED);
 }

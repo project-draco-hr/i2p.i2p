@@ -1,4 +1,13 @@
 {
-  if (_log.shouldLog(Log.INFO))   _log.info("Destroying client session " + _runner.getSessionId());
-  _runner.stopRunning();
+  SessionId id=message.getSessionId();
+  SessionConfig cfg=_runner.getConfig(id);
+  _runner.removeSession(id);
+  int left=_runner.getSessionIds().size();
+  if (left <= 0) {
+    _runner.stopRunning();
+  }
+ else {
+    if (cfg != null)     _context.tunnelManager().removeAlias(cfg.getDestination());
+    if (_log.shouldLog(Log.INFO))     _log.info("Still " + left + " sessions left");
+  }
 }

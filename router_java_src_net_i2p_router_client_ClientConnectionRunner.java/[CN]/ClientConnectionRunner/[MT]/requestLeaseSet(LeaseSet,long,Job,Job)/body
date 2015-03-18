@@ -5,11 +5,14 @@
     return;
   }
   int leases=set.getLeaseCount();
+  LeaseSet current=null;
 synchronized (this) {
-    if (_currentLeaseSet != null && _currentLeaseSet.getLeaseCount() == leases) {
+    Destination dest=set.getDestination();
+    if (dest != null)     current=getLeaseSet(dest.calculateHash());
+    if (current != null && current.getLeaseCount() == leases) {
       for (int i=0; i < leases; i++) {
-        if (!_currentLeaseSet.getLease(i).getTunnelId().equals(set.getLease(i).getTunnelId()))         break;
-        if (!_currentLeaseSet.getLease(i).getGateway().equals(set.getLease(i).getGateway()))         break;
+        if (!current.getLease(i).getTunnelId().equals(set.getLease(i).getTunnelId()))         break;
+        if (!current.getLease(i).getGateway().equals(set.getLease(i).getGateway()))         break;
         if (i == leases - 1) {
           if (_log.shouldLog(Log.INFO))           _log.info("Requested leaseSet hasn't changed");
           if (onCreateJob != null)           _context.jobQueue().addJob(onCreateJob);
@@ -18,10 +21,13 @@ synchronized (this) {
       }
     }
   }
-  if (_log.shouldLog(Log.INFO))   _log.info("Current leaseSet " + _currentLeaseSet + "\nNew leaseSet "+ set);
-  LeaseRequestState state=null;
+  if (_log.shouldLog(Log.INFO))   _log.info("Current leaseSet " + current + "\nNew leaseSet "+ set);
+  Hash h=set.getDestination().calculateHash();
+  SessionParams sp=_sessions.get(h);
+  if (sp == null)   return;
+  LeaseRequestState state;
 synchronized (this) {
-    state=_leaseRequest;
+    state=sp.leaseRequest;
     if (state != null) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Already requesting " + state);
       LeaseSet requested=state.getRequested();
@@ -35,7 +41,7 @@ synchronized (this) {
       return;
     }
  else {
-      _leaseRequest=state=new LeaseRequestState(onCreateJob,onFailedJob,_context.clock().now() + expirationTime,set);
+      sp.leaseRequest=state=new LeaseRequestState(onCreateJob,onFailedJob,_context.clock().now() + expirationTime,set);
       if (_log.shouldLog(Log.DEBUG))       _log.debug("New request: " + state);
     }
   }

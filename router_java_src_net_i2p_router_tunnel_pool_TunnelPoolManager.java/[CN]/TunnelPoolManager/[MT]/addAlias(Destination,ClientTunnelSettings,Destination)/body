@@ -1,0 +1,14 @@
+{
+  if (dest.getSigningPublicKey().equals(existingClient.getSigningPublicKey()))   throw new IllegalArgumentException("signing key must differ");
+  if (!dest.getPublicKey().equals(existingClient.getPublicKey()))   throw new IllegalArgumentException("encryption key mismatch");
+  Hash h=dest.calculateHash();
+  Hash e=existingClient.calculateHash();
+synchronized (this) {
+    TunnelPool inbound=_clientInboundPools.get(e);
+    TunnelPool outbound=_clientOutboundPools.get(e);
+    if (inbound == null || outbound == null)     return false;
+    _clientInboundPools.put(h,inbound);
+    _clientOutboundPools.put(h,outbound);
+  }
+  return true;
+}

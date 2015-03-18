@@ -1,6 +1,6 @@
 {
   if (_dead)   return;
-  if (_context.router().isAlive() && _log.shouldLog(Log.WARN))   _log.warn("Stop the I2CP connection!  current leaseSet: " + _currentLeaseSet,new Exception("Stop client connection"));
+  if (_context.router().isAlive() && _log.shouldLog(Log.WARN))   _log.warn("Stop the I2CP connection!",new Exception("Stop client connection"));
   _dead=true;
   if (_reader != null)   _reader.stopReading();
   if (_writer != null)   _writer.stopWriting();
@@ -13,9 +13,12 @@
   _acceptedPending.clear();
   if (_sessionKeyManager != null)   _sessionKeyManager.shutdown();
   _manager.unregisterConnection(this);
-  if (_currentLeaseSet != null)   _context.netDb().unpublish(_currentLeaseSet);
-  _leaseRequest=null;
+  for (  SessionParams sp : _sessions.values()) {
+    LeaseSet ls=sp.currentLeaseSet;
+    if (ls != null)     _context.netDb().unpublish(ls);
+  }
 synchronized (_alreadyProcessed) {
     _alreadyProcessed.clear();
   }
+  _sessions.clear();
 }

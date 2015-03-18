@@ -4,7 +4,13 @@
     _runner.disconnectClient("Invalid CreateLeaseSetMessage");
     return;
   }
-  Destination dest=_runner.getConfig().getDestination();
+  SessionId id=message.getSessionId();
+  SessionConfig config=_runner.getConfig(id);
+  if (config == null) {
+    _log.error("Unknown session in CLSM");
+    return;
+  }
+  Destination dest=config.getDestination();
   Destination ndest=message.getLeaseSet().getDestination();
   if (!dest.equals(ndest)) {
     if (_log.shouldLog(Log.ERROR))     _log.error("Different destination in LS");
@@ -40,6 +46,6 @@
     _runner.disconnectClient("Invalid leaseset: " + iae);
     return;
   }
-  if (_log.shouldLog(Log.INFO))   _log.info("New lease set granted for destination " + _runner.getDestHash());
+  if (_log.shouldLog(Log.INFO))   _log.info("New lease set granted for destination " + dest);
   _runner.leaseSetCreated(message.getLeaseSet());
 }
