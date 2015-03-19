@@ -1,0 +1,39 @@
+{
+  int fetched=0;
+  int errors=0;
+  File contentRaw=null;
+  try {
+    _checker.setStatus(_("Reseeding: fetching seed URL."));
+    System.err.println("Reseeding from " + seedURL);
+    long startTime=System.currentTimeMillis();
+    contentRaw=fetchURL(seedURL);
+    long totalTime=System.currentTimeMillis() - startTime;
+    if (contentRaw == null) {
+      _log.warn("Failed reading seed URL: " + seedURL);
+      System.err.println("Reseed got no router infos from " + seedURL);
+      return 0;
+    }
+    if (totalTime > 0) {
+      long sz=contentRaw.length();
+      long bw=1000 * sz / totalTime;
+      _bandwidths.add(Long.valueOf(bw));
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Rcvd " + sz + " bytes in "+ totalTime+ " ms from "+ seedURL);
+    }
+    int[] stats;
+    if (isSU3)     stats=extractSU3(contentRaw);
+ else     stats=extractZip(contentRaw);
+    fetched=stats[0];
+    errors=stats[1];
+  }
+ catch (  Throwable t) {
+    System.err.println("Error reseeding: " + t);
+    _log.error("Error reseeding",t);
+    errors++;
+  }
+ finally {
+    if (contentRaw != null)     contentRaw.delete();
+  }
+  _checker.setStatus(_("Reseeding: fetching router info from seed URL ({0} successful, {1} errors).",fetched,errors));
+  System.err.println("Reseed got " + fetched + " router infos from "+ seedURL+ " with "+ errors+ " errors");
+  return fetched;
+}

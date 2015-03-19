@@ -1,0 +1,46 @@
+{
+  byte[] su3Magic=DataHelper.getASCII(SU3File.MAGIC);
+  byte[] zipMagic=new byte[]{0x1F,(byte)0x8B,0x08};
+  int len=Math.max(su3Magic.length,zipMagic.length);
+  byte[] magic=new byte[len];
+  File tmp=null;
+  OutputStream out=null;
+  try {
+    DataHelper.read(in,magic);
+    boolean isSU3;
+    if (DataHelper.eq(magic,0,su3Magic,0,su3Magic.length))     isSU3=true;
+ else     if (DataHelper.eq(magic,0,zipMagic,0,zipMagic.length))     isSU3=false;
+ else     throw new IOException("Not a zip or su3 file");
+    tmp=new File(_context.getTempDir(),"manualreseeds-" + _context.random().nextInt() + (isSU3 ? ".su3" : ".zip"));
+    out=new BufferedOutputStream(new SecureFileOutputStream(tmp));
+    out.write(magic);
+    byte buf[]=new byte[16 * 1024];
+    int read=0;
+    while ((read=in.read(buf)) != -1)     out.write(buf,0,read);
+    out.close();
+    int[] stats;
+    ReseedRunner reseedRunner=new ReseedRunner();
+    if (isSU3)     stats=reseedRunner.extractSU3(tmp);
+ else     stats=reseedRunner.extractZip(tmp);
+    int fetched=stats[0];
+    int errors=stats[1];
+    if (fetched <= 0)     throw new IOException("No seeds extracted");
+    _checker.setStatus(_("Reseeding: got router info from file ({0} successful, {1} errors).",fetched,errors));
+    System.err.println("Reseed got " + fetched + " router infos from file with "+ errors+ " errors");
+    _context.router().eventLog().addEvent(EventLog.RESEED,fetched + " from file");
+    return fetched;
+  }
+  finally {
+    try {
+      in.close();
+    }
+ catch (    IOException ioe) {
+    }
+    if (out != null)     try {
+      out.close();
+    }
+ catch (    IOException ioe) {
+    }
+    if (tmp != null)     tmp.delete();
+  }
+}
