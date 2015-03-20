@@ -53,14 +53,13 @@
     }
   }
  else   if (_action.equals(_("Reseed from file"))) {
-    String val=getJettyString("file");
-    if (val == null || val.length() == 0) {
-      addFormError(_("You must enter a file"));
-      return;
-    }
-    ByteArrayInputStream bais=new ByteArrayInputStream(DataHelper.getASCII(val));
+    InputStream in=_requestWrapper.getInputStream("file");
     try {
-      int count=_context.netDb().reseedChecker().requestReseed(bais);
+      if (in == null || in.available() <= 0) {
+        addFormError(_("You must enter a file"));
+        return;
+      }
+      int count=_context.netDb().reseedChecker().requestReseed(in);
       if (count <= 0) {
         addFormError(_("Reseed from file failed"));
       }
@@ -70,6 +69,13 @@
     }
  catch (    IOException ioe) {
       addFormError(_("Reseed from file failed") + " - " + ioe);
+    }
+ finally {
+      if (in != null)       try {
+        in.close();
+      }
+ catch (      IOException ioe) {
+      }
     }
   }
  else   if (_action.equals(_("Save changes"))) {
