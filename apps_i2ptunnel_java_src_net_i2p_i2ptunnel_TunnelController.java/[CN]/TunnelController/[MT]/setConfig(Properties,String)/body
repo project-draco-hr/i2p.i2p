@@ -23,24 +23,25 @@
     }
   }
   setSessionOptions();
-  if (_running) {
-    Collection<I2PSession> sessions=getAllSessions();
-    if (sessions.isEmpty()) {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Running but no sessions to update");
-    }
-    for (    I2PSession s : sessions) {
-      if (!s.isClosed()) {
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("Session is open, updating: " + s);
-        s.updateOptions(_tunnel.getClientOptions());
+synchronized (this) {
+    if (_state != TunnelState.RUNNING) {
+      if (_log.shouldLog(Log.DEBUG)) {
+        _log.debug("Not running, not updating sessions");
       }
- else {
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("Session is closed, not updating: " + s);
-      }
+      return;
     }
   }
+  Collection<I2PSession> sessions=getAllSessions();
+  if (sessions.isEmpty()) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Running but no sessions to update");
+  }
+  for (  I2PSession s : sessions) {
+    if (!s.isClosed()) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Session is open, updating: " + s);
+      s.updateOptions(_tunnel.getClientOptions());
+    }
  else {
-    if (_log.shouldLog(Log.DEBUG)) {
-      _log.debug("Not running, not updating sessions");
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Session is closed, not updating: " + s);
     }
   }
 }
