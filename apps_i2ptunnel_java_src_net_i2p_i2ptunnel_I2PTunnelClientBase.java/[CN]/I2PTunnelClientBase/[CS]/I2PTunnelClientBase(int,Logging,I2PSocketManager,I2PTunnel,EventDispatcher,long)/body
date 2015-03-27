@@ -3,6 +3,7 @@
   chained=true;
   sockMgr=sktMgr;
   _clientId=clientId;
+  _handlerName="chained";
   this.localPort=localPort;
   this.l=l;
   _ownDest=true;
@@ -15,24 +16,5 @@
 synchronized (_executorLock) {
     if (_executor == null)     _executor=new CustomThreadPoolExecutor();
   }
-  Thread t=new I2PAppThread(this,"Client " + tunnel.listenHost + ':'+ localPort);
-  t.start();
-  open=true;
-synchronized (this) {
-    while (!listenerReady && open) {
-      try {
-        wait();
-      }
- catch (      InterruptedException e) {
-      }
-    }
-  }
-  if (open && listenerReady) {
-    l.log("Client ready, listening on " + tunnel.listenHost + ':'+ localPort);
-    notifyEvent("openBaseClientResult","ok");
-  }
- else {
-    l.log("Client error for " + tunnel.listenHost + ':'+ localPort+ ", check logs");
-    notifyEvent("openBaseClientResult","error");
-  }
+  startup();
 }
