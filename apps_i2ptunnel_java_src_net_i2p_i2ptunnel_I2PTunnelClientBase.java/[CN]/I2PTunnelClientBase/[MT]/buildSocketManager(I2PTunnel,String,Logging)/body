@@ -8,50 +8,33 @@
       portNum=Integer.parseInt(tunnel.port);
     }
  catch (    NumberFormatException nfe) {
-      _log.log(Log.CRIT,"Invalid port specified [" + tunnel.port + "], reverting to "+ portNum);
+      throw new IllegalArgumentException("Invalid port specified [" + tunnel.port + "]",nfe);
     }
   }
   I2PSocketManager sockManager=null;
-  int retries=0;
-  while (sockManager == null) {
+  FileInputStream fis=null;
+  try {
     if (pkf != null) {
-      FileInputStream fis=null;
-      try {
-        fis=new FileInputStream(pkf);
-        sockManager=I2PSocketManagerFactory.createManager(fis,tunnel.host,portNum,props);
-      }
- catch (      IOException ioe) {
-        if (log != null)         log.log("Error opening key file " + ioe);
-        _log.error("Error opening key file",ioe);
-        throw new IllegalArgumentException("Error opening key file " + ioe);
-      }
+      fis=new FileInputStream(pkf);
+      sockManager=I2PSocketManagerFactory.createDisconnectedManager(fis,tunnel.host,portNum,props);
+    }
+ else {
+      sockManager=I2PSocketManagerFactory.createDisconnectedManager(null,tunnel.host,portNum,props);
+    }
+  }
+ catch (  I2PSessionException ise) {
+    throw new IllegalArgumentException("Can't create socket manager",ise);
+  }
+catch (  IOException ioe) {
+    if (log != null)     log.log("Error opening key file " + ioe);
+    _log.error("Error opening key file",ioe);
+    throw new IllegalArgumentException("Error opening key file " + ioe);
+  }
  finally {
-        if (fis != null)         try {
-          fis.close();
-        }
- catch (        IOException ioe) {
-        }
-      }
+    if (fis != null)     try {
+      fis.close();
     }
- else {
-      sockManager=I2PSocketManagerFactory.createManager(tunnel.host,portNum,props);
-    }
-    if (sockManager == null) {
-      String msg="Unable to connect to the router at " + tunnel.host + ':'+ portNum+ " and build tunnels for the client";
-      if (++retries < MAX_RETRIES) {
-        if (log != null)         log.log(msg + ", retrying in " + (RETRY_DELAY / 1000)+ " seconds");
-        _log.error(msg + ", retrying in " + (RETRY_DELAY / 1000)+ " seconds");
-      }
- else {
-        if (log != null)         log.log(msg + ", giving up");
-        _log.log(Log.CRIT,msg + ", giving up");
-        throw new IllegalArgumentException(msg);
-      }
-      try {
-        Thread.sleep(RETRY_DELAY);
-      }
- catch (      InterruptedException ie) {
-      }
+ catch (    IOException ioe) {
     }
   }
   sockManager.setName("Client");
