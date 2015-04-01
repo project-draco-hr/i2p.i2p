@@ -1,0 +1,45 @@
+{
+  int fetched=0;
+  int errors=0;
+  File tmpDir=null;
+  try {
+    tmpDir=new File(_context.getTempDir(),"reseeds-" + _context.random().nextInt());
+    if (!FileUtil.extractZip(zip,tmpDir))     throw new IOException("Bad zip file");
+    Hash ourHash=_context.routerHash();
+    String ourB64=ourHash != null ? ROUTERINFO_PREFIX + ourHash.toBase64() + ROUTERINFO_SUFFIX : "";
+    File[] files=tmpDir.listFiles();
+    if (files == null || files.length == 0)     throw new IOException("No files in zip");
+    List<File> fList=Arrays.asList(files);
+    Collections.shuffle(fList,_context.random());
+    long minTime=_context.clock().now() - MAX_FILE_AGE;
+    File netDbDir=new SecureDirectory(_context.getRouterDir(),"netDb");
+    if (!netDbDir.exists())     netDbDir.mkdirs();
+    for (Iterator<File> iter=fList.iterator(); iter.hasNext() && fetched < 400; ) {
+      File f=iter.next();
+      String name=f.getName();
+      if (name.length() != ROUTERINFO_PREFIX.length() + 44 + ROUTERINFO_SUFFIX.length() || name.equals(ourB64) || f.length() > 10 * 1024 || f.lastModified() < minTime || !name.startsWith(ROUTERINFO_PREFIX) || !name.endsWith(ROUTERINFO_SUFFIX) || !f.isFile()) {
+        if (_log.shouldLog(Log.WARN))         _log.warn("Skipping " + f);
+        f.delete();
+        errors++;
+        continue;
+      }
+      File to=new File(netDbDir,name);
+      if (FileUtil.rename(f,to)) {
+        fetched++;
+      }
+ else {
+        f.delete();
+        errors++;
+      }
+      if (errors >= 5)       break;
+    }
+  }
+  finally {
+    if (tmpDir != null)     FileUtil.rmdir(tmpDir,false);
+  }
+  if (fetched > 0)   _context.netDb().rescan();
+  int[] rv=new int[2];
+  rv[0]=fetched;
+  rv[1]=errors;
+  return rv;
+}

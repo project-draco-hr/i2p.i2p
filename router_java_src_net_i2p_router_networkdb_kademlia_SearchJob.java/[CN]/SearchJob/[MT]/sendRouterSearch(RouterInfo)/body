@@ -1,0 +1,11 @@
+{
+  int timeout=_facade.getPeerTimeout(router.getIdentity().getHash());
+  long expiration=getContext().clock().now() + timeout;
+  I2NPMessage msg=buildMessage(null,router.getIdentity().getHash(),expiration,router);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug(getJobId() + ": Sending router search directly to " + router.getIdentity().getHash()+ " for "+ _state.getTarget());
+  SearchMessageSelector sel=new SearchMessageSelector(getContext(),router,_expiration,_state);
+  SearchUpdateReplyFoundJob reply=new SearchUpdateReplyFoundJob(getContext(),router,_state,_facade,this);
+  SendMessageDirectJob j=new SendMessageDirectJob(getContext(),msg,router.getIdentity().getHash(),reply,new FailedJob(getContext(),router),sel,timeout,OutNetMessage.PRIORITY_EXPLORATORY);
+  if (FloodfillNetworkDatabaseFacade.isFloodfill(router))   _floodfillSearchesOutstanding++;
+  j.runJob();
+}

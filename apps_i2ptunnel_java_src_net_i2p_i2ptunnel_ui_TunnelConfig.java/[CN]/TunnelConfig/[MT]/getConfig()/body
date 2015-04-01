@@ -1,0 +1,105 @@
+{
+  Properties config=new Properties();
+  updateConfigGeneric(config);
+  if ((TunnelController.isClient(_type) && !TunnelController.TYPE_STREAMR_CLIENT.equals(_type)) || TunnelController.TYPE_STREAMR_SERVER.equals(_type)) {
+    if (_reachableBy != null)     config.setProperty(TunnelController.PROP_INTFC,_reachableBy);
+ else     config.setProperty(TunnelController.PROP_INTFC,"");
+  }
+ else {
+    if (_targetHost != null)     config.setProperty(TunnelController.PROP_TARGET_HOST,_targetHost);
+  }
+  if (TunnelController.isClient(_type)) {
+    if (_port >= 0)     config.setProperty(TunnelController.PROP_LISTEN_PORT,Integer.toString(_port));
+    config.setProperty(TunnelController.PROP_SHARED,_sharedClient + "");
+    for (    String p : _booleanClientOpts)     config.setProperty(OPT + p,"" + _booleanOptions.contains(p));
+    for (    String p : _otherClientOpts) {
+      if (_otherOptions.containsKey(p))       config.setProperty(OPT + p,_otherOptions.get(p));
+    }
+  }
+ else {
+    if (_targetPort >= 0)     config.setProperty(TunnelController.PROP_TARGET_PORT,Integer.toString(_targetPort));
+    for (    String p : _booleanServerOpts)     config.setProperty(OPT + p,"" + _booleanOptions.contains(p));
+    for (    String p : _otherServerOpts) {
+      if (_otherOptions.containsKey(p))       config.setProperty(OPT + p,_otherOptions.get(p));
+    }
+  }
+  if (TunnelController.TYPE_HTTP_CLIENT.equals(_type) || TunnelController.TYPE_CONNECT.equals(_type) || TunnelController.TYPE_SOCKS.equals(_type)|| TunnelController.TYPE_SOCKS_IRC.equals(_type)) {
+    for (    String p : _booleanProxyOpts)     config.setProperty(OPT + p,"" + _booleanOptions.contains(p));
+    if (_proxyList != null)     config.setProperty(TunnelController.PROP_PROXIES,_proxyList);
+  }
+  if (TunnelController.TYPE_HTTP_CLIENT.equals(_type) || TunnelController.TYPE_CONNECT.equals(_type)) {
+    String puser=OPT + I2PTunnelHTTPClientBase.PROP_USER;
+    String user=config.getProperty(puser);
+    String ppw=OPT + I2PTunnelHTTPClientBase.PROP_PW;
+    String pw=config.getProperty(ppw);
+    if (user != null && pw != null && user.length() > 0 && pw.length() > 0) {
+      String pmd5=OPT + I2PTunnelHTTPClientBase.PROP_PROXY_DIGEST_PREFIX + user+ I2PTunnelHTTPClientBase.PROP_PROXY_DIGEST_SUFFIX;
+      if (config.getProperty(pmd5) == null) {
+        String realm=_type.equals(TunnelController.TYPE_HTTP_CLIENT) ? I2PTunnelHTTPClient.AUTH_REALM : I2PTunnelConnectClient.AUTH_REALM;
+        String hex=PasswordManager.md5Hex(realm,user,pw);
+        if (hex != null) {
+          config.setProperty(pmd5,hex);
+          config.remove(puser);
+          config.remove(ppw);
+        }
+      }
+    }
+    String auth=_otherOptions.get(I2PTunnelHTTPClientBase.PROP_AUTH);
+    if (auth != null && !auth.equals("false")) {
+      if (_newProxyUser != null && _newProxyPW != null && _newProxyUser.length() > 0 && _newProxyPW.length() > 0) {
+        String pmd5=OPT + I2PTunnelHTTPClientBase.PROP_PROXY_DIGEST_PREFIX + _newProxyUser+ I2PTunnelHTTPClientBase.PROP_PROXY_DIGEST_SUFFIX;
+        String realm=_type.equals(TunnelController.TYPE_HTTP_CLIENT) ? I2PTunnelHTTPClient.AUTH_REALM : I2PTunnelConnectClient.AUTH_REALM;
+        String hex=PasswordManager.md5Hex(realm,_newProxyUser,_newProxyPW);
+        if (hex != null)         config.setProperty(pmd5,hex);
+      }
+    }
+  }
+  if (TunnelController.TYPE_IRC_CLIENT.equals(_type) || TunnelController.TYPE_STD_CLIENT.equals(_type) || TunnelController.TYPE_STREAMR_CLIENT.equals(_type)) {
+    if (_targetDestination != null)     config.setProperty(TunnelController.PROP_DEST,_targetDestination);
+  }
+ else   if (TunnelController.TYPE_HTTP_SERVER.equals(_type) || TunnelController.TYPE_HTTP_BIDIR_SERVER.equals(_type)) {
+    if (_spoofedHost != null)     config.setProperty(TunnelController.PROP_SPOOFED_HOST,_spoofedHost);
+    for (    String p : _httpServerOpts)     if (_otherOptions.containsKey(p))     config.setProperty(OPT + p,_otherOptions.get(p));
+  }
+  if (TunnelController.TYPE_HTTP_BIDIR_SERVER.equals(_type)) {
+    if (_port >= 0)     config.setProperty(TunnelController.PROP_LISTEN_PORT,Integer.toString(_port));
+    if (_reachableBy != null)     config.setProperty(TunnelController.PROP_INTFC,_reachableBy);
+ else     if (_targetHost != null)     config.setProperty(TunnelController.PROP_INTFC,_targetHost);
+ else     config.setProperty(TunnelController.PROP_INTFC,"");
+  }
+  if (TunnelController.TYPE_IRC_CLIENT.equals(_type)) {
+    boolean dcc=_booleanOptions.contains(I2PTunnelIRCClient.PROP_DCC);
+    config.setProperty(OPT + I2PTunnelIRCClient.PROP_DCC,"" + dcc);
+    if (dcc) {
+      config.setProperty(OPT + PROP_MAX_CONNS_MIN,"3");
+      config.setProperty(OPT + PROP_MAX_CONNS_HOUR,"10");
+      config.setProperty(OPT + PROP_MAX_TOTAL_CONNS_MIN,"5");
+      config.setProperty(OPT + PROP_MAX_TOTAL_CONNS_HOUR,"25");
+    }
+  }
+  if (!TunnelController.isClient(_type) || _booleanOptions.contains("persistentClientKey")) {
+    String p=OPT + "inbound.randomKey";
+    if (!config.containsKey(p)) {
+      byte[] rk=new byte[32];
+      _context.random().nextBytes(rk);
+      config.setProperty(p,Base64.encode(rk));
+      p=OPT + "outbound.randomKey";
+      _context.random().nextBytes(rk);
+      config.setProperty(p,Base64.encode(rk));
+    }
+    p=OPT + "i2cp.leaseSetSigningPrivateKey";
+    if (_dest != null && !config.containsKey(p)) {
+      try {
+        SigType type=_dest.getSigType();
+        SimpleDataStructure keys[]=KeyGenerator.getInstance().generateSigningKeys(type);
+        config.setProperty(p,type.name() + ':' + keys[1].toBase64());
+        p=OPT + "i2cp.leaseSetPrivateKey";
+        keys=KeyGenerator.getInstance().generatePKIKeys();
+        config.setProperty(p,"ELGAMAL_2048:" + keys[1].toBase64());
+      }
+ catch (      GeneralSecurityException gse) {
+      }
+    }
+  }
+  return config;
+}

@@ -1,7 +1,19 @@
 {
   if (!_context.getBooleanPropertyDefaultTrue(PROP_BLOCKLIST_ENABLED))   return;
-  String file=_context.getProperty(PROP_BLOCKLIST_FILE,BLOCKLIST_FILE_DEFAULT);
-  Job job=new ReadinJob(file);
-  job.getTiming().setStartAfter(_context.clock().now() + 2 * 60 * 1000);
+  List<File> files=new ArrayList<File>(3);
+  File blFile=new File(_context.getBaseDir(),BLOCKLIST_FILE_DEFAULT);
+  files.add(blFile);
+  if (!_context.getConfigDir().equals(_context.getBaseDir())) {
+    blFile=new File(_context.getConfigDir(),BLOCKLIST_FILE_DEFAULT);
+    files.add(blFile);
+  }
+  String file=_context.getProperty(PROP_BLOCKLIST_FILE);
+  if (file != null && !file.equals(BLOCKLIST_FILE_DEFAULT)) {
+    blFile=new File(file);
+    if (!blFile.isAbsolute())     blFile=new File(_context.getConfigDir(),file);
+    files.add(blFile);
+  }
+  Job job=new ReadinJob(files);
+  job.getTiming().setStartAfter(_context.clock().now() + 30 * 1000);
   _context.jobQueue().addJob(job);
 }

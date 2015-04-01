@@ -1,0 +1,61 @@
+{
+  if (blFile == null || (!blFile.exists()) || blFile.length() <= 0) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Blocklist file not found: " + blFile);
+    return count;
+  }
+  long start=_context.clock().now();
+  int oldcount=count;
+  int badcount=0;
+  int peercount=0;
+  long ipcount=0;
+  BufferedReader br=null;
+  try {
+    br=new BufferedReader(new InputStreamReader(new FileInputStream(blFile),"UTF-8"));
+    String buf=null;
+    while ((buf=br.readLine()) != null) {
+      Entry e=parse(buf,true);
+      if (e == null) {
+        badcount++;
+        continue;
+      }
+      if (e.peer != null) {
+        _peerBlocklist.put(e.peer,e.comment);
+        peercount++;
+        continue;
+      }
+      byte[] ip1=e.ip1;
+      byte[] ip2=e.ip2;
+      store(ip1,ip2,count++);
+      ipcount+=1 + toInt(ip2) - toInt(ip1);
+    }
+  }
+ catch (  IOException ioe) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Error reading the blocklist file",ioe);
+    return count;
+  }
+catch (  OutOfMemoryError oom) {
+    _blocklist=null;
+    _log.log(Log.CRIT,"OOM reading the blocklist");
+    return count;
+  }
+ finally {
+    if (br != null)     try {
+      br.close();
+    }
+ catch (    IOException ioe) {
+    }
+  }
+  if (_wrapSave != null) {
+    store(_wrapSave.ip1,_wrapSave.ip2,count++);
+    ipcount+=1 + toInt(_wrapSave.ip2) - toInt(_wrapSave.ip1);
+    _wrapSave=null;
+  }
+  if (_log.shouldLog(Log.INFO)) {
+    _log.info("Stats for " + blFile);
+    _log.info("Removed " + badcount + " bad entries and comment lines");
+    _log.info("Read " + (count - oldcount) + " valid entries from the blocklist "+ blFile);
+    _log.info("Blocking " + ipcount + " IPs and "+ peercount+ " hashes");
+    _log.info("Blocklist processing finished, time: " + (_context.clock().now() - start));
+  }
+  return count;
+}

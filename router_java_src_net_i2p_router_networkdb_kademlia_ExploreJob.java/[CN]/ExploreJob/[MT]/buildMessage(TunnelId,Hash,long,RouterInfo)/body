@@ -4,7 +4,7 @@
   msg.setFrom(replyGateway);
   Set<Hash> dontIncludePeers=getState().getClosestAttempted(MAX_CLOSEST);
   msg.setMessageExpiration(expiration);
-  msg.setReplyTunnel(replyTunnelId);
+  if (replyTunnelId != null)   msg.setReplyTunnel(replyTunnelId);
   int available=MAX_CLOSEST - dontIncludePeers.size();
   if (available > 0) {
     if (dontIncludePeers.add(Hash.FAKE_HASH))     available--;
@@ -21,7 +21,7 @@
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Peers we don't want to hear about: " + dontIncludePeers);
   msg.setDontIncludePeers(dontIncludePeers);
   I2NPMessage outMsg;
-  if (getContext().getProperty(IterativeSearchJob.PROP_ENCRYPT_RI,IterativeSearchJob.DEFAULT_ENCRYPT_RI)) {
+  if (replyTunnelId != null && getContext().getProperty(IterativeSearchJob.PROP_ENCRYPT_RI,IterativeSearchJob.DEFAULT_ENCRYPT_RI)) {
     if (DatabaseLookupMessage.supportsEncryptedReplies(peer)) {
       MessageWrapper.OneTimeSession sess;
       sess=MessageWrapper.generateSession(getContext());

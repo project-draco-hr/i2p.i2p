@@ -3,6 +3,8 @@
   if (udn == null)   udn="???";
   String name=dev.getFriendlyName();
   if (name == null)   name="???";
+  boolean isIGD=ROUTER_DEVICE.equals(dev.getDeviceType()) && dev.isRootDevice();
+  name+=isIGD ? " IGD" : (" " + dev.getDeviceType());
 synchronized (lock) {
     if (isDisabled) {
       if (_log.shouldLog(Log.WARN))       _log.warn("Plugin has been disabled previously, ignoring " + name + " UDN: "+ udn);
@@ -11,7 +13,7 @@ synchronized (lock) {
     }
   }
   if (!ROUTER_DEVICE.equals(dev.getDeviceType()) || !dev.isRootDevice()) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("UP&P non-IGD device found, ignoring " + name);
+    if (_log.shouldLog(Log.WARN))     _log.warn("UP&P non-IGD device found, ignoring " + name + ' '+ dev.getDeviceType());
 synchronized (lock) {
       _otherUDNs.put(udn,name);
     }
@@ -50,7 +52,6 @@ synchronized (lock) {
 synchronized (lock) {
     if (_service == null) {
       _log.error("The IGD device we got isn't suiting our needs, let's disable the plugin");
-      isDisabled=true;
       _router=null;
       return;
     }

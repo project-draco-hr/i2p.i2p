@@ -1,0 +1,32 @@
+{
+  PingRequest req=new PingRequest(null);
+  long id=assignPingId(req);
+  PacketLocal packet=new PacketLocal(_context,peer);
+  packet.setSendStreamId(id);
+  packet.setFlag(Packet.FLAG_ECHO | Packet.FLAG_NO_ACK | Packet.FLAG_SIGNATURE_INCLUDED);
+  packet.setOptionalFrom(_session.getMyDestination());
+  packet.setLocalPort(fromPort);
+  packet.setRemotePort(toPort);
+  packet.setPayload(new ByteArray(payload));
+  if (timeoutMs > MAX_PING_TIMEOUT)   timeoutMs=MAX_PING_TIMEOUT;
+  if (_log.shouldLog(Log.INFO)) {
+    _log.info(String.format("about to ping %s port %d from port %d timeout=%d payload=%d",peer.calculateHash().toString(),toPort,fromPort,timeoutMs,payload.length));
+  }
+  _outboundQueue.enqueue(packet);
+  packet.releasePayload();
+synchronized (req) {
+    if (!req.pongReceived())     try {
+      req.wait(timeoutMs);
+    }
+ catch (    InterruptedException ie) {
+    }
+  }
+  _pendingPings.remove(id);
+  boolean ok=req.pongReceived();
+  if (!ok)   return null;
+  ByteArray ba=req.getPayload();
+  if (ba == null)   return new byte[0];
+  byte[] rv=new byte[ba.getValid()];
+  System.arraycopy(ba,ba.getOffset(),rv,0,ba.getValid());
+  return rv;
+}

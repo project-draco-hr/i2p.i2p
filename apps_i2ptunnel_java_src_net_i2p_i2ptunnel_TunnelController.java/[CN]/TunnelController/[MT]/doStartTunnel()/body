@@ -1,17 +1,17 @@
 {
-  if (_running) {
-    if (_log.shouldLog(Log.INFO))     _log.info("Already running");
-    log("Tunnel " + getName() + " is already running");
-    return;
+synchronized (this) {
+    if (_state != TunnelState.STARTING)     return;
   }
   String type=getType();
   if ((type == null) || (type.length() <= 0)) {
+    changeState(TunnelState.STOPPED);
     if (_log.shouldLog(Log.ERROR))     _log.error("Cannot start the tunnel - no type specified");
     return;
   }
   if (type.endsWith("server") || getPersistentClientKey()) {
     boolean ok=createPrivateKey();
     if (!ok) {
+      changeState(TunnelState.STOPPED);
       log("Failed to start tunnel " + getName() + " as the private key file could not be created");
       return;
     }
@@ -55,9 +55,10 @@
     startStreamrServer();
   }
  else {
+    changeState(TunnelState.STOPPED);
     if (_log.shouldLog(Log.ERROR))     _log.error("Cannot start tunnel - unknown type [" + type + "]");
     return;
   }
   acquire();
-  _running=true;
+  changeState(TunnelState.RUNNING);
 }

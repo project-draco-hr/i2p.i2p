@@ -13,10 +13,14 @@
  else       get=new EepGet(_context,false,null,0,0,_tempFile.getAbsolutePath(),newsURL,true,null,_lastModified);
       get.addStatusListener(this);
       long start=_context.clock().now();
+      _newLastModified=start;
       if (get.fetch()) {
         int status=get.getStatusCode();
         if (status == 200 || status == 304) {
-          _context.router().saveConfig(NewsHelper.PROP_LAST_CHECKED,Long.toString(start));
+          Map<String,String> opts=new HashMap<String,String>(2);
+          opts.put(NewsHelper.PROP_LAST_CHECKED,Long.toString(start));
+          if (status == 200 && _isNewer)           opts.put(NewsHelper.PROP_LAST_UPDATED,Long.toString(_newLastModified));
+          _context.router().saveConfig(opts,null);
           return;
         }
       }

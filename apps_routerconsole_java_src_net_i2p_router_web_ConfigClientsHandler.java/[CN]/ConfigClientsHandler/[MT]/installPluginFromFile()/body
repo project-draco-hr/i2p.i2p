@@ -1,0 +1,64 @@
+{
+  InputStream in=_requestWrapper.getInputStream("pluginFile");
+  byte[] su3Magic=DataHelper.getASCII(SU3File.MAGIC);
+  byte[] zipMagic=new byte[]{0x50,0x4b,0x03,0x04};
+  byte[] magic=new byte[TrustedUpdate.HEADER_BYTES + zipMagic.length];
+  File tmp=null;
+  OutputStream out=null;
+  try {
+    if (in == null || in.available() <= 0) {
+      addFormError(_("You must enter a file"));
+      return;
+    }
+    DataHelper.read(in,magic);
+    boolean isSU3=DataHelper.eq(magic,0,su3Magic,0,su3Magic.length);
+    if (!isSU3) {
+      if (!DataHelper.eq(magic,TrustedUpdate.HEADER_BYTES,zipMagic,0,zipMagic.length)) {
+        String name=_requestWrapper.getFilename("pluginFile");
+        if (name == null)         name="File";
+        throw new IOException(name + " is not an xpi2p or su3 plugin");
+      }
+    }
+    tmp=new File(_context.getTempDir(),"plugin-" + _context.random().nextInt() + (isSU3 ? ".su3" : ".xpi2p"));
+    out=new BufferedOutputStream(new SecureFileOutputStream(tmp));
+    out.write(magic);
+    byte buf[]=new byte[16 * 1024];
+    int read=0;
+    while ((read=in.read(buf)) != -1) {
+      out.write(buf,0,read);
+    }
+    out.close();
+    String url=tmp.toURI().toString();
+    installPlugin(null,url);
+    ConsoleUpdateManager mgr=UpdateHandler.updateManager(_context);
+    if (mgr == null)     return;
+    for (int i=0; i < 20; i++) {
+      if (!mgr.isUpdateInProgress(PLUGIN)) {
+        tmp.delete();
+        break;
+      }
+      try {
+        Thread.sleep(500);
+      }
+ catch (      InterruptedException ie) {
+      }
+    }
+    String status=mgr.getStatus();
+    if (status != null && status.length() > 0)     addFormNoticeNoEscape(status);
+  }
+ catch (  IOException ioe) {
+    addFormError(_("Install from file failed") + " - " + ioe.getMessage());
+  }
+ finally {
+    if (in != null)     try {
+      in.close();
+    }
+ catch (    IOException ioe) {
+    }
+    if (out != null)     try {
+      out.close();
+    }
+ catch (    IOException ioe) {
+    }
+  }
+}

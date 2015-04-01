@@ -2,12 +2,18 @@
   changeState(STARTING);
   Properties cfg=loadConfig(configFile);
   int i=0;
-  while (true) {
-    String type=cfg.getProperty("tunnel." + i + ".type");
-    if (type == null)     break;
-    TunnelController controller=new TunnelController(cfg,"tunnel." + i + ".");
-    _controllers.add(controller);
-    i++;
+  _controllersLock.writeLock().lock();
+  try {
+    while (true) {
+      String type=cfg.getProperty("tunnel." + i + ".type");
+      if (type == null)       break;
+      TunnelController controller=new TunnelController(cfg,"tunnel." + i + ".");
+      _controllers.add(controller);
+      i++;
+    }
+  }
+  finally {
+    _controllersLock.writeLock().unlock();
   }
   I2PAppThread startupThread=new I2PAppThread(new StartControllers(),"Startup tunnels");
   startupThread.start();

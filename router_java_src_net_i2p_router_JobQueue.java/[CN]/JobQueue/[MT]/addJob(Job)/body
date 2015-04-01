@@ -36,6 +36,14 @@ synchronized (_jobLock) {
   _context.statManager().addRateData("jobQueue.readyJobs",numReady);
   if (dropped) {
     _context.statManager().addRateData("jobQueue.droppedJobs",1);
-    _log.logAlways(Log.WARN,"Dropping job due to overload!  # ready jobs: " + numReady + ": job = "+ job);
+    if (_log.shouldLog(Log.WARN))     _log.warn("Dropping job due to overload!  # ready jobs: " + numReady + ": job = "+ job);
+    String key=job.getName();
+    JobStats stats=_jobStats.get(key);
+    if (stats == null) {
+      stats=new JobStats(key);
+      JobStats old=_jobStats.putIfAbsent(key,stats);
+      if (old != null)       stats=old;
+    }
+    stats.jobDropped();
   }
 }

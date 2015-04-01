@@ -1,7 +1,8 @@
 {
+  if (exitCode < 0)   throw new IllegalArgumentException();
+  changeState(State.FINAL_SHUTDOWN_2);
   int priority=(exitCode == EXIT_OOM) ? Thread.MAX_PRIORITY - 1 : Thread.NORM_PRIORITY + 2;
   Thread.currentThread().setPriority(priority);
-  _shutdownInProgress=true;
   _log.log(Log.CRIT,"Starting final shutdown(" + exitCode + ')');
   if (_killVMOnEnd) {
     try {
@@ -11,7 +12,6 @@
     }
   }
   ((RouterClock)_context.clock()).removeShiftListener(this);
-  _isAlive=false;
   _context.random().saveSeed();
   I2PThread.removeOOMEventListener(_oomListener);
   for (  Runnable task : _context.getShutdownTasks()) {

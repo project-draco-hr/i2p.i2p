@@ -10,7 +10,17 @@
     long afterHeaders=getTunnel().getContext().clock().now();
     Properties opts=getTunnel().getClientOptions();
     if (Boolean.parseBoolean(opts.getProperty(OPT_REJECT_INPROXY)) && (headers.containsKey("X-Forwarded-For") || headers.containsKey("X-Forwarded-Server") || headers.containsKey("X-Forwarded-Host"))) {
-      if (_log.shouldLog(Log.WARN))       _log.warn("Refusing inproxy access: " + peerHash.toBase64());
+      if (_log.shouldLog(Log.WARN)) {
+        StringBuilder buf=new StringBuilder();
+        buf.append("Refusing inproxy access: ").append(peerHash.toBase64());
+        List<String> h=headers.get("X-Forwarded-For");
+        if (h != null)         buf.append(" from: ").append(h.get(0));
+        h=headers.get("X-Forwarded-Server");
+        if (h != null)         buf.append(" via: ").append(h.get(0));
+        h=headers.get("X-Forwarded-Host");
+        if (h != null)         buf.append(" for: ").append(h.get(0));
+        _log.warn(buf.toString());
+      }
       try {
         socket.getOutputStream().write(ERR_INPROXY);
       }
@@ -79,7 +89,7 @@
     _clientExecutor.execute(t);
     long afterHandle=getTunnel().getContext().clock().now();
     long timeToHandle=afterHandle - afterAccept;
-    getTunnel().getContext().statManager().addRateData("i2ptunnel.httpserver.blockingHandleTime",timeToHandle,0);
+    getTunnel().getContext().statManager().addRateData("i2ptunnel.httpserver.blockingHandleTime",timeToHandle);
     if ((timeToHandle > 1000) && (_log.shouldLog(Log.WARN)))     _log.warn("Took a while to handle the request for " + remoteHost + ':'+ remotePort+ " ["+ timeToHandle+ ", read headers: "+ (afterHeaders - afterAccept)+ ", socket create: "+ (afterSocket - afterHeaders)+ ", start runners: "+ (afterHandle - afterSocket)+ "]");
   }
  catch (  SocketException ex) {

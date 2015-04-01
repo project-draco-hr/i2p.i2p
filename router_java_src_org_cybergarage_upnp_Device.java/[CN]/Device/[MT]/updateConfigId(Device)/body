@@ -1,0 +1,25 @@
+{
+  int configId=0;
+  DeviceList cdevList=dev.getDeviceList();
+  int cdevCnt=cdevList.size();
+  for (int n=0; n < cdevCnt; n++) {
+    Device cdev=cdevList.getDevice(n);
+    updateConfigId(cdev);
+    configId+=cdev.getConfigId();
+    configId&=UPnP.CONFIGID_UPNP_ORG_MAX;
+  }
+  ServiceList serviceList=dev.getServiceList();
+  int serviceCnt=serviceList.size();
+  for (int n=0; n < serviceCnt; n++) {
+    Service service=serviceList.getService(n);
+    service.updateConfigId();
+    configId+=service.getConfigId();
+    configId&=UPnP.CONFIGID_UPNP_ORG_MAX;
+  }
+  Node devNode=getDeviceNode();
+  if (devNode == null)   return;
+  String devDescXml=devNode.toString();
+  configId+=UPnP.caluculateConfigId(devDescXml);
+  configId&=UPnP.CONFIGID_UPNP_ORG_MAX;
+  devNode.setAttribute(CONFIG_ID,configId);
+}
