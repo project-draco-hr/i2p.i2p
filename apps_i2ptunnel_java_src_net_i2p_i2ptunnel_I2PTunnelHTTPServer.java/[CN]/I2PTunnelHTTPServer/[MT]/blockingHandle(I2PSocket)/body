@@ -2,6 +2,27 @@
   Hash peerHash=socket.getPeerDestination().calculateHash();
   if (_log.shouldLog(Log.INFO))   _log.info("Incoming connection to '" + toString() + "' port "+ socket.getLocalPort()+ " from: "+ peerHash+ " port "+ socket.getPort());
   try {
+    if (socket.getLocalPort() == 443) {
+      if (getTunnel().getClientOptions().getProperty("targetForPort.443") == null) {
+        try {
+          socket.getOutputStream().write(ERR_SSL.getBytes("UTF-8"));
+        }
+ catch (        IOException ioe) {
+        }
+ finally {
+          try {
+            socket.close();
+          }
+ catch (          IOException ioe) {
+          }
+        }
+        return;
+      }
+      Socket s=getSocket(socket.getPeerDestination().calculateHash(),443);
+      Runnable t=new I2PTunnelRunner(s,socket,slock,null,null,null,(I2PTunnelRunner.FailCallback)null);
+      _clientExecutor.execute(t);
+      return;
+    }
     long afterAccept=getTunnel().getContext().clock().now();
     socket.setReadTimeout(HEADER_TIMEOUT);
     InputStream in=socket.getInputStream();
@@ -22,7 +43,7 @@
         _log.warn(buf.toString());
       }
       try {
-        socket.getOutputStream().write(ERR_INPROXY);
+        socket.getOutputStream().write(ERR_INPROXY.getBytes("UTF-8"));
       }
  catch (      IOException ioe) {
       }
@@ -37,7 +58,7 @@
       if (_postThrottler.shouldThrottle(peerHash)) {
         if (_log.shouldLog(Log.WARN))         _log.warn("Refusing POST since peer is throttled: " + peerHash.toBase64());
         try {
-          socket.getOutputStream().write(ERR_DENIED);
+          socket.getOutputStream().write(ERR_DENIED.getBytes("UTF-8"));
         }
  catch (        IOException ioe) {
         }
@@ -94,7 +115,7 @@
   }
  catch (  SocketException ex) {
     try {
-      socket.getOutputStream().write(ERR_UNAVAILABLE);
+      socket.getOutputStream().write(ERR_UNAVAILABLE.getBytes("UTF-8"));
     }
  catch (    IOException ioe) {
     }
@@ -116,7 +137,7 @@ catch (  IOException ex) {
   }
 catch (  OutOfMemoryError oom) {
     try {
-      socket.getOutputStream().write(ERR_UNAVAILABLE);
+      socket.getOutputStream().write(ERR_UNAVAILABLE.getBytes("UTF-8"));
     }
  catch (    IOException ioe) {
     }
