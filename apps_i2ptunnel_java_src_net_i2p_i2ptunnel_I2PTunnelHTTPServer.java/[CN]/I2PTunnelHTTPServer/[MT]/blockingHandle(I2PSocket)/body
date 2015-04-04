@@ -25,7 +25,90 @@
     }
     long afterAccept=getTunnel().getContext().clock().now();
     StringBuilder command=new StringBuilder(128);
-    Map<String,List<String>> headers=readHeaders(socket,null,command,CLIENT_SKIPHEADERS,getTunnel().getContext());
+    Map<String,List<String>> headers;
+    try {
+      headers=readHeaders(socket,null,command,CLIENT_SKIPHEADERS,getTunnel().getContext());
+    }
+ catch (    SocketTimeoutException ste) {
+      try {
+        socket.getOutputStream().write(ERR_REQUEST_TIMEOUT.getBytes("UTF-8"));
+      }
+ catch (      IOException ioe) {
+      }
+ finally {
+        try {
+          socket.close();
+        }
+ catch (        IOException ioe) {
+        }
+      }
+      if (_log.shouldLog(Log.WARN))       _log.warn("Error while receiving the new HTTP request",ste);
+      return;
+    }
+catch (    EOFException eofe) {
+      try {
+        socket.getOutputStream().write(ERR_BAD_REQUEST.getBytes("UTF-8"));
+      }
+ catch (      IOException ioe) {
+      }
+ finally {
+        try {
+          socket.close();
+        }
+ catch (        IOException ioe) {
+        }
+      }
+      if (_log.shouldLog(Log.WARN))       _log.warn("Error while receiving the new HTTP request",eofe);
+      return;
+    }
+catch (    LineTooLongException ltle) {
+      try {
+        socket.getOutputStream().write(ERR_HEADERS_TOO_LARGE.getBytes("UTF-8"));
+      }
+ catch (      IOException ioe) {
+      }
+ finally {
+        try {
+          socket.close();
+        }
+ catch (        IOException ioe) {
+        }
+      }
+      if (_log.shouldLog(Log.WARN))       _log.warn("Error while receiving the new HTTP request",ltle);
+      return;
+    }
+catch (    RequestTooLongException rtle) {
+      try {
+        socket.getOutputStream().write(ERR_REQUEST_URI_TOO_LONG.getBytes("UTF-8"));
+      }
+ catch (      IOException ioe) {
+      }
+ finally {
+        try {
+          socket.close();
+        }
+ catch (        IOException ioe) {
+        }
+      }
+      if (_log.shouldLog(Log.WARN))       _log.warn("Error while receiving the new HTTP request",rtle);
+      return;
+    }
+catch (    BadRequestException bre) {
+      try {
+        socket.getOutputStream().write(ERR_BAD_REQUEST.getBytes("UTF-8"));
+      }
+ catch (      IOException ioe) {
+      }
+ finally {
+        try {
+          socket.close();
+        }
+ catch (        IOException ioe) {
+        }
+      }
+      if (_log.shouldLog(Log.WARN))       _log.warn("Error while receiving the new HTTP request",bre);
+      return;
+    }
     long afterHeaders=getTunnel().getContext().clock().now();
     Properties opts=getTunnel().getClientOptions();
     if (Boolean.parseBoolean(opts.getProperty(OPT_REJECT_INPROXY)) && (headers.containsKey("X-Forwarded-For") || headers.containsKey("X-Forwarded-Server") || headers.containsKey("X-Forwarded-Host"))) {

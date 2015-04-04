@@ -3,11 +3,16 @@
   StringBuilder buf=new StringBuilder(128);
   long expire=ctx.clock().now() + TOTAL_HEADER_TIMEOUT;
   if (socket != null) {
-    readLine(socket,command,HEADER_TIMEOUT);
+    try {
+      readLine(socket,command,HEADER_TIMEOUT);
+    }
+ catch (    LineTooLongException ltle) {
+      throw new RequestTooLongException("Request too long - max " + MAX_LINE_LENGTH);
+    }
   }
  else {
     boolean ok=DataHelper.readLine(in,command);
-    if (!ok)     throw new IOException("EOF reached before the end of the headers [" + buf.toString() + "]");
+    if (!ok)     throw new EOFException("EOF reached before the end of the headers [" + buf.toString() + "]");
   }
   int trimmed=0;
   if (command.length() > 0) {
@@ -22,22 +27,26 @@
   if (trimmed > 0)   ctx.statManager().addRateData("i2ptunnel.httpNullWorkaround",trimmed);
   int i=0;
   while (true) {
-    if (++i > MAX_HEADERS)     throw new IOException("Too many header lines - max " + MAX_HEADERS);
+    if (++i > MAX_HEADERS) {
+      throw new LineTooLongException("Too many header lines - max " + MAX_HEADERS);
+    }
     buf.setLength(0);
     if (socket != null) {
       readLine(socket,buf,expire - ctx.clock().now());
     }
  else {
       boolean ok=DataHelper.readLine(in,buf);
-      if (!ok)       throw new IOException("EOF reached before the end of the headers [" + buf.toString() + "]");
+      if (!ok)       throw new BadRequestException("EOF reached before the end of the headers [" + buf.toString() + "]");
     }
     if ((buf.length() == 0) || ((buf.charAt(0) == '\n') || (buf.charAt(0) == '\r'))) {
       return headers;
     }
  else {
-      if (ctx.clock().now() >= expire)       throw new IOException("Headers took too long [" + buf.toString() + "]");
+      if (ctx.clock().now() > expire) {
+        throw new SocketTimeoutException("Headers took too long [" + buf.toString() + "]");
+      }
       int split=buf.indexOf(":");
-      if (split <= 0)       throw new IOException("Invalid HTTP header, missing colon [" + buf.toString() + "]");
+      if (split <= 0)       throw new BadRequestException("Invalid HTTP header, missing colon [" + buf.toString() + "]");
       String name=buf.substring(0,split).trim();
       String value=null;
       if (buf.length() > split + 1)       value=buf.substring(split + 1).trim();
