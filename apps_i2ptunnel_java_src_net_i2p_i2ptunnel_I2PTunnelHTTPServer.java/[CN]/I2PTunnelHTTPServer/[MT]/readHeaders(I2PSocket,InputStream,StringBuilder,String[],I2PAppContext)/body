@@ -2,8 +2,13 @@
   HashMap<String,List<String>> headers=new HashMap<String,List<String>>();
   StringBuilder buf=new StringBuilder(128);
   long expire=ctx.clock().now() + TOTAL_HEADER_TIMEOUT;
-  boolean ok=DataHelper.readLine(in,command);
-  if (!ok)   throw new IOException("EOF reached while reading the HTTP command [" + command.toString() + "]");
+  if (socket != null) {
+    readLine(socket,command,HEADER_TIMEOUT);
+  }
+ else {
+    boolean ok=DataHelper.readLine(in,command);
+    if (!ok)     throw new IOException("EOF reached before the end of the headers [" + buf.toString() + "]");
+  }
   int trimmed=0;
   if (command.length() > 0) {
     for (int i=0; i < command.length(); i++) {
@@ -19,13 +24,18 @@
   while (true) {
     if (++i > MAX_HEADERS)     throw new IOException("Too many header lines - max " + MAX_HEADERS);
     buf.setLength(0);
-    ok=DataHelper.readLine(in,buf);
-    if (!ok)     throw new IOException("EOF reached before the end of the headers [" + buf.toString() + "]");
+    if (socket != null) {
+      readLine(socket,buf,expire - ctx.clock().now());
+    }
+ else {
+      boolean ok=DataHelper.readLine(in,buf);
+      if (!ok)       throw new IOException("EOF reached before the end of the headers [" + buf.toString() + "]");
+    }
     if ((buf.length() == 0) || ((buf.charAt(0) == '\n') || (buf.charAt(0) == '\r'))) {
       return headers;
     }
  else {
-      if (ctx.clock().now() > expire)       throw new IOException("Headers took too long [" + buf.toString() + "]");
+      if (ctx.clock().now() >= expire)       throw new IOException("Headers took too long [" + buf.toString() + "]");
       int split=buf.indexOf(":");
       if (split <= 0)       throw new IOException("Invalid HTTP header, missing colon [" + buf.toString() + "]");
       String name=buf.substring(0,split).trim();
