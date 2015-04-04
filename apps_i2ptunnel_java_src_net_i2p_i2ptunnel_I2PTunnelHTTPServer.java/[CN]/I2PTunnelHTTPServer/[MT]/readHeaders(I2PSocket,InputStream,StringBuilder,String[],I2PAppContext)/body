@@ -12,7 +12,7 @@
   }
  else {
     boolean ok=DataHelper.readLine(in,command);
-    if (!ok)     throw new EOFException("EOF reached before the end of the headers [" + buf.toString() + "]");
+    if (!ok)     throw new EOFException("EOF reached before the end of the headers");
   }
   int trimmed=0;
   if (command.length() > 0) {
@@ -25,6 +25,7 @@
     }
   }
   if (trimmed > 0)   ctx.statManager().addRateData("i2ptunnel.httpNullWorkaround",trimmed);
+  int totalSize=command.length();
   int i=0;
   while (true) {
     if (++i > MAX_HEADERS) {
@@ -36,17 +37,19 @@
     }
  else {
       boolean ok=DataHelper.readLine(in,buf);
-      if (!ok)       throw new BadRequestException("EOF reached before the end of the headers [" + buf.toString() + "]");
+      if (!ok)       throw new BadRequestException("EOF reached before the end of the headers");
     }
     if ((buf.length() == 0) || ((buf.charAt(0) == '\n') || (buf.charAt(0) == '\r'))) {
       return headers;
     }
  else {
       if (ctx.clock().now() > expire) {
-        throw new SocketTimeoutException("Headers took too long [" + buf.toString() + "]");
+        throw new SocketTimeoutException("Headers took too long");
       }
       int split=buf.indexOf(":");
-      if (split <= 0)       throw new BadRequestException("Invalid HTTP header, missing colon [" + buf.toString() + "]");
+      if (split <= 0)       throw new BadRequestException("Invalid HTTP header, missing colon");
+      totalSize+=buf.length();
+      if (totalSize > MAX_TOTAL_HEADER_SIZE)       throw new LineTooLongException("Req+headers too big");
       String name=buf.substring(0,split).trim();
       String value=null;
       if (buf.length() > split + 1)       value=buf.substring(split + 1).trim();
