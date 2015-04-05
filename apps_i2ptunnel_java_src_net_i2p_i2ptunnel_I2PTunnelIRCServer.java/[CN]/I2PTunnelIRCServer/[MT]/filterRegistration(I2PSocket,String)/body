@@ -3,15 +3,15 @@
   int lineCount=0;
   long expire=System.currentTimeMillis() + TOTAL_HEADER_TIMEOUT;
   while (true) {
-    String s=DataHelper.readLine(in);
-    if (s == null)     throw new IOException("EOF reached before the end of the headers [" + buf.toString() + "]");
+    String s=readLine(socket,expire - System.currentTimeMillis());
+    if (s == null)     throw new EOFException("EOF reached before the end of the headers");
     if (lineCount == 0) {
       for (int i=0; i < BAD_PROTOCOLS.length; i++) {
-        if (s.startsWith(BAD_PROTOCOLS[i]))         throw new IOException("Bad protocol " + BAD_PROTOCOLS[i]);
+        if (s.startsWith(BAD_PROTOCOLS[i]))         throw new RegistrationException("Bad protocol " + BAD_PROTOCOLS[i]);
       }
     }
-    if (++lineCount > 10)     throw new IOException("Too many lines before USER or SERVER, giving up");
-    if (System.currentTimeMillis() > expire)     throw new IOException("Headers took too long [" + buf.toString() + "]");
+    if (++lineCount > 10)     throw new RegistrationException("Too many lines before USER or SERVER, giving up");
+    if (System.currentTimeMillis() > expire)     throw new SocketTimeoutException("Headers took too long");
     s=s.trim();
     String field[]=s.split(" ",5);
     String command;
@@ -21,10 +21,10 @@
       command=field[idx++].toUpperCase(Locale.US);
     }
  catch (    IndexOutOfBoundsException ioobe) {
-      throw new IOException("Dropping defective message: [" + s + ']');
+      throw new RegistrationException("Dropping defective message: [" + s + ']');
     }
     if ("USER".equals(command)) {
-      if (field.length < idx + 4)       throw new IOException("Too few parameters in USER message: " + s);
+      if (field.length < idx + 4)       throw new RegistrationException("Too few parameters in USER message: " + s);
       buf.append("USER ").append(field[idx]).append(' ').append(newHostname);
       buf.append(' ');
       buf.append(field[idx + 2]).append(' ').append(field[idx + 3]).append("\r\n");
