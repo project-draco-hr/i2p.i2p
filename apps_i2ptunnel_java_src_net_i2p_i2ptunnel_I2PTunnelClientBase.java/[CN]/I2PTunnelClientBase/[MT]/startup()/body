@@ -1,0 +1,30 @@
+{
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("startup " + _clientId,new Exception("I did it"));
+  boolean isDaemon=getTunnel().getContext().isRouterContext();
+  Thread t=new I2PAppThread(this,"Client " + _clientId,isDaemon);
+  t.start();
+  open=true;
+synchronized (this) {
+    while (!listenerReady && open) {
+      try {
+        wait();
+      }
+ catch (      InterruptedException e) {
+      }
+    }
+  }
+  if (open && listenerReady) {
+    boolean openNow=!Boolean.parseBoolean(getTunnel().getClientOptions().getProperty("i2cp.delayOpen"));
+    if (openNow)     l.log("Client ready, listening on " + getTunnel().listenHost + ':'+ localPort);
+ else     l.log("Client ready, listening on " + getTunnel().listenHost + ':'+ localPort+ ", delaying tunnel open until required");
+    notifyEvent("openBaseClientResult","ok");
+  }
+ else {
+    l.log("Client error for " + getTunnel().listenHost + ':'+ localPort+ ", check logs");
+    notifyEvent("openBaseClientResult","error");
+  }
+synchronized (startLock) {
+    startRunning=true;
+    startLock.notify();
+  }
+}
