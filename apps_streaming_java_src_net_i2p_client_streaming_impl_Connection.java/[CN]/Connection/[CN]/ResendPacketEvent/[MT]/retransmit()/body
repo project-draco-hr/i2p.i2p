@@ -15,7 +15,7 @@ synchronized (_outboundPackets) {
     if ((!isLowest) && (!fastRetransmit)) {
       if (_log.shouldLog(Log.INFO))       _log.info("Delaying resend of " + _packet + " with "+ _activeResends+ " active resend, "+ _outboundPackets.size()+ " unacked, window size = "+ _options.getWindowSize());
       forceReschedule(1333);
-      _nextSendTime=1333 + _context.clock().now();
+      _nextSend=1333 + _context.clock().now();
       return false;
     }
     if (fastRetransmit)     _context.statManager().addRateData("stream.fastRetransmit",_packet.getLifetime(),_packet.getLifetime());
@@ -53,7 +53,7 @@ synchronized (_outboundPackets) {
       if (rto < MIN_RESEND_DELAY)       rto=MIN_RESEND_DELAY;
       long timeout=rto << (numSends - 1);
       if ((timeout > MAX_RESEND_DELAY) || (timeout <= 0))       timeout=MAX_RESEND_DELAY;
-      _nextSendTime=timeout + _context.clock().now();
+      _nextSend=timeout + _context.clock().now();
       if (_outboundQueue.enqueue(_packet)) {
         if (numSends == 2)         _activeResends.incrementAndGet();
         if (_log.shouldLog(Log.INFO))         _log.info("Resent packet " + (fastRetransmit ? "(fast) " : "(timeout) ") + _packet+ " next resend in "+ timeout+ "ms"+ " activeResends: "+ _activeResends+ " (wsize "+ newWindowSize+ " lifetime "+ (_context.clock().now() - _packet.getCreatedOn())+ "ms)");
