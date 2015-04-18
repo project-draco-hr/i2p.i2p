@@ -1,4 +1,25 @@
 {
+  if (privateKeyStream == null) {
+    ByteArrayOutputStream keyStream=new ByteArrayOutputStream(1024);
+    try {
+      SigType type=getSigType(opts);
+      if (type != SigType.DSA_SHA1) {
+        throw new I2PSessionException("type " + type + " unsupported");
+      }
+      PublicKey pub=_session.getMyDestination().getPublicKey();
+      PrivateKey priv=_session.getDecryptionKey();
+      SimpleDataStructure[] keys=_context.keyGenerator().generateSigningKeys(type);
+      pub.writeBytes(keyStream);
+      keys[0].writeBytes(keyStream);
+      Certificate.NULL_CERT.writeBytes(keyStream);
+      priv.writeBytes(keyStream);
+      keys[1].writeBytes(keyStream);
+    }
+ catch (    Exception e) {
+      throw new I2PSessionException("Error creating keys",e);
+    }
+    privateKeyStream=new ByteArrayInputStream(keyStream.toByteArray());
+  }
   I2PSession rv=_session.addSubsession(privateKeyStream,opts);
   ConnectionOptions defaultOptions=new ConnectionOptions(opts);
   ConnectionManager connectionManager=new ConnectionManager(_context,rv,defaultOptions);
