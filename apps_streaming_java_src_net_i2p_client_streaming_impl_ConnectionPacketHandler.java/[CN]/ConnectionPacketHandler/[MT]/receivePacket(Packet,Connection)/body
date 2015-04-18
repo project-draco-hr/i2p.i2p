@@ -52,7 +52,7 @@
     }
   }
   con.getOptions().setChoke(0);
-  _context.statManager().addRateData("stream.con.receiveMessageSize",packet.getPayloadSize(),0);
+  _context.statManager().addRateData("stream.con.receiveMessageSize",packet.getPayloadSize());
   boolean allowAck=true;
   final boolean isSYN=packet.isFlagSet(Packet.FLAG_SYNCHRONIZE);
   if ((!isSYN) && (packet.getReceiveStreamId() <= 0))   allowAck=false;
@@ -86,12 +86,12 @@
   }
  else {
     if ((seqNum > 0) || (packet.getPayloadSize() > 0) || isSYN) {
-      _context.statManager().addRateData("stream.con.receiveDuplicateSize",packet.getPayloadSize(),0);
+      _context.statManager().addRateData("stream.con.receiveDuplicateSize",packet.getPayloadSize());
       con.incrementDupMessagesReceived(1);
       final long now=_context.clock().now();
       final int ackDelay=con.getOptions().getSendAckDelay();
       final long lastSendTime=con.getLastSendTime();
-      if (_log.shouldLog(Log.WARN))       _log.warn(String.format("%s congestion.. dup packet %s ackDelay %d lastSend %s ago",con,packet,ackDelay,DataHelper.formatDuration(now - lastSendTime)));
+      if (_log.shouldLog(Log.INFO))       _log.info(String.format("%s congestion.. dup packet %s ackDelay %d lastSend %s ago",con,packet,ackDelay,DataHelper.formatDuration(now - lastSendTime)));
       final long nextSendTime=lastSendTime + ackDelay;
       if (nextSendTime <= now) {
         if (_log.shouldLog(Log.DEBUG))         _log.debug("immediate ack");
@@ -101,7 +101,7 @@
  else {
         final long delay=nextSendTime - now;
         if (_log.shouldLog(Log.DEBUG))         _log.debug("scheduling ack in " + delay);
-        _context.simpleScheduler().addEvent(new AckDup(con),delay);
+        _context.simpleTimer2().addEvent(new AckDup(con),delay);
       }
     }
  else {

@@ -1,11 +1,7 @@
 {
   if (targetRequest.equals("/")) {
-    try {
-      out.write(("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nCache-Control: max-age=86400\r\n\r\nI2P HTTP proxy OK").getBytes());
-      out.flush();
-    }
- catch (    IOException ioe) {
-    }
+    out.write(("HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\nCache-Control: max-age=86400\r\n\r\nI2P HTTP proxy OK").getBytes("UTF-8"));
+    out.flush();
     return;
   }
   if ((method.equals("GET") || method.equals("HEAD")) && targetRequest.startsWith("/themes/") && !targetRequest.contains("..")) {
@@ -26,14 +22,10 @@
  else       if (filename.endsWith(".png"))       type="image/png";
  else       if (filename.endsWith(".jpg"))       type="image/jpeg";
  else       type="text/html";
-      try {
-        out.write("HTTP/1.1 200 OK\r\nContent-Type: ".getBytes());
-        out.write(type.getBytes());
-        out.write("\r\nCache-Control: max-age=86400\r\n\r\n".getBytes());
-        FileUtil.readFile(filename,themesDir.getAbsolutePath(),out);
-      }
- catch (      IOException ioe) {
-      }
+      out.write("HTTP/1.1 200 OK\r\nContent-Type: ".getBytes("UTF-8"));
+      out.write(type.getBytes("UTF-8"));
+      out.write("\r\nCache-Control: max-age=86400\r\n\r\n".getBytes("UTF-8"));
+      FileUtil.readFile(filename,themesDir.getAbsolutePath(),out);
       return;
     }
   }
@@ -64,36 +56,24 @@
       }
     }
     if (proxyNonce.equals(nonce) && url != null && host != null && dest != null) {
-      try {
-        NamingService ns=I2PAppContext.getGlobalContext().namingService();
-        Properties nsOptions=new Properties();
-        nsOptions.setProperty("list",book);
-        if (referer != null && referer.startsWith("http")) {
-          String from="<a href=\"" + referer + "\">"+ referer+ "</a>";
-          nsOptions.setProperty("s",_("Added via address helper from {0}",from));
-        }
+      NamingService ns=I2PAppContext.getGlobalContext().namingService();
+      Properties nsOptions=new Properties();
+      nsOptions.setProperty("list",book);
+      if (referer != null && referer.startsWith("http")) {
+        String from="<a href=\"" + referer + "\">"+ referer+ "</a>";
+        nsOptions.setProperty("s",_("Added via address helper from {0}",from));
+      }
  else {
-          nsOptions.setProperty("s",_("Added via address helper"));
-        }
-        boolean success=ns.put(host,dest,nsOptions);
-        writeRedirectPage(out,success,host,book,url);
-        return;
+        nsOptions.setProperty("s",_("Added via address helper"));
       }
- catch (      IOException ioe) {
-      }
+      boolean success=ns.put(host,dest,nsOptions);
+      writeRedirectPage(out,success,host,book,url);
+      return;
     }
-    try {
-      out.write(ERR_ADD);
-      out.flush();
-    }
- catch (    IOException ioe) {
-    }
-    return;
+    out.write(ERR_ADD.getBytes("UTF-8"));
   }
-  try {
-    out.write(ERR_404);
-    out.flush();
+ else {
+    out.write(ERR_404.getBytes("UTF-8"));
   }
- catch (  IOException ioe) {
-  }
+  out.flush();
 }

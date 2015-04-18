@@ -1,0 +1,62 @@
+{
+  RouterContext context=r.getContext();
+  File updateFile=new File(context.getRouterDir(),Router.UPDATE_FILE);
+  boolean exists=updateFile.exists();
+  if (!exists) {
+    updateFile=new File(context.getBaseDir(),Router.UPDATE_FILE);
+    exists=updateFile.exists();
+  }
+  if (exists) {
+    File test=new File(context.getBaseDir(),"history.txt");
+    if ((test.exists() && !test.canWrite()) || (!context.getBaseDir().canWrite())) {
+      System.out.println("ERROR: No write permissions on " + context.getBaseDir() + " to extract software update file");
+      return;
+    }
+    System.out.println("INFO: Update file exists [" + Router.UPDATE_FILE + "] - installing");
+    boolean ok=FileUtil.verifyZip(updateFile);
+    if (ok) {
+      Map<String,String> config=new HashMap<String,String>(4);
+      config.put("router.updateLastInstalled","" + System.currentTimeMillis());
+      config.put("router.previousVersion",RouterVersion.VERSION);
+      config.put("router.previousFullVersion",RouterVersion.FULL_VERSION);
+      r.saveConfig(config,null);
+      ok=FileUtil.extractZip(updateFile,context.getBaseDir());
+    }
+    try {
+      if (ok) {
+        deleteListedFiles(context);
+        System.out.println("INFO: Update installed");
+      }
+ else {
+        System.out.println("ERROR: Update failed!");
+      }
+      if (!ok) {
+        File bad=new File(context.getRouterDir(),"BAD-" + Router.UPDATE_FILE);
+        boolean renamed=updateFile.renameTo(bad);
+        if (renamed) {
+          System.out.println("Moved update file to " + bad.getAbsolutePath());
+        }
+ else {
+          System.out.println("Deleting file " + updateFile.getAbsolutePath());
+          ok=true;
+        }
+      }
+      if (ok) {
+        boolean deleted=updateFile.delete();
+        if (!deleted) {
+          System.out.println("ERROR: Unable to delete the update file!");
+          updateFile.deleteOnExit();
+        }
+      }
+      if (context.hasWrapper())       System.out.println("INFO: Restarting after update");
+ else       System.out.println("WARNING: Exiting after update, restart I2P");
+    }
+ catch (    Throwable t) {
+    }
+    System.exit(Router.EXIT_HARD_RESTART);
+  }
+ else {
+    deleteJbigiFiles(context);
+    deleteListedFiles(context);
+  }
+}

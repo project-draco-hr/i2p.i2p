@@ -1,5 +1,6 @@
 {
-  if (_log.shouldLog(Log.WARN))   _log.warn("Failed " + task + " for "+ task.getType()+ ": "+ reason,t);
+  int level=task.getType() == TYPE_DUMMY ? Log.WARN : Log.ERROR;
+  if (_log.shouldLog(level))   _log.log(level,"Failed " + task + " for "+ task.getType()+ ": "+ reason,t);
   List<RegisteredUpdater> toTry=_downloaders.get(task);
   if (toTry != null) {
     UpdateItem ui=new UpdateItem(task.getType(),task.getID());
@@ -13,5 +14,26 @@
   }
   _downloaders.remove(task);
   _activeCheckers.remove(task);
-  if (task.getURI() != null && task.getType() != TYPE_DUMMY)   finishStatus("<b>" + _("Transfer failed from {0}",linkify(task.getURI().toString())) + "</b>");
+  if (task.getURI() != null && task.getType() != TYPE_DUMMY) {
+    StringBuilder buf=new StringBuilder(256);
+    buf.append("<b>");
+    String uri=task.getURI().toString();
+    if (uri.startsWith("file:") || task.getMethod() == FILE) {
+      uri=DataHelper.stripHTML(task.getURI().getPath());
+      buf.append(_("Install failed from {0}",uri));
+    }
+ else {
+      buf.append(_("Transfer failed from {0}"));
+    }
+    if (reason != null && reason.length() > 0) {
+      buf.append("<br>");
+      buf.append(reason);
+    }
+    if (t != null && t.getMessage() != null && t.getMessage().length() > 0) {
+      buf.append("<br>");
+      buf.append(DataHelper.stripHTML(t.getMessage()));
+    }
+    buf.append("</b>");
+    finishStatus(buf.toString());
+  }
 }

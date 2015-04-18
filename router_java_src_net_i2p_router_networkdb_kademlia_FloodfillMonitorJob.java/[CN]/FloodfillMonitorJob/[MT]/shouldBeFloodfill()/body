@@ -1,9 +1,10 @@
 {
-  if (getContext().router().gracefulShutdownInProgress())   return false;
+  if (!SigType.ECDSA_SHA256_P256.isAvailable())   return false;
   if (getContext().router().isHidden())   return false;
   String enabled=getContext().getProperty(PROP_FLOODFILL_PARTICIPANT,"auto");
   if ("true".equals(enabled))   return true;
   if ("false".equals(enabled))   return false;
+  if (getContext().router().gracefulShutdownInProgress())   return false;
   if (SystemVersion.isARM())   return false;
   if (getContext().getBooleanProperty(UDPTransport.PROP_LAPTOP_MODE))   return false;
   if (getContext().commSystem().isInBadCountry())   return false;
@@ -13,7 +14,7 @@
   RouterInfo ri=getContext().router().getRouterInfo();
   if (ri == null)   return false;
   char bw=ri.getBandwidthTier().charAt(0);
-  if (bw < Router.CAPABILITY_BW128 || bw > Router.CAPABILITY_BW256)   return false;
+  if (bw != Router.CAPABILITY_BW128 && bw != Router.CAPABILITY_BW256 && bw != Router.CAPABILITY_BW512 && bw != Router.CAPABILITY_BW_UNLIMITED)   return false;
   List<Hash> floodfillPeers=_facade.getFloodfillPeers();
   long now=getContext().clock().now();
   if (floodfillPeers == null || floodfillPeers.isEmpty()) {

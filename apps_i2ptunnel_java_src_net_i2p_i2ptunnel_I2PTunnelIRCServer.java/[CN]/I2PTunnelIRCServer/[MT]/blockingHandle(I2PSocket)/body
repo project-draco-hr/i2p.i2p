@@ -3,9 +3,7 @@
   try {
     String modifiedRegistration;
     if (!this.method.equals("webirc")) {
-      socket.setReadTimeout(HEADER_TIMEOUT);
-      InputStream in=socket.getInputStream();
-      modifiedRegistration=filterRegistration(in,cloakDest(socket.getPeerDestination()));
+      modifiedRegistration=filterRegistration(socket,cloakDest(socket.getPeerDestination()));
       socket.setReadTimeout(readTimeout);
     }
  else {
@@ -22,9 +20,54 @@
     Thread t=new I2PTunnelRunner(s,socket,slock,null,modifiedRegistration.getBytes(),null,(I2PTunnelRunner.FailCallback)null);
     _clientExecutor.execute(t);
   }
- catch (  SocketException ex) {
+ catch (  RegistrationException ex) {
     try {
-      socket.getOutputStream().write(ERR_UNAVAILABLE);
+      socket.getOutputStream().write(ERR_REGISTRATION.getBytes("ISO-8859-1"));
+    }
+ catch (    IOException ioe) {
+    }
+ finally {
+      try {
+        socket.close();
+      }
+ catch (      IOException ioe) {
+      }
+    }
+    if (_log.shouldLog(Log.WARN))     _log.warn("Error while receiving the new IRC Connection",ex);
+  }
+catch (  EOFException ex) {
+    try {
+      socket.getOutputStream().write(ERR_EOF.getBytes("ISO-8859-1"));
+    }
+ catch (    IOException ioe) {
+    }
+ finally {
+      try {
+        socket.close();
+      }
+ catch (      IOException ioe) {
+      }
+    }
+    if (_log.shouldLog(Log.WARN))     _log.warn("Error while receiving the new IRC Connection",ex);
+  }
+catch (  SocketTimeoutException ex) {
+    try {
+      socket.getOutputStream().write(ERR_TIMEOUT.getBytes("ISO-8859-1"));
+    }
+ catch (    IOException ioe) {
+    }
+ finally {
+      try {
+        socket.close();
+      }
+ catch (      IOException ioe) {
+      }
+    }
+    if (_log.shouldLog(Log.WARN))     _log.warn("Error while receiving the new IRC Connection",ex);
+  }
+catch (  SocketException ex) {
+    try {
+      socket.getOutputStream().write(ERR_UNAVAILABLE.getBytes("ISO-8859-1"));
     }
  catch (    IOException ioe) {
     }

@@ -1,0 +1,67 @@
+{
+  if (outs == null)   return;
+  Writer out=new BufferedWriter(new OutputStreamWriter(outs,"UTF-8"));
+  out.write(errMessage);
+  if (targetRequest != null) {
+    String uri=DataHelper.escapeHTML(targetRequest);
+    out.write("<a href=\"");
+    out.write(uri);
+    out.write("\">");
+    if (targetRequest.length() > 80)     out.write(DataHelper.escapeHTML(targetRequest.substring(0,75)) + "&hellip;");
+ else     out.write(uri);
+    out.write("</a>");
+    if (usingWWWProxy) {
+      out.write("<br><br><b>");
+      out.write(_("HTTP Outproxy"));
+      out.write(":</b> " + wwwProxy);
+    }
+    if (extraMessage != null) {
+      out.write("<br><br><b>" + DataHelper.escapeHTML(extraMessage) + "</b>");
+    }
+    if (jumpServers != null && jumpServers.length() > 0) {
+      boolean first=true;
+      if (uri.startsWith("http://")) {
+        uri=uri.substring(7);
+      }
+      StringTokenizer tok=new StringTokenizer(jumpServers,", ");
+      while (tok.hasMoreTokens()) {
+        String jurl=tok.nextToken();
+        String jumphost;
+        try {
+          URI jURI=new URI(jurl);
+          String proto=jURI.getScheme();
+          jumphost=jURI.getHost();
+          if (proto == null || jumphost == null || !proto.toLowerCase(Locale.US).equals("http"))           continue;
+          jumphost=jumphost.toLowerCase(Locale.US);
+          if (!jumphost.endsWith(".i2p"))           continue;
+        }
+ catch (        URISyntaxException use) {
+          continue;
+        }
+        if (!jumphost.endsWith(".b32.i2p")) {
+          Destination dest=_context.namingService().lookup(jumphost);
+          if (dest == null) {
+            continue;
+          }
+        }
+        if (first) {
+          first=false;
+          out.write("<br><br><h3>");
+          out.write(_("Click a link below for an address helper from a jump service"));
+          out.write("</h3>\n");
+        }
+ else {
+          out.write("<br>");
+        }
+        out.write("<a href=\"");
+        out.write(jurl);
+        out.write(uri);
+        out.write("\">");
+        out.write(_("{0} jump service",jumphost));
+        out.write("</a>\n");
+      }
+    }
+  }
+  out.write("</div>");
+  writeFooter(out);
+}

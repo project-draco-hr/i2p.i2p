@@ -1,6 +1,18 @@
 {
-synchronized (startLock) {
-    startRunning=true;
-    startLock.notify();
+  boolean openNow=!Boolean.parseBoolean(getTunnel().getClientOptions().getProperty("i2cp.delayOpen"));
+  if (openNow) {
+    while (sockMgr == null) {
+      verifySocketManager();
+      if (sockMgr == null) {
+        _log.error("Unable to connect to router and build tunnels for " + _handlerName);
+        try {
+          Thread.sleep(10 * 1000);
+        }
+ catch (        InterruptedException ie) {
+        }
+      }
+    }
+    l.log("Tunnels ready for client: " + _handlerName);
   }
+  startup();
 }

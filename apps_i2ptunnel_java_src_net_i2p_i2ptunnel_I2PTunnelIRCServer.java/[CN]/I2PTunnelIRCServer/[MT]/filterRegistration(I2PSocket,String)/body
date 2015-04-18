@@ -1,0 +1,37 @@
+{
+  StringBuilder buf=new StringBuilder(128);
+  int lineCount=0;
+  long expire=System.currentTimeMillis() + TOTAL_HEADER_TIMEOUT;
+  while (true) {
+    String s=readLine(socket,expire - System.currentTimeMillis());
+    if (s == null)     throw new EOFException("EOF reached before the end of the headers");
+    if (lineCount == 0) {
+      for (int i=0; i < BAD_PROTOCOLS.length; i++) {
+        if (s.startsWith(BAD_PROTOCOLS[i]))         throw new RegistrationException("Bad protocol " + BAD_PROTOCOLS[i]);
+      }
+    }
+    if (++lineCount > 10)     throw new RegistrationException("Too many lines before USER or SERVER, giving up");
+    if (System.currentTimeMillis() > expire)     throw new SocketTimeoutException("Headers took too long");
+    s=s.trim();
+    String field[]=s.split(" ",5);
+    String command;
+    int idx=0;
+    try {
+      if (field[0].charAt(0) == ':')       idx++;
+      command=field[idx++].toUpperCase(Locale.US);
+    }
+ catch (    IndexOutOfBoundsException ioobe) {
+      throw new RegistrationException("Dropping defective message: [" + s + ']');
+    }
+    if ("USER".equals(command)) {
+      if (field.length < idx + 4)       throw new RegistrationException("Too few parameters in USER message: " + s);
+      buf.append("USER ").append(field[idx]).append(' ').append(newHostname);
+      buf.append(' ');
+      buf.append(field[idx + 2]).append(' ').append(field[idx + 3]).append("\r\n");
+      break;
+    }
+    buf.append(s).append("\r\n");
+    if ("SERVER".equals(command))     break;
+  }
+  return buf.toString();
+}
