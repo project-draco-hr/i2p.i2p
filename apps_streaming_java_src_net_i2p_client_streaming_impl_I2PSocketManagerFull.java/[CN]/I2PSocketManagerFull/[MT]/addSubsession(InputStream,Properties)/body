@@ -1,5 +1,13 @@
 {
   I2PSession rv=_session.addSubsession(privateKeyStream,opts);
-  _subsessions.add(rv);
+  ConnectionOptions defaultOptions=new ConnectionOptions(opts);
+  ConnectionManager connectionManager=new ConnectionManager(_context,rv,defaultOptions);
+  ConnectionManager old=_subsessions.putIfAbsent(rv,connectionManager);
+  if (old != null) {
+    _session.removeSubsession(rv);
+    connectionManager.shutdown();
+    throw new I2PSessionException("dup");
+  }
+  if (_log.shouldLog(Log.WARN))   _log.warn("Added subsession " + rv);
   return rv;
 }

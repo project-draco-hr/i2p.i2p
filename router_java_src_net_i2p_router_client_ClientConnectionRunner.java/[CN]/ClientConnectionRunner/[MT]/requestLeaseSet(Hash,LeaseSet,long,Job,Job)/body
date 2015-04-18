@@ -4,11 +4,16 @@
     if (onFailedJob != null)     _context.jobQueue().addJob(onFailedJob);
     return;
   }
+  SessionParams sp=_sessions.get(h);
+  if (sp == null) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Requesting leaseSet for an unknown sesssion");
+    return;
+  }
   int leases=set.getLeaseCount();
   LeaseSet current=null;
+  Destination dest=sp.dest;
 synchronized (this) {
-    Destination dest=set.getDestination();
-    if (dest != null)     current=getLeaseSet(dest.calculateHash());
+    current=sp.currentLeaseSet;
     if (current != null && current.getLeaseCount() == leases) {
       for (int i=0; i < leases; i++) {
         if (!current.getLease(i).getTunnelId().equals(set.getLease(i).getTunnelId()))         break;
@@ -22,9 +27,6 @@ synchronized (this) {
     }
   }
   if (_log.shouldLog(Log.INFO))   _log.info("Current leaseSet " + current + "\nNew leaseSet "+ set);
-  Hash h=set.getDestination().calculateHash();
-  SessionParams sp=_sessions.get(h);
-  if (sp == null)   return;
   LeaseRequestState state;
 synchronized (this) {
     state=sp.leaseRequest;
@@ -36,11 +38,13 @@ synchronized (this) {
       if (((requested != null) && (requested.getEarliestLeaseDate() > ours)) || ((granted != null) && (granted.getEarliestLeaseDate() > ours))) {
       }
  else {
+        set.setDestination(dest);
         _context.simpleTimer2().addEvent(new Rerequest(set,expirationTime,onCreateJob,onFailedJob),3 * 1000);
       }
       return;
     }
  else {
+      set.setDestination(dest);
       sp.leaseRequest=state=new LeaseRequestState(onCreateJob,onFailedJob,_context.clock().now() + expirationTime,set);
       if (_log.shouldLog(Log.DEBUG))       _log.debug("New request: " + state);
     }
