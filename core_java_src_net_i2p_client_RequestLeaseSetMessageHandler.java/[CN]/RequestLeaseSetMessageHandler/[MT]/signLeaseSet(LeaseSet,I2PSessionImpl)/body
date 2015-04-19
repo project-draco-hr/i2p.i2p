@@ -7,9 +7,8 @@
     String sspk=session.getOptions().getProperty("i2cp.leaseSetSigningPrivateKey");
     PrivateKey privKey=null;
     SigningPrivateKey signingPrivKey=null;
-    boolean useOldKeys;
     if (spk != null && sspk != null) {
-      useOldKeys=true;
+      boolean useOldKeys=true;
       int colon=sspk.indexOf(':');
       SigType type=dest.getSigType();
       if (colon > 0) {
@@ -27,6 +26,7 @@
         }
  catch (        DataFormatException iae) {
           useOldKeys=false;
+          signingPrivKey=null;
         }
       }
       if (useOldKeys) {
@@ -35,17 +35,34 @@
           privKey.fromBase64(spk);
         }
  catch (        DataFormatException iae) {
-          useOldKeys=false;
+          privKey=null;
         }
       }
     }
- else {
-      useOldKeys=false;
+    if (privKey == null && !_existingLeaseSets.isEmpty()) {
+      PublicKey pk=dest.getPublicKey();
+      for (      Map.Entry<Destination,LeaseInfo> e : _existingLeaseSets.entrySet()) {
+        if (pk.equals(e.getKey().getPublicKey())) {
+          privKey=e.getValue().getPrivateKey();
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("Creating new leaseInfo keys for " + dest + " with private key from "+ e.getKey());
+          break;
+        }
+      }
     }
-    if (useOldKeys)     li=new LeaseInfo(privKey,signingPrivKey);
- else     li=new LeaseInfo(dest);
+    if (privKey != null) {
+      if (signingPrivKey != null) {
+        li=new LeaseInfo(privKey,signingPrivKey);
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Creating new leaseInfo keys for " + dest + " WITH configured private keys");
+      }
+ else {
+        li=new LeaseInfo(privKey,dest);
+      }
+    }
+ else {
+      li=new LeaseInfo(dest);
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Creating new leaseInfo keys for " + dest + " without configured private keys");
+    }
     _existingLeaseSets.put(dest,li);
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Creating new leaseInfo keys for " + dest + " using configured private keys? "+ useOldKeys);
   }
  else {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Caching the old leaseInfo keys for " + dest);
