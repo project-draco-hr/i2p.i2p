@@ -33,7 +33,14 @@
       if (hostlc.endsWith(".onion"))       throw new UnknownHostException("Tor addresses must be proxied");
       int port=url.getPort();
       if (port == -1)       port=80;
-      _proxy=new Socket(host,port);
+      if (_fetchHeaderTimeout > 0) {
+        _proxy=new Socket();
+        _proxy.setSoTimeout(_fetchHeaderTimeout);
+        _proxy.connect(new InetSocketAddress(host,port),_fetchHeaderTimeout);
+      }
+ else {
+        _proxy=new Socket(host,port);
+      }
     }
  else {
       throw new MalformedURLException("URL is not supported:" + _actualURL);
