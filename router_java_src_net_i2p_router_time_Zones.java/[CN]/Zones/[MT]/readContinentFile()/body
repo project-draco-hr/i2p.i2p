@@ -1,0 +1,37 @@
+{
+  String geoDir=_context.getProperty(GeoIP.PROP_GEOIP_DIR,GeoIP.GEOIP_DIR_DEFAULT);
+  File geoFile=new File(geoDir);
+  if (!geoFile.isAbsolute())   geoFile=new File(_context.getBaseDir(),geoDir);
+  geoFile=new File(geoFile,CONTINENT_FILE_DEFAULT);
+  if (!geoFile.exists()) {
+    return;
+  }
+  BufferedReader br=null;
+  try {
+    br=new BufferedReader(new InputStreamReader(new FileInputStream(geoFile),"UTF-8"));
+    String line=null;
+    while ((line=br.readLine()) != null) {
+      try {
+        if (line.charAt(0) == '#')         continue;
+        String[] s=line.split(",");
+        String ucContinent=s[1].toUpperCase(Locale.US).trim();
+        String zone=_continentToZone.get(ucContinent);
+        if (zone == null)         continue;
+        String lcCountry=s[0].toLowerCase(Locale.US).trim();
+        _countryToZone.put(lcCountry,zone);
+      }
+ catch (      IndexOutOfBoundsException ioobe) {
+      }
+    }
+  }
+ catch (  IOException ioe) {
+    System.out.println("Error reading the continent file " + geoFile.getAbsolutePath());
+  }
+ finally {
+    if (br != null)     try {
+      br.close();
+    }
+ catch (    IOException ioe) {
+    }
+  }
+}

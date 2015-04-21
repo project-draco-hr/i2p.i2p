@@ -7,9 +7,21 @@
       country=Locale.getDefault().getCountry();
       if (country != null)       country=country.toLowerCase(Locale.US);
     }
-    if (country != null && country.length() > 0) {
-      _priorityServers=new ArrayList<String>(3);
-      for (int i=0; i < 3; i++)       _priorityServers.add(i + "." + country+ ".pool.ntp.org");
+    if (country != null && country.length() > 0 && !country.equals("a1") && !country.equals("a2")) {
+      _priorityServers=new ArrayList<List<String>>(2);
+      List<String> p1=new ArrayList<String>(3);
+      for (int i=0; i < 3; i++) {
+        p1.add(i + "." + country+ ".pool.ntp.org");
+      }
+      _priorityServers.add(p1);
+      String zone=_zones.getZone(country);
+      if (zone != null) {
+        List<String> p2=new ArrayList<String>(3);
+        for (int i=0; i < 3; i++) {
+          p2.add(i + "." + zone+ ".pool.ntp.org");
+        }
+        _priorityServers.add(p2);
+      }
     }
  else {
       _priorityServers=null;
@@ -26,7 +38,6 @@
     if (val.length() > 0)     _servers.add(val);
   }
   _queryFrequency=Math.max(MIN_QUERY_FREQUENCY,_context.getProperty(PROP_QUERY_FREQUENCY,DEFAULT_QUERY_FREQUENCY));
-  String disabled=_context.getProperty(PROP_DISABLED,DEFAULT_DISABLED);
-  _disabled=Boolean.parseBoolean(disabled);
+  _disabled=_context.getProperty(PROP_DISABLED,DEFAULT_DISABLED);
   _concurringServers=Math.min(4,Math.max(1,_context.getProperty(PROP_CONCURRING_SERVERS,DEFAULT_CONCURRING_SERVERS)));
 }

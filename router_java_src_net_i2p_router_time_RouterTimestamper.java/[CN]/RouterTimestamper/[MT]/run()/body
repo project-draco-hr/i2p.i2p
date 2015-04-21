@@ -1,45 +1,66 @@
 {
-  try {
-    Thread.sleep(1000);
-  }
- catch (  InterruptedException ie) {
-  }
-  _log=_context.logManager().getLog(Timestamper.class);
-  if (_log.shouldLog(Log.INFO))   _log.info("Starting timestamper");
   boolean lastFailed=false;
   try {
     while (_isRunning) {
       updateConfig();
       if (!_disabled) {
         if (_priorityServers != null) {
-          if (_log.shouldLog(Log.DEBUG))           _log.debug("Querying servers " + _priorityServers);
-          try {
-            lastFailed=!queryTime(_priorityServers.toArray(new String[_priorityServers.size()]));
-          }
- catch (          IllegalArgumentException iae) {
-            if ((!lastFailed) && (_log.shouldLog(Log.WARN)))             _log.warn("Unable to reach country-specific NTP servers");
-            lastFailed=true;
+          for (          List<String> servers : _priorityServers) {
+            if (_log != null && _log.shouldDebug())             _log.debug("Querying servers " + servers);
+            try {
+              lastFailed=!queryTime(servers.toArray(new String[servers.size()]));
+            }
+ catch (            IllegalArgumentException iae) {
+              if (!lastFailed && _log != null && _log.shouldWarn())               _log.warn("Unable to reach any regional NTP servers: " + servers);
+              lastFailed=true;
+            }
+            if (!lastFailed)             break;
           }
         }
         if (_priorityServers == null || lastFailed) {
-          if (_log.shouldLog(Log.DEBUG))           _log.debug("Querying servers " + _servers);
+          if (_log != null && _log.shouldDebug())           _log.debug("Querying servers " + _servers);
           try {
             lastFailed=!queryTime(_servers.toArray(new String[_servers.size()]));
           }
  catch (          IllegalArgumentException iae) {
-            if ((!_initialized) && (_log.shouldLog(Log.ERROR))) {
-              List<String> all=new ArrayList<String>();
-              if (_priorityServers != null)               all.addAll(_priorityServers);
-              all.addAll(_servers);
-              _log.error("Unable to reach any of the NTP servers " + all + " - network disconnected? Or set time.sntpServerList=myserver1.com,myserver2.com in advanced configuration.");
-            }
             lastFailed=true;
           }
         }
       }
-      _initialized=true;
+      boolean wasInitialized=_initialized;
+      if (!wasInitialized)       _initialized=true;
 synchronized (this) {
         notifyAll();
+      }
+      if (!wasInitialized) {
+        try {
+          Thread.sleep(10 * 1000);
+        }
+ catch (        InterruptedException ie) {
+        }
+        _log=_context.logManager().getLog(RouterTimestamper.class);
+        if (lastFailed) {
+          List<String> all=new ArrayList<String>(9);
+          if (_priorityServers != null) {
+            for (            List<String> servers : _priorityServers) {
+              all.addAll(servers);
+            }
+          }
+          all.addAll(_servers);
+          String msg="Unable to reach any of the NTP servers " + all + " - network disconnected? Or set time.sntpServerList=myserver1.com,myserver2.com in advanced configuration.";
+          _log.logAlways(Log.WARN,msg);
+          System.out.println("Warning: " + msg);
+        }
+ else         if (_log.shouldDebug()) {
+          _log.debug("NTP initialization successful");
+          int i=1;
+          if (_priorityServers != null) {
+            for (            List<String> servers : _priorityServers) {
+              _log.debug("NTP Server list " + (i++) + ": "+ servers);
+            }
+          }
+          _log.debug("NTP Server list " + i + ": "+ _servers);
+        }
       }
       long sleepTime;
       if (lastFailed) {
@@ -59,9 +80,10 @@ synchronized (this) {
     }
   }
  catch (  Throwable t) {
-    _log.log(Log.CRIT,"Timestamper died!",t);
 synchronized (this) {
       notifyAll();
     }
+    if (_log != null)     _log.log(Log.CRIT,"Timestamper died!",t);
+    t.printStackTrace();
   }
 }
