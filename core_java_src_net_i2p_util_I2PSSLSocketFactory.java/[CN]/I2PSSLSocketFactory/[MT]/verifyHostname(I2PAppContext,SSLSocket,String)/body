@@ -1,0 +1,18 @@
+{
+  Log log=ctx.logManager().getLog(I2PSSLSocketFactory.class);
+  if (ctx.getBooleanProperty(PROP_DISABLE) || host.equals("localhost") || host.equals("127.0.0.1")|| host.equals("::1")|| host.equals("0:0:0:0:0:0:0::1")) {
+    if (log.shouldWarn())     log.warn("Skipping hostname validation for " + host);
+    return;
+  }
+  HostnameVerifier hv;
+  if (SystemVersion.isAndroid()) {
+    hv=HttpsURLConnection.getDefaultHostnameVerifier();
+  }
+ else {
+    hv=new DefaultHostnameVerifier(getDefaultMatcher(ctx));
+  }
+  SSLSession sess=socket.getSession();
+  if (!hv.verify(host,sess)) {
+    throw new SSLHandshakeException("SSL hostname verify failed, Expected " + host + " - set "+ PROP_DISABLE+ "=true to disable verification (dangerous!)");
+  }
+}
