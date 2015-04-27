@@ -28,19 +28,18 @@
  catch (    NumberFormatException nfe) {
     }
   }
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Searching " + listname + " beginning with "+ beginWith+ " starting with "+ startsWith+ " search string "+ search+ " limit="+ limit+ " skip="+ skip);
 synchronized (_bf) {
-    if (_isClosed)     return Collections.emptyMap();
+    if (_isClosed)     return Collections.emptySet();
     try {
       SkipList sl=_bf.getIndex(listname,_stringSerializer,_destSerializer);
       if (sl == null) {
         if (_log.shouldLog(Log.WARN))         _log.warn("No skiplist found for lookup in " + listname);
-        return Collections.emptyMap();
+        return Collections.emptySet();
       }
       SkipIterator iter;
       if (beginWith != null)       iter=sl.find(beginWith);
  else       iter=sl.iterator();
-      Map<String,Destination> rv=new TreeMap<String,Destination>();
+      Set<String> rv=new HashSet<String>();
       for (int i=0; i < skip && iter.hasNext(); i++) {
         iter.next();
       }
@@ -54,24 +53,19 @@ synchronized (_bf) {
             break;
           }
         }
-        DestEntry de=(DestEntry)iter.next();
-        if (!validate(key,de,listname))         continue;
         if (search != null && key.indexOf(search) < 0)         continue;
-        rv.put(key,de.dest);
+        rv.add(key);
         i++;
       }
       return rv;
     }
  catch (    IOException ioe) {
       _log.error("DB lookup error",ioe);
-      return Collections.emptyMap();
+      return Collections.emptySet();
     }
 catch (    RuntimeException re) {
       _log.error("DB lookup error",re);
-      return Collections.emptyMap();
-    }
- finally {
-      deleteInvalid();
+      return Collections.emptySet();
     }
   }
 }
