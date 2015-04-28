@@ -20,17 +20,20 @@
     _log.error("die",uhe);
     System.exit(0);
   }
+  int MIN=1 + UDPPacket.MAC_SIZE + UDPPacket.IV_SIZE;
+  int MAX=PeerState.LARGE_MTU - PacketBuilder.IP_HEADER_SIZE;
   _log.debug("Beginning to write");
   for (int curPacket=0; curPacket < 2000; curPacket++) {
-    byte data[]=new byte[1024];
+    int sz=MIN + _context.random().nextInt(MAX - MIN - 1);
+    byte data[]=new byte[sz];
     _context.random().nextBytes(data);
     int curPeer=(curPacket % _endpoints.length);
     if (_endpoints[curPeer] == _endpoint)     curPeer++;
     if (curPeer >= _endpoints.length)     curPeer=0;
     UDPPacket packet=builder.buildPacket(data,localhost,_endpoints[curPeer].getListenPort());
     int outstanding=_sentNotReceived.size() + 1;
-    _sentNotReceived.add(new ByteArray(data,0,1024));
-    _log.debug("Sending packet " + curPacket + " with outstanding "+ outstanding);
+    _sentNotReceived.add(new ByteArray(data));
+    _log.debug("Sending packet " + curPacket + " with "+ sz+ " byte payload, outstanding "+ outstanding);
     try {
       _endpoint.send(packet);
     }
@@ -38,17 +41,30 @@
       _log.error("die",e);
       break;
     }
-    try {
-      Thread.sleep(3);
-    }
- catch (    InterruptedException ie) {
+    int batch=32 + _context.random().nextInt(32);
+    if (curPacket % batch == 0 || _sentNotReceived.size() > 100) {
+      try {
+        Thread.sleep(3);
+      }
+ catch (      InterruptedException ie) {
+      }
     }
   }
   _log.debug("Done sending packets");
-  try {
-    Thread.sleep(10 * 1000);
+  for (int i=0; i < 20; i++) {
+    if (_sentNotReceived.isEmpty())     break;
+    try {
+      Thread.sleep(500);
+    }
+ catch (    InterruptedException e) {
+    }
   }
- catch (  InterruptedException e) {
+  if (_sentNotReceived.isEmpty()) {
+    _log.info("Test passed");
+    System.exit(0);
   }
-  System.exit(0);
+ else {
+    _log.error("Test failed, " + _sentNotReceived.size() + " not received");
+    System.exit(1);
+  }
 }
