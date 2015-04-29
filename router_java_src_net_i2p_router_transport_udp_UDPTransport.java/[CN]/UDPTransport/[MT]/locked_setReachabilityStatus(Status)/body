@@ -1,40 +1,35 @@
 {
   Status old=_reachabilityStatus;
-  long now=_context.clock().now();
-switch (status) {
-case OK:
-    _context.statManager().addRateData("udp.statusOK",1);
-  _reachabilityStatus=status;
-_reachabilityStatusLastUpdated=now;
-break;
-case DIFFERENT:
-_context.statManager().addRateData("udp.statusDifferent",1);
-_reachabilityStatus=status;
-_reachabilityStatusLastUpdated=now;
-break;
-case REJECT_UNSOLICITED:
-_context.statManager().addRateData("udp.statusReject",1);
-case DISCONNECTED:
-case HOSED:
-_reachabilityStatus=status;
-_reachabilityStatusLastUpdated=now;
-break;
-case UNKNOWN:
-default :
-_context.statManager().addRateData("udp.statusUnknown",1);
-break;
-}
-_testEvent.setLastTested();
-if (status != Status.UNKNOWN) {
-if (status != old) _reachabilityStatusUnchanged=0;
- else _reachabilityStatusUnchanged++;
-}
-if ((status != old) && (status != Status.UNKNOWN)) {
-if (_log.shouldLog(Log.WARN)) _log.warn("Old status: " + old + " New status: "+ status+ " from: ",new Exception("traceback"));
-if (old != Status.UNKNOWN) _context.router().eventLog().addEvent(EventLog.REACHABILITY,status.toStatusString());
-rebuildExternalAddress();
-}
+  Status status=Status.merge(old,newStatus);
+  _testEvent.setLastTested();
+  TransportUtil.IPv6Config config=getIPv6Config();
+  if (config == IPV6_ONLY) {
+    if (status == Status.IPV4_UNKNOWN_IPV6_OK)     status=Status.IPV4_DISABLED_IPV6_OK;
+ else     if (status == Status.IPV4_UNKNOWN_IPV6_FIREWALLED)     status=Status.IPV4_DISABLED_IPV6_FIREWALLED;
+ else     if (status == Status.UNKNOWN)     status=Status.IPV4_DISABLED_IPV6_UNKNOWN;
+  }
+  if (status != Status.UNKNOWN) {
+    if (_currentOurV6Address == null) {
+      if (status == Status.IPV4_OK_IPV6_UNKNOWN)       status=Status.OK;
+ else       if (status == Status.IPV4_FIREWALLED_IPV6_UNKNOWN)       status=Status.REJECT_UNSOLICITED;
+ else       if (status == Status.IPV4_SNAT_IPV6_UNKNOWN)       status=Status.DIFFERENT;
+    }
+    if (status != old) {
+      _reachabilityStatusUnchanged=0;
+      long now=_context.clock().now();
+      _reachabilityStatusLastUpdated=now;
+      _reachabilityStatus=status;
+    }
  else {
-if (_log.shouldLog(Log.INFO)) _log.info("Status unchanged: " + _reachabilityStatus + " ("+ _reachabilityStatusUnchanged+ " consecutive times), last updated "+ DataHelper.formatDuration(_context.clock().now() - _reachabilityStatusLastUpdated)+ " ago");
-}
+      _reachabilityStatusUnchanged++;
+    }
+  }
+  if (status != old) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Old status: " + old + " New status: "+ status+ " Caused by update: "+ newStatus+ " from: ",new Exception("traceback"));
+    if (old != Status.UNKNOWN)     _context.router().eventLog().addEvent(EventLog.REACHABILITY,"from " + _(old.toStatusString()) + " to "+ _(status.toStatusString()));
+    rebuildExternalAddress();
+  }
+ else {
+    if (_log.shouldLog(Log.INFO))     _log.info("Status unchanged: " + _reachabilityStatus + " after update: "+ newStatus+ " (unchanged "+ _reachabilityStatusUnchanged+ " consecutive times), last updated "+ DataHelper.formatDuration(_context.clock().now() - _reachabilityStatusLastUpdated)+ " ago");
+  }
 }

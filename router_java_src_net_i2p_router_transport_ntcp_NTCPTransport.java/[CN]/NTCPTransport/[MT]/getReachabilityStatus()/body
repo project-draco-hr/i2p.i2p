@@ -1,8 +1,56 @@
 {
-  if (isAlive() && getCurrentAddress(false) != null) {
-    for (    NTCPConnection con : _conByIdent.values()) {
-      if (con.isInbound())       return Status.OK;
+  if (!isAlive())   return Status.UNKNOWN;
+  TransportUtil.IPv6Config config=getIPv6Config();
+  boolean v4Disabled, v6Disabled;
+  if (config == IPV6_DISABLED) {
+    v4Disabled=false;
+    v6Disabled=true;
+  }
+ else   if (config == IPV6_ONLY) {
+    v4Disabled=true;
+    v6Disabled=false;
+  }
+ else {
+    v4Disabled=false;
+    v6Disabled=false;
+  }
+  boolean hasV4=getCurrentAddress(false) != null;
+  boolean hasV6=getCurrentAddress(true) != null;
+  if (!hasV4 && !hasV6)   return Status.UNKNOWN;
+  long now=_context.clock().now();
+  boolean v4OK=hasV4 && !v4Disabled && now - _lastInboundIPv4 < 10 * 60 * 1000;
+  boolean v6OK=hasV6 && !v6Disabled && now - _lastInboundIPv6 < 30 * 60 * 1000;
+  if (v4OK) {
+    if (v6OK)     return Status.OK;
+    if (v6Disabled)     return Status.OK;
+    if (!hasV6)     return Status.IPV4_OK_IPV6_UNKNOWN;
+  }
+  if (v6OK) {
+    if (v4Disabled)     return Status.IPV4_DISABLED_IPV6_OK;
+    if (!hasV4)     return Status.IPV4_UNKNOWN_IPV6_OK;
+  }
+  for (  NTCPConnection con : _conByIdent.values()) {
+    if (con.isInbound()) {
+      if (con.isIPv6()) {
+        if (hasV6)         v6OK=true;
+      }
+ else {
+        if (hasV4)         v4OK=true;
+      }
+      if (v4OK) {
+        if (v6OK)         return Status.OK;
+        if (v6Disabled)         return Status.OK;
+        if (!hasV6)         return Status.IPV4_OK_IPV6_UNKNOWN;
+      }
+      if (v6OK) {
+        if (v4Disabled)         return Status.IPV4_DISABLED_IPV6_OK;
+        if (!hasV4)         return Status.IPV4_UNKNOWN_IPV6_OK;
+      }
     }
   }
+  if (v4OK)   return Status.IPV4_OK_IPV6_UNKNOWN;
+  if (v6OK)   return Status.IPV4_UNKNOWN_IPV6_OK;
+  if (v4Disabled)   return Status.IPV4_DISABLED_IPV6_UNKNOWN;
+  if (v6Disabled)   return Status.UNKNOWN;
   return Status.UNKNOWN;
 }
