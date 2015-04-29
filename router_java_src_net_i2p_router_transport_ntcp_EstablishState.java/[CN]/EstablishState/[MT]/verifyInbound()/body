@@ -3,6 +3,9 @@
   try {
     int sz=_aliceIdentSize;
     long tsA=DataHelper.fromLong(b,2 + sz,4);
+    long now=_context.clock().now();
+    long rtt=now - _con.getCreated();
+    _peerSkew=(now - (tsA * 1000) - (rtt / 2) + 500) / 1000;
     ByteArrayOutputStream baos=new ByteArrayOutputStream(768);
     baos.write(_X);
     baos.write(_Y);
@@ -30,17 +33,17 @@
       }
       if (ip != null)       _transport.setIP(_aliceIdent.calculateHash(),ip);
       if (_log.shouldLog(Log.DEBUG))       _log.debug(prefix() + "verification successful for " + _con);
-      long diff=1000 * Math.abs(tsA - _tsB);
+      long diff=1000 * Math.abs(_peerSkew);
       if (!_context.clock().getUpdatedSuccessfully()) {
-        _context.clock().setOffset(1000 * (_tsB - tsA),true);
-        tsA=_tsB;
+        _context.clock().setOffset(1000 * (0 - _peerSkew),true);
+        _peerSkew=0;
         if (diff != 0)         _log.logAlways(Log.WARN,"NTP failure, NTCP adjusting clock by " + DataHelper.formatDuration(diff));
       }
  else       if (diff >= Router.CLOCK_FUDGE_FACTOR) {
         _context.statManager().addRateData("ntcp.invalidInboundSkew",diff);
         _transport.markReachable(_aliceIdent.calculateHash(),true);
         _context.banlist().banlistRouter(DataHelper.formatDuration(diff),_aliceIdent.calculateHash(),_x("Excessive clock skew: {0}"));
-        _transport.setLastBadSkew(tsA - _tsB);
+        _transport.setLastBadSkew(_peerSkew);
         fail("Clocks too skewed (" + diff + " ms)",null,true);
         return;
       }
@@ -52,7 +55,7 @@
       if (_log.shouldLog(Log.DEBUG))       _log.debug(prefix() + "e_bobSig is " + _e_bobSig.length+ " bytes long");
       byte iv[]=_curEncrypted;
       System.arraycopy(_e_bobSig,_e_bobSig.length - AES_SIZE,iv,0,AES_SIZE);
-      _con.finishInboundEstablishment(_dh.getSessionKey(),(tsA - _tsB),iv,_prevEncrypted);
+      _con.finishInboundEstablishment(_dh.getSessionKey(),_peerSkew,iv,_prevEncrypted);
       releaseBufs(true);
       if (_log.shouldLog(Log.INFO))       _log.info(prefix() + "Verified remote peer as " + _aliceIdent.calculateHash());
       changeState(State.VERIFIED);
