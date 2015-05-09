@@ -1,6 +1,7 @@
 {
   Log log=ctx.logManager().getLog(PluginStarter.class);
   File pluginDir=new File(ctx.getConfigDir(),PLUGIN_DIR + '/' + appName);
+  String iconfile=null;
   if ((!pluginDir.exists()) || (!pluginDir.isDirectory())) {
     log.error("Cannot start nonexistent plugin: " + appName);
     disablePlugin(appName);
@@ -95,6 +96,14 @@
           log.error("Error resolving '" + fileNames[i] + "' in '"+ webappDir,ioe);
         }
       }
+      String icfile=ConfigClientsHelper.stripHTML(props,"console-icon");
+      if (icfile != null && !icfile.contains("..")) {
+        StringBuilder buf=new StringBuilder(32);
+        buf.append('/').append(appName);
+        if (!icfile.startsWith("/"))         buf.append('/');
+        buf.append(icfile);
+        iconfile=buf.toString();
+      }
     }
   }
  else {
@@ -127,8 +136,7 @@
   if (name != null && url != null && name.length() > 0 && url.length() > 0) {
     String tip=ConfigClientsHelper.stripHTML(props,"consoleLinkTooltip_" + Messages.getLanguage(ctx));
     if (tip == null)     tip=ConfigClientsHelper.stripHTML(props,"consoleLinkTooltip");
-    if (tip != null)     NavHelper.registerApp(name,url,tip);
- else     NavHelper.registerApp(name,url);
+    NavHelper.registerApp(name,url,tip,iconfile);
   }
   return true;
 }
