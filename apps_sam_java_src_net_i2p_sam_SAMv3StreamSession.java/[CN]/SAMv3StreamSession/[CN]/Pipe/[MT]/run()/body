@@ -1,4 +1,5 @@
 {
+  if (bridge != null)   bridge.register(this);
   try {
     while (!Thread.interrupted() && (in.read(buf) >= 0 || buf.position() != 0)) {
       buf.flip();
@@ -6,23 +7,27 @@
       buf.compact();
     }
   }
- catch (  IOException e) {
-    this.interrupt();
+ catch (  IOException ioe) {
   }
-  try {
-    in.close();
-  }
- catch (  IOException e) {
-  }
-  try {
-    buf.flip();
-    while (buf.hasRemaining())     out.write(buf);
-  }
- catch (  IOException e) {
-  }
-  try {
-    out.close();
-  }
- catch (  IOException e) {
+ finally {
+    try {
+      in.close();
+    }
+ catch (    IOException e) {
+    }
+    try {
+      buf.flip();
+      while (buf.hasRemaining()) {
+        out.write(buf);
+      }
+    }
+ catch (    IOException e) {
+    }
+    try {
+      out.close();
+    }
+ catch (    IOException e) {
+    }
+    if (bridge != null)     bridge.unregister(this);
   }
 }
