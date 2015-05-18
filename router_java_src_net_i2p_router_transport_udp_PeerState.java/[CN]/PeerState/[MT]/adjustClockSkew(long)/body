@@ -1,5 +1,12 @@
 {
-  double adj=0.1 * (skew + CLOCK_SKEW_FUDGE - (_rtt / 2));
+  long actualSkew=skew + CLOCK_SKEW_FUDGE - (_rtt / 2);
+  if (_packetsReceived <= 1) {
+synchronized (_clockSkewLock) {
+      _clockSkew=actualSkew;
+    }
+    return;
+  }
+  double adj=0.1 * actualSkew;
 synchronized (_clockSkewLock) {
     _clockSkew=(long)(0.9 * _clockSkew + adj);
   }

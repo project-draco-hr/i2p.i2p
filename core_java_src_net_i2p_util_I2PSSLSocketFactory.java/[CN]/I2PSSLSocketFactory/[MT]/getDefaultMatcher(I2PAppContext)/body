@@ -1,0 +1,45 @@
+{
+synchronized (I2PSSLSocketFactory.class) {
+    if (!_matcherLoaded) {
+      String geoDir=ctx.getProperty(PROP_GEOIP_DIR,GEOIP_DIR_DEFAULT);
+      File geoFile=new File(geoDir);
+      if (!geoFile.isAbsolute())       geoFile=new File(ctx.getBaseDir(),geoDir);
+      geoFile=new File(geoFile,PUBLIC_SUFFIX_LIST);
+      Log log=ctx.logManager().getLog(I2PSSLSocketFactory.class);
+      if (geoFile.exists()) {
+        try {
+          long begin=System.currentTimeMillis();
+          InputStream in=null;
+          PublicSuffixList list=new PublicSuffixList(Arrays.asList(ADDITIONAL_TLDS),Collections.<String>emptyList());
+          try {
+            in=new FileInputStream(geoFile);
+            PublicSuffixList list2=new PublicSuffixListParser().parse(new InputStreamReader(in,"UTF-8"));
+            list=merge(list,list2);
+          }
+  finally {
+            try {
+              if (in != null)               in.close();
+            }
+ catch (            IOException ioe) {
+            }
+          }
+          DEFAULT_MATCHER=new PublicSuffixMatcher(list.getRules(),list.getExceptions());
+          if (log.shouldWarn())           log.warn("Loaded " + geoFile + " in "+ (System.currentTimeMillis() - begin)+ " ms and created list with "+ list.getRules().size()+ " entries and "+ list.getExceptions().size()+ " exceptions");
+        }
+ catch (        IOException ex) {
+          log.error("Failure loading public suffix list from " + geoFile,ex);
+        }
+      }
+ else {
+        List<String> list=new ArrayList<String>(320);
+        addCountries(ctx,list);
+        list.addAll(Arrays.asList(DEFAULT_TLDS));
+        list.addAll(Arrays.asList(ADDITIONAL_TLDS));
+        DEFAULT_MATCHER=new PublicSuffixMatcher(list,null);
+        if (log.shouldWarn())         log.warn("No public suffix list found at " + geoFile + " - created default with "+ list.size()+ " entries");
+      }
+    }
+    _matcherLoaded=true;
+  }
+  return DEFAULT_MATCHER;
+}

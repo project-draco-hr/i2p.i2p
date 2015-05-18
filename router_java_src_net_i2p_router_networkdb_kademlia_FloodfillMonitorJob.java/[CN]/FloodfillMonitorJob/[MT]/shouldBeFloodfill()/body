@@ -5,7 +5,7 @@
   if ("true".equals(enabled))   return true;
   if ("false".equals(enabled))   return false;
   if (getContext().router().gracefulShutdownInProgress())   return false;
-  if (SystemVersion.isARM())   return false;
+  if (SystemVersion.isARM() || SystemVersion.isAndroid())   return false;
   if (getContext().getBooleanProperty(UDPTransport.PROP_LAPTOP_MODE))   return false;
   if (getContext().commSystem().isInBadCountry())   return false;
   String country=getContext().commSystem().getOurCountry();
@@ -14,7 +14,7 @@
   RouterInfo ri=getContext().router().getRouterInfo();
   if (ri == null)   return false;
   char bw=ri.getBandwidthTier().charAt(0);
-  if (bw != Router.CAPABILITY_BW128 && bw != Router.CAPABILITY_BW256 && bw != Router.CAPABILITY_BW512 && bw != Router.CAPABILITY_BW_UNLIMITED)   return false;
+  if (bw != Router.CAPABILITY_BW64 && bw != Router.CAPABILITY_BW128 && bw != Router.CAPABILITY_BW256 && bw != Router.CAPABILITY_BW512 && bw != Router.CAPABILITY_BW_UNLIMITED)   return false;
   List<Hash> floodfillPeers=_facade.getFloodfillPeers();
   long now=getContext().clock().now();
   if (floodfillPeers == null || floodfillPeers.isEmpty()) {
@@ -34,8 +34,9 @@
   int good=ffcount - failcount;
   boolean happy=getContext().router().getRouterInfo().getCapabilities().indexOf("R") >= 0;
   RateStat lagStat=getContext().statManager().getRate("jobQueue.jobLag");
+  RateStat queueStat=getContext().statManager().getRate("router.tunnelBacklog");
   happy=happy && lagStat.getRate(60 * 60 * 1000L).getAvgOrLifetimeAvg() < 25;
-  happy=happy && getContext().tunnelManager().getInboundBuildQueueSize() < 5;
+  happy=happy && queueStat.getRate(60 * 60 * 1000L).getAvgOrLifetimeAvg() < 5;
   happy=happy && _facade.getKnownRouters() >= 400;
   happy=happy && getContext().commSystem().countActivePeers() >= 50;
   happy=happy && getContext().tunnelManager().getParticipatingCount() >= 25;

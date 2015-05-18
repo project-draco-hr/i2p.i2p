@@ -91,7 +91,7 @@
   }
   if (_endpoints.isEmpty()) {
     _log.log(Log.CRIT,"Unable to open UDP port");
-    setReachabilityStatus(CommSystemFacade.STATUS_HOSED);
+    setReachabilityStatus(Status.HOSED);
     return;
   }
   if (newPort > 0 && (newPort != port || newPort != oldIPort || newPort != oldEPort)) {
@@ -108,12 +108,36 @@
   _establisher.startup();
   if (USE_PRIORITY)   _refiller.startup();
   _expireEvent.setIsAlive(true);
+  _reachabilityStatus=Status.UNKNOWN;
   _testEvent.setIsAlive(true);
   _testEvent.reschedule(10 * 1000);
   if (newPort > 0 && bindToAddrs.isEmpty()) {
     for (    InetAddress ia : getSavedLocalAddresses()) {
+      if (ia.getAddress().length == 16) {
+        _lastInboundIPv6=_context.clock().now();
+        setReachabilityStatus(Status.IPV4_UNKNOWN_IPV6_OK);
+      }
+ else {
+        if (!isIPv4Firewalled())         setReachabilityStatus(Status.IPV4_OK_IPV6_UNKNOWN);
+      }
       rebuildExternalAddress(ia.getHostAddress(),newPort,false);
     }
+  }
+ else   if (newPort > 0 && !bindToAddrs.isEmpty()) {
+    for (    InetAddress ia : bindToAddrs) {
+      if (ia.getAddress().length == 16) {
+        _lastInboundIPv6=_context.clock().now();
+        setReachabilityStatus(Status.IPV4_UNKNOWN_IPV6_OK);
+      }
+ else {
+        if (!isIPv4Firewalled())         setReachabilityStatus(Status.IPV4_OK_IPV6_UNKNOWN);
+      }
+      rebuildExternalAddress(ia.getHostAddress(),newPort,false);
+    }
+  }
+  if (isIPv4Firewalled()) {
+    if (_lastInboundIPv6 > 0)     setReachabilityStatus(Status.IPV4_FIREWALLED_IPV6_UNKNOWN);
+ else     setReachabilityStatus(Status.REJECT_UNSOLICITED);
   }
   rebuildExternalAddress(false);
 }

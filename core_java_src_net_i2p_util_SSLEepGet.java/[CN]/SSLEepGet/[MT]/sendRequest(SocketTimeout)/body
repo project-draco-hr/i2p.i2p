@@ -16,8 +16,20 @@
     if (port == -1)     port=443;
     if (_sslContext != null)     _proxy=_sslContext.getSocketFactory().createSocket(host,port);
  else     _proxy=SSLSocketFactory.getDefault().createSocket(host,port);
+    if (_fetchHeaderTimeout > 0) {
+      _proxy.setSoTimeout(_fetchHeaderTimeout);
+    }
     SSLSocket socket=(SSLSocket)_proxy;
     I2PSSLSocketFactory.setProtocolsAndCiphers(socket);
+    if (!_bypassVerification) {
+      try {
+        I2PSSLSocketFactory.verifyHostname(_context,socket,host);
+      }
+ catch (      SSLException ssle) {
+        if (_saveCerts > 0 && _stm != null)         saveCerts(host,_stm);
+        throw ssle;
+      }
+    }
   }
  else {
     throw new MalformedURLException("Only https supported: " + _actualURL);
@@ -27,10 +39,11 @@
   try {
     _proxyOut.write(DataHelper.getUTF8(req));
     _proxyOut.flush();
+    if (_saveCerts > 1 && _stm != null)     saveCerts(host,_stm);
   }
- catch (  SSLHandshakeException sslhe) {
+ catch (  SSLException sslhe) {
     _log.error("SSL negotiation error with " + host + ':'+ port+ " - self-signed certificate or untrusted certificate authority?",sslhe);
-    if (_saveCerts && _stm != null)     saveCerts(host,_stm);
+    if (_saveCerts > 0 && _stm != null)     saveCerts(host,_stm);
  else     if (_commandLine) {
       System.out.println("FAILED (probably due to untrusted certificates) - Run with -s option to save certificates");
     }

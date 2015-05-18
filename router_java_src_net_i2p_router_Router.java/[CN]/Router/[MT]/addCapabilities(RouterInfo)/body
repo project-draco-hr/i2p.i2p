@@ -22,9 +22,11 @@
     ri.addCapability(CAPABILITY_BW256);
   }
  else   if (bwLim <= 2000) {
+    ri.addCapability(CAPABILITY_BW512);
     ri.addCapability(CAPABILITY_BW256);
   }
  else {
+    ri.addCapability(CAPABILITY_BW_UNLIMITED);
     ri.addCapability(CAPABILITY_BW256);
   }
   if (_context.netDb().floodfillEnabled() && !_context.getBooleanProperty("router.hideFloodfillParticipant"))   ri.addCapability(FloodfillNetworkDatabaseFacade.CAPABILITY_FLOODFILL);
@@ -33,17 +35,29 @@
     ri.addCapability(CAPABILITY_UNREACHABLE);
     return;
   }
-switch (_context.commSystem().getReachabilityStatus()) {
-case CommSystemFacade.STATUS_OK:
+switch (_context.commSystem().getStatus()) {
+case OK:
+case IPV4_OK_IPV6_UNKNOWN:
+case IPV4_OK_IPV6_FIREWALLED:
+case IPV4_FIREWALLED_IPV6_OK:
+case IPV4_DISABLED_IPV6_OK:
+case IPV4_UNKNOWN_IPV6_OK:
+case IPV4_SNAT_IPV6_OK:
     ri.addCapability(CAPABILITY_REACHABLE);
   break;
-case CommSystemFacade.STATUS_DIFFERENT:
-case CommSystemFacade.STATUS_REJECT_UNSOLICITED:
+case DIFFERENT:
+case REJECT_UNSOLICITED:
+case IPV4_DISABLED_IPV6_FIREWALLED:
 ri.addCapability(CAPABILITY_UNREACHABLE);
 break;
-case CommSystemFacade.STATUS_DISCONNECTED:
-case CommSystemFacade.STATUS_HOSED:
-case CommSystemFacade.STATUS_UNKNOWN:
+case DISCONNECTED:
+case HOSED:
+case UNKNOWN:
+case IPV4_UNKNOWN_IPV6_FIREWALLED:
+case IPV4_DISABLED_IPV6_UNKNOWN:
+case IPV4_FIREWALLED_IPV6_UNKNOWN:
+case IPV4_SNAT_IPV6_UNKNOWN:
+default :
 break;
 }
 }

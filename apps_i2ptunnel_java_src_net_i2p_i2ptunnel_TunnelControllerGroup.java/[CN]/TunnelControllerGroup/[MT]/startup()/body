@@ -1,5 +1,19 @@
 {
-  loadControllers(_configFile);
+  try {
+    loadControllers(_configFile);
+  }
+ catch (  IllegalArgumentException iae) {
+    if (DEFAULT_CONFIG_FILE.equals(_configFile) && !_context.isRouterContext()) {
+synchronized (_controllersLoadedLock) {
+        _controllersLoaded=true;
+      }
+      _log.logAlways(Log.WARN,"Not in router context and no preconfigured tunnels");
+    }
+ else {
+      throw iae;
+    }
+  }
+  startControllers();
   if (_mgr != null)   _mgr.register(this);
  else   _context.addShutdownTask(new Shutdown());
 }

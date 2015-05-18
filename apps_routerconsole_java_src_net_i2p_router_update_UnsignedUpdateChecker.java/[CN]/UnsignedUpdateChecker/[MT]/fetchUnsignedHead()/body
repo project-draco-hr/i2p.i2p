@@ -4,6 +4,12 @@
   String url=_currentURI.toString();
   String proxyHost=_context.getProperty(ConfigUpdateHandler.PROP_PROXY_HOST,ConfigUpdateHandler.DEFAULT_PROXY_HOST);
   int proxyPort=_context.getProperty(ConfigUpdateHandler.PROP_PROXY_PORT,ConfigUpdateHandler.DEFAULT_PROXY_PORT_INT);
+  if (proxyPort == ConfigUpdateHandler.DEFAULT_PROXY_PORT_INT && proxyHost.equals(ConfigUpdateHandler.DEFAULT_PROXY_HOST) && _context.portMapper().getPort(PortMapper.SVC_HTTP_PROXY) < 0) {
+    String msg=_("HTTP client proxy tunnel must be running");
+    if (_log.shouldWarn())     _log.warn(msg);
+    updateStatus("<b>" + msg + "</b>");
+    return false;
+  }
   try {
     EepHead get=new EepHead(_context,proxyHost,proxyPort,0,url);
     if (get.fetch()) {
@@ -21,7 +27,7 @@
     }
   }
  catch (  Throwable t) {
-    _log.error("Error fetching the unsigned update",t);
+    _log.error("Error fetching the update",t);
   }
   return false;
 }

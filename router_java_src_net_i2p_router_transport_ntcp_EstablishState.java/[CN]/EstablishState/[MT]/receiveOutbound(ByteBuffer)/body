@@ -39,19 +39,22 @@
       SimpleByteCache.release(h);
       changeState(State.OB_GOT_HXY);
       _tsB=DataHelper.fromLong(hXY_tsB,HXY_SIZE,4);
-      _tsA=(_context.clock().now() + 500) / 1000;
-      if (_log.shouldLog(Log.DEBUG))       _log.debug(prefix() + "h(X+Y) is correct, tsA-tsB=" + (_tsA - _tsB));
-      long diff=1000 * Math.abs(_tsA - _tsB);
+      long now=_context.clock().now();
+      long rtt=now - _con.getCreated();
+      _tsA=(now + 500) / 1000;
+      _peerSkew=(now - (_tsB * 1000) - (rtt / 2) + 500) / 1000;
+      if (_log.shouldLog(Log.DEBUG))       _log.debug(prefix() + "h(X+Y) is correct, skew = " + _peerSkew);
+      long diff=1000 * Math.abs(_peerSkew);
       if (!_context.clock().getUpdatedSuccessfully()) {
-        _context.clock().setOffset(1000 * (_tsB - _tsA),true);
-        _tsA=_tsB;
+        _context.clock().setOffset(1000 * (0 - _peerSkew),true);
+        _peerSkew=0;
         if (diff != 0)         _log.logAlways(Log.WARN,"NTP failure, NTCP adjusting clock by " + DataHelper.formatDuration(diff));
       }
  else       if (diff >= Router.CLOCK_FUDGE_FACTOR) {
         _context.statManager().addRateData("ntcp.invalidOutboundSkew",diff);
         _transport.markReachable(_con.getRemotePeer().calculateHash(),false);
         _context.banlist().banlistRouter(DataHelper.formatDuration(diff),_con.getRemotePeer().calculateHash(),_x("Excessive clock skew: {0}"));
-        _transport.setLastBadSkew(_tsA - _tsB);
+        _transport.setLastBadSkew(_peerSkew);
         fail("Clocks too skewed (" + diff + " ms)",null,true);
         return;
       }
@@ -132,7 +135,7 @@
           prepareExtra(src);
           byte nextWriteIV[]=_curEncrypted;
           System.arraycopy(_prevEncrypted,_prevEncrypted.length - AES_SIZE,nextWriteIV,0,AES_SIZE);
-          _con.finishOutboundEstablishment(_dh.getSessionKey(),(_tsA - _tsB),nextWriteIV,_e_bobSig);
+          _con.finishOutboundEstablishment(_dh.getSessionKey(),_peerSkew,nextWriteIV,_e_bobSig);
           releaseBufs(true);
           InetAddress ia=_con.getChannel().socket().getInetAddress();
           if (ia != null)           _transport.setIP(_con.getRemotePeer().calculateHash(),ia.getAddress());

@@ -3,6 +3,7 @@
   notifyInstalled(NEWS,"",Long.toString(NewsHelper.lastUpdated(_context)));
   notifyInstalled(ROUTER_SIGNED,"",RouterVersion.VERSION);
   notifyInstalled(ROUTER_SIGNED_SU3,"",RouterVersion.VERSION);
+  notifyInstalled(ROUTER_DEV_SU3,"",RouterVersion.FULL_VERSION);
   (new NewsFetcher(_context,this,Collections.<URI>emptyList())).checkForUpdates();
   for (  String plugin : PluginStarter.getPlugins()) {
     Properties props=PluginStarter.pluginProperties(_context,plugin);
@@ -30,9 +31,25 @@
   String newVersion=_context.getProperty(PROP_UNSIGNED_AVAILABLE);
   if (newVersion != null) {
     List<URI> updateSources=uuh.getUpdateSources();
-    if (uuh != null) {
+    if (updateSources != null) {
       VersionAvailable newVA=new VersionAvailable(newVersion,"",HTTP,updateSources);
       _available.put(new UpdateItem(ROUTER_UNSIGNED,""),newVA);
+    }
+  }
+  DevSU3UpdateHandler dsuh=new DevSU3UpdateHandler(_context,this);
+  register((Checker)dsuh,ROUTER_DEV_SU3,HTTP,0);
+  register((Updater)dsuh,ROUTER_DEV_SU3,HTTP,0);
+  newVersion=_context.getProperty(PROP_DEV_SU3_AVAILABLE);
+  if (newVersion != null) {
+    if (VersionComparator.comp(newVersion,RouterVersion.FULL_VERSION) > 0) {
+      List<URI> updateSources=dsuh.getUpdateSources();
+      if (updateSources != null) {
+        VersionAvailable newVA=new VersionAvailable(newVersion,"",HTTP,updateSources);
+        _available.put(new UpdateItem(ROUTER_DEV_SU3,""),newVA);
+      }
+    }
+ else {
+      _context.router().saveConfig(PROP_DEV_SU3_AVAILABLE,null);
     }
   }
   PluginUpdateHandler puh=new PluginUpdateHandler(_context,this);
@@ -40,7 +57,7 @@
   register((Updater)puh,PLUGIN,HTTP,0);
   register((Updater)puh,PLUGIN,FILE,0);
   new NewsTimerTask(_context,this);
-  _context.simpleScheduler().addPeriodicEvent(new TaskCleaner(),TASK_CLEANER_TIME);
+  _context.simpleTimer2().addPeriodicEvent(new TaskCleaner(),TASK_CLEANER_TIME);
   changeState(RUNNING);
   if (_cmgr != null)   _cmgr.register(this);
 }
