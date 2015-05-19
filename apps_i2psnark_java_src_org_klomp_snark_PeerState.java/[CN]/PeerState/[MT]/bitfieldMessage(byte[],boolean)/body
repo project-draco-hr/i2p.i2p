@@ -1,0 +1,34 @@
+{
+synchronized (this) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug(peer + " rcv bitfield");
+    if (bitfield != null) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Got unexpected bitfield message from " + peer);
+      return;
+    }
+    if (metainfo == null) {
+      if (bitmap != null) {
+        bitfield=new BitField(bitmap,bitmap.length * 8);
+      }
+ else {
+        if (_log.shouldLog(Log.WARN))         _log.warn("have_x w/o metainfo: " + isAll);
+        return;
+      }
+    }
+ else {
+      if (bitmap != null) {
+        bitfield=new BitField(bitmap,metainfo.getPieces());
+      }
+ else {
+        bitfield=new BitField(metainfo.getPieces());
+        if (isAll)         bitfield.setAll();
+      }
+    }
+  }
+  if (metainfo == null)   return;
+  boolean interest=listener.gotBitField(peer,bitfield);
+  setInteresting(interest);
+  if (bitfield.complete() && !interest) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Disconnecting seed that connects to seeds: " + peer);
+    peer.disconnect(true);
+  }
+}
