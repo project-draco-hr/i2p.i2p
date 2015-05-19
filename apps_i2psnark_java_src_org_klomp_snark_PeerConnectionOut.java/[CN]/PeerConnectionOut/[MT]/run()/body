@@ -24,6 +24,15 @@ synchronized (sendQueue) {
             if (nm.type == Message.PIECE) {
               if (state.choking) {
                 it.remove();
+                if (peer.supportsFast()) {
+                  Message r=new Message();
+                  r.type=Message.REJECT;
+                  r.piece=nm.piece;
+                  r.begin=nm.begin;
+                  r.length=nm.length;
+                  if (_log.shouldLog(Log.DEBUG))                   _log.debug("Send " + peer + ": "+ r);
+                  r.sendMessage(dout);
+                }
               }
               nm=null;
             }
@@ -36,8 +45,8 @@ synchronized (sendQueue) {
               it.remove();
             }
           }
-          if (m == null && !sendQueue.isEmpty()) {
-            m=sendQueue.remove(0);
+          if (m == null) {
+            m=sendQueue.poll();
           }
         }
       }
