@@ -1,40 +1,69 @@
 {
-  try {
-    CPUInfo c=CPUID.getInfo();
+  if (_isX86) {
     try {
-      _cpuModel=c.getCPUModelString();
+      CPUInfo c=CPUID.getInfo();
+      try {
+        _cpuModel=c.getCPUModelString();
+      }
+ catch (      UnknownCPUException e) {
+      }
+      if (c instanceof VIACPUInfo) {
+        VIACPUInfo viacpu=(VIACPUInfo)c;
+        if (viacpu.IsNanoCompatible())         return JBIGI_OPTIMIZATION_NANO;
+        return JBIGI_OPTIMIZATION_VIAC3;
+      }
+ else       if (c instanceof AMDCPUInfo) {
+        AMDCPUInfo amdcpu=(AMDCPUInfo)c;
+        if (amdcpu.IsExcavatorCompatible())         return JBIGI_OPTIMIZATION_EXCAVATOR;
+        if (amdcpu.IsSteamrollerCompatible())         return JBIGI_OPTIMIZATION_STEAMROLLER;
+        if (amdcpu.IsPiledriverCompatible())         return JBIGI_OPTIMIZATION_PILEDRIVER;
+        if (amdcpu.IsBulldozerCompatible())         return JBIGI_OPTIMIZATION_BULLDOZER;
+        if (amdcpu.IsJaguarCompatible())         return JBIGI_OPTIMIZATION_JAGUAR;
+        if (amdcpu.IsBobcatCompatible())         return JBIGI_OPTIMIZATION_BOBCAT;
+        if (amdcpu.IsAthlon64Compatible())         return JBIGI_OPTIMIZATION_ATHLON64;
+        if (amdcpu.IsAthlonCompatible())         return JBIGI_OPTIMIZATION_ATHLON;
+        if (amdcpu.IsGeodeCompatible())         return JBIGI_OPTIMIZATION_GEODE;
+        if (amdcpu.IsK6_3_Compatible())         return JBIGI_OPTIMIZATION_K6_3;
+        if (amdcpu.IsK6_2_Compatible())         return JBIGI_OPTIMIZATION_K6_2;
+        if (amdcpu.IsK6Compatible())         return JBIGI_OPTIMIZATION_K6;
+      }
+ else       if (c instanceof IntelCPUInfo) {
+        IntelCPUInfo intelcpu=(IntelCPUInfo)c;
+        if (intelcpu.IsBroadwellCompatible())         return JBIGI_OPTIMIZATION_COREI_BWL;
+        if (intelcpu.IsHaswellCompatible())         return JBIGI_OPTIMIZATION_COREI_HWL;
+        if (intelcpu.IsSandyCompatible())         return JBIGI_OPTIMIZATION_COREI_SBR;
+        if (intelcpu.IsCoreiCompatible())         return JBIGI_OPTIMIZATION_COREI;
+        if (intelcpu.IsCore2Compatible())         return JBIGI_OPTIMIZATION_CORE2;
+        if (intelcpu.IsPentium4Compatible())         return JBIGI_OPTIMIZATION_PENTIUM4;
+        if (intelcpu.IsAtomCompatible())         return JBIGI_OPTIMIZATION_ATOM;
+        if (intelcpu.IsPentiumMCompatible())         return JBIGI_OPTIMIZATION_PENTIUMM;
+        if (intelcpu.IsPentium3Compatible())         return JBIGI_OPTIMIZATION_PENTIUM3;
+        if (intelcpu.IsPentium2Compatible())         return JBIGI_OPTIMIZATION_PENTIUM2;
+        if (intelcpu.IsPentiumMMXCompatible())         return JBIGI_OPTIMIZATION_PENTIUMMMX;
+        if (intelcpu.IsPentiumCompatible())         return JBIGI_OPTIMIZATION_PENTIUM;
+      }
+      return null;
     }
  catch (    UnknownCPUException e) {
+      return null;
     }
-    if (c instanceof VIACPUInfo) {
-      VIACPUInfo viacpu=(VIACPUInfo)c;
-      if (viacpu.IsNanoCompatible())       return JBIGI_OPTIMIZATION_NANO;
-      return JBIGI_OPTIMIZATION_VIAC3;
+  }
+ else   if (_isArm) {
+    Map<String,String> cpuinfo=getCPUInfo();
+    String proc=cpuinfo.get("model name");
+    if (proc != null && proc.contains("ARMv7")) {
+      return JBIGI_OPTIMIZATION_ARM_ARMV7;
     }
- else     if (c instanceof AMDCPUInfo) {
-      AMDCPUInfo amdcpu=(AMDCPUInfo)c;
-      if (amdcpu.IsAthlon64Compatible())       return JBIGI_OPTIMIZATION_ATHLON64;
-      if (amdcpu.IsAthlonCompatible())       return JBIGI_OPTIMIZATION_ATHLON;
-      if (amdcpu.IsGeodeCompatible())       return JBIGI_OPTIMIZATION_GEODE;
-      if (amdcpu.IsK6_3_Compatible())       return JBIGI_OPTIMIZATION_K6_3;
-      if (amdcpu.IsK6_2_Compatible())       return JBIGI_OPTIMIZATION_K6_2;
-      if (amdcpu.IsK6Compatible())       return JBIGI_OPTIMIZATION_K6;
+ else     if (proc != null && proc.contains("ARMv6")) {
+      return JBIGI_OPTIMIZATION_ARM_ARMV6;
     }
- else     if (c instanceof IntelCPUInfo) {
-      IntelCPUInfo intelcpu=(IntelCPUInfo)c;
-      if (intelcpu.IsCoreiCompatible())       return JBIGI_OPTIMIZATION_COREI;
-      if (intelcpu.IsCore2Compatible())       return JBIGI_OPTIMIZATION_CORE2;
-      if (intelcpu.IsPentium4Compatible())       return JBIGI_OPTIMIZATION_PENTIUM4;
-      if (intelcpu.IsAtomCompatible())       return JBIGI_OPTIMIZATION_ATOM;
-      if (intelcpu.IsPentiumMCompatible())       return JBIGI_OPTIMIZATION_PENTIUMM;
-      if (intelcpu.IsPentium3Compatible())       return JBIGI_OPTIMIZATION_PENTIUM3;
-      if (intelcpu.IsPentium2Compatible())       return JBIGI_OPTIMIZATION_PENTIUM2;
-      if (intelcpu.IsPentiumMMXCompatible())       return JBIGI_OPTIMIZATION_PENTIUMMMX;
-      if (intelcpu.IsPentiumCompatible())       return JBIGI_OPTIMIZATION_PENTIUM;
+ else     if (proc != null && proc.contains("ARMv5")) {
+      return JBIGI_OPTIMIZATION_ARM_ARMV5;
     }
     return null;
   }
- catch (  UnknownCPUException e) {
-    return null;
+ else   if (_isPPC && !_isMac) {
+    return JBIGI_OPTIMIZATION_PPC;
   }
+  return null;
 }
