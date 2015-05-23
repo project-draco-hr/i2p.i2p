@@ -4,18 +4,21 @@ synchronized (_stateLock) {
     boolean loop=true;
     while (loop) {
 switch (_state) {
+case INIT:
+        loop=false;
+      break;
 case CLOSED:
-        if (wasOpening)         throw new I2PSessionException("connect by other thread failed");
-      loop=false;
-    break;
+    if (wasOpening)     throw new I2PSessionException("connect by other thread failed");
+  loop=false;
+break;
 case OPENING:
 case GOTDATE:
-  wasOpening=true;
+wasOpening=true;
 try {
-  _stateLock.wait(10 * 1000);
+_stateLock.wait(10 * 1000);
 }
  catch (InterruptedException ie) {
-  throw new I2PSessionException("Interrupted",ie);
+throw new I2PSessionException("Interrupted",ie);
 }
 break;
 case CLOSING:
