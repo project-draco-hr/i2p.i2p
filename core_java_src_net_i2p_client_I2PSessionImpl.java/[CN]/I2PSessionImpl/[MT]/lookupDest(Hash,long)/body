@@ -3,9 +3,11 @@ synchronized (_lookupCache) {
     Destination rv=_lookupCache.get(h);
     if (rv != null)     return rv;
   }
-  if (isClosed()) {
-    if (_log.shouldLog(Log.INFO))     _log.info("Session closed, cannot lookup " + h);
-    return null;
+synchronized (_stateLock) {
+    if (_state == State.CLOSED || _state == State.INIT || _state == State.OPENING) {
+      if (_log.shouldLog(Log.INFO))       _log.info("Session closed, cannot lookup " + h);
+      return null;
+    }
   }
   LookupWaiter waiter;
   long nonce;
