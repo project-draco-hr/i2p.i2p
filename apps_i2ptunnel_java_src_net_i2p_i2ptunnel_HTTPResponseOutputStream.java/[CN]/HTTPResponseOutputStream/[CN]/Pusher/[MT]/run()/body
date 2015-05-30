@@ -1,4 +1,5 @@
 {
+  if (_log.shouldLog(Log.INFO))   _log.info("Starting pusher from " + _inRaw + " to: "+ _out);
   ReusableGZIPInputStream _in=ReusableGZIPInputStream.acquire();
   long written=0;
   ByteArray ba=null;
@@ -13,16 +14,15 @@
       _out.flush();
       written+=read;
     }
-    if (_log.shouldLog(Log.INFO))     _log.info("Decompressed: " + written + ", "+ _in.getTotalRead()+ "/"+ _in.getTotalExpanded());
   }
  catch (  IOException ioe) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("Error decompressing: " + written + ", "+ _in.getTotalRead()+ "/"+ _in.getTotalExpanded(),ioe);
+    if (_log.shouldLog(Log.WARN))     _log.warn("Error decompressing: " + written + ", "+ _in.getTotalRead()+ "/"+ _in.getTotalExpanded()+ " from "+ _inRaw+ " to: "+ _out,ioe);
   }
 catch (  OutOfMemoryError oom) {
     _log.error("OOM in HTTP Decompressor",oom);
   }
  finally {
-    if (_log.shouldInfo())     _log.info("After decompression, written=" + written + " read="+ _in.getTotalRead()+ ", expanded="+ _in.getTotalExpanded()+ ", remaining="+ _in.getRemaining()+ ", finished="+ _in.getFinished());
+    if (_log.shouldInfo())     _log.info("After decompression, written=" + written + " read="+ _in.getTotalRead()+ ", expanded="+ _in.getTotalExpanded()+ ", remaining="+ _in.getRemaining()+ ", finished="+ _in.getFinished()+ " from "+ _inRaw+ " to: "+ _out);
     if (ba != null)     _cache.release(ba);
     if (_out != null)     try {
       _out.close();
