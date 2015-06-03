@@ -6,8 +6,7 @@ synchronized (this.socketServerLock) {
     }
     this.socketServer=this.socketMgr.getServerSocket();
   }
-  I2PSocket i2ps;
-  i2ps=this.socketServer.accept();
+  I2PSocket i2ps=this.socketServer.accept();
 synchronized (this.socketServerLock) {
     this.socketServer=null;
   }
@@ -19,6 +18,7 @@ synchronized (this.socketServerLock) {
   ReadableByteChannel fromI2P=Channels.newChannel(i2ps.getInputStream());
   WritableByteChannel toClient=handler.getClientSocket();
   WritableByteChannel toI2P=Channels.newChannel(i2ps.getOutputStream());
-  (new Thread(rec.getThreadGroup(),new I2PAppThread(new Pipe(fromClient,toI2P,"SAMPipeClientToI2P"),"SAMPipeClientToI2P"),"SAMPipeClientToI2P")).start();
-  (new Thread(rec.getThreadGroup(),new I2PAppThread(new Pipe(fromI2P,toClient,"SAMPipeI2PToClient"),"SAMPipeI2PToClient"),"SAMPipeI2PToClient")).start();
+  SAMBridge bridge=handler.getBridge();
+  (new Thread(rec.getThreadGroup(),new Pipe(fromClient,toI2P,bridge),"AcceptV3 SAMPipeClientToI2P")).start();
+  (new Thread(rec.getThreadGroup(),new Pipe(fromI2P,toClient,bridge),"AcceptV3 SAMPipeI2PToClient")).start();
 }
