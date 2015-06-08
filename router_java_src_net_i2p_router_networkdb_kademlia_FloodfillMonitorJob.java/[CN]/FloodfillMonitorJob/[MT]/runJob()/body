@@ -9,7 +9,21 @@
  else {
       getContext().router().eventLog().addEvent(EventLog.NOT_FLOODFILL);
     }
-    getContext().router().rebuildRouterInfo();
+    getContext().router().rebuildRouterInfo(true);
+    Job routerInfoFlood=new FloodfillRouterInfoFloodJob(getContext(),_facade);
+    if (getContext().router().getUptime() < 5 * 60 * 1000) {
+      routerInfoFlood.getTiming().setStartAfter(getContext().clock().now() + 5 * 60 * 1000);
+      getContext().jobQueue().addJob(routerInfoFlood);
+      if (_log.shouldLog(Log.DEBUG)) {
+        _log.logAlways(Log.DEBUG,"Deferring our FloodfillRouterInfoFloodJob run because of low uptime.");
+      }
+    }
+ else {
+      routerInfoFlood.runJob();
+      if (_log.shouldLog(Log.DEBUG)) {
+        _log.logAlways(Log.DEBUG,"Running FloodfillRouterInfoFloodJob");
+      }
+    }
   }
   if (_log.shouldLog(Log.INFO))   _log.info("Should we be floodfill? " + ff);
   int delay=(REQUEUE_DELAY / 2) + getContext().random().nextInt(REQUEUE_DELAY);
