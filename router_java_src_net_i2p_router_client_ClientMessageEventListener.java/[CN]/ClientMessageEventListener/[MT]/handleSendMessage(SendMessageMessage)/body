@@ -1,5 +1,6 @@
 {
-  SessionConfig cfg=_runner.getConfig();
+  SessionId sid=message.getSessionId();
+  SessionConfig cfg=_runner.getConfig(sid);
   if (cfg == null) {
     if (_log.shouldLog(Log.ERROR))     _log.error("SendMessage w/o session");
     _runner.disconnectClient("SendMessage w/o session");
@@ -9,7 +10,7 @@
   long beforeDistribute=_context.clock().now();
   MessageId id=_runner.distributeMessage(message);
   long timeToDistribute=_context.clock().now() - beforeDistribute;
-  _runner.ackSendMessage(id,message.getNonce());
+  _runner.ackSendMessage(message.getSessionId(),id,message.getNonce());
   _context.statManager().addRateData("client.distributeTime",timeToDistribute);
   if ((timeToDistribute > 50) && (_log.shouldLog(Log.INFO)))   _log.info("Took too long to distribute the message (which holds up the ack): " + timeToDistribute);
 }

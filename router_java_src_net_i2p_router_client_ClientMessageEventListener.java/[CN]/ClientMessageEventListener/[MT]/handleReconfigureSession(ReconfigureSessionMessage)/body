@@ -1,5 +1,6 @@
 {
-  SessionConfig cfg=_runner.getConfig();
+  SessionId id=message.getSessionId();
+  SessionConfig cfg=_runner.getConfig(id);
   if (cfg == null) {
     if (_log.shouldLog(Log.ERROR))     _log.error("ReconfigureSession w/o session");
     _runner.disconnectClient("ReconfigureSession w/o session");
@@ -8,17 +9,17 @@
   if (_log.shouldLog(Log.INFO))   _log.info("Updating options - old: " + cfg + " new: "+ message.getSessionConfig());
   if (!message.getSessionConfig().getDestination().equals(cfg.getDestination())) {
     _log.error("Dest mismatch");
-    sendStatusMessage(SessionStatusMessage.STATUS_INVALID);
+    sendStatusMessage(id,SessionStatusMessage.STATUS_INVALID);
     _runner.stopRunning();
     return;
   }
+  Hash dest=cfg.getDestination().calculateHash();
   cfg.getOptions().putAll(message.getSessionConfig().getOptions());
-  Hash dest=_runner.getDestHash();
   ClientTunnelSettings settings=new ClientTunnelSettings(dest);
   Properties props=new Properties();
   props.putAll(cfg.getOptions());
   settings.readFromProperties(props);
   _context.tunnelManager().setInboundSettings(dest,settings.getInboundSettings());
   _context.tunnelManager().setOutboundSettings(dest,settings.getOutboundSettings());
-  sendStatusMessage(SessionStatusMessage.STATUS_UPDATED);
+  sendStatusMessage(id,SessionStatusMessage.STATUS_UPDATED);
 }

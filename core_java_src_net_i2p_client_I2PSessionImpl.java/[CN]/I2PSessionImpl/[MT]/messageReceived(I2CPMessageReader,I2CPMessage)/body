@@ -1,10 +1,49 @@
 {
-  I2CPMessageHandler handler=_handlerMap.getHandler(message.getType());
-  if (handler == null) {
-    if (_log.shouldLog(Log.WARN))     _log.warn(getPrefix() + "Unknown message or unhandleable message received: type = " + message.getType());
+  int type=message.getType();
+  SessionId id=message.sessionId();
+  if (id == null || id.equals(_sessionId) || (_sessionId == null && id != null && type == SessionStatusMessage.MESSAGE_TYPE)) {
+    I2CPMessageHandler handler=_handlerMap.getHandler(type);
+    if (handler != null) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug(getPrefix() + "Message received of type " + type+ " to be handled by "+ handler.getClass().getSimpleName());
+      handler.handleMessage(message,this);
+    }
+ else {
+      if (_log.shouldLog(Log.WARN))       _log.warn(getPrefix() + "Unknown message or unhandleable message received: type = " + type);
+    }
   }
  else {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug(getPrefix() + "Message received of type " + message.getType()+ " to be handled by "+ handler.getClass().getSimpleName());
-    handler.handleMessage(message,this);
+    SubSession sub=_subsessionMap.get(id);
+    if (sub != null) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug(getPrefix() + "Message received of type " + type+ " to be handled by "+ sub);
+      sub.messageReceived(reader,message);
+    }
+ else     if (id != null && type == SessionStatusMessage.MESSAGE_TYPE) {
+synchronized (_subsessionLock) {
+        for (        SubSession sess : _subsessions) {
+          if (sess.getSessionId() == null) {
+            sess.messageReceived(reader,message);
+            id=sess.getSessionId();
+            if (id != null) {
+              if (id.equals(_sessionId)) {
+                sess.setSessionId(null);
+                if (_log.shouldLog(Log.WARN))                 _log.warn("Dup or our session id " + id);
+              }
+ else {
+                SubSession old=_subsessionMap.putIfAbsent(id,sess);
+                if (old != null) {
+                  sess.setSessionId(null);
+                  if (_log.shouldLog(Log.WARN))                   _log.warn("Dup session id " + id);
+                }
+              }
+            }
+            return;
+          }
+          if (_log.shouldLog(Log.WARN))           _log.warn(getPrefix() + "No session " + id+ " to handle message: type = "+ type);
+        }
+      }
+    }
+ else {
+      if (_log.shouldLog(Log.WARN))       _log.warn(getPrefix() + "No session " + id+ " to handle message: type = "+ type);
+    }
   }
 }
