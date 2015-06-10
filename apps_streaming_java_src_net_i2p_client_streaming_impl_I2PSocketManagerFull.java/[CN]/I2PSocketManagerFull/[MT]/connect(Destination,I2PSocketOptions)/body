@@ -4,20 +4,20 @@
   if (options instanceof ConnectionOptions)   opts=new ConnectionOptions((ConnectionOptions)options);
  else   opts=new ConnectionOptions(options);
   if (_log.shouldLog(Log.INFO))   _log.info("Connecting to " + peer.calculateHash().toBase64().substring(0,6) + " with options: "+ opts);
-  ConnectionManager cm=_connectionManager;
+  I2PSession session=_session;
   if (!_subsessions.isEmpty()) {
     Hash h=peer.calculateHash();
     if (_dsaOnly.contains(h)) {
-      for (      Map.Entry<I2PSession,ConnectionManager> e : _subsessions.entrySet()) {
-        if (e.getKey().getMyDestination().getSigType() == SigType.DSA_SHA1) {
-          cm=e.getValue();
+      for (      I2PSession sess : _subsessions) {
+        if (sess.getMyDestination().getSigType() == SigType.DSA_SHA1) {
+          session=sess;
           break;
         }
       }
     }
   }
-  verifySession(cm);
-  Connection con=cm.connect(peer,opts);
+  verifySession(session);
+  Connection con=_connectionManager.connect(peer,opts,session);
   if (con == null)   throw new TooManyStreamsException("Too many streams, max " + _defaultOptions.getMaxConns());
   I2PSocketFull socket=new I2PSocketFull(con,_context);
   con.setSocket(socket);

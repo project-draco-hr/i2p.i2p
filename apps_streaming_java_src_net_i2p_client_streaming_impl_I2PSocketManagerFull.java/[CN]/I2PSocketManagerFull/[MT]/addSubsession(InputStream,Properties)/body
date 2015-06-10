@@ -21,14 +21,14 @@
     privateKeyStream=new ByteArrayInputStream(keyStream.toByteArray());
   }
   I2PSession rv=_session.addSubsession(privateKeyStream,opts);
-  ConnectionOptions defaultOptions=new ConnectionOptions(opts);
-  ConnectionManager connectionManager=new ConnectionManager(_context,rv,defaultOptions);
-  ConnectionManager old=_subsessions.putIfAbsent(rv,connectionManager);
-  if (old != null) {
+  boolean added=_subsessions.add(rv);
+  if (!added) {
     _session.removeSubsession(rv);
-    connectionManager.shutdown();
     throw new I2PSessionException("dup");
   }
+  ConnectionOptions defaultOptions=new ConnectionOptions(opts);
+  int protocol=defaultOptions.getEnforceProtocol() ? I2PSession.PROTO_STREAMING : I2PSession.PROTO_ANY;
+  rv.addMuxedSessionListener(_connectionManager.getMessageHandler(),protocol,defaultOptions.getLocalPort());
   if (_log.shouldLog(Log.WARN))   _log.warn("Added subsession " + rv);
   return rv;
 }
