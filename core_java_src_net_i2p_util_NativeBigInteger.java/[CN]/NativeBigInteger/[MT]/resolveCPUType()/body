@@ -1,11 +1,9 @@
 {
   if (_isX86) {
     try {
-      System.out.println("resolveType() x86");
       CPUInfo c=CPUID.getInfo();
       try {
         _cpuModel=c.getCPUModelString();
-        System.out.println("CPUModel: " + _cpuModel.toString());
       }
  catch (      UnknownCPUException e) {
       }
@@ -51,14 +49,11 @@
     }
   }
  else   if (_isArm) {
+    if (_isWin)     return null;
     Map<String,String> cpuinfo=getCPUInfo();
     String implementer=cpuinfo.get("cpu implementer");
-    String features=cpuinfo.get("features");
     String part=cpuinfo.get("cpu part");
-    if (implementer == null || part == null) {
-      return null;
-    }
-    if (implementer.contains("0x41")) {
+    if (implementer != null && part != null && implementer.contains("0x41")) {
       if (part.contains("0xc0f")) {
         return JBIGI_OPTIMIZATION_ARM_CORTEX_A15;
       }
@@ -81,25 +76,20 @@
         return JBIGI_OPTIMIZATION_ARM_CORTEX_A5;
       }
     }
-    String model=cpuinfo.get("model name");
-    if (model != null && model.contains("ARMv7")) {
-      return JBIGI_OPTIMIZATION_ARM_ARMV7;
-    }
- else     if (model != null && model.contains("ARMv6")) {
-      return JBIGI_OPTIMIZATION_ARM_ARMV6;
-    }
- else     if (model != null && model.contains("ARMv5")) {
-      return JBIGI_OPTIMIZATION_ARM_ARMV5;
-    }
     String arch=cpuinfo.get("cpu architecture");
-    if (arch != null && arch.equals("7")) {
-      return JBIGI_OPTIMIZATION_ARM_ARMV7;
+    String model=cpuinfo.get("model name");
+    if (arch != null) {
+      if (arch.startsWith("7")) {
+        if (model != null && model.contains("ARMv6"))         return JBIGI_OPTIMIZATION_ARM_ARMV6;
+        return JBIGI_OPTIMIZATION_ARM_ARMV7;
+      }
+      if (arch.startsWith("6"))       return JBIGI_OPTIMIZATION_ARM_ARMV6;
+      if (arch.startsWith("5"))       return JBIGI_OPTIMIZATION_ARM_ARMV5;
     }
- else     if (arch != null && arch.equals("6")) {
-      return JBIGI_OPTIMIZATION_ARM_ARMV6;
-    }
- else     if (arch != null && arch.equals("5")) {
-      return JBIGI_OPTIMIZATION_ARM_ARMV5;
+    if (model != null) {
+      if (model.contains("ARMv7"))       return JBIGI_OPTIMIZATION_ARM_ARMV7;
+      if (model.contains("ARMv6"))       return JBIGI_OPTIMIZATION_ARM_ARMV6;
+      if (model.contains("ARMv5"))       return JBIGI_OPTIMIZATION_ARM_ARMV5;
     }
     return null;
   }
