@@ -1,0 +1,49 @@
+{
+  DeliveryStatusMessage msg=new DeliveryStatusMessage(getContext());
+  msg.setMessageId(_message.getReplyToken());
+  msg.setArrival(getContext().clock().now() - getContext().random().nextInt(3 * 1000));
+  TunnelId replyTunnel=_message.getReplyTunnel();
+  DatabaseStoreMessage msg2;
+  if (getContext().netDb().floodfillEnabled() || storedKey.equals(getContext().routerHash())) {
+    msg2=null;
+  }
+ else {
+    msg2=new DatabaseStoreMessage(getContext());
+    RouterInfo me=getContext().router().getRouterInfo();
+    msg2.setEntry(me);
+    if (_log.shouldWarn())     _log.warn("Got a store w/ reply token, but we aren't ff: from: " + _from + " fromHash: "+ _fromHash+ " msg: "+ _message,new Exception());
+  }
+  Hash toPeer=_message.getReplyGateway();
+  boolean toUs=getContext().routerHash().equals(toPeer);
+  if (toUs && replyTunnel != null) {
+    TunnelGatewayMessage tgm=new TunnelGatewayMessage(getContext());
+    tgm.setMessage(msg);
+    tgm.setTunnelId(replyTunnel);
+    tgm.setMessageExpiration(msg.getMessageExpiration());
+    getContext().tunnelDispatcher().dispatch(tgm);
+    if (msg2 != null) {
+      TunnelGatewayMessage tgm2=new TunnelGatewayMessage(getContext());
+      tgm2.setMessage(msg2);
+      tgm2.setTunnelId(replyTunnel);
+      tgm2.setMessageExpiration(msg.getMessageExpiration());
+      getContext().tunnelDispatcher().dispatch(tgm2);
+    }
+  }
+ else   if (toUs || getContext().commSystem().isEstablished(toPeer)) {
+    Job send=new SendMessageDirectJob(getContext(),msg,toPeer,REPLY_TIMEOUT,MESSAGE_PRIORITY);
+    send.runJob();
+    if (msg2 != null) {
+      Job send2=new SendMessageDirectJob(getContext(),msg2,toPeer,REPLY_TIMEOUT,MESSAGE_PRIORITY);
+      send2.runJob();
+    }
+  }
+ else {
+    TunnelInfo outTunnel=getContext().tunnelManager().selectOutboundExploratoryTunnel(toPeer);
+    if (outTunnel == null) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("No outbound tunnel could be found");
+      return;
+    }
+    getContext().tunnelDispatcher().dispatchOutbound(msg,outTunnel.getSendTunnelId(0),replyTunnel,toPeer);
+    if (msg2 != null)     getContext().tunnelDispatcher().dispatchOutbound(msg2,outTunnel.getSendTunnelId(0),replyTunnel,toPeer);
+  }
+}
