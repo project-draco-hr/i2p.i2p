@@ -2,8 +2,22 @@
   SessionId sid=message.getSessionId();
   SessionConfig cfg=_runner.getConfig(sid);
   if (cfg == null) {
-    if (_log.shouldLog(Log.ERROR))     _log.error("SendMessage w/o session: " + sid);
-    _runner.disconnectClient("SendMessage w/o session: " + sid);
+    List<SessionId> current=_runner.getSessionIds();
+    String msg="SendMessage invalid session: " + sid + " current: "+ current;
+    if (_log.shouldLog(Log.ERROR))     _log.error(msg);
+    if (sid != null && message.getNonce() > 0) {
+      MessageStatusMessage status=new MessageStatusMessage();
+      status.setSessionId(sid.getSessionId());
+      status.setSize(0);
+      status.setNonce(message.getNonce());
+      status.setStatus(MessageStatusMessage.STATUS_SEND_FAILURE_BAD_SESSION);
+      try {
+        _runner.doSend(status);
+      }
+ catch (      I2CPMessageException ime) {
+        if (_log.shouldLog(Log.WARN))         _log.warn("Error writing out the message status message",ime);
+      }
+    }
     return;
   }
   if (_log.shouldLog(Log.DEBUG))   _log.debug("handleSendMessage called");
