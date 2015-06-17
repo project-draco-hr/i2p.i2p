@@ -2,25 +2,56 @@
   String keyfile=DEFAULT_SAM_KEYFILE;
   int port=SAM_LISTENPORT;
   String host=DEFAULT_TCP_HOST;
+  boolean isSSL=false;
   Properties opts=null;
-  if (args.length > 0) {
-    opts=parseOptions(args,0);
-    keyfile=args[0];
-    int portIndex=1;
-    try {
-      if (args.length > portIndex)       port=Integer.parseInt(args[portIndex]);
-    }
- catch (    NumberFormatException nfe) {
-      host=args[portIndex];
-      portIndex++;
-      try {
-        if (args.length > portIndex)         port=Integer.parseInt(args[portIndex]);
-      }
- catch (      NumberFormatException nfe1) {
-        port=Integer.parseInt(opts.getProperty(SAMBridge.PROP_TCP_PORT,SAMBridge.DEFAULT_TCP_PORT));
-        host=opts.getProperty(SAMBridge.PROP_TCP_HOST,SAMBridge.DEFAULT_TCP_HOST);
-      }
-    }
-  }
-  return new Options(host,port,opts,keyfile);
+  Getopt g=new Getopt("SAM",args,"hs");
+  int c;
+  while ((c=g.getopt()) != -1) {
+switch (c) {
+case 's':
+      isSSL=true;
+    break;
+case 'h':
+case '?':
+case ':':
+default :
+  throw new HelpRequestedException();
+}
+}
+int startArgs=g.getOptind();
+int startOpts;
+for (startOpts=startArgs; startOpts < args.length; startOpts++) {
+if (args[startOpts].contains("=")) break;
+}
+int numArgs=startOpts - startArgs;
+switch (numArgs) {
+case 0:
+break;
+case 2:
+keyfile=args[startArgs];
+try {
+port=Integer.parseInt(args[startArgs + 1]);
+}
+ catch (NumberFormatException nfe) {
+throw new HelpRequestedException();
+}
+break;
+case 3:
+keyfile=args[startArgs];
+host=args[startArgs + 1];
+try {
+port=Integer.parseInt(args[startArgs + 2]);
+}
+ catch (NumberFormatException nfe) {
+throw new HelpRequestedException();
+}
+break;
+default :
+throw new HelpRequestedException();
+}
+int remaining=args.length - startOpts;
+if (remaining > 0) {
+opts=parseOptions(args,startOpts);
+}
+return new Options(host,port,isSSL,opts,keyfile);
 }
