@@ -31,15 +31,16 @@ synchronized (this) {
 synchronized (this) {
     state=sp.leaseRequest;
     if (state != null) {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Already requesting " + state);
       LeaseSet requested=state.getRequested();
       LeaseSet granted=state.getGranted();
       long ours=set.getEarliestLeaseDate();
       if (((requested != null) && (requested.getEarliestLeaseDate() > ours)) || ((granted != null) && (granted.getEarliestLeaseDate() > ours))) {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Already requesting, theirs newer, do nothing: " + state);
       }
  else {
         set.setDestination(dest);
         _context.simpleTimer2().addEvent(new Rerequest(set,expirationTime,onCreateJob,onFailedJob),3 * 1000);
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Already requesting, ours newer, wait 3 sec: " + state);
       }
       return;
     }
