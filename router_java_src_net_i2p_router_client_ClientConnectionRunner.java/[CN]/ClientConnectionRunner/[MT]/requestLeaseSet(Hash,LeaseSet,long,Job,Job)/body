@@ -12,6 +12,7 @@
   int leases=set.getLeaseCount();
   LeaseSet current=null;
   Destination dest=sp.dest;
+  LeaseRequestState state;
 synchronized (this) {
     current=sp.currentLeaseSet;
     if (current != null && current.getLeaseCount() == leases) {
@@ -25,10 +26,7 @@ synchronized (this) {
         }
       }
     }
-  }
-  if (_log.shouldLog(Log.INFO))   _log.info("Current leaseSet " + current + "\nNew leaseSet "+ set);
-  LeaseRequestState state;
-synchronized (this) {
+    if (_log.shouldLog(Log.INFO))     _log.info("Current leaseSet " + current + "\nNew leaseSet "+ set);
     state=sp.leaseRequest;
     if (state != null) {
       LeaseSet requested=state.getRequested();
@@ -39,15 +37,27 @@ synchronized (this) {
       }
  else {
         set.setDestination(dest);
-        _context.simpleTimer2().addEvent(new Rerequest(set,expirationTime,onCreateJob,onFailedJob),3 * 1000);
+        Rerequest timer=new Rerequest(set,expirationTime,onCreateJob,onFailedJob);
+        sp.rerequestTimer=timer;
+        _context.simpleTimer2().addEvent(timer,3 * 1000);
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Already requesting, ours newer, wait 3 sec: " + state);
       }
       return;
     }
  else {
       set.setDestination(dest);
-      sp.leaseRequest=state=new LeaseRequestState(onCreateJob,onFailedJob,_context.clock().now() + expirationTime,set);
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("New request: " + state);
+      if (current == null && _context.tunnelManager().getOutboundClientTunnelCount(h) <= 0) {
+        Rerequest timer=new Rerequest(set,expirationTime,onCreateJob,onFailedJob);
+        sp.rerequestTimer=timer;
+        _context.simpleTimer2().addEvent(timer,1000);
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("No current LS but no OB tunnels, wait 1 sec for " + h);
+        return;
+      }
+ else {
+        sp.rerequestTimer=null;
+        sp.leaseRequest=state=new LeaseRequestState(onCreateJob,onFailedJob,_context.clock().now() + expirationTime,set);
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("New request: " + state);
+      }
     }
   }
   _context.jobQueue().addJob(new RequestLeaseSetJob(_context,this,state));
