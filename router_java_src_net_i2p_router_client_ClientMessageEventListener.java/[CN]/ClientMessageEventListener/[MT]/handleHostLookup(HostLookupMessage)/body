@@ -1,5 +1,15 @@
 {
-  Hash h=_runner.getDestHash(message.getSessionId());
-  if (h == null)   return;
-  _context.jobQueue().addJob(new LookupDestJob(_context,_runner,message.getReqID(),message.getTimeout(),message.getSessionId(),message.getHash(),message.getHostname(),h));
+  SessionId sid=message.getSessionId();
+  Hash h;
+  if (sid != null) {
+    h=_runner.getDestHash(sid);
+  }
+ else {
+    if (message.getReqID() >= 0)     sid=new SessionId(65535);
+    h=null;
+  }
+  if (h == null) {
+    h=_runner.getDestHash();
+  }
+  _context.jobQueue().addJob(new LookupDestJob(_context,_runner,message.getReqID(),message.getTimeout(),sid,message.getHash(),message.getHostname(),h));
 }
