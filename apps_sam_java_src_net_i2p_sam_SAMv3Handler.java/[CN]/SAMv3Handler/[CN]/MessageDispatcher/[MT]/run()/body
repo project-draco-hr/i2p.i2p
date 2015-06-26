@@ -2,26 +2,68 @@
   try {
     String header=DataHelper.readLine(is).trim();
     StringTokenizer tok=new StringTokenizer(header," ");
-    if (tok.countTokens() != 3) {
+    if (tok.countTokens() < 3) {
+      warn("Bad datagram header received");
       return;
     }
     String version=tok.nextToken();
-    if (!"3.0".equals(version))     return;
+    if (!version.startsWith("3")) {
+      warn("Bad datagram header received");
+      return;
+    }
     String nick=tok.nextToken();
     String dest=tok.nextToken();
     byte[] data=new byte[is.available()];
     is.read(data);
     SessionRecord rec=sSessionsHash.get(nick);
     if (rec != null) {
-      rec.getHandler().session.sendBytes(dest,data);
+      Properties sprops=rec.getProps();
+      String pr=sprops.getProperty("PROTOCOL");
+      String fp=sprops.getProperty("FROM_PORT");
+      String tp=sprops.getProperty("TO_PORT");
+      while (tok.hasMoreTokens()) {
+        String t=tok.nextToken();
+        if (t.startsWith("PROTOCOL="))         pr=t.substring("PROTOTCOL=".length());
+ else         if (t.startsWith("FROM_PORT="))         fp=t.substring("FROM_PORT=".length());
+ else         if (t.startsWith("TO_PORT="))         tp=t.substring("TO_PORT=".length());
+      }
+      int proto=I2PSession.PROTO_UNSPECIFIED;
+      int fromPort=I2PSession.PORT_UNSPECIFIED;
+      int toPort=I2PSession.PORT_UNSPECIFIED;
+      if (pr != null) {
+        try {
+          proto=Integer.parseInt(pr);
+        }
+ catch (        NumberFormatException nfe) {
+          warn("Bad datagram header received");
+          return;
+        }
+      }
+      if (fp != null) {
+        try {
+          fromPort=Integer.parseInt(fp);
+        }
+ catch (        NumberFormatException nfe) {
+          warn("Bad datagram header received");
+          return;
+        }
+      }
+      if (tp != null) {
+        try {
+          toPort=Integer.parseInt(tp);
+        }
+ catch (        NumberFormatException nfe) {
+          warn("Bad datagram header received");
+          return;
+        }
+      }
+      rec.getHandler().session.sendBytes(dest,data,proto,fromPort,toPort);
     }
  else {
-      Log log=I2PAppContext.getGlobalContext().logManager().getLog(SAMv3Handler.class);
-      if (log.shouldLog(Log.WARN))       log.warn("Dropping datagram, no session for " + nick);
+      warn("Dropping datagram, no session for " + nick);
     }
   }
  catch (  Exception e) {
-    Log log=I2PAppContext.getGlobalContext().logManager().getLog(SAMv3Handler.class);
-    if (log.shouldLog(Log.WARN))     log.warn("Error handling datagram",e);
+    warn("Error handling datagram",e);
   }
 }
