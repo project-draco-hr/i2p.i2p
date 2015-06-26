@@ -1,21 +1,24 @@
 {
-  String keyfile=DEFAULT_SAM_KEYFILE;
-  int port=SAM_LISTENPORT;
-  String host=DEFAULT_TCP_HOST;
+  String keyfile=null;
+  int port=-1;
+  String host=null;
   boolean isSSL=false;
-  Properties opts=null;
-  Getopt g=new Getopt("SAM",args,"hs");
+  String cfile=null;
+  Getopt g=new Getopt("SAM",args,"hsc:");
   int c;
   while ((c=g.getopt()) != -1) {
 switch (c) {
 case 's':
       isSSL=true;
     break;
+case 'c':
+  cfile=g.getOptarg();
+break;
 case 'h':
 case '?':
 case ':':
 default :
-  throw new HelpRequestedException();
+throw new HelpRequestedException();
 }
 }
 int startArgs=g.getOptind();
@@ -49,9 +52,34 @@ break;
 default :
 throw new HelpRequestedException();
 }
+String scfile=cfile != null ? cfile : DEFAULT_SAM_CONFIGFILE;
+File file=new File(scfile);
+if (!file.isAbsolute()) file=new File(I2PAppContext.getGlobalContext().getConfigDir(),scfile);
+Properties opts=new Properties();
+if (file.exists()) {
+DataHelper.loadProps(opts,file);
+}
+ else if (cfile != null) {
+throw new IllegalArgumentException("Config file not found: " + file);
+}
+if (host == null) host=opts.getProperty(PROP_TCP_HOST,DEFAULT_TCP_HOST);
+if (port < 0) {
+try {
+port=Integer.parseInt(opts.getProperty(PROP_TCP_PORT,DEFAULT_TCP_PORT));
+}
+ catch (NumberFormatException nfe) {
+throw new HelpRequestedException();
+}
+}
+if (keyfile == null) keyfile=opts.getProperty(PROP_SAM_KEYFILE,DEFAULT_SAM_KEYFILE);
+if (!isSSL) isSSL=Boolean.parseBoolean(opts.getProperty(PROP_SAM_SSL));
+if (isSSL) {
+boolean shouldSave=SSLUtil.verifyKeyStore(opts);
+if (shouldSave) DataHelper.storeProps(opts,file);
+}
 int remaining=args.length - startOpts;
 if (remaining > 0) {
-opts=parseOptions(args,startOpts);
+parseOptions(args,startOpts,opts);
 }
 return new Options(host,port,isSSL,opts,keyfile);
 }
