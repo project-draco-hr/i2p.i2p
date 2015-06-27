@@ -1,20 +1,66 @@
 {
   while (session.getSocketServer() != null) {
-    I2PSocket i2ps=null;
+    I2PSocket i2ps;
     try {
       i2ps=session.getSocketServer().accept();
+      if (i2ps == null)       continue;
     }
- catch (    Exception e) {
-    }
-    if (i2ps == null) {
+ catch (    SocketTimeoutException ste) {
       continue;
     }
-    java.net.InetSocketAddress addr=new java.net.InetSocketAddress(host,port);
-    SocketChannel clientServerSock=null;
-    try {
-      clientServerSock=SocketChannel.open(addr);
+catch (    ConnectException ce) {
+      Log log=I2PAppContext.getGlobalContext().logManager().getLog(SAMv3StreamSession.class);
+      if (log.shouldLog(Log.WARN))       log.warn("Error accepting",ce);
+      try {
+        Thread.sleep(50);
+      }
+ catch (      InterruptedException ie) {
+      }
+      continue;
     }
- catch (    IOException e) {
+catch (    I2PException ipe) {
+      Log log=I2PAppContext.getGlobalContext().logManager().getLog(SAMv3StreamSession.class);
+      if (log.shouldLog(Log.WARN))       log.warn("Error accepting",ipe);
+      break;
+    }
+    SocketChannel clientServerSock;
+    try {
+      if (isSSL) {
+        I2PAppContext ctx=I2PAppContext.getGlobalContext();
+synchronized (SAMv3StreamSession.class) {
+          if (_sslSocketFactory == null) {
+            try {
+              _sslSocketFactory=new I2PSSLSocketFactory(ctx,true,"certificates/sam");
+            }
+ catch (            GeneralSecurityException gse) {
+              Log log=ctx.logManager().getLog(SAMv3StreamSession.class);
+              log.error("SSL error",gse);
+              try {
+                i2ps.close();
+              }
+ catch (              IOException ee) {
+              }
+              throw new RuntimeException("SSL error",gse);
+            }
+          }
+        }
+        SSLSocket sock=(SSLSocket)_sslSocketFactory.createSocket(host,port);
+        I2PSSLSocketFactory.verifyHostname(ctx,sock,host);
+        clientServerSock=new SSLSocketChannel(sock);
+      }
+ else {
+        InetSocketAddress addr=new InetSocketAddress(host,port);
+        clientServerSock=SocketChannel.open(addr);
+      }
+    }
+ catch (    IOException ioe) {
+      Log log=I2PAppContext.getGlobalContext().logManager().getLog(SAMv3StreamSession.class);
+      if (log.shouldLog(Log.WARN))       log.warn("Error forwarding",ioe);
+      try {
+        i2ps.close();
+      }
+ catch (      IOException ee) {
+      }
       continue;
     }
     try {

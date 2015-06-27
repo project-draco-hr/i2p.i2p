@@ -1,6 +1,6 @@
 {
   SAMv3Handler.SessionRecord rec=SAMv3Handler.sSessionsHash.get(nick);
-  boolean verbose=props.getProperty("SILENT","false").equals("false");
+  boolean verbose=!Boolean.parseBoolean(props.getProperty("SILENT"));
   if (rec == null)   throw new InterruptedIOException();
   String portStr=props.getProperty("PORT");
   if (portStr == null) {
@@ -13,6 +13,7 @@
     host=rec.getHandler().getClientIP();
     if (_log.shouldLog(Log.DEBUG))     _log.debug("no host specified. Taken from the client socket : " + host + ':'+ port);
   }
+  boolean isSSL=Boolean.parseBoolean(props.getProperty("SSL"));
 synchronized (this.socketServerLock) {
     if (this.socketServer != null) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("a socket server is already defined for this destination");
@@ -20,6 +21,6 @@ synchronized (this.socketServerLock) {
     }
     this.socketServer=this.socketMgr.getServerSocket();
   }
-  SocketForwarder forwarder=new SocketForwarder(host,port,this,verbose,sendPorts);
+  SocketForwarder forwarder=new SocketForwarder(host,port,isSSL,this,verbose,sendPorts);
   (new Thread(rec.getThreadGroup(),forwarder,"SAMV3StreamForwarder")).start();
 }
