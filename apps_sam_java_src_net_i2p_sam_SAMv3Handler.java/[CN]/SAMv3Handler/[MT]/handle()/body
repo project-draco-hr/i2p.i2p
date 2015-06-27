@@ -28,11 +28,24 @@
         continue;
       }
       tok=new StringTokenizer(msg," ");
-      if (tok.countTokens() < 2) {
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("Error in message format");
-        break;
+      int count=tok.countTokens();
+      if (count <= 0) {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Ignoring whitespace");
+        continue;
       }
       domain=tok.nextToken();
+      if (domain.equals("PING")) {
+        execPingMessage(tok);
+        continue;
+      }
+ else       if (domain.equals("PONG")) {
+        execPongMessage(tok);
+        continue;
+      }
+      if (count <= 1) {
+        if (writeString(domain + " STATUS RESULT=I2P_ERROR MESSAGE=\"command not specified\"\n"))         continue;
+ else         break;
+      }
       opcode=tok.nextToken();
       if (_log.shouldLog(Log.DEBUG)) {
         _log.debug("Parsing (domain: \"" + domain + "\"; opcode: \""+ opcode+ "\")");
