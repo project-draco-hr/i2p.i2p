@@ -7,14 +7,16 @@
       long acquireTime=_context.clock().now();
       int size=packet.getPacket().getLength();
       if (size > 0) {
-        FIFOBandwidthLimiter.Request req=_context.bandwidthLimiter().requestOutbound(size,0,"UDP sender");
-        int waitCount=0;
-        while (req.getPendingRequested() > 0 && waitCount++ < 5) {
-          req.waitForNextAllocation();
-        }
-        if (waitCount >= 5) {
-          req.abort();
-          _context.statManager().addRateData("udp.sendFailsafe",1);
+        FIFOBandwidthLimiter.Request req=packet.getBandwidthRequest();
+        if (req != null) {
+          int waitCount=0;
+          while (req.getPendingRequested() > 0 && waitCount++ < 5) {
+            req.waitForNextAllocation();
+          }
+          if (waitCount >= 5) {
+            req.abort();
+            _context.statManager().addRateData("udp.sendFailsafe",1);
+          }
         }
       }
       long afterBW=_context.clock().now();
