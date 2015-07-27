@@ -7,24 +7,24 @@
   for (int i=0; i < orig.length / 1024; i++)   order.add(new Integer(i));
   Collections.shuffle(order);
   int offset=0;
-  for (int i=0; i < orig.length / 1024; i++) {
-    byte msg[]=new byte[1024];
-    Integer cur=(Integer)order.get(i);
-    System.arraycopy(orig,cur.intValue() * 1024,msg,0,1024);
-    in.messageReceived(cur.intValue(),new ByteArray(msg));
-    _log.debug("Injecting " + cur);
-    try {
+  try {
+    for (int i=0; i < orig.length / 1024; i++) {
+      byte msg[]=new byte[1024];
+      Integer cur=(Integer)order.get(i);
+      System.arraycopy(orig,cur.intValue() * 1024,msg,0,1024);
+      in.messageReceived(cur.intValue(),new ByteArray(msg));
+      _log.debug("Injecting " + cur);
       if (in.available() > 0) {
         int curRead=in.read(read,offset,read.length - offset);
         _log.debug("read " + curRead);
-        if (curRead == -1)         throw new RuntimeException("EOF with offset " + offset);
+        if (curRead == -1)         fail("EOF with offset " + offset);
  else         offset+=curRead;
       }
     }
- catch (    IOException ioe) {
-      throw new RuntimeException("IOE: " + ioe.getMessage());
-    }
   }
-  if (!DataHelper.eq(orig,read))   throw new RuntimeException("Failed test: data read is not equal");
+  finally {
+    in.close();
+  }
+  if (!DataHelper.eq(orig,read))   fail("data read is not equal");
   _log.info("Passed test: staggered");
 }
