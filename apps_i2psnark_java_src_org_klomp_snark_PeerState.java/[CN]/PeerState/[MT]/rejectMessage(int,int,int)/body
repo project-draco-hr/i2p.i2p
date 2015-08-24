@@ -2,9 +2,29 @@
   if (_log.shouldInfo())   _log.info("Got reject(" + piece + ','+ begin+ ','+ length+ ") from "+ peer);
   out.cancelRequest(piece,begin,length);
 synchronized (this) {
+    Request deletedRequest=null;
+    boolean haveMoreRequests=false;
     for (Iterator<Request> iter=outstandingRequests.iterator(); iter.hasNext(); ) {
       Request req=iter.next();
-      if (req.getPiece() == piece && req.off == begin && req.len == length)       iter.remove();
+      if (req.getPiece() == piece) {
+        if (req.off == begin && req.len == length) {
+          iter.remove();
+          deletedRequest=req;
+        }
+ else {
+          haveMoreRequests=true;
+        }
+      }
+    }
+    if (deletedRequest != null && !haveMoreRequests) {
+      PartialPiece pp=deletedRequest.getPartialPiece();
+      int downloaded=pp.getDownloaded();
+      Request req;
+      if (deletedRequest.off == downloaded)       req=deletedRequest;
+ else       req=new Request(pp,downloaded,1);
+      List<Request> pcs=Collections.singletonList(req);
+      listener.savePartialPieces(this.peer,pcs);
+      if (_log.shouldWarn())       _log.warn("Returned to coord. w/ offset " + pp.getDownloaded() + " due to reject("+ piece+ ','+ begin+ ','+ length+ ") from "+ peer);
     }
     if (lastRequest != null && lastRequest.getPiece() == piece && lastRequest.off == begin && lastRequest.len == length)     lastRequest=null;
   }
