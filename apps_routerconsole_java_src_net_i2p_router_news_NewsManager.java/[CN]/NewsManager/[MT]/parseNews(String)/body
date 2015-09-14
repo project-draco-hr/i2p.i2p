@@ -1,0 +1,29 @@
+{
+  List<NewsEntry> rv=new ArrayList<NewsEntry>();
+  boolean foundEntry=false;
+  int start=newsContent.indexOf("<h3>");
+  while (start >= 0) {
+    NewsEntry entry=new NewsEntry();
+    if (newsContent.length() > start + 16 && newsContent.substring(start + 4,start + 6).equals("20") && newsContent.substring(start + 14,start + 16).equals(": ")) {
+      entry.updated=RFC3339Date.parse3339Date(newsContent.substring(start + 4,start + 14));
+      newsContent=newsContent.substring(start + 16);
+    }
+ else {
+      newsContent=newsContent.substring(start + 4);
+    }
+    int end=newsContent.indexOf("</h3>");
+    if (end >= 0) {
+      String heading=newsContent.substring(0,end);
+      entry.title=heading;
+      entry.id=heading;
+      newsContent=newsContent.substring(end + 5);
+      end=newsContent.indexOf("<h3>");
+      if (end > 0)       entry.content=newsContent.substring(0,end);
+ else       entry.content=newsContent;
+      rv.add(entry);
+      start=end;
+    }
+  }
+  Collections.sort(rv);
+  return rv;
+}
