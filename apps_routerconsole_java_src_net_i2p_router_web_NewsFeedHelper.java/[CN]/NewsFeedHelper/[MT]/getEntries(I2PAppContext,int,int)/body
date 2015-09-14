@@ -1,0 +1,27 @@
+{
+  if (max <= 0)   max=Integer.MAX_VALUE;
+  StringBuilder buf=new StringBuilder(512);
+  List<NewsEntry> entries=Collections.emptyList();
+  ClientAppManager cmgr=ctx.clientAppManager();
+  if (cmgr != null) {
+    NewsManager nmgr=(NewsManager)cmgr.getRegisteredApp(NewsManager.APP_NAME);
+    if (nmgr != null)     entries=nmgr.getEntries();
+  }
+  if (!entries.isEmpty()) {
+    DateFormat fmt=DateFormat.getDateInstance(DateFormat.SHORT);
+    String systemTimeZone=ctx.getProperty("i2p.systemTimeZone");
+    if (systemTimeZone != null)     fmt.setTimeZone(TimeZone.getTimeZone(systemTimeZone));
+    int i=0;
+    for (    NewsEntry entry : entries) {
+      if (i++ < start)       continue;
+      buf.append("<h3>");
+      if (entry.updated > 0) {
+        Date date=new Date(entry.updated);
+        buf.append(fmt.format(date)).append(": ");
+      }
+      buf.append(entry.title).append("</h3>\n").append(entry.content).append("\n");
+      if (i >= start + max)       break;
+    }
+  }
+  return buf.toString();
+}
