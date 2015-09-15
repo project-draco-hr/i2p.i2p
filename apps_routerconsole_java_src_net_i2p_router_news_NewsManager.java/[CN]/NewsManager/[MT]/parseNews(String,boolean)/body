@@ -10,6 +10,19 @@
     }
  else {
       newsContent=newsContent.substring(start + 4);
+      int colon=newsContent.indexOf(": ");
+      if (colon > 0 && colon <= 10) {
+        DateFormat fmt=DateFormat.getDateInstance(DateFormat.SHORT);
+        String systemTimeZone=_context.getProperty("i2p.systemTimeZone");
+        if (systemTimeZone != null)         fmt.setTimeZone(TimeZone.getTimeZone(systemTimeZone));
+        try {
+          Date date=fmt.parse(newsContent.substring(0,colon));
+          entry.updated=date.getTime();
+          newsContent=newsContent.substring(colon + 2);
+        }
+ catch (        ParseException pe) {
+        }
+      }
     }
     int end=newsContent.indexOf("</h3>");
     if (end >= 0) {
@@ -20,6 +33,7 @@
       end=newsContent.indexOf("<h3>");
       if (end > 0)       entry.content=newsContent.substring(0,end);
  else       entry.content=newsContent;
+      if (addMissingDiv)       entry.content="<div>\n" + entry.content;
       rv.add(entry);
       start=end;
     }
