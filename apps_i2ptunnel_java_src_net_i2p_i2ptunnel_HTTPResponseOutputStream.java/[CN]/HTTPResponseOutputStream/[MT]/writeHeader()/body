@@ -10,7 +10,7 @@
         responseLine=filterResponseLine(responseLine);
         responseLine=(responseLine.trim() + "\r\n");
         if (_log.shouldLog(Log.INFO))         _log.info("Response: " + responseLine.trim());
-        out.write(responseLine.getBytes());
+        out.write(DataHelper.getUTF8(responseLine));
       }
  else {
         for (int j=lastEnd + 1; j < i; j++) {
@@ -19,17 +19,17 @@
             int valLen=i - (j + 1);
             if ((keyLen <= 0) || (valLen < 0))             throw new IOException("Invalid header @ " + j);
             String key=DataHelper.getUTF8(_headerBuffer.getData(),lastEnd + 1,keyLen);
-            String val=null;
+            String val;
             if (valLen == 0)             val="";
  else             val=DataHelper.getUTF8(_headerBuffer.getData(),j + 2,valLen).trim();
             if (_log.shouldLog(Log.INFO))             _log.info("Response header [" + key + "] = ["+ val+ "]");
             String lcKey=key.toLowerCase(Locale.US);
             if ("connection".equals(lcKey)) {
-              out.write("Connection: close\r\n".getBytes());
+              out.write(DataHelper.getASCII("Connection: close\r\n"));
               connectionSent=true;
             }
  else             if ("proxy-connection".equals(lcKey)) {
-              out.write("Proxy-Connection: close\r\n".getBytes());
+              out.write(DataHelper.getASCII("Proxy-Connection: close\r\n"));
               proxyConnectionSent=true;
             }
  else             if ("content-encoding".equals(lcKey) && "x-i2p-gzip".equals(val.toLowerCase(Locale.US))) {
@@ -46,7 +46,10 @@
                 }
               }
  else               if ("content-type".equals(lcKey)) {
-                _contentType=val;
+                _contentType=val.toLowerCase(Locale.US);
+              }
+ else               if ("content-encoding".equals(lcKey)) {
+                _contentEncoding=val.toLowerCase(Locale.US);
               }
  else               if ("set-cookie".equals(lcKey)) {
                 String lcVal=val.toLowerCase(Locale.US);
@@ -55,7 +58,7 @@
                   break;
                 }
               }
-              out.write((key.trim() + ": " + val.trim()+ "\r\n").getBytes());
+              out.write(DataHelper.getUTF8(key.trim() + ": " + val+ "\r\n"));
             }
             break;
           }
@@ -64,8 +67,8 @@
       lastEnd=i;
     }
   }
-  if (!connectionSent)   out.write("Connection: close\r\n".getBytes());
-  if (!proxyConnectionSent)   out.write("Proxy-Connection: close\r\n".getBytes());
+  if (!connectionSent)   out.write(DataHelper.getASCII("Connection: close\r\n"));
+  if (!proxyConnectionSent)   out.write(DataHelper.getASCII("Proxy-Connection: close\r\n"));
   finishHeaders();
   boolean shouldCompress=shouldCompress();
   if (_log.shouldLog(Log.INFO))   _log.info("After headers: gzip? " + _gzip + " compress? "+ shouldCompress);
