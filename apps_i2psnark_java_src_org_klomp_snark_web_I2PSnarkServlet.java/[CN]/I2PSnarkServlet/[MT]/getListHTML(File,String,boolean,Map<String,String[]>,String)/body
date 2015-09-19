@@ -19,8 +19,26 @@
     String[] val=postParams.get("nonce");
     if (val != null) {
       String nonce=val[0];
-      if (String.valueOf(_nonce).equals(nonce))       savePriorities(snark,postParams);
- else       _manager.addMessage("Please retry form submission (bad nonce)");
+      if (String.valueOf(_nonce).equals(nonce)) {
+        if (postParams.get("savepri") != null) {
+          savePriorities(snark,postParams);
+        }
+ else         if (postParams.get("stop") != null) {
+          _manager.stopTorrent(snark,false);
+        }
+ else         if (postParams.get("start") != null) {
+          _manager.startTorrent(snark);
+        }
+ else         if (postParams.get("recheck") != null) {
+          _manager.recheckTorrent(snark);
+        }
+ else {
+          _manager.addMessage("Unknown command");
+        }
+      }
+ else {
+        _manager.addMessage("Please retry form submission (bad nonce)");
+      }
     }
     return null;
   }
@@ -39,6 +57,7 @@
  else {
     r=new File("");
   }
+  boolean showStopStart=snark != null;
   boolean showPriority=snark != null && snark.getStorage() != null && !snark.getStorage().complete() && r.isDirectory();
   StringBuilder buf=new StringBuilder(4096);
   buf.append(DOCTYPE).append("<HTML><HEAD><TITLE>");
@@ -58,7 +77,7 @@
  else   buf.append(_contextName);
   buf.append("</a></div></center>\n");
   if (parent)   buf.append("<div class=\"page\"><div class=\"mainsection\">");
-  if (showPriority) {
+  if (showStopStart || showPriority) {
     buf.append("<form action=\"").append(base).append("\" method=\"POST\">\n");
     buf.append("<input type=\"hidden\" name=\"nonce\" value=\"").append(_nonce).append("\" >\n");
     if (sortParam != null) {
@@ -210,6 +229,29 @@
     buf.append("&nbsp;");
     toThemeImg(buf,"file");
     buf.append("&nbsp;<b>").append(_("Piece size")).append(":</b> ").append(formatSize(snark.getPieceLength(0))).append("</td></tr>\n");
+    if (showStopStart) {
+      buf.append("<tr><td>");
+      toThemeImg(buf,"file");
+      if (snark.isChecking()) {
+        buf.append("&nbsp;<b>").append(_("Checking")).append("&hellip;</b>&nbsp;&nbsp;&nbsp;").append("<a href=\"").append(base).append("\">").append(_("Refresh page for results")).append("</a>");
+      }
+ else       if (snark.isStarting()) {
+        buf.append("&nbsp;<b>").append(_("Starting")).append("&hellip;</b>");
+      }
+ else       if (snark.isAllocating()) {
+        buf.append("&nbsp;<b>").append(_("Allocating")).append("&hellip;</b>");
+      }
+ else {
+        boolean isRunning=!snark.isStopped();
+        buf.append(" <input type=\"submit\" value=\"");
+        if (isRunning)         buf.append(_("Stop")).append("\" name=\"stop\" class=\"stoptorrent\">\n");
+ else         buf.append(_("Start")).append("\" name=\"start\" class=\"starttorrent\">\n");
+        buf.append("&nbsp;&nbsp;&nbsp;<input type=\"submit\" name=\"recheck\" value=\"").append(_("Force Recheck"));
+        if (isRunning)         buf.append("\" class=\"disabled\" disabled=\"disabled\">\n");
+ else         buf.append("\" class=\"reload\">\n");
+      }
+      buf.append("</td></tr>\n");
+    }
   }
  else {
     buf.append("<tr><th>Not found<br>resource=\"").append(r.toString()).append("\"<br>base=\"").append(base).append("\"<br>torrent=\"").append(torrentName).append("\"</th></tr>\n");
@@ -395,7 +437,7 @@
     buf.append("<thead><tr><th colspan=\"4\">&nbsp;</th><th class=\"headerpriority\">" + "<a class=\"control\" id=\"setallhigh\" href=\"javascript:void(null);\" onclick=\"setallhigh();\">").append(toImg("clock_red")).append(_("Set all high")).append("</a>\n" + "<a class=\"control\" id=\"setallnorm\" href=\"javascript:void(null);\" onclick=\"setallnorm();\">").append(toImg("clock")).append(_("Set all normal")).append("</a>\n" + "<a class=\"control\" id=\"setallskip\" href=\"javascript:void(null);\" onclick=\"setallskip();\">").append(toImg("cancel")).append(_("Skip all")).append("</a>\n" + "<br><br><input type=\"submit\" class=\"accept\" value=\"").append(_("Save priorities")).append("\" name=\"savepri\" >\n" + "</th></tr></thead>\n");
   }
   buf.append("</table>\n");
-  if (showPriority)   buf.append("</form>");
+  if (showStopStart || showPriority)   buf.append("</form>");
   buf.append("</div></div></BODY></HTML>\n");
   return buf.toString();
 }
