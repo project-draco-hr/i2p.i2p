@@ -1,4 +1,5 @@
 {
+  _checkProgress.set(0);
   boolean resume=false;
   _probablyComplete=true;
   int need=metainfo.getPieces();
@@ -9,10 +10,13 @@
  else {
     bfield=bitfield;
   }
+  long lengthProgress=0;
   for (  TorrentFile tf : _torrentFiles) {
     long length=tf.RAFfile.length();
+    lengthProgress+=tf.length;
     if (tf.RAFfile.exists() && length == tf.length) {
       if (listener != null)       listener.storageAllocated(this,length);
+      _checkProgress.set(0);
       resume=true;
     }
  else     if (length == 0) {
@@ -25,6 +29,7 @@ synchronized (tf) {
  catch (        IOException ioe) {
         }
       }
+      if (!resume)       _checkProgress.set((int)(pieces * lengthProgress / total_length));
     }
  else {
       String msg="File '" + tf.name + "' exists, but has wrong length (expected "+ tf.length+ " but found "+ length+ ") - repairing corruption";
@@ -32,6 +37,7 @@ synchronized (tf) {
       _log.error(msg);
       changed=true;
       resume=true;
+      _checkProgress.set(0);
       _probablyComplete=false;
 synchronized (tf) {
         RandomAccessFile raf=tf.checkRAF();
@@ -50,6 +56,7 @@ synchronized (tf) {
     long fileEnd=_torrentFiles.get(0).length;
     long pieceEnd=0;
     for (int i=0; i < pieces; i++) {
+      _checkProgress.set(i);
       int length=getUncheckedPiece(i,piece);
       boolean correctHash=metainfo.checkPiece(i,piece,0,length);
       pieceEnd+=length;
@@ -72,6 +79,7 @@ synchronized (tf) {
       if (listener != null)       listener.storageChecked(this,i,correctHash);
     }
   }
+  _checkProgress.set(pieces);
   _probablyComplete=complete();
   needed=need;
   if (recheck && need > 0) {
