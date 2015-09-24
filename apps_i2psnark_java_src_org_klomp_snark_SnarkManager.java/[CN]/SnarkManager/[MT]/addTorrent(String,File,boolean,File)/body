@@ -64,25 +64,27 @@ synchronized (_snarks) {
         }
         String rejectMessage=validateTorrent(info);
         if (rejectMessage != null) {
-          sfile.delete();
-          addMessage(rejectMessage);
-          return;
+          throw new IOException(rejectMessage);
         }
- else {
-          if (baseFile == null)           baseFile=getSavedBaseFile(info.getInfoHash());
-          if (_log.shouldLog(Log.INFO))           _log.info("New Snark, torrent: " + filename + " base: "+ baseFile);
-          torrent=new Snark(_util,filename,null,-1,null,null,this,_peerCoordinatorSet,_connectionAcceptor,shouldAutoStart(),dataDir.getPath(),baseFile);
-          loadSavedFilePriorities(torrent);
+        if (baseFile == null)         baseFile=getSavedBaseFile(info.getInfoHash());
+        if (_log.shouldLog(Log.INFO))         _log.info("New Snark, torrent: " + filename + " base: "+ baseFile);
+        torrent=new Snark(_util,filename,null,-1,null,null,this,_peerCoordinatorSet,_connectionAcceptor,shouldAutoStart(),dataDir.getPath(),baseFile);
+        loadSavedFilePriorities(torrent);
 synchronized (_snarks) {
-            _snarks.put(filename,torrent);
-          }
+          _snarks.put(filename,torrent);
         }
       }
  catch (      IOException ioe) {
-        String err=_("Torrent in \"{0}\" is invalid",sfile.getName()) + ": " + ioe.getMessage();
+        String err=_("Torrent in \"{0}\" is invalid",sfile.toString()) + ": " + ioe.getMessage();
         addMessage(err);
         _log.error(err,ioe);
-        if (sfile.exists())         sfile.delete();
+        File rename=new File(filename + ".BAD");
+        if (rename.exists()) {
+          if (sfile.delete())           addMessage(_("Torrent file deleted: {0}",sfile.toString()));
+        }
+ else {
+          if (FileUtil.rename(sfile,rename))           addMessage(_("Torrent file moved from {0} to {1}",sfile.toString(),rename.toString()));
+        }
         return;
       }
 catch (      OutOfMemoryError oom) {
