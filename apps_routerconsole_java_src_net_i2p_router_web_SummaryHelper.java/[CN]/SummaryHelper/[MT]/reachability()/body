@@ -1,11 +1,11 @@
 {
   if (_context.commSystem().isDummy())   return "VM Comm System";
-  if (_context.router().getUptime() > 60 * 1000 && (!_context.router().gracefulShutdownInProgress()) && !_context.clientManager().isAlive())   return _("ERR-Client Manager I2CP Error - check logs");
+  if (_context.router().getUptime() > 60 * 1000 && (!_context.router().gracefulShutdownInProgress()) && !_context.clientManager().isAlive())   return _t("ERR-Client Manager I2CP Error - check logs");
   long skew=_context.commSystem().getFramedAveragePeerClockSkew(33);
-  if (Math.abs(skew) > 30 * 1000)   return _("ERR-Clock Skew of {0}",DataHelper.formatDuration2(Math.abs(skew)));
-  if (_context.router().isHidden())   return _("Hidden");
+  if (Math.abs(skew) > 30 * 1000)   return _t("ERR-Clock Skew of {0}",DataHelper.formatDuration2(Math.abs(skew)));
+  if (_context.router().isHidden())   return _t("Hidden");
   RouterInfo routerInfo=_context.router().getRouterInfo();
-  if (routerInfo == null)   return _("Testing");
+  if (routerInfo == null)   return _t("Testing");
   Status status=_context.commSystem().getStatus();
 switch (status) {
 case OK:
@@ -15,35 +15,35 @@ case IPV4_UNKNOWN_IPV6_OK:
 case IPV4_DISABLED_IPV6_OK:
 case IPV4_SNAT_IPV6_OK:
     RouterAddress ra=routerInfo.getTargetAddress("NTCP");
-  if (ra == null)   return _(status.toStatusString());
+  if (ra == null)   return _t(status.toStatusString());
 byte[] ip=ra.getIP();
-if (ip == null) return _("ERR-Unresolved TCP Address");
-if (TransportUtil.isPubliclyRoutable(ip,true)) return _(status.toStatusString());
-return _("ERR-Private TCP Address");
+if (ip == null) return _t("ERR-Unresolved TCP Address");
+if (TransportUtil.isPubliclyRoutable(ip,true)) return _t(status.toStatusString());
+return _t("ERR-Private TCP Address");
 case IPV4_SNAT_IPV6_UNKNOWN:
 case DIFFERENT:
-return _("ERR-SymmetricNAT");
+return _t("ERR-SymmetricNAT");
 case REJECT_UNSOLICITED:
 case IPV4_DISABLED_IPV6_FIREWALLED:
-if (routerInfo.getTargetAddress("NTCP") != null) return _("WARN-Firewalled with Inbound TCP Enabled");
+if (routerInfo.getTargetAddress("NTCP") != null) return _t("WARN-Firewalled with Inbound TCP Enabled");
 case IPV4_FIREWALLED_IPV6_OK:
 case IPV4_FIREWALLED_IPV6_UNKNOWN:
-if (((FloodfillNetworkDatabaseFacade)_context.netDb()).floodfillEnabled()) return _("WARN-Firewalled and Floodfill");
-return _(status.toStatusString());
+if (((FloodfillNetworkDatabaseFacade)_context.netDb()).floodfillEnabled()) return _t("WARN-Firewalled and Floodfill");
+return _t(status.toStatusString());
 case DISCONNECTED:
-return _("Disconnected - check network cable");
+return _t("Disconnected - check network cable");
 case HOSED:
-return _("ERR-UDP Port In Use - Set i2np.udp.internalPort=xxxx in advanced config and restart");
+return _t("ERR-UDP Port In Use - Set i2np.udp.internalPort=xxxx in advanced config and restart");
 case UNKNOWN:
 case IPV4_UNKNOWN_IPV6_FIREWALLED:
 case IPV4_DISABLED_IPV6_UNKNOWN:
 default :
 ra=routerInfo.getTargetAddress("SSU");
 if (ra == null && _context.router().getUptime() > 5 * 60 * 1000) {
-if (getActivePeers() <= 0) return _("ERR-No Active Peers, Check Network Connection and Firewall");
- else if (_context.getProperty(ConfigNetHelper.PROP_I2NP_NTCP_HOSTNAME) == null || _context.getProperty(ConfigNetHelper.PROP_I2NP_NTCP_PORT) == null) return _("ERR-UDP Disabled and Inbound TCP host/port not set");
- else return _("WARN-Firewalled with UDP Disabled");
+if (getActivePeers() <= 0) return _t("ERR-No Active Peers, Check Network Connection and Firewall");
+ else if (_context.getProperty(ConfigNetHelper.PROP_I2NP_NTCP_HOSTNAME) == null || _context.getProperty(ConfigNetHelper.PROP_I2NP_NTCP_PORT) == null) return _t("ERR-UDP Disabled and Inbound TCP host/port not set");
+ else return _t("WARN-Firewalled with UDP Disabled");
 }
-return _(status.toStatusString());
+return _t(status.toStatusString());
 }
 }
