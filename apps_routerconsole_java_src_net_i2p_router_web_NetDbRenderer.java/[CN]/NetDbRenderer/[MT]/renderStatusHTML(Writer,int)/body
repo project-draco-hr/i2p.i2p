@@ -4,6 +4,8 @@
     out.flush();
     return;
   }
+  Log log=_context.logManager().getLog(NetDbRenderer.class);
+  long start=System.currentTimeMillis();
   boolean full=mode == 1;
   boolean shortStats=mode == 2;
   boolean showStats=full || shortStats;
@@ -36,6 +38,9 @@
       transportCount[classifyTransports(ri)]++;
     }
   }
+  long end=System.currentTimeMillis();
+  if (log.shouldWarn())   log.warn("part 1 took " + (end - start));
+  start=end;
   if (!showStats) {
     buf.append("<table border=\"0\" cellspacing=\"30\"><tr><th colspan=\"3\">").append(_t("Network Database Router Statistics")).append("</th></tr><tr><td style=\"vertical-align: top;\">");
     List<String> versionList=new ArrayList<String>(versions.objects());
@@ -54,6 +59,9 @@
     buf.append("</td><td style=\"vertical-align: top;\">");
     out.write(buf.toString());
     buf.setLength(0);
+    end=System.currentTimeMillis();
+    if (log.shouldWarn())     log.warn("part 2 took " + (end - start));
+    start=end;
     buf.append("<table>\n");
     buf.append("<tr><th align=\"left\">" + _t("Transports") + "</th><th>"+ _t("Count")+ "</th></tr>\n");
     for (int i=0; i < TNAMES.length; i++) {
@@ -67,6 +75,9 @@
     buf.append("</td><td style=\"vertical-align: top;\">");
     out.write(buf.toString());
     buf.setLength(0);
+    end=System.currentTimeMillis();
+    if (log.shouldWarn())     log.warn("part 3 took " + (end - start));
+    start=end;
     List<String> countryList=new ArrayList<String>(countries.objects());
     if (!countryList.isEmpty()) {
       Collections.sort(countryList,new CountryComparator());
@@ -82,6 +93,9 @@
       buf.append("</table>\n");
     }
     buf.append("</td></tr></table>");
+    end=System.currentTimeMillis();
+    if (log.shouldWarn())     log.warn("part 4 took " + (end - start));
+    start=end;
   }
   out.write(buf.toString());
   out.flush();
