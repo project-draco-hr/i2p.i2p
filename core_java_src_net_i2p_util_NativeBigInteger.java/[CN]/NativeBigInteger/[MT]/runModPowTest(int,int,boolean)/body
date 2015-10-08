@@ -1,8 +1,5 @@
 {
-  System.out.println("DEBUG: Warming up the random number generator...");
   SecureRandom rand=RandomSource.getInstance();
-  rand.nextBoolean();
-  System.out.println("DEBUG: Random number generator warmed up");
   byte[] _sampleGenerator=CryptoConstants.elgg.toByteArray();
   byte[] _samplePrime=CryptoConstants.elgp.toByteArray();
   BigInteger jg=new BigInteger(_sampleGenerator);
@@ -17,40 +14,46 @@
  else     if (mode == 2)     ng.modPowCT(bi,jp);
  else     bi.modInverse(jp);
   }
+  BigInteger myValue=null, jval;
   for (runsProcessed=0; runsProcessed < numRuns; runsProcessed++) {
     BigInteger bi=new BigInteger(2048,rand);
     NativeBigInteger g=new NativeBigInteger(_sampleGenerator);
     NativeBigInteger p=new NativeBigInteger(_samplePrime);
     NativeBigInteger k=new NativeBigInteger(1,bi.toByteArray());
-    BigInteger myValue, jval;
     long beforeModPow=System.nanoTime();
-    if (mode == 1)     myValue=g.modPow(k,p);
- else     if (mode == 2)     myValue=g.modPowCT(bi,jp);
- else     myValue=k.modInverse(p);
+    if (_nativeOk) {
+      if (mode == 1)       myValue=g.modPow(k,p);
+ else       if (mode == 2)       myValue=g.modPowCT(bi,jp);
+ else       myValue=k.modInverse(p);
+    }
     long afterModPow=System.nanoTime();
-    if (mode != 3)     jval=jg.modPow(bi,jp);
- else     jval=bi.modInverse(jp);
-    long afterJavaModPow=System.nanoTime();
     totalTime+=(afterModPow - beforeModPow);
-    javaTime+=(afterJavaModPow - afterModPow);
-    if (!myValue.equals(jval)) {
-      System.err.println("ERROR: [" + runsProcessed + "]\tnative modPow != java modPow");
-      System.err.println("ERROR: native modPow value: " + myValue.toString());
-      System.err.println("ERROR: java modPow value: " + jval.toString());
-      break;
+    if (!nativeOnly) {
+      if (mode != 3)       jval=jg.modPow(bi,jp);
+ else       jval=bi.modInverse(jp);
+      long afterJavaModPow=System.nanoTime();
+      javaTime+=(afterJavaModPow - afterModPow);
+      if (_nativeOk && !myValue.equals(jval)) {
+        System.err.println("ERROR: [" + runsProcessed + "]\tnative modPow != java modPow");
+        System.err.println("ERROR: native modPow value: " + myValue.toString());
+        System.err.println("ERROR: java modPow value: " + jval.toString());
+        break;
+      }
     }
   }
   double dtotal=totalTime / 1000000f;
   double djava=javaTime / 1000000f;
-  System.out.println(String.format("INFO: run time: %.3f ms (%.3f ms each)",dtotal,dtotal / (runsProcessed + 1)));
+  if (_nativeOk)   System.out.println(String.format("INFO: run time: %.3f ms (%.3f ms each)",dtotal,dtotal / (runsProcessed + 1)));
   if (numRuns == runsProcessed)   System.out.println("INFO: " + runsProcessed + " runs complete without any errors");
  else   System.out.println("ERROR: " + runsProcessed + " runs until we got an error");
   if (_nativeOk) {
     System.out.println(String.format("Native run time: \t%9.3f ms (%7.3f ms each)",dtotal,dtotal / (runsProcessed + 1)));
-    System.out.println(String.format("Java run time:   \t%9.3f ms (%7.3f ms each)",djava,djava / (runsProcessed + 1)));
-    System.out.println(String.format("Native = %.3f%% of pure Java time",dtotal * 100.0d / djava));
-    if (dtotal < djava)     System.out.println(String.format("Native is BETTER by a factor of %.3f -- YAY!",djava / dtotal));
- else     System.out.println(String.format("Native is WORSE by a factor of %.3f -- BOO!",dtotal / djava));
+    if (!nativeOnly) {
+      System.out.println(String.format("Java run time:   \t%9.3f ms (%7.3f ms each)",djava,djava / (runsProcessed + 1)));
+      System.out.println(String.format("Native = %.3f%% of pure Java time",dtotal * 100.0d / djava));
+      if (dtotal < djava)       System.out.println(String.format("Native is BETTER by a factor of %.3f -- YAY!",djava / dtotal));
+ else       System.out.println(String.format("Native is WORSE by a factor of %.3f -- BOO!",dtotal / djava));
+    }
   }
  else {
     System.out.println(String.format("java run time: \t%.3f ms (%.3f ms each)",djava,djava / (runsProcessed + 1)));
