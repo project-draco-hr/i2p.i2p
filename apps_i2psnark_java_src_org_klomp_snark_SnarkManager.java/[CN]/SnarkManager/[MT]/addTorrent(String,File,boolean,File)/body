@@ -1,9 +1,9 @@
 {
   if ((!dontAutoStart) && !_util.connected()) {
-    addMessage(_("Connecting to I2P"));
+    addMessage(_t("Connecting to I2P"));
     boolean ok=_util.connect();
     if (!ok) {
-      addMessage(_("Error connecting to I2P - check your I2CP settings!"));
+      addMessage(_t("Error connecting to I2P - check your I2CP settings!"));
       return;
     }
   }
@@ -13,7 +13,7 @@
   }
  catch (  IOException ioe) {
     _log.error("Unable to add the torrent " + filename,ioe);
-    addMessage(_("Error: Could not add the torrent {0}",filename) + ": " + ioe);
+    addMessage(_t("Error: Could not add the torrent {0}",filename) + ": " + ioe);
     return;
   }
   if (dataDir == null)   dataDir=getDataDir();
@@ -31,7 +31,7 @@ synchronized (_snarks) {
         fis=new FileInputStream(sfile);
       }
  catch (      IOException ioe) {
-        addMessage(_("Cannot open \"{0}\"",sfile.getName()) + ": " + ioe.getMessage());
+        addMessage(_t("Cannot open \"{0}\"",sfile.getName()) + ": " + ioe.getMessage());
         return;
       }
       try {
@@ -44,49 +44,57 @@ synchronized (_snarks) {
         }
         Snark snark=getTorrentByInfoHash(info.getInfoHash());
         if (snark != null) {
-          addMessage(_("Torrent with this info hash is already running: {0}",snark.getBaseName()));
+          addMessage(_t("Torrent with this info hash is already running: {0}",snark.getBaseName()));
           return;
         }
         if (!TrackerClient.isValidAnnounce(info.getAnnounce())) {
           if (info.isPrivate()) {
-            addMessage(_("ERROR - No I2P trackers in private torrent \"{0}\"",info.getName()));
+            addMessage(_t("ERROR - No I2P trackers in private torrent \"{0}\"",info.getName()));
           }
  else           if (!_util.getOpenTrackers().isEmpty()) {
-            addMessage(_("Warning - No I2P trackers in \"{0}\", will announce to I2P open trackers and DHT only.",info.getName()));
+            addMessage(_t("Warning - No I2P trackers in \"{0}\", will announce to I2P open trackers and DHT only.",info.getName()));
           }
  else           if (_util.shouldUseDHT()) {
-            addMessage(_("Warning - No I2P trackers in \"{0}\", and open trackers are disabled, will announce to DHT only.",info.getName()));
+            addMessage(_t("Warning - No I2P trackers in \"{0}\", and open trackers are disabled, will announce to DHT only.",info.getName()));
           }
  else {
-            addMessage(_("Warning - No I2P trackers in \"{0}\", and DHT and open trackers are disabled, you should enable open trackers or DHT before starting the torrent.",info.getName()));
+            addMessage(_t("Warning - No I2P trackers in \"{0}\", and DHT and open trackers are disabled, you should enable open trackers or DHT before starting the torrent.",info.getName()));
             dontAutoStart=true;
           }
         }
         String rejectMessage=validateTorrent(info);
         if (rejectMessage != null) {
-          sfile.delete();
-          addMessage(rejectMessage);
-          return;
+          throw new IOException(rejectMessage);
         }
- else {
-          if (baseFile == null)           baseFile=getSavedBaseFile(info.getInfoHash());
-          if (_log.shouldLog(Log.INFO))           _log.info("New Snark, torrent: " + filename + " base: "+ baseFile);
-          torrent=new Snark(_util,filename,null,-1,null,null,this,_peerCoordinatorSet,_connectionAcceptor,false,dataDir.getPath(),baseFile);
-          loadSavedFilePriorities(torrent);
+        if (baseFile == null)         baseFile=getSavedBaseFile(info.getInfoHash());
+        if (_log.shouldLog(Log.INFO))         _log.info("New Snark, torrent: " + filename + " base: "+ baseFile);
+        torrent=new Snark(_util,filename,null,-1,null,null,this,_peerCoordinatorSet,_connectionAcceptor,shouldAutoStart(),dataDir.getPath(),baseFile);
+        loadSavedFilePriorities(torrent);
 synchronized (_snarks) {
-            _snarks.put(filename,torrent);
-          }
+          _snarks.put(filename,torrent);
         }
       }
  catch (      IOException ioe) {
-        String err=_("Torrent in \"{0}\" is invalid",sfile.getName()) + ": " + ioe.getMessage();
+        if (fis != null)         try {
+          fis.close();
+          fis=null;
+        }
+ catch (        IOException ioe2) {
+        }
+        String err=_t("Torrent in \"{0}\" is invalid",sfile.toString()) + ": " + ioe.getMessage();
         addMessage(err);
         _log.error(err,ioe);
-        if (sfile.exists())         sfile.delete();
+        File rename=new File(filename + ".BAD");
+        if (rename.exists()) {
+          if (sfile.delete())           addMessage(_t("Torrent file deleted: {0}",sfile.toString()));
+        }
+ else {
+          if (FileUtil.rename(sfile,rename))           addMessage(_t("Torrent file moved from {0} to {1}",sfile.toString(),rename.toString()));
+        }
         return;
       }
 catch (      OutOfMemoryError oom) {
-        addMessage(_("ERROR - Out of memory, cannot create torrent from {0}",sfile.getName()) + ": " + oom.getMessage());
+        addMessage(_t("ERROR - Out of memory, cannot create torrent from {0}",sfile.getName()) + ": " + oom.getMessage());
         return;
       }
  finally {
@@ -112,9 +120,9 @@ catch (      OutOfMemoryError oom) {
   }
   if (!dontAutoStart && shouldAutoStart() && running) {
     torrent.startTorrent();
-    addMessage(_("Torrent added and started: \"{0}\"",torrent.getBaseName()));
+    addMessage(_t("Torrent added and started: \"{0}\"",torrent.getBaseName()));
   }
  else {
-    addMessage(_("Torrent added: \"{0}\"",torrent.getBaseName()));
+    addMessage(_t("Torrent added: \"{0}\"",torrent.getBaseName()));
   }
 }

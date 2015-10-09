@@ -13,10 +13,10 @@
         _util.setMaxUploaders(limit);
         changed=true;
         _config.setProperty(PROP_UPLOADERS_TOTAL,Integer.toString(limit));
-        addMessage(_("Total uploaders limit changed to {0}",limit));
+        addMessage(_t("Total uploaders limit changed to {0}",limit));
       }
  else {
-        addMessage(_("Minimum total uploaders limit is {0}",Snark.MIN_TOTAL_UPLOADERS));
+        addMessage(_t("Minimum total uploaders limit is {0}",Snark.MIN_TOTAL_UPLOADERS));
       }
     }
   }
@@ -32,10 +32,10 @@
         _util.setMaxUpBW(limit);
         changed=true;
         _config.setProperty(PROP_UPBW_MAX,Integer.toString(limit));
-        addMessage(_("Up BW limit changed to {0}KBps",limit));
+        addMessage(_t("Up BW limit changed to {0}KBps",limit));
       }
  else {
-        addMessage(_("Minimum up bandwidth limit is {0}KBps",MIN_UP_BW));
+        addMessage(_t("Minimum up bandwidth limit is {0}KBps",MIN_UP_BW));
       }
     }
   }
@@ -50,7 +50,7 @@
       _util.setStartupDelay(minutes);
       changed=true;
       _config.setProperty(PROP_STARTUP_DELAY,Integer.toString(minutes));
-      addMessage(_("Startup delay changed to {0}",DataHelper.formatDuration2(minutes * (60L * 1000))));
+      addMessage(_t("Startup delay changed to {0}",DataHelper.formatDuration2(minutes * (60L * 1000))));
     }
   }
   if (refreshDelay != null) {
@@ -59,8 +59,8 @@
       if (secs != getRefreshDelaySeconds()) {
         changed=true;
         _config.setProperty(PROP_REFRESH_DELAY,Integer.toString(secs));
-        if (secs >= 0)         addMessage(_("Refresh time changed to {0}",DataHelper.formatDuration2(secs * 1000)));
- else         addMessage(_("Refresh disabled"));
+        if (secs >= 0)         addMessage(_t("Refresh time changed to {0}",DataHelper.formatDuration2(secs * 1000)));
+ else         addMessage(_t("Refresh disabled"));
       }
     }
  catch (    NumberFormatException nfe) {
@@ -75,7 +75,7 @@
         changed=true;
         pageSize=Integer.toString(size);
         _config.setProperty(PROP_PAGE_SIZE,pageSize);
-        addMessage(_("Page size changed to {0}",pageSize));
+        addMessage(_t("Page size changed to {0}",pageSize));
       }
     }
  catch (    NumberFormatException nfe) {
@@ -85,22 +85,22 @@
     dataDir=DataHelper.stripHTML(dataDir.trim());
     File dd=new File(dataDir);
     if (!dd.isAbsolute()) {
-      addMessage(_("Data directory must be an absolute path") + ": " + dataDir);
+      addMessage(_t("Data directory must be an absolute path") + ": " + dataDir);
     }
  else     if (!dd.exists()) {
-      addMessage(_("Data directory does not exist") + ": " + dataDir);
+      addMessage(_t("Data directory does not exist") + ": " + dataDir);
     }
  else     if (!dd.isDirectory()) {
-      addMessage(_("Not a directory") + ": " + dataDir);
+      addMessage(_t("Not a directory") + ": " + dataDir);
     }
  else     if (!dd.canRead()) {
-      addMessage(_("Unreadable") + ": " + dataDir);
+      addMessage(_t("Unreadable") + ": " + dataDir);
     }
  else {
       changed=true;
       interruptMonitor=true;
       _config.setProperty(PROP_DIR,dataDir);
-      addMessage(_("Data directory changed to {0}",dataDir));
+      addMessage(_t("Data directory changed to {0}",dataDir));
     }
   }
   int oldI2CPPort=_util.getI2CPPort();
@@ -147,36 +147,36 @@
       p.putAll(opts);
       _util.setI2CPConfig(i2cpHost,port,p);
       _util.setMaxUpBW(getInt(PROP_UPBW_MAX,DEFAULT_MAX_UP_BW));
-      addMessage(_("I2CP and tunnel changes will take effect after stopping all torrents"));
+      addMessage(_t("I2CP and tunnel changes will take effect after stopping all torrents"));
     }
  else     if (!reconnect) {
       _config.setProperty(PROP_I2CP_OPTS,i2cpOpts.trim());
-      addMessage(_("I2CP options changed to {0}",i2cpOpts));
+      addMessage(_t("I2CP options changed to {0}",i2cpOpts));
       _util.setI2CPConfig(oldI2CPHost,oldI2CPPort,opts);
     }
  else {
       if (_util.connected()) {
         _util.disconnect();
-        addMessage(_("Disconnecting old I2CP destination"));
+        addMessage(_t("Disconnecting old I2CP destination"));
       }
-      addMessage(_("I2CP settings changed to {0}",i2cpHost + ':' + port+ ' '+ i2cpOpts));
+      addMessage(_t("I2CP settings changed to {0}",i2cpHost + ':' + port+ ' '+ i2cpOpts));
       _util.setI2CPConfig(i2cpHost,port,opts);
       _util.setMaxUpBW(getInt(PROP_UPBW_MAX,DEFAULT_MAX_UP_BW));
       boolean ok=_util.connect();
       if (!ok) {
-        addMessage(_("Unable to connect with the new settings, reverting to the old I2CP settings"));
+        addMessage(_t("Unable to connect with the new settings, reverting to the old I2CP settings"));
         _util.setI2CPConfig(oldI2CPHost,oldI2CPPort,oldOpts);
         ok=_util.connect();
-        if (!ok)         addMessage(_("Unable to reconnect with the old settings!"));
+        if (!ok)         addMessage(_t("Unable to reconnect with the old settings!"));
       }
  else {
-        addMessage(_("Reconnected on the new I2CP destination"));
+        addMessage(_t("Reconnected on the new I2CP destination"));
         _config.setProperty(PROP_I2CP_HOST,i2cpHost.trim());
         _config.setProperty(PROP_I2CP_PORT,"" + port);
         _config.setProperty(PROP_I2CP_OPTS,i2cpOpts.trim());
         for (        Snark snark : _snarks.values()) {
           if (snark.restartAcceptor()) {
-            addMessage(_("I2CP listener restarted for \"{0}\"",snark.getBaseName()));
+            addMessage(_t("I2CP listener restarted for \"{0}\"",snark.getBaseName()));
             break;
           }
         }
@@ -187,35 +187,35 @@
   if (areFilesPublic() != filesPublic) {
     _config.setProperty(PROP_FILES_PUBLIC,Boolean.toString(filesPublic));
     _util.setFilesPublic(filesPublic);
-    if (filesPublic)     addMessage(_("New files will be publicly readable"));
- else     addMessage(_("New files will not be publicly readable"));
+    if (filesPublic)     addMessage(_t("New files will be publicly readable"));
+ else     addMessage(_t("New files will not be publicly readable"));
     changed=true;
   }
   if (shouldAutoStart() != autoStart) {
     _config.setProperty(PROP_AUTO_START,Boolean.toString(autoStart));
-    if (autoStart)     addMessage(_("Enabled autostart"));
- else     addMessage(_("Disabled autostart"));
+    if (autoStart)     addMessage(_t("Enabled autostart"));
+ else     addMessage(_t("Disabled autostart"));
     changed=true;
   }
   if (_util.shouldUseOpenTrackers() != useOpenTrackers) {
     _config.setProperty(PROP_USE_OPENTRACKERS,useOpenTrackers + "");
-    if (useOpenTrackers)     addMessage(_("Enabled open trackers - torrent restart required to take effect."));
- else     addMessage(_("Disabled open trackers - torrent restart required to take effect."));
+    if (useOpenTrackers)     addMessage(_t("Enabled open trackers - torrent restart required to take effect."));
+ else     addMessage(_t("Disabled open trackers - torrent restart required to take effect."));
     _util.setUseOpenTrackers(useOpenTrackers);
     changed=true;
   }
   if (_util.shouldUseDHT() != useDHT) {
     _config.setProperty(PROP_USE_DHT,Boolean.toString(useDHT));
-    if (useDHT)     addMessage(_("Enabled DHT."));
- else     addMessage(_("Disabled DHT."));
-    if (_util.connected())     addMessage(_("DHT change requires tunnel shutdown and reopen"));
+    if (useDHT)     addMessage(_t("Enabled DHT."));
+ else     addMessage(_t("Disabled DHT."));
+    if (_util.connected())     addMessage(_t("DHT change requires tunnel shutdown and reopen"));
     _util.setUseDHT(useDHT);
     changed=true;
   }
   if (theme != null) {
     if (!theme.equals(_config.getProperty(PROP_THEME))) {
       _config.setProperty(PROP_THEME,theme);
-      addMessage(_("{0} theme loaded, return to main i2psnark page to view.",theme));
+      addMessage(_t("{0} theme loaded, return to main i2psnark page to view.",theme));
       changed=true;
     }
   }
@@ -224,6 +224,6 @@
     if (interruptMonitor)     _monitor.interrupt();
   }
  else {
-    addMessage(_("Configuration unchanged."));
+    addMessage(_t("Configuration unchanged."));
   }
 }

@@ -1,0 +1,47 @@
+{
+  _util=util;
+  _base=baseFile;
+  _log=util.getContext().logManager().getLog(Storage.class);
+  this.listener=listener;
+  _preserveFileNames=true;
+  _torrentFiles=getFiles(baseFile);
+  long total=0;
+  ArrayList<Long> lengthsList=new ArrayList<Long>();
+  for (  TorrentFile tf : _torrentFiles) {
+    long length=tf.length;
+    total+=length;
+    lengthsList.add(Long.valueOf(length));
+  }
+  if (total <= 0)   throw new IOException("Torrent contains no data");
+  if (total > MAX_TOTAL_SIZE)   throw new IOException("Torrent too big (" + total + " bytes), max is "+ MAX_TOTAL_SIZE);
+  int pc_size;
+  if (total <= 5 * 1024 * 1024)   pc_size=DEFAULT_PIECE_SIZE / 4;
+ else   if (total <= 10 * 1024 * 1024)   pc_size=DEFAULT_PIECE_SIZE / 2;
+ else   pc_size=DEFAULT_PIECE_SIZE;
+  int pcs=(int)((total - 1) / pc_size) + 1;
+  while (pcs > (MAX_PIECES * 2 / 3) && pc_size < MAX_PIECE_SIZE) {
+    pc_size*=2;
+    pcs=(int)((total - 1) / pc_size) + 1;
+  }
+  piece_size=pc_size;
+  pieces=pcs;
+  total_length=total;
+  bitfield=new BitField(pieces);
+  needed=0;
+  List<List<String>> files=new ArrayList<List<String>>();
+  for (  TorrentFile tf : _torrentFiles) {
+    List<String> file=new ArrayList<String>();
+    StringTokenizer st=new StringTokenizer(tf.name,File.separator);
+    while (st.hasMoreTokens()) {
+      String part=st.nextToken();
+      file.add(part);
+    }
+    files.add(file);
+  }
+  if (files.size() == 1 && !baseFile.isDirectory()) {
+    files=null;
+    lengthsList=null;
+  }
+  byte[] piece_hashes=fast_digestCreate();
+  metainfo=new MetaInfo(announce,baseFile.getName(),null,files,lengthsList,piece_size,piece_hashes,total,privateTorrent,announce_list,created_by);
+}

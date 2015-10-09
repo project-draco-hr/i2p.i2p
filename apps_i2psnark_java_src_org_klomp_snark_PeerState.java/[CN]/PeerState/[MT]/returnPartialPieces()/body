@@ -4,7 +4,11 @@
   for (  Integer p : pcs) {
     Request req=getLowestOutstandingRequest(p.intValue());
     if (req != null) {
-      req.getPartialPiece().setDownloaded(req.off);
+      PartialPiece pp=req.getPartialPiece();
+synchronized (pp) {
+        int dl=pp.getDownloaded();
+        if (req.off != dl)         req=new Request(pp,dl,1);
+      }
       rv.add(req);
     }
   }

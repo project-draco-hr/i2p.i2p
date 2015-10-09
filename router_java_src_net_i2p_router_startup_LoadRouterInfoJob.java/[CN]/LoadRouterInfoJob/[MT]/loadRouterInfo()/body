@@ -25,6 +25,12 @@
       SigType stype=signingPubKey.getType();
       SigType cstype=CreateRouterInfoJob.getSigTypeConfig(getContext());
       boolean sigTypeChanged=stype != cstype;
+      if (sigTypeChanged && getContext().getProperty(CreateRouterInfoJob.PROP_ROUTER_SIGTYPE) == null) {
+        if (getContext().random().nextInt(20) > 0) {
+          sigTypeChanged=false;
+          if (_log.shouldWarn())           _log.warn("Deferring RI rekey from " + stype + " to "+ cstype);
+        }
+      }
       if (sigTypeChanged || shouldRebuild(privkey)) {
         if (sigTypeChanged)         _log.logAlways(Log.WARN,"Rebuilding RouterInfo with new signature type " + cstype);
         _us=null;

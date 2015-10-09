@@ -18,8 +18,16 @@ synchronized (wantedPieces) {
         if (_log.shouldLog(Log.INFO))         _log.info("Got valid piece " + piece + "/"+ metainfo.getPieces()+ " from "+ peer+ " for "+ metainfo.getName());
       }
  else {
+        markUnrequested(peer,piece);
+        removePartialPiece(piece);
         downloaded.addAndGet(0 - metainfo.getPieceLength(piece));
-        _log.warn("Got BAD piece " + piece + "/"+ metainfo.getPieces()+ " from "+ peer+ " for "+ metainfo.getName());
+        for (        Piece pc : wantedPieces) {
+          if (pc.getId() == piece) {
+            pc.removePeer(peer);
+            break;
+          }
+        }
+        if (_log.shouldWarn())         _log.warn("Got BAD piece " + piece + "/"+ metainfo.getPieces()+ " from "+ peer+ " for "+ metainfo.getName());
         return false;
       }
     }
