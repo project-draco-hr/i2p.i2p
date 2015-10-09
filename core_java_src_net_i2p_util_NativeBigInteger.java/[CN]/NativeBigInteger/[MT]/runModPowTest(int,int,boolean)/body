@@ -1,24 +1,33 @@
 {
   SecureRandom rand=RandomSource.getInstance();
-  byte[] _sampleGenerator=CryptoConstants.elgg.toByteArray();
-  byte[] _samplePrime=CryptoConstants.elgp.toByteArray();
-  BigInteger jg=new BigInteger(_sampleGenerator);
-  NativeBigInteger ng=new NativeBigInteger(_sampleGenerator);
-  BigInteger jp=new BigInteger(_samplePrime);
+  byte[] sampleGenerator=CryptoConstants.elgg.toByteArray();
+  byte[] samplePrime=CryptoConstants.elgp.toByteArray();
+  BigInteger jg=new BigInteger(sampleGenerator);
+  NativeBigInteger ng=CryptoConstants.elgg;
+  BigInteger jp=new BigInteger(samplePrime);
   long totalTime=0;
   long javaTime=0;
   int runsProcessed=0;
   for (int i=0; i < 1000; i++) {
-    BigInteger bi=new NativeBigInteger(16,rand);
+    BigInteger bi;
+    do {
+      bi=new BigInteger(16,rand);
+    }
+ while (bi.signum() == 0);
     if (mode == 1)     jg.modPow(bi,jp);
  else     if (mode == 2)     ng.modPowCT(bi,jp);
  else     bi.modInverse(jp);
   }
   BigInteger myValue=null, jval;
+  final NativeBigInteger g=CryptoConstants.elgg;
+  final NativeBigInteger p=CryptoConstants.elgp;
+  final int numBits=(mode == 3) ? 1060 : 2048;
   for (runsProcessed=0; runsProcessed < numRuns; runsProcessed++) {
-    BigInteger bi=new BigInteger(2048,rand);
-    NativeBigInteger g=new NativeBigInteger(_sampleGenerator);
-    NativeBigInteger p=new NativeBigInteger(_samplePrime);
+    BigInteger bi;
+    do {
+      bi=new BigInteger(numBits,rand);
+    }
+ while (bi.signum() == 0);
     NativeBigInteger k=new NativeBigInteger(1,bi.toByteArray());
     long beforeModPow=System.nanoTime();
     if (_nativeOk) {
