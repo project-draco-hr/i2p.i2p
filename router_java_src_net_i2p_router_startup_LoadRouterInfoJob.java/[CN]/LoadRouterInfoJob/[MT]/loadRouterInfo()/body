@@ -32,8 +32,15 @@
         }
       }
       if (sigTypeChanged || shouldRebuild(privkey)) {
+        if (_us != null) {
+          Hash h=_us.getIdentity().getHash();
+          _log.logAlways(Log.WARN,"Deleting old router identity " + h.toBase64());
+          File f=PersistentDataStore.getRouterInfoFile(getContext(),h);
+          f.delete();
+          getContext().banlist().banlistRouterForever(h,"Our previous identity");
+          _us=null;
+        }
         if (sigTypeChanged)         _log.logAlways(Log.WARN,"Rebuilding RouterInfo with new signature type " + cstype);
-        _us=null;
         if (fis1 != null) {
           try {
             fis1.close();
