@@ -1,0 +1,41 @@
+{
+  Log log=ctx.logManager().getLog(PersistNews.class);
+  File dir=new SecureDirectory(ctx.getConfigDir(),DIR);
+  if (!dir.exists())   dir.mkdirs();
+  StringBuilder buf=new StringBuilder();
+  boolean rv=true;
+  for (  Node entry : entries) {
+    Node nid=entry.getNode("id");
+    if (nid == null) {
+      if (log.shouldWarn())       log.warn("entry without UUID");
+      continue;
+    }
+    String id=nid.getValue();
+    if (id == null) {
+      if (log.shouldWarn())       log.warn("entry without UUID");
+      continue;
+    }
+    String name=idToName(ctx,id);
+    File file=new File(dir,name);
+    Writer out=null;
+    try {
+      out=new OutputStreamWriter(new GZIPOutputStream(new SecureFileOutputStream(file)));
+      out.write(XML_START);
+      XMLParser.toString(buf,entry);
+      out.write(buf.toString());
+      buf.setLength(0);
+    }
+ catch (    IOException ioe) {
+      if (log.shouldWarn())       log.warn("failed store to " + file,ioe);
+      rv=false;
+    }
+ finally {
+      if (out != null)       try {
+        out.close();
+      }
+ catch (      IOException ioe) {
+      }
+    }
+  }
+  return rv;
+}

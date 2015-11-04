@@ -18,10 +18,19 @@
       xml=to1;
     }
     NewsXMLParser parser=new NewsXMLParser(_context);
-    parser.parse(xml);
+    Node root=parser.parse(xml);
     xml.delete();
     NewsMetadata data=parser.getMetadata();
     List<NewsEntry> entries=parser.getEntries();
+    ClientAppManager cmgr=_context.clientAppManager();
+    if (cmgr != null) {
+      NewsManager nmgr=(NewsManager)cmgr.getRegisteredApp(NewsManager.APP_NAME);
+      if (nmgr != null) {
+        nmgr.addEntries(entries);
+        List<Node> nodes=NewsXMLParser.getNodes(root,"entry");
+        nmgr.storeEntries(nodes);
+      }
+    }
     String sudVersion=su3.getVersionString();
     String signingKeyName=su3.getSignerString();
     File to3=new File(_context.getTempDir(),"tmp3-" + _context.random().nextInt() + ".xml");

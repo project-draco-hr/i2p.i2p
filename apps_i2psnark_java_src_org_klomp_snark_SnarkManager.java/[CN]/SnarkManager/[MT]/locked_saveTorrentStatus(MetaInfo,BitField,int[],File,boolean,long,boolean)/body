@@ -1,19 +1,23 @@
 {
   byte[] ih=metainfo.getInfoHash();
+  Properties config=getConfig(ih);
+  String now=Long.toString(System.currentTimeMillis());
+  config.setProperty(PROP_META_STAMP,now);
+  if (config.getProperty(PROP_META_ADDED) == null)   config.setProperty(PROP_META_ADDED,now);
   String bfs;
   if (bitfield.complete()) {
     bfs=".";
+    if (config.getProperty(PROP_META_COMPLETED) == null)     config.setProperty(PROP_META_COMPLETED,now);
   }
  else {
     byte[] bf=bitfield.getFieldBytes();
     bfs=Base64.encode(bf);
+    config.remove(PROP_META_COMPLETED);
   }
-  boolean running=!stopped;
-  Properties config=getConfig(ih);
-  config.setProperty(PROP_META_STAMP,Long.toString(System.currentTimeMillis()));
   config.setProperty(PROP_META_BITFIELD,bfs);
   config.setProperty(PROP_META_PRESERVE_NAMES,Boolean.toString(preserveNames));
   config.setProperty(PROP_META_UPLOADED,Long.toString(uploaded));
+  boolean running=!stopped;
   config.setProperty(PROP_META_RUNNING,Boolean.toString(running));
   if (base != null)   config.setProperty(PROP_META_BASE,base.getAbsolutePath());
   if (priorities != null) {
@@ -39,13 +43,9 @@
  else {
     config.remove(PROP_META_PRIORITY);
   }
-  File conf=configFile(_configDir,ih);
-  File subdir=conf.getParentFile();
-  if (!subdir.exists())   subdir.mkdirs();
-  try {
-    DataHelper.storeProps(config,conf);
-  }
- catch (  IOException ioe) {
-    _log.error("Unable to save the config to " + conf);
-  }
+  config.remove(PROP_META_MAGNET);
+  config.remove(PROP_META_MAGNET_DIR);
+  config.remove(PROP_META_MAGNET_DN);
+  config.remove(PROP_META_MAGNET_TR);
+  locked_saveTorrentStatus(ih,config);
 }

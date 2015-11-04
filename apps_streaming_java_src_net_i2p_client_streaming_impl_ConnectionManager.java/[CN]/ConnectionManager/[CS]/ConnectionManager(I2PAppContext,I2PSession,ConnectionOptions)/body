@@ -7,14 +7,14 @@
   _pendingPings=new ConcurrentHashMap<Long,PingRequest>(4);
   _messageHandler=new MessageHandler(_context,this);
   _packetHandler=new PacketHandler(_context,this);
-  _connectionHandler=new ConnectionHandler(_context,this);
   _schedulerChooser=new SchedulerChooser(_context);
   _conPacketHandler=new ConnectionPacketHandler(_context);
   _timer=new RetransmissionTimer(_context,"Streaming Timer " + session.getMyDestination().calculateHash().toBase64().substring(0,4));
+  _connectionHandler=new ConnectionHandler(_context,this,_timer);
   _tcbShare=new TCBShare(_context,_timer);
   int protocol=defaultOptions.getEnforceProtocol() ? I2PSession.PROTO_STREAMING : I2PSession.PROTO_ANY;
   _session.addMuxedSessionListener(_messageHandler,protocol,defaultOptions.getLocalPort());
-  _outboundQueue=new PacketQueue(_context);
+  _outboundQueue=new PacketQueue(_context,_timer);
   _recentlyClosed=new LHMCache<Long,Object>(32);
   _soTimeout=-1;
   _context.statManager().createRateStat("stream.con.lifetimeMessagesSent","How many messages do we send on a stream?","Stream",new long[]{60 * 60 * 1000,24 * 60 * 60* 1000});

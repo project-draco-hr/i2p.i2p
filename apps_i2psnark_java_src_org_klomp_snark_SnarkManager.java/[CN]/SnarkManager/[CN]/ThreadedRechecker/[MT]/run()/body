@@ -1,0 +1,22 @@
+{
+  try {
+    if (_log.shouldWarn())     _log.warn("Starting recheck of " + snark.getBaseName());
+    boolean changed=snark.getStorage().recheck();
+    if (changed)     updateStatus(snark);
+    if (_log.shouldWarn())     _log.warn("Finished recheck of " + snark.getBaseName() + " changed? "+ changed);
+    String link=linkify(snark);
+    if (changed) {
+      int pieces=snark.getPieces();
+      double completion=(pieces - snark.getNeeded()) / (double)pieces;
+      String complete=(new DecimalFormat("0.00%")).format(completion);
+      addMessageNoEscape(_t("Finished recheck of torrent {0}, now {1} complete",link,complete));
+    }
+ else {
+      addMessageNoEscape(_t("Finished recheck of torrent {0}, unchanged",link));
+    }
+  }
+ catch (  Exception e) {
+    _log.error("Error rechecking " + snark.getBaseName(),e);
+    addMessage(_t("Error checking the torrent {0}",snark.getBaseName()) + ": " + e);
+  }
+}
