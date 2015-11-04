@@ -1,10 +1,36 @@
 {
-  int last=url.lastIndexOf('/');
-  if ((last < 0) || (url.lastIndexOf('#') > last))   last=url.lastIndexOf('#');
-  if ((last < 0) || (url.lastIndexOf('?') > last))   last=url.lastIndexOf('?');
-  if ((last < 0) || (url.lastIndexOf('=') > last))   last=url.lastIndexOf('=');
-  String name=null;
-  if (last >= 0)   name=sanitize(url.substring(last + 1));
-  if ((name != null) && (name.length() > 0))   return name;
- else   return sanitize(url);
+  URL nameURL=null;
+  String name;
+  try {
+    nameURL=new URL(url);
+  }
+ catch (  MalformedURLException e) {
+    System.err.println("Please enter a properly formed URL.");
+    System.exit(1);
+  }
+  String path=nameURL.getPath();
+  Pattern slashes=Pattern.compile("/+");
+  Matcher matcher=slashes.matcher(path);
+  if (path.equals("") || matcher.matches()) {
+    name=sanitize(nameURL.getAuthority());
+  }
+ else {
+    int last=path.lastIndexOf('/');
+    if (last != path.length() - 1) {
+      name=sanitize(path.substring(last + 1));
+    }
+ else {
+      int i=1;
+      int slash;
+      while (true) {
+        slash=path.lastIndexOf('/',last - i);
+        if (slash != last - i) {
+          break;
+        }
+        i+=1;
+      }
+      name=sanitize(path.substring(slash + 1,path.length() - i));
+    }
+  }
+  return name;
 }
