@@ -1,0 +1,24 @@
+{
+  if (_log.shouldLog(Log.DEBUG))   _log.debug(getPrefix() + "starting muxed availability notifier");
+  _msgs.clear();
+  _alive=true;
+  while (_alive) {
+    MsgData msg;
+    try {
+      msg=_msgs.take();
+    }
+ catch (    InterruptedException ie) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("I2PSessionMuxedImpl.run() InterruptedException " + String.valueOf(_msgs.size()) + " Messages, Alive "+ _alive);
+      continue;
+    }
+    if (msg.size == POISON_SIZE) {
+      break;
+    }
+    try {
+      _demultiplexer.messageAvailable(I2PSessionMuxedImpl.this,msg.id,msg.size,msg.proto,msg.fromPort,msg.toPort);
+    }
+ catch (    Exception e) {
+      _log.error("Error notifying app of message availability",e);
+    }
+  }
+}

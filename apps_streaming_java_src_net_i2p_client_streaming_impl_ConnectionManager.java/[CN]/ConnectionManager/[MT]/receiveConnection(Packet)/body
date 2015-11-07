@@ -2,7 +2,7 @@
   ConnectionOptions opts=new ConnectionOptions(_defaultOptions);
   opts.setPort(synPacket.getRemotePort());
   opts.setLocalPort(synPacket.getLocalPort());
-  Connection con=new Connection(_context,this,_schedulerChooser,_timer,_outboundQueue,_conPacketHandler,opts,true);
+  Connection con=new Connection(_context,this,synPacket.getSession(),_schedulerChooser,_timer,_outboundQueue,_conPacketHandler,opts,true);
   _tcbShare.updateOptsFromShare(con);
   boolean reject=false;
   int active=0;
@@ -34,13 +34,13 @@
         }
       }
     }
-    PacketLocal reply=new PacketLocal(_context,from);
+    PacketLocal reply=new PacketLocal(_context,from,synPacket.getSession());
     reply.setFlag(Packet.FLAG_RESET);
     reply.setFlag(Packet.FLAG_SIGNATURE_INCLUDED);
     reply.setAckThrough(synPacket.getSequenceNum());
     reply.setSendStreamId(synPacket.getReceiveStreamId());
     reply.setReceiveStreamId(0);
-    reply.setOptionalFrom(_session.getMyDestination());
+    reply.setOptionalFrom();
     reply.setLocalPort(synPacket.getLocalPort());
     reply.setRemotePort(synPacket.getRemotePort());
     _outboundQueue.enqueue(reply);

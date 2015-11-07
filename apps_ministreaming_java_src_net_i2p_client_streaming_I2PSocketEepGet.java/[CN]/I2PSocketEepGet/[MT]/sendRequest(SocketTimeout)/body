@@ -35,8 +35,32 @@
           throw new IOException("Bad /i2p/ format: " + _actualURL);
         }
       }
-      Destination dest=_context.namingService().lookup(host);
-      if (dest == null)       throw new UnknownHostException("Unknown or non-i2p host");
+      Destination dest;
+      I2PSession sess=_socketManager.getSession();
+      if (sess != null && !sess.isClosed()) {
+        try {
+          if (host.length() == 60 && host.endsWith(".b32.i2p")) {
+            byte[] b=Base32.decode(host.substring(0,52));
+            if (b != null) {
+              Hash h=Hash.create(b);
+              dest=sess.lookupDest(h,20 * 1000);
+            }
+ else {
+              dest=null;
+            }
+          }
+ else {
+            dest=sess.lookupDest(host,20 * 1000);
+          }
+        }
+ catch (        I2PSessionException ise) {
+          dest=null;
+        }
+      }
+ else {
+        dest=_context.namingService().lookup(host);
+      }
+      if (dest == null)       throw new UnknownHostException("Unknown or non-i2p host: " + host);
       Properties props=new Properties();
       props.setProperty(I2PSocketOptions.PROP_CONNECT_TIMEOUT,"" + CONNECT_TIMEOUT);
       props.setProperty(I2PSocketOptions.PROP_READ_TIMEOUT,"" + INACTIVITY_TIMEOUT);

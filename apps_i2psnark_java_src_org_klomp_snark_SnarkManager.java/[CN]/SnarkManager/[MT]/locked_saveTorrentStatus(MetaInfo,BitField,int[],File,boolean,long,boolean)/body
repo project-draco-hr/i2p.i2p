@@ -1,0 +1,51 @@
+{
+  byte[] ih=metainfo.getInfoHash();
+  Properties config=getConfig(ih);
+  String now=Long.toString(System.currentTimeMillis());
+  config.setProperty(PROP_META_STAMP,now);
+  if (config.getProperty(PROP_META_ADDED) == null)   config.setProperty(PROP_META_ADDED,now);
+  String bfs;
+  if (bitfield.complete()) {
+    bfs=".";
+    if (config.getProperty(PROP_META_COMPLETED) == null)     config.setProperty(PROP_META_COMPLETED,now);
+  }
+ else {
+    byte[] bf=bitfield.getFieldBytes();
+    bfs=Base64.encode(bf);
+    config.remove(PROP_META_COMPLETED);
+  }
+  config.setProperty(PROP_META_BITFIELD,bfs);
+  config.setProperty(PROP_META_PRESERVE_NAMES,Boolean.toString(preserveNames));
+  config.setProperty(PROP_META_UPLOADED,Long.toString(uploaded));
+  boolean running=!stopped;
+  config.setProperty(PROP_META_RUNNING,Boolean.toString(running));
+  if (base != null)   config.setProperty(PROP_META_BASE,base.getAbsolutePath());
+  if (priorities != null) {
+    boolean nonzero=false;
+    for (int i=0; i < priorities.length; i++) {
+      if (priorities[i] != 0) {
+        nonzero=true;
+        break;
+      }
+    }
+    if (nonzero) {
+      StringBuilder buf=new StringBuilder(2 * priorities.length);
+      for (int i=0; i < priorities.length; i++) {
+        if (priorities[i] != 0)         buf.append(Integer.toString(priorities[i]));
+        if (i != priorities.length - 1)         buf.append(',');
+      }
+      config.setProperty(PROP_META_PRIORITY,buf.toString());
+    }
+ else {
+      config.remove(PROP_META_PRIORITY);
+    }
+  }
+ else {
+    config.remove(PROP_META_PRIORITY);
+  }
+  config.remove(PROP_META_MAGNET);
+  config.remove(PROP_META_MAGNET_DIR);
+  config.remove(PROP_META_MAGNET_DN);
+  config.remove(PROP_META_MAGNET_TR);
+  locked_saveTorrentStatus(ih,config);
+}

@@ -1,12 +1,13 @@
 {
-  stopped=true;
   TrackerClient tc=trackerclient;
   if (tc != null)   tc.halt(fast);
   PeerCoordinator pc=coordinator;
   if (pc != null)   pc.halt();
   Storage st=storage;
+  if (!fast)   stopped=true;
   if (st != null) {
-    boolean changed=storage.isChanged() || getUploaded() != savedUploaded;
+    boolean changed=true;
+    if (changed && completeListener != null)     completeListener.updateStatus(this);
     try {
       storage.close();
     }
@@ -14,8 +15,8 @@
       System.out.println("Error closing " + torrent);
       ioe.printStackTrace();
     }
-    if (changed && completeListener != null)     completeListener.updateStatus(this);
   }
+  if (fast)   stopped=true;
   if (pc != null && _peerCoordinatorSet != null)   _peerCoordinatorSet.remove(pc);
   if (_peerCoordinatorSet == null)   _util.disconnect();
 }

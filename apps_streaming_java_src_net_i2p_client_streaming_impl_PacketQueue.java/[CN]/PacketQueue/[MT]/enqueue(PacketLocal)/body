@@ -13,7 +13,7 @@
   try {
     int size=0;
     long beforeWrite=System.currentTimeMillis();
-    if (packet.shouldSign())     size=packet.writeSignedPacket(buf,0,_context,_session.getPrivateKey());
+    if (packet.shouldSign())     size=packet.writeSignedPacket(buf,0);
  else     size=packet.writePacket(buf,0);
     long writeTime=System.currentTimeMillis() - beforeWrite;
     if ((writeTime > 1000) && (_log.shouldLog(Log.WARN)))     _log.warn("took " + writeTime + "ms to write the packet: "+ packet);
@@ -53,13 +53,14 @@
         options.setTagThreshold(thresh);
       }
     }
+    I2PSession session=packet.getSession();
     if (listenForStatus) {
-      long id=_session.sendMessage(packet.getTo(),buf,0,size,I2PSession.PROTO_STREAMING,packet.getLocalPort(),packet.getRemotePort(),options,this);
+      long id=session.sendMessage(packet.getTo(),buf,0,size,I2PSession.PROTO_STREAMING,packet.getLocalPort(),packet.getRemotePort(),options,this);
       _messageStatusMap.put(Long.valueOf(id),packet.getConnection());
       sent=true;
     }
  else {
-      sent=_session.sendMessage(packet.getTo(),buf,0,size,I2PSession.PROTO_STREAMING,packet.getLocalPort(),packet.getRemotePort(),options);
+      sent=session.sendMessage(packet.getTo(),buf,0,size,I2PSession.PROTO_STREAMING,packet.getLocalPort(),packet.getRemotePort(),options);
     }
     end=_context.clock().now();
     if ((end - begin > 1000) && (_log.shouldLog(Log.WARN)))     _log.warn("Took " + (end - begin) + "ms to sendMessage(...) "+ packet);
@@ -83,8 +84,10 @@
  else {
     packet.incrementSends();
     Connection c=packet.getConnection();
-    String suffix=(c != null ? "wsize " + c.getOptions().getWindowSize() + " rto "+ c.getOptions().getRTO() : null);
-    if (_log.shouldDebug())     _connectionManager.getPacketHandler().displayPacket(packet,"SEND",suffix);
+    if (c != null && _log.shouldDebug()) {
+      String suffix="wsize " + c.getOptions().getWindowSize() + " rto "+ c.getOptions().getRTO();
+      c.getConnectionManager().getPacketHandler().displayPacket(packet,"SEND",suffix);
+    }
     if (I2PSocketManagerFull.pcapWriter != null && _context.getBooleanProperty(I2PSocketManagerFull.PROP_PCAP))     packet.logTCPDump();
   }
   if ((packet.getSequenceNum() == 0) && (!packet.isFlagSet(Packet.FLAG_SYNCHRONIZE))) {

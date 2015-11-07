@@ -11,24 +11,21 @@
     if (type == TYPE_REQUEST) {
       if (log.shouldLog(Log.DEBUG))       log.debug("Got request for " + piece + " from: "+ peer);
       byte[] pc;
+      int totalSize;
 synchronized (state) {
         pc=state.getChunk(piece);
+        totalSize=state.getSize();
       }
-      sendPiece(peer,piece,pc);
+      sendPiece(peer,piece,pc,totalSize);
       peer.uploaded(pc.length);
       listener.uploaded(peer,pc.length);
     }
  else     if (type == TYPE_DATA) {
-      int size=map.get("total_size").getInt();
-      if (log.shouldLog(Log.DEBUG))       log.debug("Got data for " + piece + " length "+ size+ " from: "+ peer);
       boolean done;
       int chk=-1;
 synchronized (state) {
         if (state.isComplete())         return;
         int len=is.available();
-        if (len != size) {
-          if (log.shouldLog(Log.WARN))           log.warn("total_size " + size + " but avail data "+ len);
-        }
         peer.downloaded(len);
         listener.downloaded(peer,len);
         done=state.saveChunk(piece,bs,bs.length - len,len);

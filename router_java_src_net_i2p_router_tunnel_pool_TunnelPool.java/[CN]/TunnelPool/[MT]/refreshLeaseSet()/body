@@ -1,12 +1,18 @@
 {
   if (_settings.isInbound() && !_settings.isExploratory()) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug(toString() + ": refreshing leaseSet on tunnel expiration (but prior to grace timeout)");
-    LeaseSet ls=null;
+    LeaseSet ls;
 synchronized (_tunnels) {
       ls=locked_buildNewLeaseSet();
     }
     if (ls != null) {
       _context.clientManager().requestLeaseSet(_settings.getDestination(),ls);
+      Set<Hash> aliases=_settings.getAliases();
+      if (aliases != null && !aliases.isEmpty()) {
+        for (        Hash h : aliases) {
+          _context.clientManager().requestLeaseSet(h,ls);
+        }
+      }
     }
   }
 }
