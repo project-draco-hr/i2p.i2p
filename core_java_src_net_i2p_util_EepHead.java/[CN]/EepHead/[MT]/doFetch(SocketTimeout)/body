@@ -12,13 +12,20 @@
   if (_fetchInactivityTimeout > 0)   timeout.setInactivityTimeout(_fetchInactivityTimeout);
  else   timeout.setInactivityTimeout(60 * 1000);
   if (_redirectLocation != null) {
-    if (_redirectLocation.startsWith("http://")) {
-      _actualURL=_redirectLocation;
-    }
+    try {
+      if (_redirectLocation.startsWith("http://")) {
+        _actualURL=_redirectLocation;
+      }
  else {
-      URL url=new URL(_actualURL);
-      if (_redirectLocation.startsWith("/"))       _actualURL="http://" + url.getHost() + ":"+ url.getPort()+ _redirectLocation;
- else       _actualURL="http://" + url.getHost() + ":"+ url.getPort()+ "/"+ _redirectLocation;
+        URI url=new URI(_actualURL);
+        if (_redirectLocation.startsWith("/"))         _actualURL="http://" + url.getHost() + ":"+ url.getPort()+ _redirectLocation;
+ else         _actualURL="http://" + url.getHost() + ":"+ url.getPort()+ "/"+ _redirectLocation;
+      }
+    }
+ catch (    URISyntaxException use) {
+      IOException ioe=new MalformedURLException("Redirected to invalid URL");
+      ioe.initCause(use);
+      throw ioe;
     }
     AuthState as=_authState;
     if (_responseCode == 407) {
