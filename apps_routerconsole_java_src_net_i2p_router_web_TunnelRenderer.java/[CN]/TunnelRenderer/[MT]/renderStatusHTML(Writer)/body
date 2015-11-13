@@ -35,12 +35,12 @@
   int displayed=0;
   for (int i=0; i < participating.size(); i++) {
     HopConfig cfg=participating.get(i);
-    long count=cfg.getProcessedMessagesCount();
+    int count=cfg.getProcessedMessagesCount();
     if (count <= 0) {
       inactive++;
       continue;
     }
-    processed+=count;
+    processed+=cfg.getRecentMessagesCount();
     if (++displayed > DISPLAY_LIMIT)     continue;
     out.write("<tr>");
     if (cfg.getReceiveTunnel() != null)     out.write("<td class=\"cells\" align=\"center\">" + cfg.getReceiveTunnel().getTunnelId() + "</td>");
@@ -54,11 +54,11 @@
     long timeLeft=cfg.getExpiration() - _context.clock().now();
     if (timeLeft > 0)     out.write("<td class=\"cells\" align=\"center\">" + DataHelper.formatDuration2(timeLeft) + "</td>");
  else     out.write("<td class=\"cells\" align=\"center\">(" + _t("grace period") + ")</td>");
-    out.write("<td class=\"cells\" align=\"center\">" + cfg.getProcessedMessagesCount() + " KB</td>");
+    out.write("<td class=\"cells\" align=\"center\">" + count + " KB</td>");
     int lifetime=(int)((_context.clock().now() - cfg.getCreation()) / 1000);
     if (lifetime <= 0)     lifetime=1;
     if (lifetime > 10 * 60)     lifetime=10 * 60;
-    int bps=1024 * cfg.getProcessedMessagesCount() / lifetime;
+    int bps=1024 * count / lifetime;
     out.write("<td class=\"cells\" align=\"center\">" + bps + " Bps</td>");
     if (cfg.getSendTo() == null)     out.write("<td class=\"cells\" align=\"center\">" + _t("Outbound Endpoint") + "</td>");
  else     if (cfg.getReceiveFrom() == null)     out.write("<td class=\"cells\" align=\"center\">" + _t("Inbound Gateway") + "</td>");
