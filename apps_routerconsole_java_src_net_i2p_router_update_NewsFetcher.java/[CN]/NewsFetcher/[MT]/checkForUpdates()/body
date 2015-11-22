@@ -23,6 +23,18 @@
               _mgr.notifyVersionConstraint(this,_currentURI,ROUTER_SIGNED,"",ver,msg);
               return;
             }
+            if (!FileUtil.isPack200Supported()) {
+              String msg=_mgr._t("No Pack200 support in Java runtime.");
+              _log.logAlways(Log.WARN,"Cannot update to version " + ver + ": "+ msg);
+              _mgr.notifyVersionConstraint(this,_currentURI,ROUTER_SIGNED,"",ver,msg);
+              return;
+            }
+            if (!ConfigUpdateHandler.USE_SU3_UPDATE) {
+              String msg=_mgr._t("No update certificates installed.");
+              _log.logAlways(Log.WARN,"Cannot update to version " + ver + ": "+ msg);
+              _mgr.notifyVersionConstraint(this,_currentURI,ROUTER_SIGNED,"",ver,msg);
+              return;
+            }
             String minRouter=args.get(MIN_VERSION_KEY);
             if (minRouter != null) {
               if (VersionComparator.comp(RouterVersion.VERSION,minRouter) < 0) {
@@ -44,18 +56,12 @@
             }
             if (_log.shouldLog(Log.DEBUG))             _log.debug("Our version is out of date, update!");
             Map<UpdateMethod,List<URI>> sourceMap=new HashMap<UpdateMethod,List<URI>>(4);
-            if (ConfigUpdateHandler.USE_SU3_UPDATE) {
-              sourceMap.put(HTTP,_mgr.getUpdateURLs(ROUTER_SIGNED_SU3,"",HTTP));
-              addMethod(TORRENT,args.get(SU3_KEY),sourceMap);
-              addMethod(HTTP_CLEARNET,args.get(CLEARNET_HTTP_SU3_KEY),sourceMap);
-              addMethod(HTTPS_CLEARNET,args.get(CLEARNET_HTTPS_SU3_KEY),sourceMap);
-              _mgr.notifyVersionAvailable(this,_currentURI,ROUTER_SIGNED_SU3,"",sourceMap,ver,"");
-              sourceMap.clear();
-            }
-            sourceMap.put(HTTP,_mgr.getUpdateURLs(ROUTER_SIGNED,"",HTTP));
-            String key=FileUtil.isPack200Supported() ? SU2_KEY : SUD_KEY;
-            addMethod(TORRENT,args.get(key),sourceMap);
-            _mgr.notifyVersionAvailable(this,_currentURI,ROUTER_SIGNED,"",sourceMap,ver,"");
+            sourceMap.put(HTTP,_mgr.getUpdateURLs(ROUTER_SIGNED_SU3,"",HTTP));
+            addMethod(TORRENT,args.get(SU3_KEY),sourceMap);
+            addMethod(HTTP_CLEARNET,args.get(CLEARNET_HTTP_SU3_KEY),sourceMap);
+            addMethod(HTTPS_CLEARNET,args.get(CLEARNET_HTTPS_SU3_KEY),sourceMap);
+            _mgr.notifyVersionAvailable(this,_currentURI,ROUTER_SIGNED_SU3,"",sourceMap,ver,"");
+            sourceMap.clear();
           }
  else {
             if (_log.shouldLog(Log.DEBUG))             _log.debug("Our version is current");
