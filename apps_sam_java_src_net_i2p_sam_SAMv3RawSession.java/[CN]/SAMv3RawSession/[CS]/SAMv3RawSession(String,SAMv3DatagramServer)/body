@@ -1,15 +1,15 @@
 {
-  super(SAMv3Handler.sSessionsHash.get(nick).getDest(),SAMv3Handler.sSessionsHash.get(nick).getProps(),null);
+  super(SAMv3Handler.sSessionsHash.get(nick).getDest(),SAMv3Handler.sSessionsHash.get(nick).getProps(),SAMv3Handler.sSessionsHash.get(nick).getHandler());
   this.nick=nick;
   this.recv=this;
-  this.server=SAMv3DatagramServer.getInstance();
+  this.server=dgServer;
   SAMv3Handler.SessionRecord rec=SAMv3Handler.sSessionsHash.get(nick);
-  if (rec == null)   throw new SAMException("Record disappeared for nickname : \"" + nick + "\"");
+  if (rec == null)   throw new InterruptedIOException();
   this.handler=rec.getHandler();
   Properties props=rec.getProps();
   String portStr=props.getProperty("PORT");
   if (portStr == null) {
-    _log.debug("receiver port not specified. Current socket will be used.");
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("receiver port not specified. Current socket will be used.");
     this.clientAddress=null;
   }
  else {
@@ -17,7 +17,7 @@
     String host=props.getProperty("HOST");
     if (host == null) {
       host=rec.getHandler().getClientIP();
-      _log.debug("no host specified. Taken from the client socket : " + host + ':'+ port);
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("no host specified. Taken from the client socket : " + host + ':'+ port);
     }
     this.clientAddress=new InetSocketAddress(host,port);
   }
