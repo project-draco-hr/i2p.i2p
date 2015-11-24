@@ -1,0 +1,29 @@
+{
+  if (SystemVersion.isAndroid())   return 0;
+  int count=0;
+  try {
+    for (Enumeration<String> e=ks.aliases(); e.hasMoreElements(); ) {
+      String alias=e.nextElement();
+      if (ks.isCertificateEntry(alias)) {
+        Certificate c=ks.getCertificate(alias);
+        if (c != null && (c instanceof X509Certificate)) {
+          X509Certificate xc=(X509Certificate)c;
+          BigInteger serial=xc.getSerialNumber();
+          for (int i=0; i < BLACKLIST_SERIAL.length; i++) {
+            if (BLACKLIST_SERIAL[i].equals(serial)) {
+              String name=CertUtil.getIssuerValue(xc,"CN");
+              if (BLACKLIST_ISSUER_CN[i].equals(name)) {
+                ks.deleteEntry(alias);
+                warn("Ignoring blacklisted certificate \"" + alias + "\" issued by: \""+ name+ "\" s/n: "+ serial.toString(16),null);
+                count++;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+ catch (  GeneralSecurityException e) {
+  }
+  return count;
+}
