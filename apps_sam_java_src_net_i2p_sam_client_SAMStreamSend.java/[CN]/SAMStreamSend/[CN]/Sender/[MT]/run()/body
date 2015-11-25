@@ -1,6 +1,7 @@
 {
   _started=_context.clock().now();
   _context.statManager().addRateData("send." + _connectionId + ".started",1,0);
+  final long toSend=(new File(_dataFile)).length();
   byte data[]=new byte[1024];
   long lastSend=_context.clock().now();
   while (!_closed) {
@@ -26,6 +27,7 @@ synchronized (_samOut) {
     }
  catch (    IOException ioe) {
       _log.error("Error sending",ioe);
+      break;
     }
   }
   byte msg[]=("STREAM CLOSE ID=" + _connectionId + "\n").getBytes();
@@ -36,9 +38,10 @@ synchronized (_samOut) {
     }
   }
  catch (  IOException ioe) {
-    _log.error("Error closing",ioe);
+    _log.info("Error closing",ioe);
   }
   closed();
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Runner exiting");
+  if (toSend != _totalSent)   _log.error("Only sent " + _totalSent + " of "+ toSend+ " bytes");
   _reader.stopReading();
 }
