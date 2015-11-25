@@ -15,9 +15,11 @@
  else       if (read > 0) {
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Sending " + read + " on "+ _connectionId+ " after "+ (now - lastSend));
         lastSend=now;
-        byte msg[]=("STREAM SEND ID=" + _connectionId + " SIZE="+ read+ "\n").getBytes();
 synchronized (_samOut) {
-          _samOut.write(msg);
+          if (!_isV3) {
+            byte msg[]=("STREAM SEND ID=" + _connectionId + " SIZE="+ read+ "\n").getBytes();
+            _samOut.write(msg);
+          }
           _samOut.write(data,0,read);
           _samOut.flush();
         }
@@ -30,18 +32,30 @@ synchronized (_samOut) {
       break;
     }
   }
-  byte msg[]=("STREAM CLOSE ID=" + _connectionId + "\n").getBytes();
-  try {
-synchronized (_samOut) {
-      _samOut.write(msg);
-      _samOut.flush();
+  if (_isV3) {
+    try {
+      _samOut.close();
+    }
+ catch (    IOException ioe) {
+      _log.info("Error closing",ioe);
     }
   }
- catch (  IOException ioe) {
-    _log.info("Error closing",ioe);
+ else {
+    byte msg[]=("STREAM CLOSE ID=" + _connectionId + "\n").getBytes();
+    try {
+synchronized (_samOut) {
+        _samOut.write(msg);
+        _samOut.flush();
+        _samOut.close();
+      }
+    }
+ catch (    IOException ioe) {
+      _log.info("Error closing",ioe);
+    }
   }
   closed();
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Runner exiting");
   if (toSend != _totalSent)   _log.error("Only sent " + _totalSent + " of "+ toSend+ " bytes");
+  if (_reader2 != null)   _reader2.stopReading();
   _reader.stopReading();
 }

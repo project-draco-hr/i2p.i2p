@@ -1,15 +1,33 @@
 {
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Starting up");
-  boolean ok=connect();
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Connected: " + ok);
-  if (ok) {
-    _reader=new SAMReader(_context,_samIn,_eventHandler);
+  try {
+    Socket sock=connect();
+    SAMEventHandler eventHandler=new SendEventHandler(_context);
+    _reader=new SAMReader(_context,sock.getInputStream(),eventHandler);
     _reader.startReading();
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Reader created");
-    String ourDest=handshake(version);
+    OutputStream out=sock.getOutputStream();
+    String ourDest=handshake(out,version,true,eventHandler);
+    if (ourDest == null)     throw new IOException("handshake failed");
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Handshake complete.  we are " + ourDest);
-    if (ourDest != null) {
-      send();
+    if (_isV3) {
+      Socket sock2=connect();
+      eventHandler=new SendEventHandler(_context);
+      _reader2=new SAMReader(_context,sock2.getInputStream(),eventHandler);
+      _reader2.startReading();
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Reader2 created");
+      out=sock2.getOutputStream();
+      String ok=handshake(out,version,false,eventHandler);
+      if (ok == null)       throw new IOException("2nd handshake failed");
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Handshake2 complete.");
     }
+    if (ourDest != null) {
+      send(out,eventHandler);
+    }
+  }
+ catch (  IOException e) {
+    _log.error("Unable to connect to SAM at " + _samHost + ":"+ _samPort,e);
+    if (_reader != null)     _reader.stopReading();
+    if (_reader2 != null)     _reader2.stopReading();
   }
 }
