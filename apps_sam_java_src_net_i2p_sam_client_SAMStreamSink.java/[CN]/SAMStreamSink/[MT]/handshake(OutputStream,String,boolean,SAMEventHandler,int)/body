@@ -55,9 +55,11 @@ synchronized (samOut) {
       samOut.write(req.getBytes());
       samOut.flush();
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Session create sent");
-      boolean ok=eventHandler.waitForSessionCreateReply();
-      if (!ok)       throw new IOException("Session create failed");
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Session create reply found: " + ok);
+      if (mode == STREAM) {
+        boolean ok=eventHandler.waitForSessionCreateReply();
+        if (!ok)         throw new IOException("Session create failed");
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Session create reply found: " + ok);
+      }
       req="NAMING LOOKUP NAME=ME\n";
       samOut.write(req.getBytes());
       samOut.flush();
@@ -68,8 +70,9 @@ synchronized (samOut) {
         _log.error("No naming lookup reply found!");
         return null;
       }
- else {
-        if (_log.shouldInfo())         _log.info(_destFile + " is located at " + destination);
+      if (_log.shouldInfo())       _log.info(_destFile + " is located at " + destination);
+      if (mode != STREAM) {
+        eventHandler.streamConnectedReceived(destination,"FAKE");
       }
       return destination;
     }
