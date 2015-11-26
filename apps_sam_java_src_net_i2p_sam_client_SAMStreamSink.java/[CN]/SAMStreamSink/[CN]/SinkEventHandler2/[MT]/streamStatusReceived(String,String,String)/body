@@ -1,0 +1,72 @@
+{
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("got STREAM STATUS, result=" + result);
+  super.streamStatusReceived(result,id,message);
+  Sink sink=null;
+  try {
+    String dest="TODO if not silent";
+    sink=new Sink(_v3ID,dest);
+synchronized (_remotePeers) {
+      _remotePeers.put(_v3ID,sink);
+    }
+  }
+ catch (  IOException ioe) {
+    _log.error("Error creating a new sink",ioe);
+    try {
+      _in.close();
+    }
+ catch (    IOException ioe2) {
+    }
+    if (sink != null)     sink.closed();
+    return;
+  }
+  try {
+    boolean gotDest=false;
+    byte[] dest=new byte[1024];
+    int dlen=0;
+    byte buf[]=new byte[4096];
+    int len;
+    while ((len=_in.read(buf)) >= 0) {
+      if (!gotDest) {
+        for (int i=0; i < len; i++) {
+          byte b=buf[i];
+          if (b == (byte)'\n') {
+            gotDest=true;
+            if (_log.shouldInfo()) {
+              try {
+                _log.info("Got incoming accept from: \"" + new String(dest,0,dlen,"ISO-8859-1") + '"');
+              }
+ catch (              IOException uee) {
+              }
+            }
+            i++;
+            if (i < len)             sink.received(buf,i,len - i);
+            break;
+          }
+ else {
+            if (dlen < dest.length) {
+              dest[dlen++]=b;
+            }
+ else             if (dlen == dest.length) {
+              dlen++;
+              _log.error("first line overflow on accept");
+            }
+          }
+        }
+      }
+ else {
+        sink.received(buf,0,len);
+      }
+    }
+    sink.closed();
+  }
+ catch (  IOException ioe) {
+    _log.error("Error reading",ioe);
+  }
+ finally {
+    try {
+      _in.close();
+    }
+ catch (    IOException ioe) {
+    }
+  }
+}

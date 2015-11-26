@@ -4,9 +4,17 @@ synchronized (samOut) {
       samOut.write(("HELLO VERSION MIN=1.0 MAX=" + version + '\n').getBytes());
       samOut.flush();
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Hello sent");
-      String hisVersion=_eventHandler.waitForHelloReply();
+      String hisVersion=eventHandler.waitForHelloReply();
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Hello reply found: " + hisVersion);
       if (hisVersion == null)       throw new IOException("Hello failed");
+      if (!isMaster) {
+        String req="STREAM ACCEPT SILENT=false ID=" + _v3ID + "\n";
+        samOut.write(req.getBytes());
+        samOut.flush();
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("STREAM ACCEPT sent");
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("got STREAM STATUS, awaiting connetion");
+        return "OK";
+      }
       _isV3=VersionComparator.comp(hisVersion,"3") >= 0;
       String dest;
       if (_isV3) {
@@ -32,7 +40,8 @@ synchronized (samOut) {
         if (isMaster) {
           byte[] id=new byte[5];
           _context.random().nextBytes(id);
-          _conOptions="ID=" + Base32.encode(id);
+          _v3ID=Base32.encode(id);
+          _conOptions="ID=" + _v3ID;
         }
       }
  else {
@@ -42,14 +51,14 @@ synchronized (samOut) {
       samOut.write(req.getBytes());
       samOut.flush();
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Session create sent");
-      boolean ok=_eventHandler.waitForSessionCreateReply();
+      boolean ok=eventHandler.waitForSessionCreateReply();
       if (!ok)       throw new IOException("Session create failed");
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Session create reply found: " + ok);
       req="NAMING LOOKUP NAME=ME\n";
       samOut.write(req.getBytes());
       samOut.flush();
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Naming lookup sent");
-      String destination=_eventHandler.waitForNamingReply("ME");
+      String destination=eventHandler.waitForNamingReply("ME");
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Naming lookup reply found: " + destination);
       if (destination == null) {
         _log.error("No naming lookup reply found!");
