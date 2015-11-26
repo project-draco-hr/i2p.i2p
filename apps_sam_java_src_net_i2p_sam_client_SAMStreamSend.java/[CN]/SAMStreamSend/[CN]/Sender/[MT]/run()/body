@@ -2,7 +2,7 @@
   _started=_context.clock().now();
   _context.statManager().addRateData("send." + _connectionId + ".started",1,0);
   final long toSend=(new File(_dataFile)).length();
-  byte data[]=new byte[1024];
+  byte data[]=new byte[8192];
   long lastSend=_context.clock().now();
   while (!_closed) {
     try {
@@ -16,8 +16,13 @@
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Sending " + read + " on "+ _connectionId+ " after "+ (now - lastSend));
         lastSend=now;
 synchronized (_samOut) {
-          if (!_isV3) {
-            byte msg[]=("STREAM SEND ID=" + _connectionId + " SIZE="+ read+ "\n").getBytes();
+          if (!_isV3 || _mode == V1DG || _mode == V1RAW) {
+            String m;
+            if (_mode == STREAM)             m="STREAM SEND ID=" + _connectionId + " SIZE="+ read+ "\n";
+ else             if (_mode == V1DG)             m="DATAGRAM SEND DESTINATION=" + _remoteDestination + " SIZE="+ read+ "\n";
+ else             if (_mode == V1RAW)             m="RAW SEND DESTINATION=" + _remoteDestination + " SIZE="+ read+ "\n";
+ else             throw new IOException("unsupported mode " + _mode);
+            byte msg[]=DataHelper.getASCII(m);
             _samOut.write(msg);
           }
           _samOut.write(data,0,read);

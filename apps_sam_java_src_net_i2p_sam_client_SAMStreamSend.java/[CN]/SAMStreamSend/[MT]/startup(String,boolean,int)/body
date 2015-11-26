@@ -1,28 +1,28 @@
 {
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Starting up");
   try {
-    Socket sock=connect();
+    Socket sock=connect(isSSL);
     SAMEventHandler eventHandler=new SendEventHandler(_context);
     _reader=new SAMReader(_context,sock.getInputStream(),eventHandler);
     _reader.startReading();
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Reader created");
     OutputStream out=sock.getOutputStream();
-    String ourDest=handshake(out,version,true,eventHandler);
+    String ourDest=handshake(out,version,true,eventHandler,mode);
     if (ourDest == null)     throw new IOException("handshake failed");
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Handshake complete.  we are " + ourDest);
-    if (_isV3) {
-      Socket sock2=connect();
+    if (_isV3 && mode != V1DG && mode != V1RAW) {
+      Socket sock2=connect(isSSL);
       eventHandler=new SendEventHandler(_context);
       _reader2=new SAMReader(_context,sock2.getInputStream(),eventHandler);
       _reader2.startReading();
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Reader2 created");
       out=sock2.getOutputStream();
-      String ok=handshake(out,version,false,eventHandler);
+      String ok=handshake(out,version,false,eventHandler,mode);
       if (ok == null)       throw new IOException("2nd handshake failed");
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Handshake2 complete.");
     }
     if (ourDest != null) {
-      send(out,eventHandler);
+      send(out,eventHandler,mode);
     }
   }
  catch (  IOException e) {
