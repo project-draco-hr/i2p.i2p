@@ -2,21 +2,21 @@
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Starting up");
   try {
     Socket sock=connect();
-    SAMEventHandler eventHandler=new SinkEventHandler(_context);
+    OutputStream out=sock.getOutputStream();
+    SAMEventHandler eventHandler=new SinkEventHandler(_context,out);
     _reader=new SAMReader(_context,sock.getInputStream(),eventHandler);
     _reader.startReading();
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Reader created");
-    OutputStream out=sock.getOutputStream();
     String ourDest=handshake(out,version,true,eventHandler);
     if (ourDest == null)     throw new IOException("handshake failed");
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Handshake complete.  we are " + ourDest);
     if (_isV3) {
       Socket sock2=connect();
-      eventHandler=new SinkEventHandler2(_context,sock2.getInputStream());
+      out=sock2.getOutputStream();
+      eventHandler=new SinkEventHandler2(_context,sock2.getInputStream(),out);
       _reader2=new SAMReader(_context,sock2.getInputStream(),eventHandler);
       _reader2.startReading();
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Reader2 created");
-      out=sock2.getOutputStream();
       String ok=handshake(out,version,false,eventHandler);
       if (ok == null)       throw new IOException("2nd handshake failed");
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Handshake2 complete.");
