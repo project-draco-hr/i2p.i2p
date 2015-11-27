@@ -1,14 +1,17 @@
 {
 synchronized (this.socketServerLock) {
     if (this.socketServer != null) {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("a socket server is already defined for this destination");
-      throw new SAMException("a socket server is already defined for this destination");
+      if (_log.shouldWarn())       _log.warn("a forwarding server is already defined for this destination");
+      throw new SAMException("a forwarding server is already defined for this destination");
     }
-    this.socketServer=this.socketMgr.getServerSocket();
   }
-  I2PSocket i2ps=this.socketServer.accept();
-synchronized (this.socketServerLock) {
-    this.socketServer=null;
+  I2PSocket i2ps;
+  _acceptors.incrementAndGet();
+  try {
+    i2ps=socketMgr.getServerSocket().accept();
+  }
+  finally {
+    _acceptors.decrementAndGet();
   }
   SAMv3Handler.SessionRecord rec=SAMv3Handler.sSessionsHash.get(nick);
   if (rec == null || i2ps == null)   throw new InterruptedIOException();
