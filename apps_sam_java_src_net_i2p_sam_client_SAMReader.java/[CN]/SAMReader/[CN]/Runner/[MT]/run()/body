@@ -11,28 +11,24 @@
         baos.write(c);
       }
       if (c == -1) {
-        _log.error("Error reading from the SAM bridge");
-        return;
+        _log.info("EOF reading from the SAM bridge");
+        break;
       }
     }
  catch (    IOException ioe) {
       _log.error("Error reading from SAM",ioe);
+      break;
     }
     String line=DataHelper.getUTF8(baos.toByteArray());
     baos.reset();
-    if (line == null) {
-      _log.info("No more data from the SAM bridge");
+    if (_log.shouldDebug())     _log.debug("Line read from the bridge: " + line);
+    StringTokenizer tok=new StringTokenizer(line);
+    if (tok.countTokens() <= 0) {
+      _log.error("Invalid SAM line: [" + line + "]");
       break;
     }
-    _log.debug("Line read from the bridge: " + line);
-    StringTokenizer tok=new StringTokenizer(line);
-    if (tok.countTokens() < 2) {
-      _log.error("Invalid SAM line: [" + line + "]");
-      _live=false;
-      return;
-    }
     String major=tok.nextToken();
-    String minor=tok.nextToken();
+    String minor=tok.hasMoreTokens() ? tok.nextToken() : "";
     params.clear();
     while (tok.hasMoreTokens()) {
       String pair=tok.nextToken();
@@ -47,4 +43,6 @@
     }
     processEvent(major,minor,params);
   }
+  _live=false;
+  if (_log.shouldWarn())   _log.warn("SAMReader exiting");
 }

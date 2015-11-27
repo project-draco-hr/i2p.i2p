@@ -1,0 +1,17 @@
+{
+  int port=Integer.parseInt(_samPort);
+  if (!isSSL)   return new Socket(_samHost,port);
+synchronized (SAMStreamSink.class) {
+    if (_sslSocketFactory == null) {
+      try {
+        _sslSocketFactory=new I2PSSLSocketFactory(_context,true,"certificates/sam");
+      }
+ catch (      GeneralSecurityException gse) {
+        throw new IOException("SSL error",gse);
+      }
+    }
+  }
+  SSLSocket sock=(SSLSocket)_sslSocketFactory.createSocket(_samHost,port);
+  I2PSSLSocketFactory.verifyHostname(_context,sock,_samHost);
+  return sock;
+}
