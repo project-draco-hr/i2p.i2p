@@ -1,10 +1,12 @@
 {
-  Getopt g=new Getopt("SAM",args,"sb:m:p:v:");
+  Getopt g=new Getopt("SAM",args,"sb:m:p:u:v:w:");
   boolean isSSL=false;
   int mode=STREAM;
   String version="1.0";
   String host="127.0.0.1";
   String port="7656";
+  String user=null;
+  String password=null;
   int c;
   while ((c=g.getopt()) != -1) {
 switch (c) {
@@ -27,6 +29,12 @@ break;
 case 'p':
 port=g.getOptarg();
 break;
+case 'u':
+user=g.getOptarg();
+break;
+case 'w':
+password=g.getOptarg();
+break;
 case 'h':
 case '?':
 case ':':
@@ -40,7 +48,15 @@ if (args.length - startArgs != 2) {
 System.err.println(USAGE);
 return;
 }
+if ((user == null && password != null) || (user != null && password == null)) {
+System.err.println("both user and password or neither");
+return;
+}
+if (user != null && password != null && VersionComparator.comp(version,"3.2") < 0) {
+System.err.println("user/password require 3.2");
+return;
+}
 I2PAppContext ctx=I2PAppContext.getGlobalContext();
 SAMStreamSend sender=new SAMStreamSend(ctx,host,port,args[startArgs],args[startArgs + 1]);
-sender.startup(version,isSSL,mode);
+sender.startup(version,isSSL,mode,user,password);
 }

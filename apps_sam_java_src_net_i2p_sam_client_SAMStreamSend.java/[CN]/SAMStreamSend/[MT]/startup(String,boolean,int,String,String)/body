@@ -2,33 +2,32 @@
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Starting up");
   try {
     Socket sock=connect(isSSL);
-    OutputStream out=sock.getOutputStream();
-    SAMEventHandler eventHandler=new SinkEventHandler(_context,out);
+    SAMEventHandler eventHandler=new SendEventHandler(_context);
     _reader=new SAMReader(_context,sock.getInputStream(),eventHandler);
     _reader.startReading();
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Reader created");
-    String ourDest=handshake(out,version,true,eventHandler,mode);
+    OutputStream out=sock.getOutputStream();
+    String ourDest=handshake(out,version,true,eventHandler,mode,user,password);
     if (ourDest == null)     throw new IOException("handshake failed");
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Handshake complete.  we are " + ourDest);
-    if (_isV32) {
-      _log.debug("Starting pinger");
-      Thread t=new Pinger(out);
-      t.start();
-    }
     if (_isV3 && mode != V1DG && mode != V1RAW) {
       Socket sock2=connect(isSSL);
-      out=sock2.getOutputStream();
-      eventHandler=new SinkEventHandler2(_context,sock2.getInputStream(),out);
+      eventHandler=new SendEventHandler(_context);
       _reader2=new SAMReader(_context,sock2.getInputStream(),eventHandler);
       _reader2.startReading();
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Reader2 created");
-      String ok=handshake(out,version,false,eventHandler,mode);
+      out=sock2.getOutputStream();
+      String ok=handshake(out,version,false,eventHandler,mode,user,password);
       if (ok == null)       throw new IOException("2nd handshake failed");
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Handshake2 complete.");
     }
-    writeDest(ourDest);
+    if (ourDest != null) {
+      send(out,eventHandler,mode);
+    }
   }
  catch (  IOException e) {
     _log.error("Unable to connect to SAM at " + _samHost + ":"+ _samPort,e);
+    if (_reader != null)     _reader.stopReading();
+    if (_reader2 != null)     _reader2.stopReading();
   }
 }
