@@ -15,8 +15,8 @@
       Thread t=new Pinger(out);
       t.start();
     }
-    if (_isV3 && mode == STREAM) {
-      int acceptors=isV32 ? 4 : 1;
+    if (_isV3 && (mode == STREAM || mode == FORWARD)) {
+      int acceptors=(_isV32 && mode == STREAM) ? 4 : 1;
       for (int i=0; i < acceptors; i++) {
         Socket sock2=connect(isSSL);
         out=sock2.getOutputStream();
@@ -27,6 +27,9 @@
         String ok=handshake(out,version,false,eventHandler,mode,user,password,"");
         if (ok == null)         throw new IOException("handshake " + (2 + i) + " failed");
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Handshake " + (2 + i) + " complete.");
+      }
+      if (mode == FORWARD) {
+        (new FwdRcvr(isSSL)).start();
       }
     }
  else     if (_isV3 && (mode == DG || mode == RAW || mode == RAWHDR)) {

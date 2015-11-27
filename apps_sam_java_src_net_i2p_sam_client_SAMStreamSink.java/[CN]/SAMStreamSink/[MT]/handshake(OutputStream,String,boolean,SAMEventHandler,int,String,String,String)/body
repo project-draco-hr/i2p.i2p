@@ -9,11 +9,18 @@ synchronized (samOut) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Hello reply found: " + hisVersion);
       if (hisVersion == null)       throw new IOException("Hello failed");
       if (!isMaster) {
-        String req="STREAM ACCEPT SILENT=false TO_PORT=5678 ID=" + _v3ID + "\n";
+        String req;
+        if (mode == STREAM)         req="STREAM ACCEPT SILENT=false TO_PORT=5678 ID=" + _v3ID + "\n";
+ else         if (mode == FORWARD)         req="STREAM FORWARD ID=" + _v3ID + " PORT="+ V3FORWARDPORT+ '\n';
+ else         throw new IllegalStateException("mode " + mode);
         samOut.write(req.getBytes());
         samOut.flush();
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("STREAM ACCEPT sent");
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("got STREAM STATUS, awaiting connection");
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("STREAM ACCEPT/FORWARD sent");
+        if (mode == FORWARD) {
+          boolean ok=eventHandler.waitForStreamStatusReply();
+          if (!ok)           throw new IOException("Stream status failed");
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("got STREAM STATUS, awaiting connection");
+        }
         return "OK";
       }
       _isV3=VersionComparator.comp(hisVersion,"3") >= 0;
@@ -50,7 +57,7 @@ synchronized (samOut) {
         dest=_destFile;
       }
       String style;
-      if (mode == STREAM)       style="STREAM";
+      if (mode == STREAM || mode == FORWARD)       style="STREAM";
  else       if (mode == V1DG)       style="DATAGRAM";
  else       if (mode == DG)       style="DATAGRAM PORT=" + V3DGPORT;
  else       if (mode == V1RAW)       style="RAW";
