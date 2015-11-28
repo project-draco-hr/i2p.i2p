@@ -1,8 +1,8 @@
 {
 synchronized (samOut) {
     try {
-      if (user != null && password != null)       samOut.write(("HELLO VERSION MIN=1.0 MAX=" + version + " USER="+ user+ " PASSWORD="+ password+ '\n').getBytes());
- else       samOut.write(("HELLO VERSION MIN=1.0 MAX=" + version + '\n').getBytes());
+      if (user != null && password != null)       samOut.write(("HELLO VERSION MIN=1.0 MAX=" + version + " USER=\""+ user.replace("\"","\\\"")+ "\" PASSWORD=\""+ password.replace("\"","\\\"")+ "\"\n").getBytes("UTF-8"));
+ else       samOut.write(("HELLO VERSION MIN=1.0 MAX=" + version + '\n').getBytes("UTF-8"));
       samOut.flush();
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Hello sent");
       String hisVersion=eventHandler.waitForHelloReply();
@@ -15,6 +15,7 @@ synchronized (samOut) {
         byte[] id=new byte[5];
         _context.random().nextBytes(id);
         _v3ID=Base32.encode(id);
+        if (_isV32)         _v3ID="xx??????xx" + _v3ID;
         _conOptions="ID=" + _v3ID;
       }
       String style;
@@ -22,14 +23,14 @@ synchronized (samOut) {
  else       if (mode == DG || mode == V1DG)       style="DATAGRAM";
  else       style="RAW";
       String req="SESSION CREATE STYLE=" + style + " DESTINATION=TRANSIENT "+ _conOptions+ ' '+ opts+ '\n';
-      samOut.write(req.getBytes());
+      samOut.write(req.getBytes("UTF-8"));
       samOut.flush();
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Session create sent");
       boolean ok=eventHandler.waitForSessionCreateReply();
       if (!ok)       throw new IOException("Session create failed");
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Session create reply found: " + ok);
       req="NAMING LOOKUP NAME=ME\n";
-      samOut.write(req.getBytes());
+      samOut.write(req.getBytes("UTF-8"));
       samOut.flush();
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Naming lookup sent");
       String destination=eventHandler.waitForNamingReply("ME");

@@ -1,23 +1,34 @@
 {
-  if (timeout <= 0)   throw new SocketTimeoutException();
-  long expires=System.currentTimeMillis() + timeout;
-  InputStream in=socket.getInputStream();
+  final int origTimeout=timeout;
   int c;
   int i=0;
-  socket.setSoTimeout(timeout);
-  while ((c=in.read()) != -1) {
+  final long expires;
+  if (origTimeout > 0) {
+    socket.setSoTimeout(timeout);
+    expires=System.currentTimeMillis() + timeout;
+  }
+ else {
+    expires=0;
+  }
+  final Reader reader=new UTF8Reader(socket.getInputStream());
+  while ((c=reader.read()) != -1) {
     if (++i > MAX_LINE_LENGTH)     throw new LineTooLongException("Line too long - max " + MAX_LINE_LENGTH);
     if (c == '\n')     break;
-    int newTimeout=(int)(expires - System.currentTimeMillis());
-    if (newTimeout <= 0)     throw new SocketTimeoutException();
-    buf.append((char)c);
-    if (newTimeout != timeout) {
-      timeout=newTimeout;
-      socket.setSoTimeout(timeout);
+    if (origTimeout > 0) {
+      int newTimeout=(int)(expires - System.currentTimeMillis());
+      if (newTimeout <= 0)       throw new SocketTimeoutException();
+      buf.append((char)c);
+      if (newTimeout != timeout) {
+        timeout=newTimeout;
+        socket.setSoTimeout(timeout);
+      }
+    }
+ else {
+      buf.append((char)c);
     }
   }
   if (c == -1) {
-    if (System.currentTimeMillis() >= expires)     throw new SocketTimeoutException();
+    if (origTimeout > 0 && System.currentTimeMillis() >= expires)     throw new SocketTimeoutException();
  else     throw new EOFException();
   }
 }
