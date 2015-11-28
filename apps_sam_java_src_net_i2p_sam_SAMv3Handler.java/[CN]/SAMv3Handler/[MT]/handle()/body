@@ -3,7 +3,6 @@
   String domain=null;
   String opcode=null;
   boolean canContinue=false;
-  StringTokenizer tok;
   Properties props;
   this.thread.setName("SAMv3Handler " + _id);
   if (_log.shouldLog(Log.DEBUG))   _log.debug("SAMv3 handling started");
@@ -70,42 +69,37 @@
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Connection closed by client (line read : null)");
         break;
       }
-      msg=line.trim();
       if (_log.shouldLog(Log.DEBUG)) {
         if (_log.shouldLog(Log.DEBUG))         _log.debug("New message received: [" + msg + "]");
       }
-      if (msg.equals("")) {
+      props=SAMUtils.parseParams(line);
+      domain=props.getProperty(SAMUtils.COMMAND);
+      if (domain == null) {
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Ignoring newline");
         continue;
       }
-      tok=new StringTokenizer(msg," ");
-      int count=tok.countTokens();
-      if (count <= 0) {
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("Ignoring whitespace");
-        continue;
+      opcode=props.getProperty(SAMUtils.OPCODE);
+      props.remove(SAMUtils.COMMAND);
+      props.remove(SAMUtils.OPCODE);
+      if (_log.shouldLog(Log.DEBUG)) {
+        _log.debug("Parsing (domain: \"" + domain + "\"; opcode: \""+ opcode+ "\")");
       }
-      domain=tok.nextToken();
       if (domain.equals("PING")) {
-        execPingMessage(tok);
+        execPingMessage(opcode);
         continue;
       }
  else       if (domain.equals("PONG")) {
-        execPongMessage(tok);
+        execPongMessage(opcode);
         continue;
       }
  else       if (domain.equals("QUIT") || domain.equals("STOP") || domain.equals("EXIT")) {
         writeString(domain + " STATUS RESULT=OK MESSAGE=bye\n");
         break;
       }
-      if (count <= 1) {
+      if (opcode == null) {
         if (writeString(domain + " STATUS RESULT=I2P_ERROR MESSAGE=\"command not specified\"\n"))         continue;
  else         break;
       }
-      opcode=tok.nextToken();
-      if (_log.shouldLog(Log.DEBUG)) {
-        _log.debug("Parsing (domain: \"" + domain + "\"; opcode: \""+ opcode+ "\")");
-      }
-      props=SAMUtils.parseParams(tok);
       if (domain.equals("STREAM")) {
         canContinue=execStreamMessage(opcode,props);
       }

@@ -1,0 +1,74 @@
+{
+  final Properties rv=new Properties();
+  final StringBuilder buf=new StringBuilder(32);
+  final int length=args.length();
+  boolean isQuoted=false;
+  String key=null;
+  for (int i=0; i <= length; i++) {
+    char c=(i < length) ? args.charAt(i) : ' ';
+switch (c) {
+case '"':
+      if (isQuoted) {
+        if (key != null) {
+          if (rv.setProperty(key,buf.length() > 0 ? buf.toString() : "true") != null)           throw new SAMException("Duplicate parameter " + key);
+          key=null;
+        }
+        buf.setLength(0);
+      }
+    isQuoted=!isQuoted;
+  break;
+case '\r':
+case '\n':
+break;
+case ' ':
+case '\b':
+case '\f':
+case '\t':
+if (isQuoted) {
+buf.append(c);
+}
+ else {
+if (key != null) {
+  if (rv.setProperty(key,buf.length() > 0 ? buf.toString() : "true") != null)   throw new SAMException("Duplicate parameter " + key);
+  key=null;
+}
+ else if (buf.length() > 0) {
+  String k=buf.toString().trim().toUpperCase(Locale.US);
+  if (rv.isEmpty()) {
+    rv.setProperty(COMMAND,k);
+    if (k.equals("PING") || k.equals("PONG")) {
+      if (i + 1 < args.length()) {
+        String pingData=args.substring(i + 1);
+        rv.setProperty(OPCODE,pingData);
+      }
+      i=length + 1;
+    }
+  }
+ else   if (rv.size() == 1) {
+    rv.setProperty(OPCODE,k);
+  }
+ else {
+    if (rv.setProperty(k,"true") != null)     throw new SAMException("Duplicate parameter " + k);
+  }
+}
+buf.setLength(0);
+}
+break;
+case '=':
+if (isQuoted) {
+buf.append(c);
+}
+ else {
+if (buf.length() == 0) throw new SAMException("Empty parameter name");
+key=buf.toString().toUpperCase(Locale.US);
+buf.setLength(0);
+}
+break;
+default :
+buf.append(c);
+break;
+}
+}
+if (isQuoted) throw new SAMException("Unterminated quote");
+return rv;
+}

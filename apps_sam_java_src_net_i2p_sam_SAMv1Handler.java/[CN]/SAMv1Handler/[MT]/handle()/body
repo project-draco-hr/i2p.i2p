@@ -3,7 +3,6 @@
   String domain=null;
   String opcode=null;
   boolean canContinue=false;
-  StringTokenizer tok;
   Properties props;
   this.thread.setName("SAMv1Handler " + _id);
   if (_log.shouldLog(Log.DEBUG))   _log.debug("SAM handling started");
@@ -32,25 +31,25 @@
         _log.info("Connection closed by client (line read : null)");
         break;
       }
-      msg=msg.trim();
       if (_log.shouldLog(Log.DEBUG)) {
         _log.debug("New message received: [" + msg + "]");
       }
-      if (msg.equals("")) {
+      props=SAMUtils.parseParams(msg);
+      domain=props.getProperty(SAMUtils.COMMAND);
+      if (domain == null) {
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Ignoring newline");
         continue;
       }
-      tok=new StringTokenizer(msg," ");
-      if (tok.countTokens() < 2) {
+      opcode=props.getProperty(SAMUtils.OPCODE);
+      if (opcode == null) {
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Error in message format");
         break;
       }
-      domain=tok.nextToken();
-      opcode=tok.nextToken();
+      props.remove(SAMUtils.COMMAND);
+      props.remove(SAMUtils.OPCODE);
       if (_log.shouldLog(Log.DEBUG)) {
         _log.debug("Parsing (domain: \"" + domain + "\"; opcode: \""+ opcode+ "\")");
       }
-      props=SAMUtils.parseParams(tok);
       if (domain.equals("STREAM")) {
         canContinue=execStreamMessage(opcode,props);
       }
