@@ -8,6 +8,7 @@
   this.thread.setName("SAMv1Handler " + _id);
   if (_log.shouldLog(Log.DEBUG))   _log.debug("SAM handling started");
   try {
+    boolean gotFirstLine=false;
     while (true) {
       if (shouldStop()) {
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Stop request found");
@@ -23,27 +24,34 @@
         break;
       }
       buf.setLength(0);
-      ReadLine.readLine(clientSocketChannel.socket(),buf,0);
+      try {
+        Socket sock=clientSocketChannel.socket();
+        ReadLine.readLine(sock,buf,gotFirstLine ? 0 : FIRST_READ_TIMEOUT);
+        sock.setSoTimeout(0);
+      }
+ catch (      SocketTimeoutException ste) {
+        writeString("SESSION STATUS RESULT=I2P_ERROR MESSAGE=\"command timeout, bye\"\n");
+        break;
+      }
       msg=buf.toString();
       if (_log.shouldLog(Log.DEBUG)) {
         _log.debug("New message received: [" + msg + ']');
       }
       props=SAMUtils.parseParams(msg);
-      domain=props.getProperty(SAMUtils.COMMAND);
+      domain=(String)props.remove(SAMUtils.COMMAND);
       if (domain == null) {
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Ignoring newline");
         continue;
       }
-      opcode=props.getProperty(SAMUtils.OPCODE);
+      opcode=(String)props.remove(SAMUtils.OPCODE);
       if (opcode == null) {
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Error in message format");
         break;
       }
-      props.remove(SAMUtils.COMMAND);
-      props.remove(SAMUtils.OPCODE);
       if (_log.shouldLog(Log.DEBUG)) {
         _log.debug("Parsing (domain: \"" + domain + "\"; opcode: \""+ opcode+ "\")");
       }
+      gotFirstLine=true;
       if (domain.equals("STREAM")) {
         canContinue=execStreamMessage(opcode,props);
       }
