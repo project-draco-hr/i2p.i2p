@@ -1,0 +1,44 @@
+{
+  Collections.sort(ris,new RouterInfoRoutingKeyComparator(us));
+  double min=256;
+  double max=0;
+  double tot=0;
+  double median=0;
+  int count=Math.min(MAX,ris.size());
+  boolean isEven=(count % 2) == 0;
+  int medIdx=isEven ? (count / 2) - 1 : (count / 2);
+  DecimalFormat fmt=new DecimalFormat("#0.00");
+  for (int i=0; i < count; i++) {
+    RouterInfo ri=ris.get(i);
+    double dist=renderRouterInfo(buf,ri,us,false,false);
+    if (dist < avgMinDist) {
+      if (i == 0) {
+      }
+ else       if (i == 1) {
+        buf.append("<p><b>Not to worry, but above routers are closer than average minimum distance " + fmt.format(avgMinDist) + "</b></p>");
+      }
+ else       if (i == 2) {
+        buf.append("<p><b>Possible Sybil Warning - above routers are closer than average minimum distance " + fmt.format(avgMinDist) + "</b></p>");
+      }
+ else {
+        buf.append("<p><b>Major Sybil Warning - above router is closer than average minimum distance " + fmt.format(avgMinDist) + "</b></p>");
+      }
+    }
+    if (dist < min)     min=dist;
+    if (dist > max)     max=dist;
+    tot+=dist;
+    if (i == medIdx)     median=dist;
+ else     if (i == medIdx + 1 && isEven)     median=(median + dist) / 2;
+    double point=MIN_CLOSE - dist;
+    if (point > 0) {
+      point*=2.0;
+      addPoints(points,ri.getHash(),point,fmt.format(point) + ": Too close to our key " + us.toBase64());
+    }
+    if (i >= MAX - 1)     break;
+  }
+  double avg=tot / count;
+  buf.append("<p><b>Totals for " + count + " floodfills: </b>MIN="+ fmt.format(min)+ " AVG="+ fmt.format(avg)+ " MEDIAN="+ fmt.format(median)+ " MAX="+ fmt.format(max)+ "</p>\n");
+  out.write(buf.toString());
+  out.flush();
+  buf.setLength(0);
+}

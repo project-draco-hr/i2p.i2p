@@ -1,0 +1,79 @@
+{
+  Set<Hash> ffs=_context.peerManager().getPeersByCapability('f');
+  List<RouterInfo> ris=new ArrayList<RouterInfo>(ffs.size());
+  Hash us=_context.routerHash();
+  Hash ourRKey=_context.router().getRouterInfo().getRoutingKey();
+  for (  Hash ff : ffs) {
+    if (ff.equals(us))     continue;
+    RouterInfo ri=_context.netDb().lookupRouterInfoLocally(ff);
+    if (ri != null)     ris.add(ri);
+  }
+  if (ris.isEmpty()) {
+    out.write("<h3>No known floodfills</h3>");
+    return;
+  }
+  StringBuilder buf=new StringBuilder(4 * 1024);
+  buf.append("<p><b>This is an experimental network database tool for debugging and analysis. Do not panic even if you see warnings below. " + "Possible \"threats\" are summarized at the bottom, however these are unlikely to be real threats. " + "If you see anything you would like to discuss with the devs, contact us on IRC #i2p-dev.</b></p>");
+  renderRouterInfo(buf,_context.router().getRouterInfo(),null,true,false);
+  buf.append("<h3>Known Floodfills: ").append(ris.size()).append("</h3>");
+  double tot=0;
+  int count=200;
+  byte[] b=new byte[32];
+  for (int i=0; i < count; i++) {
+    _context.random().nextBytes(b);
+    Hash h=new Hash(b);
+    double d=closestDistance(h,ris);
+    tot+=d;
+  }
+  DecimalFormat fmt=new DecimalFormat("#0.00");
+  double avgMinDist=tot / count;
+  buf.append("<p>Average closest floodfill distance: " + fmt.format(avgMinDist) + "</p>");
+  buf.append("<p>Routing Data: \"").append(DataHelper.getUTF8(_context.routerKeyGenerator().getModData())).append("\" Last Changed: ").append(new Date(_context.routerKeyGenerator().getLastChanged()));
+  buf.append("</p><p>Next Routing Data: \"").append(DataHelper.getUTF8(_context.routerKeyGenerator().getNextModData())).append("\" Rotates in: ").append(DataHelper.formatDuration(_context.routerKeyGenerator().getTimeTillMidnight()));
+  buf.append("</p>");
+  Map<Hash,Points> points=new HashMap<Hash,Points>(64);
+  renderIPGroups32(out,buf,ris,points);
+  renderIPGroups24(out,buf,ris,points);
+  renderIPGroups16(out,buf,ris);
+  renderPairDistance(out,buf,ris,points);
+  buf.append("<h3>Closest Floodfills to Our Routing Key (Where we Store our RI)</h3>");
+  renderRouterInfoHTML(out,buf,ourRKey,avgMinDist,ris,points);
+  buf.append("<h3>Closest Floodfills to Our Router Hash (DHT Neighbors if we are Floodfill)</h3>");
+  renderRouterInfoHTML(out,buf,us,avgMinDist,ris,points);
+  Map<Hash,TunnelPool> clientInboundPools=_context.tunnelManager().getInboundClientPools();
+  List<Hash> destinations=new ArrayList<Hash>(clientInboundPools.keySet());
+  boolean debug=_context.getBooleanProperty(HelperBase.PROP_ADVANCED);
+  for (  Hash client : destinations) {
+    boolean isLocal=_context.clientManager().isLocal(client);
+    if (!isLocal)     continue;
+    if (!_context.clientManager().shouldPublishLeaseSet(client))     continue;
+    LeaseSet ls=_context.netDb().lookupLeaseSetLocally(client);
+    if (ls == null)     continue;
+    Hash rkey=ls.getRoutingKey();
+    TunnelPool in=clientInboundPools.get(client);
+    String name=(in != null) ? in.getSettings().getDestinationNickname() : client.toBase64().substring(0,4);
+    buf.append("<h3>Closest floodfills to the Routing Key for Our Destination " + DataHelper.escapeHTML(name) + " (where we store our LS)</h3>");
+    renderRouterInfoHTML(out,buf,rkey,avgMinDist,ris,points);
+  }
+  if (!points.isEmpty()) {
+    List<Hash> warns=new ArrayList<Hash>(points.keySet());
+    Collections.sort(warns,new PointsComparator(points));
+    buf.append("<h3>Routers with Most Threat Points</h3>");
+    for (    Hash h : warns) {
+      RouterInfo ri=_context.netDb().lookupRouterInfoLocally(h);
+      if (h == null)       continue;
+      Points pp=points.get(h);
+      double p=pp.points;
+      if (p < MIN_DISPLAY_POINTS)       break;
+      buf.append("<p><b>Threat Points: " + fmt.format(p) + "</b><ul>");
+      for (      String s : pp.reasons) {
+        buf.append("<li>").append(s).append("</li>");
+      }
+      buf.append("</ul></p>");
+      renderRouterInfo(buf,ri,null,false,false);
+    }
+  }
+  out.write(buf.toString());
+  out.flush();
+  buf.setLength(0);
+}

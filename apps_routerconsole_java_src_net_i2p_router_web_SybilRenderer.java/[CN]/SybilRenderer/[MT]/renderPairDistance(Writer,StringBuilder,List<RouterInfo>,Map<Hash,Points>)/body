@@ -1,0 +1,39 @@
+{
+  buf.append("<h3>Closest Floodfill Pairs by Hash</h3>");
+  int sz=ris.size();
+  List<Pair> pairs=new ArrayList<Pair>(PAIRMAX);
+  for (int i=0; i < sz; i++) {
+    RouterInfo info1=ris.get(i);
+    for (int j=i + 1; j < sz; j++) {
+      RouterInfo info2=ris.get(j);
+      BigInteger dist=HashDistance.getDistance(info1.getHash(),info2.getHash());
+      if (pairs.isEmpty()) {
+        pairs.add(new Pair(info1,info2,dist));
+      }
+ else       if (pairs.size() < PAIRMAX) {
+        pairs.add(new Pair(info1,info2,dist));
+        Collections.sort(pairs);
+      }
+ else       if (dist.compareTo(pairs.get(PAIRMAX - 1).dist) < 0) {
+        pairs.set(PAIRMAX - 1,new Pair(info1,info2,dist));
+        Collections.sort(pairs);
+      }
+    }
+  }
+  DecimalFormat fmt=new DecimalFormat("#0.00");
+  for (  Pair p : pairs) {
+    double distance=biLog2(p.dist);
+    buf.append("<p><b>Hash Distance: ").append(fmt.format(distance)).append(": </b>");
+    buf.append("</p>");
+    renderRouterInfo(buf,p.r1,null,false,false);
+    renderRouterInfo(buf,p.r2,null,false,false);
+    double point=MIN_CLOSE - distance;
+    if (point > 0) {
+      addPoints(points,p.r1.getHash(),point,fmt.format(point) + ": Too close to other floodfill " + p.r2.getHash().toBase64());
+      addPoints(points,p.r2.getHash(),point,fmt.format(point) + ": Too close to other floodfill " + p.r1.getHash().toBase64());
+    }
+  }
+  out.write(buf.toString());
+  out.flush();
+  buf.setLength(0);
+}

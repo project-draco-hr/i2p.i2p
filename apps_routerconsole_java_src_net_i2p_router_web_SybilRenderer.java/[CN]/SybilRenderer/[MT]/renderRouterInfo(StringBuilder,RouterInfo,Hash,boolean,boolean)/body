@@ -1,0 +1,79 @@
+{
+  String hash=info.getIdentity().getHash().toBase64();
+  buf.append("<table><tr><th><a name=\"").append(hash.substring(0,6)).append("\" ></a>");
+  double distance=0;
+  if (isUs) {
+    buf.append("<a name=\"our-info\" ></a><b>" + _t("Our info") + ": ").append(hash).append("</b></th></tr><tr><td>\n");
+  }
+ else {
+    buf.append("<b>" + _t("Peer info for") + ":</b> ").append(hash).append("\n");
+    if (!full) {
+      buf.append("[<a href=\"netdb?r=").append(hash.substring(0,6)).append("\" >").append(_t("Full entry")).append("</a>]");
+    }
+    buf.append("</th></tr><tr><td>\n");
+    if (us != null) {
+      DecimalFormat fmt=new DecimalFormat("#0.00");
+      BigInteger dist=HashDistance.getDistance(us,info.getHash());
+      distance=biLog2(dist);
+      buf.append("<b>Hash Distance: ").append(fmt.format(distance)).append("</b><br>");
+    }
+  }
+  buf.append("<b>Routing Key: </b>").append(info.getRoutingKey().toBase64()).append("<br>\n");
+  buf.append("<b>Version: </b>").append(DataHelper.stripHTML(info.getVersion())).append("<br>\n");
+  buf.append("<b>Caps: </b>").append(DataHelper.stripHTML(info.getCapabilities())).append("<br>\n");
+  String kls=info.getOption("netdb.knownLeaseSets");
+  if (kls != null)   buf.append("<b>Lease Sets: </b>").append(DataHelper.stripHTML(kls)).append("<br>\n");
+  String kr=info.getOption("netdb.knownRouters");
+  if (kr != null)   buf.append("<b>Routers: </b>").append(DataHelper.stripHTML(kr)).append("<br>\n");
+  long now=_context.clock().now();
+  if (!isUs) {
+    PeerProfile prof=_context.profileOrganizer().getProfileNonblocking(info.getHash());
+    if (prof != null) {
+      long heard=prof.getFirstHeardAbout();
+      if (heard > 0) {
+        long age=now - heard;
+        if (age > 0) {
+          buf.append("<b>First heard about:</b> ").append(_t("{0} ago",DataHelper.formatDuration2(age))).append("<br>\n");
+        }
+ else {
+          buf.append("<b>First heard about:</b> in ").append(DataHelper.formatDuration2(0 - age)).append("???<br>\n");
+        }
+      }
+    }
+  }
+  long age=now - info.getPublished();
+  if (isUs && _context.router().isHidden()) {
+    buf.append("<b>").append(_t("Hidden")).append(", ").append(_t("Updated")).append(":</b> ").append(_t("{0} ago",DataHelper.formatDuration2(age))).append("<br>\n");
+  }
+ else   if (age > 0) {
+    buf.append("<b>").append(_t("Published")).append(":</b> ").append(_t("{0} ago",DataHelper.formatDuration2(age))).append("<br>\n");
+  }
+ else {
+    buf.append("<b>" + _t("Published") + ":</b> in ").append(DataHelper.formatDuration2(0 - age)).append("???<br>\n");
+  }
+  buf.append("<b>").append(_t("Signing Key")).append(":</b> ").append(info.getIdentity().getSigningPublicKey().getType().toString());
+  buf.append("<br>\n<b>" + _t("Addresses") + ":</b> ");
+  String country=_context.commSystem().getCountry(info.getIdentity().getHash());
+  if (country != null) {
+    buf.append("<img height=\"11\" width=\"16\" alt=\"").append(country.toUpperCase(Locale.US)).append('\"');
+    buf.append(" title=\"").append(getTranslatedCountry(country)).append('\"');
+    buf.append(" src=\"/flags.jsp?c=").append(country).append("\"> ");
+  }
+  for (  RouterAddress addr : info.getAddresses()) {
+    String style=addr.getTransportStyle();
+    buf.append("<b>").append(DataHelper.stripHTML(style)).append(":</b> ");
+    Map<Object,Object> p=addr.getOptionsMap();
+    for (    Map.Entry<Object,Object> e : p.entrySet()) {
+      String name=(String)e.getKey();
+      if (name.equals("key") || name.startsWith("ikey") || name.startsWith("itag")|| name.startsWith("iport"))       continue;
+      String val=(String)e.getValue();
+      buf.append('[').append(_t(DataHelper.stripHTML(name))).append('=');
+      if (name.equals("host"))       buf.append("<b>");
+      buf.append(DataHelper.stripHTML(val)).append("] ");
+      if (name.equals("host"))       buf.append("</b>");
+    }
+  }
+  buf.append("</td></tr>\n");
+  buf.append("</table>\n");
+  return distance;
+}
