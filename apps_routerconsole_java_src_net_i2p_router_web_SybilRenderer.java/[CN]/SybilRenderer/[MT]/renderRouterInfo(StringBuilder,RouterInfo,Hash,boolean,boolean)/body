@@ -6,7 +6,7 @@
     buf.append("<a name=\"our-info\" ></a><b>" + _t("Our info") + ": ").append(hash).append("</b></th></tr><tr><td>\n");
   }
  else {
-    buf.append("<b>" + _t("Peer info for") + ":</b> ").append(hash).append("\n");
+    buf.append("<b>" + _t("Router") + ":</b> ").append(hash).append("\n");
     if (!full) {
       buf.append("[<a href=\"netdb?r=").append(hash.substring(0,6)).append("\" >").append(_t("Full entry")).append("</a>]");
     }
@@ -31,13 +31,18 @@
     if (prof != null) {
       long heard=prof.getFirstHeardAbout();
       if (heard > 0) {
-        long age=now - heard;
-        if (age > 0) {
-          buf.append("<b>First heard about:</b> ").append(_t("{0} ago",DataHelper.formatDuration2(age))).append("<br>\n");
-        }
- else {
-          buf.append("<b>First heard about:</b> in ").append(DataHelper.formatDuration2(0 - age)).append("???<br>\n");
-        }
+        long age=Math.max(now - heard,1);
+        buf.append("<b>First heard about:</b> ").append(_t("{0} ago",DataHelper.formatDuration2(age))).append("<br>\n");
+      }
+      heard=prof.getLastHeardAbout();
+      if (heard > 0) {
+        long age=Math.max(now - heard,1);
+        buf.append("<b>Last heard about:</b> ").append(_t("{0} ago",DataHelper.formatDuration2(age))).append("<br>\n");
+      }
+      heard=prof.getLastHeardFrom();
+      if (heard > 0) {
+        long age=Math.max(now - heard,1);
+        buf.append("<b>Last heard from:</b> ").append(_t("{0} ago",DataHelper.formatDuration2(age))).append("<br>\n");
       }
     }
   }
@@ -65,7 +70,7 @@
     Map<Object,Object> p=addr.getOptionsMap();
     for (    Map.Entry<Object,Object> e : p.entrySet()) {
       String name=(String)e.getKey();
-      if (name.equals("key") || name.startsWith("ikey") || name.startsWith("itag")|| name.startsWith("iport"))       continue;
+      if (name.equals("key") || name.startsWith("ikey") || name.startsWith("itag")|| name.startsWith("iport")|| name.equals("mtu"))       continue;
       String val=(String)e.getValue();
       buf.append('[').append(_t(DataHelper.stripHTML(name))).append('=');
       if (name.equals("host"))       buf.append("<b>");
