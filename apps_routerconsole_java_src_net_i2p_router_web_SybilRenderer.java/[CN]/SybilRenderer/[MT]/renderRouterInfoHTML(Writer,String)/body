@@ -38,6 +38,10 @@
   renderPairDistance(out,buf,ris,points);
   buf.append("<h3>Closest Floodfills to Our Routing Key (Where we Store our RI)</h3>");
   renderRouterInfoHTML(out,buf,ourRKey,avgMinDist,ris,points);
+  RouterKeyGenerator rkgen=_context.routerKeyGenerator();
+  Hash nkey=rkgen.getNextRoutingKey(us);
+  buf.append("<h3>Closest Floodfills to Tomorrow's Routing Key (Where we will Store our RI)</h3>");
+  renderRouterInfoHTML(out,buf,nkey,avgMinDist,ris,points);
   buf.append("<h3>Closest Floodfills to Our Router Hash (DHT Neighbors if we are Floodfill)</h3>");
   renderRouterInfoHTML(out,buf,us,avgMinDist,ris,points);
   Map<Hash,TunnelPool> clientInboundPools=_context.tunnelManager().getInboundClientPools();
@@ -52,8 +56,11 @@
     Hash rkey=ls.getRoutingKey();
     TunnelPool in=clientInboundPools.get(client);
     String name=(in != null) ? in.getSettings().getDestinationNickname() : client.toBase64().substring(0,4);
-    buf.append("<h3>Closest floodfills to the Routing Key for Our Destination " + DataHelper.escapeHTML(name) + " (where we store our LS)</h3>");
+    buf.append("<h3>Closest floodfills to the Routing Key for " + DataHelper.escapeHTML(name) + " (where we store our LS)</h3>");
     renderRouterInfoHTML(out,buf,rkey,avgMinDist,ris,points);
+    nkey=rkgen.getNextRoutingKey(ls.getHash());
+    buf.append("<h3>Closest floodfills to Tomorrow's Routing Key for " + DataHelper.escapeHTML(name) + " (where we store our LS)</h3>");
+    renderRouterInfoHTML(out,buf,nkey,avgMinDist,ris,points);
   }
   if (!points.isEmpty()) {
     List<Hash> warns=new ArrayList<Hash>(points.keySet());
