@@ -7,10 +7,12 @@ synchronized (this) {
   if (getContext().commSystem().getStatus() != Status.DISCONNECTED)   _facade.lookupFailed(_key);
   getContext().messageRegistry().unregisterPending(_out);
   int tries;
+  final List<Hash> unheard;
 synchronized (this) {
     tries=_unheardFrom.size() + _failedPeers.size();
-    for (    Hash h : _unheardFrom)     getContext().profileManager().dbLookupFailed(h);
+    unheard=new ArrayList<Hash>(_unheardFrom);
   }
+  for (  Hash h : unheard)   getContext().profileManager().dbLookupFailed(h);
   long time=System.currentTimeMillis() - _created;
   if (_log.shouldLog(Log.INFO)) {
     long timeRemaining=_expiration - getContext().clock().now();

@@ -1,0 +1,31 @@
+{
+  buf.append("<h3>Floodfills in the Same Declared Family</h3>");
+  int sz=ris.size();
+  ObjectCounter<String> oc=new ObjectCounter<String>();
+  for (  RouterInfo info : ris) {
+    String fam=info.getOption("family");
+    if (fam == null)     continue;
+    oc.increment(fam);
+  }
+  List<String> foo=new ArrayList<String>(oc.objects());
+  Collections.sort(foo,new FoofComparator(oc));
+  boolean found=false;
+  DecimalFormat fmt=new DecimalFormat("#0.00");
+  for (  String s : foo) {
+    int count=oc.count(s);
+    buf.append("<p><b>").append(count).append(" floodfills in declared family \"").append(DataHelper.escapeHTML(s) + '"').append("</b></p>");
+    for (    RouterInfo info : ris) {
+      String fam=info.getOption("family");
+      if (fam == null)       continue;
+      if (!fam.equals(s))       continue;
+      found=true;
+      double point=POINTS_FAMILY;
+      if (count > 1)       addPoints(points,info.getHash(),point,"Same declared family \"" + DataHelper.escapeHTML(s) + "\" with "+ (count - 1)+ " other"+ ((count > 2) ? "s" : ""));
+ else       addPoints(points,info.getHash(),point,"Declared family \"" + DataHelper.escapeHTML(s) + '"');
+    }
+  }
+  if (!found)   buf.append("<p>None</p>");
+  out.write(buf.toString());
+  out.flush();
+  buf.setLength(0);
+}

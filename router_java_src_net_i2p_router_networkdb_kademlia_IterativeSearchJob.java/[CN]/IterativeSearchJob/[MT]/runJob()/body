@@ -32,10 +32,15 @@
       floodfillPeers.add(iter.next());
     }
   }
-  _toTry.addAll(floodfillPeers);
-  _toTry.remove(getContext().routerHash());
-  _toTry.remove(_key);
-  if (_toTry.isEmpty()) {
+  final boolean empty;
+  final Hash us=getContext().routerHash();
+synchronized (this) {
+    _toTry.addAll(floodfillPeers);
+    _toTry.remove(us);
+    _toTry.remove(_key);
+    empty=_toTry.isEmpty();
+  }
+  if (empty) {
     if (_log.shouldLog(Log.WARN))     _log.warn(getJobId() + ": ISJ for " + _key+ " had no peers to send to");
     failed();
     return;

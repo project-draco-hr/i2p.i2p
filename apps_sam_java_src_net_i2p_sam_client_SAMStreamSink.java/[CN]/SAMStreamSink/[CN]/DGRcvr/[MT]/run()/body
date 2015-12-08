@@ -1,0 +1,45 @@
+{
+  byte[] buf=new byte[32768];
+  try {
+    Sink sink=new Sink("FAKE","FAKEFROM");
+    DatagramSocket dg=new DatagramSocket(V3DGPORT);
+    while (true) {
+      DatagramPacket p=new DatagramPacket(buf,32768);
+      dg.receive(p);
+      int len=p.getLength();
+      int off=p.getOffset();
+      byte[] data=p.getData();
+      _log.info("Got datagram length " + len);
+      if (_mode == DG || _mode == RAWHDR) {
+        ByteArrayInputStream bais=new ByteArrayInputStream(data,off,len);
+        String line=DataHelper.readLine(bais);
+        if (line == null) {
+          _log.error("DGRcvr no header line");
+          continue;
+        }
+        if (_mode == DG && line.length() < 516) {
+          _log.error("DGRcvr line too short: \"" + line + '\n');
+          continue;
+        }
+        String[] parts=line.split(" ");
+        int i=0;
+        if (_mode == DG) {
+          String dest=parts[0];
+          _log.info("DG is from " + dest);
+          i++;
+        }
+        for (; i < parts.length; i++) {
+          _log.info("Parameter: " + parts[i]);
+        }
+        int left=bais.available();
+        sink.received(data,off + len - left,left);
+      }
+ else {
+        sink.received(data,off,len);
+      }
+    }
+  }
+ catch (  IOException ioe) {
+    _log.error("DGRcvr",ioe);
+  }
+}

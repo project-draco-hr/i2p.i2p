@@ -4,12 +4,24 @@
   long tag=rrReader.readTag();
   int ipSize=rrReader.readIPSize();
   int port=rrReader.readPort();
-  if (!isValid(alice.getIP(),alice.getPort()) || ipSize != 0 || port != 0) {
-    if (_log.shouldLog(Log.WARN)) {
-      byte ip[]=new byte[ipSize];
-      rrReader.readIP(ip,0);
-      _log.warn("Bad relay req from " + alice + " for "+ Addresses.toString(ip,port));
+  byte[] aliceIP=alice.getIP();
+  int alicePort=alice.getPort();
+  if (!isValid(alice.getIP(),alice.getPort())) {
+    if (_log.shouldWarn())     _log.warn("Bad relay req from " + alice + " for "+ Addresses.toString(aliceIP,alicePort));
+    _context.statManager().addRateData("udp.relayBadIP",1);
+    return;
+  }
+  if (ipSize != 0) {
+    byte ip[]=new byte[ipSize];
+    rrReader.readIP(ip,0);
+    if (!Arrays.equals(aliceIP,ip)) {
+      if (_log.shouldWarn())       _log.warn("Bad relay req from " + alice + " for "+ Addresses.toString(ip,port));
+      _context.statManager().addRateData("udp.relayBadIP",1);
+      return;
     }
+  }
+  if (port != 0 && port != alicePort) {
+    if (_log.shouldWarn())     _log.warn("Bad relay req from " + alice + " for "+ Addresses.toString(aliceIP,port));
     _context.statManager().addRateData("udp.relayBadIP",1);
     return;
   }

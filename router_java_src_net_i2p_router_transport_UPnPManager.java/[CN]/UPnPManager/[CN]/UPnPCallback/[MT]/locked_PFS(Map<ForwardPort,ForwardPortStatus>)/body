@@ -1,0 +1,31 @@
+{
+  byte[] ipaddr=null;
+  DetectedIP[] ips=_upnp.getAddress();
+  if (ips != null) {
+    for (    DetectedIP ip : ips) {
+      if (TransportUtil.isPubliclyRoutable(ip.publicAddress.getAddress(),false)) {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("External address: " + ip.publicAddress + " type: "+ ip.natType);
+        if (!ip.publicAddress.equals(_detectedAddress)) {
+          _detectedAddress=ip.publicAddress;
+          _manager.externalAddressReceived(SOURCE_UPNP,_detectedAddress.getAddress(),0);
+        }
+        ipaddr=ip.publicAddress.getAddress();
+        break;
+      }
+    }
+  }
+ else {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("No external address returned");
+  }
+  for (  Map.Entry<ForwardPort,ForwardPortStatus> entry : statuses.entrySet()) {
+    ForwardPort fp=entry.getKey();
+    ForwardPortStatus fps=entry.getValue();
+    if (_log.shouldLog(Log.DEBUG))     _log.debug(fp.name + " " + fp.protocol+ " "+ fp.portNumber+ " status: "+ fps.status+ " reason: "+ fps.reasonString+ " ext port: "+ fps.externalPort);
+    String style;
+    if (fp.protocol == ForwardPort.PROTOCOL_UDP_IPV4)     style="SSU";
+ else     if (fp.protocol == ForwardPort.PROTOCOL_TCP_IPV4)     style="NTCP";
+ else     continue;
+    boolean success=fps.status >= ForwardPortStatus.MAYBE_SUCCESS;
+    _manager.forwardPortStatus(style,ipaddr,fp.portNumber,fps.externalPort,success,fps.reasonString);
+  }
+}

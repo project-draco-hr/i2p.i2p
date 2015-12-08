@@ -109,8 +109,15 @@ synchronized (coordinator.peers) {
   coordinator.interestedAndChoking+=removedCount;
   coordinator.setRateHistory(uploaded,downloaded);
   Storage storage=coordinator.getStorage();
-  if (storage != null && (_runCount % 4) == 0) {
-    storage.cleanRAFs();
+  if (storage != null) {
+    int files=storage.getFileCount();
+    int skip;
+    if (files == 1)     skip=6;
+ else     if (files <= 4)     skip=4;
+ else     if (files <= 20)     skip=3;
+ else     if (files <= 50)     skip=2;
+ else     skip=1;
+    if ((_runCount % skip) == 0)     storage.cleanRAFs();
   }
   if (dht != null && (_runCount % 16) == 0) {
     dht.announce(coordinator.getInfoHash(),coordinator.completed());

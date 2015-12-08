@@ -14,29 +14,57 @@
       return false;
     }
     int size;
-{
-      String strsize=props.getProperty("SIZE");
-      if (strsize == null) {
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("Size not specified in RAW SEND message");
-        return false;
-      }
+    String strsize=props.getProperty("SIZE");
+    if (strsize == null) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Size not specified in RAW SEND message");
+      return false;
+    }
+    try {
+      size=Integer.parseInt(strsize);
+    }
+ catch (    NumberFormatException e) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Invalid RAW SEND size specified: " + strsize);
+      return false;
+    }
+    if (!checkSize(size)) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Specified size (" + size + ") is out of protocol limits");
+      return false;
+    }
+    int proto=I2PSession.PROTO_DATAGRAM_RAW;
+    int fromPort=I2PSession.PORT_UNSPECIFIED;
+    int toPort=I2PSession.PORT_UNSPECIFIED;
+    String s=props.getProperty("PROTOCOL");
+    if (s != null) {
       try {
-        size=Integer.parseInt(strsize);
+        proto=Integer.parseInt(s);
       }
  catch (      NumberFormatException e) {
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("Invalid RAW SEND size specified: " + strsize);
-        return false;
+        if (_log.shouldLog(Log.WARN))         _log.warn("Invalid RAW SEND protocol specified: " + s);
       }
-      if (!checkSize(size)) {
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("Specified size (" + size + ") is out of protocol limits");
-        return false;
+    }
+    s=props.getProperty("FROM_PORT");
+    if (s != null) {
+      try {
+        fromPort=Integer.parseInt(s);
+      }
+ catch (      NumberFormatException e) {
+        if (_log.shouldLog(Log.WARN))         _log.warn("Invalid RAW SEND port specified: " + s);
+      }
+    }
+    s=props.getProperty("TO_PORT");
+    if (s != null) {
+      try {
+        toPort=Integer.parseInt(s);
+      }
+ catch (      NumberFormatException e) {
+        if (_log.shouldLog(Log.WARN))         _log.warn("Invalid RAW SEND port specified: " + s);
       }
     }
     try {
       DataInputStream in=new DataInputStream(getClientSocket().socket().getInputStream());
       byte[] data=new byte[size];
       in.readFully(data);
-      if (!getRawSession().sendBytes(dest,data)) {
+      if (!getRawSession().sendBytes(dest,data,proto,fromPort,toPort)) {
         _log.error("RAW SEND failed");
         return true;
       }

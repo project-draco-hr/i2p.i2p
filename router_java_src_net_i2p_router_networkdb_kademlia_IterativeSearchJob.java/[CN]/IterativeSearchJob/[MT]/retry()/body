@@ -9,16 +9,19 @@
   }
   while (true) {
     Hash peer;
+    final int done, pend;
 synchronized (this) {
       if (_dead)       return;
-      int pend=_unheardFrom.size();
-      if (pend >= MAX_CONCURRENT)       return;
-      int done=_failedPeers.size();
-      if (done >= _totalSearchLimit) {
-        failed();
-        return;
-      }
-      if (done + pend >= _totalSearchLimit)       return;
+      pend=_unheardFrom.size();
+      if (pend >= _maxConcurrent)       return;
+      done=_failedPeers.size();
+    }
+    if (done >= _totalSearchLimit) {
+      failed();
+      return;
+    }
+    if (done + pend >= _totalSearchLimit)     return;
+synchronized (this) {
       if (_alwaysQueryHash != null && !_unheardFrom.contains(_alwaysQueryHash) && !_failedPeers.contains(_alwaysQueryHash)) {
         peer=_alwaysQueryHash;
       }
