@@ -1,0 +1,35 @@
+{
+  RouterInfo us=_context.router().getRouterInfo();
+  byte[] ourIP=getIP(us);
+  if (ourIP == null)   return;
+  buf.append("<h3>Floodfills close to Our IP</h3>");
+  boolean found=false;
+  for (  RouterInfo info : ris) {
+    byte[] ip=getIP(info);
+    if (ip == null)     continue;
+    if (ip[0] == ourIP[0] && ip[1] == ourIP[1]) {
+      buf.append("<p><b>");
+      if (ip[2] == ourIP[2]) {
+        if (ip[3] == ourIP[3]) {
+          buf.append("Same IP as us");
+          addPoints(points,info.getHash(),POINTS_US32,"Same IP as us");
+        }
+ else {
+          buf.append("Same /24 as us");
+          addPoints(points,info.getHash(),POINTS_US24,"Same /24 as us");
+        }
+      }
+ else {
+        buf.append("Same /16 as us");
+        addPoints(points,info.getHash(),POINTS_US16,"Same /16 as us");
+      }
+      buf.append(":</b></p>");
+      renderRouterInfo(buf,info,null,false,false);
+      found=true;
+    }
+  }
+  if (!found)   buf.append("<p>None</p>");
+  out.write(buf.toString());
+  out.flush();
+  buf.setLength(0);
+}
