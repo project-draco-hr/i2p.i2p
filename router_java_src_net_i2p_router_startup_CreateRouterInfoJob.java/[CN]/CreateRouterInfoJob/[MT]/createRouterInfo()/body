@@ -4,10 +4,6 @@
   OutputStream fos1=null;
   try {
     info.setAddresses(getContext().commSystem().createAddresses());
-    Properties stats=getContext().statPublisher().publishStatistics();
-    stats.setProperty(RouterInfo.PROP_NETWORK_ID,Router.NETWORK_ID + "");
-    getContext().router().addCapabilities(info);
-    info.setOptions(stats);
     info.setPublished(getCurrentPublishDate(getContext()));
     Object keypair[]=getContext().keyGenerator().generatePKIKeypair();
     PublicKey pubkey=(PublicKey)keypair[0];
@@ -31,6 +27,8 @@
       padding=null;
     }
     info.setIdentity(ident);
+    Properties stats=getContext().statPublisher().publishStatistics(ident.getHash());
+    info.setOptions(stats);
     info.sign(signingPrivKey);
     if (!info.isValid())     throw new DataFormatException("RouterInfo we just built is invalid: " + info);
     (new File(getContext().getRouterDir(),KEYS_FILENAME)).delete();

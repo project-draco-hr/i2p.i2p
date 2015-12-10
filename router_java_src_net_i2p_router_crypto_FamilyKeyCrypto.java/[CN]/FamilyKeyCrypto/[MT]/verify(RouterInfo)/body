@@ -1,0 +1,35 @@
+{
+  String name=ri.getOption(OPT_NAME);
+  if (name == null)   return true;
+  String ssig=ri.getOption("OPT_SIG");
+  if (ssig == null)   return false;
+  Hash h=ri.getHash();
+  String nameAndSig=_verified.get(h);
+  String riNameAndSig=name + ssig;
+  if (nameAndSig != null) {
+    if (nameAndSig.equals(riNameAndSig))     return true;
+    _verified.remove(h);
+  }
+  if (_negativeCache.contains(name))   return false;
+  SigningPublicKey spk=loadCert(name);
+  if (spk == null) {
+    _negativeCache.add(name);
+    return false;
+  }
+  byte[] bsig=Base64.decode(ssig);
+  if (bsig == null)   return false;
+  Signature sig;
+  try {
+    sig=new Signature(spk.getType(),bsig);
+  }
+ catch (  IllegalArgumentException iae) {
+    return false;
+  }
+  byte[] nb=DataHelper.getUTF8(_fname);
+  byte[] b=new byte[nb.length + Hash.HASH_LENGTH];
+  System.arraycopy(nb,0,b,0,nb.length);
+  System.arraycopy(ri.getHash().getData(),0,b,nb.length,Hash.HASH_LENGTH);
+  boolean rv=_context.dsa().verifySignature(sig,b,spk);
+  if (rv)   _verified.put(h,riNameAndSig);
+  return rv;
+}
