@@ -1,35 +1,53 @@
 {
   String name=ri.getOption(OPT_NAME);
   if (name == null)   return true;
-  String ssig=ri.getOption("OPT_SIG");
-  if (ssig == null)   return false;
   Hash h=ri.getHash();
+  String ssig=ri.getOption(OPT_SIG);
+  if (ssig == null) {
+    if (_log.shouldInfo())     _log.info("No sig for " + h + ' '+ name);
+    return false;
+  }
   String nameAndSig=_verified.get(h);
   String riNameAndSig=name + ssig;
   if (nameAndSig != null) {
     if (nameAndSig.equals(riNameAndSig))     return true;
     _verified.remove(h);
   }
-  if (_negativeCache.contains(name))   return false;
-  SigningPublicKey spk=loadCert(name);
-  if (spk == null) {
-    _negativeCache.add(name);
-    return false;
+  SigningPublicKey spk;
+  if (name.equals(_fname)) {
+    spk=_pubkey;
+  }
+ else {
+    if (_negativeCache.contains(h))     return false;
+    spk=loadCert(name);
+    if (spk == null) {
+      _negativeCache.add(h);
+      if (_log.shouldInfo())       _log.info("No cert for " + h + ' '+ name);
+      return false;
+    }
   }
   byte[] bsig=Base64.decode(ssig);
-  if (bsig == null)   return false;
+  if (bsig == null) {
+    _negativeCache.add(h);
+    if (_log.shouldInfo())     _log.info("Bad sig for " + h + ' '+ name+ ' '+ ssig);
+    return false;
+  }
   Signature sig;
   try {
     sig=new Signature(spk.getType(),bsig);
   }
  catch (  IllegalArgumentException iae) {
+    _negativeCache.add(h);
+    if (_log.shouldInfo())     _log.info("Bad sig for " + ri,iae);
     return false;
   }
-  byte[] nb=DataHelper.getUTF8(_fname);
+  byte[] nb=DataHelper.getUTF8(name);
   byte[] b=new byte[nb.length + Hash.HASH_LENGTH];
   System.arraycopy(nb,0,b,0,nb.length);
   System.arraycopy(ri.getHash().getData(),0,b,nb.length,Hash.HASH_LENGTH);
   boolean rv=_context.dsa().verifySignature(sig,b,spk);
   if (rv)   _verified.put(h,riNameAndSig);
+ else   _negativeCache.add(h);
+  if (_log.shouldInfo())   _log.info("Verified? " + rv + " for "+ h+ ' '+ name+ ' '+ ssig);
   return rv;
 }
