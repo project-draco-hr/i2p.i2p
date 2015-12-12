@@ -21,10 +21,42 @@
     if (_negativeCache.contains(h))     return false;
     spk=loadCert(name);
     if (spk == null) {
-      _negativeCache.add(h);
-      if (_log.shouldInfo())       _log.info("No cert for " + h + ' '+ name);
-      return false;
+      String skey=ri.getOption(OPT_KEY);
+      if (skey != null) {
+        int semi=skey.indexOf(";");
+        if (semi > 0) {
+          try {
+            int code=Integer.parseInt(skey.substring(0,semi));
+            SigType type=SigType.getByCode(code);
+            if (type != null) {
+              byte[] bkey=Base64.decode(skey.substring(semi + 1));
+              if (bkey != null) {
+                spk=new SigningPublicKey(type,bkey);
+              }
+            }
+          }
+ catch (          NumberFormatException e) {
+            if (_log.shouldInfo())             _log.info("Bad b64 family key: " + ri,e);
+          }
+catch (          IllegalArgumentException e) {
+            if (_log.shouldInfo())             _log.info("Bad b64 family key: " + ri,e);
+          }
+catch (          ArrayIndexOutOfBoundsException e) {
+            if (_log.shouldInfo())             _log.info("Bad b64 family key: " + ri,e);
+          }
+        }
+      }
+      if (spk == null) {
+        _negativeCache.add(h);
+        if (_log.shouldInfo())         _log.info("No cert or valid key for " + h + ' '+ name);
+        return false;
+      }
     }
+  }
+  if (!spk.getType().isAvailable()) {
+    _negativeCache.add(h);
+    if (_log.shouldInfo())     _log.info("Unsupported crypto for sig for " + h);
+    return false;
   }
   byte[] bsig=Base64.decode(ssig);
   if (bsig == null) {
