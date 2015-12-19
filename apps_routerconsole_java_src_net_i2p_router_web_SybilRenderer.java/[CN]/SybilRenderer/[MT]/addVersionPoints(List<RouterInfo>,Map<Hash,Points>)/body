@@ -1,0 +1,37 @@
+{
+  RouterInfo us=_context.router().getRouterInfo();
+  if (us == null)   return;
+  String ourVer=us.getVersion();
+  if (!ourVer.startsWith("0.9."))   return;
+  ourVer=ourVer.substring(4);
+  int dot=ourVer.indexOf('.');
+  if (dot > 0)   ourVer=ourVer.substring(0,dot);
+  int minor;
+  try {
+    minor=Integer.parseInt(ourVer);
+  }
+ catch (  NumberFormatException nfe) {
+    return;
+  }
+  for (  RouterInfo info : ris) {
+    Hash h=info.getHash();
+    String hisFullVer=info.getVersion();
+    if (!hisFullVer.startsWith("0.9.")) {
+      addPoints(points,h,50.0,"Strange version " + DataHelper.escapeHTML(hisFullVer));
+      continue;
+    }
+    String hisVer=hisFullVer.substring(4);
+    dot=hisVer.indexOf('.');
+    if (dot > 0)     hisVer=hisVer.substring(0,dot);
+    int hisMinor;
+    try {
+      hisMinor=Integer.parseInt(hisVer);
+    }
+ catch (    NumberFormatException nfe) {
+      continue;
+    }
+    int howOld=minor - hisMinor;
+    if (howOld < 3)     continue;
+    addPoints(points,h,howOld * VERSION_FACTOR,howOld + " versions behind: " + DataHelper.escapeHTML(hisFullVer));
+  }
+}
