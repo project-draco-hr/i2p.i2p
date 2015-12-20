@@ -8,11 +8,13 @@
   if (isInGW && isOutEnd) {
     _context.statManager().addRateData("tunnel.rejectHostile",1);
     _log.error("Dropping build request, IBGW+OBEP");
+    if (from != null)     _context.commSystem().mayDisconnect(from);
     return;
   }
   if ((!isOutEnd) && _context.routerHash().equals(nextPeer)) {
     _context.statManager().addRateData("tunnel.rejectHostile",1);
     if (_log.shouldWarn())     _log.warn("Dropping build request, we are the next hop");
+    if (from != null)     _context.commSystem().mayDisconnect(from);
     return;
   }
   if (!isInGW) {
@@ -26,6 +28,7 @@
     if (nextPeer.equals(from)) {
       _context.statManager().addRateData("tunnel.rejectHostile",1);
       if (_log.shouldLog(Log.WARN))       _log.warn("Dropping build request with the same previous and next hop");
+      _context.commSystem().mayDisconnect(from);
       return;
     }
   }
@@ -35,11 +38,13 @@
   if (timeDiff > MAX_REQUEST_AGE) {
     _context.statManager().addRateData("tunnel.rejectTooOld",1);
     if (_log.shouldLog(Log.WARN))     _log.warn("Dropping build request too old... replay attack? " + DataHelper.formatDuration(timeDiff));
+    if (from != null)     _context.commSystem().mayDisconnect(from);
     return;
   }
   if (timeDiff < 0 - MAX_REQUEST_FUTURE) {
     _context.statManager().addRateData("tunnel.rejectFuture",1);
     if (_log.shouldLog(Log.WARN))     _log.warn("Dropping build request too far in future " + DataHelper.formatDuration(0 - timeDiff));
+    if (from != null)     _context.commSystem().mayDisconnect(from);
     return;
   }
   int response;
@@ -130,11 +135,15 @@
   if (response != 0) {
     _context.statManager().addRateData("tunnel.reject." + response,1);
     _context.messageHistory().tunnelRejected(from,new TunnelId(ourId),nextPeer,"rejecting for " + response + ": "+ state.msg.getUniqueId()+ "/"+ ourId+ "/"+ req.readNextTunnelId()+ " delay "+ recvDelay+ " as "+ (isOutEnd ? "outbound endpoint" : isInGW ? "inbound gw" : "participant"));
+    if (from != null)     _context.commSystem().mayDisconnect(from);
     if ((!_context.routerHash().equals(nextPeer)) && (!_context.commSystem().haveOutboundCapacity(81)) && (!_context.commSystem().isEstablished(nextPeer))) {
       _context.statManager().addRateData("tunnel.dropConnLimits",1);
       if (_log.shouldLog(Log.WARN))       _log.warn("Not sending rejection due to conn limits");
       return;
     }
+  }
+ else   if (isInGW && from != null) {
+    _context.commSystem().mayDisconnect(from);
   }
   EncryptedBuildRecord reply=BuildResponseRecord.create(_context,response,req.readReplyKey(),req.readReplyIV(),state.msg.getUniqueId());
   int records=state.msg.getRecordCount();
