@@ -10,12 +10,11 @@
         if (_log.shouldLog(Log.DEBUG))         _log.debug("No parameters specified in SESSION CREATE message");
         return writeString("SESSION STATUS RESULT=I2P_ERROR MESSAGE=\"No parameters for SESSION CREATE\"\n");
       }
-      dest=props.getProperty("DESTINATION");
+      dest=(String)props.remove("DESTINATION");
       if (dest == null) {
         if (_log.shouldLog(Log.DEBUG))         _log.debug("SESSION DESTINATION parameter not specified");
         return writeString("SESSION STATUS RESULT=I2P_ERROR MESSAGE=\"DESTINATION not specified\"\n");
       }
-      props.remove("DESTINATION");
       String destKeystream=null;
       if (dest.equals("TRANSIENT")) {
         _log.debug("TRANSIENT destination requested");
@@ -36,12 +35,11 @@
           if (_log.shouldLog(Log.DEBUG))           _log.debug("Custom destination specified [" + dest + "] and it is already known");
         }
       }
-      String style=props.getProperty("STYLE");
+      String style=(String)props.remove("STYLE");
       if (style == null) {
         if (_log.shouldLog(Log.DEBUG))         _log.debug("SESSION STYLE parameter not specified");
         return writeString("SESSION STATUS RESULT=I2P_ERROR MESSAGE=\"No SESSION STYLE specified\"\n");
       }
-      props.remove("STYLE");
       props.setProperty(I2PClient.PROP_RELIABILITY,I2PClient.PROP_RELIABILITY_NONE);
       if (style.equals("RAW")) {
         rawSession=new SAMRawSession(destKeystream,props,this);
@@ -50,7 +48,7 @@
         datagramSession=new SAMDatagramSession(destKeystream,props,this);
       }
  else       if (style.equals("STREAM")) {
-        String dir=props.getProperty("DIRECTION");
+        String dir=(String)props.remove("DIRECTION");
         if (dir == null) {
           if (_log.shouldLog(Log.DEBUG))           _log.debug("No DIRECTION parameter in STREAM session, defaulting to BOTH");
           dir="BOTH";
@@ -58,9 +56,6 @@
  else         if (!dir.equals("CREATE") && !dir.equals("RECEIVE") && !dir.equals("BOTH")) {
           if (_log.shouldLog(Log.DEBUG))           _log.debug("Unknown DIRECTION parameter value: [" + dir + "]");
           return writeString("SESSION STATUS RESULT=I2P_ERROR MESSAGE=\"Unknown DIRECTION parameter\"\n");
-        }
- else {
-          props.remove("DIRECTION");
         }
         streamSession=newSAMStreamSession(destKeystream,dir,props);
       }
