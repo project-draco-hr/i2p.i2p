@@ -1,0 +1,46 @@
+{
+  int sz=ris.size();
+  List<Pair> pairs=new ArrayList<Pair>(PAIRMAX);
+  double total=0;
+  for (int i=0; i < sz; i++) {
+    RouterInfo info1=ris.get(i);
+    for (int j=i + 1; j < sz; j++) {
+      RouterInfo info2=ris.get(j);
+      BigInteger dist=HashDistance.getDistance(info1.getHash(),info2.getHash());
+      if (pairs.isEmpty()) {
+        pairs.add(new Pair(info1,info2,dist));
+      }
+ else       if (pairs.size() < PAIRMAX) {
+        pairs.add(new Pair(info1,info2,dist));
+        Collections.sort(pairs);
+      }
+ else       if (dist.compareTo(pairs.get(PAIRMAX - 1).dist) < 0) {
+        pairs.set(PAIRMAX - 1,new Pair(info1,info2,dist));
+        Collections.sort(pairs);
+      }
+      total+=biLog2(dist);
+    }
+  }
+  double avg=total / (sz * sz / 2);
+  buf.append("<h3>Average Floodfill Distance is ").append(fmt.format(avg)).append("</h3>");
+  buf.append("<h3 id=\"pairs\">Closest Floodfill Pairs by Hash</h3>");
+  for (  Pair p : pairs) {
+    double distance=biLog2(p.dist);
+    double point=MIN_CLOSE - distance;
+    if (point < 0)     break;
+    if (point >= 2) {
+      buf.append("<p><b>Hash Distance: ").append(fmt.format(distance)).append(": </b>");
+      buf.append("</p>");
+      renderRouterInfo(buf,p.r1,null,false,false);
+      renderRouterInfo(buf,p.r2,null,false,false);
+    }
+    point*=PAIR_DISTANCE_FACTOR;
+    String b2=p.r2.getHash().toBase64();
+    addPoints(points,p.r1.getHash(),point,"Very close (" + fmt.format(distance) + ") to other floodfill <a href=\"netdb?r="+ b2+ "\">"+ b2+ "</a>");
+    String b1=p.r1.getHash().toBase64();
+    addPoints(points,p.r2.getHash(),point,"Very close (" + fmt.format(distance) + ") to other floodfill <a href=\"netdb?r="+ b1+ "\">"+ b1+ "</a>");
+  }
+  out.write(buf.toString());
+  out.flush();
+  buf.setLength(0);
+}

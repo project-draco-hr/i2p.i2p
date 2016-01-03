@@ -1,0 +1,49 @@
+{
+synchronized (_lookupCache) {
+    Destination rv=_lookupCache.get(h);
+    if (rv != null)     return rv;
+  }
+synchronized (_stateLock) {
+    if (_state == State.CLOSED || _state == State.INIT || _state == State.OPENING) {
+      if (_log.shouldLog(Log.INFO))       _log.info("Session closed, cannot lookup " + h);
+      return null;
+    }
+  }
+  LookupWaiter waiter;
+  long nonce;
+  if (_routerSupportsHostLookup) {
+    nonce=_lookupID.incrementAndGet() & 0x7fffffff;
+    waiter=new LookupWaiter(h,nonce);
+  }
+ else {
+    nonce=0;
+    waiter=new LookupWaiter(h);
+  }
+  _pendingLookups.offer(waiter);
+  Destination rv=null;
+  try {
+    if (_routerSupportsHostLookup) {
+      if (_log.shouldLog(Log.INFO))       _log.info("Sending HostLookup for " + h);
+      SessionId id=_sessionId;
+      if (id == null)       id=new SessionId(65535);
+      sendMessage_unchecked(new HostLookupMessage(id,h,nonce,maxWait));
+    }
+ else {
+      if (_log.shouldLog(Log.INFO))       _log.info("Sending DestLookup for " + h);
+      sendMessage_unchecked(new DestLookupMessage(h));
+    }
+    try {
+synchronized (waiter) {
+        waiter.wait(maxWait);
+        rv=waiter.destination;
+      }
+    }
+ catch (    InterruptedException ie) {
+      throw new I2PSessionException("Interrupted",ie);
+    }
+  }
+  finally {
+    _pendingLookups.remove(waiter);
+  }
+  return rv;
+}

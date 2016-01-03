@@ -1,0 +1,32 @@
+{
+  if (max <= 0)   max=Integer.MAX_VALUE;
+  StringBuilder buf=new StringBuilder(512);
+  List<NewsEntry> entries=Collections.emptyList();
+  ClientAppManager cmgr=ctx.clientAppManager();
+  if (cmgr != null) {
+    NewsManager nmgr=(NewsManager)cmgr.getRegisteredApp(NewsManager.APP_NAME);
+    if (nmgr != null)     entries=nmgr.getEntries();
+  }
+  if (!entries.isEmpty()) {
+    DateFormat fmt=DateFormat.getDateInstance(DateFormat.SHORT);
+    fmt.setTimeZone(SystemVersion.getSystemTimeZone(ctx));
+    int i=0;
+    for (    NewsEntry entry : entries) {
+      if (i++ < start)       continue;
+      buf.append("<div class=\"newsentry\"><h3>");
+      if (entry.updated > 0) {
+        Date date=new Date(entry.updated);
+        buf.append("<font size=\"-1\">").append(fmt.format(date)).append(":</font> ");
+      }
+      if (entry.link != null)       buf.append("<a href=\"").append(DataHelper.escapeHTML(entry.link)).append("\">");
+      buf.append(entry.title);
+      if (entry.link != null)       buf.append("</a>");
+      if (entry.authorName != null) {
+        buf.append(" <font size=\"-2\">(<i>").append(Messages.getString("by {0}",DataHelper.escapeHTML(entry.authorName),ctx)).append("</i>)</font>\n");
+      }
+      buf.append("</h3>\n<div class=\"newscontent\">\n").append(entry.content).append("\n</div></div>\n");
+      if (i >= start + max)       break;
+    }
+  }
+  return buf.toString();
+}

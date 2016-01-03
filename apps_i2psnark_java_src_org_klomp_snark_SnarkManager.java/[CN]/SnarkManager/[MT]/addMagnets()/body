@@ -1,11 +1,25 @@
 {
-  for (  Object o : _config.keySet()) {
-    String k=(String)o;
+  boolean changed=false;
+  for (Iterator<?> iter=_config.keySet().iterator(); iter.hasNext(); ) {
+    String k=(String)iter.next();
     if (k.startsWith(PROP_META_MAGNET_PREFIX)) {
       String b64=k.substring(PROP_META_MAGNET_PREFIX.length());
       b64=b64.replace('$','=');
       byte[] ih=Base64.decode(b64);
-      if (ih != null && ih.length == 20)       addMagnet(_("Magnet") + ' ' + I2PSnarkUtil.toHex(ih),ih,null,false);
+      if (ih != null && ih.length == 20) {
+        Properties config=getConfig(ih);
+        String name=config.getProperty(PROP_META_MAGNET_DN);
+        if (name == null)         name=_t("Magnet") + ' ' + I2PSnarkUtil.toHex(ih);
+        String tracker=config.getProperty(PROP_META_MAGNET_TR);
+        String dir=config.getProperty(PROP_META_MAGNET_DIR);
+        File dirf=(dir != null) ? (new File(dir)) : null;
+        addMagnet(name,ih,tracker,false,dirf);
+      }
+ else {
+        iter.remove();
+        changed=true;
+      }
     }
   }
+  if (changed)   saveConfig();
 }

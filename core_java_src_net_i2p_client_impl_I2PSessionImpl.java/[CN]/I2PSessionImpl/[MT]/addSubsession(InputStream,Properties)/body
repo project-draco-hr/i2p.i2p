@@ -1,0 +1,20 @@
+{
+  if (!_routerSupportsSubsessions)   throw new I2PSessionException("Router does not support subsessions");
+  SubSession sub;
+synchronized (_subsessionLock) {
+    if (_subsessions.size() > _subsessionMap.size())     throw new I2PSessionException("Subsession request already pending");
+    sub=new SubSession(this,privateKeyStream,opts);
+    for (    SubSession ss : _subsessions) {
+      if (ss.getDecryptionKey().equals(sub.getDecryptionKey()) && ss.getPrivateKey().equals(sub.getPrivateKey())) {
+        throw new I2PSessionException("Dup subsession");
+      }
+    }
+    _subsessions.add(sub);
+  }
+synchronized (_stateLock) {
+    if (_state == State.OPEN) {
+      _producer.connect(sub);
+    }
+  }
+  return sub;
+}

@@ -1,0 +1,20 @@
+{
+  String keyPassword=KeyStoreUtil.randomString();
+  String cname=name + ".sam.i2p.net";
+  String keyName=opts.getProperty(PROP_KEY_ALIAS);
+  boolean success=KeyStoreUtil.createKeys(ks,keyName,cname,"SAM",keyPassword);
+  if (success) {
+    success=ks.exists();
+    if (success) {
+      opts.setProperty(PROP_KEYSTORE_PASSWORD,DEFAULT_KEYSTORE_PASSWORD);
+      opts.setProperty(PROP_KEY_PASSWORD,keyPassword);
+    }
+  }
+  if (success) {
+    logAlways("Created self-signed certificate for " + cname + " in keystore: "+ ks.getAbsolutePath()+ "\n"+ "The certificate name was generated randomly, and is not associated with your "+ "IP address, host name, router identity, or destination keys.");
+  }
+ else {
+    error("Failed to create SAM SSL keystore.\n" + "If you create the keystore manually, you must add " + PROP_KEYSTORE_PASSWORD + " and "+ PROP_KEY_PASSWORD+ " to "+ (new File(I2PAppContext.getGlobalContext().getConfigDir(),DEFAULT_SAMCLIENT_CONFIGFILE)).getAbsolutePath());
+  }
+  return success;
+}

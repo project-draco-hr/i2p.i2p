@@ -3,31 +3,32 @@
   long nextId=req.readNextTunnelId();
   boolean isInGW=req.readIsInboundGateway();
   boolean isOutEnd=req.readIsOutboundEndpoint();
+  Hash from=state.fromHash;
+  if (from == null && state.from != null)   from=state.from.calculateHash();
   if (isInGW && isOutEnd) {
     _context.statManager().addRateData("tunnel.rejectHostile",1);
     _log.error("Dropping build request, IBGW+OBEP");
+    if (from != null)     _context.commSystem().mayDisconnect(from);
     return;
   }
   if ((!isOutEnd) && _context.routerHash().equals(nextPeer)) {
     _context.statManager().addRateData("tunnel.rejectHostile",1);
-    _log.error("Dropping build request, we are the next hop");
+    if (_log.shouldWarn())     _log.warn("Dropping build request, we are the next hop");
+    if (from != null)     _context.commSystem().mayDisconnect(from);
     return;
   }
   if (!isInGW) {
-    Hash from=state.fromHash;
-    if (from == null)     from=state.from.calculateHash();
-    if (_context.routerHash().equals(from)) {
+    if (from == null || _context.routerHash().equals(from)) {
       _context.statManager().addRateData("tunnel.rejectHostile",1);
       _log.error("Dropping build request, we are the previous hop");
       return;
     }
   }
   if ((!isOutEnd) && (!isInGW)) {
-    Hash from=state.fromHash;
-    if (from == null)     from=state.from.calculateHash();
     if (nextPeer.equals(from)) {
       _context.statManager().addRateData("tunnel.rejectHostile",1);
       if (_log.shouldLog(Log.WARN))       _log.warn("Dropping build request with the same previous and next hop");
+      _context.commSystem().mayDisconnect(from);
       return;
     }
   }
@@ -37,11 +38,13 @@
   if (timeDiff > MAX_REQUEST_AGE) {
     _context.statManager().addRateData("tunnel.rejectTooOld",1);
     if (_log.shouldLog(Log.WARN))     _log.warn("Dropping build request too old... replay attack? " + DataHelper.formatDuration(timeDiff));
+    if (from != null)     _context.commSystem().mayDisconnect(from);
     return;
   }
   if (timeDiff < 0 - MAX_REQUEST_FUTURE) {
     _context.statManager().addRateData("tunnel.rejectFuture",1);
     if (_log.shouldLog(Log.WARN))     _log.warn("Dropping build request too far in future " + DataHelper.formatDuration(0 - timeDiff));
+    if (from != null)     _context.commSystem().mayDisconnect(from);
     return;
   }
   int response;
@@ -80,8 +83,6 @@
     }
   }
   if (response == 0 && !isInGW) {
-    Hash from=state.fromHash;
-    if (from == null)     from=state.from.calculateHash();
     if (from != null && _throttler.shouldThrottle(from)) {
       if (_log.shouldLog(Log.WARN))       _log.warn("Rejecting tunnel (hop throttle), previous hop: " + from);
       _context.statManager().addRateData("tunnel.rejectHopThrottle",1);
@@ -93,7 +94,7 @@
     _context.statManager().addRateData("tunnel.rejectHopThrottle",1);
     response=TunnelHistory.TUNNEL_REJECT_BANDWIDTH;
   }
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Responding to " + state.msg.getUniqueId() + "/"+ ourId+ " after "+ recvDelay+ " with "+ response+ " from "+ (state.fromHash != null ? state.fromHash : state.from != null ? state.from.calculateHash() : "tunnel"));
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Responding to " + state.msg.getUniqueId() + "/"+ ourId+ " after "+ recvDelay+ " with "+ response+ " from "+ (from != null ? from : "tunnel"));
   HopConfig cfg=null;
   if (response == 0) {
     cfg=new HopConfig();
@@ -102,14 +103,10 @@
     cfg.setIVKey(req.readIVKey());
     cfg.setLayerKey(req.readLayerKey());
     if (isInGW) {
-      cfg.setReceiveFrom(null);
     }
  else {
-      if (state.fromHash != null) {
-        cfg.setReceiveFrom(state.fromHash);
-      }
- else       if (state.from != null) {
-        cfg.setReceiveFrom(state.from.calculateHash());
+      if (from != null) {
+        cfg.setReceiveFrom(from);
       }
  else {
         return;
@@ -117,8 +114,6 @@
     }
     cfg.setReceiveTunnelId(DataHelper.toLong(4,ourId));
     if (isOutEnd) {
-      cfg.setSendTo(null);
-      cfg.setSendTunnelId(null);
     }
  else {
       cfg.setSendTo(nextPeer);
@@ -139,12 +134,16 @@
   }
   if (response != 0) {
     _context.statManager().addRateData("tunnel.reject." + response,1);
-    _context.messageHistory().tunnelRejected(state.fromHash,new TunnelId(ourId),nextPeer,"rejecting for " + response + ": "+ state.msg.getUniqueId()+ "/"+ ourId+ "/"+ req.readNextTunnelId()+ " delay "+ recvDelay+ " as "+ (isOutEnd ? "outbound endpoint" : isInGW ? "inbound gw" : "participant"));
+    _context.messageHistory().tunnelRejected(from,new TunnelId(ourId),nextPeer,"rejecting for " + response + ": "+ state.msg.getUniqueId()+ "/"+ ourId+ "/"+ req.readNextTunnelId()+ " delay "+ recvDelay+ " as "+ (isOutEnd ? "outbound endpoint" : isInGW ? "inbound gw" : "participant"));
+    if (from != null)     _context.commSystem().mayDisconnect(from);
+    if ((!_context.routerHash().equals(nextPeer)) && (!_context.commSystem().haveOutboundCapacity(81)) && (!_context.commSystem().isEstablished(nextPeer))) {
+      _context.statManager().addRateData("tunnel.dropConnLimits",1);
+      if (_log.shouldLog(Log.WARN))       _log.warn("Not sending rejection due to conn limits");
+      return;
+    }
   }
-  if (response != 0 && (!_context.routerHash().equals(nextPeer)) && (!_context.commSystem().haveOutboundCapacity(81)) && (!_context.commSystem().isEstablished(nextPeer))) {
-    _context.statManager().addRateData("tunnel.dropConnLimits",1);
-    if (_log.shouldLog(Log.WARN))     _log.warn("Not sending rejection due to conn limits");
-    return;
+ else   if (isInGW && from != null) {
+    _context.commSystem().mayDisconnect(from);
   }
   EncryptedBuildRecord reply=BuildResponseRecord.create(_context,response,req.readReplyKey(),req.readReplyIV(),state.msg.getUniqueId());
   int records=state.msg.getRecordCount();

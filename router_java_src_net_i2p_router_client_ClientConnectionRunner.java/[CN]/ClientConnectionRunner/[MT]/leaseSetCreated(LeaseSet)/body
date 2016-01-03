@@ -1,16 +1,19 @@
 {
-  LeaseRequestState state=null;
+  Hash h=ls.getDestination().calculateHash();
+  SessionParams sp=_sessions.get(h);
+  if (sp == null)   return;
+  LeaseRequestState state;
 synchronized (this) {
-    state=_leaseRequest;
+    state=sp.leaseRequest;
     if (state == null) {
       if (_log.shouldLog(Log.WARN))       _log.warn("LeaseRequest is null and we've received a new lease?! perhaps this is odd... " + ls);
       return;
     }
  else {
       state.setIsSuccessful(true);
-      _currentLeaseSet=ls;
+      setLeaseSet(ls);
       if (_log.shouldLog(Log.DEBUG))       _log.debug("LeaseSet created fully: " + state + " / "+ ls);
-      _leaseRequest=null;
+      sp.leaseRequest=null;
       _consecutiveLeaseRequestFails=0;
     }
   }

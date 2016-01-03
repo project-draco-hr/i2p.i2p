@@ -1,0 +1,45 @@
+{
+  Log log=ctx.logManager().getLog(PersistNews.class);
+  File dir=new File(ctx.getConfigDir(),DIR);
+  List<NewsEntry> rv=new ArrayList<NewsEntry>();
+  File[] files=dir.listFiles();
+  if (files == null)   return rv;
+  for (  File file : files) {
+    String name=file.getName();
+    if (!name.startsWith(PFX) || !name.endsWith(SFX))     continue;
+    XMLParser parser=new XMLParser(ctx);
+    InputStream in=null;
+    Node node;
+    boolean error=false;
+    try {
+      in=new GZIPInputStream(new FileInputStream(file));
+      node=parser.parse(in);
+      NewsEntry entry=extract(node);
+      if (entry != null) {
+        rv.add(entry);
+      }
+ else {
+        if (log.shouldWarn())         log.warn("load error from " + file);
+        error=true;
+      }
+    }
+ catch (    ParserException pe) {
+      if (log.shouldWarn())       log.warn("load error from " + file,pe);
+      error=true;
+    }
+catch (    IOException ioe) {
+      if (log.shouldWarn())       log.warn("load error from " + file,ioe);
+      error=true;
+    }
+ finally {
+      if (in != null)       try {
+        in.close();
+      }
+ catch (      IOException ioe) {
+      }
+    }
+    if (error)     file.delete();
+  }
+  Collections.sort(rv);
+  return rv;
+}

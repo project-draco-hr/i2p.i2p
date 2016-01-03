@@ -31,7 +31,7 @@ synchronized (_samOut) {
  else {
                 throw new IOException("unsupported mode " + _mode);
               }
-              byte msg[]=DataHelper.getASCII(m);
+              byte msg[]=DataHelper.getUTF8(m);
               _samOut.write(msg);
             }
             _samOut.write(data,0,read);
@@ -40,13 +40,13 @@ synchronized (_samOut) {
         }
  else {
           ByteArrayOutputStream baos=new ByteArrayOutputStream(read + 1024);
-          baos.write(DataHelper.getASCII("3.0 "));
-          baos.write(DataHelper.getASCII(_v3ID));
+          baos.write(DataHelper.getUTF8("3.0 "));
+          baos.write(DataHelper.getUTF8(_v3ID));
           baos.write((byte)' ');
-          baos.write(DataHelper.getASCII(_remoteDestination));
+          baos.write(DataHelper.getUTF8(_remoteDestination));
           if (_isV32) {
-            if (_mode == RAW)             baos.write(DataHelper.getASCII(" PROTOCOL=123 TO_PORT=5678"));
- else             baos.write(DataHelper.getASCII(" TO_PORT=5678"));
+            if (_mode == RAW)             baos.write(DataHelper.getUTF8(" PROTOCOL=123 TO_PORT=5678"));
+ else             baos.write(DataHelper.getUTF8(" TO_PORT=5678"));
           }
           baos.write((byte)'\n');
           baos.write(data,0,read);
@@ -78,12 +78,11 @@ synchronized (_samOut) {
       }
     }
  else {
-      byte msg[]=("STREAM CLOSE ID=" + _connectionId + "\n").getBytes();
       try {
+        byte msg[]=("STREAM CLOSE ID=" + _connectionId + "\n").getBytes("UTF-8");
 synchronized (_samOut) {
           _samOut.write(msg);
           _samOut.flush();
-          _samOut.close();
         }
       }
  catch (      IOException ioe) {
@@ -95,15 +94,13 @@ synchronized (_samOut) {
     _dgSock.close();
   }
   closed();
+  try {
+    Thread.sleep(10000);
+  }
+ catch (  InterruptedException ie) {
+  }
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Runner exiting");
   if (toSend != _totalSent)   _log.error("Only sent " + _totalSent + " of "+ toSend+ " bytes");
   if (_reader2 != null)   _reader2.stopReading();
-  if (_isV3) {
-    try {
-      Thread.sleep(10000);
-    }
- catch (    InterruptedException ie) {
-    }
-  }
   _reader.stopReading();
 }

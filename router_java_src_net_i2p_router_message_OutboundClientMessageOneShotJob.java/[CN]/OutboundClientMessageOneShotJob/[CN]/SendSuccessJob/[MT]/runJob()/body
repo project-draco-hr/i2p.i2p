@@ -26,11 +26,15 @@ synchronized (OutboundClientMessageOneShotJob.this) {
   getContext().statManager().addRateData("client.sendMessageSize",_clientMessageSize,sendTime);
   if (_outTunnel != null) {
     if (_outTunnel.getLength() > 0)     size=((size + 1023) / 1024) * 1024;
-    for (int i=0; i < _outTunnel.getLength(); i++) {
+    for (int i=1; i < _outTunnel.getLength(); i++) {
       getContext().profileManager().tunnelTestSucceeded(_outTunnel.getPeer(i),sendTime);
       getContext().profileManager().tunnelDataPushed(_outTunnel.getPeer(i),sendTime,size);
     }
     _outTunnel.incrementVerifiedBytesTransferred(size);
   }
-  if (_inTunnel != null)   for (int i=0; i < _inTunnel.getLength(); i++)   getContext().profileManager().tunnelTestSucceeded(_inTunnel.getPeer(i),sendTime);
+  if (_inTunnel != null) {
+    for (int i=0; i < _inTunnel.getLength() - 1; i++) {
+      getContext().profileManager().tunnelTestSucceeded(_inTunnel.getPeer(i),sendTime);
+    }
+  }
 }

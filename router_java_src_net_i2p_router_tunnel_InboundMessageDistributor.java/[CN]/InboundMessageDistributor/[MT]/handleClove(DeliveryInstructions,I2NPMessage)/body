@@ -1,52 +1,53 @@
 {
+  int type=data.getType();
 switch (instructions.getDeliveryMode()) {
 case DeliveryInstructions.DELIVERY_MODE_LOCAL:
     if (_log.shouldLog(Log.DEBUG))     _log.debug("local delivery instructions for clove: " + data.getClass().getSimpleName());
-  int type=data.getType();
-if (type == GarlicMessage.MESSAGE_TYPE) {
-  _receiver.receive((GarlicMessage)data);
-}
- else if (type == DatabaseStoreMessage.MESSAGE_TYPE) {
-  DatabaseStoreMessage dsm=(DatabaseStoreMessage)data;
-  dsm.setReplyToken(0);
-  dsm.setReplyTunnel(null);
-  dsm.setReplyGateway(null);
-  if (dsm.getEntry().getType() == DatabaseEntry.KEY_TYPE_LEASESET) {
-    ((LeaseSet)dsm.getEntry()).setReceivedAsReply();
-    if (_log.shouldLog(Log.INFO))     _log.info("Storing garlic LS down tunnel for: " + dsm.getKey() + " sent to: "+ _client);
-    _context.inNetMessagePool().add(dsm,null,null);
+  if (type == GarlicMessage.MESSAGE_TYPE) {
+    _receiver.receive((GarlicMessage)data);
   }
- else {
-    if (_client != null) {
-      _context.statManager().addRateData("tunnel.dropDangerousClientTunnelMessage",1,DatabaseStoreMessage.MESSAGE_TYPE);
-      _log.error("Dropped dangerous message down a tunnel for " + _client + ": "+ dsm,new Exception("cause"));
-      return;
+ else   if (type == DatabaseStoreMessage.MESSAGE_TYPE) {
+    DatabaseStoreMessage dsm=(DatabaseStoreMessage)data;
+    dsm.setReplyToken(0);
+    dsm.setReplyTunnel(null);
+    dsm.setReplyGateway(null);
+    if (dsm.getEntry().getType() == DatabaseEntry.KEY_TYPE_LEASESET) {
+      ((LeaseSet)dsm.getEntry()).setReceivedAsReply();
+      if (_log.shouldLog(Log.INFO))       _log.info("Storing garlic LS down tunnel for: " + dsm.getKey() + " sent to: "+ _client);
+      _context.inNetMessagePool().add(dsm,null,null);
     }
-    if (_log.shouldLog(Log.INFO))     _log.info("Storing garlic RI down tunnel for: " + dsm.getKey() + " sent to: "+ _client);
-    _context.inNetMessagePool().add(dsm,null,null);
-  }
-}
- else if (_client != null && type == DatabaseSearchReplyMessage.MESSAGE_TYPE) {
-  DatabaseSearchReplyMessage orig=(DatabaseSearchReplyMessage)data;
-  _context.inNetMessagePool().add(orig,null,null);
-}
- else if (type == DataMessage.MESSAGE_TYPE) {
-  _context.statManager().addRateData("tunnel.handleLoadClove",1);
-  data=null;
-}
- else if (_client != null && type != DeliveryStatusMessage.MESSAGE_TYPE) {
-  _context.statManager().addRateData("tunnel.dropDangerousClientTunnelMessage",1,data.getType());
-  _log.error("Dropped dangerous message down a tunnel for " + _client + ": "+ data,new Exception("cause"));
-}
  else {
-  _context.inNetMessagePool().add(data,null,null);
-}
+      if (_client != null) {
+        _context.statManager().addRateData("tunnel.dropDangerousClientTunnelMessage",1,DatabaseStoreMessage.MESSAGE_TYPE);
+        _log.error("Dropped dangerous message down a tunnel for " + _client + ": "+ dsm,new Exception("cause"));
+        return;
+      }
+      if (_log.shouldLog(Log.INFO))       _log.info("Storing garlic RI down tunnel for: " + dsm.getKey() + " sent to: "+ _client);
+      _context.inNetMessagePool().add(dsm,null,null);
+    }
+  }
+ else   if (_client != null && type == DatabaseSearchReplyMessage.MESSAGE_TYPE) {
+    DatabaseSearchReplyMessage orig=(DatabaseSearchReplyMessage)data;
+    _context.inNetMessagePool().add(orig,null,null);
+  }
+ else   if (type == DataMessage.MESSAGE_TYPE) {
+    _context.statManager().addRateData("tunnel.handleLoadClove",1);
+    data=null;
+  }
+ else   if (_client != null && type != DeliveryStatusMessage.MESSAGE_TYPE) {
+    _context.statManager().addRateData("tunnel.dropDangerousClientTunnelMessage",1,data.getType());
+    _log.error("Dropped dangerous message down a tunnel for " + _client + ": "+ data,new Exception("cause"));
+  }
+ else {
+    _context.inNetMessagePool().add(data,null,null);
+  }
 return;
 case DeliveryInstructions.DELIVERY_MODE_DESTINATION:
-if (!(data instanceof DataMessage)) {
+Hash to=instructions.getDestination();
+if (type != DataMessage.MESSAGE_TYPE) {
 if (_log.shouldLog(Log.ERROR)) _log.error("cant send a " + data.getClass().getSimpleName() + " to a destination");
 }
- else if ((_client != null) && (_client.equals(instructions.getDestination()))) {
+ else if (_client != null && _client.equals(to)) {
 if (_log.shouldLog(Log.DEBUG)) _log.debug("data message came down a tunnel for " + _client);
 DataMessage dm=(DataMessage)data;
 Payload payload=new Payload();
@@ -54,8 +55,22 @@ payload.setEncryptedData(dm.getData());
 ClientMessage m=new ClientMessage(_client,payload);
 _context.clientManager().messageReceived(m);
 }
+ else if (_client != null) {
+TunnelPoolSettings tgt=_context.tunnelManager().getInboundSettings(to);
+if (tgt != null && _client.equals(tgt.getAliasOf())) {
+if (_log.shouldLog(Log.DEBUG)) _log.debug("data message came down a tunnel for " + _client + " targeting shared "+ to);
+DataMessage dm=(DataMessage)data;
+Payload payload=new Payload();
+payload.setEncryptedData(dm.getData());
+ClientMessage m=new ClientMessage(to,payload);
+_context.clientManager().messageReceived(m);
+}
  else {
-if (_log.shouldLog(Log.ERROR)) _log.error("this data message came down a tunnel for " + (_client == null ? "no one" : _client) + " but targetted "+ instructions.getDestination());
+if (_log.shouldLog(Log.ERROR)) _log.error("Data message came down a tunnel for " + _client + " but targetted "+ to);
+}
+}
+ else {
+if (_log.shouldLog(Log.ERROR)) _log.error("Data message came down an exploratory tunnel targeting " + to);
 }
 return;
 case DeliveryInstructions.DELIVERY_MODE_ROUTER:

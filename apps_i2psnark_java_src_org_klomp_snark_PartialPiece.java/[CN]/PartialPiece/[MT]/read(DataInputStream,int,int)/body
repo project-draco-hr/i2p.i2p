@@ -1,6 +1,9 @@
 {
   if (bs != null) {
-    din.readFully(bs,off,len);
+    din.readFully(bs,offset,len);
+synchronized (this) {
+      if (this.off == offset)       this.off+=len;
+    }
   }
  else {
     ByteArray ba;
@@ -16,8 +19,9 @@
     din.readFully(tmp);
 synchronized (this) {
       if (raf == null)       createTemp();
-      raf.seek(off);
+      raf.seek(offset);
       raf.write(tmp);
+      if (this.off == offset)       this.off+=len;
     }
     if (ba != null)     _cache.release(ba,false);
   }

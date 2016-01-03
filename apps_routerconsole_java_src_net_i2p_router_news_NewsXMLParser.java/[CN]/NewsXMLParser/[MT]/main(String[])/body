@@ -1,4 +1,8 @@
 {
+  if (args.length <= 0 || args.length > 2) {
+    System.err.println("Usage: NewsXMLParser file.xml [parserMode]");
+    System.exit(1);
+  }
   try {
     I2PAppContext ctx=new I2PAppContext();
     Debug.initialize(ctx);
@@ -18,9 +22,16 @@
     System.out.println("Release timestamp: " + latestRelease.date);
     System.out.println("Feed timestamp: " + ud.feedUpdated);
     System.out.println("Found " + entries.size() + " news entries");
+    Set<String> uuids=new HashSet<String>(entries.size());
     for (int i=0; i < entries.size(); i++) {
       NewsEntry e=entries.get(i);
-      System.out.println("News #" + (i + 1) + ": "+ e.title+ '\n'+ e.content);
+      System.out.println("\n****** News #" + (i + 1) + ": "+ e.title+ '\n'+ e.content);
+      if (e.id == null)       throw new IOException("missing ID");
+      if (e.title == null)       throw new IOException("missing title");
+      if (e.content == null)       throw new IOException("missing content");
+      if (e.authorName == null)       throw new IOException("missing author");
+      if (e.updated == 0)       throw new IOException("missing updated");
+      if (!uuids.add(e.id))       throw new IOException("duplicate ID");
     }
   }
  catch (  IOException ioe) {

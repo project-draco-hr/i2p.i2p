@@ -1,15 +1,31 @@
 {
-  SessionConfig cfg=_runner.getConfig();
+  SessionId sid=message.getSessionId();
+  SessionConfig cfg=_runner.getConfig(sid);
   if (cfg == null) {
-    if (_log.shouldLog(Log.ERROR))     _log.error("SendMessage w/o session");
-    _runner.disconnectClient("SendMessage w/o session");
+    List<SessionId> current=_runner.getSessionIds();
+    String msg="SendMessage invalid session: " + sid + " current: "+ current;
+    if (_log.shouldLog(Log.ERROR))     _log.error(msg);
+    if (sid != null && message.getNonce() > 0) {
+      MessageStatusMessage status=new MessageStatusMessage();
+      status.setMessageId(_runner.getNextMessageId());
+      status.setSessionId(sid.getSessionId());
+      status.setSize(0);
+      status.setNonce(message.getNonce());
+      status.setStatus(MessageStatusMessage.STATUS_SEND_FAILURE_BAD_SESSION);
+      try {
+        _runner.doSend(status);
+      }
+ catch (      I2CPMessageException ime) {
+        if (_log.shouldLog(Log.WARN))         _log.warn("Error writing out the message status message",ime);
+      }
+    }
     return;
   }
   if (_log.shouldLog(Log.DEBUG))   _log.debug("handleSendMessage called");
   long beforeDistribute=_context.clock().now();
   MessageId id=_runner.distributeMessage(message);
   long timeToDistribute=_context.clock().now() - beforeDistribute;
-  _runner.ackSendMessage(id,message.getNonce());
+  _runner.ackSendMessage(sid,id,message.getNonce());
   _context.statManager().addRateData("client.distributeTime",timeToDistribute);
-  if ((timeToDistribute > 50) && (_log.shouldLog(Log.INFO)))   _log.info("Took too long to distribute the message (which holds up the ack): " + timeToDistribute);
+  if ((timeToDistribute > 50) && (_log.shouldLog(Log.DEBUG)))   _log.debug("Took too long to distribute the message (which holds up the ack): " + timeToDistribute);
 }

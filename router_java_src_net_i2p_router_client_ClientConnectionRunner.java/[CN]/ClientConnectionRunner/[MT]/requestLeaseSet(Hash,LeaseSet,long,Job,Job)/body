@@ -1,0 +1,64 @@
+{
+  if (_dead) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Requesting leaseSet from a dead client: " + set);
+    if (onFailedJob != null)     _context.jobQueue().addJob(onFailedJob);
+    return;
+  }
+  SessionParams sp=_sessions.get(h);
+  if (sp == null) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Requesting leaseSet for an unknown sesssion");
+    return;
+  }
+  int leases=set.getLeaseCount();
+  LeaseSet current=null;
+  Destination dest=sp.dest;
+  LeaseRequestState state;
+synchronized (this) {
+    current=sp.currentLeaseSet;
+    if (current != null && current.getLeaseCount() == leases) {
+      for (int i=0; i < leases; i++) {
+        if (!current.getLease(i).getTunnelId().equals(set.getLease(i).getTunnelId()))         break;
+        if (!current.getLease(i).getGateway().equals(set.getLease(i).getGateway()))         break;
+        if (i == leases - 1) {
+          if (_log.shouldLog(Log.INFO))           _log.info("Requested leaseSet hasn't changed");
+          if (onCreateJob != null)           _context.jobQueue().addJob(onCreateJob);
+          return;
+        }
+      }
+    }
+    if (_log.shouldLog(Log.INFO))     _log.info("Current leaseSet " + current + "\nNew leaseSet "+ set);
+    state=sp.leaseRequest;
+    if (state != null) {
+      LeaseSet requested=state.getRequested();
+      LeaseSet granted=state.getGranted();
+      long ours=set.getEarliestLeaseDate();
+      if (((requested != null) && (requested.getEarliestLeaseDate() > ours)) || ((granted != null) && (granted.getEarliestLeaseDate() > ours))) {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Already requesting, theirs newer, do nothing: " + state);
+      }
+ else {
+        set.setDestination(dest);
+        Rerequest timer=new Rerequest(set,expirationTime,onCreateJob,onFailedJob);
+        sp.rerequestTimer=timer;
+        _context.simpleTimer2().addEvent(timer,3 * 1000);
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("Already requesting, ours newer, wait 3 sec: " + state);
+      }
+      return;
+    }
+ else {
+      set.setDestination(dest);
+      if (current == null && _context.tunnelManager().getOutboundClientTunnelCount(h) <= 0) {
+        Rerequest timer=new Rerequest(set,expirationTime,onCreateJob,onFailedJob);
+        sp.rerequestTimer=timer;
+        _context.simpleTimer2().addEvent(timer,1000);
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("No current LS but no OB tunnels, wait 1 sec for " + h);
+        return;
+      }
+ else {
+        sp.rerequestTimer=null;
+        sp.leaseRequest=state=new LeaseRequestState(onCreateJob,onFailedJob,_context.clock().now() + expirationTime,set);
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("New request: " + state);
+      }
+    }
+  }
+  _context.jobQueue().addJob(new RequestLeaseSetJob(_context,this,state));
+}

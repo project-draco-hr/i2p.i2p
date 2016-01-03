@@ -5,15 +5,16 @@
   long tooYoung=_context.clock().now() - 60 * 1000;
   long tooOld=tooYoung - 9 * 60 * 1000;
   for (  HopConfig cfg : _participatingConfig.values()) {
-    long c=cfg.getRecentMessagesCount();
+    long c=cfg.getAndResetRecentMessagesCount();
     bw+=c;
     long created=cfg.getCreation();
     if (created > tooYoung || created < tooOld)     continue;
     tcount++;
     count+=c;
   }
-  if (tcount > 0)   count=count * 30 / tcount;
-  _context.statManager().addRateData("tunnel.participatingMessageCount",count,ms);
+  if (tcount > 0)   count=count * (10 * 60 * 1000 / ms) / tcount;
+  _context.statManager().addRateData("tunnel.participatingMessageCountAvgPerTunnel",count,ms);
+  _context.statManager().addRateData("tunnel.participatingMessageCount",bw,ms);
   _context.statManager().addRateData("tunnel.participatingBandwidth",bw * 1024 / (ms / 1000),ms);
   _context.statManager().addRateData("tunnel.participatingTunnels",tcount);
 }

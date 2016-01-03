@@ -1,28 +1,6 @@
 {
   if (_log.shouldLog(Log.INFO))   _log.info("Rebuilding new routerInfo");
-  RouterInfo ri=null;
-  if (_routerInfo != null)   ri=new RouterInfo(_routerInfo);
- else   ri=new RouterInfo();
-  try {
-    ri.setPublished(_context.clock().now());
-    Properties stats=_context.statPublisher().publishStatistics();
-    stats.setProperty(RouterInfo.PROP_NETWORK_ID,NETWORK_ID + "");
-    ri.setOptions(stats);
-    ri.setAddresses(_context.commSystem().createAddresses());
-    addCapabilities(ri);
-    SigningPrivateKey key=_context.keyManager().getSigningPrivateKey();
-    if (key == null) {
-      _log.log(Log.CRIT,"Internal error - signing private key not known?  wtf");
-      return;
-    }
-    ri.sign(key);
-    setRouterInfo(ri);
-    if (!ri.isValid())     throw new DataFormatException("Our RouterInfo has a bad signature");
-    Republish r=new Republish(_context);
-    if (blockingRebuild)     r.timeReached();
- else     _context.simpleTimer2().addEvent(r,0);
-  }
- catch (  DataFormatException dfe) {
-    _log.log(Log.CRIT,"Internal error - unable to sign our own address?!",dfe);
+synchronized (_routerInfoLock) {
+    locked_rebuildRouterInfo(blockingRebuild);
   }
 }

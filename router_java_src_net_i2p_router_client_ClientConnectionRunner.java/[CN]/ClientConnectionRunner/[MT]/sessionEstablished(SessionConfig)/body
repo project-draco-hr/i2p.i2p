@@ -1,13 +1,24 @@
 {
-  _destHashCache=config.getDestination().calculateHash();
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("SessionEstablished called for destination " + _destHashCache.toBase64());
-  _config=config;
+  Destination dest=config.getDestination();
+  Hash destHash=dest.calculateHash();
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("SessionEstablished called for destination " + destHash);
+  if (_sessions.size() > MAX_SESSIONS)   return SessionStatusMessage.STATUS_REFUSED;
+  boolean isPrimary=_sessions.isEmpty();
+  if (!isPrimary) {
+    for (    SessionParams sp : _sessions.values()) {
+      if (!dest.getPublicKey().equals(sp.dest.getPublicKey()))       return SessionStatusMessage.STATUS_INVALID;
+    }
+  }
+  SessionParams sp=new SessionParams(dest,isPrimary);
+  sp.config=config;
+  SessionParams old=_sessions.putIfAbsent(destHash,sp);
+  if (old != null)   return SessionStatusMessage.STATUS_INVALID;
   Properties opts=config.getOptions();
-  if (opts != null) {
+  if (isPrimary && opts != null) {
     _dontSendMSM="none".equals(opts.getProperty(I2PClient.PROP_RELIABILITY,"").toLowerCase(Locale.US));
     _dontSendMSMOnReceive=Boolean.parseBoolean(opts.getProperty(I2PClient.PROP_FAST_RECEIVE));
   }
-  if (_sessionKeyManager == null) {
+  if (isPrimary && _sessionKeyManager == null) {
     int tags=TransientSessionKeyManager.DEFAULT_TAGS;
     int thresh=TransientSessionKeyManager.LOW_THRESHOLD;
     if (opts != null) {
@@ -30,8 +41,5 @@
     }
     _sessionKeyManager=new TransientSessionKeyManager(_context,tags,thresh);
   }
- else {
-    _log.error("SessionEstablished called for twice for destination " + _destHashCache.toBase64().substring(0,4));
-  }
-  return _manager.destinationEstablished(this);
+  return _manager.destinationEstablished(this,dest);
 }

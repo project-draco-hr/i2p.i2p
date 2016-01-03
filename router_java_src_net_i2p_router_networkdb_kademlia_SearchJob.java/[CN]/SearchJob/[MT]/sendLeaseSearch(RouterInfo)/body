@@ -2,7 +2,7 @@
   Hash to=router.getIdentity().getHash();
   TunnelInfo inTunnel=getContext().tunnelManager().selectInboundExploratoryTunnel(to);
   if (inTunnel == null) {
-    _log.warn("No tunnels to get search replies through!  wtf!");
+    _log.warn("No tunnels to get search replies through!");
     getContext().jobQueue().addJob(new FailedJob(getContext(),router));
     return;
   }
@@ -10,9 +10,13 @@
   int timeout=getPerPeerTimeoutMs(to);
   long expiration=getContext().clock().now() + timeout;
   I2NPMessage msg=buildMessage(inTunnelId,inTunnel.getPeer(0),expiration,router);
+  if (msg == null) {
+    getContext().jobQueue().addJob(new FailedJob(getContext(),router));
+    return;
+  }
   TunnelInfo outTunnel=getContext().tunnelManager().selectOutboundExploratoryTunnel(to);
   if (outTunnel == null) {
-    _log.warn("No tunnels to send search out through!  wtf!");
+    _log.warn("No tunnels to send search out through! Impossible?");
     getContext().jobQueue().addJob(new FailedJob(getContext(),router));
     return;
   }

@@ -18,12 +18,14 @@
   _transport.addRemotePeerState(peer);
   _transport.setIP(remote.calculateHash(),state.getSentIP());
   _context.statManager().addRateData("udp.outboundEstablishTime",state.getLifetime(),0);
+  DatabaseStoreMessage dbsm=null;
   if (!state.isFirstMessageOurDSM()) {
-    sendOurInfo(peer,false);
+    dbsm=getOurInfo();
   }
  else   if (_log.shouldLog(Log.INFO)) {
     _log.info("Skipping publish: " + state);
   }
+  List<OutNetMessage> msgs=new ArrayList<OutNetMessage>(8);
   OutNetMessage msg;
   while ((msg=state.getNextQueuedMessage()) != null) {
     if (now - Router.CLOCK_FUDGE_FACTOR > msg.getExpiration()) {
@@ -32,8 +34,9 @@
     }
  else {
       msg.timestamp("session fully established and sent");
-      _transport.send(msg);
+      msgs.add(msg);
     }
   }
+  _transport.send(dbsm,msgs,peer);
   return peer;
 }

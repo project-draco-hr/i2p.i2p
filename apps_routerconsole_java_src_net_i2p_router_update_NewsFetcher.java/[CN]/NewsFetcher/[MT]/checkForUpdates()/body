@@ -12,13 +12,25 @@
           if (_log.shouldLog(Log.DEBUG))           _log.debug("Found version: [" + ver + "]");
           if (TrustedUpdate.needsUpdate(RouterVersion.VERSION,ver)) {
             if (NewsHelper.isUpdateDisabled(_context)) {
-              String msg=_mgr._("In-network updates disabled. Check package manager.");
+              String msg=_mgr._t("In-network updates disabled. Check package manager.");
               _log.logAlways(Log.WARN,"Cannot update to version " + ver + ": "+ msg);
               _mgr.notifyVersionConstraint(this,_currentURI,ROUTER_SIGNED,"",ver,msg);
               return;
             }
             if (NewsHelper.isBaseReadonly(_context)) {
-              String msg=_mgr._("No write permission for I2P install directory.");
+              String msg=_mgr._t("No write permission for I2P install directory.");
+              _log.logAlways(Log.WARN,"Cannot update to version " + ver + ": "+ msg);
+              _mgr.notifyVersionConstraint(this,_currentURI,ROUTER_SIGNED,"",ver,msg);
+              return;
+            }
+            if (!FileUtil.isPack200Supported()) {
+              String msg=_mgr._t("No Pack200 support in Java runtime.");
+              _log.logAlways(Log.WARN,"Cannot update to version " + ver + ": "+ msg);
+              _mgr.notifyVersionConstraint(this,_currentURI,ROUTER_SIGNED,"",ver,msg);
+              return;
+            }
+            if (!ConfigUpdateHandler.USE_SU3_UPDATE) {
+              String msg=_mgr._t("No update certificates installed.");
               _log.logAlways(Log.WARN,"Cannot update to version " + ver + ": "+ msg);
               _mgr.notifyVersionConstraint(this,_currentURI,ROUTER_SIGNED,"",ver,msg);
               return;
@@ -26,7 +38,7 @@
             String minRouter=args.get(MIN_VERSION_KEY);
             if (minRouter != null) {
               if (VersionComparator.comp(RouterVersion.VERSION,minRouter) < 0) {
-                String msg=_mgr._("You must first update to version {0}",minRouter);
+                String msg=_mgr._t("You must first update to version {0}",minRouter);
                 _log.logAlways(Log.WARN,"Cannot update to version " + ver + ": "+ msg);
                 _mgr.notifyVersionConstraint(this,_currentURI,ROUTER_SIGNED,"",ver,msg);
                 return;
@@ -36,7 +48,7 @@
             if (minJava != null) {
               String ourJava=System.getProperty("java.version");
               if (VersionComparator.comp(ourJava,minJava) < 0) {
-                String msg=_mgr._("Requires Java version {0} but installed Java version is {1}",minJava,ourJava);
+                String msg=_mgr._t("Requires Java version {0} but installed Java version is {1}",minJava,ourJava);
                 _log.logAlways(Log.WARN,"Cannot update to version " + ver + ": "+ msg);
                 _mgr.notifyVersionConstraint(this,_currentURI,ROUTER_SIGNED,"",ver,msg);
                 return;
@@ -44,18 +56,12 @@
             }
             if (_log.shouldLog(Log.DEBUG))             _log.debug("Our version is out of date, update!");
             Map<UpdateMethod,List<URI>> sourceMap=new HashMap<UpdateMethod,List<URI>>(4);
-            if (ConfigUpdateHandler.USE_SU3_UPDATE) {
-              sourceMap.put(HTTP,_mgr.getUpdateURLs(ROUTER_SIGNED_SU3,"",HTTP));
-              addMethod(TORRENT,args.get(SU3_KEY),sourceMap);
-              addMethod(HTTP_CLEARNET,args.get(CLEARNET_HTTP_SU3_KEY),sourceMap);
-              addMethod(HTTPS_CLEARNET,args.get(CLEARNET_HTTPS_SU3_KEY),sourceMap);
-              _mgr.notifyVersionAvailable(this,_currentURI,ROUTER_SIGNED_SU3,"",sourceMap,ver,"");
-              sourceMap.clear();
-            }
-            sourceMap.put(HTTP,_mgr.getUpdateURLs(ROUTER_SIGNED,"",HTTP));
-            String key=FileUtil.isPack200Supported() ? SU2_KEY : SUD_KEY;
-            addMethod(TORRENT,args.get(key),sourceMap);
-            _mgr.notifyVersionAvailable(this,_currentURI,ROUTER_SIGNED,"",sourceMap,ver,"");
+            sourceMap.put(HTTP,_mgr.getUpdateURLs(ROUTER_SIGNED_SU3,"",HTTP));
+            addMethod(TORRENT,args.get(SU3_KEY),sourceMap);
+            addMethod(HTTP_CLEARNET,args.get(CLEARNET_HTTP_SU3_KEY),sourceMap);
+            addMethod(HTTPS_CLEARNET,args.get(CLEARNET_HTTPS_SU3_KEY),sourceMap);
+            _mgr.notifyVersionAvailable(this,_currentURI,ROUTER_SIGNED_SU3,"",sourceMap,ver,"");
+            sourceMap.clear();
           }
  else {
             if (_log.shouldLog(Log.DEBUG))             _log.debug("Our version is current");

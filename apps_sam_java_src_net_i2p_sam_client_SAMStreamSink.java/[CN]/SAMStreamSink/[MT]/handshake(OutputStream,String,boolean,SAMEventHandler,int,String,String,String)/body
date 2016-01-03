@@ -1,8 +1,8 @@
 {
 synchronized (samOut) {
     try {
-      if (user != null && password != null)       samOut.write(("HELLO VERSION MIN=1.0 MAX=" + version + " USER="+ user+ " PASSWORD="+ password+ '\n').getBytes());
- else       samOut.write(("HELLO VERSION MIN=1.0 MAX=" + version + '\n').getBytes());
+      if (user != null && password != null)       samOut.write(("HELLO VERSION MIN=1.0 MAX=" + version + " USER="+ user+ " PASSWORD="+ password+ '\n').getBytes("UTF-8"));
+ else       samOut.write(("HELLO VERSION MIN=1.0 MAX=" + version + '\n').getBytes("UTF-8"));
       samOut.flush();
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Hello sent");
       String hisVersion=eventHandler.waitForHelloReply();
@@ -12,11 +12,12 @@ synchronized (samOut) {
         String req;
         if (mode == STREAM)         req="STREAM ACCEPT SILENT=false TO_PORT=5678 ID=" + _v3ID + "\n";
  else         if (mode == FORWARD)         req="STREAM FORWARD ID=" + _v3ID + " PORT="+ V3FORWARDPORT+ '\n';
+ else         if (mode == FORWARDSSL)         req="STREAM FORWARD ID=" + _v3ID + " PORT="+ V3FORWARDPORT+ " SSL=true\n";
  else         throw new IllegalStateException("mode " + mode);
-        samOut.write(req.getBytes());
+        samOut.write(req.getBytes("UTF-8"));
         samOut.flush();
         if (_log.shouldLog(Log.DEBUG))         _log.debug("STREAM ACCEPT/FORWARD sent");
-        if (mode == FORWARD) {
+        if (mode == FORWARD || mode == FORWARDSSL) {
           boolean ok=eventHandler.waitForStreamStatusReply();
           if (!ok)           throw new IOException("Stream status failed");
           if (_log.shouldLog(Log.DEBUG))           _log.debug("got STREAM STATUS, awaiting connection");
@@ -57,14 +58,14 @@ synchronized (samOut) {
         dest=_destFile;
       }
       String style;
-      if (mode == STREAM || mode == FORWARD)       style="STREAM";
+      if (mode == STREAM || mode == FORWARD || mode == FORWARDSSL)       style="STREAM";
  else       if (mode == V1DG)       style="DATAGRAM";
  else       if (mode == DG)       style="DATAGRAM PORT=" + V3DGPORT;
  else       if (mode == V1RAW)       style="RAW";
  else       if (mode == RAW)       style="RAW PORT=" + V3DGPORT;
  else       style="RAW HEADER=true PORT=" + V3DGPORT;
       String req="SESSION CREATE STYLE=" + style + " DESTINATION="+ dest+ ' '+ _conOptions+ ' '+ sopts+ '\n';
-      samOut.write(req.getBytes());
+      samOut.write(req.getBytes("UTF-8"));
       samOut.flush();
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Session create sent");
       if (mode == STREAM) {
@@ -73,7 +74,7 @@ synchronized (samOut) {
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Session create reply found: " + ok);
       }
       req="NAMING LOOKUP NAME=ME\n";
-      samOut.write(req.getBytes());
+      samOut.write(req.getBytes("UTF-8"));
       samOut.flush();
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Naming lookup sent");
       String destination=eventHandler.waitForNamingReply("ME");

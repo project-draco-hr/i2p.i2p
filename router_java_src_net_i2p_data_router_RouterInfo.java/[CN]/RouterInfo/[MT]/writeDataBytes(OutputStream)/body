@@ -1,0 +1,26 @@
+{
+  if (_identity == null)   throw new DataFormatException("Missing identity");
+  if (_published < 0)   throw new DataFormatException("Invalid published date: " + _published);
+  _identity.writeBytes(out);
+  DataHelper.writeLong(out,8,_published);
+  int sz=_addresses.size();
+  if (sz <= 0 || isHidden()) {
+    out.write((byte)0);
+  }
+ else {
+    out.write((byte)sz);
+    for (    RouterAddress addr : _addresses) {
+      addr.writeBytes(out);
+    }
+  }
+  int psz=_peers == null ? 0 : _peers.size();
+  out.write((byte)psz);
+  if (psz > 0) {
+    Collection<Hash> peers=_peers;
+    if (psz > 1)     peers=SortHelper.sortStructures(peers);
+    for (    Hash peerHash : peers) {
+      peerHash.writeBytes(out);
+    }
+  }
+  DataHelper.writeProperties(out,_options);
+}

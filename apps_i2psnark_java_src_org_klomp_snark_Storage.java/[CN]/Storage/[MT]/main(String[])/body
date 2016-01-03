@@ -1,38 +1,63 @@
 {
-  if (args.length < 1 || args.length > 2) {
-    System.err.println("Usage: Storage file-or-dir [announceURL]");
-    System.exit(1);
-  }
-  File base=new File(args[0]);
-  String announce=args.length == 2 ? args[1] : null;
-  I2PAppContext ctx=I2PAppContext.getGlobalContext();
-  I2PSnarkUtil util=new I2PSnarkUtil(ctx);
-  File file=null;
-  FileOutputStream out=null;
+  boolean error=false;
+  String created_by=null;
+  String announce=null;
+  Getopt g=new Getopt("Storage",args,"a:c:");
   try {
-    Storage storage=new Storage(util,base,announce,null,false,null);
-    MetaInfo meta=storage.getMetaInfo();
-    file=new File(storage.getBaseName() + ".torrent");
-    out=new FileOutputStream(file);
-    out.write(meta.getTorrentData());
-    String hex=DataHelper.toString(meta.getInfoHash());
-    System.out.println("Created:     " + file);
-    System.out.println("InfoHash:    " + hex);
-    String basename=base.getName().replace(" ","%20");
-    String magnet=MagnetURI.MAGNET_FULL + hex + "&dn="+ basename;
-    if (announce != null)     magnet+="&tr=" + announce;
-    System.out.println("Magnet:      " + magnet);
-  }
- catch (  IOException ioe) {
-    if (file != null)     file.delete();
-    ioe.printStackTrace();
-    System.exit(1);
-  }
+    int c;
+    while ((c=g.getopt()) != -1) {
+switch (c) {
+case 'a':
+        announce=g.getOptarg();
+      break;
+case 'c':
+    created_by=g.getOptarg();
+  break;
+case '?':
+case ':':
+default :
+error=true;
+break;
+}
+}
+}
+ catch (RuntimeException e) {
+e.printStackTrace();
+error=true;
+}
+if (error || args.length - g.getOptind() != 1) {
+System.err.println("Usage: Storage [-a announceURL] [-c created-by] file-or-dir");
+System.exit(1);
+}
+File base=new File(args[g.getOptind()]);
+I2PAppContext ctx=I2PAppContext.getGlobalContext();
+I2PSnarkUtil util=new I2PSnarkUtil(ctx);
+File file=null;
+FileOutputStream out=null;
+try {
+Storage storage=new Storage(util,base,announce,null,created_by,false,null);
+MetaInfo meta=storage.getMetaInfo();
+file=new File(storage.getBaseName() + ".torrent");
+out=new FileOutputStream(file);
+out.write(meta.getTorrentData());
+String hex=DataHelper.toString(meta.getInfoHash());
+System.out.println("Created:     " + file);
+System.out.println("InfoHash:    " + hex);
+String basename=base.getName().replace(" ","%20");
+String magnet=MagnetURI.MAGNET_FULL + hex + "&dn="+ basename;
+if (announce != null) magnet+="&tr=" + announce;
+System.out.println("Magnet:      " + magnet);
+}
+ catch (IOException ioe) {
+if (file != null) file.delete();
+ioe.printStackTrace();
+System.exit(1);
+}
  finally {
-    try {
-      if (out != null)       out.close();
-    }
- catch (    IOException ioe) {
-    }
-  }
+try {
+if (out != null) out.close();
+}
+ catch (IOException ioe) {
+}
+}
 }

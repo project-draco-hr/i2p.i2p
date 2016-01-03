@@ -15,16 +15,47 @@
   _context.statManager().addRateData("udp.receivePacketSkew",skew);
   if (skewOK && !_context.clock().getUpdatedSuccessfully()) {
     _context.clock().setOffset(0 - skew,true);
-    if (skew != 0)     _log.logAlways(Log.WARN,"NTP failure, UDP adjusting clock by " + DataHelper.formatDuration(Math.abs(skew)));
+    if (skew != 0) {
+      _log.logAlways(Log.WARN,"NTP failure, UDP adjusting clock by " + DataHelper.formatDuration(Math.abs(skew)));
+      skew=0;
+    }
   }
   if (skew > GRACE_PERIOD) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("Packet too far in the past: " + new Date(sendOn) + ": "+ packet);
-    _context.statManager().addRateData("udp.droppedInvalidSkew",skew,packet.getExpiration());
+    _context.statManager().addRateData("udp.droppedInvalidSkew",skew);
+    if (state != null && skew > 4 * GRACE_PERIOD && state.getPacketsReceived() <= 0) {
+      _transport.sendDestroy(state);
+      _transport.dropPeer(state,true,"Clock skew");
+      if (state.getRemotePort() == 65520) {
+        _context.banlist().banlistRouterForever(state.getRemotePeer(),_x("Excessive clock skew: {0}"),DataHelper.formatDuration(skew));
+      }
+ else {
+        _context.banlist().banlistRouter(DataHelper.formatDuration(skew),state.getRemotePeer(),_x("Excessive clock skew: {0}"));
+      }
+      _context.statManager().addRateData("udp.destroyedInvalidSkew",skew);
+      if (_log.shouldWarn())       _log.warn("Dropped conn, packet too far in the past: " + new Date(sendOn) + ": "+ packet+ " PeerState: "+ state);
+    }
+ else {
+      if (_log.shouldWarn())       _log.warn("Packet too far in the past: " + new Date(sendOn) + ": "+ packet+ " PeerState: "+ state);
+    }
     return;
   }
  else   if (skew < 0 - GRACE_PERIOD) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("Packet too far in the future: " + new Date(sendOn) + ": "+ packet);
-    _context.statManager().addRateData("udp.droppedInvalidSkew",0 - skew,packet.getExpiration());
+    _context.statManager().addRateData("udp.droppedInvalidSkew",0 - skew);
+    if (state != null && skew < 0 - (4 * GRACE_PERIOD) && state.getPacketsReceived() <= 0) {
+      _transport.sendDestroy(state);
+      _transport.dropPeer(state,true,"Clock skew");
+      if (state.getRemotePort() == 65520) {
+        _context.banlist().banlistRouterForever(state.getRemotePeer(),_x("Excessive clock skew: {0}"),DataHelper.formatDuration(0 - skew));
+      }
+ else {
+        _context.banlist().banlistRouter(DataHelper.formatDuration(0 - skew),state.getRemotePeer(),_x("Excessive clock skew: {0}"));
+      }
+      _context.statManager().addRateData("udp.destroyedInvalidSkew",0 - skew);
+      if (_log.shouldWarn())       _log.warn("Dropped conn, packet too far in the future: " + new Date(sendOn) + ": "+ packet+ " PeerState: "+ state);
+    }
+ else {
+      if (_log.shouldWarn())       _log.warn("Packet too far in the future: " + new Date(sendOn) + ": "+ packet+ " PeerState: "+ state);
+    }
     return;
   }
   _state=45;
@@ -140,7 +171,7 @@ break;
 default :
 _state=52;
 if (_log.shouldLog(Log.WARN)) _log.warn("Dropping type " + type + " auth "+ auth+ ": "+ packet);
-_context.statManager().addRateData("udp.droppedInvalidUnknown",packet.getLifetime(),packet.getExpiration());
+_context.statManager().addRateData("udp.droppedInvalidUnknown",packet.getLifetime());
 return;
 }
 }

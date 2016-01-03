@@ -125,7 +125,7 @@
         sslFactory.setKeyStorePassword(_context.getProperty(PROP_KEYSTORE_PASSWORD,DEFAULT_KEYSTORE_PASSWORD));
         sslFactory.setKeyManagerPassword(_context.getProperty(PROP_KEY_PASSWORD,"thisWontWork"));
         sslFactory.addExcludeProtocols(I2PSSLSocketFactory.EXCLUDE_PROTOCOLS.toArray(new String[I2PSSLSocketFactory.EXCLUDE_PROTOCOLS.size()]));
-        sslFactory.addExcludeCipherSuites(I2PSSLSocketFactory.INCLUDE_CIPHERS.toArray(new String[I2PSSLSocketFactory.EXCLUDE_CIPHERS.size()]));
+        sslFactory.addExcludeCipherSuites(I2PSSLSocketFactory.EXCLUDE_CIPHERS.toArray(new String[I2PSSLSocketFactory.EXCLUDE_CIPHERS.size()]));
         StringTokenizer tok=new StringTokenizer(_sslListenHost," ,");
         while (tok.hasMoreTokens()) {
           String host=tok.nextToken().trim();
@@ -220,7 +220,8 @@
       }
     }
     if (error) {
-      System.err.println("WARNING: Error starting one or more listeners of the Router Console server.\n" + "If your console is still accessible at http://127.0.0.1:" + _listenPort + "/,\n"+ "this may be a problem only with binding to the IPV6 address ::1.\n"+ "If so, you may ignore this error, or remove the\n"+ "\"::1,\" in the \"clientApp.0.args\" line of the clients.config file.");
+      String port=(_listenPort != null) ? _listenPort : ((_sslListenPort != null) ? _sslListenPort : "7657");
+      System.err.println("WARNING: Error starting one or more listeners of the Router Console server.\n" + "If your console is still accessible at http://127.0.0.1:" + port + "/,\n"+ "this may be a problem only with binding to the IPV6 address ::1.\n"+ "If so, you may ignore this error, or remove the\n"+ "\"::1,\" in the \"clientApp.0.args\" line of the clients.config file.");
     }
   }
   List<String> notStarted=new ArrayList<String>();
@@ -283,6 +284,8 @@
   t.start();
   ConsoleUpdateManager um=new ConsoleUpdateManager(_context,_mgr,null);
   um.start();
+  NewsManager nm=new NewsManager(_context,_mgr,null);
+  nm.startup();
   if (PluginStarter.pluginsEnabled(_context)) {
     t=new I2PAppThread(new PluginStarter(_context),"PluginStarter",true);
     t.setPriority(Thread.NORM_PRIORITY - 1);
