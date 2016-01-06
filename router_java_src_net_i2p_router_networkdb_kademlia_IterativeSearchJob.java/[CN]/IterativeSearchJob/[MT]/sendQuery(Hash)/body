@@ -1,6 +1,15 @@
 {
   TunnelManagerFacade tm=getContext().tunnelManager();
   RouterInfo ri=getContext().netDb().lookupRouterInfoLocally(peer);
+  if (ri != null) {
+    String v=ri.getVersion();
+    String since=SigType.EdDSA_SHA512_Ed25519.getSupportedSince();
+    if (VersionComparator.comp(v,since) < 0) {
+      failed(peer,false);
+      if (_log.shouldLog(Log.WARN))       _log.warn(getJobId() + ": not sending query to old version " + v+ ": "+ peer);
+      return;
+    }
+  }
   TunnelInfo outTunnel;
   TunnelInfo replyTunnel;
   boolean isClientReplyTunnel;
@@ -68,7 +77,7 @@ synchronized (this) {
   }
  else   if (_isLease || (getContext().getProperty(PROP_ENCRYPT_RI,DEFAULT_ENCRYPT_RI) && getContext().jobQueue().getMaxLag() < 300)) {
     if (ri != null) {
-      if (DatabaseLookupMessage.supportsEncryptedReplies(ri)) {
+      if (true) {
         MessageWrapper.OneTimeSession sess;
         if (isClientReplyTunnel)         sess=MessageWrapper.generateSession(getContext(),_fromLocalDest);
  else         sess=MessageWrapper.generateSession(getContext());
