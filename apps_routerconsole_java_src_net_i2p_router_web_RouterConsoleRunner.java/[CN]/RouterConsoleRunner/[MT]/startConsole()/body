@@ -65,6 +65,7 @@
       if (lport <= 0)       System.err.println("Bad routerconsole port " + _listenPort);
     }
     if (lport > 0) {
+      List<String> hosts=new ArrayList<String>(2);
       StringTokenizer tok=new StringTokenizer(_listenHost," ,");
       while (tok.hasMoreTokens()) {
         String host=tok.nextToken().trim();
@@ -101,13 +102,20 @@
           lsnr.setAcceptors(1);
           connectors.add(lsnr);
           boundAddresses++;
+          hosts.add(host);
         }
  catch (        Exception ioe) {
           System.err.println("Unable to bind routerconsole to " + host + " port "+ _listenPort+ ": "+ ioe);
           System.err.println("You may ignore this warning if the console is still available at http://localhost:" + _listenPort);
         }
       }
-      _context.portMapper().register(PortMapper.SVC_CONSOLE,lport);
+      if (hosts.isEmpty()) {
+        _context.portMapper().register(PortMapper.SVC_CONSOLE,lport);
+      }
+ else {
+        Collections.sort(hosts,new HostComparator());
+        _context.portMapper().register(PortMapper.SVC_CONSOLE,hosts.get(0),lport);
+      }
     }
     int sslPort=0;
     if (_sslListenPort != null) {
@@ -126,6 +134,7 @@
         sslFactory.setKeyManagerPassword(_context.getProperty(PROP_KEY_PASSWORD,"thisWontWork"));
         sslFactory.addExcludeProtocols(I2PSSLSocketFactory.EXCLUDE_PROTOCOLS.toArray(new String[I2PSSLSocketFactory.EXCLUDE_PROTOCOLS.size()]));
         sslFactory.addExcludeCipherSuites(I2PSSLSocketFactory.EXCLUDE_CIPHERS.toArray(new String[I2PSSLSocketFactory.EXCLUDE_CIPHERS.size()]));
+        List<String> hosts=new ArrayList<String>(2);
         StringTokenizer tok=new StringTokenizer(_sslListenHost," ,");
         while (tok.hasMoreTokens()) {
           String host=tok.nextToken().trim();
@@ -163,6 +172,7 @@
             ssll.setAcceptors(1);
             connectors.add(ssll);
             boundAddresses++;
+            hosts.add(host);
           }
  catch (          Exception e) {
             System.err.println("Unable to bind routerconsole to " + host + " port "+ sslPort+ " for SSL: "+ e);
@@ -170,7 +180,13 @@
             System.err.println("You may ignore this warning if the console is still available at https://localhost:" + sslPort);
           }
         }
-        _context.portMapper().register(PortMapper.SVC_HTTPS_CONSOLE,sslPort);
+        if (hosts.isEmpty()) {
+          _context.portMapper().register(PortMapper.SVC_HTTPS_CONSOLE,sslPort);
+        }
+ else {
+          Collections.sort(hosts,new HostComparator());
+          _context.portMapper().register(PortMapper.SVC_HTTPS_CONSOLE,hosts.get(0),sslPort);
+        }
       }
  else {
         System.err.println("Unable to create or access keystore for SSL: " + keyStore.getAbsolutePath());
