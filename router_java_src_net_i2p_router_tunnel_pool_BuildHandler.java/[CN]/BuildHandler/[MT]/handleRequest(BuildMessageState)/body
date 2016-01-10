@@ -8,12 +8,17 @@
     return -1;
   }
   long beforeDecrypt=System.currentTimeMillis();
-  BuildRequestRecord req=_processor.decrypt(_context,state.msg,_context.routerHash(),_context.keyManager().getPrivateKey());
+  BuildRequestRecord req=_processor.decrypt(state.msg,_context.routerHash(),_context.keyManager().getPrivateKey());
   long decryptTime=System.currentTimeMillis() - beforeDecrypt;
   _context.statManager().addRateData("tunnel.decryptRequestTime",decryptTime);
   if (decryptTime > 500 && _log.shouldLog(Log.WARN))   _log.warn("Took too long to decrypt the request: " + decryptTime + " for message "+ state.msg.getUniqueId()+ " received "+ (timeSinceReceived + decryptTime)+ " ago");
   if (req == null) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("The request " + state.msg.getUniqueId() + " could not be decrypted");
+    if (_log.shouldLog(Log.WARN)) {
+      Hash from=state.fromHash;
+      if (from == null && state.from != null)       from=state.from.calculateHash();
+      _log.warn("The request " + state.msg.getUniqueId() + " could not be decrypted from: "+ from);
+    }
+    _context.statManager().addRateData("tunnel.dropDecryptFail",1);
     return -1;
   }
   long beforeLookup=System.currentTimeMillis();
