@@ -1,0 +1,22 @@
+{
+  _log=I2PAppContext.getGlobalContext().logManager().getLog(SAMBridge.class);
+  _mgr=null;
+  _listenHost=listenHost;
+  _listenPort=listenPort;
+  _useSSL=isSSL;
+  if (_useSSL && !SystemVersion.isJava7())   throw new IllegalArgumentException("SSL requires Java 7 or higher");
+  this.i2cpProps=i2cpProps;
+  persistFilename=persistFile;
+  _configFile=configFile;
+  nameToPrivKeys=new HashMap<String,String>(8);
+  _handlers=new HashSet<Handler>(8);
+  loadKeys();
+  try {
+    openSocket();
+  }
+ catch (  IOException e) {
+    if (_log.shouldLog(Log.ERROR))     _log.error("Error starting SAM bridge on " + (listenHost == null ? "0.0.0.0" : listenHost) + ":"+ listenPort,e);
+    throw new RuntimeException(e);
+  }
+  _state=INITIALIZED;
+}

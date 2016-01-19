@@ -1,0 +1,21 @@
+{
+  if (this.clientAddress == null) {
+    this.handler.receiveRawBytes(data,proto,fromPort,toPort);
+  }
+ else {
+    ByteBuffer msgBuf;
+    if (_sendHeader) {
+      StringBuilder buf=new StringBuilder(64);
+      buf.append("PROTOCOL=").append(proto).append(" FROM_PORT=").append(fromPort).append(" TO_PORT=").append(toPort).append('\n');
+      String msg=buf.toString();
+      msgBuf=ByteBuffer.allocate(msg.length() + data.length);
+      msgBuf.put(DataHelper.getASCII(msg));
+    }
+ else {
+      msgBuf=ByteBuffer.allocate(data.length);
+    }
+    msgBuf.put(data);
+    msgBuf.flip();
+    this.server.send(this.clientAddress,msgBuf);
+  }
+}

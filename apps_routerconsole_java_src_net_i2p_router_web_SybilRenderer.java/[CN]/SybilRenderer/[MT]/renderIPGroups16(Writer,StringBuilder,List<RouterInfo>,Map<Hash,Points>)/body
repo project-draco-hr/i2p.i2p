@@ -1,0 +1,37 @@
+{
+  buf.append("<h3 id=\"same16\">Floodfills in the Same /16 (4 minimum)</h3>");
+  ObjectCounter<Integer> oc=new ObjectCounter<Integer>();
+  for (  RouterInfo info : ris) {
+    byte[] ip=getIP(info);
+    if (ip == null)     continue;
+    Integer x=Integer.valueOf((int)DataHelper.fromLong(ip,0,2));
+    oc.increment(x);
+  }
+  List<Integer> foo=new ArrayList<Integer>();
+  for (  Integer ii : oc.objects()) {
+    int count=oc.count(ii);
+    if (count >= 4)     foo.add(ii);
+  }
+  Collections.sort(foo,new FooComparator(oc));
+  boolean found=false;
+  for (  Integer ii : foo) {
+    int count=oc.count(ii);
+    int i=ii.intValue();
+    int i0=i >> 8;
+    int i1=i & 0xff;
+    buf.append("<p><b>").append(count).append(" floodfills in ").append(i0).append('.').append(i1).append(".0.0/16</b></p>");
+    for (    RouterInfo info : ris) {
+      byte[] ip=getIP(info);
+      if (ip == null)       continue;
+      if ((ip[0] & 0xff) != i0)       continue;
+      if ((ip[1] & 0xff) != i1)       continue;
+      found=true;
+      double point=POINTS16 * (count - 1);
+      addPoints(points,info.getHash(),point,"Same /16 IP with " + (count - 1) + " other"+ ((count > 2) ? "s" : ""));
+    }
+  }
+  if (!found)   buf.append("<p>None</p>");
+  out.write(buf.toString());
+  out.flush();
+  buf.setLength(0);
+}

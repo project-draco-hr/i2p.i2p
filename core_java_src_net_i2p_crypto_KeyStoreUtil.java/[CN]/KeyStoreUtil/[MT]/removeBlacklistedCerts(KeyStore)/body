@@ -1,0 +1,46 @@
+{
+  if (SystemVersion.isAndroid())   return 0;
+  int count=0;
+  try {
+    for (Enumeration<String> e=ks.aliases(); e.hasMoreElements(); ) {
+      String alias=e.nextElement();
+      if (ks.isCertificateEntry(alias)) {
+        Certificate c=ks.getCertificate(alias);
+        if (c != null && (c instanceof X509Certificate)) {
+          X509Certificate xc=(X509Certificate)c;
+          BigInteger serial=xc.getSerialNumber();
+          for (int i=0; i < BLACKLIST_SERIAL.length; i++) {
+            if (BLACKLIST_SERIAL[i].equals(serial)) {
+              if (BLACKLIST_ISSUER_CN[i] != null) {
+                String name=CertUtil.getIssuerValue(xc,"CN");
+                if (BLACKLIST_ISSUER_CN[i].equals(name)) {
+                  ks.deleteEntry(alias);
+                  count++;
+                  if (!_blacklistLogged) {
+                    warn("Ignoring blacklisted certificate \"" + alias + "\" CN: \""+ name+ "\" s/n: "+ serial.toString(16),null);
+                  }
+                  break;
+                }
+              }
+              if (BLACKLIST_ISSUER_OU[i] != null) {
+                String name=CertUtil.getIssuerValue(xc,"OU");
+                if (BLACKLIST_ISSUER_OU[i].equals(name)) {
+                  ks.deleteEntry(alias);
+                  count++;
+                  if (!_blacklistLogged) {
+                    warn("Ignoring blacklisted certificate \"" + alias + "\" OU: \""+ name+ "\" s/n: "+ serial.toString(16),null);
+                  }
+                  break;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+ catch (  GeneralSecurityException e) {
+  }
+  if (count > 0)   _blacklistLogged=true;
+  return count;
+}
