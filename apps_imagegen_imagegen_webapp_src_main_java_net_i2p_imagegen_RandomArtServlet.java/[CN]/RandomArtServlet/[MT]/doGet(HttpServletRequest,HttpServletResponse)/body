@@ -1,0 +1,37 @@
+{
+  String codeParam=request.getParameter(PARAM_IDENTICON_CODE_SHORT);
+  boolean codeSpecified=codeParam != null && codeParam.length() > 0;
+  if (!codeSpecified)   codeParam="stats.i2p";
+  String identiconETag=IdenticonUtil.getIdenticonETag(codeParam.hashCode(),0,version);
+  String requestETag=request.getHeader("If-None-Match");
+  if (requestETag != null && requestETag.equals(identiconETag)) {
+    response.setStatus(HttpServletResponse.SC_NOT_MODIFIED);
+  }
+ else {
+    Hash h=ConvertToHash.getHash(codeParam);
+    if (h == null) {
+      response.setStatus(403);
+    }
+ else {
+      boolean html=true;
+      StringBuilder buf=new StringBuilder(512);
+      if (html) {
+        response.setContentType("text/html");
+        buf.append("<html><head><meta http-equiv=\"Content-Type\" content=\"text/html; charset=UTF-8\"></head><body>");
+      }
+ else {
+        response.setContentType("text/plain");
+      }
+      buf.append(RandomArt.gnutls_key_fingerprint_randomart(h.getData(),"SHA",256,"",true,html));
+      if (html)       buf.append("</body></html>");
+      response.setHeader("ETag",identiconETag);
+      if (codeSpecified) {
+        long expires=System.currentTimeMillis() + identiconExpiresInMillis;
+        response.addDateHeader("Expires",expires);
+      }
+      byte[] imageBytes=buf.toString().getBytes("UTF-8");
+      response.setContentLength(imageBytes.length);
+      response.getOutputStream().write(imageBytes);
+    }
+  }
+}
