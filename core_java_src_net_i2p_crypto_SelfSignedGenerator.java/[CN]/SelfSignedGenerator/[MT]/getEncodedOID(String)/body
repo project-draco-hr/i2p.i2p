@@ -1,0 +1,19 @@
+{
+  ByteArrayOutputStream baos=new ByteArrayOutputStream(16);
+  baos.write(0x06);
+  baos.write(0);
+  String[] f=DataHelper.split(oid,"[.]");
+  if (f.length < 2)   throw new IllegalArgumentException("length: " + f.length);
+  baos.write((40 * Integer.parseInt(f[0])) + Integer.parseInt(f[1]));
+  for (int i=2; i < f.length; i++) {
+    int v=Integer.parseInt(f[i]);
+    if (v >= 128 * 128 * 128 || v < 0)     throw new IllegalArgumentException();
+    if (v >= 128 * 128)     baos.write((v >> 14) | 0x80);
+    if (v >= 128)     baos.write((v >> 7) | 0x80);
+    baos.write(v & 0x7f);
+  }
+  byte[] rv=baos.toByteArray();
+  if (rv.length > 129)   throw new IllegalArgumentException();
+  rv[1]=(byte)(rv.length - 2);
+  return rv;
+}

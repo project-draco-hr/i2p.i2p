@@ -1,0 +1,22 @@
+{
+  ByteArrayOutputStream baos=new ByteArrayOutputStream(32);
+  baos.write(0x30);
+  baos.write(0);
+  long now=System.currentTimeMillis();
+  long then=now + (validDays * 24L * 60* 60* 1000);
+  SimpleDateFormat fmt=new SimpleDateFormat("yyMMddHHmmss");
+  fmt.setTimeZone(TimeZone.getTimeZone("GMT"));
+  byte[] nowbytes=DataHelper.getASCII(fmt.format(new Date(now)));
+  byte[] thenbytes=DataHelper.getASCII(fmt.format(new Date(then)));
+  baos.write(0x17);
+  baos.write(nowbytes.length + 1);
+  baos.write(nowbytes,0,nowbytes.length);
+  baos.write('Z');
+  baos.write(0x17);
+  baos.write(thenbytes.length + 1);
+  baos.write(thenbytes,0,thenbytes.length);
+  baos.write('Z');
+  byte[] rv=baos.toByteArray();
+  rv[1]=(byte)(rv.length - 2);
+  return rv;
+}

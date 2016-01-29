@@ -1,0 +1,71 @@
+{
+  SimpleDataStructure[] keys=KeyGenerator.getInstance().generateSigningKeys(type);
+  SigningPublicKey pub=(SigningPublicKey)keys[0];
+  SigningPrivateKey priv=(SigningPrivateKey)keys[1];
+  PublicKey jpub=SigUtil.toJavaKey(pub);
+  PrivateKey jpriv=SigUtil.toJavaKey(priv);
+  String oid;
+switch (type) {
+case DSA_SHA1:
+    oid=OID_DSA_1024_SIG;
+  break;
+case ECDSA_SHA256_P256:
+oid=OID_ECDSA_P256_SIG;
+break;
+case ECDSA_SHA384_P384:
+oid=OID_ECDSA_P384_SIG;
+break;
+case ECDSA_SHA512_P521:
+oid=OID_ECDSA_P521_SIG;
+break;
+case RSA_SHA256_2048:
+oid=OID_RSA_2048_SIG;
+break;
+case RSA_SHA384_3072:
+oid=OID_RSA_3072_SIG;
+break;
+case RSA_SHA512_4096:
+oid=OID_RSA_4096_SIG;
+break;
+default :
+throw new GeneralSecurityException("Unsupported: " + type);
+}
+byte[] sigoid=getEncodedOIDSeq(oid);
+byte[] tbs=genTBS(cname,ou,o,l,st,c,validDays,sigoid,jpub);
+int tbslen=tbs.length;
+Signature sig=DSAEngine.getInstance().sign(tbs,priv);
+if (sig == null) throw new GeneralSecurityException("sig failed");
+byte[] sigbytes=SigUtil.toJavaSig(sig);
+int seqlen=tbslen + sigoid.length + spaceFor(sigbytes.length + 1);
+int totlen=spaceFor(seqlen);
+byte[] cb=new byte[totlen];
+int idx=0;
+cb[idx++]=0x30;
+idx=intToASN1(cb,idx,seqlen);
+System.arraycopy(tbs,0,cb,idx,tbs.length);
+idx+=tbs.length;
+System.out.println("Sig OID");
+System.out.println(net.i2p.util.HexDump.dump(sigoid));
+System.arraycopy(sigoid,0,cb,idx,sigoid.length);
+idx+=sigoid.length;
+System.out.println("Signature");
+System.out.println(net.i2p.util.HexDump.dump(sigbytes));
+cb[idx++]=0x03;
+idx=intToASN1(cb,idx,sigbytes.length + 1);
+cb[idx++]=0;
+System.arraycopy(sigbytes,0,cb,idx,sigbytes.length);
+System.out.println("Whole cert");
+System.out.println(net.i2p.util.HexDump.dump(cb));
+ByteArrayInputStream bais=new ByteArrayInputStream(cb);
+X509Certificate cert;
+try {
+CertificateFactory cf=CertificateFactory.getInstance("X.509");
+cert=(X509Certificate)cf.generateCertificate(bais);
+cert.checkValidity();
+}
+ catch (IllegalArgumentException iae) {
+throw new GeneralSecurityException("cert error",iae);
+}
+Object[] rv={jpub,jpriv,cert};
+return rv;
+}
