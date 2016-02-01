@@ -1,7 +1,12 @@
 {
   String codeParam=request.getParameter(PARAM_IDENTICON_CODE_SHORT);
   boolean codeSpecified=codeParam != null && codeParam.length() > 0;
-  if (!codeSpecified)   codeParam="stats.i2p";
+  if (!codeSpecified) {
+    response.setStatus(403);
+    return;
+  }
+  String modeParam=request.getParameter(PARAM_IDENTICON_MODE_SHORT);
+  boolean html=modeParam == null || modeParam.startsWith("h");
   String identiconETag=IdenticonUtil.getIdenticonETag(codeParam.hashCode(),0,version);
   String requestETag=request.getHeader("If-None-Match");
   if (requestETag != null && requestETag.equals(identiconETag)) {
@@ -13,7 +18,6 @@
       response.setStatus(403);
     }
  else {
-      boolean html=true;
       StringBuilder buf=new StringBuilder(512);
       if (html) {
         response.setContentType("text/html");
@@ -21,6 +25,7 @@
       }
  else {
         response.setContentType("text/plain");
+        response.setCharacterEncoding("UTF-8");
       }
       buf.append(RandomArt.gnutls_key_fingerprint_randomart(h.getData(),"SHA",256,"",true,html));
       if (html)       buf.append("</body></html>");
