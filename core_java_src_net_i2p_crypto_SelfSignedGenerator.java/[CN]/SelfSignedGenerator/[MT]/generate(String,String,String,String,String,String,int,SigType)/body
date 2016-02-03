@@ -1,0 +1,67 @@
+{
+  SimpleDataStructure[] keys=KeyGenerator.getInstance().generateSigningKeys(type);
+  SigningPublicKey pub=(SigningPublicKey)keys[0];
+  SigningPrivateKey priv=(SigningPrivateKey)keys[1];
+  PublicKey jpub=SigUtil.toJavaKey(pub);
+  PrivateKey jpriv=SigUtil.toJavaKey(priv);
+  String oid;
+switch (type) {
+case DSA_SHA1:
+case ECDSA_SHA256_P256:
+case ECDSA_SHA384_P384:
+case ECDSA_SHA512_P521:
+case RSA_SHA256_2048:
+case RSA_SHA384_3072:
+case RSA_SHA512_4096:
+case EdDSA_SHA512_Ed25519:
+case EdDSA_SHA512_Ed25519ph:
+    oid=type.getOID();
+  break;
+default :
+throw new GeneralSecurityException("Unsupported: " + type);
+}
+byte[] sigoid=getEncodedOIDSeq(oid);
+byte[] tbs=genTBS(cname,ou,o,l,st,c,validDays,sigoid,jpub);
+int tbslen=tbs.length;
+Signature sig=DSAEngine.getInstance().sign(tbs,priv);
+if (sig == null) throw new GeneralSecurityException("sig failed");
+byte[] sigbytes=SigUtil.toJavaSig(sig);
+int seqlen=tbslen + sigoid.length + spaceFor(sigbytes.length + 1);
+int totlen=spaceFor(seqlen);
+byte[] cb=new byte[totlen];
+int idx=0;
+cb[idx++]=0x30;
+idx=intToASN1(cb,idx,seqlen);
+System.arraycopy(tbs,0,cb,idx,tbs.length);
+idx+=tbs.length;
+System.arraycopy(sigoid,0,cb,idx,sigoid.length);
+idx+=sigoid.length;
+cb[idx++]=0x03;
+idx=intToASN1(cb,idx,sigbytes.length + 1);
+cb[idx++]=0;
+System.arraycopy(sigbytes,0,cb,idx,sigbytes.length);
+if (DEBUG) {
+System.out.println("Sig OID");
+System.out.println(HexDump.dump(sigoid));
+System.out.println("Signature");
+System.out.println(HexDump.dump(sigbytes));
+System.out.println("Whole cert");
+System.out.println(HexDump.dump(cb));
+}
+ByteArrayInputStream bais=new ByteArrayInputStream(cb);
+X509Certificate cert;
+try {
+CertificateFactory cf=CertificateFactory.getInstance("X.509");
+cert=(X509Certificate)cf.generateCertificate(bais);
+cert.checkValidity();
+}
+ catch (IllegalArgumentException iae) {
+throw new GeneralSecurityException("cert error",iae);
+}
+X509CRL crl=generateCRL(cert,validDays,1,sigoid,jpriv);
+PublicKey cpub=cert.getPublicKey();
+cert.verify(cpub);
+if (!cpub.equals(jpub)) throw new GeneralSecurityException("pubkey mismatch");
+Object[] rv={jpub,jpriv,cert,crl};
+return rv;
+}

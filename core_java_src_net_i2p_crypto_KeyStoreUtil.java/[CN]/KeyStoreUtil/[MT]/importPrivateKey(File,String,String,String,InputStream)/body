@@ -1,0 +1,30 @@
+{
+  OutputStream fos=null;
+  try {
+    KeyStore keyStore=createKeyStore(ks,ksPW);
+    PrivateKey pk=CertUtil.loadPrivateKey(in);
+    List<X509Certificate> certs=CertUtil.loadCerts(in);
+    if (alias == null) {
+      alias=CertUtil.getSubjectValue(certs.get(0),"CN");
+      if (alias == null)       throw new GeneralSecurityException("no alias specified and no Subject CN in cert");
+      if (alias.endsWith(".family.i2p.net") && alias.length() > ".family.i2p.net".length())       alias=alias.substring(0,".family.i2p.net".length());
+    }
+    keyStore.setKeyEntry(alias,pk,keyPW.toCharArray(),certs.toArray(new Certificate[certs.size()]));
+    char[] pwchars=ksPW != null ? ksPW.toCharArray() : null;
+    fos=new SecureFileOutputStream(ks);
+    keyStore.store(fos,pwchars);
+    return alias;
+  }
+  finally {
+    if (fos != null)     try {
+      fos.close();
+    }
+ catch (    IOException ioe) {
+    }
+    try {
+      in.close();
+    }
+ catch (    IOException ioe) {
+    }
+  }
+}

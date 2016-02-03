@@ -1,0 +1,34 @@
+{
+  try {
+    String line;
+    while ((line=DataHelper.readLine(in)) != null) {
+      if (line.startsWith("---") && line.contains("BEGIN") && line.contains("PRIVATE"))       break;
+    }
+    if (line == null)     throw new IOException("no private key found");
+    StringBuilder buf=new StringBuilder(128);
+    while ((line=DataHelper.readLine(in)) != null) {
+      if (line.startsWith("---"))       break;
+      buf.append(line.trim());
+    }
+    if (buf.length() <= 0)     throw new IOException("no private key found");
+    byte[] data=Base64.decode(buf.toString(),true);
+    if (data == null)     throw new CertificateEncodingException("bad base64 cert");
+    PrivateKey rv=null;
+    for (    SigAlgo algo : EnumSet.allOf(SigAlgo.class)) {
+      try {
+        KeySpec ks=new PKCS8EncodedKeySpec(data);
+        String alg=algo.getName();
+        KeyFactory kf=KeyFactory.getInstance(alg);
+        rv=kf.generatePrivate(ks);
+        break;
+      }
+ catch (      GeneralSecurityException gse) {
+      }
+    }
+    if (rv == null)     throw new InvalidKeyException("unsupported key type");
+    return rv;
+  }
+ catch (  IllegalArgumentException iae) {
+    throw new GeneralSecurityException("key error",iae);
+  }
+}

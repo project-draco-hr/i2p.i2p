@@ -1,0 +1,54 @@
+{
+  byte[] data;
+  String name=srq.getParameter("plugin");
+  data=NavHelper.getBinary(name);
+  srs.setContentType("image/png");
+  srs.setDateHeader("Expires",I2PAppContext.getGlobalContext().clock().now() + 86400000l);
+  srs.setHeader("Cache-Control","public, max-age=86400");
+  OutputStream os=srs.getOutputStream();
+  if (data != null) {
+    srs.setHeader("Content-Length",Integer.toString(data.length));
+    int content=Arrays.hashCode(data);
+    int chksum=srq.getIntHeader("If-None-Match");
+    if (content != chksum) {
+      srs.setIntHeader("ETag",content);
+      try {
+        os.write(data);
+        os.flush();
+        os.close();
+      }
+ catch (      IOException e) {
+        I2PAppContext.getGlobalContext().logManager().getLog(getClass()).warn("Error writing binary image data for plugin",e);
+      }
+    }
+ else {
+      srs.sendError(304,"Not Modified");
+    }
+  }
+ else {
+    File pfile=new File(base,file);
+    srs.setHeader("Content-Length",Long.toString(pfile.length()));
+    try {
+      long lastmod=pfile.lastModified();
+      if (lastmod > 0) {
+        long iflast=srq.getDateHeader("If-Modified-Since");
+        if (iflast >= ((lastmod / 1000) * 1000)) {
+          srs.sendError(304,"Not Modified");
+        }
+ else {
+          srs.setDateHeader("Last-Modified",lastmod);
+          FileUtil.readFile(file,base,os);
+        }
+      }
+    }
+ catch (    IOException e) {
+      if (!srs.isCommitted()) {
+        srs.sendError(403,e.toString());
+      }
+ else {
+        I2PAppContext.getGlobalContext().logManager().getLog(getClass()).warn("Error serving plugin.png",e);
+        throw e;
+      }
+    }
+  }
+}

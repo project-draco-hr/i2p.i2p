@@ -26,7 +26,39 @@ catch (    GeneralSecurityException e) {
     }
   }
   String keytool=(new File(System.getProperty("java.home"),"bin/keytool")).getAbsolutePath();
-  String[] args=new String[]{keytool,"-genkey","-storetype",KeyStore.getDefaultType(),"-keystore",ks.getAbsolutePath(),"-storepass",ksPW,"-alias",alias,"-dname","CN=" + cname + ",OU="+ ou+ ",O=I2P Anonymous Network,L=XX,ST=XX,C=XX","-validity",Integer.toString(validDays),"-keyalg",keyAlg,"-sigalg",getSigAlg(keySize,keyAlg),"-keysize",Integer.toString(keySize),"-keypass",keyPW};
+  List<String> a=new ArrayList<String>(32);
+  a.add(keytool);
+  a.add("-genkey");
+  a.add("-storetype");
+  a.add(KeyStore.getDefaultType());
+  a.add("-keystore");
+  a.add(ks.getAbsolutePath());
+  a.add("-storepass");
+  a.add(ksPW);
+  a.add("-alias");
+  a.add(alias);
+  a.add("-dname");
+  a.add("CN=" + cname + ",OU="+ ou+ ",O=I2P Anonymous Network,L=XX,ST=XX,C=XX");
+  a.add("-validity");
+  a.add(Integer.toString(validDays));
+  a.add("-keyalg");
+  a.add(keyAlg);
+  a.add("-sigalg");
+  a.add(getSigAlg(keySize,keyAlg));
+  a.add("-keysize");
+  a.add(Integer.toString(keySize));
+  a.add("-keypass");
+  a.add(keyPW);
+  if (keyAlg.equals("Ed") || keyAlg.equals("EdDSA") || keyAlg.equals("ElGamal")) {
+    File f=I2PAppContext.getGlobalContext().getBaseDir();
+    f=new File(f,"lib");
+    f=new File(f,"i2p.jar");
+    a.add("-providerpath");
+    a.add(f.getAbsolutePath());
+    a.add("-providerclass");
+    a.add("net.i2p.crypto.provider.I2PProvider");
+  }
+  String[] args=a.toArray(new String[a.size()]);
   boolean success=(new ShellCommand()).executeSilentAndWaitTimed(args,240);
   if (success) {
     success=ks.exists();

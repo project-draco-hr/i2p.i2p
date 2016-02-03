@@ -1,0 +1,55 @@
+{
+  byte[] version={(byte)0xa0,3,2,1,2};
+  byte[] serial=new byte[6];
+  serial[0]=2;
+  serial[1]=4;
+  RandomSource.getInstance().nextBytes(serial,2,4);
+  serial[2]&=0x7f;
+  String dname="CN=" + cname + ",OU="+ ou+ ",O="+ o+ ",L="+ l+ ",ST="+ st+ ",C="+ c;
+  byte[] issuer=(new X500Principal(dname,OIDS)).getEncoded();
+  byte[] validity=getValidity(validDays);
+  byte[] subject=issuer;
+  byte[] pubbytes=jpub.getEncoded();
+  byte[] extbytes=getExtensions(pubbytes);
+  int len=version.length + serial.length + sigoid.length+ issuer.length+ validity.length+ subject.length+ pubbytes.length+ extbytes.length;
+  int totlen=spaceFor(len);
+  byte[] rv=new byte[totlen];
+  int idx=0;
+  rv[idx++]=0x30;
+  idx=intToASN1(rv,idx,len);
+  System.arraycopy(version,0,rv,idx,version.length);
+  idx+=version.length;
+  System.arraycopy(serial,0,rv,idx,serial.length);
+  idx+=serial.length;
+  System.arraycopy(sigoid,0,rv,idx,sigoid.length);
+  idx+=sigoid.length;
+  System.arraycopy(issuer,0,rv,idx,issuer.length);
+  idx+=issuer.length;
+  System.arraycopy(validity,0,rv,idx,validity.length);
+  idx+=validity.length;
+  System.arraycopy(subject,0,rv,idx,subject.length);
+  idx+=subject.length;
+  System.arraycopy(pubbytes,0,rv,idx,pubbytes.length);
+  idx+=pubbytes.length;
+  System.arraycopy(extbytes,0,rv,idx,extbytes.length);
+  if (DEBUG) {
+    System.out.println(HexDump.dump(version));
+    System.out.println("serial");
+    System.out.println(HexDump.dump(serial));
+    System.out.println("oid");
+    System.out.println(HexDump.dump(sigoid));
+    System.out.println("issuer");
+    System.out.println(HexDump.dump(issuer));
+    System.out.println("valid");
+    System.out.println(HexDump.dump(validity));
+    System.out.println("subject");
+    System.out.println(HexDump.dump(subject));
+    System.out.println("pub");
+    System.out.println(HexDump.dump(pubbytes));
+    System.out.println("extensions");
+    System.out.println(HexDump.dump(extbytes));
+    System.out.println("TBS cert");
+    System.out.println(HexDump.dump(rv));
+  }
+  return rv;
+}

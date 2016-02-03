@@ -1,17 +1,8 @@
 {
-  Curve curve=key.getParams().getCurve();
-  int b=curve.getField().getb();
-  if (sigBytes.length != b / 4)   throw new SignatureException("signature length is wrong");
-  digest.update(sigBytes,0,b / 8);
-  digest.update(((EdDSAPublicKey)key).getAbyte());
-  byte[] message=baos.toByteArray();
-  byte[] h=digest.digest(message);
-  h=key.getParams().getScalarOps().reduce(h);
-  byte[] Sbyte=Arrays.copyOfRange(sigBytes,b / 8,b / 4);
-  GroupElement R=key.getParams().getB().doubleScalarMultiplyVariableTime(((EdDSAPublicKey)key).getNegativeA(),h,Sbyte);
-  byte[] Rcalc=R.toByteArray();
-  for (int i=0; i < Rcalc.length; i++) {
-    if (Rcalc[i] != sigBytes[i])     return false;
+  try {
+    return x_engineVerify(sigBytes);
   }
-  return true;
+  finally {
+    reset();
+  }
 }
