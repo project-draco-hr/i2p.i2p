@@ -1,10 +1,17 @@
 {
   int hashlen=hash.length();
   if (type.getHashLen() != hashlen)   throw new IllegalArgumentException("type mismatch hash=" + hash.getClass() + " key="+ type);
-  java.security.Signature jsig;
-  if (type.getBaseAlgorithm() == SigAlgo.EdDSA)   jsig=new EdDSAEngine();
- else   jsig=java.security.Signature.getInstance(algo);
-  jsig.initSign(privKey,_context.random());
-  jsig.update(hash.getData());
-  return SigUtil.fromJavaSig(jsig.sign(),type);
+  byte[] sigbytes;
+  if (type.getBaseAlgorithm() == SigAlgo.EdDSA) {
+    EdDSAEngine jsig=new EdDSAEngine();
+    jsig.initSign(privKey);
+    sigbytes=jsig.signOneShot(hash.getData());
+  }
+ else {
+    java.security.Signature jsig=java.security.Signature.getInstance(type.getAlgorithmName());
+    jsig.initSign(privKey,_context.random());
+    jsig.update(hash.getData());
+    sigbytes=jsig.sign();
+  }
+  return SigUtil.fromJavaSig(sigbytes,type);
 }

@@ -2,12 +2,19 @@
   SigType type=signature.getType();
   int hashlen=hash.length();
   if (type.getHashLen() != hashlen)   throw new IllegalArgumentException("type mismatch hash=" + hash.getClass() + " key="+ type);
-  String algo=getRawAlgo(type);
-  java.security.Signature jsig;
-  if (type.getBaseAlgorithm() == SigAlgo.EdDSA)   jsig=new EdDSAEngine();
- else   jsig=java.security.Signature.getInstance(algo);
-  jsig.initVerify(pubKey);
-  jsig.update(hash.getData());
-  boolean rv=jsig.verify(SigUtil.toJavaSig(signature));
+  byte[] sigbytes=SigUtil.toJavaSig(signature);
+  boolean rv;
+  if (type.getBaseAlgorithm() == SigAlgo.EdDSA) {
+    EdDSAEngine jsig=new EdDSAEngine();
+    jsig.initVerify(pubKey);
+    rv=jsig.verifyOneShot(hash.getData(),sigbytes);
+  }
+ else {
+    String algo=getRawAlgo(type);
+    java.security.Signature jsig=java.security.Signature.getInstance(algo);
+    jsig.initVerify(pubKey);
+    jsig.update(hash.getData());
+    rv=jsig.verify(sigbytes);
+  }
   return rv;
 }
