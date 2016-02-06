@@ -34,6 +34,7 @@ synchronized (samOut) {
  else       if (mode == DG || mode == V1DG)       style="DATAGRAM";
  else       style="RAW";
       if (masterMode) {
+        if (mode == V1DG || mode == V1RAW)         throw new IllegalArgumentException("v1 dg/raw incompatible with master session");
         String req="SESSION CREATE DESTINATION=TRANSIENT STYLE=MASTER ID=masterSend " + opts + '\n';
         samOut.write(req.getBytes("UTF-8"));
         samOut.flush();
@@ -41,6 +42,7 @@ synchronized (samOut) {
         boolean ok=eventHandler.waitForSessionCreateReply();
         if (!ok)         throw new IOException("SESSION CREATE STYLE=MASTER failed");
         if (_log.shouldLog(Log.DEBUG))         _log.debug("SESSION CREATE STYLE=MASTER reply found: " + ok);
+        if (mode != STREAM)         opts+=" PORT=9999";
       }
       String req="SESSION " + command + " STYLE="+ style+ ' '+ _conOptions+ ' '+ opts+ '\n';
       samOut.write(req.getBytes("UTF-8"));
