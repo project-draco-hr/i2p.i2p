@@ -45,6 +45,12 @@
       Properties allProps=new Properties();
       allProps.putAll(i2cpProps);
       allProps.putAll(props);
+      if (style.equals("MASTER")) {
+        allProps.setProperty("i2p.streaming.enforceProtocol","true");
+        allProps.setProperty("i2cp.dontPublishLeaseSet","false");
+        allProps.setProperty("FROM_PORT",Integer.toString(I2PSession.PORT_UNSPECIFIED));
+        allProps.setProperty("TO_PORT",Integer.toString(I2PSession.PORT_UNSPECIFIED));
+      }
       try {
         sSessionsHash.put(nick,new SessionRecord(dest,allProps,this));
       }
@@ -93,7 +99,7 @@ catch (      SessionsDB.ExistingDestException e) {
     }
  else     if (opcode.equals("ADD") || opcode.equals("REMOVE")) {
       ok=true;
-      if (streamSession != null || datagramSession != null || rawSession != null)       return writeString("SESSION STATUS RESULT=I2P_ERROR MESSAGE=\"Not a MASTER session\"\n");
+      if (streamSession == null || datagramSession == null || rawSession == null)       return writeString("SESSION STATUS RESULT=I2P_ERROR MESSAGE=\"Not a MASTER session\"\n");
       MasterSession msess=(MasterSession)session;
       String msg;
       if (opcode.equals("ADD")) {
@@ -116,15 +122,15 @@ catch (      SessionsDB.ExistingDestException e) {
   }
 catch (  I2PSessionException e) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("I2P error when instantiating session",e);
-    return writeString("SESSION STATUS RESULT=I2P_ERROR DESTINATION=" + dest + " MESSAGE=\""+ e.getMessage()+ "\"\n");
+    return writeString("SESSION STATUS RESULT=I2P_ERROR MESSAGE=\"" + e.getMessage() + "\"\n");
   }
 catch (  SAMException e) {
     if (_log.shouldLog(Log.INFO))     _log.info("Funny SAM error",e);
-    return writeString("SESSION STATUS RESULT=I2P_ERROR DESTINATION=" + dest + " MESSAGE=\""+ e.getMessage()+ "\"\n");
+    return writeString("SESSION STATUS RESULT=I2P_ERROR MESSAGE=\"" + e.getMessage() + "\"\n");
   }
 catch (  IOException e) {
     _log.error("Unexpected IOException",e);
-    return writeString("SESSION STATUS RESULT=I2P_ERROR DESTINATION=" + dest + " MESSAGE=\""+ e.getMessage()+ "\"\n");
+    return writeString("SESSION STATUS RESULT=I2P_ERROR MESSAGE=\"" + e.getMessage() + "\"\n");
   }
  finally {
     if (!ok && nick != null) {

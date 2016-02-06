@@ -45,9 +45,12 @@
     allprops.setProperty("outbound.nickname","SAM TCP Client");
   }
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Creating I2PSocketManager...");
-  socketMgr=I2PSocketManagerFactory.createManager(destStream,i2cpHost,i2cpPort,allprops);
-  if (socketMgr == null) {
-    throw new SAMException("Error creating I2PSocketManager");
+  try {
+    socketMgr=I2PSocketManagerFactory.createDisconnectedManager(destStream,i2cpHost,i2cpPort,allprops);
+    socketMgr.getSession().connect();
+  }
+ catch (  I2PSessionException ise) {
+    throw new SAMException("Error creating I2PSocketManager: " + ise.getMessage(),ise);
   }
   socketMgr.addDisconnectListener(new DisconnectListener());
   forceFlush=Boolean.parseBoolean(allprops.getProperty(PROP_FORCE_FLUSH,DEFAULT_FORCE_FLUSH));
