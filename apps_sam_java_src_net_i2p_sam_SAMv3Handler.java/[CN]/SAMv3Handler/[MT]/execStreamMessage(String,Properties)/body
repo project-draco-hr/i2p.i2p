@@ -2,15 +2,15 @@
   String nick=null;
   SessionRecord rec=null;
   if (session != null) {
-    _log.error("STREAM message received, but this session is a master session");
+    _log.error("v3 control socket cannot be used for STREAM");
     try {
-      notifyStreamResult(true,"I2P_ERROR","master session cannot be used for streams");
+      notifyStreamResult(true,"I2P_ERROR","v3 control socket cannot be used for STREAM");
     }
  catch (    IOException e) {
     }
     return false;
   }
-  nick=props.getProperty("ID");
+  nick=(String)props.remove("ID");
   if (nick == null) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("SESSION ID parameter not specified");
     try {
@@ -20,12 +20,11 @@
     }
     return false;
   }
-  props.remove("ID");
   rec=sSessionsHash.get(nick);
   if (rec == null) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("STREAM SESSION ID does not exist");
     try {
-      notifyStreamResult(true,"INVALID_ID","STREAM SESSION ID does not exist");
+      notifyStreamResult(true,"INVALID_ID","STREAM SESSION ID " + nick + " does not exist");
     }
  catch (    IOException e) {
     }
@@ -35,7 +34,7 @@
   if (streamSession == null) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("specified ID is not a stream session");
     try {
-      notifyStreamResult(true,"I2P_ERROR","specified ID is not a STREAM session");
+      notifyStreamResult(true,"I2P_ERROR","specified ID " + nick + " is not a STREAM session");
     }
  catch (    IOException e) {
     }

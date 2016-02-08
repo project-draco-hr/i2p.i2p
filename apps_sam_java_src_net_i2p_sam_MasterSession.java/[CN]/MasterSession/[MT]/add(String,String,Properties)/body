@@ -1,0 +1,84 @@
+{
+  if (props.containsKey("DESTINATION"))   return "SESSION ADD may not contain DESTINATION";
+  SessionRecord rec=SAMv3Handler.sSessionsHash.get(nick);
+  if (rec != null || sessions.containsKey(nick))   return "Duplicate ID " + nick;
+  int listenPort=I2PSession.PORT_ANY;
+  String slp=(String)props.remove("LISTEN_PORT");
+  if (slp == null)   slp=props.getProperty("FROM_PORT");
+  if (slp != null) {
+    try {
+      listenPort=Integer.parseInt(slp);
+      if (listenPort < 0 || listenPort > 65535)       return "Bad LISTEN_PORT " + slp;
+    }
+ catch (    NumberFormatException nfe) {
+      return "Bad LISTEN_PORT " + slp;
+    }
+  }
+  int listenProtocol;
+  SAMMessageSess sess;
+  SAMv3Handler subhandler;
+  try {
+    I2PSession isess=socketMgr.getSession();
+    subhandler=new SAMv3Handler(handler.getClientSocket(),handler.verMajor,handler.verMinor,handler.getBridge());
+    if (style.equals("RAW")) {
+      if (!props.containsKey("PORT"))       return "RAW subsession must specify PORT";
+      listenProtocol=I2PSession.PROTO_DATAGRAM_RAW;
+      String spr=(String)props.remove("LISTEN_PROTOCOL");
+      if (spr == null)       spr=props.getProperty("PROTOCOL");
+      if (spr != null) {
+        try {
+          listenProtocol=Integer.parseInt(spr);
+          if (listenProtocol < 0 || listenProtocol > 255 || listenProtocol == I2PSession.PROTO_STREAMING)           return "Bad RAW LISTEN_PPROTOCOL " + spr;
+        }
+ catch (        NumberFormatException nfe) {
+          return "Bad LISTEN_PROTOCOL " + spr;
+        }
+      }
+      SAMv3RawSession ssess=new SAMv3RawSession(nick,props,handler,isess,listenProtocol,listenPort,dgs);
+      subhandler.setSession(ssess);
+      sess=ssess;
+    }
+ else     if (style.equals("DATAGRAM")) {
+      if (!props.containsKey("PORT"))       return "DATAGRAM subsession must specify PORT";
+      listenProtocol=I2PSession.PROTO_DATAGRAM;
+      SAMv3DatagramSession ssess=new SAMv3DatagramSession(nick,props,handler,isess,listenPort,dgs);
+      subhandler.setSession(ssess);
+      sess=ssess;
+    }
+ else     if (style.equals("STREAM")) {
+      listenProtocol=I2PSession.PROTO_STREAMING;
+      SAMv3StreamSession ssess=new SAMv3StreamSession(nick,props,handler,socketMgr,listenPort);
+      subhandler.setSession(ssess);
+      sess=ssess;
+    }
+ else {
+      return "Unrecognized SESSION STYLE " + style;
+    }
+  }
+ catch (  IOException e) {
+    return e.toString();
+  }
+catch (  DataFormatException e) {
+    return e.toString();
+  }
+catch (  SAMException e) {
+    return e.toString();
+  }
+catch (  I2PSessionException e) {
+    return e.toString();
+  }
+  for (  SAMMessageSess s : sessions.values()) {
+    if (listenProtocol == s.getListenProtocol() && listenPort == s.getListenPort())     return "Duplicate protocol " + listenProtocol + " and port "+ listenPort;
+  }
+  rec=new SessionRecord(getDestination().toBase64(),props,subhandler);
+  try {
+    SAMv3Handler.sSessionsHash.putDupDestOK(nick,rec);
+    sessions.put(nick,sess);
+  }
+ catch (  SessionsDB.ExistingIdException e) {
+    return "Duplicate ID " + nick;
+  }
+  if (_log.shouldWarn())   _log.warn("added " + style + " proto "+ listenProtocol+ " port "+ listenPort);
+  sess.start();
+  return null;
+}

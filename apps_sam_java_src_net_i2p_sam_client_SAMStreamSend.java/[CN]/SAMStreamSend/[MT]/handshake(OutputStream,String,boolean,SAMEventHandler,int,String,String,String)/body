@@ -18,17 +18,50 @@ synchronized (samOut) {
         if (_isV32)         _v3ID="xx??????xx" + _v3ID;
         _conOptions="ID=" + _v3ID;
       }
+      boolean masterMode;
+      String command;
+      if (mode >= MASTER) {
+        masterMode=true;
+        command="ADD";
+        mode-=MASTER;
+      }
+ else {
+        masterMode=false;
+        command="CREATE DESTINATION=TRANSIENT";
+      }
       String style;
       if (mode == STREAM)       style="STREAM";
  else       if (mode == DG || mode == V1DG)       style="DATAGRAM";
  else       style="RAW";
-      String req="SESSION CREATE STYLE=" + style + " DESTINATION=TRANSIENT "+ _conOptions+ ' '+ opts+ '\n';
+      if (masterMode) {
+        if (mode == V1DG || mode == V1RAW)         throw new IllegalArgumentException("v1 dg/raw incompatible with master session");
+        String req="SESSION CREATE DESTINATION=TRANSIENT STYLE=MASTER ID=masterSend " + opts + '\n';
+        samOut.write(req.getBytes("UTF-8"));
+        samOut.flush();
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("SESSION CREATE STYLE=MASTER sent");
+        boolean ok=eventHandler.waitForSessionCreateReply();
+        if (!ok)         throw new IOException("SESSION CREATE STYLE=MASTER failed");
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("SESSION CREATE STYLE=MASTER reply found: " + ok);
+        if (mode != STREAM)         opts+=" PORT=9999";
+      }
+      String req="SESSION " + command + " STYLE="+ style+ ' '+ _conOptions+ ' '+ opts+ '\n';
       samOut.write(req.getBytes("UTF-8"));
       samOut.flush();
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Session create sent");
-      boolean ok=eventHandler.waitForSessionCreateReply();
-      if (!ok)       throw new IOException("Session create failed");
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Session create reply found: " + ok);
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("SESSION " + command + " sent");
+      boolean ok;
+      if (masterMode)       ok=eventHandler.waitForSessionAddReply();
+ else       ok=eventHandler.waitForSessionCreateReply();
+      if (!ok)       throw new IOException("SESSION " + command + " failed");
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("SESSION " + command + " reply found: "+ ok);
+      if (masterMode) {
+        req="SESSION ADD STYLE=STREAM FROM_PORT=99 ID=stream99\n";
+        samOut.write(req.getBytes("UTF-8"));
+        req="SESSION ADD STYLE=STREAM FROM_PORT=98 ID=stream98\n";
+        samOut.write(req.getBytes("UTF-8"));
+        req="SESSION REMOVE ID=stream99\n";
+        samOut.write(req.getBytes("UTF-8"));
+        samOut.flush();
+      }
       req="NAMING LOOKUP NAME=ME\n";
       samOut.write(req.getBytes("UTF-8"));
       samOut.flush();

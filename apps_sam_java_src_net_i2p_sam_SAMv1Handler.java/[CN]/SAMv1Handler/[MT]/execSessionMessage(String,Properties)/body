@@ -2,20 +2,19 @@
   String dest="BUG!";
   try {
     if (opcode.equals("CREATE")) {
-      if ((getRawSession() != null) || (getDatagramSession() != null) || (getStreamSession() != null)) {
+      if ((rawSession != null) || (datagramSession != null) || (streamSession != null)) {
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Trying to create a session, but one still exists");
-        return writeString("SESSION STATUS RESULT=I2P_ERROR MESSAGE=\"Session already exists\"\n");
+        return writeString(SESSION_ERROR,"Session already exists");
       }
       if (props.isEmpty()) {
         if (_log.shouldLog(Log.DEBUG))         _log.debug("No parameters specified in SESSION CREATE message");
-        return writeString("SESSION STATUS RESULT=I2P_ERROR MESSAGE=\"No parameters for SESSION CREATE\"\n");
+        return writeString(SESSION_ERROR,"No parameters for SESSION CREATE");
       }
-      dest=props.getProperty("DESTINATION");
+      dest=(String)props.remove("DESTINATION");
       if (dest == null) {
         if (_log.shouldLog(Log.DEBUG))         _log.debug("SESSION DESTINATION parameter not specified");
-        return writeString("SESSION STATUS RESULT=I2P_ERROR MESSAGE=\"DESTINATION not specified\"\n");
+        return writeString(SESSION_ERROR,"DESTINATION not specified");
       }
-      props.remove("DESTINATION");
       String destKeystream=null;
       if (dest.equals("TRANSIENT")) {
         _log.debug("TRANSIENT destination requested");
@@ -36,59 +35,58 @@
           if (_log.shouldLog(Log.DEBUG))           _log.debug("Custom destination specified [" + dest + "] and it is already known");
         }
       }
-      String style=props.getProperty("STYLE");
+      String style=(String)props.remove("STYLE");
       if (style == null) {
         if (_log.shouldLog(Log.DEBUG))         _log.debug("SESSION STYLE parameter not specified");
-        return writeString("SESSION STATUS RESULT=I2P_ERROR MESSAGE=\"No SESSION STYLE specified\"\n");
+        return writeString(SESSION_ERROR,"No SESSION STYLE specified");
       }
-      props.remove("STYLE");
       props.setProperty(I2PClient.PROP_RELIABILITY,I2PClient.PROP_RELIABILITY_NONE);
       if (style.equals("RAW")) {
         rawSession=new SAMRawSession(destKeystream,props,this);
+        rawSession.start();
       }
  else       if (style.equals("DATAGRAM")) {
         datagramSession=new SAMDatagramSession(destKeystream,props,this);
+        datagramSession.start();
       }
  else       if (style.equals("STREAM")) {
-        String dir=props.getProperty("DIRECTION");
+        String dir=(String)props.remove("DIRECTION");
         if (dir == null) {
           if (_log.shouldLog(Log.DEBUG))           _log.debug("No DIRECTION parameter in STREAM session, defaulting to BOTH");
           dir="BOTH";
         }
  else         if (!dir.equals("CREATE") && !dir.equals("RECEIVE") && !dir.equals("BOTH")) {
           if (_log.shouldLog(Log.DEBUG))           _log.debug("Unknown DIRECTION parameter value: [" + dir + "]");
-          return writeString("SESSION STATUS RESULT=I2P_ERROR MESSAGE=\"Unknown DIRECTION parameter\"\n");
-        }
- else {
-          props.remove("DIRECTION");
+          return writeString(SESSION_ERROR,"Unknown DIRECTION parameter");
         }
         streamSession=newSAMStreamSession(destKeystream,dir,props);
+        streamSession.start();
       }
  else {
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Unrecognized SESSION STYLE: \"" + style + "\"");
-        return writeString("SESSION STATUS RESULT=I2P_ERROR MESSAGE=\"Unrecognized SESSION STYLE\"\n");
+        return writeString(SESSION_ERROR,"Unrecognized SESSION STYLE");
       }
       return writeString("SESSION STATUS RESULT=OK DESTINATION=" + dest + "\n");
     }
  else {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Unrecognized SESSION message opcode: \"" + opcode + "\"");
-      return writeString("SESSION STATUS RESULT=I2P_ERROR MESSAGE=\"Unrecognized opcode\"\n");
+      return writeString(SESSION_ERROR,"Unrecognized opcode");
     }
   }
  catch (  DataFormatException e) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Invalid destination specified");
-    return writeString("SESSION STATUS RESULT=INVALID_KEY DESTINATION=" + dest + " MESSAGE=\""+ e.getMessage()+ "\"\n");
+    return writeString("SESSION STATUS RESULT=INVALID_KEY",e.getMessage());
   }
 catch (  I2PSessionException e) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("I2P error when instantiating session",e);
-    return writeString("SESSION STATUS RESULT=I2P_ERROR DESTINATION=" + dest + " MESSAGE=\""+ e.getMessage()+ "\"\n");
+    return writeString(SESSION_ERROR,e.getMessage());
   }
 catch (  SAMException e) {
     _log.error("Unexpected SAM error",e);
-    return writeString("SESSION STATUS RESULT=I2P_ERROR DESTINATION=" + dest + " MESSAGE=\""+ e.getMessage()+ "\"\n");
+    return writeString(SESSION_ERROR,e.getMessage());
   }
 catch (  IOException e) {
     _log.error("Unexpected IOException",e);
-    return writeString("SESSION STATUS RESULT=I2P_ERROR DESTINATION=" + dest + " MESSAGE=\""+ e.getMessage()+ "\"\n");
+    return writeString(SESSION_ERROR,e.getMessage());
   }
 }

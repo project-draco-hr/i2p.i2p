@@ -8,28 +8,28 @@
  else   if (opcode.equals("ADD")) {
     String user=props.getProperty("USER");
     String pw=props.getProperty("PASSWORD");
-    if (user == null || pw == null)     return writeString("AUTH STATUS RESULT=I2P_ERROR MESSAGE=\"USER and PASSWORD required\"\n");
+    if (user == null || pw == null)     return writeString(AUTH_ERROR,"USER and PASSWORD required");
     String prop=SAMBridge.PROP_PW_PREFIX + user + SAMBridge.PROP_PW_SUFFIX;
-    if (i2cpProps.containsKey(prop))     return writeString("AUTH STATUS RESULT=I2P_ERROR MESSAGE=\"user " + user + " already exists\"\n");
+    if (i2cpProps.containsKey(prop))     return writeString(AUTH_ERROR,"user " + user + " already exists");
     PasswordManager pm=new PasswordManager(I2PAppContext.getGlobalContext());
     String shash=pm.createHash(pw);
     i2cpProps.setProperty(prop,shash);
   }
  else   if (opcode.equals("REMOVE")) {
     String user=props.getProperty("USER");
-    if (user == null)     return writeString("AUTH STATUS RESULT=I2P_ERROR MESSAGE=\"USER required\"\n");
+    if (user == null)     return writeString(AUTH_ERROR,"USER required");
     String prop=SAMBridge.PROP_PW_PREFIX + user + SAMBridge.PROP_PW_SUFFIX;
-    if (!i2cpProps.containsKey(prop))     return writeString("AUTH STATUS RESULT=I2P_ERROR MESSAGE=\"user " + user + " not found\"\n");
+    if (!i2cpProps.containsKey(prop))     return writeString(AUTH_ERROR,"user " + user + " not found");
     i2cpProps.remove(prop);
   }
  else {
-    return writeString("AUTH STATUS RESULT=I2P_ERROR MESSAGE=\"Unknown AUTH command\"\n");
+    return writeString(AUTH_ERROR,"Unknown AUTH command");
   }
   try {
     bridge.saveConfig();
     return writeString("AUTH STATUS RESULT=OK\n");
   }
  catch (  IOException ioe) {
-    return writeString("AUTH STATUS RESULT=I2P_ERROR MESSAGE=\"Config save failed: " + ioe + "\"\n");
+    return writeString(AUTH_ERROR,"Config save failed: " + ioe);
   }
 }
