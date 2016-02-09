@@ -30,21 +30,35 @@
  catch (  IOException ioe) {
     return false;
   }
-  int keylen=type.getPubkeyLen() * 8;
-  if (type.getBaseAlgorithm() == SigAlgo.EC) {
-    keylen/=2;
-    if (keylen == 528)     keylen=521;
+  OutputStream out=null;
+  try {
+    Object[] rv=KeyStoreUtil.createKeysAndCRL(ksFile,kspass,alias,alias,"I2P",3652,type,keypw);
+    X509Certificate cert=(X509Certificate)rv[2];
+    out=new SecureFileOutputStream(publicKeyFile);
+    CertUtil.exportCert(cert,out);
+    if (crlFile != null) {
+      out.close();
+      X509CRL crl=(X509CRL)rv[3];
+      out=new SecureFileOutputStream(crlFile);
+      CertUtil.exportCRL(crl,out);
+    }
   }
-  boolean success=KeyStoreUtil.createKeys(ksFile,kspass,alias,alias,"I2P",3652,type.getBaseAlgorithm().getName(),keylen,keypw);
-  if (!success) {
+ catch (  GeneralSecurityException gse) {
     System.err.println("Error creating keys for " + alias);
+    gse.printStackTrace();
     return false;
   }
-  File outfile=new File(publicKeyFile);
-  success=KeyStoreUtil.exportCert(ksFile,KeyStoreUtil.DEFAULT_KEYSTORE_PASSWORD,alias,outfile);
-  if (!success) {
-    System.err.println("Error writing public key for " + alias + " to "+ outfile);
+catch (  IOException ioe) {
+    System.err.println("Error creating keys for " + alias);
+    ioe.printStackTrace();
     return false;
+  }
+ finally {
+    if (out != null)     try {
+      out.close();
+    }
+ catch (    IOException ioe) {
+    }
   }
   return true;
 }
