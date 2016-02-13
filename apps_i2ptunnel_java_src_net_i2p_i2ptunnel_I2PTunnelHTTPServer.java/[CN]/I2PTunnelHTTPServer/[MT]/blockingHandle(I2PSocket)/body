@@ -114,7 +114,7 @@ catch (    BadRequestException bre) {
     if (Boolean.parseBoolean(opts.getProperty(OPT_REJECT_INPROXY)) && (headers.containsKey("X-Forwarded-For") || headers.containsKey("X-Forwarded-Server") || headers.containsKey("X-Forwarded-Host"))) {
       if (_log.shouldLog(Log.WARN)) {
         StringBuilder buf=new StringBuilder();
-        buf.append("Refusing inproxy access: ").append(peerHash.toBase64());
+        buf.append("Refusing inproxy access: ").append(Base32.encode(peerHash.getData())).append(".b32.i2p");
         List<String> h=headers.get("X-Forwarded-For");
         if (h != null)         buf.append(" from: ").append(h.get(0));
         h=headers.get("X-Forwarded-Server");
@@ -135,9 +135,49 @@ catch (    BadRequestException bre) {
       }
       return;
     }
+    if (Boolean.parseBoolean(opts.getProperty(OPT_REJECT_REFERER)) && headers.containsKey("Referer")) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Refusing access from: " + Base32.encode(peerHash.getData()) + ".b32.i2p"+ " with Referer: "+ headers.get("Referer").get(0));
+      try {
+        socket.getOutputStream().write(ERR_INPROXY.getBytes("UTF-8"));
+      }
+ catch (      IOException ioe) {
+      }
+      try {
+        socket.close();
+      }
+ catch (      IOException ioe) {
+      }
+      return;
+    }
+    if (Boolean.parseBoolean(opts.getProperty(OPT_REJECT_USER_AGENTS)) && headers.containsKey("User-Agent")) {
+      String ua=headers.get("User-Agent").get(0);
+      if (!ua.startsWith("MYOB")) {
+        String blockAgents=opts.getProperty(OPT_USER_AGENTS);
+        if (blockAgents != null) {
+          String[] agents=DataHelper.split(blockAgents,",");
+          for (int i=0; i < agents.length; i++) {
+            String ag=agents[i].trim();
+            if (ag.length() > 0 && ua.contains(ag)) {
+              if (_log.shouldLog(Log.WARN))               _log.warn("Refusing access from: " + Base32.encode(peerHash.getData()) + ".b32.i2p"+ " with User-Agent: "+ ua);
+              try {
+                socket.getOutputStream().write(ERR_INPROXY.getBytes("UTF-8"));
+              }
+ catch (              IOException ioe) {
+              }
+              try {
+                socket.close();
+              }
+ catch (              IOException ioe) {
+              }
+              return;
+            }
+          }
+        }
+      }
+    }
     if (_postThrottler != null && command.length() >= 5 && command.substring(0,5).toUpperCase(Locale.US).equals("POST ")) {
       if (_postThrottler.shouldThrottle(peerHash)) {
-        if (_log.shouldLog(Log.WARN))         _log.warn("Refusing POST since peer is throttled: " + peerHash.toBase64());
+        if (_log.shouldLog(Log.WARN))         _log.warn("Refusing POST since peer is throttled: " + Base32.encode(peerHash.getData()) + ".b32.i2p");
         try {
           socket.getOutputStream().write(ERR_DENIED.getBytes("UTF-8"));
         }
@@ -213,7 +253,7 @@ catch (  IOException ex) {
     }
  catch (    IOException ioe) {
     }
-    if (_log.shouldLog(Log.WARN))     _log.warn("Error while receiving the new HTTP request",ex);
+    if (_log.shouldLog(Log.WARN))     _log.warn("Error while receiving the new HTTP request from: " + Base32.encode(peerHash.getData()) + ".b32.i2p",ex);
   }
 catch (  OutOfMemoryError oom) {
     try {

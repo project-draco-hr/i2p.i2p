@@ -36,7 +36,7 @@
         throw new SocketTimeoutException("Headers took too long");
       }
       int split=buf.indexOf(":");
-      if (split <= 0)       throw new BadRequestException("Invalid HTTP header, missing colon");
+      if (split <= 0)       throw new BadRequestException("Invalid HTTP header, missing colon: \"" + buf + "\" request: \""+ command+ '"');
       totalSize+=buf.length();
       if (totalSize > MAX_TOTAL_HEADER_SIZE)       throw new LineTooLongException("Req+headers too big");
       String name=buf.substring(0,split).trim();
@@ -49,6 +49,8 @@
  else       if ("x-forwarded-for".equals(lcName))       name="X-Forwarded-For";
  else       if ("x-forwarded-server".equals(lcName))       name="X-Forwarded-Server";
  else       if ("x-forwarded-host".equals(lcName))       name="X-Forwarded-Host";
+ else       if ("user-agent".equals(lcName))       name="User-Agent";
+ else       if ("referer".equals(lcName))       name="Referer";
       boolean skip=false;
       for (      String skipHeader : skipHeaders) {
         if (skipHeader.toLowerCase(Locale.US).equals(lcName)) {
