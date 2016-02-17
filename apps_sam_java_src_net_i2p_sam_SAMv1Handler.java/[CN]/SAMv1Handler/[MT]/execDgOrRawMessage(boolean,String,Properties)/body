@@ -6,7 +6,7 @@
     }
     String dest=props.getProperty("DESTINATION");
     if (dest == null) {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Destination not specified in SEND message");
+      if (_log.shouldWarn())       _log.warn("Destination not specified in SEND message");
       return false;
     }
     int size;
@@ -68,22 +68,21 @@
       byte[] data=new byte[size];
       in.readFully(data);
       SAMMessageSess sess=isRaw ? rawSession : datagramSession;
-      if (sess.sendBytes(dest,data,proto,fromPort,toPort)) {
-        _log.error("SEND failed");
-        return true;
+      if (!sess.sendBytes(dest,data,proto,fromPort,toPort)) {
+        if (_log.shouldWarn())         _log.warn((isRaw ? "SEND RAW to " : "SEND DATAGRAM to ") + dest + " size "+ size+ " failed");
       }
       return true;
     }
  catch (    EOFException e) {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Too few bytes with SEND message (expected: " + size);
+      if (_log.shouldWarn())       _log.warn("Too few bytes with SEND message (expected: " + size,e);
       return false;
     }
 catch (    IOException e) {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Caught IOException while parsing SEND message",e);
+      if (_log.shouldWarn())       _log.warn("Caught IOException while parsing SEND message",e);
       return false;
     }
 catch (    DataFormatException e) {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Invalid key specified with SEND message",e);
+      if (_log.shouldWarn())       _log.warn("Invalid key specified with SEND message",e);
       return false;
     }
 catch (    I2PSessionException e) {
@@ -92,7 +91,7 @@ catch (    I2PSessionException e) {
     }
   }
  else {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Unrecognized message opcode: \"" + opcode + "\"");
+    if (_log.shouldWarn())     _log.warn("Unrecognized message opcode: \"" + opcode + "\"");
     return false;
   }
 }
