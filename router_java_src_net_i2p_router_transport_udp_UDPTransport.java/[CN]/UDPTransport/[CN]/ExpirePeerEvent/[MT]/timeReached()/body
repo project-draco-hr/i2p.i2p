@@ -21,7 +21,7 @@
   boolean shouldPingFirewall=_reachabilityStatus != Status.OK;
   int currentListenPort=getListenPort(false);
   boolean pingOneOnly=shouldPingFirewall && getExternalPort(false) == currentListenPort;
-  boolean shortLoop=shouldPingFirewall;
+  boolean shortLoop=shouldPingFirewall || !haveCap || _context.netDb().floodfillEnabled();
   _lastLoopShort=shortLoop;
   _expireBuffer.clear();
   _runCount++;
@@ -31,7 +31,8 @@
     if (peer.getWeRelayToThemAs() > 0 || peer.getIntroducerTime() > pingCutoff) {
       inactivityCutoff=longInactivityCutoff;
     }
- else     if (!haveCap && peer.getMayDisconnect() && peer.getMessagesReceived() <= 2 && peer.getMessagesSent() <= 2) {
+ else     if ((!haveCap || !peer.isInbound()) && peer.getMayDisconnect() && peer.getMessagesReceived() <= 2 && peer.getMessagesSent() <= 2) {
+      if (_log.shouldInfo())       _log.info("Possible early disconnect for: " + peer);
       inactivityCutoff=mayDisconCutoff;
     }
  else {
