@@ -1,0 +1,26 @@
+{
+  Set<X509CRL> crls=new HashSet<X509CRL>(8);
+  File dir=new File(ctx.getBaseDir(),CERT_DIR);
+  dir=new File(dir,REVOCATION_DIR);
+  loadCRLs(crls,dir);
+  boolean diff=true;
+  try {
+    diff=!ctx.getBaseDir().getCanonicalPath().equals(ctx.getConfigDir().getCanonicalPath());
+  }
+ catch (  IOException ioe) {
+  }
+  if (diff) {
+    File dir2=new File(ctx.getConfigDir(),CERT_DIR);
+    dir2=new File(dir2,REVOCATION_DIR);
+    loadCRLs(crls,dir2);
+  }
+  CollectionCertStoreParameters ccsp=new CollectionCertStoreParameters(crls);
+  try {
+    CertStore store=CertStore.getInstance("Collection",ccsp);
+    return store;
+  }
+ catch (  GeneralSecurityException gse) {
+    error("CertStore",gse);
+    throw new UnsupportedOperationException(gse);
+  }
+}
