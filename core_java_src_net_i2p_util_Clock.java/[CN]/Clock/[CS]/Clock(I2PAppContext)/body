@@ -1,5 +1,23 @@
 {
   _context=context;
   _listeners=new CopyOnWriteArraySet<ClockUpdateListener>();
-  _startedOn=System.currentTimeMillis();
+  long now=System.currentTimeMillis();
+  long min=BuildTime.getEarliestTime();
+  long max=BuildTime.getLatestTime();
+  if (now < min) {
+    _offset=min - now;
+    System.out.println("ERROR: System clock is invalid: " + new Date(now));
+    now=min;
+    _isSystemClockBad=true;
+  }
+ else   if (now > max) {
+    _offset=max - now;
+    System.out.println("ERROR: System clock is invalid: " + new Date(now));
+    now=max;
+    _isSystemClockBad=true;
+  }
+ else {
+    _isSystemClockBad=false;
+  }
+  _startedOn=now;
 }
