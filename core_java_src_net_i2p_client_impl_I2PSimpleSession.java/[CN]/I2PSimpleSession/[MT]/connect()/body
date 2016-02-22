@@ -67,7 +67,11 @@ catch (  UnknownHostException uhe) {
     throw new I2PSessionException(getPrefix() + "Cannot connect to the router on " + _hostname+ ':'+ _portNum,uhe);
   }
 catch (  IOException ioe) {
-    throw new I2PSessionException(getPrefix() + "Cannot connect to the router on " + _hostname+ ':'+ _portNum,ioe);
+    String msg;
+    if (_context.isRouterContext())     msg="Failed internal router binding";
+ else     if (SystemVersion.isAndroid() && Boolean.parseBoolean(getOptions().getProperty(PROP_DOMAIN_SOCKET)))     msg="Failed to bind to the router";
+ else     msg="Cannot connect to the router on " + _hostname + ':'+ _portNum;
+    throw new I2PSessionException(getPrefix() + msg,ioe);
   }
  finally {
     changeState(success ? State.OPEN : State.CLOSED);
