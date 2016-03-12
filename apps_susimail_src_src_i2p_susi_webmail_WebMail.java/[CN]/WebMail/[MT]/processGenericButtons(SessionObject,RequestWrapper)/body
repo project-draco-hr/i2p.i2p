@@ -7,8 +7,14 @@
     sessionObject.info=_t("Configuration reloaded");
   }
   if (buttonPressed(request,REFRESH)) {
-    sessionObject.mailbox.refresh();
-    sessionObject.error+=sessionObject.mailbox.lastError();
+    POP3MailBox mailbox=sessionObject.mailbox;
+    if (mailbox == null) {
+      sessionObject.error+=_t("Internal error, lost connection.") + '\n';
+      sessionObject.state=STATE_AUTH;
+      return;
+    }
+    mailbox.refresh();
+    sessionObject.error+=mailbox.lastError();
     sessionObject.mailCache.getMail(MailCache.FetchMode.HEADER);
     String[] uidls=sessionObject.mailCache.getUIDLs();
     if (uidls != null)     sessionObject.folder.setElements(uidls);
