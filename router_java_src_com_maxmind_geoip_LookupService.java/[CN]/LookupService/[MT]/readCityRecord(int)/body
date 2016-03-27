@@ -1,0 +1,23 @@
+{
+  if (seekCountry == databaseSegments[0]) {
+    return null;
+  }
+  ByteBuffer buffer=readRecordBuf(seekCountry,FULL_RECORD_LENGTH);
+  Location record=new Location();
+  int country=unsignedByteToInt(buffer.get());
+  record.countryCode=countryCode[country];
+  record.countryName=countryName[country];
+  record.region=readString(buffer);
+  record.city=readString(buffer);
+  record.postalCode=readString(buffer);
+  record.latitude=readAngle(buffer);
+  record.longitude=readAngle(buffer);
+  if (databaseType == DatabaseInfo.CITY_EDITION_REV1) {
+    if ("US".equals(record.countryCode)) {
+      int metroarea_combo=readMetroAreaCombo(buffer);
+      record.metro_code=record.dma_code=metroarea_combo / 1000;
+      record.area_code=metroarea_combo % 1000;
+    }
+  }
+  return record;
+}

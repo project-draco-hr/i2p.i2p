@@ -1,0 +1,39 @@
+{
+  if (databaseInfo != null) {
+    return databaseInfo;
+  }
+  try {
+    _check_mtime();
+    boolean hasStructureInfo=false;
+    byte[] delim=new byte[3];
+    file.seek(file.length() - 3);
+    for (int i=0; i < STRUCTURE_INFO_MAX_SIZE; i++) {
+      int read=file.read(delim);
+      if (read == 3 && (delim[0] & 0xFF) == 255 && (delim[1] & 0xFF) == 255 && (delim[2] & 0xFF) == 255) {
+        hasStructureInfo=true;
+        break;
+      }
+      file.seek(file.getFilePointer() - 4);
+    }
+    if (hasStructureInfo) {
+      file.seek(file.getFilePointer() - 6);
+    }
+ else {
+      file.seek(file.length() - 3);
+    }
+    for (int i=0; i < DATABASE_INFO_MAX_SIZE; i++) {
+      file.readFully(delim);
+      if (delim[0] == 0 && delim[1] == 0 && delim[2] == 0) {
+        byte[] dbInfo=new byte[i];
+        file.readFully(dbInfo);
+        databaseInfo=new DatabaseInfo(new String(dbInfo,charset));
+        return databaseInfo;
+      }
+      file.seek(file.getFilePointer() - 4);
+    }
+  }
+ catch (  IOException e) {
+    throw new InvalidDatabaseException("Error reading database info",e);
+  }
+  return new DatabaseInfo("");
+}
