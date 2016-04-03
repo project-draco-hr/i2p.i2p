@@ -1,0 +1,49 @@
+{
+  Region record=new Region();
+  int seek_region;
+  if (databaseType == DatabaseInfo.REGION_EDITION_REV0) {
+    seek_region=seekCountry(ipnum) - STATE_BEGIN_REV0;
+    char[] ch=new char[2];
+    if (seek_region >= 1000) {
+      record.countryCode="US";
+      record.countryName="United States";
+      ch[0]=(char)(((seek_region - 1000) / 26) + 65);
+      ch[1]=(char)(((seek_region - 1000) % 26) + 65);
+      record.region=new String(ch);
+    }
+ else {
+      record.countryCode=countryCode[seek_region];
+      record.countryName=countryName[seek_region];
+      record.region="";
+    }
+  }
+ else   if (databaseType == DatabaseInfo.REGION_EDITION_REV1) {
+    seek_region=seekCountry(ipnum) - STATE_BEGIN_REV1;
+    char[] ch=new char[2];
+    if (seek_region < US_OFFSET) {
+      record.countryCode="";
+      record.countryName="";
+      record.region="";
+    }
+ else     if (seek_region < CANADA_OFFSET) {
+      record.countryCode="US";
+      record.countryName="United States";
+      ch[0]=(char)(((seek_region - US_OFFSET) / 26) + 65);
+      ch[1]=(char)(((seek_region - US_OFFSET) % 26) + 65);
+      record.region=new String(ch);
+    }
+ else     if (seek_region < WORLD_OFFSET) {
+      record.countryCode="CA";
+      record.countryName="Canada";
+      ch[0]=(char)(((seek_region - CANADA_OFFSET) / 26) + 65);
+      ch[1]=(char)(((seek_region - CANADA_OFFSET) % 26) + 65);
+      record.region=new String(ch);
+    }
+ else {
+      record.countryCode=countryCode[(seek_region - WORLD_OFFSET) / FIPS_RANGE];
+      record.countryName=countryName[(seek_region - WORLD_OFFSET) / FIPS_RANGE];
+      record.region="";
+    }
+  }
+  return record;
+}

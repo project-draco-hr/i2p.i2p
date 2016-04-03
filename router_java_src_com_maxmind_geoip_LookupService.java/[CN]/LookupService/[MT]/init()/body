@@ -1,0 +1,70 @@
+{
+  byte[] delim=new byte[3];
+  byte[] buf=new byte[SEGMENT_RECORD_LENGTH];
+  if (file == null) {
+    return;
+  }
+  if ((dboptions & GEOIP_CHECK_CACHE) != 0) {
+    mtime=databaseFile.lastModified();
+  }
+  file.seek(file.length() - 3);
+  for (int i=0; i < STRUCTURE_INFO_MAX_SIZE; i++) {
+    file.readFully(delim);
+    if (delim[0] == -1 && delim[1] == -1 && delim[2] == -1) {
+      databaseType=file.readByte();
+      if (databaseType >= 106) {
+        databaseType-=105;
+      }
+      if (databaseType == DatabaseInfo.REGION_EDITION_REV0) {
+        databaseSegments=new int[1];
+        databaseSegments[0]=STATE_BEGIN_REV0;
+        recordLength=STANDARD_RECORD_LENGTH;
+      }
+ else       if (databaseType == DatabaseInfo.REGION_EDITION_REV1) {
+        databaseSegments=new int[1];
+        databaseSegments[0]=STATE_BEGIN_REV1;
+        recordLength=STANDARD_RECORD_LENGTH;
+      }
+ else       if (databaseType == DatabaseInfo.CITY_EDITION_REV0 || databaseType == DatabaseInfo.CITY_EDITION_REV1 || databaseType == DatabaseInfo.ORG_EDITION || databaseType == DatabaseInfo.ORG_EDITION_V6 || databaseType == DatabaseInfo.ISP_EDITION || databaseType == DatabaseInfo.ISP_EDITION_V6 || databaseType == DatabaseInfo.DOMAIN_EDITION || databaseType == DatabaseInfo.DOMAIN_EDITION_V6 || databaseType == DatabaseInfo.ASNUM_EDITION || databaseType == DatabaseInfo.ASNUM_EDITION_V6 || databaseType == DatabaseInfo.NETSPEED_EDITION_REV1 || databaseType == DatabaseInfo.NETSPEED_EDITION_REV1_V6 || databaseType == DatabaseInfo.CITY_EDITION_REV0_V6 || databaseType == DatabaseInfo.CITY_EDITION_REV1_V6) {
+        databaseSegments=new int[1];
+        databaseSegments[0]=0;
+        if (databaseType == DatabaseInfo.CITY_EDITION_REV0 || databaseType == DatabaseInfo.CITY_EDITION_REV1 || databaseType == DatabaseInfo.ASNUM_EDITION_V6 || databaseType == DatabaseInfo.NETSPEED_EDITION_REV1 || databaseType == DatabaseInfo.NETSPEED_EDITION_REV1_V6 || databaseType == DatabaseInfo.CITY_EDITION_REV0_V6 || databaseType == DatabaseInfo.CITY_EDITION_REV1_V6 || databaseType == DatabaseInfo.ASNUM_EDITION) {
+          recordLength=STANDARD_RECORD_LENGTH;
+        }
+ else {
+          recordLength=ORG_RECORD_LENGTH;
+        }
+        file.readFully(buf);
+        for (int j=0; j < SEGMENT_RECORD_LENGTH; j++) {
+          databaseSegments[0]+=(unsignedByteToInt(buf[j]) << (j * 8));
+        }
+      }
+      break;
+    }
+ else {
+      file.seek(file.getFilePointer() - 4);
+    }
+  }
+  if ((databaseType == DatabaseInfo.COUNTRY_EDITION) || (databaseType == DatabaseInfo.COUNTRY_EDITION_V6) || (databaseType == DatabaseInfo.PROXY_EDITION)|| (databaseType == DatabaseInfo.NETSPEED_EDITION)) {
+    databaseSegments=new int[1];
+    databaseSegments[0]=COUNTRY_BEGIN;
+    recordLength=STANDARD_RECORD_LENGTH;
+  }
+  if ((dboptions & GEOIP_MEMORY_CACHE) == 1) {
+    int l=(int)file.length();
+    dbbuffer=new byte[l];
+    file.seek(0);
+    file.readFully(dbbuffer,0,l);
+    databaseInfo=getDatabaseInfo();
+    file.close();
+  }
+  if ((dboptions & GEOIP_INDEX_CACHE) != 0) {
+    int l=databaseSegments[0] * recordLength * 2;
+    index_cache=new byte[l];
+    file.seek(0);
+    file.readFully(index_cache,0,l);
+  }
+ else {
+    index_cache=null;
+  }
+}
