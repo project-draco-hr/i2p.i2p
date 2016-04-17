@@ -13,8 +13,8 @@
       start=end;
     }
     int old=0, nnew=0, invalid=0, conflict=0, total=0;
-    for (Iterator<Map.Entry<String,String>> eIter=sub.iterator(); eIter.hasNext(); ) {
-      Map.Entry<String,String> entry=eIter.next();
+    for (Iterator<Map.Entry<String,HostTxtEntry>> eIter=sub.iterator(); eIter.hasNext(); ) {
+      Map.Entry<String,HostTxtEntry> entry=eIter.next();
       String key=entry.getKey();
       boolean isKnown;
       Destination oldDest=null;
@@ -33,9 +33,22 @@
       try {
         if (!isKnown) {
           if (AddressBook.isValidKey(key)) {
-            Destination dest=new Destination(entry.getValue());
-            Properties props=new Properties();
+            HostTxtEntry he=entry.getValue();
+            Destination dest=new Destination(he.getDest());
+            Properties props=new OrderedProperties();
             props.setProperty("s",sub.getLocation());
+            if (he.hasValidSig()) {
+              props.setProperty("v","true");
+            }
+ else             if (MUST_VALIDATE) {
+              continue;
+            }
+            Properties hprops=he.getProps();
+            if (hprops != null) {
+              for (              Map.Entry<Object,Object> e : hprops.entrySet()) {
+                props.setProperty(RCVD_PROP_PREFIX + e.getKey(),(String)e.getValue());
+              }
+            }
             boolean success=router.put(key,dest,props);
             if (log != null) {
               if (success)               log.append("New address " + key + " added to address book. From: "+ sub.getLocation());
@@ -43,7 +56,7 @@
             }
             if (published != null) {
               if (publishedNS == null)               publishedNS=new SingleFileNamingService(I2PAppContext.getGlobalContext(),published.getAbsolutePath());
-              success=publishedNS.putIfAbsent(key,dest);
+              success=publishedNS.putIfAbsent(key,dest,props);
               if (log != null && !success) {
                 try {
                   log.append("Save to published address book " + published.getCanonicalPath() + " failed for new key "+ key);

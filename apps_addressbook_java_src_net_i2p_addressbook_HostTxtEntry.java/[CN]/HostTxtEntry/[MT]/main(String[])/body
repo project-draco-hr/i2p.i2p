@@ -1,0 +1,28 @@
+{
+  File f=new File("tmp-eepPriv.dat");
+  PrivateKeyFile pkf=new PrivateKeyFile(f);
+  pkf.createIfAbsent(SigType.EdDSA_SHA512_Ed25519);
+  OrderedProperties props=new OrderedProperties();
+  props.setProperty("c","ccccccccccc");
+  props.setProperty("a","aaaa");
+  HostTxtEntry he=new HostTxtEntry("foo.i2p",pkf.getDestination().toBase64(),props);
+  BufferedWriter out=new BufferedWriter(new OutputStreamWriter(System.out));
+  out.write("Before signing:\n");
+  he.write(out);
+  out.flush();
+  SigningPrivateKey priv=pkf.getSigningPrivKey();
+  he.sign(priv);
+  out.write("After signing:\n");
+  he.write(out);
+  out.flush();
+  System.out.println("Orig has valid sig? " + he.hasValidSig());
+  StringWriter sw=new StringWriter(1024);
+  BufferedWriter buf=new BufferedWriter(sw);
+  he.write(buf);
+  buf.flush();
+  String line=sw.toString();
+  line=line.substring(line.indexOf(PROPS_SEPARATOR) + 2);
+  HostTxtEntry he2=new HostTxtEntry("foo.i2p",pkf.getDestination().toBase64(),line);
+  System.out.println("Dupl. has valid sig? " + he2.hasValidSig());
+  f.delete();
+}
