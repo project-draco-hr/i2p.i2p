@@ -1,20 +1,29 @@
 {
   File f=new File("tmp-eepPriv.dat");
+  File f2=new File("tmp-eepPriv2.dat");
   PrivateKeyFile pkf=new PrivateKeyFile(f);
+  PrivateKeyFile pkf2=new PrivateKeyFile(f2);
   pkf.createIfAbsent(SigType.EdDSA_SHA512_Ed25519);
+  pkf2.createIfAbsent(SigType.DSA_SHA1);
   OrderedProperties props=new OrderedProperties();
   props.setProperty("c","ccccccccccc");
   props.setProperty("a","aaaa");
+  props.setProperty(PROP_OLDDEST,pkf2.getDestination().toBase64());
   HostTxtEntry he=new HostTxtEntry("foo.i2p",pkf.getDestination().toBase64(),props);
   BufferedWriter out=new BufferedWriter(new OutputStreamWriter(System.out));
   out.write("Before signing:\n");
   he.write(out);
   out.flush();
   SigningPrivateKey priv=pkf.getSigningPrivKey();
+  SigningPrivateKey priv2=pkf2.getSigningPrivKey();
+  he.signInner(priv2);
+  out.write("After signing inner:\n");
+  he.write(out);
   he.sign(priv);
   out.write("After signing:\n");
   he.write(out);
   out.flush();
+  System.out.println("Orig has valid inner sig? " + he.hasValidInnerSig());
   System.out.println("Orig has valid sig? " + he.hasValidSig());
   StringWriter sw=new StringWriter(1024);
   BufferedWriter buf=new BufferedWriter(sw);
@@ -23,6 +32,8 @@
   String line=sw.toString();
   line=line.substring(line.indexOf(PROPS_SEPARATOR) + 2);
   HostTxtEntry he2=new HostTxtEntry("foo.i2p",pkf.getDestination().toBase64(),line);
+  System.out.println("Dupl. has valid inner sig? " + he2.hasValidInnerSig());
   System.out.println("Dupl. has valid sig? " + he2.hasValidSig());
   f.delete();
+  f2.delete();
 }
