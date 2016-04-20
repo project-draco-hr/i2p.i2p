@@ -1,0 +1,35 @@
+{
+  if (openIndices.containsKey(name))   throw new IOException("Cannot reformat open skiplist " + name);
+  BSkipList old=getIndex(name,oldKey,oldVal);
+  if (old == null)   return;
+  long start=System.currentTimeMillis();
+  String tmpName="---tmp---" + name + "---tmp---";
+  BSkipList tmp=makeIndex(tmpName,newKey,newVal);
+  final int loop=32;
+  List<Comparable> keys=new ArrayList<Comparable>(loop);
+  List<Object> vals=new ArrayList<Object>(loop);
+  while (true) {
+    SkipIterator iter=old.iterator();
+    for (int i=0; iter.hasNext() && i < loop; i++) {
+      keys.add(iter.nextKey());
+      vals.add(iter.next());
+    }
+    boolean done=!iter.hasNext();
+    for (int i=0; i < keys.size(); i++) {
+      tmp.put(keys.get(i),vals.get(i));
+    }
+    for (int i=keys.size() - 1; i >= 0; i--) {
+      old.remove(keys.get(i));
+    }
+    if (done)     break;
+    keys.clear();
+    vals.clear();
+  }
+  delIndex(name);
+  closeIndex(name);
+  closeIndex(tmpName);
+  Integer page=(Integer)metaIndex.get(tmpName);
+  metaIndex.put(name,page);
+  metaIndex.remove(tmpName);
+  if (log.shouldWarn())   log.warn("reformatted list: " + name + " in "+ (System.currentTimeMillis() - start)+ "ms");
+}

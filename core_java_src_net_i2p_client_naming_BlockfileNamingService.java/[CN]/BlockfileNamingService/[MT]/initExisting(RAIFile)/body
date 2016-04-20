@@ -18,12 +18,16 @@
       }
     }
     String version=info.getProperty(PROP_VERSION);
-    _needsUpgrade=needsUpgrade(bf,version);
+    if (version == null)     throw new IOException("No version");
+    if (VersionComparator.comp(version,VERSION) > 0)     throw new IOException("Database version is " + version + " but this implementation only supports versions 1-"+ VERSION+ " Did you downgrade I2P??");
+    _version=version;
+    if (VersionComparator.comp(version,"4") >= 0)     _destSerializer=_destSerializerV4;
+    _needsUpgrade=needsUpgrade(bf);
     if (_needsUpgrade) {
-      if (_log.shouldLog(Log.WARN))       _log.warn("Upgrading from database version " + version + " to "+ VERSION+ " created "+ (new Date(createdOn)).toString()+ " containing lists: "+ list);
+      if (_log.shouldLog(Log.WARN))       _log.warn("Upgrading database from version " + _version + " to "+ VERSION+ ", created "+ (new Date(createdOn)).toString()+ " containing lists: "+ list);
     }
  else {
-      if (_log.shouldLog(Log.INFO))       _log.info("Found database version " + version + " created "+ (new Date(createdOn)).toString()+ " containing lists: "+ list);
+      if (_log.shouldLog(Log.INFO))       _log.info("Found database version " + _version + " created "+ (new Date(createdOn)).toString()+ " containing lists: "+ list);
     }
     List<String> skiplists=getFilenames(list);
     if (skiplists.isEmpty())     skiplists.add(FALLBACK_LIST);

@@ -1,26 +1,36 @@
 {
   try {
-    SkipList rev=_bf.getIndex(REVERSE_SKIPLIST,_hashIndexSerializer,_infoSerializer);
-    if (rev == null) {
-      if (_log.shouldLog(Log.WARN))       _log.warn("Created reverse index");
-      rev=_bf.makeIndex(REVERSE_SKIPLIST,_hashIndexSerializer,_infoSerializer);
+    if (VersionComparator.comp(_version,"2") < 0) {
+      SkipList rev=_bf.getIndex(REVERSE_SKIPLIST,_hashIndexSerializer,_infoSerializer);
+      if (rev == null) {
+        rev=_bf.makeIndex(REVERSE_SKIPLIST,_hashIndexSerializer,_infoSerializer);
+        if (_log.shouldLog(Log.WARN))         _log.warn("Created reverse index");
+      }
+      setVersion("2");
     }
-    Map<String,Destination> entries=getEntries();
-    long start=System.currentTimeMillis();
-    int i=0;
-    for (    Map.Entry<String,Destination> entry : entries.entrySet()) {
-      addReverseEntry(entry.getKey(),entry.getValue());
-      i++;
+    if (VersionComparator.comp(_version,"3") < 0) {
+      Map<String,Destination> entries=getEntries();
+      int i=0;
+      for (      Map.Entry<String,Destination> entry : entries.entrySet()) {
+        addReverseEntry(entry.getKey(),entry.getValue());
+        i++;
+      }
+      if (_log.shouldLog(Log.WARN))       _log.warn("Updated reverse index with " + i + " entries");
+      setVersion("3");
     }
-    if (_log.shouldLog(Log.WARN))     _log.warn("Updated reverse index with " + i + " entries");
-    SkipList hdr=_bf.getIndex(INFO_SKIPLIST,_stringSerializer,_infoSerializer);
-    if (hdr == null)     throw new IOException("No db header");
-    Properties info=(Properties)hdr.get(PROP_INFO);
-    if (info == null)     throw new IOException("No header info");
-    info.setProperty(PROP_VERSION,VERSION);
-    info.setProperty(PROP_UPGRADED,Long.toString(_context.clock().now()));
-    hdr.put(PROP_INFO,info);
-    if (_log.shouldLog(Log.WARN))     _log.warn("Upgraded to version " + VERSION + " in "+ DataHelper.formatDuration(System.currentTimeMillis() - start));
+    if (VersionComparator.comp(_version,"4") < 0) {
+      for (      String list : _lists) {
+        try {
+          if (_log.shouldWarn())           _log.warn("Upgrading " + list + " from database version 3 to 4");
+          _bf.reformatIndex(list,_stringSerializer,_destSerializerV1,_stringSerializer,_destSerializerV4);
+        }
+ catch (        IOException ioe) {
+          _log.error("Failed upgrade of list " + list + " to version 4",ioe);
+        }
+      }
+      _destSerializer=_destSerializerV4;
+      setVersion("4");
+    }
     return true;
   }
  catch (  IOException ioe) {
