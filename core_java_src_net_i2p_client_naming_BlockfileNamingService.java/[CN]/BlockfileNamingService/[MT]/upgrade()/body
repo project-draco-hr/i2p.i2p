@@ -19,10 +19,23 @@
       setVersion("3");
     }
     if (VersionComparator.comp(_version,"4") < 0) {
+      SkipList<String,Properties> hdr=_bf.getIndex(INFO_SKIPLIST,_stringSerializer,_infoSerializer);
+      if (hdr == null)       throw new IOException("No db header");
+      Properties info=hdr.get(PROP_INFO);
+      if (info == null)       throw new IOException("No header info");
       for (      String list : _lists) {
         try {
-          if (_log.shouldWarn())           _log.warn("Upgrading " + list + " from database version 3 to 4");
-          _bf.reformatIndex(list,_stringSerializer,_destSerializerV1,_stringSerializer,_destSerializerV4);
+          String vprop=PROP_LISTVERSION + '_' + list;
+          String listVersion=info.getProperty(vprop);
+          if (listVersion == null || VersionComparator.comp(listVersion,"4") < 0) {
+            if (_log.shouldWarn())             _log.warn("Upgrading " + list + " from database version 3 to 4");
+            _bf.reformatIndex(list,_stringSerializer,_destSerializerV1,_stringSerializer,_destSerializerV4);
+            info.setProperty(vprop,"4");
+            hdr.put(PROP_INFO,info);
+          }
+ else {
+            if (_log.shouldWarn())             _log.warn("Partial upgrade, " + list + " already at version "+ listVersion);
+          }
         }
  catch (        IOException ioe) {
           _log.error("Failed upgrade of list " + list + " to version 4",ioe);
