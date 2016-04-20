@@ -1,0 +1,36 @@
+{
+  boolean fail=false;
+  for (int i=0; i < lps.length; i++) {
+    int lp=lps[i];
+    if (lp != 0) {
+      levels[i]=bsl.levelHash.get(Integer.valueOf(lp));
+      if (levels[i] == null) {
+        try {
+          BSkipLevels<K,V> lev=new BSkipLevels<K,V>(bf,lp,bsl);
+          levels[i]=lev;
+          nextInit.add(lev);
+        }
+ catch (        IOException ioe) {
+          bf.log.error("Corrupt database, bad level " + i + " at page "+ lp,ioe);
+          levels[i]=null;
+          fail=true;
+          continue;
+        }
+      }
+      K ourKey=key();
+      K nextKey=levels[i].key();
+      if (ourKey != null && nextKey != null && ourKey.compareTo(nextKey) >= 0) {
+        bf.log.warn("Corrupt database, level out of order " + this + ' '+ print()+ " i = "+ i+ ' '+ levels[i]);
+      }
+    }
+ else {
+      if (bf.log.shouldLog(Log.WARN))       bf.log.warn("WTF " + this + " i = "+ i+ " of "+ lps.length+ " / "+ levels.length+ " valid levels but page is zero");
+      levels[i]=null;
+      fail=true;
+    }
+  }
+  if (fail && bf.file.canWrite()) {
+    bf.log.error("Repairing corruption of " + this + ' '+ print());
+    flush();
+  }
+}

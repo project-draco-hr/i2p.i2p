@@ -21,9 +21,16 @@
     Integer page=(Integer)iter.next();
     if (log.shouldLog(Log.INFO))     log.info("List " + slname + " page "+ page);
     try {
-      Serializer keyser=slname.equals("%%__REVERSE__%%") ? new IntBytes() : new UTF8StringBytes();
-      BSkipList bsl=getIndex(slname,keyser,new IdentityBytes());
-      if (bsl == null) {
+      boolean fail;
+      if (slname.equals("%%__REVERSE__%%")) {
+        Serializer<Integer> keyser=new IntBytes();
+        fail=getIndex(slname,keyser,new IdentityBytes()) == null;
+      }
+ else {
+        Serializer<String> keyser=new UTF8StringBytes();
+        fail=getIndex(slname,keyser,new IdentityBytes()) == null;
+      }
+      if (fail) {
         log.error("Can't find list? " + slname);
         continue;
       }
