@@ -1,0 +1,50 @@
+{
+  if (hostname.length() == BASE32_HASH_LENGTH + 8 && hostname.toLowerCase(Locale.US).endsWith(".b32.i2p")) {
+    Destination d=super.lookup(hostname,null,null);
+    if (d != null) {
+      if (storedOptions != null)       storedOptions.add(null);
+      return Collections.singletonList(d);
+    }
+    return null;
+  }
+  String key=hostname.toLowerCase(Locale.US);
+synchronized (_negativeCache) {
+    if (_negativeCache.get(key) != null)     return null;
+  }
+  String listname=null;
+  if (lookupOptions != null)   listname=lookupOptions.getProperty("list");
+  List<Destination> rv=null;
+synchronized (_bf) {
+    if (_isClosed)     return null;
+    for (    String list : _lists) {
+      if (listname != null && !list.equals(listname))       continue;
+      try {
+        DestEntry de=getEntry(list,key);
+        if (de != null) {
+          int sz=de.destList.size();
+          boolean invalid=false;
+          for (int i=0; i < sz; i++) {
+            if (!validate(key,de,listname))             invalid=true;
+          }
+          if (invalid)           continue;
+          rv=de.destList;
+          if (storedOptions != null)           storedOptions.addAll(de.propsList);
+          break;
+        }
+      }
+ catch (      IOException ioe) {
+        break;
+      }
+    }
+    deleteInvalid();
+  }
+  if (rv != null) {
+    putCache(hostname,rv.get(0));
+  }
+ else {
+synchronized (_negativeCache) {
+      _negativeCache.put(key,DUMMY);
+    }
+  }
+  return rv;
+}
