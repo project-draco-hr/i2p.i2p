@@ -2,40 +2,19 @@
   if (props == null)   return false;
   boolean rv=false;
   if (true) {
-    StringBuilder buf=new StringBuilder(1024);
-    String sig=null;
-    String olddest=null;
+    StringWriter buf=new StringWriter(1024);
+    String sig=props.getProperty(PROP_OLDSIG);
+    String olddest=props.getProperty(PROP_OLDDEST);
+    if (sig == null || olddest == null)     return false;
     buf.append(name);
     buf.append(KV_SEPARATOR);
     buf.append(dest);
-    boolean started=false;
-    for (    Map.Entry<Object,Object> e : props.entrySet()) {
-      String k=(String)e.getKey();
-      String v=(String)e.getValue();
-      if (k.equals(PROP_SIG)) {
-        continue;
-      }
-      if (k.equals(PROP_OLDSIG)) {
-        if (sig != null)         return false;
-        sig=v;
-        continue;
-      }
-      if (k.equals(PROP_OLDDEST)) {
-        if (olddest != null)         return false;
-        olddest=v;
-      }
-      if (started) {
-        buf.append(PROP_SEPARATOR);
-      }
- else {
-        started=true;
-        buf.append(PROPS_SEPARATOR);
-      }
-      buf.append(k);
-      buf.append(KV_SEPARATOR);
-      buf.append(v);
+    try {
+      writeProps(buf,true,true);
     }
-    if (sig == null || olddest == null)     return false;
+ catch (    IOException ioe) {
+      return false;
+    }
     byte[] sdata=Base64.decode(sig);
     if (sdata == null)     return false;
     Destination d;

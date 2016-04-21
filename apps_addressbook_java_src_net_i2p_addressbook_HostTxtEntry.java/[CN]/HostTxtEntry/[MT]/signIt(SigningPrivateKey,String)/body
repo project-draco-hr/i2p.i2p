@@ -1,24 +1,15 @@
 {
   if (props == null)   throw new IllegalStateException();
-  StringBuilder buf=new StringBuilder(1024);
+  if (props.containsKey(sigprop))   throw new IllegalStateException();
+  StringWriter buf=new StringWriter(1024);
   buf.append(name);
   buf.append(KV_SEPARATOR);
   buf.append(dest);
-  boolean started=false;
-  for (  Map.Entry<Object,Object> e : props.entrySet()) {
-    String k=(String)e.getKey();
-    String v=(String)e.getValue();
-    if (k.equals(sigprop))     throw new IllegalStateException();
-    if (started) {
-      buf.append(PROP_SEPARATOR);
-    }
- else {
-      started=true;
-      buf.append(PROPS_SEPARATOR);
-    }
-    buf.append(k);
-    buf.append(KV_SEPARATOR);
-    buf.append(v);
+  try {
+    writeProps(buf,false,false);
+  }
+ catch (  IOException ioe) {
+    throw new IllegalStateException(ioe);
   }
   Signature s=DSAEngine.getInstance().sign(DataHelper.getUTF8(buf.toString()),spk);
   if (s == null)   throw new IllegalArgumentException("sig failed");

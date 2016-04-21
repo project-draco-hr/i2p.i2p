@@ -98,10 +98,10 @@
                 }
                 String poldname=hprops.getProperty(HostTxtEntry.PROP_OLDNAME);
                 if (poldname != null) {
-                  Destination pod=router.lookup(poldname);
+                  List<Destination> pod=router.lookupAll(poldname);
                   if (pod == null) {
                   }
- else                   if (pod.equals(dest)) {
+ else                   if (pod.contains(dest)) {
                   }
  else {
                     if (log != null)                     log.append("Action: " + action + " failed because"+ " destination for old name "+ poldname+ " does not match"+ " from "+ addressbook.getLocation());
@@ -129,10 +129,10 @@
                     continue;
                   }
                   Destination pod=new Destination(polddest);
-                  Destination pod2=router.lookup(poldname);
+                  List<Destination> pod2=router.lookupAll(poldname);
                   if (pod2 == null) {
                   }
- else                   if (pod.equals(pod2)) {
+ else                   if (pod2.contains(pod)) {
                     if (!he.hasValidInnerSig()) {
                       if (log != null)                       log.append("Action: " + action + " failed because"+ " inner signature for old name "+ poldname+ " failed"+ " from "+ addressbook.getLocation());
                       invalid++;
@@ -184,12 +184,12 @@
                 }
                 String poldname=hprops.getProperty(HostTxtEntry.PROP_OLDNAME);
                 if (poldname != null) {
-                  Destination pod=router.lookup(poldname);
+                  List<Destination> pod=router.lookupAll(poldname);
                   if (pod == null) {
                   }
- else                   if (pod.equals(dest)) {
+ else                   if (pod.contains(dest)) {
                     if (knownNames != null)                     knownNames.remove(poldname);
-                    boolean success=router.remove(poldname);
+                    boolean success=router.remove(poldname,dest);
                     if (success)                     deleted++;
                     if (log != null) {
                       if (success)                       log.append("Removed: " + poldname + " to be replaced with "+ key+ " from "+ addressbook.getLocation());
@@ -197,7 +197,7 @@
                     }
                     if (published != null) {
                       if (publishedNS == null)                       publishedNS=new SingleFileNamingService(I2PAppContext.getGlobalContext(),published.getAbsolutePath());
-                      success=publishedNS.remove(poldname);
+                      success=publishedNS.remove(poldname,dest);
                       if (log != null && !success)                       log.append("Remove from published address book " + published.getAbsolutePath() + " failed for "+ poldname);
                     }
                   }
@@ -222,10 +222,10 @@
                 String poldname=hprops.getProperty(HostTxtEntry.PROP_NAME);
                 if (polddest != null && poldname != null) {
                   Destination pod=new Destination(polddest);
-                  Destination pod2=router.lookup(poldname);
-                  if (pod.equals(pod2)) {
-                    if (knownNames != null)                     knownNames.remove(poldname);
-                    boolean success=router.remove(poldname);
+                  List<Destination> pod2=router.lookupAll(poldname);
+                  if (pod2 != null && pod2.contains(pod)) {
+                    if (knownNames != null && pod2.size() == 1)                     knownNames.remove(poldname);
+                    boolean success=router.remove(poldname,pod);
                     if (success)                     deleted++;
                     if (log != null) {
                       if (success)                       log.append("Removed: " + poldname + " as requested"+ " from "+ addressbook.getLocation());
@@ -233,7 +233,7 @@
                     }
                     if (published != null) {
                       if (publishedNS == null)                       publishedNS=new SingleFileNamingService(I2PAppContext.getGlobalContext(),published.getAbsolutePath());
-                      success=publishedNS.remove(poldname);
+                      success=publishedNS.remove(poldname,pod);
                       if (log != null && !success)                       log.append("Remove from published address book " + published.getAbsolutePath() + " failed for "+ poldname);
                     }
                   }
@@ -258,10 +258,10 @@
                   Destination pod=new Destination(polddest);
                   String poldname=hprops.getProperty(HostTxtEntry.PROP_NAME);
                   if (poldname != null) {
-                    Destination pod2=router.lookup(poldname);
-                    if (pod.equals(pod2)) {
+                    List<Destination> pod2=router.lookupAll(poldname);
+                    if (pod2 != null && pod2.contains(pod)) {
                       if (knownNames != null)                       knownNames.remove(poldname);
-                      boolean success=router.remove(poldname);
+                      boolean success=router.remove(poldname,pod);
                       if (success)                       deleted++;
                       if (log != null) {
                         if (success)                         log.append("Removed: " + poldname + " as requested"+ " from "+ addressbook.getLocation());
@@ -269,7 +269,7 @@
                       }
                       if (published != null) {
                         if (publishedNS == null)                         publishedNS=new SingleFileNamingService(I2PAppContext.getGlobalContext(),published.getAbsolutePath());
-                        success=publishedNS.remove(poldname);
+                        success=publishedNS.remove(poldname,pod);
                         if (log != null && !success)                         log.append("Remove from published address book " + published.getAbsolutePath() + " failed for "+ poldname);
                       }
                     }
@@ -283,10 +283,10 @@
                   while ((rev=router.reverseLookup(pod)) != null) {
                     if (rev.equals(rev2))                     break;
                     rev2=rev;
-                    Destination fwd=router.lookup(rev);
-                    if (!pod.equals(fwd))                     break;
+                    List<Destination> fwd=router.lookupAll(rev);
+                    if (!fwd.contains(pod))                     break;
                     if (knownNames != null)                     knownNames.remove(rev);
-                    boolean success=router.remove(rev);
+                    boolean success=router.remove(rev,pod);
                     if (success)                     deleted++;
                     if (log != null) {
                       if (success)                       log.append("Removed: " + rev + " as requested"+ " from "+ addressbook.getLocation());
@@ -294,7 +294,7 @@
                     }
                     if (published != null) {
                       if (publishedNS == null)                       publishedNS=new SingleFileNamingService(I2PAppContext.getGlobalContext(),published.getAbsolutePath());
-                      success=publishedNS.remove(rev);
+                      success=publishedNS.remove(rev,pod);
                       if (log != null && !success)                       log.append("Remove from published address book " + published.getAbsolutePath() + " failed for "+ rev);
                     }
                   }

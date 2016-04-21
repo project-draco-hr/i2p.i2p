@@ -1,39 +1,49 @@
 {
-  File f=new File("tmp-eepPriv.dat");
-  File f2=new File("tmp-eepPriv2.dat");
-  PrivateKeyFile pkf=new PrivateKeyFile(f);
-  PrivateKeyFile pkf2=new PrivateKeyFile(f2);
-  pkf.createIfAbsent(SigType.EdDSA_SHA512_Ed25519);
-  pkf2.createIfAbsent(SigType.DSA_SHA1);
+  int astart=0;
+  if (args.length > 0 && args[0].equals("-i"))   astart++;
   OrderedProperties props=new OrderedProperties();
-  props.setProperty("c","ccccccccccc");
-  props.setProperty("a","aaaa");
-  props.setProperty(PROP_OLDDEST,pkf2.getDestination().toBase64());
-  HostTxtEntry he=new HostTxtEntry("foo.i2p",pkf.getDestination().toBase64(),props);
+  for (int i=astart; i < args.length; i++) {
+    int eq=args[i].indexOf("=");
+    props.setProperty(args[i].substring(0,eq),args[i].substring(eq + 1));
+  }
+  props.setProperty("zzzz","zzzzzzzzzzzzzzz");
+  File f=new File("tmp-eepPriv.dat");
+  PrivateKeyFile pkf=new PrivateKeyFile(f);
+  pkf.createIfAbsent(SigType.EdDSA_SHA512_Ed25519);
+  f.delete();
+  PrivateKeyFile pkf2;
+  if (astart != 0) {
+    File f2=new File("tmp-eepPriv2.dat");
+    pkf2=new PrivateKeyFile(f2);
+    pkf2.createIfAbsent(SigType.DSA_SHA1);
+    f2.delete();
+    props.setProperty(PROP_OLDDEST,pkf2.getDestination().toBase64());
+  }
+ else {
+    pkf2=null;
+  }
+  byte[] rand=new byte[5];
+  RandomSource.getInstance().nextBytes(rand);
+  String host=Base32.encode(rand) + ".i2p";
+  HostTxtEntry he=new HostTxtEntry(host,pkf.getDestination().toBase64(),props);
   BufferedWriter out=new BufferedWriter(new OutputStreamWriter(System.out));
-  out.write("Before signing:\n");
-  he.write(out);
-  out.flush();
   SigningPrivateKey priv=pkf.getSigningPrivKey();
-  SigningPrivateKey priv2=pkf2.getSigningPrivKey();
-  he.signInner(priv2);
-  out.write("After signing inner:\n");
-  he.write(out);
+  if (astart != 0) {
+    SigningPrivateKey priv2=pkf2.getSigningPrivKey();
+    he.signInner(priv2);
+  }
   he.sign(priv);
-  out.write("After signing:\n");
   he.write(out);
   out.flush();
-  System.out.println("Orig has valid inner sig? " + he.hasValidInnerSig());
-  System.out.println("Orig has valid sig? " + he.hasValidSig());
+  if (astart > 0 && !he.hasValidInnerSig())   throw new IllegalStateException("Inner fail 1");
+  if (!he.hasValidSig())   throw new IllegalStateException("Outer fail 1");
   StringWriter sw=new StringWriter(1024);
   BufferedWriter buf=new BufferedWriter(sw);
   he.write(buf);
   buf.flush();
   String line=sw.toString();
   line=line.substring(line.indexOf(PROPS_SEPARATOR) + 2);
-  HostTxtEntry he2=new HostTxtEntry("foo.i2p",pkf.getDestination().toBase64(),line);
-  System.out.println("Dupl. has valid inner sig? " + he2.hasValidInnerSig());
-  System.out.println("Dupl. has valid sig? " + he2.hasValidSig());
-  f.delete();
-  f2.delete();
+  HostTxtEntry he2=new HostTxtEntry(host,pkf.getDestination().toBase64(),line);
+  if (astart > 0 && !he2.hasValidInnerSig())   throw new IllegalStateException("Inner fail 2");
+  if (!he2.hasValidSig())   throw new IllegalStateException("Outer fail 2");
 }

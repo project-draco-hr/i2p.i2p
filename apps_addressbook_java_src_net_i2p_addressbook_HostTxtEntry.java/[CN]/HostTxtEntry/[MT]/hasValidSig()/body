@@ -2,32 +2,18 @@
   if (props == null)   return false;
   if (!isValidated) {
     isValidated=true;
-    StringBuilder buf=new StringBuilder(1024);
-    String sig=null;
+    StringWriter buf=new StringWriter(1024);
+    String sig=props.getProperty(PROP_SIG);
+    if (sig == null)     return false;
     buf.append(name);
     buf.append(KV_SEPARATOR);
     buf.append(dest);
-    boolean started=false;
-    for (    Map.Entry<Object,Object> e : props.entrySet()) {
-      String k=(String)e.getKey();
-      String v=(String)e.getValue();
-      if (k.equals(PROP_SIG)) {
-        if (sig != null)         return false;
-        sig=v;
-        continue;
-      }
-      if (started) {
-        buf.append(PROP_SEPARATOR);
-      }
- else {
-        started=true;
-        buf.append(PROPS_SEPARATOR);
-      }
-      buf.append(k);
-      buf.append(KV_SEPARATOR);
-      buf.append(v);
+    try {
+      writeProps(buf,true,false);
     }
-    if (sig == null)     return false;
+ catch (    IOException ioe) {
+      return false;
+    }
     byte[] sdata=Base64.decode(sig);
     if (sdata == null)     return false;
     Destination d;
