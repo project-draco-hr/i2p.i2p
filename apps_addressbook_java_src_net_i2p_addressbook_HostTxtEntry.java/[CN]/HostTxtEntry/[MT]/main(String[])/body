@@ -46,4 +46,15 @@
   HostTxtEntry he2=new HostTxtEntry(host,pkf.getDestination().toBase64(),line);
   if (astart > 0 && !he2.hasValidInnerSig())   throw new IllegalStateException("Inner fail 2");
   if (!he2.hasValidSig())   throw new IllegalStateException("Outer fail 2");
+  he.getProps().remove(PROP_SIG);
+  he.signRemove(priv);
+  sw=new StringWriter(1024);
+  buf=new BufferedWriter(sw);
+  he.writeRemove(buf);
+  buf.flush();
+  out.write(sw.toString());
+  out.flush();
+  line=sw.toString().substring(2).trim();
+  HostTxtEntry he3=new HostTxtEntry(line);
+  if (!he3.hasValidRemoveSig())   throw new IllegalStateException("Remove verify fail");
 }
