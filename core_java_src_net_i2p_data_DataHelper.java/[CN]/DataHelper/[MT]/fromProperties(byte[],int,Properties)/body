@@ -2,18 +2,14 @@
   int size=(int)fromLong(source,offset,2);
   offset+=2;
   ByteArrayInputStream in=new ByteArrayInputStream(source,offset,size);
-  byte eqBuf[]=new byte[EQUAL_BYTES.length];
-  byte semiBuf[]=new byte[SEMICOLON_BYTES.length];
   while (in.available() > 0) {
     String key;
     try {
       key=readString(in);
       String cached=_propertiesKeyCache.get(key);
       if (cached != null)       key=cached;
-      int read=read(in,eqBuf);
-      if ((read != eqBuf.length) || (!eq(eqBuf,EQUAL_BYTES))) {
-        throw new DataFormatException("Bad key");
-      }
+      int b=in.read();
+      if (b != '=')       throw new DataFormatException("Bad key");
     }
  catch (    IOException ioe) {
       throw new DataFormatException("Bad key",ioe);
@@ -21,10 +17,8 @@
     String val;
     try {
       val=readString(in);
-      int read=read(in,semiBuf);
-      if ((read != semiBuf.length) || (!eq(semiBuf,SEMICOLON_BYTES))) {
-        throw new DataFormatException("Bad value");
-      }
+      int b=in.read();
+      if (b != ';')       throw new DataFormatException("Bad value");
     }
  catch (    IOException ioe) {
       throw new DataFormatException("Bad value",ioe);

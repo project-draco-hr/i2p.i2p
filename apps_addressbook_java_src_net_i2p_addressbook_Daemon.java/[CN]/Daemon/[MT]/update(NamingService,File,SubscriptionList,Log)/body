@@ -62,25 +62,34 @@
                 String polddest=hprops.getProperty(HostTxtEntry.PROP_OLDDEST);
                 if (polddest != null) {
                   Destination pod=new Destination(polddest);
-                  if (isKnown && isTextFile)                   oldDest=router.lookup(key);
-                  if (pod.equals(dest)) {
-                    if (log != null)                     log.append("Action: " + action + " failed because"+ " identical old and new destinations for "+ key+ " from "+ addressbook.getLocation());
-                    invalid++;
-                    continue;
+                  List<Destination> pod2=router.lookupAll(key);
+                  if (pod2 == null) {
                   }
- else                   if (!isKnown) {
-                  }
- else                   if (dest.equals(oldDest)) {
+ else                   if (pod2.contains(dest)) {
                     old++;
                     continue;
                   }
- else                   if (pod.equals(oldDest)) {
+ else                   if (pod2.contains(pod)) {
                     if (!he.hasValidInnerSig()) {
-                      if (log != null)                       log.append("Action: " + action + " failed because"+ " inner signature for key "+ key+ " failed"+ " from "+ addressbook.getLocation());
+                      if (log != null)                       log.append("Action: " + action + " failed because"+ " inner signature for key "+ key+ " failed"+ ". From: "+ addressbook.getLocation());
                       invalid++;
                       continue;
                     }
-                    if (log != null)                     log.append("Action: " + action + " unimplemented"+ " from "+ addressbook.getLocation());
+                    boolean success=router.addDestination(key,dest,props);
+                    if (log != null) {
+                      if (success)                       log.append("Additional address for " + key + " added to address book. From: "+ addressbook.getLocation());
+ else                       log.append("Failed to add additional address for " + key + " From: "+ addressbook.getLocation());
+                    }
+                    if (published != null) {
+                      if (publishedNS == null)                       publishedNS=new SingleFileNamingService(I2PAppContext.getGlobalContext(),published.getAbsolutePath());
+                      success=publishedNS.addDestination(key,dest,props);
+                      if (log != null && !success)                       log.append("Add to published address book " + published.getAbsolutePath() + " failed for "+ key);
+                    }
+                    nnew++;
+                    continue;
+                  }
+ else {
+                    logMismatch(log,action,key,pod2,he.getDest(),addressbook);
                     invalid++;
                     continue;
                   }
@@ -104,13 +113,13 @@
  else                   if (pod.contains(dest)) {
                   }
  else {
-                    if (log != null)                     log.append("Action: " + action + " failed because"+ " destination for old name "+ poldname+ " does not match"+ " from "+ addressbook.getLocation());
+                    logMismatch(log,action,key,pod,he.getDest(),addressbook);
                     invalid++;
                     continue;
                   }
                 }
  else {
-                  if (log != null)                   log.append("Action: " + action + " failed, missing required parameters"+ " from "+ addressbook.getLocation());
+                  if (log != null)                   log.append("Action: " + action + " failed, missing required parameters"+ ". From: "+ addressbook.getLocation());
                   invalid++;
                   continue;
                 }
@@ -124,7 +133,7 @@
                 String poldname=hprops.getProperty(HostTxtEntry.PROP_OLDNAME);
                 if (polddest != null && poldname != null) {
                   if (!AddressBook.isValidKey(poldname) || key.indexOf('.' + poldname) <= 0) {
-                    if (log != null)                     log.append("Action: " + action + " failed because"+ " old name "+ poldname+ " is invalid"+ " from "+ addressbook.getLocation());
+                    if (log != null)                     log.append("Action: " + action + " failed because"+ " old name "+ poldname+ " is invalid"+ ". From: "+ addressbook.getLocation());
                     invalid++;
                     continue;
                   }
@@ -134,19 +143,19 @@
                   }
  else                   if (pod2.contains(pod)) {
                     if (!he.hasValidInnerSig()) {
-                      if (log != null)                       log.append("Action: " + action + " failed because"+ " inner signature for old name "+ poldname+ " failed"+ " from "+ addressbook.getLocation());
+                      if (log != null)                       log.append("Action: " + action + " failed because"+ " inner signature for old name "+ poldname+ " failed"+ ". From: "+ addressbook.getLocation());
                       invalid++;
                       continue;
                     }
                   }
  else {
-                    if (log != null)                     log.append("Action: " + action + " failed because"+ " destination for old name "+ poldname+ " does not match provided"+ " from "+ addressbook.getLocation());
+                    logMismatch(log,action,key,pod2,polddest,addressbook);
                     invalid++;
                     continue;
                   }
                 }
  else {
-                  if (log != null)                   log.append("Action: " + action + " failed, missing required parameters"+ " from "+ addressbook.getLocation());
+                  if (log != null)                   log.append("Action: " + action + " failed, missing required parameters"+ ". From: "+ addressbook.getLocation());
                   invalid++;
                   continue;
                 }
@@ -155,24 +164,32 @@
                 String polddest=hprops.getProperty(HostTxtEntry.PROP_OLDDEST);
                 if (polddest != null) {
                   Destination pod=new Destination(polddest);
-                  if (isKnown && isTextFile)                   oldDest=router.lookup(key);
-                  if (!isKnown) {
+                  List<Destination> pod2=router.lookupAll(key);
+                  if (pod2 == null) {
                   }
- else                   if (pod.equals(oldDest)) {
+ else                   if (pod2.contains(dest)) {
+                    old++;
+                    continue;
+                  }
+ else                   if (pod2.contains(pod)) {
                     if (!he.hasValidInnerSig()) {
-                      if (log != null)                       log.append("Action: " + action + " failed because"+ " inner signature for key "+ key+ " failed"+ " from "+ addressbook.getLocation());
+                      if (log != null)                       log.append("Action: " + action + " failed because"+ " inner signature for key "+ key+ " failed"+ ". From: "+ addressbook.getLocation());
                       invalid++;
                       continue;
                     }
+                    if (log != null) {
+                      if (pod2.size() == 1)                       log.append("Changing destination for " + key + ". From: "+ addressbook.getLocation());
+ else                       log.append("Replacing " + pod2.size() + " destinations for "+ key+ ". From: "+ addressbook.getLocation());
+                    }
                   }
  else {
-                    if (log != null)                     log.append("Action: " + action + " failed because"+ " destination for key "+ key+ " does not match provided"+ " from "+ addressbook.getLocation());
+                    logMismatch(log,action,key,pod2,polddest,addressbook);
                     invalid++;
                     continue;
                   }
                 }
  else {
-                  if (log != null)                   log.append("Action: " + action + " failed, missing required parameters"+ " from "+ addressbook.getLocation());
+                  if (log != null)                   log.append("Action: " + action + " failed, missing required parameters"+ ". From: "+ addressbook.getLocation());
                   invalid++;
                   continue;
                 }
@@ -192,8 +209,8 @@
                     boolean success=router.remove(poldname,dest);
                     if (success)                     deleted++;
                     if (log != null) {
-                      if (success)                       log.append("Removed: " + poldname + " to be replaced with "+ key+ " from "+ addressbook.getLocation());
- else                       log.append("Remove failed for: " + poldname + " to be replaced with "+ key+ " from "+ addressbook.getLocation());
+                      if (success)                       log.append("Removed: " + poldname + " to be replaced with "+ key+ ". From: "+ addressbook.getLocation());
+ else                       log.append("Remove failed for: " + poldname + " to be replaced with "+ key+ ". From: "+ addressbook.getLocation());
                     }
                     if (published != null) {
                       if (publishedNS == null)                       publishedNS=new SingleFileNamingService(I2PAppContext.getGlobalContext(),published.getAbsolutePath());
@@ -202,13 +219,12 @@
                     }
                   }
  else {
-                    if (log != null)                     log.append("Action: " + action + " failed because"+ " destination for old name "+ poldname+ " does not match new name "+ key+ " from "+ addressbook.getLocation());
-                    invalid++;
+                    logMismatch(log,action,key,pod,he.getDest(),addressbook);
                     continue;
                   }
                 }
  else {
-                  if (log != null)                   log.append("Action: " + action + " failed, missing required parameters"+ " from "+ addressbook.getLocation());
+                  if (log != null)                   log.append("Action: " + action + " failed, missing required parameters"+ ". From: "+ addressbook.getLocation());
                   invalid++;
                   continue;
                 }
@@ -228,8 +244,8 @@
                     boolean success=router.remove(poldname,pod);
                     if (success)                     deleted++;
                     if (log != null) {
-                      if (success)                       log.append("Removed: " + poldname + " as requested"+ " from "+ addressbook.getLocation());
- else                       log.append("Remove failed for: " + poldname + " as requested"+ " from "+ addressbook.getLocation());
+                      if (success)                       log.append("Removed: " + poldname + " as requested"+ ". From: "+ addressbook.getLocation());
+ else                       log.append("Remove failed for: " + poldname + " as requested"+ ". From: "+ addressbook.getLocation());
                     }
                     if (published != null) {
                       if (publishedNS == null)                       publishedNS=new SingleFileNamingService(I2PAppContext.getGlobalContext(),published.getAbsolutePath());
@@ -238,12 +254,12 @@
                     }
                   }
  else                   if (pod2 != null) {
-                    if (log != null)                     log.append("Action: " + action + " failed because"+ " destination for "+ poldname+ " does not match"+ " from "+ addressbook.getLocation());
+                    logMismatch(log,action,key,pod2,polddest,addressbook);
                     invalid++;
                   }
                 }
  else {
-                  if (log != null)                   log.append("Action: " + action + " failed, missing required parameters"+ " from "+ addressbook.getLocation());
+                  if (log != null)                   log.append("Action: " + action + " failed, missing required parameters"+ ". From: "+ addressbook.getLocation());
                   invalid++;
                 }
                 continue;
@@ -264,8 +280,8 @@
                       boolean success=router.remove(poldname,pod);
                       if (success)                       deleted++;
                       if (log != null) {
-                        if (success)                         log.append("Removed: " + poldname + " as requested"+ " from "+ addressbook.getLocation());
- else                         log.append("Remove failed for: " + poldname + " as requested"+ " from "+ addressbook.getLocation());
+                        if (success)                         log.append("Removed: " + poldname + " as requested"+ ". From: "+ addressbook.getLocation());
+ else                         log.append("Remove failed for: " + poldname + " as requested"+ ". From: "+ addressbook.getLocation());
                       }
                       if (published != null) {
                         if (publishedNS == null)                         publishedNS=new SingleFileNamingService(I2PAppContext.getGlobalContext(),published.getAbsolutePath());
@@ -274,7 +290,7 @@
                       }
                     }
  else                     if (pod2 != null) {
-                      if (log != null)                       log.append("Action: " + action + " failed because"+ " destination for "+ poldname+ " does not match"+ " from "+ addressbook.getLocation());
+                      logMismatch(log,action,key,pod2,polddest,addressbook);
                       invalid++;
                     }
                   }
@@ -289,8 +305,8 @@
                     boolean success=router.remove(rev,pod);
                     if (success)                     deleted++;
                     if (log != null) {
-                      if (success)                       log.append("Removed: " + rev + " as requested"+ " from "+ addressbook.getLocation());
- else                       log.append("Remove failed for: " + rev + " as requested"+ " from "+ addressbook.getLocation());
+                      if (success)                       log.append("Removed: " + rev + " as requested"+ ". From: "+ addressbook.getLocation());
+ else                       log.append("Remove failed for: " + rev + " as requested"+ ". From: "+ addressbook.getLocation());
                     }
                     if (published != null) {
                       if (publishedNS == null)                       publishedNS=new SingleFileNamingService(I2PAppContext.getGlobalContext(),published.getAbsolutePath());
@@ -300,7 +316,7 @@
                   }
                 }
  else {
-                  if (log != null)                   log.append("Action: " + action + " failed, missing required parameters"+ " from "+ addressbook.getLocation());
+                  if (log != null)                   log.append("Action: " + action + " failed, missing required parameters"+ ". From: "+ addressbook.getLocation());
                   invalid++;
                 }
                 continue;
@@ -310,7 +326,7 @@
                 }
               }
  else {
-                if (log != null)                 log.append("Action: " + action + " unrecognized"+ " from "+ addressbook.getLocation());
+                if (log != null)                 log.append("Action: " + action + " unrecognized"+ ". From: "+ addressbook.getLocation());
                 invalid++;
                 continue;
               }
@@ -331,7 +347,7 @@
             nnew++;
           }
  else           if (log != null) {
-            log.append("Bad hostname " + key + " from "+ addressbook.getLocation());
+            log.append("Bad hostname " + key + ". From: "+ addressbook.getLocation());
             invalid++;
           }
         }
