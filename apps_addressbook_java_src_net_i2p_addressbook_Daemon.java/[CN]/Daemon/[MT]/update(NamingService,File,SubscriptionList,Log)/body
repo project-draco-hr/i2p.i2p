@@ -26,10 +26,10 @@
           knownNames=router.getNames(opts);
         }
         oldDest=null;
-        isKnown=knownNames.contains(key);
+        isKnown=key != null ? knownNames.contains(key) : null;
       }
  else {
-        oldDest=router.lookup(key);
+        oldDest=key != null ? router.lookup(key) : null;
         isKnown=oldDest != null;
       }
       try {
@@ -37,18 +37,24 @@
         Properties hprops=he.getProps();
         boolean mustValidate=MUST_VALIDATE || hprops != null;
         String action=hprops != null ? hprops.getProperty(HostTxtEntry.PROP_ACTION) : null;
-        if (mustValidate && !he.hasValidSig()) {
+        if (key == null && !he.hasValidRemoveSig()) {
           if (log != null) {
-            if (isKnown)             log.append("Bad signature for old key " + key);
- else             log.append("Bad signature for new key " + key);
+            log.append("Bad signature of action " + action + " for key "+ hprops.getProperty(HostTxtEntry.PROP_NAME)+ ". From: "+ addressbook.getLocation());
+          }
+          invalid++;
+        }
+ else         if (key != null && mustValidate && !he.hasValidSig()) {
+          if (log != null) {
+            log.append("Bad signature of action " + action + " for key "+ key+ ". From: "+ addressbook.getLocation());
           }
           invalid++;
         }
  else         if (action != null || !isKnown) {
-          if (AddressBook.isValidKey(key)) {
+          if (key != null && AddressBook.isValidKey(key)) {
             Destination dest=new Destination(he.getDest());
             Properties props=new OrderedProperties();
             props.setProperty("s",addressbook.getLocation());
+            boolean allowExistingKeyInPublished=false;
             if (mustValidate) {
               props.setProperty("v","true");
             }
@@ -181,6 +187,7 @@
                       if (pod2.size() == 1)                       log.append("Changing destination for " + key + ". From: "+ addressbook.getLocation());
  else                       log.append("Replacing " + pod2.size() + " destinations for "+ key+ ". From: "+ addressbook.getLocation());
                     }
+                    allowExistingKeyInPublished=true;
                   }
  else {
                     logMismatch(log,action,key,pod2,polddest,addressbook);
@@ -229,11 +236,41 @@
                   continue;
                 }
               }
- else               if (action.equals(HostTxtEntry.ACTION_REMOVE)) {
-                if (!isKnown) {
-                  old++;
-                  continue;
+ else               if (action.equals(HostTxtEntry.ACTION_REMOVE) || action.equals(HostTxtEntry.ACTION_REMOVEALL)) {
+                if (log != null)                 log.append("Action: " + action + " with name=dest invalid"+ ". From: "+ addressbook.getLocation());
+                invalid++;
+                continue;
+              }
+ else               if (action.equals(HostTxtEntry.ACTION_UPDATE)) {
+                if (isKnown) {
+                  allowExistingKeyInPublished=true;
                 }
+              }
+ else {
+                if (log != null)                 log.append("Action: " + action + " unrecognized"+ ". From: "+ addressbook.getLocation());
+                invalid++;
+                continue;
+              }
+            }
+            boolean success=router.put(key,dest,props);
+            if (log != null) {
+              if (success)               log.append("New address " + key + " added to address book. From: "+ addressbook.getLocation());
+ else               log.append("Save to naming service " + router + " failed for new key "+ key);
+            }
+            if (published != null) {
+              if (publishedNS == null)               publishedNS=new SingleFileNamingService(I2PAppContext.getGlobalContext(),published.getAbsolutePath());
+              if (allowExistingKeyInPublished)               success=publishedNS.put(key,dest,props);
+ else               success=publishedNS.putIfAbsent(key,dest,props);
+              if (log != null && !success) {
+                log.append("Save to published address book " + published.getAbsolutePath() + " failed for new key "+ key);
+              }
+            }
+            if (isTextFile)             knownNames.add(key);
+            nnew++;
+          }
+ else           if (key == null) {
+            if (action != null) {
+              if (action.equals(HostTxtEntry.ACTION_REMOVE)) {
                 String polddest=hprops.getProperty(HostTxtEntry.PROP_DEST);
                 String poldname=hprops.getProperty(HostTxtEntry.PROP_NAME);
                 if (polddest != null && poldname != null) {
@@ -257,18 +294,16 @@
                     logMismatch(log,action,key,pod2,polddest,addressbook);
                     invalid++;
                   }
+ else {
+                    old++;
+                  }
                 }
  else {
                   if (log != null)                   log.append("Action: " + action + " failed, missing required parameters"+ ". From: "+ addressbook.getLocation());
                   invalid++;
                 }
-                continue;
               }
  else               if (action.equals(HostTxtEntry.ACTION_REMOVEALL)) {
-                if (!isKnown) {
-                  old++;
-                  continue;
-                }
                 String polddest=hprops.getProperty(HostTxtEntry.PROP_DEST);
                 if (polddest != null) {
                   Destination pod=new Destination(polddest);
@@ -292,6 +327,9 @@
  else                     if (pod2 != null) {
                       logMismatch(log,action,key,pod2,polddest,addressbook);
                       invalid++;
+                    }
+ else {
+                      old++;
                     }
                   }
                   String rev;
@@ -319,32 +357,18 @@
                   if (log != null)                   log.append("Action: " + action + " failed, missing required parameters"+ ". From: "+ addressbook.getLocation());
                   invalid++;
                 }
-                continue;
-              }
- else               if (action.equals(HostTxtEntry.ACTION_UPDATE)) {
-                if (isKnown) {
-                }
               }
  else {
-                if (log != null)                 log.append("Action: " + action + " unrecognized"+ ". From: "+ addressbook.getLocation());
+                if (log != null)                 log.append("Action: " + action + " w/o name=dest unrecognized"+ ". From: "+ addressbook.getLocation());
                 invalid++;
-                continue;
               }
+              continue;
             }
-            boolean success=router.put(key,dest,props);
-            if (log != null) {
-              if (success)               log.append("New address " + key + " added to address book. From: "+ addressbook.getLocation());
- else               log.append("Save to naming service " + router + " failed for new key "+ key);
+ else {
+              if (log != null)               log.append("No action in command line" + ". From: " + addressbook.getLocation());
+              invalid++;
+              continue;
             }
-            if (published != null) {
-              if (publishedNS == null)               publishedNS=new SingleFileNamingService(I2PAppContext.getGlobalContext(),published.getAbsolutePath());
-              success=publishedNS.putIfAbsent(key,dest,props);
-              if (log != null && !success) {
-                log.append("Save to published address book " + published.getAbsolutePath() + " failed for new key "+ key);
-              }
-            }
-            if (isTextFile)             knownNames.add(key);
-            nnew++;
           }
  else           if (log != null) {
             log.append("Bad hostname " + key + ". From: "+ addressbook.getLocation());

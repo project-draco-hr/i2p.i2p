@@ -1,0 +1,47 @@
+{
+  if (inputLine.startsWith(";"))   return null;
+  int comment=inputLine.indexOf("#");
+  String kv;
+  String sprops;
+  if (comment >= 0) {
+    int shebang=inputLine.indexOf(HostTxtEntry.PROPS_SEPARATOR);
+    if (shebang == comment && shebang + 2 < inputLine.length()) {
+      if (comment == 0 && !allowCommandOnly)       return null;
+      sprops=inputLine.substring(shebang + 2);
+    }
+ else {
+      if (comment == 0)       return null;
+      sprops=null;
+    }
+    kv=inputLine.substring(0,comment);
+  }
+ else {
+    sprops=null;
+    kv=inputLine;
+  }
+  String name, dest;
+  if (comment != 0) {
+    String[] splitLine=DataHelper.split(kv,"=",2);
+    if (splitLine.length < 2)     return null;
+    name=splitLine[0].trim().toLowerCase(Locale.US);
+    dest=splitLine[1].trim();
+    if (name.length() == 0 || dest.length() == 0)     return null;
+  }
+ else {
+    name=null;
+    dest=null;
+  }
+  HostTxtEntry he;
+  if (sprops != null) {
+    try {
+      he=new HostTxtEntry(name,dest,sprops);
+    }
+ catch (    IllegalArgumentException iae) {
+      return null;
+    }
+  }
+ else {
+    he=new HostTxtEntry(name,dest);
+  }
+  return he;
+}
