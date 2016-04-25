@@ -5,11 +5,19 @@
     Integer idx=getReverseKey(hash);
     Properties props=rev.get(idx);
     if (props == null)     return null;
-    for (    Object okey : props.keySet()) {
-      String key=(String)okey;
-      Destination d=lookup(key);
-      if (d != null && d.calculateHash().equals(hash))       return key;
+    List<String> rv=new ArrayList<String>(props.size());
+    for (    String key : props.stringPropertyNames()) {
+      List<Destination> ld=lookupAll(key);
+      if (ld != null) {
+        for (        Destination d : ld) {
+          if (d.calculateHash().equals(hash)) {
+            rv.add(key);
+            break;
+          }
+        }
+      }
     }
+    if (!rv.isEmpty())     return rv;
   }
  catch (  IOException ioe) {
     _log.error("DB get reverse error",ioe);

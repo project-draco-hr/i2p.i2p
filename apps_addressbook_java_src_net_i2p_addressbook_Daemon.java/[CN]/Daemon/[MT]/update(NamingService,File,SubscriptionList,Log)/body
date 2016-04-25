@@ -334,24 +334,21 @@
                       old++;
                     }
                   }
-                  String rev;
-                  String rev2=null;
-                  while ((rev=router.reverseLookup(pod)) != null) {
-                    if (rev.equals(rev2))                     break;
-                    rev2=rev;
-                    List<Destination> fwd=router.lookupAll(rev);
-                    if (!fwd.contains(pod))                     break;
-                    if (knownNames != null)                     knownNames.remove(rev);
-                    boolean success=router.remove(rev,pod);
-                    if (success)                     deleted++;
-                    if (log != null) {
-                      if (success)                       log.append("Removed: " + rev + " as requested"+ ". From: "+ addressbook.getLocation());
- else                       log.append("Remove failed for: " + rev + " as requested"+ ". From: "+ addressbook.getLocation());
-                    }
-                    if (published != null) {
-                      if (publishedNS == null)                       publishedNS=new SingleFileNamingService(I2PAppContext.getGlobalContext(),published.getAbsolutePath());
-                      success=publishedNS.remove(rev,pod);
-                      if (log != null && !success)                       log.append("Remove from published address book " + published.getAbsolutePath() + " failed for "+ rev);
+                  List<String> revs=router.reverseLookupAll(pod);
+                  if (revs != null) {
+                    for (                    String rev : revs) {
+                      if (knownNames != null)                       knownNames.remove(rev);
+                      boolean success=router.remove(rev,pod);
+                      if (success)                       deleted++;
+                      if (log != null) {
+                        if (success)                         log.append("Removed: " + rev + " as requested"+ ". From: "+ addressbook.getLocation());
+ else                         log.append("Remove failed for: " + rev + " as requested"+ ". From: "+ addressbook.getLocation());
+                      }
+                      if (published != null) {
+                        if (publishedNS == null)                         publishedNS=new SingleFileNamingService(I2PAppContext.getGlobalContext(),published.getAbsolutePath());
+                        success=publishedNS.remove(rev,pod);
+                        if (log != null && !success)                         log.append("Remove from published address book " + published.getAbsolutePath() + " failed for "+ rev);
+                      }
                     }
                   }
                 }
