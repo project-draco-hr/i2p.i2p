@@ -8,8 +8,10 @@ synchronized (_pendingConnections) {
         if (keepReading) {
         }
  else {
-          _liveReads.remove(con);
-          con=null;
+          if (con != null) {
+            _liveReads.remove(con);
+            con=null;
+          }
           if (_pendingConnections.isEmpty()) {
             _pendingConnections.wait();
           }
@@ -29,7 +31,10 @@ synchronized (_pendingConnections) {
       try {
         processRead(con);
       }
- catch (      RuntimeException re) {
+ catch (      IllegalStateException ise) {
+        if (_log.shouldWarn())         _log.warn("Error in the ntcp reader",ise);
+      }
+catch (      RuntimeException re) {
         _log.log(Log.CRIT,"Error in the ntcp reader",re);
       }
       if (_log.shouldLog(Log.DEBUG))       _log.debug("end read for " + con);

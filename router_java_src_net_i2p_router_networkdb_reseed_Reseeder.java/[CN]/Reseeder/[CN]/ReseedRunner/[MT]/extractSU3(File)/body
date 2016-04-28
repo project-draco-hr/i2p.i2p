@@ -1,0 +1,38 @@
+{
+  int fetched=0;
+  int errors=0;
+  File zip=null;
+  try {
+    SU3File su3=new SU3File(_context,contentRaw);
+    zip=new File(_context.getTempDir(),"reseed-" + _context.random().nextInt() + ".zip");
+    su3.verifyAndMigrate(zip);
+    int type=su3.getContentType();
+    if (type != SU3File.CONTENT_RESEED)     throw new IOException("Bad content type " + type);
+    String version=su3.getVersionString();
+    try {
+      Long ver=Long.parseLong(version.trim());
+      if (ver >= 1400000000L) {
+        ver*=1000;
+        if (ver < _context.clock().now() - MAX_FILE_AGE)         throw new IOException("su3 file too old");
+      }
+    }
+ catch (    NumberFormatException nfe) {
+    }
+    int[] stats=extractZip(zip);
+    fetched=stats[0];
+    errors=stats[1];
+  }
+ catch (  Throwable t) {
+    System.err.println("Error reseeding: " + t);
+    _log.error("Error reseeding",t);
+    errors++;
+  }
+ finally {
+    contentRaw.delete();
+    if (zip != null)     zip.delete();
+  }
+  int[] rv=new int[2];
+  rv[0]=fetched;
+  rv[1]=errors;
+  return rv;
+}

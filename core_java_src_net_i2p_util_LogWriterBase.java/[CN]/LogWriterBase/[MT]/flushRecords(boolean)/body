@@ -1,0 +1,42 @@
+{
+  try {
+    Queue<LogRecord> records=_manager.getQueue();
+    if (records == null)     return;
+    if (!records.isEmpty()) {
+      if (_last != null && _last.getDate() < _manager.getContext().clock().now() - 30 * 60 * 1000)       _last=null;
+      LogRecord rec;
+      int dupCount=0;
+      while ((rec=records.poll()) != null) {
+        if (_manager.shouldDropDuplicates() && rec.equals(_last)) {
+          dupCount++;
+        }
+ else {
+          if (dupCount > 0) {
+            writeDupMessage(dupCount,_last);
+            dupCount=0;
+          }
+          writeRecord(rec);
+        }
+        _last=rec;
+      }
+      if (dupCount > 0) {
+        writeDupMessage(dupCount,_last);
+      }
+      flushWriter();
+    }
+  }
+ catch (  Throwable t) {
+    t.printStackTrace();
+  }
+ finally {
+    if (shouldWait) {
+      try {
+synchronized (this) {
+          this.wait(_flushInterval);
+        }
+      }
+ catch (      InterruptedException ie) {
+      }
+    }
+  }
+}

@@ -1,5 +1,6 @@
 {
-  if (haveCapacity(33)) {
+  boolean haveCap=haveCapacity(33);
+  if (haveCap) {
     long inc;
     if (_lastLoopShort)     inc=EXPIRE_INCREMENT * SHORT_LOOP_TIME / LONG_LOOP_TIME;
  else     inc=EXPIRE_INCREMENT;
@@ -14,20 +15,29 @@
   long now=_context.clock().now();
   long shortInactivityCutoff=now - _expireTimeout;
   long longInactivityCutoff=now - EXPIRE_TIMEOUT;
+  final long mayDisconCutoff=now - MAY_DISCON_TIMEOUT;
   long pingCutoff=now - (2 * 60 * 60* 1000);
   long pingFirewallCutoff=now - PING_FIREWALL_CUTOFF;
-  boolean shouldPingFirewall=_reachabilityStatus != CommSystemFacade.STATUS_OK;
+  boolean shouldPingFirewall=_reachabilityStatus != Status.OK;
   int currentListenPort=getListenPort(false);
   boolean pingOneOnly=shouldPingFirewall && getExternalPort(false) == currentListenPort;
-  boolean shortLoop=shouldPingFirewall;
+  boolean shortLoop=shouldPingFirewall || !haveCap || _context.netDb().floodfillEnabled();
   _lastLoopShort=shortLoop;
   _expireBuffer.clear();
   _runCount++;
   for (Iterator<PeerState> iter=_expirePeers.iterator(); iter.hasNext(); ) {
     PeerState peer=iter.next();
     long inactivityCutoff;
-    if (peer.getWeRelayToThemAs() > 0 || peer.getIntroducerTime() > pingCutoff)     inactivityCutoff=longInactivityCutoff;
- else     inactivityCutoff=shortInactivityCutoff;
+    if (peer.getWeRelayToThemAs() > 0 || peer.getIntroducerTime() > pingCutoff) {
+      inactivityCutoff=longInactivityCutoff;
+    }
+ else     if ((!haveCap || !peer.isInbound()) && peer.getMayDisconnect() && peer.getMessagesReceived() <= 2 && peer.getMessagesSent() <= 2) {
+      if (_log.shouldInfo())       _log.info("Possible early disconnect for: " + peer);
+      inactivityCutoff=mayDisconCutoff;
+    }
+ else {
+      inactivityCutoff=shortInactivityCutoff;
+    }
     if ((peer.getLastReceiveTime() < inactivityCutoff) && (peer.getLastSendTime() < inactivityCutoff)) {
       _expireBuffer.add(peer);
       iter.remove();

@@ -1,21 +1,25 @@
 {
-  if (args.length >= 2) {
+  if (args.length >= 1) {
     int i=0;
-    if (args[0].equals("-s")) {
+    boolean ssl=args[0].equals("-s");
+    if (ssl) {
       _clientOptions.setProperty("i2cp.SSL","true");
       i++;
     }
  else {
       _clientOptions.remove("i2cp.SSL");
     }
-    host=args[i++];
-    listenHost=host;
-    port=args[i];
+    if (i < args.length) {
+      host=args[i++];
+      listenHost=host;
+    }
+    if (i < args.length)     port=args[i];
+    l.log("New setting: " + host + ' '+ port+ (ssl ? " SSL" : " non-SSL"));
     notifyEvent("configResult","ok");
   }
  else {
     boolean ssl=Boolean.parseBoolean(_clientOptions.getProperty("i2cp.SSL"));
-    l.log("Usage:\n" + "  config [-s] <i2phost> <i2pport>\n" + "  sets the connection to the i2p router.\n"+ "Current setting:\n"+ "  " + host + ' '+ port+ (ssl ? " SSL" : ""));
+    l.log("Usage:\n" + "  config [-s] [<i2phost>] [<i2pport>]\n" + "  Sets the address and port of the I2P router.\n"+ "  Use -s for SSL.\n"+ "Current setting: " + host + ' '+ port+ (ssl ? " SSL" : " non-SSL"));
     notifyEvent("configResult","error");
   }
 }

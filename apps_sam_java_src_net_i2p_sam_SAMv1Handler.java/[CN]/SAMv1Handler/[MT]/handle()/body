@@ -3,11 +3,12 @@
   String domain=null;
   String opcode=null;
   boolean canContinue=false;
-  StringTokenizer tok;
   Properties props;
+  final StringBuilder buf=new StringBuilder(128);
   this.thread.setName("SAMv1Handler " + _id);
   if (_log.shouldLog(Log.DEBUG))   _log.debug("SAM handling started");
   try {
+    boolean gotFirstLine=false;
     while (true) {
       if (shouldStop()) {
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Stop request found");
@@ -22,35 +23,35 @@
         _log.info("Connection closed by client");
         break;
       }
-      java.io.InputStream is=clientSocketChannel.socket().getInputStream();
-      if (is == null) {
-        _log.info("Connection closed by client");
+      buf.setLength(0);
+      try {
+        Socket sock=clientSocketChannel.socket();
+        ReadLine.readLine(sock,buf,gotFirstLine ? 0 : FIRST_READ_TIMEOUT);
+        sock.setSoTimeout(0);
+      }
+ catch (      SocketTimeoutException ste) {
+        writeString(SESSION_ERROR,"command timeout, bye");
         break;
       }
-      msg=DataHelper.readLine(is);
-      if (msg == null) {
-        _log.info("Connection closed by client (line read : null)");
-        break;
-      }
-      msg=msg.trim();
+      msg=buf.toString();
       if (_log.shouldLog(Log.DEBUG)) {
-        _log.debug("New message received: [" + msg + "]");
+        _log.debug("New message received: [" + msg + ']');
       }
-      if (msg.equals("")) {
+      props=SAMUtils.parseParams(msg);
+      domain=(String)props.remove(SAMUtils.COMMAND);
+      if (domain == null) {
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Ignoring newline");
         continue;
       }
-      tok=new StringTokenizer(msg," ");
-      if (tok.countTokens() < 2) {
+      opcode=(String)props.remove(SAMUtils.OPCODE);
+      if (opcode == null) {
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Error in message format");
         break;
       }
-      domain=tok.nextToken();
-      opcode=tok.nextToken();
       if (_log.shouldLog(Log.DEBUG)) {
         _log.debug("Parsing (domain: \"" + domain + "\"; opcode: \""+ opcode+ "\")");
       }
-      props=SAMUtils.parseParams(tok);
+      gotFirstLine=true;
       if (domain.equals("STREAM")) {
         canContinue=execStreamMessage(opcode,props);
       }
@@ -80,9 +81,12 @@
     }
   }
  catch (  IOException e) {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Caught IOException (" + e.getMessage() + ") for message ["+ msg+ "]",e);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Caught IOException for message [" + msg + "]",e);
   }
-catch (  Exception e) {
+catch (  SAMException e) {
+    _log.error("Unexpected exception for message [" + msg + "]",e);
+  }
+catch (  RuntimeException e) {
     _log.error("Unexpected exception for message [" + msg + "]",e);
   }
  finally {
@@ -91,16 +95,16 @@ catch (  Exception e) {
       closeClientSocket();
     }
  catch (    IOException e) {
-      _log.error("Error closing socket: " + e.getMessage());
+      if (_log.shouldWarn())       _log.warn("Error closing socket",e);
     }
-    if (getRawSession() != null) {
-      getRawSession().close();
+    if (rawSession != null) {
+      rawSession.close();
     }
-    if (getDatagramSession() != null) {
-      getDatagramSession().close();
+    if (datagramSession != null) {
+      datagramSession.close();
     }
-    if (getStreamSession() != null) {
-      getStreamSession().close();
+    if (streamSession != null) {
+      streamSession.close();
     }
   }
 }

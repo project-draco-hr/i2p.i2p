@@ -1,0 +1,31 @@
+{
+  Curve curve=key.getParams().getCurve();
+  int b=curve.getField().getb();
+  if (sigBytes.length != b / 4)   throw new SignatureException("signature length is wrong");
+  digest.update(sigBytes,0,b / 8);
+  digest.update(((EdDSAPublicKey)key).getAbyte());
+  byte[] message;
+  int offset, length;
+  if (oneShotMode) {
+    if (oneShotBytes == null)     throw new SignatureException("update() not called first");
+    message=oneShotBytes;
+    offset=oneShotOffset;
+    length=oneShotLength;
+  }
+ else {
+    if (baos == null)     message=new byte[0];
+ else     message=baos.toByteArray();
+    offset=0;
+    length=message.length;
+  }
+  digest.update(message,offset,length);
+  byte[] h=digest.digest();
+  h=key.getParams().getScalarOps().reduce(h);
+  byte[] Sbyte=Arrays.copyOfRange(sigBytes,b / 8,b / 4);
+  GroupElement R=key.getParams().getB().doubleScalarMultiplyVariableTime(((EdDSAPublicKey)key).getNegativeA(),h,Sbyte);
+  byte[] Rcalc=R.toByteArray();
+  for (int i=0; i < Rcalc.length; i++) {
+    if (Rcalc[i] != sigBytes[i])     return false;
+  }
+  return true;
+}

@@ -19,69 +19,80 @@
   int rapCount=0;
   BigInteger median=null;
   int c=0;
-  if (debug) {
-    for (    LeaseSet ls : leases) {
-      if (ls.getReceivedAsPublished())       rapCount++;
-    }
-    medianCount=rapCount / 2;
+  if (leases.isEmpty()) {
+    if (!debug)     buf.append("<i>").append(_t("none")).append("</i>");
   }
-  long now=_context.clock().now();
-  for (  LeaseSet ls : leases) {
-    Destination dest=ls.getDestination();
-    Hash key=dest.calculateHash();
-    buf.append("<b>").append(_("LeaseSet")).append(": ").append(key.toBase64()).append("</b>\n");
-    if (_context.clientManager().isLocal(dest)) {
-      buf.append(" (<a href=\"tunnels#" + key.toBase64().substring(0,4) + "\">"+ _("Local")+ "</a> ");
-      if (!_context.clientManager().shouldPublishLeaseSet(key))       buf.append(_("Unpublished") + ' ');
-      buf.append(_("Destination") + ' ');
-      TunnelPoolSettings in=_context.tunnelManager().getInboundSettings(key);
-      if (in != null && in.getDestinationNickname() != null)       buf.append(in.getDestinationNickname());
- else       buf.append(dest.toBase64().substring(0,6));
-      buf.append(")<br>\n");
-    }
  else {
-      buf.append(" (").append(_("Destination")).append(' ');
-      String host=_context.namingService().reverseLookup(dest);
-      if (host != null) {
-        buf.append("<a href=\"http://").append(host).append("/\">").append(host).append("</a>)<br>\n");
-      }
- else {
-        String b32=dest.toBase32();
-        buf.append(dest.toBase64().substring(0,6)).append(")<br>\n" + "<a href=\"http://").append(b32).append("\">").append(b32).append("</a><br>\n" + "<a href=\"/susidns/addressbook.jsp?book=private&amp;destination=").append(dest.toBase64()).append("#add\">").append(_("Add to local addressbook")).append("</a><br>\n");
-      }
-    }
-    long exp=ls.getLatestLeaseDate() - now;
-    if (exp > 0)     buf.append(_("Expires in {0}",DataHelper.formatDuration2(exp)));
- else     buf.append(_("Expired {0} ago",DataHelper.formatDuration2(0 - exp)));
-    buf.append("<br>\n");
     if (debug) {
-      buf.append("RAP? " + ls.getReceivedAsPublished());
-      buf.append(" RAR? " + ls.getReceivedAsReply());
-      BigInteger dist=HashDistance.getDistance(ourRKey,ls.getRoutingKey());
-      if (ls.getReceivedAsPublished()) {
-        if (c++ == medianCount)         median=dist;
+      for (      LeaseSet ls : leases) {
+        if (ls.getReceivedAsPublished())         rapCount++;
       }
-      buf.append(" Dist: <b>").append(fmt.format(biLog2(dist))).append("</b><br>");
-      buf.append("Sig type: ").append(dest.getSigningPublicKey().getType()).append("<br>");
-      buf.append("Routing Key: ").append(ls.getRoutingKey().toBase64());
-      buf.append("<br>");
-      buf.append("Encryption Key: ").append(ls.getEncryptionKey().toBase64().substring(0,20)).append("...<br>");
+      medianCount=rapCount / 2;
     }
-    for (int i=0; i < ls.getLeaseCount(); i++) {
-      Lease lease=ls.getLease(i);
-      buf.append(_("Lease")).append(' ').append(i + 1).append(": ").append(_("Gateway")).append(' ');
-      buf.append(_context.commSystem().renderPeerHTML(lease.getGateway()));
-      buf.append(' ').append(_("Tunnel")).append(' ').append(lease.getTunnelId().getTunnelId()).append(' ');
-      if (debug) {
-        long exl=lease.getEndDate().getTime() - now;
-        if (exl > 0)         buf.append(_("Expires in {0}",DataHelper.formatDuration2(exl)));
- else         buf.append(_("Expired {0} ago",DataHelper.formatDuration2(0 - exl)));
+    long now=_context.clock().now();
+    for (    LeaseSet ls : leases) {
+      Destination dest=ls.getDestination();
+      Hash key=dest.calculateHash();
+      buf.append("<b>").append(_t("LeaseSet")).append(": ").append(key.toBase64()).append("</b>\n");
+      if (_context.clientManager().isLocal(dest)) {
+        buf.append(" (<a href=\"tunnels#" + key.toBase64().substring(0,4) + "\">"+ _t("Local")+ "</a> ");
+        if (!_context.clientManager().shouldPublishLeaseSet(key))         buf.append(_t("Unpublished") + ' ');
+        buf.append(_t("Destination") + ' ');
+        TunnelPoolSettings in=_context.tunnelManager().getInboundSettings(key);
+        if (in != null && in.getDestinationNickname() != null)         buf.append(in.getDestinationNickname());
+ else         buf.append(dest.toBase64().substring(0,6));
+        buf.append(")<br>\n");
+        String b32=dest.toBase32();
+        buf.append("<a href=\"http://").append(b32).append("\">").append(b32).append("</a><br>\n");
+        String host=_context.namingService().reverseLookup(dest);
+        if (host == null) {
+          buf.append("<a href=\"/susidns/addressbook.jsp?book=private&amp;destination=").append(dest.toBase64()).append("#add\">").append(_t("Add to local addressbook")).append("</a><br>\n");
+        }
       }
+ else {
+        buf.append(" (").append(_t("Destination")).append(' ');
+        String host=_context.namingService().reverseLookup(dest);
+        if (host != null) {
+          buf.append("<a href=\"http://").append(host).append("/\">").append(host).append("</a>)<br>\n");
+        }
+ else {
+          String b32=dest.toBase32();
+          buf.append(dest.toBase64().substring(0,6)).append(")<br>\n" + "<a href=\"http://").append(b32).append("\">").append(b32).append("</a><br>\n" + "<a href=\"/susidns/addressbook.jsp?book=private&amp;destination=").append(dest.toBase64()).append("#add\">").append(_t("Add to local addressbook")).append("</a><br>\n");
+        }
+      }
+      long exp=ls.getLatestLeaseDate() - now;
+      if (exp > 0)       buf.append(_t("Expires in {0}",DataHelper.formatDuration2(exp)));
+ else       buf.append(_t("Expired {0} ago",DataHelper.formatDuration2(0 - exp)));
       buf.append("<br>\n");
+      if (debug) {
+        buf.append("RAP? " + ls.getReceivedAsPublished());
+        buf.append(" RAR? " + ls.getReceivedAsReply());
+        BigInteger dist=HashDistance.getDistance(ourRKey,ls.getRoutingKey());
+        if (ls.getReceivedAsPublished()) {
+          if (c++ == medianCount)           median=dist;
+        }
+        buf.append(" Dist: <b>").append(fmt.format(biLog2(dist))).append("</b><br>");
+        buf.append("Sig type: ").append(dest.getSigningPublicKey().getType()).append("<br>");
+        buf.append("Routing Key: ").append(ls.getRoutingKey().toBase64());
+        buf.append("<br>");
+        buf.append("Encryption Key: ").append(ls.getEncryptionKey().toBase64().substring(0,20)).append("...<br>");
+      }
+      for (int i=0; i < ls.getLeaseCount(); i++) {
+        Lease lease=ls.getLease(i);
+        buf.append(_t("Lease")).append(' ').append(i + 1).append(": ").append(_t("Gateway")).append(' ');
+        buf.append(_context.commSystem().renderPeerHTML(lease.getGateway()));
+        buf.append(' ').append(_t("Tunnel")).append(' ').append(lease.getTunnelId().getTunnelId()).append(' ');
+        if (debug) {
+          long exl=lease.getEndDate().getTime() - now;
+          if (exl > 0)           buf.append(_t("Expires in {0}",DataHelper.formatDuration2(exl)));
+ else           buf.append(_t("Expired {0} ago",DataHelper.formatDuration2(0 - exl)));
+        }
+        buf.append("<br>\n");
+      }
+      buf.append("<hr>\n");
+      out.write(buf.toString());
+      buf.setLength(0);
     }
-    buf.append("<hr>\n");
-    out.write(buf.toString());
-    buf.setLength(0);
   }
   if (debug) {
     FloodfillNetworkDatabaseFacade netdb=(FloodfillNetworkDatabaseFacade)_context.netDb();
@@ -99,7 +110,7 @@
       buf.append("</b></p><p><b>Median distance (bits): ").append(fmt.format(log2));
       int total=(int)Math.round(Math.pow(2,2 + 256 - 1 - log2));
       buf.append("</b></p><p><b>Estimated total floodfills: ").append(total);
-      buf.append("</b></p><p><b>Estimated total leasesets: ").append(total * rapCount / 8);
+      buf.append("</b></p><p><b>Estimated total leasesets: ").append(total * rapCount / 4);
     }
  else {
       buf.append("</b></p><p><b>Not floodfill or no data");

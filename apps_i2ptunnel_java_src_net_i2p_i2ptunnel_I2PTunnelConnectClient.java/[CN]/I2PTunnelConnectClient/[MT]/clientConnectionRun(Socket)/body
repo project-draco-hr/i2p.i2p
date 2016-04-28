@@ -80,7 +80,7 @@
             pw=getTunnel().getClientOptions().getProperty(PROP_OUTPROXY_PW);
           }
           if (user != null && pw != null) {
-            newRequest.append("Proxy-Authorization: Basic ").append(Base64.encode((user + ':' + pw).getBytes(),true)).append("\r\n");
+            newRequest.append("Proxy-Authorization: Basic ").append(Base64.encode(DataHelper.getUTF8(user + ':' + pw),true)).append("\r\n");
           }
         }
         newRequest.append("\r\n");
@@ -98,13 +98,13 @@
         if (authorization != null)         _log.warn(getPrefix(requestId) + "Auth failed, sending 407 again");
  else         _log.warn(getPrefix(requestId) + "Auth required, sending 407");
       }
-      out.write(getAuthError(result == AuthResult.AUTH_STALE).getBytes());
+      out.write(DataHelper.getASCII(getAuthError(result == AuthResult.AUTH_STALE)));
       s.close();
       return;
     }
     Destination clientDest=_context.namingService().lookup(destination);
     if (clientDest == null) {
-      byte[] header;
+      String header;
       if (usingWWWProxy)       header=getErrorPage("dnfp",ERR_DESTINATION_UNKNOWN);
  else       header=getErrorPage("dnfh",ERR_DESTINATION_UNKNOWN);
       writeErrorMessage(header,out,targetRequest,usingWWWProxy,destination);
@@ -115,10 +115,10 @@
     byte[] data=null;
     byte[] response=null;
     if (usingWWWProxy)     data=newRequest.toString().getBytes("ISO-8859-1");
- else     response=SUCCESS_RESPONSE;
+ else     response=SUCCESS_RESPONSE.getBytes("UTF-8");
     OnTimeout onTimeout=new OnTimeout(s,s.getOutputStream(),targetRequest,usingWWWProxy,currentProxy,requestId);
     Thread t=new I2PTunnelRunner(s,i2ps,sockLock,data,response,mySockets,onTimeout);
-    t.start();
+    t.run();
   }
  catch (  IOException ex) {
     _log.info(getPrefix(requestId) + "Error trying to connect",ex);

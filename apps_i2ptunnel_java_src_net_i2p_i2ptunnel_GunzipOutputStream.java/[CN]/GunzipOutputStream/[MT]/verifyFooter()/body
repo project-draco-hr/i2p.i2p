@@ -1,0 +1,19 @@
+{
+  int idx=(int)(_bytesReceivedAtCompletion % FOOTER_SIZE);
+  byte[] footer;
+  if (idx == 0) {
+    footer=_footer;
+  }
+ else {
+    footer=new byte[FOOTER_SIZE];
+    for (int i=0; i < FOOTER_SIZE; i++) {
+      footer[i]=_footer[(int)((_bytesReceivedAtCompletion + i) % FOOTER_SIZE)];
+    }
+  }
+  long actualSize=inf.getTotalOut();
+  long expectedSize=DataHelper.fromLongLE(footer,4,4);
+  if (expectedSize != actualSize)   throw new IOException("gunzip expected " + expectedSize + " bytes, got "+ actualSize);
+  long actualCRC=_crc32.getValue();
+  long expectedCRC=DataHelper.fromLongLE(footer,0,4);
+  if (expectedCRC != actualCRC)   throw new IOException("gunzip CRC fail expected 0x" + Long.toHexString(expectedCRC) + " bytes, got 0x"+ Long.toHexString(actualCRC));
+}

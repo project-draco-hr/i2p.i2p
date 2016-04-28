@@ -1,62 +1,7 @@
 {
-  if (getRawSession() == null) {
+  if (rawSession == null) {
     _log.error("RAW message received, but no RAW session exists");
     return false;
   }
-  if (opcode.equals("SEND")) {
-    if (props.isEmpty()) {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("No parameters specified in RAW SEND message");
-      return false;
-    }
-    String dest=props.getProperty("DESTINATION");
-    if (dest == null) {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Destination not specified in RAW SEND message");
-      return false;
-    }
-    int size;
-{
-      String strsize=props.getProperty("SIZE");
-      if (strsize == null) {
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("Size not specified in RAW SEND message");
-        return false;
-      }
-      try {
-        size=Integer.parseInt(strsize);
-      }
- catch (      NumberFormatException e) {
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("Invalid RAW SEND size specified: " + strsize);
-        return false;
-      }
-      if (!checkSize(size)) {
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("Specified size (" + size + ") is out of protocol limits");
-        return false;
-      }
-    }
-    try {
-      DataInputStream in=new DataInputStream(getClientSocket().socket().getInputStream());
-      byte[] data=new byte[size];
-      in.readFully(data);
-      if (!getRawSession().sendBytes(dest,data)) {
-        _log.error("RAW SEND failed");
-        return true;
-      }
-      return true;
-    }
- catch (    EOFException e) {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Too few bytes with RAW SEND message (expected: " + size);
-      return false;
-    }
-catch (    IOException e) {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Caught IOException while parsing RAW SEND message",e);
-      return false;
-    }
-catch (    DataFormatException e) {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Invalid key specified with RAW SEND message",e);
-      return false;
-    }
-  }
- else {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Unrecognized RAW message opcode: \"" + opcode + "\"");
-    return false;
-  }
+  return execDgOrRawMessage(true,opcode,props);
 }

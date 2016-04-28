@@ -21,7 +21,14 @@
       }
  else       if (size > 0) {
         FIFOBandwidthLimiter.Request req=_context.bandwidthLimiter().requestInbound(size,"UDP receiver");
-        while (req.getPendingRequested() > 0)         req.waitForNextAllocation();
+        int waitCount=0;
+        while (req.getPendingRequested() > 0 && waitCount++ < 5) {
+          req.waitForNextAllocation();
+        }
+        if (waitCount >= 5) {
+          req.abort();
+          _context.statManager().addRateData("udp.receiveFailsafe",1);
+        }
         receive(packet);
       }
  else {

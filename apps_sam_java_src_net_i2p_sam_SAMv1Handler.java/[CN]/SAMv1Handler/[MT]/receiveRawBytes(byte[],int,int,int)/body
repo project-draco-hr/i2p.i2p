@@ -1,0 +1,17 @@
+{
+  if (rawSession == null) {
+    _log.error("BUG! Received raw bytes, but session is null!");
+    return;
+  }
+  ByteArrayOutputStream msg=new ByteArrayOutputStream(64 + data.length);
+  String msgText="RAW RECEIVED SIZE=" + data.length;
+  msg.write(DataHelper.getASCII(msgText));
+  if ((verMajor == 3 && verMinor >= 2) || verMajor > 3) {
+    msgText=" PROTOCOL=" + proto + " FROM_PORT="+ fromPort+ " TO_PORT="+ toPort;
+    msg.write(DataHelper.getASCII(msgText));
+  }
+  msg.write((byte)'\n');
+  msg.write(data);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("sending to client: " + msgText);
+  writeBytes(ByteBuffer.wrap(msg.toByteArray()));
+}

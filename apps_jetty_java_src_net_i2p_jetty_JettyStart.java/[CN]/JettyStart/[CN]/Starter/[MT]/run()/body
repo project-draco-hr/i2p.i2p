@@ -3,6 +3,21 @@
     if (!lc.isRunning()) {
       try {
         lc.start();
+        if (_context != null && _context.portMapper().getPort(PortMapper.SVC_EEPSITE) <= 0) {
+          if (lc instanceof Server) {
+            Server server=(Server)lc;
+            Connector[] connectors=server.getConnectors();
+            if (connectors.length > 0) {
+              int port=connectors[0].getPort();
+              if (port > 0) {
+                _port=port;
+                String host=connectors[0].getHost();
+                if (host.equals("0.0.0.0") || host.equals("::"))                 host="127.0.0.1";
+                _context.portMapper().register(PortMapper.SVC_EEPSITE,host,port);
+              }
+            }
+          }
+        }
       }
  catch (      Exception e) {
         changeState(START_FAILED,e);

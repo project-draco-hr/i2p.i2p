@@ -1,0 +1,21 @@
+{
+  FloodfillPeerSelector sel=(FloodfillPeerSelector)_facade.getPeerSelector();
+  DatabaseStoreMessage dsm;
+  OutNetMessage outMsg;
+  RouterInfo nextPeerInfo;
+  List<Hash> peers=sel.selectFloodfillParticipants(getContext().routerHash(),FLOOD_PEERS,null);
+  for (  Hash ri : peers) {
+    dsm=new DatabaseStoreMessage(getContext());
+    dsm.setMessageExpiration(getContext().clock().now() + 10 * 1000);
+    dsm.setEntry(getContext().router().getRouterInfo());
+    nextPeerInfo=getContext().netDb().lookupRouterInfoLocally(ri);
+    if (nextPeerInfo == null) {
+      continue;
+    }
+    outMsg=new OutNetMessage(getContext(),dsm,getContext().clock().now() + 10 * 1000,OutNetMessage.PRIORITY_MY_NETDB_STORE,nextPeerInfo);
+    getContext().outNetMessagePool().add(outMsg);
+    if (_log.shouldLog(Log.DEBUG)) {
+      _log.logAlways(Log.DEBUG,"Sending our RI to: " + nextPeerInfo.getHash());
+    }
+  }
+}

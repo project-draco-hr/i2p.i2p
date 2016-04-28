@@ -4,12 +4,12 @@
   String version=props.getProperty("version");
   if (appName == null || version == null || appName.length() <= 0 || version.length() <= 0 || appName.indexOf("<") >= 0 || appName.indexOf(">") >= 0 || version.indexOf("<") >= 0 || version.indexOf(">") >= 0 || appName.startsWith(".") || appName.indexOf("/") >= 0 || appName.indexOf("\\") >= 0) {
     to.delete();
-    statusDone("<b>" + _("Plugin from {0} has invalid name or version",url) + "</b>");
+    statusDone("<b>" + _t("Plugin from {0} has invalid name or version",url) + "</b>");
     return;
   }
   if (!version.equals(sudVersion)) {
     to.delete();
-    statusDone("<b>" + _("Plugin {0} has mismatched versions",appName) + "</b>");
+    statusDone("<b>" + _t("Plugin {0} has mismatched versions",appName) + "</b>");
     return;
   }
   _appName=appName;
@@ -17,13 +17,13 @@
   String minVersion=ConfigClientsHelper.stripHTML(props,"min-i2p-version");
   if (minVersion != null && VersionComparator.comp(CoreVersion.VERSION,minVersion) < 0) {
     to.delete();
-    statusDone("<b>" + _("This plugin requires I2P version {0} or higher",minVersion) + "</b>");
+    statusDone("<b>" + _t("This plugin requires I2P version {0} or higher",minVersion) + "</b>");
     return;
   }
   minVersion=ConfigClientsHelper.stripHTML(props,"min-java-version");
   if (minVersion != null && VersionComparator.comp(System.getProperty("java.version"),minVersion) < 0) {
     to.delete();
-    statusDone("<b>" + _("This plugin requires Java version {0} or higher",minVersion) + "</b>");
+    statusDone("<b>" + _t("This plugin requires Java version {0} or higher",minVersion) + "</b>");
     return;
   }
   boolean wasRunning=false;
@@ -31,7 +31,7 @@
   if (destDir.exists()) {
     if (Boolean.valueOf(props.getProperty("install-only")).booleanValue()) {
       to.delete();
-      statusDone("<b>" + _("Downloaded plugin is for new installs only, but the plugin is already installed",url) + "</b>");
+      statusDone("<b>" + _t("Downloaded plugin is for new installs only, but the plugin is already installed",url) + "</b>");
       return;
     }
     File oldPropFile=new File(destDir,"plugin.config");
@@ -41,7 +41,7 @@
     }
  catch (    IOException ioe) {
       to.delete();
-      statusDone("<b>" + _("Installed plugin does not contain the required configuration file",url) + "</b>");
+      statusDone("<b>" + _t("Installed plugin does not contain the required configuration file",url) + "</b>");
       return;
     }
     String oldPubkey=oldProps.getProperty("key");
@@ -49,45 +49,45 @@
     String oldAppName=oldProps.getProperty("name");
     if ((pubkey != null && !pubkey.equals(oldPubkey)) || (!signer.equals(oldKeyName)) || (!appName.equals(oldAppName))) {
       to.delete();
-      statusDone("<b>" + _("Signature of downloaded plugin does not match installed plugin") + "</b>");
+      statusDone("<b>" + _t("Signature of downloaded plugin does not match installed plugin") + "</b>");
       return;
     }
     String oldVersion=oldProps.getProperty("version");
     if (oldVersion == null || VersionComparator.comp(oldVersion,version) >= 0) {
       to.delete();
-      statusDone("<b>" + _("Downloaded plugin version {0} is not newer than installed plugin",version) + "</b>");
+      statusDone("<b>" + _t("Downloaded plugin version {0} is not newer than installed plugin",version) + "</b>");
       return;
     }
     minVersion=ConfigClientsHelper.stripHTML(props,"min-installed-version");
     if (minVersion != null && VersionComparator.comp(minVersion,oldVersion) > 0) {
       to.delete();
-      statusDone("<b>" + _("Plugin update requires installed plugin version {0} or higher",minVersion) + "</b>");
+      statusDone("<b>" + _t("Plugin update requires installed plugin version {0} or higher",minVersion) + "</b>");
       return;
     }
     String maxVersion=ConfigClientsHelper.stripHTML(props,"max-installed-version");
     if (maxVersion != null && VersionComparator.comp(maxVersion,oldVersion) < 0) {
       to.delete();
-      statusDone("<b>" + _("Plugin update requires installed plugin version {0} or lower",maxVersion) + "</b>");
+      statusDone("<b>" + _t("Plugin update requires installed plugin version {0} or lower",maxVersion) + "</b>");
       return;
     }
     oldVersion=LogsHelper.jettyVersion();
     minVersion=ConfigClientsHelper.stripHTML(props,"min-jetty-version");
     if (minVersion != null && VersionComparator.comp(minVersion,oldVersion) > 0) {
       to.delete();
-      statusDone("<b>" + _("Plugin requires Jetty version {0} or higher",minVersion) + "</b>");
+      statusDone("<b>" + _t("Plugin requires Jetty version {0} or higher",minVersion) + "</b>");
       return;
     }
     maxVersion=ConfigClientsHelper.stripHTML(props,"max-jetty-version");
     if (maxVersion != null && VersionComparator.comp(maxVersion,oldVersion) < 0) {
       to.delete();
-      statusDone("<b>" + _("Plugin requires Jetty version {0} or lower",maxVersion) + "</b>");
+      statusDone("<b>" + _t("Plugin requires Jetty version {0} or lower",maxVersion) + "</b>");
       return;
     }
     if (Boolean.valueOf(props.getProperty("router-restart-required")).booleanValue()) {
       try {
         if (!FileUtil.copy(to,(new SecureFile(new SecureFile(appDir.getCanonicalPath() + "/" + appName+ "/"+ ZIP).getCanonicalPath())),true,true)) {
           to.delete();
-          statusDone("<b>" + _("Cannot copy plugin to directory {0}",destDir.getAbsolutePath()) + "</b>");
+          statusDone("<b>" + _t("Cannot copy plugin to directory {0}",destDir.getAbsolutePath()) + "</b>");
           return;
         }
       }
@@ -97,7 +97,7 @@
         return;
       }
       to.delete();
-      statusDone("<b>" + _("Plugin will be installed on next restart.") + "</b>");
+      statusDone("<b>" + _t("Plugin will be installed on next restart.") + "</b>");
       return;
     }
     if (PluginStarter.isPluginRunning(appName,_context)) {
@@ -115,24 +115,24 @@
  else {
     if (Boolean.valueOf(props.getProperty("update-only")).booleanValue()) {
       to.delete();
-      statusDone("<b>" + _("Plugin is for upgrades only, but the plugin is not installed") + "</b>");
+      statusDone("<b>" + _t("Plugin is for upgrades only, but the plugin is not installed") + "</b>");
       return;
     }
     if (!destDir.mkdir()) {
       to.delete();
-      statusDone("<b>" + _("Cannot create plugin directory {0}",destDir.getAbsolutePath()) + "</b>");
+      statusDone("<b>" + _t("Cannot create plugin directory {0}",destDir.getAbsolutePath()) + "</b>");
       return;
     }
   }
   if (!FileUtil.extractZip(to,destDir,Log.WARN)) {
     to.delete();
-    statusDone("<b>" + _("Failed to install plugin in {0}",destDir.getAbsolutePath()) + "</b>");
+    statusDone("<b>" + _t("Failed to install plugin in {0}",destDir.getAbsolutePath()) + "</b>");
     return;
   }
   _updated=true;
   to.delete();
   if (Boolean.valueOf(props.getProperty("dont-start-at-install")).booleanValue()) {
-    statusDone("<b>" + _("Plugin {0} installed",appName) + "</b>");
+    statusDone("<b>" + _t("Plugin {0} installed",appName) + "</b>");
     if (!update) {
       Properties pluginProps=PluginStarter.pluginProperties();
       pluginProps.setProperty(PluginStarter.PREFIX + appName + PluginStarter.ENABLED,"false");
@@ -148,16 +148,16 @@
         String link;
         if (linkName != null && linkURL != null)         link="<a target=\"_blank\" href=\"" + linkURL + "\"/>"+ linkName+ "</a>";
  else         link=appName;
-        statusDone("<b>" + _("Plugin {0} installed and started",link) + "</b>");
+        statusDone("<b>" + _t("Plugin {0} installed and started",link) + "</b>");
       }
- else       statusDone("<b>" + _("Plugin {0} installed but failed to start, check logs",appName) + "</b>");
+ else       statusDone("<b>" + _t("Plugin {0} installed but failed to start, check logs",appName) + "</b>");
     }
  catch (    Throwable e) {
-      statusDone("<b>" + _("Plugin {0} installed but failed to start",appName) + ": "+ e+ "</b>");
+      statusDone("<b>" + _t("Plugin {0} installed but failed to start",appName) + ": "+ e+ "</b>");
       _log.error("Error starting plugin " + appName,e);
     }
   }
  else {
-    statusDone("<b>" + _("Plugin {0} installed",appName) + "</b>");
+    statusDone("<b>" + _t("Plugin {0} installed",appName) + "</b>");
   }
 }

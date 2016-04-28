@@ -1,16 +1,91 @@
 {
-  if (_action.equals(_("Save changes and reseed now"))) {
+  if (_action.equals(_t("Save changes and reseed now"))) {
     saveChanges();
     if (!_context.netDb().reseedChecker().requestReseed()) {
-      addFormError(_("Reseeding is already in progress"));
+      addFormError(_t("Reseeding is already in progress"));
     }
  else {
-      addFormNotice(_("Starting reseed process"));
+      addFormNotice(_t("Starting reseed process"));
     }
-    return;
   }
-  if (_action.equals(_("Save changes"))) {
+ else   if (_action.equals(_t("Reseed from URL"))) {
+    String val=getJettyString("url");
+    if (val != null)     val=val.trim();
+    if (val == null || val.length() == 0) {
+      addFormError(_t("You must enter a URL"));
+      return;
+    }
+    URI url;
+    try {
+      url=new URI(val);
+    }
+ catch (    URISyntaxException mue) {
+      addFormError(_t("Bad URL {0}",val));
+      return;
+    }
+    try {
+      if (!_context.netDb().reseedChecker().requestReseed(url)) {
+        addFormError(_t("Reseeding is already in progress"));
+      }
+ else {
+        for (int i=0; i < 40; i++) {
+          try {
+            Thread.sleep(500);
+          }
+ catch (          InterruptedException ie) {
+          }
+          if (!_context.netDb().reseedChecker().inProgress())           break;
+        }
+        String status=_context.netDb().reseedChecker().getStatus();
+        String error=_context.netDb().reseedChecker().getError();
+        if (error.length() > 0) {
+          addFormErrorNoEscape(error);
+        }
+ else         if (status.length() > 0) {
+          addFormNoticeNoEscape(status);
+        }
+ else         if (_context.netDb().reseedChecker().inProgress()) {
+          addFormNotice(_t("Reseed in progress, check summary bar for status"));
+        }
+ else {
+          addFormNotice(_t("Reseed complete, check summary bar for status"));
+        }
+      }
+    }
+ catch (    IllegalArgumentException iae) {
+      addFormError(_t("Bad URL {0}",val) + " - " + iae.getMessage());
+    }
+  }
+ else   if (_action.equals(_t("Reseed from file"))) {
+    InputStream in=_requestWrapper.getInputStream("file");
+    try {
+      if (in == null || in.available() <= 0) {
+        addFormError(_t("You must enter a file"));
+        return;
+      }
+      int count=_context.netDb().reseedChecker().requestReseed(in);
+      if (count <= 0) {
+        addFormError(_t("Reseed from file failed"));
+      }
+ else {
+        addFormNotice(ngettext("Reseed successful, loaded {0} router info from file","Reseed successful, loaded {0} router infos from file",count));
+      }
+    }
+ catch (    IOException ioe) {
+      addFormError(_t("Reseed from file failed") + " - " + ioe);
+    }
+ finally {
+      if (in != null)       try {
+        in.close();
+      }
+ catch (      IOException ioe) {
+      }
+    }
+  }
+ else   if (_action.equals(_t("Save changes"))) {
     saveChanges();
-    return;
+  }
+ else   if (_action.equals(_t("Reset URL list"))) {
+    resetUrlList();
   }
 }

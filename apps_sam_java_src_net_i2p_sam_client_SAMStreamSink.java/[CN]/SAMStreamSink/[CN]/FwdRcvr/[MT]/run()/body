@@ -1,0 +1,65 @@
+{
+  try {
+    ServerSocket ss;
+    if (_isSSL) {
+      SSLServerSocketFactory fact=SSLUtil.initializeFactory(_opts);
+      SSLServerSocket sock=(SSLServerSocket)fact.createServerSocket(V3FORWARDPORT);
+      I2PSSLSocketFactory.setProtocolsAndCiphers(sock);
+      ss=sock;
+    }
+ else {
+      ss=new ServerSocket(V3FORWARDPORT);
+    }
+    while (true) {
+      Socket s=ss.accept();
+      Sink sink=new Sink("FAKE","FAKEFROM");
+      try {
+        InputStream in=s.getInputStream();
+        boolean gotDest=false;
+        byte[] dest=new byte[1024];
+        int dlen=0;
+        byte[] buf=new byte[32768];
+        int len;
+        while ((len=in.read(buf)) >= 0) {
+          if (!gotDest) {
+            for (int i=0; i < len; i++) {
+              byte b=buf[i];
+              if (b == (byte)'\n') {
+                gotDest=true;
+                if (_log.shouldInfo()) {
+                  try {
+                    _log.info("Got incoming accept from: \"" + new String(dest,0,dlen,"ISO-8859-1") + '"');
+                  }
+ catch (                  IOException uee) {
+                  }
+                }
+                i++;
+                if (i < len)                 sink.received(buf,i,len - i);
+                break;
+              }
+ else {
+                if (dlen < dest.length) {
+                  dest[dlen++]=b;
+                }
+ else                 if (dlen == dest.length) {
+                  dlen++;
+                  _log.error("first line overflow on accept");
+                }
+              }
+            }
+          }
+ else {
+            sink.received(buf,0,len);
+          }
+        }
+        sink.closed();
+      }
+ catch (      IOException ioe) {
+        _log.error("Fwdcvr",ioe);
+      }
+    }
+  }
+ catch (  IOException ioe) {
+    _log.error("Fwdcvr",ioe);
+  }
+}

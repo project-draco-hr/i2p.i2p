@@ -1,0 +1,36 @@
+{
+  if (_complete) {
+    return;
+  }
+  boolean isFinished=inf.finished();
+  for (int i=off; i < off + len; i++) {
+    if (!isFinished) {
+      if (_state != HeaderState.DONE) {
+        verifyHeader(buf[i]);
+        continue;
+      }
+      super.write(buf,i,1);
+      if (inf.finished()) {
+        isFinished=true;
+        _bytesReceivedAtCompletion=_bytesReceived;
+      }
+    }
+    _footer[(int)(_bytesReceived++ % FOOTER_SIZE)]=buf[i];
+    if (isFinished) {
+      long footerSize=_bytesReceivedAtCompletion - _bytesReceived;
+      if (footerSize >= FOOTER_SIZE - 1) {
+        try {
+          verifyFooter();
+          inf.reset();
+          _complete=true;
+          return;
+        }
+ catch (        IOException ioe) {
+          if (footerSize == FOOTER_SIZE - 1 && i < off + len - 1)           continue;
+          _complete=true;
+          throw ioe;
+        }
+      }
+    }
+  }
+}

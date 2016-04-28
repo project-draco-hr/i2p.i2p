@@ -1,0 +1,22 @@
+{
+  if (!_isVersion4)   return putIfAbsent(hostname,d,options);
+  List<Properties> storedOptions=new ArrayList<Properties>(4);
+synchronized (_bf) {
+    List<Destination> dests=lookupAll2(hostname,options,storedOptions);
+    if (dests == null)     return put(hostname,d,options,false);
+    if (dests.contains(d))     return false;
+    if (dests.size() >= MAX_DESTS_PER_HOST)     return false;
+    List<Destination> newDests=new ArrayList<Destination>(dests.size() + 1);
+    newDests.addAll(dests);
+    SigType type=d.getSigningPublicKey().getType();
+    if (type != SigType.DSA_SHA1 && type.isAvailable()) {
+      newDests.add(0,d);
+      storedOptions.add(0,options);
+    }
+ else {
+      newDests.add(d);
+      storedOptions.add(options);
+    }
+    return put(hostname,newDests,storedOptions,false);
+  }
+}

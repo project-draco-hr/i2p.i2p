@@ -1,0 +1,24 @@
+{
+  BigInteger elgp=key.getParams().getP();
+  BigInteger pm1=elgp.subtract(BigInteger.ONE);
+  BigInteger elgg=key.getParams().getG();
+  BigInteger y=((ElGamalPublicKey)key).getY();
+  if (!(y instanceof NativeBigInteger))   y=new NativeBigInteger(y);
+  byte[] data=digest.digest();
+  try {
+    BigInteger[] rs=SigUtil.aSN1ToBigInteger(sigBytes,256);
+    BigInteger r=rs[0];
+    BigInteger s=rs[1];
+    if (r.signum() != 1 || s.signum() != 1 || r.compareTo(elgp) != -1 || s.compareTo(pm1) != -1)     return false;
+    NativeBigInteger h=new NativeBigInteger(1,data);
+    BigInteger modvalr=r.modPow(s,elgp);
+    BigInteger modvaly=y.modPow(r,elgp);
+    BigInteger modmulval=modvalr.multiply(modvaly).mod(elgp);
+    BigInteger v=elgg.modPow(h,elgp);
+    boolean ok=v.compareTo(modmulval) == 0;
+    return ok;
+  }
+ catch (  RuntimeException e) {
+    throw new SignatureException("verify",e);
+  }
+}

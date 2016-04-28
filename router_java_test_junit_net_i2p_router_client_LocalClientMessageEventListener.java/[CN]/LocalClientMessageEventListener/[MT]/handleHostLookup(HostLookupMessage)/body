@@ -1,0 +1,26 @@
+{
+  Hash h=message.getHash();
+  String name=message.getHostname();
+  long reqID=message.getReqID();
+  SessionId sessID=message.getSessionId();
+  if (h == null && name != null && name.length() == 60) {
+    String nlc=name.toLowerCase(Locale.US);
+    if (nlc.endsWith(".b32.i2p")) {
+      byte[] b=Base32.decode(nlc.substring(0,52));
+      if (b != null && b.length == Hash.HASH_LENGTH) {
+        h=Hash.create(b);
+      }
+    }
+  }
+  Destination d=null;
+  if (h != null)   d=((LocalClientConnectionRunner)_runner).localLookup(h);
+  HostReplyMessage msg;
+  if (d != null)   msg=new HostReplyMessage(sessID,d,reqID);
+ else   msg=new HostReplyMessage(sessID,HostReplyMessage.RESULT_FAILURE,reqID);
+  try {
+    _runner.doSend(msg);
+  }
+ catch (  I2CPMessageException ime) {
+    ime.printStackTrace();
+  }
+}

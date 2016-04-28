@@ -1,17 +1,33 @@
 {
   if (_log.shouldLog(Log.DEBUG))   _log.debug("UPnP Start");
+  _shouldBeRunning=true;
   if (!_isRunning) {
     long b=_context.clock().now();
     try {
       _isRunning=_upnp.runPlugin();
       if (_log.shouldLog(Log.INFO))       _log.info("UPnP runPlugin took " + (_context.clock().now() - b));
     }
- catch (    Exception e) {
-      _log.error("UPnP error, please report",e);
+ catch (    RuntimeException e) {
+      if (!_errorLogged) {
+        _log.error("UPnP error, please report",e);
+        _errorLogged=true;
+      }
     }
   }
-  if (!_isRunning) {
-    if (!Addresses.isConnected())     _log.logAlways(Log.WARN,"UPnP start failed - no network connection?");
- else     _log.error("UPnP start failed - port conflict?");
+  if (_isRunning) {
+    _rescanner.schedule(RESCAN_LONG_DELAY);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("UPnP Start Done");
+  }
+ else {
+    _rescanner.schedule(RESCAN_SHORT_DELAY);
+    if (!Addresses.isConnected()) {
+      if (!_disconLogged) {
+        _log.logAlways(Log.WARN,"UPnP start failed - no network connection?");
+        _disconLogged=true;
+      }
+    }
+ else {
+      _log.error("UPnP start failed - port conflict?");
+    }
   }
 }

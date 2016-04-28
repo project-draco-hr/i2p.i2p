@@ -4,9 +4,13 @@
   _expiration=_timeoutMs + ctx.clock().now();
   _rkey=ctx.routingKeyGenerator().getRoutingKey(key);
   _toTry=new TreeSet<Hash>(new XORComparator<Hash>(_rkey));
+  int totalSearchLimit=(facade.floodfillEnabled() && ctx.router().getUptime() > 30 * 60 * 1000) ? TOTAL_SEARCH_LIMIT_WHEN_FF : TOTAL_SEARCH_LIMIT;
+  _totalSearchLimit=ctx.getProperty("netdb.searchLimit",totalSearchLimit);
+  _singleSearchTime=ctx.getProperty("netdb.singleSearchTime",SINGLE_SEARCH_TIME);
+  _maxConcurrent=ctx.getProperty("netdb.maxConcurrent",MAX_CONCURRENT);
   _unheardFrom=new HashSet<Hash>(CONCURRENT_SEARCHES);
-  _failedPeers=new HashSet<Hash>(TOTAL_SEARCH_LIMIT);
-  _sentTime=new ConcurrentHashMap<Hash,Long>(TOTAL_SEARCH_LIMIT);
+  _failedPeers=new HashSet<Hash>(_totalSearchLimit);
+  _sentTime=new ConcurrentHashMap<Hash,Long>(_totalSearchLimit);
   _fromLocalDest=fromLocalDest;
   if (fromLocalDest != null && !isLease && _log.shouldLog(Log.WARN))   _log.warn("Search for RI " + key + " down client tunnel "+ fromLocalDest,new Exception());
 }

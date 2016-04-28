@@ -1,26 +1,15 @@
 {
 synchronized (nameToPrivKeys) {
-    FileOutputStream out=null;
+    File file=new File(persistFilename);
+    if (!file.exists() && !file.isAbsolute())     file=new File(I2PAppContext.getGlobalContext().getConfigDir(),persistFilename);
     try {
-      out=new FileOutputStream(persistFilename);
-      for (      Map.Entry<String,String> entry : nameToPrivKeys.entrySet()) {
-        String name=entry.getKey();
-        String privKeys=entry.getValue();
-        out.write(name.getBytes());
-        out.write('=');
-        out.write(privKeys.getBytes());
-        out.write('\n');
-      }
+      Properties props=new OrderedProperties();
+      props.putAll(nameToPrivKeys);
+      DataHelper.storeProps(props,file);
+      if (_log.shouldInfo())       _log.info("Saved " + nameToPrivKeys.size() + " private keys to "+ file);
     }
  catch (    IOException ioe) {
-      _log.error("Error writing out the SAM keys to " + persistFilename,ioe);
-    }
- finally {
-      if (out != null)       try {
-        out.close();
-      }
- catch (      IOException ioe) {
-      }
+      _log.error("Error writing out the SAM keys to " + file,ioe);
     }
   }
 }

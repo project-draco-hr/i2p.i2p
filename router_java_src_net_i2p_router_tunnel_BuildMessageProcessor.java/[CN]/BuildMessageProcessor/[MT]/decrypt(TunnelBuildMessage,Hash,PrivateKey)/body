@@ -1,0 +1,59 @@
+{
+  BuildRequestRecord rv=null;
+  int ourHop=-1;
+  long beforeActualDecrypt=0;
+  long afterActualDecrypt=0;
+  byte[] ourHashData=ourHash.getData();
+  long beforeLoop=System.currentTimeMillis();
+  for (int i=0; i < msg.getRecordCount(); i++) {
+    EncryptedBuildRecord rec=msg.getRecord(i);
+    int len=BuildRequestRecord.PEER_SIZE;
+    boolean eq=DataHelper.eq(ourHashData,0,rec.getData(),0,len);
+    if (eq) {
+      beforeActualDecrypt=System.currentTimeMillis();
+      try {
+        rv=new BuildRequestRecord(ctx,privKey,rec);
+        afterActualDecrypt=System.currentTimeMillis();
+        boolean isBad=SessionKey.INVALID_KEY.equals(rv.readReplyKey());
+        if (isBad) {
+          if (log.shouldLog(Log.WARN))           log.warn(msg.getUniqueId() + ": Bad reply key: " + rv);
+          ctx.statManager().addRateData("tunnel.buildRequestBadReplyKey",1);
+          return null;
+        }
+        boolean isDup=_filter.add(rv.getData(),BuildRequestRecord.OFF_REPLY_KEY,32);
+        if (isDup) {
+          if (log.shouldLog(Log.WARN))           log.warn(msg.getUniqueId() + ": Dup record: " + rv);
+          ctx.statManager().addRateData("tunnel.buildRequestDup",1);
+          return null;
+        }
+        if (log.shouldLog(Log.DEBUG))         log.debug(msg.getUniqueId() + ": Matching record: " + rv);
+        ourHop=i;
+        break;
+      }
+ catch (      DataFormatException dfe) {
+        if (log.shouldLog(Log.WARN))         log.warn(msg.getUniqueId() + ": Matching record decrypt failure",dfe);
+        continue;
+      }
+    }
+  }
+  if (rv == null) {
+    if (log.shouldLog(Log.WARN))     log.warn(msg.getUniqueId() + ": No matching record");
+    return null;
+  }
+  long beforeEncrypt=System.currentTimeMillis();
+  SessionKey replyKey=rv.readReplyKey();
+  byte iv[]=rv.readReplyIV();
+  for (int i=0; i < msg.getRecordCount(); i++) {
+    if (i != ourHop) {
+      EncryptedBuildRecord data=msg.getRecord(i);
+      byte[] bytes=data.getData();
+      ctx.aes().encrypt(bytes,0,bytes,0,replyKey,iv,0,EncryptedBuildRecord.LENGTH);
+    }
+  }
+  long afterEncrypt=System.currentTimeMillis();
+  msg.setRecord(ourHop,null);
+  if (afterEncrypt - beforeLoop > 1000) {
+    if (log.shouldLog(Log.WARN))     log.warn("Slow decryption, total=" + (afterEncrypt - beforeLoop) + " looping="+ (beforeEncrypt - beforeLoop)+ " decrypt="+ (afterActualDecrypt - beforeActualDecrypt)+ " encrypt="+ (afterEncrypt - beforeEncrypt));
+  }
+  return rv;
+}

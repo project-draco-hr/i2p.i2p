@@ -1,0 +1,39 @@
+{
+  if (props == null || name == null || dest == null)   return false;
+  if (!isValidated) {
+    isValidated=true;
+    StringWriter buf=new StringWriter(1024);
+    String sig=props.getProperty(PROP_SIG);
+    if (sig == null)     return false;
+    buf.append(name);
+    buf.append(KV_SEPARATOR);
+    buf.append(dest);
+    try {
+      writeProps(buf,true,false);
+    }
+ catch (    IOException ioe) {
+      return false;
+    }
+    byte[] sdata=Base64.decode(sig);
+    if (sdata == null)     return false;
+    Destination d;
+    try {
+      d=new Destination(dest);
+    }
+ catch (    DataFormatException dfe) {
+      return false;
+    }
+    SigningPublicKey spk=d.getSigningPublicKey();
+    SigType type=spk.getType();
+    if (type == null)     return false;
+    Signature s;
+    try {
+      s=new Signature(type,sdata);
+    }
+ catch (    IllegalArgumentException iae) {
+      return false;
+    }
+    isValid=DSAEngine.getInstance().verifySignature(s,DataHelper.getUTF8(buf.toString()),spk);
+  }
+  return isValid;
+}

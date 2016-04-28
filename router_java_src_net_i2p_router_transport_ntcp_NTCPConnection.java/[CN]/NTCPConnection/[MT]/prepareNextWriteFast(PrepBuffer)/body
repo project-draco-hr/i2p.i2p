@@ -3,9 +3,10 @@
   if (!_isInbound && !isEstablished()) {
     return;
   }
-  if (_nextMetaTime <= System.currentTimeMillis()) {
+  long now=_context.clock().now();
+  if (_nextMetaTime <= now) {
     sendMeta();
-    _nextMetaTime=System.currentTimeMillis() + (META_FREQUENCY / 2) + _context.random().nextInt(META_FREQUENCY / 2);
+    _nextMetaTime=now + (META_FREQUENCY / 2) + _context.random().nextInt(META_FREQUENCY / 2);
   }
   OutNetMessage msg=null;
 synchronized (_outbound) {
@@ -21,8 +22,8 @@ synchronized (_outbound) {
   _context.aes().encrypt(buf.unencrypted,0,buf.encrypted,0,_sessionKey,_prevWriteEnd,0,buf.unencryptedLength);
   System.arraycopy(buf.encrypted,buf.encrypted.length - 16,_prevWriteEnd,0,_prevWriteEnd.length);
   _transport.getPumper().wantsWrite(this,buf.encrypted);
-  if (_nextInfoTime <= System.currentTimeMillis()) {
+  if (_nextInfoTime <= now) {
     enqueueInfoMessage();
-    _nextInfoTime=System.currentTimeMillis() + (INFO_FREQUENCY / 2) + _context.random().nextInt(INFO_FREQUENCY);
+    _nextInfoTime=now + (INFO_FREQUENCY / 2) + _context.random().nextInt(INFO_FREQUENCY);
   }
 }

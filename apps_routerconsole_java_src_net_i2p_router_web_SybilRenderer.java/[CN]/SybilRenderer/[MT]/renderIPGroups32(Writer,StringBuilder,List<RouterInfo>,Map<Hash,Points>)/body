@@ -1,0 +1,42 @@
+{
+  buf.append("<h3 id=\"sameIP\">Floodfills with the Same IP</h3>");
+  ObjectCounter<Integer> oc=new ObjectCounter<Integer>();
+  for (  RouterInfo info : ris) {
+    byte[] ip=getIP(info);
+    if (ip == null)     continue;
+    Integer x=Integer.valueOf((int)DataHelper.fromLong(ip,0,4));
+    oc.increment(x);
+  }
+  List<Integer> foo=new ArrayList<Integer>();
+  for (  Integer ii : oc.objects()) {
+    int count=oc.count(ii);
+    if (count >= 2)     foo.add(ii);
+  }
+  Collections.sort(foo,new FooComparator(oc));
+  boolean found=false;
+  for (  Integer ii : foo) {
+    int count=oc.count(ii);
+    int i=ii.intValue();
+    int i0=(i >> 24) & 0xff;
+    int i1=(i >> 16) & 0xff;
+    int i2=(i >> 8) & 0xff;
+    int i3=i & 0xff;
+    buf.append("<p><b>").append(count).append(" floodfills with IP ").append(i0).append('.').append(i1).append('.').append(i2).append('.').append(i3).append(":</b></p>");
+    for (    RouterInfo info : ris) {
+      byte[] ip=getIP(info);
+      if (ip == null)       continue;
+      if ((ip[0] & 0xff) != i0)       continue;
+      if ((ip[1] & 0xff) != i1)       continue;
+      if ((ip[2] & 0xff) != i2)       continue;
+      if ((ip[3] & 0xff) != i3)       continue;
+      found=true;
+      renderRouterInfo(buf,info,null,false,false);
+      double point=POINTS32 * (count - 1);
+      addPoints(points,info.getHash(),point,"Same IP with " + (count - 1) + " other"+ ((count > 2) ? "s" : ""));
+    }
+  }
+  if (!found)   buf.append("<p>None</p>");
+  out.write(buf.toString());
+  out.flush();
+  buf.setLength(0);
+}

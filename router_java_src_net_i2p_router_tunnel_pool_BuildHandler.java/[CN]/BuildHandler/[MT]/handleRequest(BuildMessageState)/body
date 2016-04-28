@@ -1,19 +1,25 @@
 {
   long timeSinceReceived=_context.clock().now() - state.recvTime;
-  if (_log.shouldLog(Log.DEBUG))   _log.debug(state.msg.getUniqueId() + ": handling request after " + timeSinceReceived);
+  Hash from=state.fromHash;
+  if (from == null && state.from != null)   from=state.from.calculateHash();
   if (timeSinceReceived > (BuildRequestor.REQUEST_TIMEOUT * 3)) {
     _context.throttle().setTunnelStatus(_x("Dropping tunnel requests: Overloaded"));
     if (_log.shouldLog(Log.WARN))     _log.warn("Not even trying to handle/decrypt the request " + state.msg.getUniqueId() + ", since we received it a long time ago: "+ timeSinceReceived);
     _context.statManager().addRateData("tunnel.dropLoadDelay",timeSinceReceived);
+    if (from != null)     _context.commSystem().mayDisconnect(from);
     return -1;
   }
   long beforeDecrypt=System.currentTimeMillis();
-  BuildRequestRecord req=_processor.decrypt(_context,state.msg,_context.routerHash(),_context.keyManager().getPrivateKey());
+  BuildRequestRecord req=_processor.decrypt(state.msg,_context.routerHash(),_context.keyManager().getPrivateKey());
   long decryptTime=System.currentTimeMillis() - beforeDecrypt;
   _context.statManager().addRateData("tunnel.decryptRequestTime",decryptTime);
   if (decryptTime > 500 && _log.shouldLog(Log.WARN))   _log.warn("Took too long to decrypt the request: " + decryptTime + " for message "+ state.msg.getUniqueId()+ " received "+ (timeSinceReceived + decryptTime)+ " ago");
   if (req == null) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("The request " + state.msg.getUniqueId() + " could not be decrypted");
+    if (_log.shouldLog(Log.WARN)) {
+      _log.warn("The request " + state.msg.getUniqueId() + " could not be decrypted from: "+ from);
+    }
+    _context.statManager().addRateData("tunnel.dropDecryptFail",1);
+    if (from != null)     _context.commSystem().mayDisconnect(from);
     return -1;
   }
   long beforeLookup=System.currentTimeMillis();
@@ -21,19 +27,23 @@
   long readPeerTime=System.currentTimeMillis() - beforeLookup;
   RouterInfo nextPeerInfo=_context.netDb().lookupRouterInfoLocally(nextPeer);
   long lookupTime=System.currentTimeMillis() - beforeLookup;
-  if (lookupTime > 500 && _log.shouldLog(Log.WARN))   _log.warn("Took too long to lookup the request: " + lookupTime + "/"+ readPeerTime+ " for message "+ state.msg.getUniqueId()+ " received "+ (timeSinceReceived + decryptTime)+ " ago");
+  if (lookupTime > 500 && _log.shouldLog(Log.WARN))   _log.warn("Took too long to lookup the request: " + lookupTime + "/"+ readPeerTime+ " for "+ req);
   if (nextPeerInfo == null) {
     int numTunnels=_context.tunnelManager().getParticipatingCount();
     int limit=Math.max(MIN_LOOKUP_LIMIT,Math.min(MAX_LOOKUP_LIMIT,numTunnels * PERCENT_LOOKUP_LIMIT / 100));
-    int current=_currentLookups.incrementAndGet();
+    int current;
+    if (_context.random().nextInt(16) > 0)     current=_currentLookups.incrementAndGet();
+ else     current=1;
     if (current <= limit) {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Request " + state.msg.getUniqueId() + '/'+ req.readReceiveTunnelId()+ '/'+ req.readNextTunnelId()+ " handled, lookup next peer "+ nextPeer+ " lookups: "+ current+ '/'+ limit);
+      if (current <= 0)       _currentLookups.set(1);
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Request " + req + " handled, lookup next peer "+ nextPeer+ " lookups: "+ current+ '/'+ limit);
       _context.netDb().lookupRouterInfo(nextPeer,new HandleReq(_context,state,req,nextPeer),new TimeoutReq(_context,state,req,nextPeer),NEXT_HOP_LOOKUP_TIMEOUT);
     }
  else {
       _currentLookups.decrementAndGet();
-      if (_log.shouldLog(Log.WARN))       _log.warn("Drop next hop lookup, limit " + limit);
+      if (_log.shouldLog(Log.WARN))       _log.warn("Drop next hop lookup, limit " + limit + ": "+ req);
       _context.statManager().addRateData("tunnel.dropLookupThrottle",1);
+      if (from != null)       _context.commSystem().mayDisconnect(from);
     }
     return -1;
   }
@@ -41,7 +51,7 @@
     long beforeHandle=System.currentTimeMillis();
     handleReq(nextPeerInfo,state,req,nextPeer);
     long handleTime=System.currentTimeMillis() - beforeHandle;
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Request " + state.msg.getUniqueId() + " handled and we know the next peer "+ nextPeer+ " after "+ handleTime+ "/"+ decryptTime+ "/"+ lookupTime+ "/"+ timeSinceReceived);
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Request " + req + " handled and we know the next peer "+ nextPeer+ " after "+ handleTime+ "/"+ decryptTime+ "/"+ lookupTime+ "/"+ timeSinceReceived);
     return handleTime;
   }
 }

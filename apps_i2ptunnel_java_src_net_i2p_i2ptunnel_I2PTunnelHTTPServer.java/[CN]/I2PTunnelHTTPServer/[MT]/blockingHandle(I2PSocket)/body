@@ -2,17 +2,129 @@
   Hash peerHash=socket.getPeerDestination().calculateHash();
   if (_log.shouldLog(Log.INFO))   _log.info("Incoming connection to '" + toString() + "' port "+ socket.getLocalPort()+ " from: "+ peerHash+ " port "+ socket.getPort());
   try {
+    if (socket.getLocalPort() == 443) {
+      if (getTunnel().getClientOptions().getProperty("targetForPort.443") == null) {
+        try {
+          socket.getOutputStream().write(ERR_SSL.getBytes("UTF-8"));
+        }
+ catch (        IOException ioe) {
+        }
+ finally {
+          try {
+            socket.close();
+          }
+ catch (          IOException ioe) {
+          }
+        }
+        return;
+      }
+      Socket s=getSocket(socket.getPeerDestination().calculateHash(),443);
+      Runnable t=new I2PTunnelRunner(s,socket,slock,null,null,null,(I2PTunnelRunner.FailCallback)null);
+      _clientExecutor.execute(t);
+      return;
+    }
     long afterAccept=getTunnel().getContext().clock().now();
-    socket.setReadTimeout(HEADER_TIMEOUT);
-    InputStream in=socket.getInputStream();
     StringBuilder command=new StringBuilder(128);
-    Map<String,List<String>> headers=readHeaders(in,command,CLIENT_SKIPHEADERS,getTunnel().getContext());
+    Map<String,List<String>> headers;
+    try {
+      headers=readHeaders(socket,null,command,CLIENT_SKIPHEADERS,getTunnel().getContext());
+    }
+ catch (    SocketTimeoutException ste) {
+      try {
+        socket.getOutputStream().write(ERR_REQUEST_TIMEOUT.getBytes("UTF-8"));
+      }
+ catch (      IOException ioe) {
+      }
+ finally {
+        try {
+          socket.close();
+        }
+ catch (        IOException ioe) {
+        }
+      }
+      if (_log.shouldLog(Log.WARN))       _log.warn("Error while receiving the new HTTP request",ste);
+      return;
+    }
+catch (    EOFException eofe) {
+      try {
+        socket.getOutputStream().write(ERR_BAD_REQUEST.getBytes("UTF-8"));
+      }
+ catch (      IOException ioe) {
+      }
+ finally {
+        try {
+          socket.close();
+        }
+ catch (        IOException ioe) {
+        }
+      }
+      if (_log.shouldLog(Log.WARN))       _log.warn("Error while receiving the new HTTP request",eofe);
+      return;
+    }
+catch (    LineTooLongException ltle) {
+      try {
+        socket.getOutputStream().write(ERR_HEADERS_TOO_LARGE.getBytes("UTF-8"));
+      }
+ catch (      IOException ioe) {
+      }
+ finally {
+        try {
+          socket.close();
+        }
+ catch (        IOException ioe) {
+        }
+      }
+      if (_log.shouldLog(Log.WARN))       _log.warn("Error while receiving the new HTTP request",ltle);
+      return;
+    }
+catch (    RequestTooLongException rtle) {
+      try {
+        socket.getOutputStream().write(ERR_REQUEST_URI_TOO_LONG.getBytes("UTF-8"));
+      }
+ catch (      IOException ioe) {
+      }
+ finally {
+        try {
+          socket.close();
+        }
+ catch (        IOException ioe) {
+        }
+      }
+      if (_log.shouldLog(Log.WARN))       _log.warn("Error while receiving the new HTTP request",rtle);
+      return;
+    }
+catch (    BadRequestException bre) {
+      try {
+        socket.getOutputStream().write(ERR_BAD_REQUEST.getBytes("UTF-8"));
+      }
+ catch (      IOException ioe) {
+      }
+ finally {
+        try {
+          socket.close();
+        }
+ catch (        IOException ioe) {
+        }
+      }
+      if (_log.shouldLog(Log.WARN))       _log.warn("Error while receiving the new HTTP request",bre);
+      return;
+    }
     long afterHeaders=getTunnel().getContext().clock().now();
     Properties opts=getTunnel().getClientOptions();
     if (Boolean.parseBoolean(opts.getProperty(OPT_REJECT_INPROXY)) && (headers.containsKey("X-Forwarded-For") || headers.containsKey("X-Forwarded-Server") || headers.containsKey("X-Forwarded-Host"))) {
-      if (_log.shouldLog(Log.WARN))       _log.warn("Refusing inproxy access: " + peerHash.toBase64());
+      if (_log.shouldLog(Log.WARN)) {
+        StringBuilder buf=new StringBuilder();
+        buf.append("Refusing inproxy access: ").append(Base32.encode(peerHash.getData())).append(".b32.i2p");
+        List<String> h=headers.get("X-Forwarded-For");
+        if (h != null)         buf.append(" from: ").append(h.get(0));
+        h=headers.get("X-Forwarded-Server");
+        if (h != null)         buf.append(" via: ").append(h.get(0));
+        h=headers.get("X-Forwarded-Host");
+        if (h != null)         buf.append(" for: ").append(h.get(0));
+        _log.warn(buf.toString());
+      }
       try {
-        socket.getOutputStream().write(ERR_INPROXY);
+        socket.getOutputStream().write(ERR_INPROXY.getBytes("UTF-8"));
       }
  catch (      IOException ioe) {
       }
@@ -23,11 +135,51 @@
       }
       return;
     }
+    if (Boolean.parseBoolean(opts.getProperty(OPT_REJECT_REFERER)) && headers.containsKey("Referer")) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Refusing access from: " + Base32.encode(peerHash.getData()) + ".b32.i2p"+ " with Referer: "+ headers.get("Referer").get(0));
+      try {
+        socket.getOutputStream().write(ERR_INPROXY.getBytes("UTF-8"));
+      }
+ catch (      IOException ioe) {
+      }
+      try {
+        socket.close();
+      }
+ catch (      IOException ioe) {
+      }
+      return;
+    }
+    if (Boolean.parseBoolean(opts.getProperty(OPT_REJECT_USER_AGENTS)) && headers.containsKey("User-Agent")) {
+      String ua=headers.get("User-Agent").get(0);
+      if (!ua.startsWith("MYOB")) {
+        String blockAgents=opts.getProperty(OPT_USER_AGENTS);
+        if (blockAgents != null) {
+          String[] agents=DataHelper.split(blockAgents,",");
+          for (int i=0; i < agents.length; i++) {
+            String ag=agents[i].trim();
+            if (ag.length() > 0 && ua.contains(ag)) {
+              if (_log.shouldLog(Log.WARN))               _log.warn("Refusing access from: " + Base32.encode(peerHash.getData()) + ".b32.i2p"+ " with User-Agent: "+ ua);
+              try {
+                socket.getOutputStream().write(ERR_INPROXY.getBytes("UTF-8"));
+              }
+ catch (              IOException ioe) {
+              }
+              try {
+                socket.close();
+              }
+ catch (              IOException ioe) {
+              }
+              return;
+            }
+          }
+        }
+      }
+    }
     if (_postThrottler != null && command.length() >= 5 && command.substring(0,5).toUpperCase(Locale.US).equals("POST ")) {
       if (_postThrottler.shouldThrottle(peerHash)) {
-        if (_log.shouldLog(Log.WARN))         _log.warn("Refusing POST since peer is throttled: " + peerHash.toBase64());
+        if (_log.shouldLog(Log.WARN))         _log.warn("Refusing POST since peer is throttled: " + Base32.encode(peerHash.getData()) + ".b32.i2p");
         try {
-          socket.getOutputStream().write(ERR_DENIED);
+          socket.getOutputStream().write(ERR_DENIED.getBytes("UTF-8"));
         }
  catch (        IOException ioe) {
         }
@@ -54,9 +206,8 @@
     }
     if (spoofHost != null)     setEntry(headers,"Host",spoofHost);
     setEntry(headers,"Connection","close");
-    String enc=getEntryOrNull(headers,"Accept-encoding");
-    String altEnc=getEntryOrNull(headers,"X-Accept-encoding");
-    setEntry(headers,"Accept-encoding","");
+    String enc=getEntryOrNull(headers,"Accept-Encoding");
+    String altEnc=getEntryOrNull(headers,"X-Accept-Encoding");
     socket.setReadTimeout(readTimeout);
     Socket s=getSocket(socket.getPeerDestination().calculateHash(),socket.getLocalPort());
     long afterSocket=getTunnel().getContext().clock().now();
@@ -66,25 +217,25 @@
     if (_log.shouldLog(Log.INFO))     _log.info("HTTP server encoding header: " + enc + "/"+ altEnc);
     boolean alt=(altEnc != null) && (altEnc.indexOf("x-i2p-gzip") >= 0);
     boolean useGZIP=alt || ((enc != null) && (enc.indexOf("x-i2p-gzip") >= 0));
-    if (alt)     headers.remove("X-Accept-encoding");
+    if (alt)     headers.remove("X-Accept-Encoding");
     String modifiedHeader=formatHeaders(headers,command);
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Modified header: [" + modifiedHeader + "]");
+    Runnable t;
     if (allowGZIP && useGZIP) {
-      I2PAppThread req=new I2PAppThread(new CompressedRequestor(s,socket,modifiedHeader,getTunnel().getContext(),_log),Thread.currentThread().getName() + ".hc");
-      req.start();
+      t=new CompressedRequestor(s,socket,modifiedHeader,getTunnel().getContext(),_log);
     }
  else {
-      Thread t=new I2PTunnelRunner(s,socket,slock,null,modifiedHeader.getBytes(),null,(I2PTunnelRunner.FailCallback)null);
-      t.start();
+      t=new I2PTunnelRunner(s,socket,slock,null,DataHelper.getUTF8(modifiedHeader),null,(I2PTunnelRunner.FailCallback)null);
     }
+    _clientExecutor.execute(t);
     long afterHandle=getTunnel().getContext().clock().now();
     long timeToHandle=afterHandle - afterAccept;
-    getTunnel().getContext().statManager().addRateData("i2ptunnel.httpserver.blockingHandleTime",timeToHandle,0);
+    getTunnel().getContext().statManager().addRateData("i2ptunnel.httpserver.blockingHandleTime",timeToHandle);
     if ((timeToHandle > 1000) && (_log.shouldLog(Log.WARN)))     _log.warn("Took a while to handle the request for " + remoteHost + ':'+ remotePort+ " ["+ timeToHandle+ ", read headers: "+ (afterHeaders - afterAccept)+ ", socket create: "+ (afterSocket - afterHeaders)+ ", start runners: "+ (afterHandle - afterSocket)+ "]");
   }
  catch (  SocketException ex) {
     try {
-      socket.getOutputStream().write(ERR_UNAVAILABLE);
+      socket.getOutputStream().write(ERR_UNAVAILABLE.getBytes("UTF-8"));
     }
  catch (    IOException ioe) {
     }
@@ -102,11 +253,11 @@ catch (  IOException ex) {
     }
  catch (    IOException ioe) {
     }
-    if (_log.shouldLog(Log.WARN))     _log.warn("Error while receiving the new HTTP request",ex);
+    if (_log.shouldLog(Log.WARN))     _log.warn("Error while receiving the new HTTP request from: " + Base32.encode(peerHash.getData()) + ".b32.i2p",ex);
   }
 catch (  OutOfMemoryError oom) {
     try {
-      socket.getOutputStream().write(ERR_UNAVAILABLE);
+      socket.getOutputStream().write(ERR_UNAVAILABLE.getBytes("UTF-8"));
     }
  catch (    IOException ioe) {
     }

@@ -1,6 +1,7 @@
 {
   int loopCount=0;
   long lastFailsafeIteration=System.currentTimeMillis();
+  long lastBlockedIPClear=lastFailsafeIteration;
   while (_alive && _selector.isOpen()) {
     try {
       loopCount++;
@@ -23,8 +24,9 @@ catch (      CancelledKeyException cke) {
         if (_log.shouldLog(Log.WARN))         _log.warn("Error selecting",cke);
         continue;
       }
-      if (lastFailsafeIteration + FAILSAFE_ITERATION_FREQ < System.currentTimeMillis()) {
-        lastFailsafeIteration=System.currentTimeMillis();
+      long now=System.currentTimeMillis();
+      if (lastFailsafeIteration + FAILSAFE_ITERATION_FREQ < now) {
+        lastFailsafeIteration=now;
         try {
           Set<SelectionKey> all=_selector.keys();
           _context.statManager().addRateData("ntcp.pumperKeySetSize",all.size());
@@ -33,7 +35,8 @@ catch (      CancelledKeyException cke) {
           int failsafeWrites=0;
           int failsafeCloses=0;
           int failsafeInvalid=0;
-          if (_transport.haveCapacity(33))           _expireIdleWriteTime=Math.min(_expireIdleWriteTime + 1000,MAX_EXPIRE_IDLE_TIME);
+          boolean haveCap=_transport.haveCapacity(33);
+          if (haveCap)           _expireIdleWriteTime=Math.min(_expireIdleWriteTime + 1000,MAX_EXPIRE_IDLE_TIME);
  else           _expireIdleWriteTime=Math.max(_expireIdleWriteTime - 3000,MIN_EXPIRE_IDLE_TIME);
           for (          SelectionKey key : all) {
             try {
@@ -47,10 +50,19 @@ catch (      CancelledKeyException cke) {
                 continue;
               }
               if ((!con.isWriteBufEmpty()) && ((key.interestOps() & SelectionKey.OP_WRITE) == 0)) {
+                if (_log.shouldLog(Log.INFO))                 _log.info("Failsafe write for " + con);
                 key.interestOps(SelectionKey.OP_WRITE | key.interestOps());
                 failsafeWrites++;
               }
-              if (con.getTimeSinceSend() > _expireIdleWriteTime && con.getTimeSinceReceive() > _expireIdleWriteTime) {
+              final long expire;
+              if ((!haveCap || !con.isInbound()) && con.getMayDisconnect() && con.getMessagesReceived() <= 2 && con.getMessagesSent() <= 1) {
+                expire=MAY_DISCON_TIMEOUT;
+                if (_log.shouldInfo())                 _log.info("Possible early disconnect for " + con);
+              }
+ else {
+                expire=_expireIdleWriteTime;
+              }
+              if (con.getTimeSinceSend() > expire && con.getTimeSinceReceive() > expire) {
                 con.close();
                 failsafeCloses++;
               }
@@ -65,6 +77,21 @@ catch (      CancelledKeyException cke) {
  catch (        ClosedSelectorException cse) {
           continue;
         }
+      }
+ else {
+        if ((loopCount % 512) == 511) {
+          if (_log.shouldLog(Log.INFO))           _log.info("EventPumper throttle " + loopCount + " loops in "+ (now - lastFailsafeIteration)+ " ms");
+          _context.statManager().addRateData("ntcp.failsafeThrottle",1);
+          try {
+            Thread.sleep(25);
+          }
+ catch (          InterruptedException ie) {
+          }
+        }
+      }
+      if (lastBlockedIPClear + BLOCKED_IP_FREQ < now) {
+        _blockedIPs.clear();
+        lastBlockedIPClear=now;
       }
       boolean newUseDirect=_context.getBooleanProperty(PROP_DIRECT);
       if (_useDirect != newUseDirect) {
@@ -94,7 +121,7 @@ catch (      CancelledKeyException cke) {
             key.cancel();
           }
         }
- catch (        Exception ke) {
+ catch (        IOException ke) {
           _log.error("Error closing key " + key + " on pumper shutdown",ke);
         }
       }
@@ -104,7 +131,7 @@ catch (      CancelledKeyException cke) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Closing down the event pumper with no selection keys remaining");
     }
   }
- catch (  Exception e) {
+ catch (  IOException e) {
     _log.error("Error closing keys on pumper shutdown",e);
   }
   _wantsConRegister.clear();

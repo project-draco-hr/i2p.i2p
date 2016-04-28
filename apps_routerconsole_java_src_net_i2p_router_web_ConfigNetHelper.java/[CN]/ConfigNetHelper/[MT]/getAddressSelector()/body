@@ -1,5 +1,9 @@
 {
   Set<String> addrs=getAddresses();
+  for (Iterator<String> iter=addrs.iterator(); iter.hasNext(); ) {
+    byte[] ip=Addresses.getIP(iter.next());
+    if (ip == null || !TransportUtil.isPubliclyRoutable(ip,true))     iter.remove();
+  }
   Set<String> configs;
   String cs=getUdphostname();
   if (cs.length() <= 0) {
@@ -7,7 +11,7 @@
   }
  else {
     configs=new HashSet<String>(4);
-    String[] ca=cs.split("[,; \r\n\t]");
+    String[] ca=DataHelper.split(cs,"[,; \r\n\t]");
     for (int i=0; i < ca.length; i++) {
       String c=ca[i];
       if (c.length() > 0) {
@@ -27,8 +31,10 @@
     buf.append(addr);
     buf.append("<br>");
   }
-  buf.append("\n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;" + "<input type=\"checkbox\" class=\"optbox\" name=\"addrnew\"");
-  buf.append(CHECKED);
-  buf.append("><input name =\"udpHost1\" type=\"text\" size=\"16\" />" + "</div>");
+  buf.append("\n&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;");
+  if (!addrs.isEmpty()) {
+    buf.append(_t("Add host name or IP")).append(": ");
+  }
+  buf.append("<input name=\"udpHost1\" type=\"text\" size=\"16\" >" + "</div>");
   return buf.toString();
 }

@@ -1,0 +1,65 @@
+{
+  if (_log.shouldWarn())   _log.warn("Stream acceptor started");
+  final I2PServerSocket i2pss=socketMgr.getServerSocket();
+  while (!stop) {
+    I2PSocket i2ps;
+    try {
+      i2ps=i2pss.accept();
+      if (i2ps == null)       continue;
+    }
+ catch (    SocketTimeoutException ste) {
+      continue;
+    }
+catch (    ConnectException ce) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Error accepting",ce);
+      try {
+        Thread.sleep(50);
+      }
+ catch (      InterruptedException ie) {
+      }
+      continue;
+    }
+catch (    I2PException ipe) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Error accepting",ipe);
+      break;
+    }
+    int port=i2ps.getLocalPort();
+    SAMMessageSess foundSess=null;
+    Collection<SAMMessageSess> all=sessions.values();
+    for (Iterator<SAMMessageSess> iter=all.iterator(); iter.hasNext(); ) {
+      SAMMessageSess sess=iter.next();
+      if (sess.getListenProtocol() != I2PSession.PROTO_STREAMING) {
+        iter.remove();
+        continue;
+      }
+      if (sess.getListenPort() == port) {
+        foundSess=sess;
+        break;
+      }
+    }
+    if (foundSess == null) {
+      for (      SAMMessageSess sess : all) {
+        if (sess.getListenPort() == 0) {
+          foundSess=sess;
+          break;
+        }
+      }
+    }
+    if (foundSess != null) {
+      SAMv3StreamSession ssess=(SAMv3StreamSession)foundSess;
+      boolean ok=ssess.queueSocket(i2ps);
+      if (!ok) {
+        _log.logAlways(Log.WARN,"Accept queue overflow for " + ssess);
+        try {
+          i2ps.close();
+        }
+ catch (        IOException ioe) {
+        }
+      }
+    }
+ else {
+      if (_log.shouldLog(Log.WARN))       _log.warn("No subsession found for incoming streaming connection on port " + port);
+    }
+  }
+  if (_log.shouldWarn())   _log.warn("Stream acceptor stopped");
+}

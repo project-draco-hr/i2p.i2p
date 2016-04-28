@@ -1,6 +1,8 @@
 {
-  long expiration=-1;
-  if (_readTimeout > 0)   expiration=_readTimeout + System.currentTimeMillis();
+  int readTimeout=_readTimeout;
+  long expiration;
+  if (readTimeout > 0)   expiration=readTimeout + System.currentTimeMillis();
+ else   expiration=-1;
 synchronized (_dataLock) {
     if (_locallyClosed)     throw new IOException("Already locally closed");
     throwAnyError();
@@ -13,8 +15,8 @@ synchronized (_dataLock) {
             return -1;
           }
  else {
-            if (_readTimeout < 0) {
-              if (_log.shouldLog(Log.DEBUG))               _log.debug("read(...," + offset + ", "+ length+ ")["+ i+ ") with no timeout: "+ toString());
+            if (readTimeout < 0) {
+              if (_log.shouldLog(Log.DEBUG))               _log.debug("read(...," + offset + ", "+ length+ ")["+ i+ "] with no timeout: "+ toString());
               try {
                 _dataLock.wait();
               }
@@ -23,30 +25,36 @@ synchronized (_dataLock) {
                 ioe2.initCause(ie);
                 throw ioe2;
               }
-              if (_log.shouldLog(Log.DEBUG))               _log.debug("read(...," + offset + ", "+ length+ ")["+ i+ ") with no timeout complete: "+ toString());
+              if (_log.shouldLog(Log.DEBUG))               _log.debug("read(...," + offset + ", "+ length+ ")["+ i+ "] with no timeout complete: "+ toString());
               throwAnyError();
             }
- else             if (_readTimeout > 0) {
-              if (_log.shouldLog(Log.DEBUG))               _log.debug("read(...," + offset + ", "+ length+ ")["+ i+ ") with timeout: "+ _readTimeout+ ": "+ toString());
+ else             if (readTimeout > 0) {
+              if (_log.shouldLog(Log.DEBUG))               _log.debug("read(...," + offset + ", "+ length+ ")["+ i+ "] with timeout: "+ readTimeout+ ": "+ toString());
               try {
-                _dataLock.wait(_readTimeout);
+                _dataLock.wait(readTimeout);
               }
  catch (              InterruptedException ie) {
                 IOException ioe2=new InterruptedIOException("Interrupted read");
                 ioe2.initCause(ie);
                 throw ioe2;
               }
-              if (_log.shouldLog(Log.DEBUG))               _log.debug("read(...," + offset + ", "+ length+ ")["+ i+ ") with timeout complete: "+ _readTimeout+ ": "+ toString());
+              if (_log.shouldLog(Log.DEBUG))               _log.debug("read(...," + offset + ", "+ length+ ")["+ i+ "] with timeout complete: "+ readTimeout+ ": "+ toString());
               throwAnyError();
             }
  else {
-              if (_log.shouldLog(Log.DEBUG))               _log.debug("read(...," + offset + ", "+ length+ ")["+ i+ ") with nonblocking setup: "+ toString());
+              if (_log.shouldLog(Log.DEBUG))               _log.debug("read(...," + offset + ", "+ length+ ")["+ i+ "] with nonblocking setup: "+ toString());
               return i;
             }
             if (_readyDataBlocks.isEmpty()) {
-              if ((_readTimeout > 0) && (expiration < System.currentTimeMillis())) {
-                if (_log.shouldLog(Log.INFO))                 _log.info("read(...," + offset + ", "+ length+ ")["+ i+ ") expired: "+ toString());
-                return i;
+              if (readTimeout > 0) {
+                long remaining=expiration - System.currentTimeMillis();
+                if (remaining <= 0) {
+                  if (_log.shouldLog(Log.INFO))                   _log.info("read(...," + offset + ", "+ length+ ")["+ i+ "] expired: "+ toString());
+                  return i;
+                }
+ else {
+                  readTimeout=(int)remaining;
+                }
               }
             }
           }

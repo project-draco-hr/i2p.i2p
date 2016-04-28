@@ -1,0 +1,97 @@
+{
+  if (opcode.equals("SEND")) {
+    if (props.isEmpty()) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("No parameters specified in SEND message");
+      return false;
+    }
+    String dest=props.getProperty("DESTINATION");
+    if (dest == null) {
+      if (_log.shouldWarn())       _log.warn("Destination not specified in SEND message");
+      return false;
+    }
+    int size;
+    String strsize=props.getProperty("SIZE");
+    if (strsize == null) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Size not specified in SEND message");
+      return false;
+    }
+    try {
+      size=Integer.parseInt(strsize);
+    }
+ catch (    NumberFormatException e) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Invalid SEND size specified: " + strsize);
+      return false;
+    }
+    boolean ok=isRaw ? checkSize(size) : checkDatagramSize(size);
+    if (!ok) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Specified size (" + size + ") is out of protocol limits");
+      return false;
+    }
+    int fromPort=I2PSession.PORT_UNSPECIFIED;
+    int toPort=I2PSession.PORT_UNSPECIFIED;
+    int proto;
+    if (isRaw) {
+      proto=I2PSession.PROTO_DATAGRAM_RAW;
+      String s=props.getProperty("PROTOCOL");
+      if (s != null) {
+        try {
+          proto=Integer.parseInt(s);
+        }
+ catch (        NumberFormatException e) {
+          if (_log.shouldLog(Log.WARN))           _log.warn("Invalid SEND protocol specified: " + s);
+        }
+      }
+    }
+ else {
+      proto=I2PSession.PROTO_DATAGRAM;
+    }
+    String s=props.getProperty("FROM_PORT");
+    if (s != null) {
+      try {
+        fromPort=Integer.parseInt(s);
+      }
+ catch (      NumberFormatException e) {
+        if (_log.shouldLog(Log.WARN))         _log.warn("Invalid SEND port specified: " + s);
+      }
+    }
+    s=props.getProperty("TO_PORT");
+    if (s != null) {
+      try {
+        toPort=Integer.parseInt(s);
+      }
+ catch (      NumberFormatException e) {
+        if (_log.shouldLog(Log.WARN))         _log.warn("Invalid SEND port specified: " + s);
+      }
+    }
+    try {
+      DataInputStream in=new DataInputStream(getClientSocket().socket().getInputStream());
+      byte[] data=new byte[size];
+      in.readFully(data);
+      SAMMessageSess sess=isRaw ? rawSession : datagramSession;
+      if (!sess.sendBytes(dest,data,proto,fromPort,toPort)) {
+        if (_log.shouldWarn())         _log.warn((isRaw ? "SEND RAW to " : "SEND DATAGRAM to ") + dest + " size "+ size+ " failed");
+      }
+      return true;
+    }
+ catch (    EOFException e) {
+      if (_log.shouldWarn())       _log.warn("Too few bytes with SEND message (expected: " + size,e);
+      return false;
+    }
+catch (    IOException e) {
+      if (_log.shouldWarn())       _log.warn("Caught IOException while parsing SEND message",e);
+      return false;
+    }
+catch (    DataFormatException e) {
+      if (_log.shouldWarn())       _log.warn("Invalid key specified with SEND message",e);
+      return false;
+    }
+catch (    I2PSessionException e) {
+      _log.error("Session error with SEND message",e);
+      return false;
+    }
+  }
+ else {
+    if (_log.shouldWarn())     _log.warn("Unrecognized message opcode: \"" + opcode + "\"");
+    return false;
+  }
+}

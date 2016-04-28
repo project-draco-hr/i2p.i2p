@@ -7,6 +7,13 @@
   SendJob success=new SendJob(getContext());
   if (_leaseSet != null) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug(getJobId() + ": Send outbound client message - leaseSet found locally for " + _toString);
+    if (!_leaseSet.isCurrent(Router.CLOCK_FUDGE_FACTOR / 4)) {
+      if (_log.shouldWarn()) {
+        long exp=now - _leaseSet.getLatestLeaseDate();
+        _log.warn(getJobId() + ": leaseSet expired " + DataHelper.formatDuration(exp)+ " ago, firing search: "+ _leaseSet.getHash().toBase32());
+      }
+      getContext().netDb().lookupLeaseSetRemotely(_leaseSet.getHash(),_from.calculateHash());
+    }
     success.runJob();
   }
  else {

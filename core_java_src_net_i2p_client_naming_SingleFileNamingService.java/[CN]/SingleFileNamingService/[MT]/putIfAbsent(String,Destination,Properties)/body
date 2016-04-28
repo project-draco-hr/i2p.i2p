@@ -1,5 +1,5 @@
 {
-  OutputStream out=null;
+  BufferedWriter out=null;
   if (!getWriteLock())   return false;
   try {
     if (_isClosed)     return false;
@@ -12,10 +12,11 @@
         return false;
       }
     }
-    out=new SecureFileOutputStream(_file,true);
-    out.write(hostname.getBytes("UTF-8"));
+    out=new BufferedWriter(new OutputStreamWriter(new SecureFileOutputStream(_file,true),"UTF-8"));
+    out.write(hostname);
     out.write('=');
-    out.write(d.toBase64().getBytes());
+    out.write(d.toBase64());
+    if (options != null)     writeOptions(options,out);
     out.write('\n');
     out.close();
     for (    NamingServiceListener nsl : _listeners) {

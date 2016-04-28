@@ -1,23 +1,42 @@
 {
-  if (!(event instanceof WrapperControlEvent))   return;
-  WrapperControlEvent wce=(WrapperControlEvent)event;
   Log log=_ctxt.logManager().getLog(ConfigServiceHandler.class);
-  if (log.shouldLog(Log.WARN))   log.warn("Got signal: " + wce.getControlEventName());
-  int sig=wce.getControlEvent();
+  if (SystemVersion.isWindows() && (event instanceof WrapperServiceControlEvent)) {
+    WrapperServiceControlEvent wcse=(WrapperServiceControlEvent)event;
+    int code=wcse.getServiceControlCode();
+switch (code) {
+case WrapperManager.SERVICE_CONTROL_CODE_STOP:
+case WrapperManager.SERVICE_CONTROL_CODE_SHUTDOWN:
+      log.log(Log.CRIT,"Hard shutdown initiated by Windows service control: " + code);
+    ConfigServiceHandler.registerWrapperNotifier(_ctxt,Router.EXIT_HARD,false);
+  _ctxt.router().shutdown(Router.EXIT_HARD);
+break;
+default :
+if (log.shouldWarn()) log.warn("Unhandled control event code: " + code);
+break;
+}
+return;
+}
+ else if (!(event instanceof WrapperControlEvent)) {
+if (log.shouldWarn()) log.warn("Got unhandled event: " + event);
+return;
+}
+WrapperControlEvent wce=(WrapperControlEvent)event;
+if (log.shouldLog(Log.WARN)) log.warn("Got signal: " + wce.getControlEventName());
+int sig=wce.getControlEvent();
 switch (sig) {
 case WrapperManager.WRAPPER_CTRL_HUP_EVENT:
-    if (_ctxt.getBooleanPropertyDefaultTrue(PROP_GRACEFUL_HUP)) {
-      wce.consume();
-      if (!(_ctxt.router().gracefulShutdownInProgress() || _ctxt.router().isFinalShutdownInProgress())) {
-        System.err.println("WARN: Graceful shutdown initiated by SIGHUP");
-        log.logAlways(Log.WARN,"Graceful shutdown initiated by SIGHUP");
-        ConfigServiceHandler.registerWrapperNotifier(_ctxt,Router.EXIT_GRACEFUL,false);
-        _ctxt.router().shutdownGracefully();
-      }
-    }
+if (_ctxt.getBooleanPropertyDefaultTrue(PROP_GRACEFUL_HUP)) {
+wce.consume();
+if (!(_ctxt.router().gracefulShutdownInProgress() || _ctxt.router().isFinalShutdownInProgress())) {
+System.err.println("WARN: Graceful shutdown initiated by SIGHUP");
+log.logAlways(Log.WARN,"Graceful shutdown initiated by SIGHUP");
+ConfigServiceHandler.registerWrapperNotifier(_ctxt,Router.EXIT_GRACEFUL,false);
+_ctxt.router().shutdownGracefully();
+}
+}
  else {
-      log.log(Log.CRIT,"Hard shutdown initiated by SIGHUP");
-    }
-  break;
+log.log(Log.CRIT,"Hard shutdown initiated by SIGHUP");
+}
+break;
 }
 }

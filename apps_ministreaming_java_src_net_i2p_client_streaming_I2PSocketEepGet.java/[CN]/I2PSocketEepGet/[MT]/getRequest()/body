@@ -1,8 +1,16 @@
 {
   StringBuilder buf=new StringBuilder(2048);
-  URL url=new URL(_actualURL);
-  String path=url.getPath();
-  String query=url.getQuery();
+  URI url;
+  try {
+    url=new URI(_actualURL);
+  }
+ catch (  URISyntaxException use) {
+    IOException ioe=new MalformedURLException("Bad URL");
+    ioe.initCause(use);
+    throw ioe;
+  }
+  String path=url.getRawPath();
+  String query=url.getRawQuery();
   if (query != null)   path=path + '?' + query;
   if (!path.startsWith("/"))   path='/' + path;
   buf.append("GET ").append(path).append(" HTTP/1.1\r\n" + "Host: ").append(url.getHost()).append("\r\n");
@@ -21,5 +29,6 @@
   }
   if (!uaOverridden)   buf.append("User-Agent: " + USER_AGENT + "\r\n");
   buf.append("\r\n");
+  if (_log.shouldDebug())   _log.debug("Request: [" + buf.toString() + "]");
   return buf.toString();
 }

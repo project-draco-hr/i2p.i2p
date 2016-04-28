@@ -17,7 +17,9 @@
           ks.load(null,DEFAULT_KEYSTORE_PASSWORD.toCharArray());
           success=addCerts(new File(System.getProperty("java.home"),"etc/security/cacerts"),ks) > 0;
         }
- catch (        Exception e) {
+ catch (        IOException e) {
+        }
+catch (        GeneralSecurityException e) {
         }
       }
  else {
@@ -29,11 +31,16 @@
       if (!success)       success=loadCerts(new File(System.getProperty("java.home"),"lib/security/cacerts"),ks);
     }
   }
-  if (!success) {
+  if (success) {
+    removeBlacklistedCerts(ks);
+  }
+ else {
     try {
       ks.load(null,DEFAULT_KEYSTORE_PASSWORD.toCharArray());
     }
- catch (    Exception e) {
+ catch (    IOException e) {
+    }
+catch (    GeneralSecurityException e) {
     }
     error("All key store loads failed, will only load local certificates",null);
   }

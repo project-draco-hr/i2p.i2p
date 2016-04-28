@@ -6,7 +6,8 @@
     if (sender == null) {
       return;
     }
-    _ctx.jobQueue().addJob(new DistributeLocal(toDest,runner,sender,fromDest,payload,msgId,messageNonce));
+    Job j=new DistributeLocal(toDest,runner,sender,fromDest,payload,msgId,messageNonce);
+    j.runJob();
   }
  else {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Message " + msgId + " is targeting a REMOTE destination!  Added to the client message pool");
@@ -14,7 +15,9 @@
     if (runner == null) {
       return;
     }
-    ClientMessage msg=new ClientMessage(toDest,payload,runner.getConfig(),runner.getConfig().getDestination(),msgId,messageNonce,expiration,flags);
+    SessionConfig config=runner.getConfig(fromDest.calculateHash());
+    if (config == null)     return;
+    ClientMessage msg=new ClientMessage(toDest,payload,config,fromDest,msgId,messageNonce,expiration,flags);
     _ctx.clientMessagePool().add(msg,true);
   }
 }

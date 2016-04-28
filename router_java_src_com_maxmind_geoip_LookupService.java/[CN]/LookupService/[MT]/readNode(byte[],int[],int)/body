@@ -1,0 +1,27 @@
+{
+  if ((dboptions & GEOIP_MEMORY_CACHE) == 1) {
+    System.arraycopy(dbbuffer,(2 * recordLength * offset),buf,0,2 * recordLength);
+  }
+ else   if ((dboptions & GEOIP_INDEX_CACHE) != 0) {
+    System.arraycopy(index_cache,(2 * recordLength * offset),buf,0,2 * recordLength);
+  }
+ else {
+    try {
+      file.seek(2 * recordLength * offset);
+      file.read(buf);
+    }
+ catch (    IOException e) {
+      throw new InvalidDatabaseException("Error seeking in database",e);
+    }
+  }
+  for (int i=0; i < 2; i++) {
+    x[i]=0;
+    for (int j=0; j < recordLength; j++) {
+      int y=buf[i * recordLength + j];
+      if (y < 0) {
+        y+=256;
+      }
+      x[i]+=(y << (j * 8));
+    }
+  }
+}

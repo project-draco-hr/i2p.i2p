@@ -1,61 +1,93 @@
 {
   if (_log.shouldLog(Log.DEBUG))   _log.debug("IBMD for " + _client + " to "+ target+ " / "+ tunnel+ " : "+ msg);
   int type=msg.getType();
-  if ((_client != null) && (type == DatabaseSearchReplyMessage.MESSAGE_TYPE)) {
-  }
- else   if ((_client != null) && (type == DatabaseStoreMessage.MESSAGE_TYPE)) {
+  if (_client != null) {
+switch (type) {
+case DatabaseSearchReplyMessage.MESSAGE_TYPE:
+      break;
+case DatabaseStoreMessage.MESSAGE_TYPE:
     DatabaseStoreMessage dsm=(DatabaseStoreMessage)msg;
-    if (dsm.getEntry().getType() == DatabaseEntry.KEY_TYPE_ROUTERINFO) {
-      if (_log.shouldLog(Log.WARN))       _log.warn("Dropping DSM down a tunnel for " + _client + ": "+ msg);
-      Hash key=dsm.getKey();
-      if (_context.routerHash().equals(key))       return;
-      RouterInfo ri=(RouterInfo)dsm.getEntry();
-      if (!key.equals(ri.getIdentity().getHash()))       return;
-      if (!ri.isValid())       return;
-      RouterInfo oldri=_context.netDb().lookupRouterInfoLocally(key);
-      if (oldri != null && oldri.getPublished() < ri.getPublished() && !FloodfillNetworkDatabaseFacade.isFloodfill(ri)) {
-        if (_log.shouldLog(Log.WARN))         _log.warn("Updating caps for RI " + key + " from \""+ oldri.getCapabilities()+ "\" to \""+ ri.getCapabilities()+ '"');
-        _context.peerManager().setCapabilities(key,ri.getCapabilities());
-      }
-      return;
+  if (dsm.getEntry().getType() == DatabaseEntry.KEY_TYPE_ROUTERINFO) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Dropping DSM down a tunnel for " + _client + ": "+ msg);
+    Hash key=dsm.getKey();
+    if (_context.routerHash().equals(key))     return;
+    RouterInfo ri=(RouterInfo)dsm.getEntry();
+    if (!key.equals(ri.getIdentity().getHash()))     return;
+    if (!ri.isValid())     return;
+    RouterInfo oldri=_context.netDb().lookupRouterInfoLocally(key);
+    if (oldri != null && oldri.getPublished() < ri.getPublished() && !FloodfillNetworkDatabaseFacade.isFloodfill(ri)) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Updating caps for RI " + key + " from \""+ oldri.getCapabilities()+ "\" to \""+ ri.getCapabilities()+ '"');
+      _context.peerManager().setCapabilities(key,ri.getCapabilities());
     }
- else     if (dsm.getReplyToken() != 0) {
-      if (_log.shouldLog(Log.WARN))       _log.warn("Dropping LS DSM w/ reply token down a tunnel for " + _client + ": "+ msg);
-      return;
-    }
- else {
-      ((LeaseSet)dsm.getEntry()).setReceivedAsReply();
-    }
-  }
- else   if ((_client != null) && (type != DeliveryStatusMessage.MESSAGE_TYPE) && (type != GarlicMessage.MESSAGE_TYPE)&& (type != TunnelBuildReplyMessage.MESSAGE_TYPE)&& (type != VariableTunnelBuildReplyMessage.MESSAGE_TYPE)) {
-    _context.statManager().addRateData("tunnel.dropDangerousClientTunnelMessage",1,type);
-    _log.error("Dropped dangerous message down a tunnel for " + _client + ": "+ msg,new Exception("cause"));
     return;
   }
-  if ((target == null) || ((tunnel == null) && (_context.routerHash().equals(target)))) {
-    if (type == GarlicMessage.MESSAGE_TYPE) {
-      _context.inNetMessagePool().handleReplies(msg);
-      _receiver.receive((GarlicMessage)msg);
-    }
- else {
-      if (_log.shouldLog(Log.INFO))       _log.info("distributing inbound tunnel message into our inNetMessagePool: " + msg);
-      _context.inNetMessagePool().add(msg,null,null);
-    }
+ else   if (dsm.getReplyToken() != 0) {
+    _context.statManager().addRateData("tunnel.dropDangerousClientTunnelMessage",1,type);
+    _log.error("Dropping LS DSM w/ reply token down a tunnel for " + _client + ": "+ msg);
+    return;
   }
  else {
-    TunnelInfo out=_context.tunnelManager().selectOutboundTunnel(_client,target);
-    if (out == null) {
-      if (_log.shouldLog(Log.WARN))       _log.warn("no outbound tunnel to send the client message for " + _client + ": "+ msg);
-      return;
-    }
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("distributing IB tunnel msg type " + type + " back out "+ out+ " targetting "+ target);
-    TunnelId outId=out.getSendTunnelId(0);
-    if (outId == null) {
-      if (_log.shouldLog(Log.ERROR))       _log.error("wtf, outbound tunnel has no outboundId? " + out + " failing to distribute "+ msg);
-      return;
-    }
-    long exp=_context.clock().now() + 20 * 1000;
-    if (msg.getMessageExpiration() < exp)     msg.setMessageExpiration(exp);
-    _context.tunnelDispatcher().dispatchOutbound(msg,outId,tunnel,target);
+    ((LeaseSet)dsm.getEntry()).setReceivedAsReply();
   }
+break;
+case DeliveryStatusMessage.MESSAGE_TYPE:
+case GarlicMessage.MESSAGE_TYPE:
+case TunnelBuildReplyMessage.MESSAGE_TYPE:
+case VariableTunnelBuildReplyMessage.MESSAGE_TYPE:
+break;
+default :
+_context.statManager().addRateData("tunnel.dropDangerousClientTunnelMessage",1,type);
+_log.error("Dropped dangerous message down a tunnel for " + _client + ": "+ msg,new Exception("cause"));
+return;
+}
+}
+ else {
+switch (type) {
+case DatabaseStoreMessage.MESSAGE_TYPE:
+DatabaseStoreMessage dsm=(DatabaseStoreMessage)msg;
+if (dsm.getReplyToken() != 0) {
+_context.statManager().addRateData("tunnel.dropDangerousExplTunnelMessage",1,type);
+_log.error("Dropping DSM w/ reply token down a expl. tunnel: " + msg);
+return;
+}
+if (dsm.getEntry().getType() == DatabaseEntry.KEY_TYPE_LEASESET) ((LeaseSet)dsm.getEntry()).setReceivedAsReply();
+break;
+case DatabaseSearchReplyMessage.MESSAGE_TYPE:
+case DeliveryStatusMessage.MESSAGE_TYPE:
+case GarlicMessage.MESSAGE_TYPE:
+case TunnelBuildReplyMessage.MESSAGE_TYPE:
+case VariableTunnelBuildReplyMessage.MESSAGE_TYPE:
+break;
+default :
+_context.statManager().addRateData("tunnel.dropDangerousExplTunnelMessage",1,type);
+_log.error("Dropped dangerous message down expl tunnel: " + msg,new Exception("cause"));
+return;
+}
+}
+if ((target == null) || ((tunnel == null) && (_context.routerHash().equals(target)))) {
+if (type == GarlicMessage.MESSAGE_TYPE) {
+_context.inNetMessagePool().handleReplies(msg);
+_receiver.receive((GarlicMessage)msg);
+}
+ else {
+if (_log.shouldLog(Log.INFO)) _log.info("distributing inbound tunnel message into our inNetMessagePool: " + msg);
+_context.inNetMessagePool().add(msg,null,null);
+}
+}
+ else {
+TunnelInfo out=_context.tunnelManager().selectOutboundTunnel(_client,target);
+if (out == null) {
+if (_log.shouldLog(Log.WARN)) _log.warn("no outbound tunnel to send the client message for " + _client + ": "+ msg);
+return;
+}
+if (_log.shouldLog(Log.DEBUG)) _log.debug("distributing IB tunnel msg type " + type + " back out "+ out+ " targetting "+ target);
+TunnelId outId=out.getSendTunnelId(0);
+if (outId == null) {
+if (_log.shouldLog(Log.ERROR)) _log.error("strange? outbound tunnel has no outboundId? " + out + " failing to distribute "+ msg);
+return;
+}
+long exp=_context.clock().now() + 20 * 1000;
+if (msg.getMessageExpiration() < exp) msg.setMessageExpiration(exp);
+_context.tunnelDispatcher().dispatchOutbound(msg,outId,tunnel,target);
+}
 }

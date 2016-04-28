@@ -1,0 +1,26 @@
+{
+  if (publicSuffixMatcher != null && host.contains(".")) {
+    if (!matchDomainRoot(host,publicSuffixMatcher.getDomainRoot(identity))) {
+      return false;
+    }
+  }
+  final int asteriskIdx=identity.indexOf('*');
+  if (asteriskIdx != -1) {
+    final String prefix=identity.substring(0,asteriskIdx);
+    final String suffix=identity.substring(asteriskIdx + 1);
+    if (!prefix.isEmpty() && !host.startsWith(prefix)) {
+      return false;
+    }
+    if (!suffix.isEmpty() && !host.endsWith(suffix)) {
+      return false;
+    }
+    if (strict) {
+      final String remainder=host.substring(prefix.length(),host.length() - suffix.length());
+      if (remainder.contains(".")) {
+        return false;
+      }
+    }
+    return true;
+  }
+  return host.equalsIgnoreCase(identity);
+}

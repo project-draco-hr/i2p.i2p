@@ -1,6 +1,8 @@
 {
+  _log=_context.logManager().getLog(Router.class);
   if (!SystemVersion.isAndroid())   beginMarkingLiveliness();
   System.setProperty("router.version",RouterVersion.VERSION);
+  warmupCrypto();
   _context.initAll();
   if (_context.hasWrapper()) {
     File f=new File(System.getProperty("java.io.tmpdir"),"wrapper.log");
@@ -9,12 +11,10 @@
   }
   CryptoChecker.warnUnavailableCrypto(_context);
   _routerInfo=null;
-  _higherVersionSeen=false;
-  _log=_context.logManager().getLog(Router.class);
-  _log.info("New router created with config file " + _configFilename);
+  if (_log.shouldLog(Log.INFO))   _log.info("New router created with config file " + _configFilename);
   _oomListener=new OOMListener(_context);
   _shutdownHook=new ShutdownHook(_context);
-  _gracefulShutdownDetector=new I2PAppThread(new GracefulShutdown(_context),"Graceful shutdown hook",true);
+  _gracefulShutdownDetector=new I2PAppThread(new GracefulShutdown(_context),"Graceful ShutdownHook",true);
   _gracefulShutdownDetector.setPriority(Thread.NORM_PRIORITY + 1);
   _gracefulShutdownDetector.start();
   _watchdog=new RouterWatchdog(_context);

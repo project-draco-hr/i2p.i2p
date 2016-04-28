@@ -1,13 +1,15 @@
 {
   long delta=offsetMs - _offset;
   if (!force) {
-    if ((offsetMs > MAX_OFFSET) || (offsetMs < 0 - MAX_OFFSET)) {
-      getLog().error("Maximum offset shift exceeded [" + offsetMs + "], NOT HONORING IT");
+    if (!_isSystemClockBad && (offsetMs > MAX_OFFSET || offsetMs < 0 - MAX_OFFSET)) {
+      Log log=getLog();
+      if (log.shouldLog(Log.WARN))       log.warn("Maximum offset shift exceeded [" + offsetMs + "], NOT HONORING IT");
       return;
     }
     if (_alreadyChanged && (System.currentTimeMillis() - _startedOn > 10 * 60 * 1000)) {
       if ((delta > MAX_LIVE_OFFSET) || (delta < 0 - MAX_LIVE_OFFSET)) {
-        getLog().log(Log.CRIT,"The clock has already been updated, but you want to change it by " + delta + " to "+ offsetMs+ "?  Did something break?");
+        Log log=getLog();
+        if (log.shouldLog(Log.WARN))         log.warn("The clock has already been updated, ignoring request to change it by " + delta + " to "+ offsetMs,new Exception());
         return;
       }
     }
@@ -17,22 +19,24 @@
       return;
     }
     if (_alreadyChanged && stratum > _lastStratum && System.currentTimeMillis() - _lastChanged < MIN_DELAY_FOR_WORSE_STRATUM) {
-      getLog().debug("Ignoring update from a stratum " + stratum + " clock, we recently had an update from a stratum "+ _lastStratum+ " clock");
+      Log log=getLog();
+      if (log.shouldLog(Log.DEBUG))       log.debug("Ignoring update from a stratum " + stratum + " clock, we recently had an update from a stratum "+ _lastStratum+ " clock");
       return;
     }
     if (_context.getBooleanPropertyDefaultTrue("router.clockOffsetSanityCheck") && _alreadyChanged) {
-      long currentPeerClockSkew=((RouterContext)_context).commSystem().getFramedAveragePeerClockSkew(50);
+      long currentPeerClockSkew=((RouterContext)_context).commSystem().getFramedAveragePeerClockSkew(33);
       long predictedPeerClockSkew=currentPeerClockSkew + delta;
+      Log log=getLog();
       if ((Math.abs(predictedPeerClockSkew) > (Math.abs(currentPeerClockSkew) + 5 * 1000)) || (Math.abs(predictedPeerClockSkew) > 20 * 1000)) {
-        getLog().error("Ignoring clock offset " + offsetMs + "ms (current "+ _offset+ "ms) since it would increase peer clock skew from "+ currentPeerClockSkew+ "ms to "+ predictedPeerClockSkew+ "ms. Bad time server?");
+        if (log.shouldWarn())         log.warn("Ignoring clock offset " + offsetMs + "ms (current "+ _offset+ "ms) since it would increase peer clock skew from "+ currentPeerClockSkew+ "ms to "+ predictedPeerClockSkew+ "ms. Stratrum: "+ stratum);
         return;
       }
  else {
-        getLog().debug("Approving clock offset " + offsetMs + "ms (current "+ _offset+ "ms) since it would decrease peer clock skew from "+ currentPeerClockSkew+ "ms to "+ predictedPeerClockSkew+ "ms.");
+        if (log.shouldInfo())         log.info("Approving clock offset " + offsetMs + "ms (current "+ _offset+ "ms) since it would decrease peer clock skew from "+ currentPeerClockSkew+ "ms to "+ predictedPeerClockSkew+ "ms. Stratrum: "+ stratum);
       }
     }
   }
-  if (_alreadyChanged && (stratum >= _lastStratum || _startedOn - System.currentTimeMillis() > 60 * 1000)) {
+  if (_alreadyChanged && (stratum >= _lastStratum || System.currentTimeMillis() - _startedOn > 60 * 1000)) {
     if (delta > 15 * 1000)     getLog().logAlways(Log.WARN,"Warning - Updating target clock offset to " + offsetMs + "ms from "+ _offset+ "ms, Stratum "+ stratum);
  else     if (getLog().shouldLog(Log.INFO))     getLog().info("Updating target clock offset to " + offsetMs + "ms from "+ _offset+ "ms, Stratum "+ stratum);
     if (!_statCreated) {
@@ -40,14 +44,25 @@
       _statCreated=true;
     }
     _context.statManager().addRateData("clock.skew",delta);
-    _desiredOffset=offsetMs;
+    if (_context.getBooleanProperty(PROP_DISABLE_ADJUSTMENT)) {
+      getLog().error("Clock adjustment disabled",new Exception());
+    }
+ else {
+      _desiredOffset=offsetMs;
+    }
   }
  else {
-    getLog().log(Log.INFO,"Initializing clock offset to " + offsetMs + "ms, Stratum "+ stratum);
+    Log log=getLog();
+    if (log.shouldLog(Log.INFO))     log.info("Initializing clock offset to " + offsetMs + "ms, Stratum "+ stratum);
     _alreadyChanged=true;
-    _offset=offsetMs;
-    _desiredOffset=offsetMs;
-    fireOffsetChanged(delta);
+    if (_context.getBooleanProperty(PROP_DISABLE_ADJUSTMENT)) {
+      log.error("Clock adjustment disabled",new Exception());
+    }
+ else {
+      _offset=offsetMs;
+      _desiredOffset=offsetMs;
+      fireOffsetChanged(delta);
+    }
   }
   _lastChanged=System.currentTimeMillis();
   _lastStratum=stratum;

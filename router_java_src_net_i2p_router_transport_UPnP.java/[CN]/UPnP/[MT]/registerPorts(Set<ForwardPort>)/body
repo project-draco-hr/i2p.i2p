@@ -1,15 +1,16 @@
 {
   if (_serviceLacksAPM) {
     if (_log.shouldLog(Log.WARN))     _log.warn("UPnP device does not support port forwarding");
+    Map<ForwardPort,ForwardPortStatus> map=new HashMap<ForwardPort,ForwardPortStatus>(portsToForwardNow.size());
     for (    ForwardPort port : portsToForwardNow) {
       ForwardPortStatus fps=new ForwardPortStatus(ForwardPortStatus.DEFINITE_FAILURE,"UPnP device does not support port forwarding",port.portNumber);
-      Map<ForwardPort,ForwardPortStatus> map=Collections.singletonMap(port,fps);
-      forwardCallback.portForwardStatus(map);
+      map.put(port,fps);
     }
+    forwardCallback.portForwardStatus(map);
     return;
   }
   if (_log.shouldLog(Log.INFO))   _log.info("Starting thread to forward " + portsToForwardNow.size() + " ports");
-  Thread t=new Thread(new RegisterPortsThread(portsToForwardNow));
+  Thread t=new I2PThread(new RegisterPortsThread(portsToForwardNow));
   t.setName("UPnP Port Opener " + __id.incrementAndGet());
   t.setDaemon(true);
   t.start();

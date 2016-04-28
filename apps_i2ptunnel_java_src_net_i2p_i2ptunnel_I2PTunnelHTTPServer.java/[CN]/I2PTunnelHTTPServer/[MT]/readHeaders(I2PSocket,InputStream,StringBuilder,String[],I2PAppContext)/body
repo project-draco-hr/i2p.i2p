@@ -1,0 +1,67 @@
+{
+  HashMap<String,List<String>> headers=new HashMap<String,List<String>>();
+  StringBuilder buf=new StringBuilder(128);
+  long expire=ctx.clock().now() + TOTAL_HEADER_TIMEOUT;
+  if (socket != null) {
+    try {
+      readLine(socket,command,HEADER_TIMEOUT);
+    }
+ catch (    LineTooLongException ltle) {
+      throw new RequestTooLongException("Request too long - max " + MAX_LINE_LENGTH);
+    }
+  }
+ else {
+    boolean ok=DataHelper.readLine(in,command);
+    if (!ok)     throw new EOFException("EOF reached before the end of the headers");
+  }
+  int totalSize=command.length();
+  int i=0;
+  while (true) {
+    if (++i > MAX_HEADERS) {
+      throw new LineTooLongException("Too many header lines - max " + MAX_HEADERS);
+    }
+    buf.setLength(0);
+    if (socket != null) {
+      readLine(socket,buf,expire - ctx.clock().now());
+    }
+ else {
+      boolean ok=DataHelper.readLine(in,buf);
+      if (!ok)       throw new BadRequestException("EOF reached before the end of the headers");
+    }
+    if ((buf.length() == 0) || ((buf.charAt(0) == '\n') || (buf.charAt(0) == '\r'))) {
+      return headers;
+    }
+ else {
+      if (ctx.clock().now() > expire) {
+        throw new SocketTimeoutException("Headers took too long");
+      }
+      int split=buf.indexOf(":");
+      if (split <= 0)       throw new BadRequestException("Invalid HTTP header, missing colon: \"" + buf + "\" request: \""+ command+ '"');
+      totalSize+=buf.length();
+      if (totalSize > MAX_TOTAL_HEADER_SIZE)       throw new LineTooLongException("Req+headers too big");
+      String name=buf.substring(0,split).trim();
+      String value=null;
+      if (buf.length() > split + 1)       value=buf.substring(split + 1).trim();
+ else       value="";
+      String lcName=name.toLowerCase(Locale.US);
+      if ("accept-encoding".equals(lcName))       name="Accept-Encoding";
+ else       if ("x-accept-encoding".equals(lcName))       name="X-Accept-Encoding";
+ else       if ("x-forwarded-for".equals(lcName))       name="X-Forwarded-For";
+ else       if ("x-forwarded-server".equals(lcName))       name="X-Forwarded-Server";
+ else       if ("x-forwarded-host".equals(lcName))       name="X-Forwarded-Host";
+ else       if ("user-agent".equals(lcName))       name="User-Agent";
+ else       if ("referer".equals(lcName))       name="Referer";
+      boolean skip=false;
+      for (      String skipHeader : skipHeaders) {
+        if (skipHeader.toLowerCase(Locale.US).equals(lcName)) {
+          skip=true;
+          break;
+        }
+      }
+      if (skip) {
+        continue;
+      }
+      addEntry(headers,name,value);
+    }
+  }
+}

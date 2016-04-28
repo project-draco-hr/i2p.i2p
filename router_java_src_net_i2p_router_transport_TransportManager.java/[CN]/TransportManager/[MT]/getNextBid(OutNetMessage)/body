@@ -30,8 +30,23 @@
       _context.banlist().banlistRouterForever(peer,_x("Unsupported signature type"));
     }
  else     if (unreachableTransports >= _transports.size() && countActivePeers() > 0) {
-      _context.statManager().addRateData("transport.banlistOnUnreachable",msg.getLifetime(),msg.getLifetime());
-      _context.banlist().banlistRouter(peer,_x("Unreachable on any transport"));
+      boolean incompat=false;
+      RouterInfo us=_context.router().getRouterInfo();
+      if (us != null) {
+        RouterIdentity id=us.getIdentity();
+        if (id.getSigType() != SigType.DSA_SHA1) {
+          String v=msg.getTarget().getVersion();
+          if (VersionComparator.comp(v,NTCPTransport.MIN_SIGTYPE_VERSION) < 0)           incompat=true;
+        }
+      }
+      if (incompat) {
+        _context.statManager().addRateData("transport.banlistOnUnsupportedSigType",1);
+        _context.banlist().banlistRouter(peer,_x("No support for our signature type"),null,null,_context.clock().now() + SIGTYPE_BANLIST_DURATION);
+      }
+ else {
+        _context.statManager().addRateData("transport.banlistOnUnreachable",msg.getLifetime(),msg.getLifetime());
+        _context.banlist().banlistRouter(peer,_x("Unreachable on any transport"));
+      }
     }
   }
  else   if (rv == null) {

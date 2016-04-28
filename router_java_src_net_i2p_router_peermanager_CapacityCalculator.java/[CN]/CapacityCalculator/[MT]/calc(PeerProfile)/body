@@ -18,7 +18,7 @@
       capacity=capacity10m * periodWeight(10 * 60 * 1000) + capacity30m * periodWeight(30 * 60 * 1000) + capacity60m * periodWeight(60 * 60 * 1000) + capacity1d * periodWeight(24 * 60 * 60* 1000);
     }
   }
-  I2PAppContext context=profile.getContext();
+  RouterContext context=profile.getContext();
   long now=context.clock().now();
   if (profile.getTunnelHistory().getLastRejectedTransient() > now - 5 * 60 * 1000)   capacity=1;
  else   if (profile.getTunnelHistory().getLastRejectedProbabalistic() > now - 5 * 60 * 1000)   capacity-=context.random().nextInt(5);
@@ -37,6 +37,8 @@
     capacity+=bonus;
   }
   if (profile.wasUnreachable())   capacity-=PENALTY_UNREACHABLE;
+  RouterInfo ri=context.netDb().lookupRouterInfoLocally(profile.getPeer());
+  if (!FloodfillNetworkDatabaseFacade.isFloodfill(ri))   capacity+=BONUS_NON_FLOODFILL;
   capacity-=profile.getXORDistance() * (BONUS_XOR / 128);
   capacity+=profile.getCapacityBonus();
   if (capacity < 0)   capacity=0;

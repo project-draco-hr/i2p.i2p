@@ -2,15 +2,28 @@
   if (_log.shouldLog(Log.DEBUG))   _log.debug(peer + " rcv request(" + piece+ ", "+ begin+ ", "+ length+ ") ");
   if (metainfo == null)   return;
   if (choking) {
-    if (_log.shouldLog(Log.INFO))     _log.info("Request received, but choking " + peer);
+    if (peer.supportsFast()) {
+      if (_log.shouldInfo())       _log.info("Request received, sending reject to choked " + peer);
+      out.sendReject(piece,begin,length);
+    }
+ else {
+      if (_log.shouldInfo())       _log.info("Request received, but choking " + peer);
+    }
     return;
   }
   if (piece < 0 || piece >= metainfo.getPieces() || begin < 0 || begin > metainfo.getPieceLength(piece) || length <= 0 || length > MAX_PARTSIZE) {
     if (_log.shouldLog(Log.WARN))     _log.warn("Got strange 'request: " + piece + ", "+ begin+ ", "+ length+ "' message from "+ peer);
+    if (peer.supportsFast())     out.sendReject(piece,begin,length);
     return;
   }
   if (out.queuedBytes() + length > MAX_PIPELINE_BYTES) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("Discarding request over pipeline limit from " + peer);
+    if (peer.supportsFast()) {
+      if (_log.shouldWarn())       _log.warn("Rejecting request over pipeline limit from " + peer);
+      out.sendReject(piece,begin,length);
+    }
+ else {
+      if (_log.shouldWarn())       _log.warn("Discarding request over pipeline limit from " + peer);
+    }
     return;
   }
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Queueing (" + piece + ", "+ begin+ ", "+ length+ ")"+ " to "+ peer);

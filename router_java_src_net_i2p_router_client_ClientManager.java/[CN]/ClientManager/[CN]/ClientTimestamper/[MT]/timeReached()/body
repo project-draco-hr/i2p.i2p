@@ -1,0 +1,16 @@
+{
+  if (!_isStarted)   return;
+  for (  ClientConnectionRunner runner : _runners.values()) {
+    if (runner instanceof QueuedClientConnectionRunner)     continue;
+    if (runner.isDead())     continue;
+    SessionConfig cfg=runner.getPrimaryConfig();
+    if (cfg == null)     continue;
+    if (runner.getLeaseSet(cfg.getDestination().calculateHash()) == null)     continue;
+    try {
+      runner.doSend(new SetDateMessage(runner.getClientVersion() != null ? CoreVersion.VERSION : null));
+    }
+ catch (    I2CPMessageException ime) {
+    }
+  }
+  if (_isStarted)   schedule(LOOP_TIME);
+}

@@ -14,11 +14,16 @@
       return false;
     }
   }
-  PacketLocal pong=new PacketLocal(_context,dest);
+  PacketLocal pong=new PacketLocal(_context,dest,ping.getSession());
   pong.setFlag(Packet.FLAG_ECHO | Packet.FLAG_NO_ACK);
   pong.setReceiveStreamId(ping.getSendStreamId());
   pong.setLocalPort(ping.getLocalPort());
   pong.setRemotePort(ping.getRemotePort());
+  ByteArray payload=ping.getPayload();
+  if (payload != null) {
+    if (payload.getValid() > MAX_PONG_PAYLOAD)     payload.setValid(MAX_PONG_PAYLOAD);
+    pong.setPayload(payload);
+  }
   _outboundQueue.enqueue(pong);
   return true;
 }

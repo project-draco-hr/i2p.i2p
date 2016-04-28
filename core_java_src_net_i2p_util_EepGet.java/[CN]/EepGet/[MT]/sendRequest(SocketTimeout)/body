@@ -25,18 +25,33 @@
     _proxy=InternalSocket.getSocket(_proxyHost,_proxyPort);
   }
  else {
-    URL url=new URL(_actualURL);
-    if ("http".equals(url.getProtocol())) {
-      String host=url.getHost();
-      String hostlc=host.toLowerCase(Locale.US);
-      if (hostlc.endsWith(".i2p"))       throw new UnknownHostException("I2P addresses must be proxied");
-      if (hostlc.endsWith(".onion"))       throw new UnknownHostException("Tor addresses must be proxied");
-      int port=url.getPort();
-      if (port == -1)       port=80;
-      _proxy=new Socket(host,port);
-    }
+    try {
+      URI url=new URI(_actualURL);
+      if ("http".equals(url.getScheme())) {
+        String host=url.getHost();
+        if (host == null)         throw new MalformedURLException("URL is not supported:" + _actualURL);
+        String hostlc=host.toLowerCase(Locale.US);
+        if (hostlc.endsWith(".i2p"))         throw new UnknownHostException("I2P addresses must be proxied");
+        if (hostlc.endsWith(".onion"))         throw new UnknownHostException("Tor addresses must be proxied");
+        int port=url.getPort();
+        if (port == -1)         port=80;
+        if (_fetchHeaderTimeout > 0) {
+          _proxy=new Socket();
+          _proxy.setSoTimeout(_fetchHeaderTimeout);
+          _proxy.connect(new InetSocketAddress(host,port),_fetchHeaderTimeout);
+        }
  else {
-      throw new MalformedURLException("URL is not supported:" + _actualURL);
+          _proxy=new Socket(host,port);
+        }
+      }
+ else {
+        throw new MalformedURLException("URL is not supported:" + _actualURL);
+      }
+    }
+ catch (    URISyntaxException use) {
+      IOException ioe=new MalformedURLException("Request URL is invalid");
+      ioe.initCause(use);
+      throw ioe;
     }
   }
   _proxyIn=_proxy.getInputStream();

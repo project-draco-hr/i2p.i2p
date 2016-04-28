@@ -1,0 +1,93 @@
+{
+  if (ks.exists()) {
+    try {
+      if (getCert(ks,ksPW,alias) != null) {
+        error("Not overwriting key " + alias + ", already exists in "+ ks,null);
+        return false;
+      }
+    }
+ catch (    IOException e) {
+      error("Not overwriting key \"" + alias + "\", already exists in "+ ks,e);
+      return false;
+    }
+catch (    GeneralSecurityException e) {
+      error("Not overwriting key \"" + alias + "\", already exists in "+ ks,e);
+      return false;
+    }
+  }
+ else {
+    File dir=ks.getParentFile();
+    if (dir != null && !dir.exists()) {
+      File sdir=new SecureDirectory(dir.getAbsolutePath());
+      if (!sdir.mkdir()) {
+        error("Can't create directory " + dir,null);
+        return false;
+      }
+    }
+  }
+  String keytool=(new File(System.getProperty("java.home"),"bin/keytool")).getAbsolutePath();
+  List<String> a=new ArrayList<String>(32);
+  a.add(keytool);
+  a.add("-genkey");
+  a.add("-storetype");
+  a.add(KeyStore.getDefaultType());
+  a.add("-keystore");
+  a.add(ks.getAbsolutePath());
+  a.add("-storepass");
+  a.add(ksPW);
+  a.add("-alias");
+  a.add(alias);
+  a.add("-dname");
+  a.add("CN=" + cname + ",OU="+ ou+ ",O=I2P Anonymous Network,L=XX,ST=XX,C=XX");
+  a.add("-validity");
+  a.add(Integer.toString(validDays));
+  a.add("-keyalg");
+  a.add(keyAlg);
+  a.add("-sigalg");
+  a.add(getSigAlg(keySize,keyAlg));
+  a.add("-keysize");
+  a.add(Integer.toString(keySize));
+  a.add("-keypass");
+  a.add(keyPW);
+  if (keyAlg.equals("Ed") || keyAlg.equals("EdDSA") || keyAlg.equals("ElGamal")) {
+    File f=I2PAppContext.getGlobalContext().getBaseDir();
+    f=new File(f,"lib");
+    f=new File(f,"i2p.jar");
+    a.add("-providerpath");
+    a.add(f.getAbsolutePath());
+    a.add("-providerclass");
+    a.add("net.i2p.crypto.provider.I2PProvider");
+  }
+  String[] args=a.toArray(new String[a.size()]);
+  boolean success=(new ShellCommand()).executeSilentAndWaitTimed(args,240);
+  if (success) {
+    success=ks.exists();
+    if (success) {
+      try {
+        success=getPrivateKey(ks,ksPW,alias,keyPW) != null;
+        if (!success)         error("Key gen failed to get private key",null);
+      }
+ catch (      IOException e) {
+        error("Key gen failed to get private key",e);
+        success=false;
+      }
+catch (      GeneralSecurityException e) {
+        error("Key gen failed to get private key",e);
+        success=false;
+      }
+    }
+    if (!success)     error("Key gen failed for unknown reasons",null);
+  }
+  if (success) {
+    SecureFileOutputStream.setPerms(ks);
+    info("Created self-signed certificate for " + cname + " in keystore: "+ ks.getAbsolutePath());
+  }
+ else {
+    StringBuilder buf=new StringBuilder(256);
+    for (int i=0; i < args.length; i++) {
+      buf.append('"').append(args[i]).append("\" ");
+    }
+    error("Failed to generate keys using command line: " + buf,null);
+  }
+  return success;
+}

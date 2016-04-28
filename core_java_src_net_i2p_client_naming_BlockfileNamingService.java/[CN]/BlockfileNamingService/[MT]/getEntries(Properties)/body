@@ -32,20 +32,20 @@
 synchronized (_bf) {
     if (_isClosed)     return Collections.emptyMap();
     try {
-      SkipList sl=_bf.getIndex(listname,_stringSerializer,_destSerializer);
+      SkipList<String,DestEntry> sl=_bf.getIndex(listname,_stringSerializer,_destSerializer);
       if (sl == null) {
         if (_log.shouldLog(Log.WARN))         _log.warn("No skiplist found for lookup in " + listname);
         return Collections.emptyMap();
       }
-      SkipIterator iter;
+      SkipIterator<String,DestEntry> iter;
       if (beginWith != null)       iter=sl.find(beginWith);
  else       iter=sl.iterator();
-      Map<String,Destination> rv=new HashMap<String,Destination>();
+      Map<String,Destination> rv=new TreeMap<String,Destination>();
       for (int i=0; i < skip && iter.hasNext(); i++) {
         iter.next();
       }
       for (int i=0; i < limit && iter.hasNext(); ) {
-        String key=(String)iter.nextKey();
+        String key=iter.nextKey();
         if (startsWith != null) {
           if (startsWith.equals("[0-9]")) {
             if (key.charAt(0) > '9')             break;
@@ -54,7 +54,7 @@ synchronized (_bf) {
             break;
           }
         }
-        DestEntry de=(DestEntry)iter.next();
+        DestEntry de=iter.next();
         if (!validate(key,de,listname))         continue;
         if (search != null && key.indexOf(search) < 0)         continue;
         rv.put(key,de.dest);

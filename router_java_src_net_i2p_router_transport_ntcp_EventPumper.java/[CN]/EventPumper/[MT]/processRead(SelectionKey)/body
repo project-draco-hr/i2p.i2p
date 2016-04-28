@@ -3,7 +3,25 @@
   ByteBuffer buf=acquireBuf();
   try {
     int read=con.getChannel().read(buf);
-    if (read == -1) {
+    if (read < 0) {
+      if (con.isInbound() && con.getMessagesReceived() <= 0) {
+        InetAddress addr=con.getChannel().socket().getInetAddress();
+        int count;
+        if (addr != null) {
+          byte[] ip=addr.getAddress();
+          ByteArray ba=new ByteArray(ip);
+          count=_blockedIPs.increment(ba);
+          if (_log.shouldLog(Log.WARN))           _log.warn("Blocking IP " + Addresses.toString(ip) + " with count "+ count+ ": "+ con);
+        }
+ else {
+          count=1;
+          if (_log.shouldLog(Log.WARN))           _log.warn("EOF on inbound before receiving any: " + con);
+        }
+        _context.statManager().addRateData("ntcp.dropInboundNoMessage",count);
+      }
+ else {
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("EOF on " + con);
+      }
       con.close();
       releaseBuf(buf);
     }
@@ -20,7 +38,7 @@
         if (_log.shouldLog(Log.INFO))         _log.info("nothing to read for " + con + ", but stay interested");
       }
     }
- else     if (read > 0) {
+ else {
       con.clearZeroRead();
       buf.flip();
       FIFOBandwidthLimiter.Request req=_context.bandwidthLimiter().requestInbound(read,"NTCP read");
@@ -43,7 +61,24 @@
   }
 catch (  IOException ioe) {
     releaseBuf(buf);
-    if (_log.shouldLog(Log.INFO))     _log.info("error reading on " + con,ioe);
+    if (con.isInbound() && con.getMessagesReceived() <= 0) {
+      InetAddress addr=con.getChannel().socket().getInetAddress();
+      int count;
+      if (addr != null) {
+        byte[] ip=addr.getAddress();
+        ByteArray ba=new ByteArray(ip);
+        count=_blockedIPs.increment(ba);
+        if (_log.shouldLog(Log.WARN))         _log.warn("Blocking IP " + Addresses.toString(ip) + " with count "+ count+ ": "+ con);
+      }
+ else {
+        count=1;
+        if (_log.shouldLog(Log.WARN))         _log.warn("IOE on inbound before receiving any: " + con);
+      }
+      _context.statManager().addRateData("ntcp.dropInboundNoMessage",count);
+    }
+ else {
+      if (_log.shouldLog(Log.INFO))       _log.info("error reading on " + con,ioe);
+    }
     if (con.isEstablished()) {
       _context.statManager().addRateData("ntcp.readError",1);
     }

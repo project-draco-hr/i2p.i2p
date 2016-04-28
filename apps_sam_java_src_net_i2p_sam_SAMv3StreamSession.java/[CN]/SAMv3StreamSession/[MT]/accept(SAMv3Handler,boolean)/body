@@ -1,24 +1,30 @@
 {
 synchronized (this.socketServerLock) {
     if (this.socketServer != null) {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("a socket server is already defined for this destination");
-      throw new SAMException("a socket server is already defined for this destination");
+      if (_log.shouldWarn())       _log.warn("a forwarding server is already defined for this destination");
+      throw new SAMException("a forwarding server is already defined for this destination");
     }
-    this.socketServer=this.socketMgr.getServerSocket();
   }
-  I2PSocket i2ps;
-  i2ps=this.socketServer.accept();
-synchronized (this.socketServerLock) {
-    this.socketServer=null;
+  I2PSocket i2ps=null;
+  _acceptors.incrementAndGet();
+  try {
+    if (_acceptQueue != null)     i2ps=acceptSocket();
+ else     i2ps=socketMgr.getServerSocket().accept();
   }
-  SAMv3Handler.SessionRecord rec=SAMv3Handler.sSessionsHash.get(nick);
+  finally {
+    _acceptors.decrementAndGet();
+  }
+  SessionRecord rec=SAMv3Handler.sSessionsHash.get(nick);
   if (rec == null || i2ps == null)   throw new InterruptedIOException();
-  if (verbose)   handler.notifyStreamIncomingConnection(i2ps.getPeerDestination());
+  if (verbose) {
+    handler.notifyStreamIncomingConnection(i2ps.getPeerDestination(),i2ps.getPort(),i2ps.getLocalPort());
+  }
   handler.stealSocket();
   ReadableByteChannel fromClient=handler.getClientSocket();
   ReadableByteChannel fromI2P=Channels.newChannel(i2ps.getInputStream());
   WritableByteChannel toClient=handler.getClientSocket();
   WritableByteChannel toI2P=Channels.newChannel(i2ps.getOutputStream());
-  (new Thread(rec.getThreadGroup(),new I2PAppThread(new Pipe(fromClient,toI2P,"SAMPipeClientToI2P"),"SAMPipeClientToI2P"),"SAMPipeClientToI2P")).start();
-  (new Thread(rec.getThreadGroup(),new I2PAppThread(new Pipe(fromI2P,toClient,"SAMPipeI2PToClient"),"SAMPipeI2PToClient"),"SAMPipeI2PToClient")).start();
+  SAMBridge bridge=handler.getBridge();
+  (new I2PAppThread(rec.getThreadGroup(),new Pipe(fromClient,toI2P,bridge),"AcceptV3 SAMPipeClientToI2P")).start();
+  (new I2PAppThread(rec.getThreadGroup(),new Pipe(fromI2P,toClient,bridge),"AcceptV3 SAMPipeI2PToClient")).start();
 }

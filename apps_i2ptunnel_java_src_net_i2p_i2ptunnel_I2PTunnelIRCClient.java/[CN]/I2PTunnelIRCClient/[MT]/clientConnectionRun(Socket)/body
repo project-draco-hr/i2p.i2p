@@ -13,10 +13,26 @@
     DCCHelper dcc=_dccEnabled ? new DCC(s.getLocalAddress().getAddress()) : null;
     Thread in=new I2PAppThread(new IrcInboundFilter(s,i2ps,expectedPong,_log,dcc),"IRC Client " + _clientId + " in",true);
     in.start();
-    Thread out=new I2PAppThread(new IrcOutboundFilter(s,i2ps,expectedPong,_log,dcc),"IRC Client " + _clientId + " out",true);
-    out.start();
+    Runnable out=new IrcOutboundFilter(s,i2ps,expectedPong,_log,dcc);
+    out.run();
   }
- catch (  Exception ex) {
+ catch (  IOException ex) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Error connecting",ex);
+    try {
+      String name=addr != null ? addr.getHostName() : "undefined";
+      String msg=":" + name + " 499 you :"+ ex+ "\r\n";
+      s.getOutputStream().write(DataHelper.getUTF8(msg));
+    }
+ catch (    IOException ioe) {
+    }
+    closeSocket(s);
+    if (i2ps != null) {
+synchronized (sockLock) {
+        mySockets.remove(sockLock);
+      }
+    }
+  }
+catch (  I2PException ex) {
     if (_log.shouldLog(Log.WARN))     _log.warn("Error connecting",ex);
     try {
       String name=addr != null ? addr.getHostName() : "undefined";

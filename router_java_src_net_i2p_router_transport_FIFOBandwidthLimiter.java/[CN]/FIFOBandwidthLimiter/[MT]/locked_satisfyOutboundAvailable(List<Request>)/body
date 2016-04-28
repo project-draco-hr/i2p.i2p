@@ -1,7 +1,6 @@
 {
   for (int i=0; i < _pendingOutboundRequests.size(); i++) {
-    if (_availableOutbound.get() <= 0)     break;
-    SimpleRequest req=(SimpleRequest)_pendingOutboundRequests.get(i);
+    SimpleRequest req=_pendingOutboundRequests.get(i);
     long waited=now() - req.getRequestTime();
     if (req.getAborted()) {
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Aborting outbound request to " + req + " waited "+ waited+ "ms) pending "+ _pendingOutboundRequests.size());
@@ -9,12 +8,9 @@
       i--;
       continue;
     }
-    if (req.getAllocationsSinceWait() > 0) {
-      if (_log.shouldLog(Log.WARN))       _log.warn("multiple allocations since wait... ntcp shouldn't do this: " + req);
-      continue;
-    }
-    int requested=req.getPendingRequested();
     int avo=_availableOutbound.get();
+    if (avo <= 0)     break;
+    int requested=req.getPendingRequested();
     int allocated;
     if (avo >= requested)     allocated=requested;
  else     allocated=avo;
@@ -23,15 +19,9 @@
     req.allocateBytes(allocated);
     satisfied.add(req);
     if (req.getPendingRequested() > 0) {
-      if (req.attachment() != null) {
-        if (_log.shouldLog(Log.INFO))         _log.info("Allocating " + allocated + " bytes outbound as a partial grant to "+ req+ " waited "+ waited+ "ms) pending "+ _pendingOutboundRequests.size()+ ", longest waited "+ locked_getLongestOutboundWait()+ " out");
-      }
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Allocating " + allocated + " bytes outbound as a partial grant to "+ req+ " waited "+ waited+ "ms) pending "+ _pendingOutboundRequests.size()+ ", longest waited "+ locked_getLongestOutboundWait()+ " out");
     }
  else {
-      if (req.attachment() != null) {
-        if (_log.shouldLog(Log.INFO))         _log.info("Allocating " + allocated + " bytes outbound to finish the partial grant to "+ req+ " waited "+ waited+ "ms) pending "+ _pendingOutboundRequests.size()+ ", longest waited "+ locked_getLongestOutboundWait()+ " out)");
-      }
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Allocating " + allocated + " bytes outbound to finish the partial grant to "+ req+ " waited "+ waited+ "ms) pending "+ _pendingOutboundRequests.size()+ ", longest waited "+ locked_getLongestOutboundWait()+ " out)");
       _pendingOutboundRequests.remove(i);
       i--;

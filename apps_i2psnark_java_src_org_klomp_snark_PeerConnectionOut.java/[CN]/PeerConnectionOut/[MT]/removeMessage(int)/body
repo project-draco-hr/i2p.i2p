@@ -7,6 +7,19 @@ synchronized (sendQueue) {
       if (m.type == type) {
         it.remove();
         removed=true;
+        if (type == Message.PIECE && peer.supportsFast()) {
+          Message r=new Message();
+          r.type=Message.REJECT;
+          r.piece=m.piece;
+          r.begin=m.begin;
+          r.length=m.length;
+          if (_log.shouldLog(Log.DEBUG))           _log.debug("Send " + peer + ": "+ r);
+          try {
+            r.sendMessage(dout);
+          }
+ catch (          IOException ioe) {
+          }
+        }
       }
     }
     sendQueue.notifyAll();

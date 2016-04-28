@@ -1,11 +1,31 @@
 {
   if (_log.shouldLog(Log.DEBUG))   _log.debug(peer + " rcv have(" + piece+ ")");
-  if (metainfo == null)   return;
-  if (piece < 0 || piece >= metainfo.getPieces()) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("Got strange 'have: " + piece + "' message from "+ peer);
+  if (piece < 0) {
+    if (_log.shouldWarn())     _log.warn("Got strange 'have: " + piece + "' message from "+ peer);
     return;
   }
 synchronized (this) {
+    if (metainfo == null) {
+      if (_log.shouldWarn())       _log.warn("Got HAVE " + piece + " before metainfo from "+ peer);
+      if (bitfield != null) {
+        if (piece < bitfield.size())         bitfield.set(piece);
+      }
+ else {
+        if (havesBeforeMetaInfo == null) {
+          havesBeforeMetaInfo=new ArrayList<Integer>(8);
+        }
+ else         if (havesBeforeMetaInfo.size() > 1000) {
+          if (_log.shouldWarn())           _log.warn("Got too many haves before metainfo from " + peer);
+          return;
+        }
+        havesBeforeMetaInfo.add(Integer.valueOf(piece));
+      }
+      return;
+    }
+    if (piece >= metainfo.getPieces()) {
+      if (_log.shouldLog(Log.WARN))       _log.warn("Got strange 'have: " + piece + "' message from "+ peer);
+      return;
+    }
     if (bitfield == null)     bitfield=new BitField(metainfo.getPieces());
     bitfield.set(piece);
   }

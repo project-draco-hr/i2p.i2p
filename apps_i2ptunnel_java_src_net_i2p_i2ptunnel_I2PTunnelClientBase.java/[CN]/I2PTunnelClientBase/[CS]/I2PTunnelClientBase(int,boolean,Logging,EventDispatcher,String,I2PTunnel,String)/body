@@ -4,15 +4,10 @@
   this.localPort=localPort;
   this.l=l;
   _ownDest=ownDest;
+  _handlerName=handlerName;
   _context=tunnel.getContext();
-  _context.statManager().createRateStat("i2ptunnel.client.closeBacklog","How many pending sockets remain when we close one due to backlog?","I2PTunnel",new long[]{60 * 1000,10 * 60 * 1000,60 * 60 * 1000});
-  _context.statManager().createRateStat("i2ptunnel.client.closeNoBacklog","How many pending sockets remain when it was removed prior to backlog timeout?","I2PTunnel",new long[]{60 * 1000,10 * 60 * 1000,60 * 60 * 1000});
-  _context.statManager().createRateStat("i2ptunnel.client.manageTime","How long it takes to accept a socket and fire it into an i2ptunnel runner (or queue it for the pool)?","I2PTunnel",new long[]{60 * 1000,10 * 60 * 1000,60 * 60 * 1000});
-  _context.statManager().createRateStat("i2ptunnel.client.buildRunTime","How long it takes to run a queued socket into an i2ptunnel runner?","I2PTunnel",new long[]{60 * 1000,10 * 60 * 1000,60 * 60 * 1000});
+  initStats();
   _log=_context.logManager().getLog(getClass());
-synchronized (_executorLock) {
-    if (_executor == null)     _executor=new CustomThreadPoolExecutor();
-  }
   if (pkf != null) {
     File keyFile=new File(pkf);
     if (!keyFile.isAbsolute())     keyFile=new File(_context.getConfigDir(),pkf);
@@ -21,41 +16,4 @@ synchronized (_executorLock) {
   boolean dccEnabled=(this instanceof I2PTunnelIRCClient) && Boolean.parseBoolean(tunnel.getClientOptions().getProperty(I2PTunnelIRCClient.PROP_DCC));
   if (!dccEnabled)   tunnel.getClientOptions().setProperty("i2cp.dontPublishLeaseSet","true");
   if (tunnel.getClientOptions().getProperty("i2p.streaming.answerPings") == null)   tunnel.getClientOptions().setProperty("i2p.streaming.answerPings","false");
-  boolean openNow=!Boolean.parseBoolean(tunnel.getClientOptions().getProperty("i2cp.delayOpen"));
-  if (openNow) {
-    while (sockMgr == null) {
-      verifySocketManager();
-      if (sockMgr == null) {
-        _log.error("Unable to connect to router and build tunnels for " + handlerName);
-        try {
-          Thread.sleep(10 * 1000);
-        }
- catch (        InterruptedException ie) {
-        }
-      }
-    }
-    l.log("Tunnels ready for client: " + handlerName);
-  }
-  Thread t=new I2PAppThread(this);
-  t.setName("Client " + _clientId);
-  t.start();
-  open=true;
-synchronized (this) {
-    while (!listenerReady && open) {
-      try {
-        wait();
-      }
- catch (      InterruptedException e) {
-      }
-    }
-  }
-  if (open && listenerReady) {
-    if (openNow)     l.log("Client ready, listening on " + tunnel.listenHost + ':'+ localPort);
- else     l.log("Client ready, listening on " + tunnel.listenHost + ':'+ localPort+ ", delaying tunnel open until required");
-    notifyEvent("openBaseClientResult","ok");
-  }
- else {
-    l.log("Client error for " + tunnel.listenHost + ':'+ localPort+ ", check logs");
-    notifyEvent("openBaseClientResult","error");
-  }
 }

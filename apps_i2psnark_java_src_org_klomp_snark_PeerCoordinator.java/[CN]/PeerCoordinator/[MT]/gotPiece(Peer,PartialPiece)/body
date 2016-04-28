@@ -4,37 +4,45 @@
     return true;
   }
   int piece=pp.getPiece();
+  try {
 synchronized (wantedPieces) {
-    Piece p=new Piece(piece);
-    if (!wantedPieces.contains(p)) {
-      _log.info("Got unwanted piece " + piece + "/"+ metainfo.getPieces()+ " from "+ peer+ " for "+ metainfo.getName());
-      if (storage.getBitField().get(piece)) {
-        pp.release();
-        return true;
+      Piece p=new Piece(piece);
+      if (!wantedPieces.contains(p)) {
+        _log.info("Got unwanted piece " + piece + "/"+ metainfo.getPieces()+ " from "+ peer+ " for "+ metainfo.getName());
+        if (storage.getBitField().get(piece)) {
+          pp.release();
+          return true;
+        }
       }
-    }
-    try {
       if (storage.putPiece(pp)) {
         if (_log.shouldLog(Log.INFO))         _log.info("Got valid piece " + piece + "/"+ metainfo.getPieces()+ " from "+ peer+ " for "+ metainfo.getName());
       }
  else {
-        downloaded-=metainfo.getPieceLength(piece);
-        _log.warn("Got BAD piece " + piece + "/"+ metainfo.getPieces()+ " from "+ peer+ " for "+ metainfo.getName());
+        markUnrequested(peer,piece);
+        removePartialPiece(piece);
+        downloaded.addAndGet(0 - metainfo.getPieceLength(piece));
+        for (        Piece pc : wantedPieces) {
+          if (pc.getId() == piece) {
+            pc.removePeer(peer);
+            break;
+          }
+        }
+        if (_log.shouldWarn())         _log.warn("Got BAD piece " + piece + "/"+ metainfo.getPieces()+ " from "+ peer+ " for "+ metainfo.getName());
         return false;
       }
+      wantedPieces.remove(p);
+      wantedBytes-=metainfo.getPieceLength(p.getId());
     }
- catch (    IOException ioe) {
-      String msg="Error writing storage (piece " + piece + ") for "+ metainfo.getName()+ ": "+ ioe;
-      _log.error(msg,ioe);
-      if (listener != null) {
-        listener.addMessage(msg);
-        listener.addMessage("Fatal storage error: Stopping torrent " + metainfo.getName());
-      }
-      snark.stopTorrent();
-      throw new RuntimeException(msg,ioe);
+  }
+ catch (  IOException ioe) {
+    String msg="Error writing storage (piece " + piece + ") for "+ metainfo.getName()+ ": "+ ioe;
+    _log.error(msg,ioe);
+    if (listener != null) {
+      listener.addMessage(msg);
+      listener.addMessage("Fatal storage error: Stopping torrent " + metainfo.getName());
     }
-    wantedPieces.remove(p);
-    wantedBytes-=metainfo.getPieceLength(p.getId());
+    snark.stopTorrent();
+    throw new RuntimeException(msg,ioe);
   }
   removePartialPiece(piece);
   boolean done=wantedBytes <= 0;

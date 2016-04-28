@@ -1,6 +1,7 @@
 {
   Log log=ctx.logManager().getLog(PluginStarter.class);
   File pluginDir=new File(ctx.getConfigDir(),PLUGIN_DIR + '/' + appName);
+  String iconfile=null;
   if ((!pluginDir.exists()) || (!pluginDir.isDirectory())) {
     log.error("Cannot start nonexistent plugin: " + appName);
     disablePlugin(appName);
@@ -58,7 +59,20 @@
   if (tfiles != null) {
     for (int i=0; i < tfiles.length; i++) {
       String name=tfiles[i].getName();
-      if (tfiles[i].isDirectory() && (!Arrays.asList(STANDARD_THEMES).contains(tfiles[i])))       ctx.router().setConfigSetting(ConfigUIHelper.PROP_THEME_PFX + name,tfiles[i].getAbsolutePath());
+      if (tfiles[i].isDirectory() && (!Arrays.asList(STANDARD_THEMES).contains(tfiles[i]))) {
+        ctx.router().setConfigSetting(ConfigUIHelper.PROP_THEME_PFX + name,tfiles[i].getAbsolutePath());
+      }
+    }
+  }
+  String fullprop=props.getProperty("icon-code");
+  if (fullprop != null && fullprop.length() > 1) {
+    byte[] decoded=Base64.decode(fullprop);
+    if (decoded != null) {
+      NavHelper.setBinary(appName,decoded);
+      iconfile="/Plugins/pluginicon?plugin=" + appName;
+    }
+ else {
+      iconfile="/themes/console/images/plugin.png";
     }
   }
   File clientConfig=new File(pluginDir,"clients.config");
@@ -95,6 +109,14 @@
           log.error("Error resolving '" + fileNames[i] + "' in '"+ webappDir,ioe);
         }
       }
+      String icfile=ConfigClientsHelper.stripHTML(props,"console-icon");
+      if (icfile != null && !icfile.contains("..")) {
+        StringBuilder buf=new StringBuilder(32);
+        buf.append('/').append(appName);
+        if (!icfile.startsWith("/"))         buf.append('/');
+        buf.append(icfile);
+        iconfile=buf.toString();
+      }
     }
   }
  else {
@@ -113,7 +135,7 @@
             log.error("INFO: Adding translation plugin to classpath: " + f);
             added=true;
           }
- catch (          Exception e) {
+ catch (          RuntimeException e) {
             log.error("Plugin " + appName + " bad classpath element: "+ f,e);
           }
         }
@@ -127,8 +149,7 @@
   if (name != null && url != null && name.length() > 0 && url.length() > 0) {
     String tip=ConfigClientsHelper.stripHTML(props,"consoleLinkTooltip_" + Messages.getLanguage(ctx));
     if (tip == null)     tip=ConfigClientsHelper.stripHTML(props,"consoleLinkTooltip");
-    if (tip != null)     NavHelper.registerApp(name,url,tip);
- else     NavHelper.registerApp(name,url);
+    NavHelper.registerApp(name,url,tip,iconfile);
   }
   return true;
 }

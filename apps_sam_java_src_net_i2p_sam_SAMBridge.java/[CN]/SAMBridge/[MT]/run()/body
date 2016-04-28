@@ -2,11 +2,12 @@
   if (serverSocket == null)   return;
   changeState(RUNNING);
   if (_mgr != null)   _mgr.register(this);
+  I2PAppContext.getGlobalContext().portMapper().register(_useSSL ? PortMapper.SVC_SAM_SSL : PortMapper.SVC_SAM,_listenHost != null ? _listenHost : "127.0.0.1",_listenPort);
   try {
     while (acceptConnections) {
       SocketChannel s=serverSocket.accept();
       if (_log.shouldLog(Log.DEBUG))       _log.debug("New connection from " + s.socket().getInetAddress().toString() + ":"+ s.socket().getPort());
-class HelloHandler implements Runnable {
+class HelloHandler implements Runnable, Handler {
         private final SocketChannel s;
         private final SAMBridge parent;
         HelloHandler(        SocketChannel s,        SAMBridge parent){
@@ -14,8 +15,9 @@ class HelloHandler implements Runnable {
           this.parent=parent;
         }
         public void run(){
+          parent.register(this);
           try {
-            SAMHandler handler=SAMHandlerFactory.createSAMHandler(s,i2cpProps);
+            SAMHandler handler=SAMHandlerFactory.createSAMHandler(s,i2cpProps,parent);
             if (handler == null) {
               if (_log.shouldLog(Log.DEBUG))               _log.debug("SAM handler has not been instantiated");
               try {
@@ -25,7 +27,6 @@ class HelloHandler implements Runnable {
               }
               return;
             }
-            handler.setBridge(parent);
             handler.startHandling();
           }
  catch (          SAMException e) {
@@ -46,9 +47,22 @@ catch (          Exception ee) {
             }
             _log.log(Log.CRIT,"Unexpected error handling SAM connection",ee);
           }
+ finally {
+            parent.unregister(this);
+          }
+        }
+        /** 
+ * @since 0.9.20 
+ */
+        public void stopHandling(){
+          try {
+            s.close();
+          }
+ catch (          IOException ioe) {
+          }
         }
       }
-      new I2PAppThread(new HelloHandler(s,this),"HelloHandler").start();
+      new I2PAppThread(new HelloHandler(s,this),"SAM HelloHandler").start();
     }
     changeState(STOPPING);
   }
@@ -64,6 +78,8 @@ catch (          Exception ee) {
     }
  catch (    IOException e) {
     }
+    I2PAppContext.getGlobalContext().portMapper().unregister(_useSSL ? PortMapper.SVC_SAM_SSL : PortMapper.SVC_SAM);
+    stopHandlers();
     changeState(STOPPED);
   }
 }

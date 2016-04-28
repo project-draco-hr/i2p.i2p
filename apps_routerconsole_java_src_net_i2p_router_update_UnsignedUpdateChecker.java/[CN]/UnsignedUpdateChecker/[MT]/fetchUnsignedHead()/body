@@ -4,6 +4,12 @@
   String url=_currentURI.toString();
   String proxyHost=_context.getProperty(ConfigUpdateHandler.PROP_PROXY_HOST,ConfigUpdateHandler.DEFAULT_PROXY_HOST);
   int proxyPort=_context.getProperty(ConfigUpdateHandler.PROP_PROXY_PORT,ConfigUpdateHandler.DEFAULT_PROXY_PORT_INT);
+  if (proxyPort == ConfigUpdateHandler.DEFAULT_PROXY_PORT_INT && proxyHost.equals(ConfigUpdateHandler.DEFAULT_PROXY_HOST) && _context.portMapper().getPort(PortMapper.SVC_HTTP_PROXY) < 0) {
+    String msg=_t("HTTP client proxy tunnel must be running");
+    if (_log.shouldWarn())     _log.warn(msg);
+    updateStatus("<b>" + msg + "</b>");
+    return false;
+  }
   try {
     EepHead get=new EepHead(_context,proxyHost,proxyPort,0,url);
     if (get.fetch()) {
@@ -13,15 +19,24 @@
         if (modtime <= 0)         return false;
         if (_ms <= 0)         return false;
         if (modtime > _ms) {
-          _unsignedUpdateAvailable=true;
-          _mgr.notifyVersionAvailable(this,_urls.get(0),getType(),"",getMethod(),_urls,Long.toString(modtime),"");
+          String newVersion=Long.toString(modtime);
+          if (SystemVersion.isJava7()) {
+            _unsignedUpdateAvailable=true;
+            _mgr.notifyVersionAvailable(this,_urls.get(0),getType(),"",getMethod(),_urls,newVersion,"");
+          }
+ else {
+            String ourJava=System.getProperty("java.version");
+            String msg=_mgr._t("Requires Java version {0} but installed Java version is {1}","1.7",ourJava);
+            _log.logAlways(Log.WARN,"Cannot update to version " + newVersion + ": "+ msg);
+            _mgr.notifyVersionConstraint(this,_urls.get(0),getType(),"",newVersion,msg);
+          }
         }
       }
       return true;
     }
   }
  catch (  Throwable t) {
-    _log.error("Error fetching the unsigned update",t);
+    _log.error("Error fetching the update",t);
   }
   return false;
 }

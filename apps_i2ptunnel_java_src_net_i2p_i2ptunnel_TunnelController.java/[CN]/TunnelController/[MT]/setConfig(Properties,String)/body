@@ -14,33 +14,37 @@
     if (type.equals(TYPE_HTTP_SERVER) || type.equals(TYPE_STREAMR_SERVER)) {
       if (!_config.containsKey(OPT_BUNDLE_REPLY))       _config.setProperty(OPT_BUNDLE_REPLY,"false");
     }
- else     if (type.contains("irc") || type.equals(TYPE_STREAMR_CLIENT)) {
+ else     if (!isClient(type)) {
+      _config.setProperty(OPT_BUNDLE_REPLY,"true");
+    }
+    if (type.contains("irc") || type.equals(TYPE_STREAMR_CLIENT)) {
       if (!_config.containsKey(OPT_TAGS_SEND))       _config.setProperty(OPT_TAGS_SEND,"20");
       if (!_config.containsKey(OPT_LOW_TAGS))       _config.setProperty(OPT_LOW_TAGS,"14");
     }
-    if (!isClient(type) || ((type.equals(TYPE_IRC_CLIENT) || type.equals(TYPE_STD_CLIENT) || type.equals(TYPE_SOCKS_IRC)|| type.equals(TYPE_STREAMR_CLIENT)) && !Boolean.valueOf(getSharedClient()))) {
+    if (!isClient(type) || type.equals(TYPE_IRC_CLIENT) || type.equals(TYPE_STD_CLIENT)|| type.equals(TYPE_SOCKS_IRC)|| type.equals(TYPE_STREAMR_CLIENT)|| (type.equals(TYPE_HTTP_CLIENT) && Boolean.valueOf(getSharedClient()))) {
       if (!_config.containsKey(OPT_SIG_TYPE))       _config.setProperty(OPT_SIG_TYPE,PREFERRED_SIGTYPE.name());
     }
   }
   setSessionOptions();
-  if (_running) {
-    Collection<I2PSession> sessions=getAllSessions();
-    if (sessions.isEmpty()) {
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("Running but no sessions to update");
-    }
-    for (    I2PSession s : sessions) {
-      if (!s.isClosed()) {
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("Session is open, updating: " + s);
-        s.updateOptions(_tunnel.getClientOptions());
+synchronized (this) {
+    if (_state != TunnelState.RUNNING) {
+      if (_log.shouldLog(Log.DEBUG)) {
+        _log.debug("Not running, not updating sessions");
       }
- else {
-        if (_log.shouldLog(Log.DEBUG))         _log.debug("Session is closed, not updating: " + s);
-      }
+      return;
     }
   }
+  Collection<I2PSession> sessions=getAllSessions();
+  if (sessions.isEmpty()) {
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Running but no sessions to update");
+  }
+  for (  I2PSession s : sessions) {
+    if (!s.isClosed()) {
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Session is open, updating: " + s);
+      s.updateOptions(_tunnel.getClientOptions());
+    }
  else {
-    if (_log.shouldLog(Log.DEBUG)) {
-      _log.debug("Not running, not updating sessions");
+      if (_log.shouldLog(Log.DEBUG))       _log.debug("Session is closed, not updating: " + s);
     }
   }
 }

@@ -1,0 +1,20 @@
+{
+  if (p != null && !p.isEmpty()) {
+    ByteArrayOutputStream baos=new ByteArrayOutputStream(p.size() * 32);
+    for (    Map.Entry<Object,Object> entry : p.entrySet()) {
+      String key=(String)entry.getKey();
+      String val=(String)entry.getValue();
+      DataHelper.writeStringUTF8(baos,key);
+      baos.write('=');
+      writeLongStringUTF8(baos,val);
+      baos.write(';');
+    }
+    if (baos.size() > 65535)     throw new DataFormatException("Properties too big (65535 max): " + baos.size());
+    byte propBytes[]=baos.toByteArray();
+    DataHelper.writeLong(rawStream,2,propBytes.length);
+    rawStream.write(propBytes);
+  }
+ else {
+    DataHelper.writeLong(rawStream,2,0);
+  }
+}

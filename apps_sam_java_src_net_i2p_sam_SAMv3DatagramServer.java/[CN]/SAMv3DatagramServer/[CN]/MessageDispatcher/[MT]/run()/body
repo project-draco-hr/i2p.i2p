@@ -1,0 +1,89 @@
+{
+  try {
+    final UTF8Reader reader=new UTF8Reader(is);
+    final StringBuilder buf=new StringBuilder(MAX_LINE_LENGTH);
+    int c;
+    int i=0;
+    while ((c=reader.read()) != -1) {
+      if (++i > MAX_LINE_LENGTH)       throw new IOException("Line too long - max " + MAX_LINE_LENGTH);
+      if (c == '\n')       break;
+      buf.append((char)c);
+    }
+    String header=buf.toString();
+    StringTokenizer tok=new StringTokenizer(header," ");
+    if (tok.countTokens() < 3) {
+      warn("Bad datagram header received");
+      return;
+    }
+    String version=tok.nextToken();
+    if (!version.startsWith("3.")) {
+      warn("Bad datagram header received");
+      return;
+    }
+    String nick=tok.nextToken();
+    String dest=tok.nextToken();
+    SessionRecord rec=SAMv3Handler.sSessionsHash.get(nick);
+    if (rec != null) {
+      Properties sprops=rec.getProps();
+      String pr=sprops.getProperty("PROTOCOL");
+      String fp=sprops.getProperty("FROM_PORT");
+      String tp=sprops.getProperty("TO_PORT");
+      String st=sprops.getProperty("crypto.tagsToSend");
+      String tt=sprops.getProperty("crypto.lowTagThreshold");
+      String sl=sprops.getProperty("shouldBundleReplyInfo");
+      String exms=sprops.getProperty("clientMessageTimeout");
+      String exs=null;
+      while (tok.hasMoreTokens()) {
+        String t=tok.nextToken();
+        if (t.startsWith("PROTOCOL="))         pr=t.substring("PROTOCOL=".length());
+ else         if (t.startsWith("FROM_PORT="))         fp=t.substring("FROM_PORT=".length());
+ else         if (t.startsWith("TO_PORT="))         tp=t.substring("TO_PORT=".length());
+ else         if (t.startsWith("SEND_TAGS="))         st=t.substring("SEND_TAGS=".length());
+ else         if (t.startsWith("TAG_THRESHOLD="))         tt=t.substring("TAG_THRESHOLD=".length());
+ else         if (t.startsWith("EXPIRES="))         exs=t.substring("EXPIRES=".length());
+ else         if (t.startsWith("SEND_LEASESET="))         sl=t.substring("SEND_LEASESET=".length());
+      }
+      int proto=I2PSession.PROTO_UNSPECIFIED;
+      int fromPort=I2PSession.PORT_UNSPECIFIED;
+      int toPort=I2PSession.PORT_UNSPECIFIED;
+      int sendTags=0;
+      int tagThreshold=0;
+      int expires=0;
+      boolean sendLeaseSet=true;
+      try {
+        if (pr != null)         proto=Integer.parseInt(pr);
+        if (fp != null)         fromPort=Integer.parseInt(fp);
+        if (tp != null)         toPort=Integer.parseInt(tp);
+        if (st != null)         sendTags=Integer.parseInt(st);
+        if (tt != null)         tagThreshold=Integer.parseInt(tt);
+        if (exs != null)         expires=Integer.parseInt(exs);
+ else         if (exms != null)         expires=Integer.parseInt(exms) / 1000;
+        if (sl != null)         sendLeaseSet=Boolean.parseBoolean(sl);
+      }
+ catch (      NumberFormatException nfe) {
+        warn("Bad datagram header received");
+        return;
+      }
+      byte[] data=new byte[is.available()];
+      is.read(data);
+      Session sess=rec.getHandler().getSession();
+      if (sess != null) {
+        if (sendTags > 0 || tagThreshold > 0 || expires > 0 || !sendLeaseSet) {
+          sess.sendBytes(dest,data,proto,fromPort,toPort,sendLeaseSet,sendTags,tagThreshold,expires);
+        }
+ else {
+          sess.sendBytes(dest,data,proto,fromPort,toPort);
+        }
+      }
+ else {
+        warn("Dropping datagram, no session for " + nick);
+      }
+    }
+ else {
+      warn("Dropping datagram, no session for " + nick);
+    }
+  }
+ catch (  Exception e) {
+    warn("Error handling datagram",e);
+  }
+}

@@ -3,17 +3,18 @@
     DatabaseStoreMessage dsm=(DatabaseStoreMessage)inMsg;
     DatabaseEntry entry=dsm.getEntry();
     if (entry == null)     return;
-    if (entry.getType() == DatabaseEntry.KEY_TYPE_ROUTERINFO && ((RouterInfo)entry).getNetworkId() != Router.NETWORK_ID) {
+    if (entry.getType() == DatabaseEntry.KEY_TYPE_ROUTERINFO && ((RouterInfo)entry).getNetworkId() != _networkID) {
       Hash peerHash=entry.getHash();
       PeerState peer=getPeerState(peerHash);
       if (peer != null) {
         RemoteHostId remote=peer.getRemoteHostId();
         _dropList.add(remote);
         _context.statManager().addRateData("udp.dropPeerDroplist",1);
-        _context.simpleScheduler().addEvent(new RemoveDropList(remote),DROPLIST_PERIOD);
+        _context.simpleTimer2().addEvent(new RemoveDropList(remote),DROPLIST_PERIOD);
       }
       markUnreachable(peerHash);
-      _context.banlist().banlistRouter(peerHash,"Part of the wrong network, version = " + ((RouterInfo)entry).getOption("router.version"));
+      _context.banlist().banlistRouter(peerHash,"Part of the wrong network, version = " + ((RouterInfo)entry).getVersion());
+      if (peer != null)       sendDestroy(peer);
       dropPeer(peerHash,false,"wrong network");
       if (_log.shouldLog(Log.WARN))       _log.warn("Dropping the peer " + peerHash + " because they are in the wrong net: "+ entry);
       return;

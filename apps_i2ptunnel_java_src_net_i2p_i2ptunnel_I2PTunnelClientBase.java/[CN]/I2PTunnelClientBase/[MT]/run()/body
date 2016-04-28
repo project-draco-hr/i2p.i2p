@@ -1,13 +1,14 @@
 {
-  try {
-    InetAddress addr=getListenHost(l);
-    if (addr == null) {
-      open=false;
+  InetAddress addr=getListenHost(l);
+  if (addr == null) {
+    close(true);
+    open=false;
 synchronized (this) {
-        notifyAll();
-      }
-      return;
+      notifyAll();
     }
+    return;
+  }
+  try {
     Properties opts=getTunnel().getClientOptions();
     boolean useSSL=Boolean.parseBoolean(opts.getProperty(PROP_USE_SSL));
     if (useSSL) {
@@ -28,7 +29,7 @@ synchronized (this) {
     notifyEvent("clientLocalPort",Integer.valueOf(ss.getLocalPort()));
 synchronized (this) {
       listenerReady=true;
-      notify();
+      notifyAll();
     }
 synchronized (startLock) {
       while (!startRunning) {
@@ -39,20 +40,28 @@ synchronized (startLock) {
         }
       }
     }
+    TunnelControllerGroup tcg=TunnelControllerGroup.getInstance();
+    if (tcg != null) {
+      _executor=tcg.getClientExecutor();
+    }
+ else {
+      _executor=new TunnelControllerGroup.CustomThreadPoolExecutor();
+    }
     while (open) {
       Socket s=ss.accept();
       manageConnection(s);
     }
   }
  catch (  IOException ex) {
-    if (open) {
-      _log.error("Error listening for connections on " + localPort,ex);
-      notifyEvent("openBaseClientResult","error");
-    }
 synchronized (sockLock) {
       mySockets.clear();
     }
-    open=false;
+    if (open) {
+      _log.error("Error listening for connections on " + addr + " port "+ localPort,ex);
+      l.log("Error listening for connections on " + addr + " port "+ localPort+ ": "+ ex);
+      notifyEvent("openBaseClientResult","error");
+      close(true);
+    }
 synchronized (this) {
       notifyAll();
     }

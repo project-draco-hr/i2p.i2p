@@ -1,0 +1,64 @@
+{
+  File pubFile=new File(publicKeyFile);
+  if (pubFile.exists()) {
+    System.out.println("Error: Not overwriting file " + publicKeyFile);
+    return false;
+  }
+  File ksFile=new File(privateKeyFile);
+  String keypw="";
+  try {
+    while (alias.length() == 0) {
+      System.out.print("Enter key name (example@mail.i2p): ");
+      alias=DataHelper.readLine(System.in);
+      if (alias == null) {
+        System.out.println("\nEOF reading key name");
+        return false;
+      }
+      alias=alias.trim();
+    }
+    while (keypw.length() < 6) {
+      System.out.print("Enter new key password: ");
+      keypw=DataHelper.readLine(System.in);
+      if (keypw == null) {
+        System.out.println("\nEOF reading password");
+        return false;
+      }
+      keypw=keypw.trim();
+      if (keypw.length() > 0 && keypw.length() < 6)       System.out.println("Key password must be at least 6 characters");
+    }
+  }
+ catch (  IOException ioe) {
+    return false;
+  }
+  OutputStream out=null;
+  try {
+    Object[] rv=KeyStoreUtil.createKeysAndCRL(ksFile,kspass,alias,alias,"I2P",3652,type,keypw);
+    X509Certificate cert=(X509Certificate)rv[2];
+    out=new SecureFileOutputStream(publicKeyFile);
+    CertUtil.exportCert(cert,out);
+    if (crlFile != null) {
+      out.close();
+      X509CRL crl=(X509CRL)rv[3];
+      out=new SecureFileOutputStream(crlFile);
+      CertUtil.exportCRL(crl,out);
+    }
+  }
+ catch (  GeneralSecurityException gse) {
+    System.err.println("Error creating keys for " + alias);
+    gse.printStackTrace();
+    return false;
+  }
+catch (  IOException ioe) {
+    System.err.println("Error creating keys for " + alias);
+    ioe.printStackTrace();
+    return false;
+  }
+ finally {
+    if (out != null)     try {
+      out.close();
+    }
+ catch (    IOException ioe) {
+    }
+  }
+  return true;
+}

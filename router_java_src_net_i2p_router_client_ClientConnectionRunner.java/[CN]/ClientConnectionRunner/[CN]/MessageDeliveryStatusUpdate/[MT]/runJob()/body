@@ -2,16 +2,16 @@
   if (_dead)   return;
   MessageStatusMessage msg=new MessageStatusMessage();
   msg.setMessageId(_messageId.getMessageId());
-  msg.setSessionId(_sessionId.getSessionId());
+  msg.setSessionId(_sessId.getSessionId());
   msg.setNonce(_messageNonce);
   msg.setSize(0);
   msg.setStatus(_status);
   if (!alreadyAccepted(_messageId)) {
     if (_requeueCount++ > MAX_REQUEUE) {
-      _log.error("Abandon update for message " + _messageId + " to "+ MessageStatusMessage.getStatusString(msg.getStatus())+ " for session "+ _sessionId.getSessionId());
+      _log.error("Abandon update for message " + _messageId + " to "+ MessageStatusMessage.getStatusString(msg.getStatus())+ " for "+ _sessId);
     }
  else {
-      if (_log.shouldLog(Log.WARN))       _log.warn("Almost send an update for message " + _messageId + " to "+ MessageStatusMessage.getStatusString(msg.getStatus())+ " for session "+ _sessionId.getSessionId()+ " before they knew the messageId!  delaying .5s");
+      if (_log.shouldLog(Log.WARN))       _log.warn("Almost send an update for message " + _messageId + " to "+ MessageStatusMessage.getStatusString(msg.getStatus())+ " for "+ _sessId+ " before they knew the messageId!  delaying .5s");
       _lastTried=_context.clock().now();
       requeue(REQUEUE_DELAY);
     }
@@ -23,7 +23,7 @@
 synchronized (_alreadyProcessed) {
     inLock=_context.clock().now();
     if (_alreadyProcessed.contains(_messageId)) {
-      _log.warn("Status already updated");
+      _log.info("Status already updated");
       alreadyProcessed=true;
     }
  else {
@@ -37,10 +37,10 @@ synchronized (_alreadyProcessed) {
   }
   if (alreadyProcessed)   return;
   if (_lastTried > 0) {
-    if (_log.shouldLog(Log.DEBUG))     _log.info("Updating message status for message " + _messageId + " to "+ MessageStatusMessage.getStatusString(msg.getStatus())+ " for session "+ _sessionId.getSessionId()+ " (with nonce=2), retrying after "+ (_context.clock().now() - _lastTried));
+    if (_log.shouldLog(Log.DEBUG))     _log.info("Updating message status for message " + _messageId + " to "+ MessageStatusMessage.getStatusString(msg.getStatus())+ " for "+ _sessId+ " (with nonce=2), retrying after "+ (_context.clock().now() - _lastTried));
   }
  else {
-    if (_log.shouldLog(Log.DEBUG))     _log.debug("Updating message status for message " + _messageId + " to "+ MessageStatusMessage.getStatusString(msg.getStatus())+ " for session "+ _sessionId.getSessionId()+ " (with nonce=2)");
+    if (_log.shouldLog(Log.DEBUG))     _log.debug("Updating message status for message " + _messageId + " to "+ MessageStatusMessage.getStatusString(msg.getStatus())+ " for "+ _sessId+ " (with nonce=2)");
   }
   try {
     doSend(msg);

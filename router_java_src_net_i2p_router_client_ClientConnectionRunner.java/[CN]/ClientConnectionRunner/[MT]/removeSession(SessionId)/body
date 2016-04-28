@@ -1,0 +1,26 @@
+{
+  if (id == null)   return;
+  boolean isPrimary=false;
+  for (Iterator<SessionParams> iter=_sessions.values().iterator(); iter.hasNext(); ) {
+    SessionParams sp=iter.next();
+    if (id.equals(sp.sessionId)) {
+      if (_log.shouldLog(Log.INFO))       _log.info("Destroying client session " + id);
+      iter.remove();
+      _manager.unregisterSession(id,sp.dest);
+      LeaseSet ls=sp.currentLeaseSet;
+      if (ls != null)       _context.netDb().unpublish(ls);
+      isPrimary=sp.isPrimary;
+      if (!isPrimary)       _context.tunnelManager().removeAlias(sp.dest);
+      break;
+    }
+  }
+  if (isPrimary && !_sessions.isEmpty()) {
+    for (    SessionParams sp : _sessions.values()) {
+      if (_log.shouldLog(Log.INFO))       _log.info("Destroying remaining client subsession " + sp.sessionId);
+      _manager.unregisterSession(sp.sessionId,sp.dest);
+      LeaseSet ls=sp.currentLeaseSet;
+      if (ls != null)       _context.netDb().unpublish(ls);
+      _context.tunnelManager().removeAlias(sp.dest);
+    }
+  }
+}

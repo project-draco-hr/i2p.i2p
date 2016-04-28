@@ -1,14 +1,23 @@
 {
   _isRunning=true;
   _checker.setError("");
-  _checker.setStatus(_("Reseeding"));
+  _checker.setStatus(_t("Reseeding"));
   if (_context.getBooleanProperty(PROP_PROXY_ENABLE)) {
     _proxyHost=_context.getProperty(PROP_PROXY_HOST);
     _proxyPort=_context.getProperty(PROP_PROXY_PORT,-1);
   }
   System.out.println("Reseed start");
-  int total=reseed(false);
-  if (total >= 50) {
+  int total;
+  if (_url != null) {
+    String lc=_url.getPath().toLowerCase(Locale.US);
+    if (lc.endsWith(".su3"))     total=reseedSU3(_url,false);
+ else     if (lc.endsWith(".zip"))     total=reseedZip(_url,false);
+ else     throw new IllegalArgumentException("Must end with .zip or .su3");
+  }
+ else {
+    total=reseed(false);
+  }
+  if (total >= 20) {
     System.out.println("Reseed complete, " + total + " received");
     _checker.setError("");
   }
@@ -17,11 +26,13 @@
     _checker.setError(ngettext("Reseed fetched only 1 router.","Reseed fetched only {0} routers.",total));
   }
  else {
-    System.out.println("Reseed failed, check network connection");
-    System.out.println("Ensure that nothing blocks outbound HTTP, check the logs, " + "and if nothing helps, read the FAQ about reseeding manually.");
-    _checker.setError(_("Reseed failed.") + ' ' + _("See {0} for help.","<a target=\"_top\" href=\"/configreseed\">" + _("reseed configuration page") + "</a>"));
+    if (total == 0) {
+      System.out.println("Reseed failed, check network connection");
+      System.out.println("Ensure that nothing blocks outbound HTTP or HTTPS, check the logs, " + "and if nothing helps, read the FAQ about reseeding manually.");
+    }
+    String old=_checker.getError();
+    _checker.setError(_t("Reseed failed.") + ' ' + _t("See {0} for help.","<a target=\"_top\" href=\"/configreseed\">" + _t("reseed configuration page") + "</a>")+ "<br>"+ old);
   }
   _isRunning=false;
-  _checker.setStatus("");
   _context.router().eventLog().addEvent(EventLog.RESEED,Integer.toString(total));
 }

@@ -1,0 +1,30 @@
+{
+  byte[] payload;
+  Destination sender;
+  try {
+synchronized (dgramDissector) {
+      dgramDissector.loadI2PDatagram(msg);
+      sender=dgramDissector.getSender();
+      payload=dgramDissector.extractPayload();
+    }
+  }
+ catch (  DataFormatException e) {
+    if (_log.shouldLog(Log.DEBUG)) {
+      _log.debug("Dropping ill-formatted I2P repliable datagram",e);
+    }
+    return;
+  }
+catch (  I2PInvalidDatagramException e) {
+    if (_log.shouldLog(Log.DEBUG)) {
+      _log.debug("Dropping ill-signed I2P repliable datagram",e);
+    }
+    return;
+  }
+  try {
+    recv.receiveDatagramBytes(sender,payload,proto,fromPort,toPort);
+  }
+ catch (  IOException e) {
+    _log.error("Error forwarding message to receiver",e);
+    close();
+  }
+}

@@ -1,0 +1,31 @@
+{
+  int extra=4;
+  byte[] rb=r.toByteArray();
+  if (rb.length > 127) {
+    extra++;
+    if (rb.length > 255)     extra++;
+  }
+  byte[] sb=s.toByteArray();
+  if (sb.length > 127) {
+    extra++;
+    if (sb.length > 255)     extra++;
+  }
+  int seqlen=rb.length + sb.length + extra;
+  int totlen=seqlen + 2;
+  if (seqlen > 127) {
+    totlen++;
+    if (seqlen > 255)     totlen++;
+  }
+  byte[] rv=new byte[totlen];
+  int idx=0;
+  rv[idx++]=0x30;
+  idx=intToASN1(rv,idx,seqlen);
+  rv[idx++]=0x02;
+  idx=intToASN1(rv,idx,rb.length);
+  System.arraycopy(rb,0,rv,idx,rb.length);
+  idx+=rb.length;
+  rv[idx++]=0x02;
+  idx=intToASN1(rv,idx,sb.length);
+  System.arraycopy(sb,0,rv,idx,sb.length);
+  return rv;
+}

@@ -525,6 +525,7 @@
                 }
               }
  else               if (Command.equals(C_getnick)) {
+                boolean nsfail=false;
                 try {
                   database.getReadLock();
                 }
@@ -537,6 +538,7 @@
                 }
  catch (                RuntimeException b) {
                   try {
+                    nsfail=true;
                     nns(out);
                   }
  catch (                  Exception ex) {
@@ -550,7 +552,7 @@
                   }
                 }
                 database.releaseReadLock();
-                if (ns) {
+                if (ns && !nsfail) {
                   try {
                     rlock();
                   }
@@ -951,7 +953,7 @@
                         while (!lock.compareAndSet(false,true)) {
                         }
                         tunnel=new MUXlisten(lock,database,nickinfo,_log);
-                        Thread t=new Thread(tunnel);
+                        Thread t=new I2PAppThread(tunnel);
                         t.start();
                         out.println("OK tunnel starting");
                       }

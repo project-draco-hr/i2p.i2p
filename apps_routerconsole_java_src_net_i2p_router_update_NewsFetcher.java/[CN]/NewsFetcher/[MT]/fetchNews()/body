@@ -2,9 +2,17 @@
   boolean shouldProxy=_context.getProperty(ConfigUpdateHandler.PROP_SHOULD_PROXY_NEWS,ConfigUpdateHandler.DEFAULT_SHOULD_PROXY_NEWS);
   String proxyHost=_context.getProperty(ConfigUpdateHandler.PROP_PROXY_HOST,ConfigUpdateHandler.DEFAULT_PROXY_HOST);
   int proxyPort=ConfigUpdateHandler.proxyPort(_context);
+  if (shouldProxy && proxyPort == ConfigUpdateHandler.DEFAULT_PROXY_PORT_INT && proxyHost.equals(ConfigUpdateHandler.DEFAULT_PROXY_HOST) && _context.portMapper().getPort(PortMapper.SVC_HTTP_PROXY) < 0) {
+    if (_log.shouldWarn())     _log.warn("Cannot fetch news - HTTP client tunnel not running");
+    return;
+  }
+  if (shouldProxy && _context.commSystem().isDummy()) {
+    if (_log.shouldWarn())     _log.warn("Cannot fetch news - VM Comm system");
+    return;
+  }
   for (  URI uri : _urls) {
-    _currentURI=uri;
-    String newsURL=uri.toString();
+    _currentURI=addLang(uri);
+    String newsURL=_currentURI.toString();
     if (_tempFile.exists())     _tempFile.delete();
     try {
       EepGet get;
@@ -13,10 +21,14 @@
  else       get=new EepGet(_context,false,null,0,0,_tempFile.getAbsolutePath(),newsURL,true,null,_lastModified);
       get.addStatusListener(this);
       long start=_context.clock().now();
+      _newLastModified=start;
       if (get.fetch()) {
         int status=get.getStatusCode();
         if (status == 200 || status == 304) {
-          _context.router().saveConfig(NewsHelper.PROP_LAST_CHECKED,Long.toString(start));
+          Map<String,String> opts=new HashMap<String,String>(2);
+          opts.put(NewsHelper.PROP_LAST_CHECKED,Long.toString(start));
+          if (status == 200 && _isNewer)           opts.put(NewsHelper.PROP_LAST_UPDATED,Long.toString(_newLastModified));
+          _context.router().saveConfig(opts,null);
           return;
         }
       }

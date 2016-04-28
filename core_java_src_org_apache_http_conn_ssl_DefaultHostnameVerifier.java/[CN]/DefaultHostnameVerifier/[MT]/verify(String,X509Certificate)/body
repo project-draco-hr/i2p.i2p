@@ -1,0 +1,25 @@
+{
+  final boolean ipv4=InetAddressUtils.isIPv4Address(host);
+  final boolean ipv6=InetAddressUtils.isIPv6Address(host);
+  final int subjectType=ipv4 || ipv6 ? IP_ADDRESS_TYPE : DNS_NAME_TYPE;
+  final List<String> subjectAlts=extractSubjectAlts(cert,subjectType);
+  if (subjectAlts != null && !subjectAlts.isEmpty()) {
+    if (ipv4) {
+      matchIPAddress(host,subjectAlts);
+    }
+ else     if (ipv6) {
+      matchIPv6Address(host,subjectAlts);
+    }
+ else {
+      matchDNSName(host,subjectAlts,this.publicSuffixMatcher);
+    }
+  }
+ else {
+    final X500Principal subjectPrincipal=cert.getSubjectX500Principal();
+    final String cn=extractCN(subjectPrincipal.getName(X500Principal.RFC2253));
+    if (cn == null) {
+      throw new SSLException("Certificate subject for <" + host + "> doesn't contain "+ "a common name and does not have alternative names");
+    }
+    matchCN(host,cn,this.publicSuffixMatcher);
+  }
+}

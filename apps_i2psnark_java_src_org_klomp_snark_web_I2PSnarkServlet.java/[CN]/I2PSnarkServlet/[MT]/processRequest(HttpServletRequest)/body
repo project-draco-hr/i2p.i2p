@@ -24,11 +24,11 @@
         if (newDir.length() > 0) {
           dir=new SecureFile(newDir);
           if (!dir.isAbsolute()) {
-            _manager.addMessage(_("Data directory must be an absolute path") + ": " + dir);
+            _manager.addMessage(_t("Data directory must be an absolute path") + ": " + dir);
             return;
           }
           if (!dir.isDirectory() && !dir.mkdirs()) {
-            _manager.addMessage(_("Data directory cannot be created") + ": " + dir);
+            _manager.addMessage(_t("Data directory cannot be created") + ": " + dir);
             return;
           }
           Collection<Snark> snarks=_manager.getTorrents();
@@ -37,7 +37,7 @@
             if (storage == null)             continue;
             File sbase=storage.getBase();
             if (isParentOf(sbase,dir)) {
-              _manager.addMessage(_("Cannot add torrent {0} inside another torrent: {1}",dir.getAbsolutePath(),sbase));
+              _manager.addMessage(_t("Cannot add torrent {0} inside another torrent: {1}",dir.getAbsolutePath(),sbase));
               return;
             }
           }
@@ -51,10 +51,15 @@
         addMagnet(newURL,dir);
       }
  else       if (newURL.length() == 40 && newURL.replaceAll("[a-fA-F0-9]","").length() == 0) {
+        newURL=newURL.toUpperCase(Locale.US);
+        addMagnet(MagnetURI.MAGNET_FULL + newURL,dir);
+      }
+ else       if (newURL.length() == 32 && newURL.replaceAll("[a-zA-Z2-7]","").length() == 0) {
+        newURL=newURL.toUpperCase(Locale.US);
         addMagnet(MagnetURI.MAGNET_FULL + newURL,dir);
       }
  else {
-        _manager.addMessage(_("Invalid URL: Must start with \"http://\", \"{0}\", or \"{1}\"",MagnetURI.MAGNET,MagnetURI.MAGGOT));
+        _manager.addMessage(_t("Invalid URL: Must start with \"http://\", \"{0}\", or \"{1}\"",MagnetURI.MAGNET,MagnetURI.MAGGOT));
       }
     }
  else {
@@ -95,13 +100,13 @@
             MetaInfo meta=snark.getMetaInfo();
             if (meta == null) {
               _manager.deleteMagnet(snark);
-              _manager.addMessage(_("Magnet deleted: {0}",name));
+              _manager.addMessage(_t("Magnet deleted: {0}",name));
               return;
             }
             _manager.stopTorrent(snark,true);
             File f=new File(name);
             f.delete();
-            _manager.addMessage(_("Torrent file deleted: {0}",f.getAbsolutePath()));
+            _manager.addMessage(_t("Torrent file deleted: {0}",f.getAbsolutePath()));
             break;
           }
         }
@@ -119,29 +124,29 @@
             MetaInfo meta=snark.getMetaInfo();
             if (meta == null) {
               _manager.deleteMagnet(snark);
-              if (snark instanceof FetchAndAdd)               _manager.addMessage(_("Download deleted: {0}",name));
- else               _manager.addMessage(_("Magnet deleted: {0}",name));
+              if (snark instanceof FetchAndAdd)               _manager.addMessage(_t("Download deleted: {0}",name));
+ else               _manager.addMessage(_t("Magnet deleted: {0}",name));
               return;
             }
             _manager.stopTorrent(snark,true);
             File f=new File(name);
             f.delete();
-            _manager.addMessage(_("Torrent file deleted: {0}",f.getAbsolutePath()));
-            List<List<String>> files=meta.getFiles();
-            String dataFile=snark.getBaseName();
-            f=new File(_manager.getDataDir(),dataFile);
-            if (files == null) {
-              if (f.delete())               _manager.addMessage(_("Data file deleted: {0}",f.getAbsolutePath()));
- else               _manager.addMessage(_("Data file could not be deleted: {0}",f.getAbsolutePath()));
-              break;
-            }
+            _manager.addMessage(_t("Torrent file deleted: {0}",f.getAbsolutePath()));
             Storage storage=snark.getStorage();
             if (storage == null)             break;
+            List<List<String>> files=meta.getFiles();
+            if (files == null) {
+              for (              File df : storage.getFiles()) {
+                if (df.delete())                 _manager.addMessage(_t("Data file deleted: {0}",df.getAbsolutePath()));
+ else                 _manager.addMessage(_t("Data file could not be deleted: {0}",df.getAbsolutePath()));
+              }
+              break;
+            }
             for (            File df : storage.getFiles()) {
               if (df.delete()) {
               }
  else {
-                _manager.addMessage(_("Data file could not be deleted: {0}",df.getAbsolutePath()));
+                _manager.addMessage(_t("Data file could not be deleted: {0}",df.getAbsolutePath()));
               }
             }
             Set<File> dirs=storage.getDirectories();
@@ -154,11 +159,11 @@
               }
  else {
                 ok=false;
-                _manager.addMessage(_("Directory could not be deleted: {0}",df.getAbsolutePath()));
+                _manager.addMessage(_t("Directory could not be deleted: {0}",df.getAbsolutePath()));
                 if (_log.shouldLog(Log.WARN))                 _log.warn("Could not delete dir " + df);
               }
             }
-            if (ok)             _manager.addMessage(_("Directory deleted: {0}",storage.getBase()));
+            if (ok)             _manager.addMessage(_t("Directory deleted: {0}",storage.getBase()));
             break;
           }
         }
@@ -166,9 +171,10 @@
     }
   }
  else   if ("Save".equals(action)) {
-    String dataDir=req.getParameter("dataDir");
+    String dataDir=req.getParameter("nofilter_dataDir");
     boolean filesPublic=req.getParameter("filesPublic") != null;
     boolean autoStart=req.getParameter("autoStart") != null;
+    boolean smartSort=req.getParameter("smartSort") != null;
     String seedPct=req.getParameter("seedPct");
     String eepHost=req.getParameter("eepHost");
     String eepPort=req.getParameter("eepPort");
@@ -183,7 +189,7 @@
     boolean useOpenTrackers=req.getParameter("useOpenTrackers") != null;
     boolean useDHT=req.getParameter("useDHT") != null;
     String theme=req.getParameter("theme");
-    _manager.updateConfig(dataDir,filesPublic,autoStart,refreshDel,startupDel,pageSize,seedPct,eepHost,eepPort,i2cpHost,i2cpPort,i2cpOpts,upLimit,upBW,useOpenTrackers,useDHT,theme);
+    _manager.updateConfig(dataDir,filesPublic,autoStart,smartSort,refreshDel,startupDel,pageSize,seedPct,eepHost,eepPort,i2cpHost,i2cpPort,i2cpOpts,upLimit,upBW,useOpenTrackers,useDHT,theme);
     try {
       setResourceBase(_manager.getDataDir());
     }
@@ -203,16 +209,16 @@
       if (baseFile.exists()) {
         String torrentName=baseFile.getName();
         if (torrentName.toLowerCase(Locale.US).endsWith(".torrent")) {
-          _manager.addMessage(_("Cannot add a torrent ending in \".torrent\": {0}",baseFile.getAbsolutePath()));
+          _manager.addMessage(_t("Cannot add a torrent ending in \".torrent\": {0}",baseFile.getAbsolutePath()));
           return;
         }
         Snark snark=_manager.getTorrentByBaseName(torrentName);
         if (snark != null) {
-          _manager.addMessage(_("Torrent with this name is already running: {0}",torrentName));
+          _manager.addMessage(_t("Torrent with this name is already running: {0}",torrentName));
           return;
         }
         if (isParentOf(baseFile,_manager.getDataDir()) || isParentOf(baseFile,_manager.util().getContext().getBaseDir()) || isParentOf(baseFile,_manager.util().getContext().getConfigDir())) {
-          _manager.addMessage(_("Cannot add a torrent including an I2P directory: {0}",baseFile.getAbsolutePath()));
+          _manager.addMessage(_t("Cannot add a torrent including an I2P directory: {0}",baseFile.getAbsolutePath()));
           return;
         }
         Collection<Snark> snarks=_manager.getTorrents();
@@ -221,11 +227,11 @@
           if (storage == null)           continue;
           File sbase=storage.getBase();
           if (isParentOf(sbase,baseFile)) {
-            _manager.addMessage(_("Cannot add torrent {0} inside another torrent: {1}",baseFile.getAbsolutePath(),sbase));
+            _manager.addMessage(_t("Cannot add torrent {0} inside another torrent: {1}",baseFile.getAbsolutePath(),sbase));
             return;
           }
           if (isParentOf(baseFile,sbase)) {
-            _manager.addMessage(_("Cannot add torrent {0} including another torrent: {1}",baseFile.getAbsolutePath(),sbase));
+            _manager.addMessage(_t("Cannot add torrent {0} including another torrent: {1}",baseFile.getAbsolutePath(),sbase));
             return;
           }
         }
@@ -245,7 +251,7 @@
         List<List<String>> announceList=null;
         if (!backupURLs.isEmpty()) {
           if (announceURL == null) {
-            _manager.addMessage(_("Error - Cannot include alternate trackers without a primary tracker"));
+            _manager.addMessage(_t("Error - Cannot include alternate trackers without a primary tracker"));
             return;
           }
           backupURLs.add(0,announceURL);
@@ -256,7 +262,7 @@
  else             hasPublic=true;
           }
           if (hasPrivate && hasPublic) {
-            _manager.addMessage(_("Error - Cannot mix private and public trackers in a torrent"));
+            _manager.addMessage(_t("Error - Cannot mix private and public trackers in a torrent"));
             return;
           }
           announceList=new ArrayList<List<String>>(backupURLs.size());
@@ -266,26 +272,26 @@
         }
         try {
           boolean isPrivate=_manager.getPrivateTrackers().contains(announceURL);
-          Storage s=new Storage(_manager.util(),baseFile,announceURL,announceList,isPrivate,null);
+          Storage s=new Storage(_manager.util(),baseFile,announceURL,announceList,null,isPrivate,null);
           s.close();
           MetaInfo info=s.getMetaInfo();
           File torrentFile=new File(_manager.getDataDir(),s.getBaseName() + ".torrent");
           boolean ok=_manager.addTorrent(info,s.getBitField(),torrentFile.getAbsolutePath(),baseFile,true);
           if (!ok)           return;
-          _manager.addMessage(_("Torrent created for \"{0}\"",baseFile.getName()) + ": " + torrentFile.getAbsolutePath());
-          if (announceURL != null && !_manager.util().getOpenTrackers().contains(announceURL))           _manager.addMessage(_("Many I2P trackers require you to register new torrents before seeding - please do so before starting \"{0}\"",baseFile.getName()));
+          _manager.addMessage(_t("Torrent created for \"{0}\"",baseFile.getName()) + ": " + torrentFile.getAbsolutePath());
+          if (announceURL != null && !_manager.util().getOpenTrackers().contains(announceURL))           _manager.addMessage(_t("Many I2P trackers require you to register new torrents before seeding - please do so before starting \"{0}\"",baseFile.getName()));
         }
  catch (        IOException ioe) {
-          _manager.addMessage(_("Error creating a torrent for \"{0}\"",baseFile.getAbsolutePath()) + ": " + ioe);
+          _manager.addMessage(_t("Error creating a torrent for \"{0}\"",baseFile.getAbsolutePath()) + ": " + ioe);
           _log.error("Error creating a torrent",ioe);
         }
       }
  else {
-        _manager.addMessage(_("Cannot create a torrent for the nonexistent data: {0}",baseFile.getAbsolutePath()));
+        _manager.addMessage(_t("Cannot create a torrent for the nonexistent data: {0}",baseFile.getAbsolutePath()));
       }
     }
  else {
-      _manager.addMessage(_("Error creating torrent - you must enter a file or directory"));
+      _manager.addMessage(_t("Error creating torrent - you must enter a file or directory"));
     }
   }
  else   if ("StopAll".equals(action)) {

@@ -4,7 +4,7 @@
   boolean quoting=false;
   boolean quote=false;
   boolean linebreak=false;
-  String quotedSequence=null;
+  StringBuilder quotedSequence=null;
   int rest=in.length;
   int index=0;
   while (true) {
@@ -33,14 +33,15 @@
     }
     if (quote) {
       if (!quoting) {
-        quotedSequence="=?utf-8?Q?";
+        quotedSequence=new StringBuilder(64);
+        quotedSequence.append("=?utf-8?Q?");
         quoting=true;
       }
-      quotedSequence+=HexTable.table[c < 0 ? 256 + c : c];
+      quotedSequence.append(HexTable.table[c < 0 ? 256 + c : c]);
     }
  else {
       if (quoting) {
-        quotedSequence+="?=";
+        quotedSequence.append("?=");
         int sl=quotedSequence.length();
         if (l + sl > 76) {
           out.append("\r\n\t");
@@ -66,7 +67,7 @@
     }
   }
   if (quoting) {
-    quotedSequence+="?=";
+    quotedSequence.append("?=");
     int sl=quotedSequence.length();
     if (l + sl > 76) {
       out.append("\r\n\t");

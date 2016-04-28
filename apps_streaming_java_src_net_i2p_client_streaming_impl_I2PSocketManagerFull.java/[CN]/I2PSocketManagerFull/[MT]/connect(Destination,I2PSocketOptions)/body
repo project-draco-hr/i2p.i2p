@@ -1,11 +1,26 @@
 {
-  verifySession();
+  if (peer == null)   throw new NullPointerException();
   if (options == null)   options=_defaultOptions;
   ConnectionOptions opts=null;
   if (options instanceof ConnectionOptions)   opts=new ConnectionOptions((ConnectionOptions)options);
  else   opts=new ConnectionOptions(options);
   if (_log.shouldLog(Log.INFO))   _log.info("Connecting to " + peer.calculateHash().toBase64().substring(0,6) + " with options: "+ opts);
-  Connection con=_connectionManager.connect(peer,opts);
+  I2PSession session=_session;
+  if (!_subsessions.isEmpty()) {
+    updateUserDsaList();
+    Hash h=peer.calculateHash();
+    SigAlgo myAlgo=session.getMyDestination().getSigType().getBaseAlgorithm();
+    if ((myAlgo == SigAlgo.EC && _ecUnsupported.contains(h)) || (myAlgo == SigAlgo.EdDSA && _edUnsupported.contains(h)) || (!_userDsaOnly.isEmpty() && _userDsaOnly.contains(h))) {
+      for (      I2PSession sess : _subsessions) {
+        if (sess.getMyDestination().getSigType() == SigType.DSA_SHA1) {
+          session=sess;
+          break;
+        }
+      }
+    }
+  }
+  verifySession(session);
+  Connection con=_connectionManager.connect(peer,opts,session);
   if (con == null)   throw new TooManyStreamsException("Too many streams, max " + _defaultOptions.getMaxConns());
   I2PSocketFull socket=new I2PSocketFull(con,_context);
   con.setSocket(socket);

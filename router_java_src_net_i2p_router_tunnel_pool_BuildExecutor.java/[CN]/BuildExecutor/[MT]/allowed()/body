@@ -1,5 +1,5 @@
 {
-  if (_context.commSystem().getReachabilityStatus() == CommSystemFacade.STATUS_DISCONNECTED)   return 0;
+  if (_context.commSystem().getStatus() == Status.DISCONNECTED)   return 0;
   int maxKBps=_context.bandwidthLimiter().getOutboundKBytesPerSecond();
   int allowed=maxKBps / 6;
   RateStat rs=_context.statManager().getRate("tunnel.buildRequestTime");
@@ -50,14 +50,18 @@
         RouterInfo ri=_context.netDb().lookupRouterInfoLocally(peer);
         String bwTier="Unknown";
         if (ri != null)         bwTier=ri.getBandwidthTier();
-        _context.statManager().addRateData("tunnel.tierExpire" + bwTier,1,0);
+        _context.statManager().addRateData("tunnel.tierExpire" + bwTier,1);
         didNotReply(cfg.getReplyMessageId(),peer);
         _context.profileManager().tunnelTimedOut(peer);
       }
       TunnelPool pool=cfg.getTunnelPool();
       if (pool != null)       pool.buildComplete(cfg);
-      if (cfg.getDestination() == null)       _context.statManager().addRateData("tunnel.buildExploratoryExpire",1,0);
- else       _context.statManager().addRateData("tunnel.buildClientExpire",1,0);
+      if (cfg.getDestination() == null) {
+        _context.statManager().addRateData("tunnel.buildExploratoryExpire",1);
+      }
+ else {
+        _context.statManager().addRateData("tunnel.buildClientExpire",1);
+      }
     }
   }
   _context.statManager().addRateData("tunnel.concurrentBuilds",concurrent,0);

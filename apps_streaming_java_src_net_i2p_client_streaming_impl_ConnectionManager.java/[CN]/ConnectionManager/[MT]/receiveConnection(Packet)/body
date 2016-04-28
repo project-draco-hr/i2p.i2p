@@ -2,7 +2,7 @@
   ConnectionOptions opts=new ConnectionOptions(_defaultOptions);
   opts.setPort(synPacket.getRemotePort());
   opts.setLocalPort(synPacket.getLocalPort());
-  Connection con=new Connection(_context,this,_schedulerChooser,_timer,_outboundQueue,_conPacketHandler,opts,true);
+  Connection con=new Connection(_context,this,synPacket.getSession(),_schedulerChooser,_timer,_outboundQueue,_conPacketHandler,opts,true);
   _tcbShare.updateOptsFromShare(con);
   boolean reject=false;
   int active=0;
@@ -14,7 +14,7 @@
  else {
     String why=shouldRejectConnection(synPacket);
     if (why != null) {
-      if ((!_defaultOptions.getDisableRejectLogging()) || _log.shouldLog(Log.WARN))       _log.logAlways(Log.WARN,"Refusing connection since peer is " + why + (synPacket.getOptionalFrom() == null ? "" : ": " + synPacket.getOptionalFrom().calculateHash().toBase64()));
+      if ((!_defaultOptions.getDisableRejectLogging()) || _log.shouldLog(Log.WARN))       _log.logAlways(Log.WARN,"Refusing connection since peer is " + why + (synPacket.getOptionalFrom() == null ? "" : ": " + synPacket.getOptionalFrom().toBase32()));
       reject=true;
     }
  else {
@@ -28,17 +28,19 @@
     if (_dayThrottler != null || _hourThrottler != null) {
       Hash h=from.calculateHash();
       if ((_hourThrottler != null && _hourThrottler.isThrottled(h)) || (_dayThrottler != null && _dayThrottler.isThrottled(h)) || _globalBlacklist.contains(h)|| (_defaultOptions.isAccessListEnabled() && !_defaultOptions.getAccessList().contains(h))|| (_defaultOptions.isBlacklistEnabled() && _defaultOptions.getBlacklist().contains(h))) {
-        if (_log.shouldLog(Log.INFO))         _log.info("Dropping RST to " + h);
-        return null;
+        if (!Boolean.valueOf(_context.getProperty("i2p.streaming.sendResetOnBlock"))) {
+          if (_log.shouldLog(Log.INFO))           _log.info("Dropping RST to " + h);
+          return null;
+        }
       }
     }
-    PacketLocal reply=new PacketLocal(_context,from);
+    PacketLocal reply=new PacketLocal(_context,from,synPacket.getSession());
     reply.setFlag(Packet.FLAG_RESET);
     reply.setFlag(Packet.FLAG_SIGNATURE_INCLUDED);
     reply.setAckThrough(synPacket.getSequenceNum());
     reply.setSendStreamId(synPacket.getReceiveStreamId());
     reply.setReceiveStreamId(0);
-    reply.setOptionalFrom(_session.getMyDestination());
+    reply.setOptionalFrom();
     reply.setLocalPort(synPacket.getLocalPort());
     reply.setRemotePort(synPacket.getRemotePort());
     _outboundQueue.enqueue(reply);
@@ -52,6 +54,6 @@
     _connectionByInboundId.remove(Long.valueOf(con.getReceiveStreamId()));
     return null;
   }
-  _context.statManager().addRateData("stream.connectionReceived",1,0);
+  _context.statManager().addRateData("stream.connectionReceived",1);
   return con;
 }

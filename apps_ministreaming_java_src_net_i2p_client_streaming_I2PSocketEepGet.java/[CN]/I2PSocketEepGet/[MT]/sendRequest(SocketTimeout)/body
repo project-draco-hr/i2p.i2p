@@ -19,24 +19,51 @@
  catch (  IOException ioe) {
   }
   try {
-    URL url=new URL(_actualURL);
-    if ("http".equals(url.getProtocol())) {
+    URI url=new URI(_actualURL);
+    if ("http".equals(url.getScheme())) {
       String host=url.getHost();
+      if (host == null)       throw new MalformedURLException("no hostname: " + _actualURL);
       int port=url.getPort();
       if (port <= 0 || port > 65535)       port=80;
       if ("i2p".equals(host)) {
-        String file=url.getFile();
+        String file=url.getRawPath();
         try {
           int slash=1 + file.substring(1).indexOf("/");
           host=file.substring(1,slash);
           _actualURL="http://" + host + file.substring(slash);
+          String query=url.getRawQuery();
+          if (query != null)           _actualURL=_actualURL + '?' + query;
         }
  catch (        IndexOutOfBoundsException ioobe) {
-          throw new IOException("Bad /i2p/ format: " + _actualURL);
+          throw new MalformedURLException("Bad /i2p/ format: " + _actualURL);
         }
       }
-      Destination dest=_context.namingService().lookup(host);
-      if (dest == null)       throw new UnknownHostException("Unknown or non-i2p host");
+      Destination dest;
+      I2PSession sess=_socketManager.getSession();
+      if (sess != null && !sess.isClosed()) {
+        try {
+          if (host.length() == 60 && host.endsWith(".b32.i2p")) {
+            byte[] b=Base32.decode(host.substring(0,52));
+            if (b != null) {
+              Hash h=Hash.create(b);
+              dest=sess.lookupDest(h,20 * 1000);
+            }
+ else {
+              dest=null;
+            }
+          }
+ else {
+            dest=sess.lookupDest(host,20 * 1000);
+          }
+        }
+ catch (        I2PSessionException ise) {
+          dest=null;
+        }
+      }
+ else {
+        dest=_context.namingService().lookup(host);
+      }
+      if (dest == null)       throw new UnknownHostException("Unknown or non-i2p host: " + host);
       Properties props=new Properties();
       props.setProperty(I2PSocketOptions.PROP_CONNECT_TIMEOUT,"" + CONNECT_TIMEOUT);
       props.setProperty(I2PSocketOptions.PROP_READ_TIMEOUT,"" + INACTIVITY_TIMEOUT);
@@ -46,14 +73,16 @@
       _socket=_socketManager.connect(dest,opts);
     }
  else {
-      throw new IOException("Unsupported protocol: " + _actualURL);
+      throw new MalformedURLException("Unsupported protocol: " + _actualURL);
     }
   }
- catch (  MalformedURLException mue) {
-    throw new IOException("Request URL is invalid: " + _actualURL);
+ catch (  URISyntaxException use) {
+    IOException ioe=new MalformedURLException("Bad URL");
+    ioe.initCause(use);
+    throw ioe;
   }
 catch (  I2PException ie) {
-    throw new IOException(ie.toString());
+    throw new IOException("I2P error",ie);
   }
   _proxyIn=_socket.getInputStream();
   _proxyOut=_socket.getOutputStream();

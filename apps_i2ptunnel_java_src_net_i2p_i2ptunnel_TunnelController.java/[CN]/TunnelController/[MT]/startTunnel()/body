@@ -1,13 +1,21 @@
 {
-  _starting=true;
+synchronized (this) {
+    if (_state != TunnelState.STOPPED && _state != TunnelState.START_ON_LOAD) {
+      if (_state == TunnelState.RUNNING) {
+        if (_log.shouldLog(Log.INFO))         _log.info("Already running");
+        log("Tunnel " + getName() + " is already running");
+      }
+      return;
+    }
+    changeState(TunnelState.STARTING);
+  }
   try {
     doStartTunnel();
   }
- catch (  Exception e) {
+ catch (  RuntimeException e) {
     _log.error("Error starting the tunnel " + getName(),e);
     log("Error starting the tunnel " + getName() + ": "+ e.getMessage());
     acquire();
     stopTunnel();
   }
-  _starting=false;
 }

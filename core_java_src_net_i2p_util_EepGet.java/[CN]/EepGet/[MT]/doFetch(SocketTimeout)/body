@@ -13,14 +13,29 @@
     if (_fetchInactivityTimeout > 0)     timeout.setInactivityTimeout(_fetchInactivityTimeout);
  else     timeout.setInactivityTimeout(INACTIVITY_TIMEOUT);
   }
+  if (_proxy != null && !_shouldProxy) {
+    if (_fetchInactivityTimeout > 0)     _proxy.setSoTimeout(_fetchInactivityTimeout);
+ else     _proxy.setSoTimeout(INACTIVITY_TIMEOUT);
+  }
   if (_redirectLocation != null) {
-    if (_redirectLocation.startsWith("http://")) {
-      _actualURL=_redirectLocation;
-    }
+    try {
+      if (_redirectLocation.startsWith("http://")) {
+        _actualURL=_redirectLocation;
+      }
  else {
-      URL url=new URL(_actualURL);
-      if (_redirectLocation.startsWith("/"))       _actualURL="http://" + url.getHost() + ":"+ url.getPort()+ _redirectLocation;
- else       _actualURL="http://" + url.getHost() + ":"+ url.getPort()+ "/"+ _redirectLocation;
+        URI url=new URI(_actualURL);
+        String host=url.getHost();
+        if (host == null)         throw new MalformedURLException("Redirected to invalid URL");
+        int port=url.getPort();
+        if (port < 0)         port=80;
+        if (_redirectLocation.startsWith("/"))         _actualURL="http://" + host + ":"+ port+ _redirectLocation;
+ else         _actualURL="http://" + host + ":"+ port+ "/"+ _redirectLocation;
+      }
+    }
+ catch (    URISyntaxException use) {
+      IOException ioe=new MalformedURLException("Redirected to invalid URL");
+      ioe.initCause(use);
+      throw ioe;
     }
     AuthState as=_authState;
     if (_responseCode == 407) {
@@ -52,6 +67,7 @@
   Thread pusher=null;
   _decompressException=null;
   if (_isGzippedResponse) {
+    if (_log.shouldInfo())     _log.info("Gzipped response, starting decompressor");
     PipedInputStream pi=BigPipedInputStream.getInstance();
     PipedOutputStream po=new PipedOutputStream(pi);
     pusher=new I2PAppThread(new Gunzipper(pi,_out),"EepGet Decompressor");

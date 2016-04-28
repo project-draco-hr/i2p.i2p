@@ -1,0 +1,17 @@
+{
+  if (_dontSendMSM || nonce == 0)   return;
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Acking message send [accepted]" + id + " / "+ nonce+ " for sessionId "+ sid);
+  MessageStatusMessage status=new MessageStatusMessage();
+  status.setMessageId(id.getMessageId());
+  status.setSessionId(sid.getSessionId());
+  status.setSize(0L);
+  status.setNonce(nonce);
+  status.setStatus(MessageStatusMessage.STATUS_SEND_ACCEPTED);
+  try {
+    doSend(status);
+    _acceptedPending.remove(id);
+  }
+ catch (  I2CPMessageException ime) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Error writing out the message status message",ime);
+  }
+}

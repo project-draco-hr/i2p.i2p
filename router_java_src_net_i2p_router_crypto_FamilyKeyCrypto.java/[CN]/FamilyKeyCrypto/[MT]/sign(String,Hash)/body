@@ -1,0 +1,23 @@
+{
+  if (_privkey == null) {
+    _log.logAlways(Log.WARN,"family name now set, must restart router to generate or load keys");
+    throw new GeneralSecurityException("family name now set, must restart router to generate or load keys");
+  }
+  if (h == null)   throw new GeneralSecurityException("null router hash");
+  if (!_fname.equals(family)) {
+    _log.logAlways(Log.WARN,"family name changed, must restart router to generate or load new keys");
+    throw new GeneralSecurityException("family name changed, must restart router to generate or load new keys");
+  }
+  byte[] nb=DataHelper.getUTF8(_fname);
+  int len=nb.length + Hash.HASH_LENGTH;
+  byte[] b=new byte[len];
+  System.arraycopy(nb,0,b,0,nb.length);
+  System.arraycopy(h.getData(),0,b,nb.length,Hash.HASH_LENGTH);
+  Signature sig=_context.dsa().sign(b,_privkey);
+  if (sig == null)   throw new GeneralSecurityException("sig failed");
+  Map<String,String> rv=new HashMap<String,String>(3);
+  rv.put(OPT_NAME,family);
+  rv.put(OPT_KEY,_pubkey.getType().getCode() + ":" + _pubkey.toBase64());
+  rv.put(OPT_SIG,sig.toBase64());
+  return rv;
+}

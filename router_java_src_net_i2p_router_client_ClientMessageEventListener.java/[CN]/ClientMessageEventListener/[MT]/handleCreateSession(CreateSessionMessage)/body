@@ -1,14 +1,23 @@
 {
   SessionConfig in=message.getSessionConfig();
+  Destination dest=in.getDestination();
   if (in.verifySignature()) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Signature verified correctly on create session message");
   }
  else {
-    int itype=in.getDestination().getCertificate().getCertificateType();
+    int itype=dest.getCertificate().getCertificateType();
     SigType stype=SigType.getByCode(itype);
     if (stype == null || !stype.isAvailable()) {
       _log.error("Client requested unsupported signature type " + itype);
       _runner.disconnectClient("Unsupported signature type " + itype);
+    }
+ else     if (in.tooOld()) {
+      long skew=_context.clock().now() - in.getCreationDate().getTime();
+      String msg="Create session message client clock skew? ";
+      if (skew >= 0)       msg+=DataHelper.formatDuration(skew) + " in the past";
+ else       msg+=DataHelper.formatDuration(0 - skew) + " in the future";
+      _log.error(msg);
+      _runner.disconnectClient(msg);
     }
  else {
       _log.error("Signature verification failed on a create session message");
@@ -18,15 +27,25 @@
   }
   Properties inProps=in.getOptions();
   if (!checkAuth(inProps))   return;
-  SessionId id=_runner.getSessionId();
+  SessionId id=_runner.getSessionId(dest.calculateHash());
   if (id != null) {
     _runner.disconnectClient("Already have session " + id);
     return;
   }
-  SessionConfig cfg=new SessionConfig(in.getDestination());
+  SessionConfig cfg=new SessionConfig(dest);
   cfg.setSignature(in.getSignature());
   Properties props=new Properties();
-  props.putAll(in.getOptions());
+  boolean isPrimary=_runner.getSessionIds().isEmpty();
+  if (!isPrimary) {
+    SessionConfig pcfg=_runner.getPrimaryConfig();
+    if (pcfg != null) {
+      props.putAll(pcfg.getOptions());
+    }
+ else {
+      _log.error("no primary config?");
+    }
+  }
+  props.putAll(inProps);
   cfg.setOptions(props);
   int status=_runner.sessionEstablished(cfg);
   if (status != SessionStatusMessage.STATUS_CREATED) {
@@ -38,7 +57,27 @@
     _runner.disconnectClient(msg);
     return;
   }
-  sendStatusMessage(status);
-  if (_log.shouldLog(Log.INFO))   _log.info("Session " + _runner.getSessionId() + " established for "+ _runner.getDestHash());
-  startCreateSessionJob();
+  id=_runner.getSessionId(dest.calculateHash());
+  if (_log.shouldLog(Log.INFO))   _log.info("Session " + id + " established for "+ dest.calculateHash());
+  if (isPrimary) {
+    sendStatusMessage(id,status);
+    startCreateSessionJob(cfg);
+  }
+ else {
+    SessionConfig pcfg=_runner.getPrimaryConfig();
+    if (pcfg != null) {
+      ClientTunnelSettings settings=new ClientTunnelSettings(dest.calculateHash());
+      settings.readFromProperties(props);
+      sendStatusMessage(id,status);
+      boolean ok=_context.tunnelManager().addAlias(dest,settings,pcfg.getDestination());
+      if (!ok) {
+        _log.error("Add alias failed");
+      }
+    }
+ else {
+      _log.error("no primary config?");
+      status=SessionStatusMessage.STATUS_INVALID;
+      sendStatusMessage(id,status);
+    }
+  }
 }

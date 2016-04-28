@@ -1,23 +1,27 @@
 {
-  boolean saveCerts=false;
+  int saveCerts=0;
+  boolean noVerify=false;
   boolean error=false;
-  Getopt g=new Getopt("ssleepget",args,"s");
+  Getopt g=new Getopt("ssleepget",args,"sz");
   try {
     int c;
     while ((c=g.getopt()) != -1) {
 switch (c) {
 case 's':
-        saveCerts=true;
+        saveCerts++;
       break;
+case 'z':
+    noVerify=true;
+  break;
 case '?':
 case ':':
 default :
-    error=true;
-  break;
+error=true;
+break;
 }
 }
 }
- catch (Exception e) {
+ catch (RuntimeException e) {
 e.printStackTrace();
 error=true;
 }
@@ -36,7 +40,8 @@ System.err.println("Failed to create output file " + saveAs);
 return;
 }
 SSLEepGet get=new SSLEepGet(I2PAppContext.getGlobalContext(),out,url);
-if (saveCerts) get._saveCerts=true;
+if (saveCerts > 0) get._saveCerts=saveCerts;
+if (noVerify) get._bypassVerification=true;
 get._commandLine=true;
 get.addStatusListener(get.new CLIStatusListener(1024,40));
 if (!get.fetch(45 * 1000,-1,60 * 1000)) System.exit(1);

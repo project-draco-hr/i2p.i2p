@@ -6,15 +6,36 @@
  else   if (style.equals("NTCP"))   maxProp="i2np.ntcp.maxConnections";
  else   maxProp="i2np." + style.toLowerCase(Locale.US) + ".maxConnections";
   int def=MAX_CONNECTION_FACTOR;
-  RouterInfo ri=_context.router().getRouterInfo();
-  if (ri != null) {
-    char bw=ri.getBandwidthTier().charAt(0);
-    if (bw > Router.CAPABILITY_BW12 && bw <= Router.CAPABILITY_BW256)     def*=(1 + bw - Router.CAPABILITY_BW12);
-  }
-  if (_context.netDb().floodfillEnabled()) {
-    def*=17;
-    def/=10;
-  }
-  if (style.equals("SSU"))   def*=3;
-  return _context.getProperty(maxProp,def);
+  String caps=_context.router().getCapabilities();
+  char bw=caps.charAt(0);
+switch (bw) {
+case Router.CAPABILITY_BW12:
+case 'u':
+default :
+    break;
+case Router.CAPABILITY_BW32:
+  def*=2;
+break;
+case Router.CAPABILITY_BW64:
+def*=3;
+break;
+case Router.CAPABILITY_BW128:
+def*=5;
+break;
+case Router.CAPABILITY_BW256:
+def*=9;
+break;
+case Router.CAPABILITY_BW512:
+def*=11;
+break;
+case Router.CAPABILITY_BW_UNLIMITED:
+def*=14;
+break;
+}
+if (_context.netDb().floodfillEnabled()) {
+def*=17;
+def/=10;
+}
+if (style.equals("SSU")) def*=3;
+return _context.getProperty(maxProp,def);
 }

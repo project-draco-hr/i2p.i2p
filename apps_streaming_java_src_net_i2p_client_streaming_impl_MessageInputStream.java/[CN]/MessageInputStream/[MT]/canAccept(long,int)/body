@@ -1,0 +1,25 @@
+{
+  if (payloadSize <= 0)   return true;
+  if (messageId < MIN_READY_BUFFERS)   return true;
+synchronized (_dataLock) {
+    if (_locallyClosed)     return true;
+    if (messageId <= _highestReadyBlockId)     return true;
+    if ((_readyDataBlocks.size() + _notYetReadyBlocks.size()) * _maxMessageSize < _maxBufferSize)     return true;
+    if (_notYetReadyBlocks.containsKey(Long.valueOf(messageId)))     return true;
+    int available=_maxBufferSize - getTotalReadySize();
+    if (available <= 0) {
+      if (_log.shouldWarn())       _log.warn("Dropping message " + messageId + ", inbound buffer exceeded: available = "+ available);
+      return false;
+    }
+    int allowedBlocks=available / _maxMessageSize;
+    if (messageId > _highestReadyBlockId + allowedBlocks) {
+      if (_log.shouldWarn())       _log.warn("Dropping message " + messageId + ", inbound buffer exceeded: "+ _highestReadyBlockId+ '/'+ (_highestReadyBlockId + allowedBlocks)+ '/'+ available);
+      return false;
+    }
+    if (_readyDataBlocks.size() >= 4 * _maxWindowSize) {
+      if (_log.shouldWarn())       _log.warn("Dropping message " + messageId + ", too many ready blocks");
+      return false;
+    }
+  }
+  return true;
+}

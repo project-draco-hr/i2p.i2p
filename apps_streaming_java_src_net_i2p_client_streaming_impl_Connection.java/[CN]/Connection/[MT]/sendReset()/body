@@ -3,17 +3,17 @@
   if (_resetSentOn.get() + 10 * 1000 > now)   return;
   if (_resetReceived.get())   return;
   _resetSentOn.set(now);
-  if ((_remotePeer == null) || (_sendStreamId <= 0))   return;
-  PacketLocal reply=new PacketLocal(_context,_remotePeer);
+  if ((_remotePeer == null) || (_sendStreamId.get() <= 0))   return;
+  PacketLocal reply=new PacketLocal(_context,_remotePeer,this);
   reply.setFlag(Packet.FLAG_RESET);
   reply.setFlag(Packet.FLAG_SIGNATURE_INCLUDED);
-  reply.setSendStreamId(_sendStreamId);
-  reply.setReceiveStreamId(_receiveStreamId);
-  reply.setOptionalFrom(_connectionManager.getSession().getMyDestination());
+  reply.setSendStreamId(_sendStreamId.get());
+  reply.setReceiveStreamId(_receiveStreamId.get());
+  reply.setOptionalFrom();
   reply.setLocalPort(_localPort);
   reply.setRemotePort(_remotePort);
   if (_outboundQueue.enqueue(reply)) {
-    _unackedPacketsReceived=0;
+    _unackedPacketsReceived.set(0);
     _lastSendTime=_context.clock().now();
     resetActivityTimer();
   }

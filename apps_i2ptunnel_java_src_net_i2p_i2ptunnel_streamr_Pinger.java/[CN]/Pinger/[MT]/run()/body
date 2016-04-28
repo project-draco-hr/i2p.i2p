@@ -3,7 +3,14 @@
   data[0]=0;
   int i=0;
   while (this.running) {
-    this.sink.send(null,data);
+    try {
+      this.sink.send(null,data);
+    }
+ catch (    RuntimeException re) {
+      Log log=I2PAppContext.getGlobalContext().logManager().getLog(getClass());
+      if (log.shouldWarn())       log.warn("error sending",re);
+      break;
+    }
 synchronized (this.waitlock) {
       int delay=10000;
       if (i < 5) {
@@ -14,6 +21,7 @@ synchronized (this.waitlock) {
         this.waitlock.wait(delay);
       }
  catch (      InterruptedException ie) {
+        break;
       }
     }
   }

@@ -1,0 +1,18 @@
+{
+  if (datagramSession == null) {
+    _log.error("BUG! Received datagram bytes, but session is null!");
+    return;
+  }
+  ByteArrayOutputStream msg=new ByteArrayOutputStream(100 + data.length);
+  String msgText="DATAGRAM RECEIVED DESTINATION=" + sender.toBase64() + " SIZE="+ data.length;
+  msg.write(DataHelper.getASCII(msgText));
+  if ((verMajor == 3 && verMinor >= 2) || verMajor > 3) {
+    msgText=" FROM_PORT=" + fromPort + " TO_PORT="+ toPort;
+    msg.write(DataHelper.getASCII(msgText));
+  }
+  msg.write((byte)'\n');
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("sending to client: " + msgText);
+  msg.write(data);
+  msg.flush();
+  writeBytes(ByteBuffer.wrap(msg.toByteArray()));
+}

@@ -1,11 +1,29 @@
 {
-  boolean verbose=(props.getProperty("SILENT","false").equals("false"));
+  boolean verbose=!Boolean.parseBoolean(props.getProperty("SILENT"));
   Destination d=SAMUtils.getDest(dest);
   I2PSocketOptions opts=socketMgr.buildOptions(props);
   if (props.getProperty(I2PSocketOptions.PROP_CONNECT_TIMEOUT) == null)   opts.setConnectTimeout(60 * 1000);
+  String fromPort=props.getProperty("FROM_PORT");
+  if (fromPort != null) {
+    try {
+      opts.setLocalPort(Integer.parseInt(fromPort));
+    }
+ catch (    NumberFormatException nfe) {
+      throw new I2PException("Bad port " + fromPort);
+    }
+  }
+  String toPort=props.getProperty("TO_PORT");
+  if (toPort != null) {
+    try {
+      opts.setPort(Integer.parseInt(toPort));
+    }
+ catch (    NumberFormatException nfe) {
+      throw new I2PException("Bad port " + toPort);
+    }
+  }
   if (_log.shouldLog(Log.DEBUG))   _log.debug("Connecting new I2PSocket...");
   I2PSocket i2ps=socketMgr.connect(d,opts);
-  SAMv3Handler.SessionRecord rec=SAMv3Handler.sSessionsHash.get(nick);
+  SessionRecord rec=SAMv3Handler.sSessionsHash.get(nick);
   if (rec == null)   throw new InterruptedIOException();
   handler.notifyStreamResult(verbose,"OK",null);
   handler.stealSocket();
@@ -13,6 +31,7 @@
   ReadableByteChannel fromI2P=Channels.newChannel(i2ps.getInputStream());
   WritableByteChannel toClient=handler.getClientSocket();
   WritableByteChannel toI2P=Channels.newChannel(i2ps.getOutputStream());
-  (new Thread(rec.getThreadGroup(),new I2PAppThread(new Pipe(fromClient,toI2P,"SAMPipeClientToI2P"),"SAMPipeClientToI2P"),"SAMPipeClientToI2P")).start();
-  (new Thread(rec.getThreadGroup(),new I2PAppThread(new Pipe(fromI2P,toClient,"SAMPipeI2PToClient"),"SAMPipeI2PToClient"),"SAMPipeI2PToClient")).start();
+  SAMBridge bridge=handler.getBridge();
+  (new I2PAppThread(rec.getThreadGroup(),new Pipe(fromClient,toI2P,bridge),"ConnectV3 SAMPipeClientToI2P")).start();
+  (new I2PAppThread(rec.getThreadGroup(),new Pipe(fromI2P,toClient,bridge),"ConnectV3 SAMPipeI2PToClient")).start();
 }

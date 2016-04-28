@@ -1,0 +1,43 @@
+{
+  Set<SHA1Hash> torrents=new HashSet<SHA1Hash>(32);
+  int found=0;
+  int totalDeleted=0;
+synchronized (_snarks) {
+    for (    Snark snark : _snarks.values()) {
+      torrents.add(new SHA1Hash(snark.getInfoHash()));
+    }
+synchronized (_configLock) {
+      for (int i=0; i < B64.length(); i++) {
+        File subdir=new File(_configDir,SUBDIR_PREFIX + B64.charAt(i));
+        File[] configs=subdir.listFiles();
+        if (configs == null)         continue;
+        int deleted=0;
+        for (int j=0; j < configs.length; j++) {
+          File config=configs[j];
+          SHA1Hash ih=configFileToInfoHash(config);
+          if (ih == null)           continue;
+          found++;
+          if (torrents.contains(ih)) {
+            if (_log.shouldInfo())             _log.info("Torrent for " + config + " exists");
+          }
+ else {
+            boolean ok=config.delete();
+            if (ok) {
+              if (_log.shouldInfo())               _log.info("Deleted " + config + " for "+ ih);
+              deleted++;
+            }
+ else {
+              if (_log.shouldWarn())               _log.warn("Failed to delete " + config + " for "+ ih);
+            }
+          }
+        }
+        if (deleted == configs.length) {
+          if (_log.shouldInfo())           _log.info("Deleting " + subdir);
+          subdir.delete();
+        }
+        totalDeleted+=deleted;
+      }
+    }
+  }
+  if (_log.shouldInfo())   _log.info("Cleanup found " + torrents.size() + " torrents and "+ found+ " configs, deleted "+ totalDeleted+ " old configs");
+}

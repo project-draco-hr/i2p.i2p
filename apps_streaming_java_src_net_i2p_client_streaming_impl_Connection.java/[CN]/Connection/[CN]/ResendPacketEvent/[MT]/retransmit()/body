@@ -15,7 +15,7 @@ synchronized (_outboundPackets) {
     if ((!isLowest) && (!fastRetransmit)) {
       if (_log.shouldLog(Log.INFO))       _log.info("Delaying resend of " + _packet + " with "+ _activeResends+ " active resend, "+ _outboundPackets.size()+ " unacked, window size = "+ _options.getWindowSize());
       forceReschedule(1333);
-      _nextSendTime=1333 + _context.clock().now();
+      _nextSend=1333 + _context.clock().now();
       return false;
     }
     if (fastRetransmit)     _context.statManager().addRateData("stream.fastRetransmit",_packet.getLifetime(),_packet.getLifetime());
@@ -23,8 +23,8 @@ synchronized (_outboundPackets) {
     _packet.setOptionalDelay(choke);
     if (choke > 0)     _packet.setFlag(Packet.FLAG_DELAY_REQUESTED);
     _packet.setResendDelay(getOptions().getResendDelay() / 1000);
-    if (_packet.getReceiveStreamId() <= 0)     _packet.setReceiveStreamId(_receiveStreamId);
-    if (_packet.getSendStreamId() <= 0)     _packet.setSendStreamId(_sendStreamId);
+    if (_packet.getReceiveStreamId() <= 0)     _packet.setReceiveStreamId(_receiveStreamId.get());
+    if (_packet.getSendStreamId() <= 0)     _packet.setSendStreamId(_sendStreamId.get());
     int newWindowSize=getOptions().getWindowSize();
     if (_ackSinceCongestion.get()) {
       if (_packet.getSequenceNum() > _lastCongestionHighestUnacked) {
@@ -33,7 +33,7 @@ synchronized (_outboundPackets) {
         newWindowSize/=2;
         if (newWindowSize <= 0)         newWindowSize=1;
         getOptions().setWindowSize(newWindowSize);
-        if (_log.shouldLog(Log.WARN))         _log.warn("Congestion, resending packet " + _packet.getSequenceNum() + " (new windowSize "+ newWindowSize+ "/"+ getOptions().getWindowSize()+ ") for "+ Connection.this.toString());
+        if (_log.shouldLog(Log.INFO))         _log.info("Congestion, resending packet " + _packet.getSequenceNum() + " (new windowSize "+ newWindowSize+ "/"+ getOptions().getWindowSize()+ ") for "+ Connection.this.toString());
         windowAdjusted();
       }
     }
@@ -53,11 +53,11 @@ synchronized (_outboundPackets) {
       if (rto < MIN_RESEND_DELAY)       rto=MIN_RESEND_DELAY;
       long timeout=rto << (numSends - 1);
       if ((timeout > MAX_RESEND_DELAY) || (timeout <= 0))       timeout=MAX_RESEND_DELAY;
-      _nextSendTime=timeout + _context.clock().now();
+      _nextSend=timeout + _context.clock().now();
       if (_outboundQueue.enqueue(_packet)) {
         if (numSends == 2)         _activeResends.incrementAndGet();
         if (_log.shouldLog(Log.INFO))         _log.info("Resent packet " + (fastRetransmit ? "(fast) " : "(timeout) ") + _packet+ " next resend in "+ timeout+ "ms"+ " activeResends: "+ _activeResends+ " (wsize "+ newWindowSize+ " lifetime "+ (_context.clock().now() - _packet.getCreatedOn())+ "ms)");
-        _unackedPacketsReceived=0;
+        _unackedPacketsReceived.set(0);
         _lastSendTime=_context.clock().now();
         resetActivityTimer();
       }

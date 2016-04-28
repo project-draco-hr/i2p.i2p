@@ -6,15 +6,38 @@
     requeue(last + delay - now);
     return;
   }
-  RouterInfo ri=new RouterInfo(getContext().router().getRouterInfo());
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("Old routerInfo contains " + ri.getAddresses().size() + " addresses and "+ ri.getOptionsMap().size()+ " options");
-  Properties stats=getContext().statPublisher().publishStatistics();
-  stats.setProperty(RouterInfo.PROP_NETWORK_ID,"" + Router.NETWORK_ID);
+  RouterInfo oldRI=getContext().router().getRouterInfo();
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("Old routerInfo contains " + oldRI.getAddresses().size() + " addresses and "+ oldRI.getOptionsMap().size()+ " options");
   try {
+    List<RouterAddress> oldAddrs=new ArrayList<RouterAddress>(oldRI.getAddresses());
+    List<RouterAddress> newAddrs=getContext().commSystem().createAddresses();
+    int count=_runCount.incrementAndGet();
+    RouterInfo ri=new RouterInfo(oldRI);
+    if (_notFirstTime && (count % 4) != 0 && oldAddrs.size() == newAddrs.size()) {
+      String newcaps=getContext().router().getCapabilities();
+      boolean different=!oldRI.getCapabilities().equals(newcaps);
+      if (!different) {
+        Comparator<RouterAddress> comp=new AddrComparator();
+        Collections.sort(oldAddrs,comp);
+        Collections.sort(newAddrs,comp);
+        for (int i=0; i < oldAddrs.size(); i++) {
+          if (!oldAddrs.get(i).deepEquals(newAddrs.get(i))) {
+            different=true;
+            break;
+          }
+        }
+        if (!different) {
+          if (_log.shouldLog(Log.INFO))           _log.info("Not republishing early because costs and caps and addresses are the same");
+          requeue(getDelay());
+          return;
+        }
+      }
+      if (_log.shouldLog(Log.INFO))       _log.info("Republishing early because addresses or costs or caps have changed -" + " oldCaps: " + oldRI.getCapabilities() + " newCaps: "+ newcaps+ " old:\n"+ oldAddrs+ "\nnew:\n"+ newAddrs);
+    }
     ri.setPublished(getContext().clock().now());
+    Properties stats=getContext().statPublisher().publishStatistics();
     ri.setOptions(stats);
-    ri.setAddresses(getContext().commSystem().createAddresses());
-    getContext().router().addCapabilities(ri);
+    ri.setAddresses(newAddrs);
     SigningPrivateKey key=getContext().keyManager().getSigningPrivateKey();
     if (key == null) {
       _log.log(Log.CRIT,"Internal error - signing private key not known?  rescheduling publish for 30s");
@@ -36,8 +59,7 @@
     _log.error("Error signing the updated local router info!",dfe);
   }
   if (_notFirstTime) {
-    long delay=getDelay();
-    requeue(delay);
+    requeue(getDelay());
   }
  else {
     requeue(FIRST_TIME_DELAY);

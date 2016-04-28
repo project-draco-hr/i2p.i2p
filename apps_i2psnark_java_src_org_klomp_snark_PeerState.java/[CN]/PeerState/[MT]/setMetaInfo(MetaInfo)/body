@@ -1,11 +1,28 @@
 {
   if (metainfo != null)   return;
-  BitField oldBF=bitfield;
-  if (oldBF != null) {
-    if (oldBF.size() != meta.getPieces())     bitfield=new BitField(oldBF.getFieldBytes(),meta.getPieces());
+  if (bitfield != null) {
+    if (bitfield.size() != meta.getPieces())     bitfield=new BitField(bitfield.getFieldBytes(),meta.getPieces());
+  }
+ else   if (havesBeforeMetaInfo != null) {
+    bitfield=new BitField(meta.getPieces());
   }
  else {
   }
   metainfo=meta;
-  if (bitfield != null && bitfield.count() > 0)   setInteresting(true);
+  if (bitfield != null) {
+    if (havesBeforeMetaInfo != null) {
+      for (      Integer i : havesBeforeMetaInfo) {
+        if (i.equals(PIECE_ALL)) {
+          bitfield.setAll();
+          if (_log.shouldLog(Log.WARN))           _log.warn("set have_all after rcv metainfo");
+          break;
+        }
+        int piece=i.intValue();
+        if (piece >= 0 && piece < meta.getPieces())         bitfield.set(piece);
+        if (_log.shouldLog(Log.WARN))         _log.warn("set have " + piece + " after rcv metainfo");
+      }
+      havesBeforeMetaInfo=null;
+    }
+    if (bitfield.count() > 0)     setInteresting(true);
+  }
 }

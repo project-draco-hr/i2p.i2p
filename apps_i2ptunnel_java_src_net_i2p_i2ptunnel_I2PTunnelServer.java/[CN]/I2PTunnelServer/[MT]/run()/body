@@ -7,6 +7,13 @@
   if (_usePool) {
     _executor=new CustomThreadPoolExecutor(getHandlerCount(),"ServerHandler pool " + remoteHost + ':'+ remotePort);
   }
+  TunnelControllerGroup tcg=TunnelControllerGroup.getInstance();
+  if (tcg != null) {
+    _clientExecutor=tcg.getClientExecutor();
+  }
+ else {
+    _clientExecutor=new TunnelControllerGroup.CustomThreadPoolExecutor();
+  }
   while (open) {
     try {
       I2PServerSocket ci2pss=i2pss;
@@ -42,7 +49,7 @@ catch (    ConnectException ce) {
     }
 catch (    SocketTimeoutException ste) {
     }
-catch (    Exception e) {
+catch (    RuntimeException e) {
       if (_log.shouldLog(Log.ERROR))       _log.error("Uncaught exception accepting",e);
       try {
         Thread.sleep(500);

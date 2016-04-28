@@ -1,26 +1,19 @@
 {
   if (_log.shouldLog(Log.INFO))   _log.info("News fetched from " + url + " with "+ (alreadyTransferred + bytesTransferred));
-  long now=_context.clock().now();
-  if (_tempFile.exists()) {
+  if (_tempFile.exists() && _tempFile.length() > 0) {
     File from;
-    if (url.endsWith(".su3")) {
-      try {
-        from=processSU3();
-      }
- catch (      IOException ioe) {
-        _log.error("Failed to extract the news file",ioe);
-        _tempFile.delete();
-        return;
-      }
+    try {
+      from=processSU3();
     }
- else {
-      from=_tempFile;
+ catch (    IOException ioe) {
+      _log.error("Failed to extract the news file",ioe);
+      _tempFile.delete();
+      return;
     }
     boolean copied=FileUtil.rename(from,_newsFile);
     _tempFile.delete();
     if (copied) {
-      String newVer=Long.toString(now);
-      _context.router().saveConfig(NewsHelper.PROP_LAST_UPDATED,newVer);
+      String newVer=Long.toString(_newLastModified);
       _mgr.notifyVersionAvailable(this,_currentURI,NEWS,"",HTTP,null,newVer,"");
       _isNewer=true;
       checkForUpdates();
