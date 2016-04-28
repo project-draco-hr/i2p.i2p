@@ -23,10 +23,15 @@
     if (f.exists() && f.lastModified() >= e.updated)     continue;
     OutputStream out=null;
     try {
+      byte[] data=DataHelper.getUTF8(e.data);
+      CertUtil.loadCRL(new ByteArrayInputStream(data));
       out=new SecureFileOutputStream(f);
-      out.write(DataHelper.getUTF8(e.data));
+      out.write(data);
     }
- catch (    IOException ioe) {
+ catch (    GeneralSecurityException gse) {
+      _log.error("Bad CRL",gse);
+    }
+catch (    IOException ioe) {
       _log.error("Failed to write CRL",ioe);
     }
  finally {
