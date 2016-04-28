@@ -1,0 +1,21 @@
+{
+  Node rev=feed.getNode("i2p:revocations");
+  if (rev == null)   return null;
+  List<Node> entries=getNodes(rev,"i2p:crl");
+  if (entries.isEmpty())   return null;
+  List<CRLEntry> rv=new ArrayList<CRLEntry>(entries.size());
+  for (  Node entry : entries) {
+    CRLEntry e=new CRLEntry();
+    String a=entry.getAttributeValue("id");
+    if (a.length() > 0)     e.id=a;
+    a=entry.getAttributeValue("updated");
+    if (a.length() > 0) {
+      long time=RFC3339Date.parse3339Date(a.trim());
+      if (time > 0)       e.updated=time;
+    }
+    a=entry.getValue();
+    if (a != null)     e.data=a.trim();
+    rv.add(e);
+  }
+  return rv;
+}
