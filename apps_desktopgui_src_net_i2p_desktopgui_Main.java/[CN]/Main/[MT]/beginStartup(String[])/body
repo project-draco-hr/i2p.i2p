@@ -1,17 +1,15 @@
 {
-  try {
-    String headless=System.getProperty("java.awt.headless");
-    boolean isHeadless=Boolean.parseBoolean(headless);
-    if (isHeadless) {
-      log.warn("Headless environment: not starting desktopgui!");
-      return;
-    }
-  }
- catch (  Exception e) {
+  changeState(STARTING);
+  String headless=System.getProperty("java.awt.headless");
+  boolean isHeadless=Boolean.parseBoolean(headless);
+  if (isHeadless) {
+    log.warn("Headless environment: not starting desktopgui!");
+    changeState(START_FAILED,"Headless environment: not starting desktopgui!",null);
     return;
   }
   try {
-    UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
+    String laf=UIManager.getSystemLookAndFeelClassName();
+    UIManager.setLookAndFeel(laf);
   }
  catch (  ClassNotFoundException ex) {
     log.log(Log.ERROR,null,ex);
@@ -25,16 +23,20 @@ catch (  IllegalAccessException ex) {
 catch (  UnsupportedLookAndFeelException ex) {
     log.log(Log.ERROR,null,ex);
   }
-  ConfigurationManager.getInstance().loadArguments(args);
-  final Main main=new Main();
-  main.launchForeverLoop();
+catch (  Error ex) {
+    log.log(Log.ERROR,"No permissions? Different user?",ex);
+    changeState(START_FAILED,"No permissions? Different user?",new RuntimeException(ex));
+    return;
+  }
+  if (_context == null)   launchForeverLoop();
   SwingUtilities.invokeLater(new Runnable(){
     @Override public void run(){
       try {
-        main.startUp();
+        startUp();
       }
  catch (      Exception e) {
         log.error("Failed while running desktopgui!",e);
+        changeState(START_FAILED,"Failed while running desktopgui!",e);
       }
     }
   }
