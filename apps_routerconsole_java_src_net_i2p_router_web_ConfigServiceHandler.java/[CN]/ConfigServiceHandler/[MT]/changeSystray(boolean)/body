@@ -1,0 +1,27 @@
+{
+  ClientAppManager mgr=_context.clientAppManager();
+  if (mgr != null) {
+    try {
+      ClientApp dtg=mgr.getRegisteredApp("desktopgui");
+      if (dtg != null) {
+        if (enable) {
+          if (dtg.getState() == ClientAppState.STOPPED)           dtg.startup();
+        }
+ else {
+          if (dtg.getState() == ClientAppState.RUNNING)           dtg.shutdown(null);
+        }
+      }
+ else       if (enable) {
+        dtg=new net.i2p.desktopgui.Main(_context,mgr,null);
+        dtg.startup();
+      }
+    }
+ catch (    Throwable t) {
+      if (enable)       addFormError(_t("Failed to start systray") + ": " + t);
+ else       addFormError(_t("Failed to stop systray") + ": " + t);
+    }
+  }
+  boolean saved=_context.router().saveConfig(RouterConsoleRunner.PROP_DTG_ENABLED,Boolean.toString(enable));
+  if (saved)   addFormNotice(_t("Configuration saved successfully"));
+ else   addFormError(_t("Error saving the configuration (applied but not saved) - please see the error logs"));
+}
