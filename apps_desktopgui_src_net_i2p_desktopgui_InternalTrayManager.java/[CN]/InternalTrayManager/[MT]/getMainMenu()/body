@@ -1,25 +1,26 @@
 {
   PopupMenu popup=new PopupMenu();
-  MenuItem browserLauncher=new MenuItem(_t("Launch I2P Browser"));
-  browserLauncher.addActionListener(new ActionListener(){
-    @Override public void actionPerformed(    ActionEvent arg0){
-      new SwingWorker<Object,Object>(){
-        @Override protected Object doInBackground() throws Exception {
-          return null;
-        }
-        @Override protected void done(){
-          try {
-            I2PDesktop.browse("http://localhost:7657");
+  MenuItem browserLauncher;
+  if (CONSOLE_ENABLED) {
+    browserLauncher=new MenuItem(_t("Launch I2P Browser"));
+    browserLauncher.addActionListener(new ActionListener(){
+      @Override public void actionPerformed(      ActionEvent arg0){
+        new SwingWorker<Object,Object>(){
+          @Override protected Object doInBackground() throws Exception {
+            return null;
           }
- catch (          BrowseException e1) {
-            log.log(Log.WARN,"Failed to open browser!",e1);
+          @Override protected void done(){
+            launchBrowser();
           }
         }
-      }
 .execute();
+      }
     }
-  }
 );
+  }
+ else {
+    browserLauncher=null;
+  }
   PopupMenu desktopguiConfigurationLauncher=new PopupMenu(_t("Configure I2P System Tray"));
   MenuItem configSubmenu=new MenuItem(_t("Disable"));
   configSubmenu.addActionListener(new ActionListener(){
@@ -111,8 +112,10 @@
     }
   }
 );
-  popup.add(browserLauncher);
-  popup.addSeparator();
+  if (CONSOLE_ENABLED) {
+    popup.add(browserLauncher);
+    popup.addSeparator();
+  }
   desktopguiConfigurationLauncher.add(configSubmenu);
   popup.add(desktopguiConfigurationLauncher);
   popup.addSeparator();
