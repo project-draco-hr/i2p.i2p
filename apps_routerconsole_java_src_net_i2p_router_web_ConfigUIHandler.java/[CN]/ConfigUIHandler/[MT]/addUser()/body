@@ -4,6 +4,13 @@
     addFormError(_t("No user name entered"));
     return;
   }
+  if (name.contains("=")) {
+    addFormError("User name may not contain '='");
+    return;
+  }
+  byte[] b1=DataHelper.getUTF8(name);
+  byte[] b2=DataHelper.getASCII(name);
+  if (!DataHelper.eq(b1,b2))   addFormError(_t("Warning: User names outside the ISO-8859-1 character set are not recommended. Support is not standardized and varies by browser."));
   String pw=getJettyString("nofilter_pw");
   if (pw == null || pw.length() <= 0) {
     addFormError(_t("No password entered"));
@@ -13,6 +20,7 @@
   if (mgr.saveMD5(RouterConsoleRunner.PROP_CONSOLE_PW,RouterConsoleRunner.JETTY_REALM,name,pw)) {
     if (!_context.getBooleanProperty(RouterConsoleRunner.PROP_PW_ENABLE))     _context.router().saveConfig(RouterConsoleRunner.PROP_PW_ENABLE,"true");
     addFormNotice(_t("Added user {0}",name));
+    addFormNotice(_t("To recover from a forgotten or non-working password, stop I2P, edit the file {0}, delete the line {1}, and restart I2P.",_context.router().getConfigFilename(),RouterConsoleRunner.PROP_PW_ENABLE + "=true"));
     addFormError(_t("Restart required to take effect"));
   }
  else {
