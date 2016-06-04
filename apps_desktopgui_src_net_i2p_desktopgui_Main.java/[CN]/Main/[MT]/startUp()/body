@@ -1,8 +1,15 @@
 {
-  trayManager=TrayManager.getInstance();
+  final TrayManager trayManager;
+  boolean useSwingDefault=!(SystemVersion.isWindows() || SystemVersion.isMac());
+  boolean useSwing=_appContext.getProperty(PROP_SWING,useSwingDefault);
+  if (_context != null)   trayManager=new InternalTrayManager(_context,this,useSwing);
+ else   trayManager=new ExternalTrayManager(_appContext,this,useSwing);
   trayManager.startManager();
-  if (RouterManager.inI2P()) {
-    RouterManager.getRouterContext().addPropertyCallback(new I2PPropertyCallback(){
+  _trayManager=trayManager;
+  changeState(RUNNING);
+  if (_mgr != null)   _mgr.register(this);
+  if (_context != null) {
+    _context.addPropertyCallback(new I2PPropertyCallback(){
       @Override public void propertyChanged(      String arg0,      String arg1){
         if (arg0.equals(Translate.PROP_LANG)) {
           trayManager.languageChanged();

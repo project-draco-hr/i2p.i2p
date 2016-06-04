@@ -1,0 +1,29 @@
+{
+  DestEntry rv=new DestEntry();
+  ByteArrayInputStream bais=new ByteArrayInputStream(b);
+  try {
+    int sz=bais.read() & 0xff;
+    if (sz <= 0)     throw new DataFormatException("bad dest count " + sz);
+    rv.props=readProperties(bais);
+    rv.dest=Destination.create(bais);
+    if (sz > 1) {
+      rv.propsList=new ArrayList<Properties>(sz);
+      rv.destList=new ArrayList<Destination>(sz);
+      rv.propsList.add(rv.props);
+      rv.destList.add(rv.dest);
+      for (int i=1; i < sz; i++) {
+        rv.propsList.add(readProperties(bais));
+        rv.destList.add(Destination.create(bais));
+      }
+    }
+  }
+ catch (  IOException ioe) {
+    logError("DB Read Fail",ioe);
+    return null;
+  }
+catch (  DataFormatException dfe) {
+    logError("DB Read Fail",dfe);
+    return null;
+  }
+  return rv;
+}

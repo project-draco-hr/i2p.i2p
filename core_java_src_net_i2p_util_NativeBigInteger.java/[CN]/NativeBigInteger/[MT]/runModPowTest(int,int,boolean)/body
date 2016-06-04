@@ -1,0 +1,71 @@
+{
+  SecureRandom rand=RandomSource.getInstance();
+  byte[] sampleGenerator=CryptoConstants.elgg.toByteArray();
+  byte[] samplePrime=CryptoConstants.elgp.toByteArray();
+  BigInteger jg=new BigInteger(sampleGenerator);
+  NativeBigInteger ng=CryptoConstants.elgg;
+  BigInteger jp=new BigInteger(samplePrime);
+  long totalTime=0;
+  long javaTime=0;
+  int runsProcessed=0;
+  for (int i=0; i < 1000; i++) {
+    BigInteger bi;
+    do {
+      bi=new BigInteger(16,rand);
+    }
+ while (bi.signum() == 0);
+    if (mode == 1)     jg.modPow(bi,jp);
+ else     if (mode == 2)     ng.modPowCT(bi,jp);
+ else     bi.modInverse(jp);
+  }
+  BigInteger myValue=null, jval;
+  final NativeBigInteger g=CryptoConstants.elgg;
+  final NativeBigInteger p=CryptoConstants.elgp;
+  final int numBits=(mode == 3) ? 1060 : 2048;
+  for (runsProcessed=0; runsProcessed < numRuns; runsProcessed++) {
+    BigInteger bi;
+    do {
+      bi=new BigInteger(numBits,rand);
+    }
+ while (bi.signum() == 0);
+    NativeBigInteger k=new NativeBigInteger(1,bi.toByteArray());
+    long beforeModPow=System.nanoTime();
+    if (_nativeOk) {
+      if (mode == 1)       myValue=g.modPow(k,p);
+ else       if (mode == 2)       myValue=g.modPowCT(bi,jp);
+ else       myValue=k.modInverse(p);
+    }
+    long afterModPow=System.nanoTime();
+    totalTime+=(afterModPow - beforeModPow);
+    if (!nativeOnly) {
+      if (mode != 3)       jval=jg.modPow(bi,jp);
+ else       jval=bi.modInverse(jp);
+      long afterJavaModPow=System.nanoTime();
+      javaTime+=(afterJavaModPow - afterModPow);
+      if (_nativeOk && !myValue.equals(jval)) {
+        System.err.println("ERROR: [" + runsProcessed + "]\tnative modPow != java modPow");
+        System.err.println("ERROR: native modPow value: " + myValue.toString());
+        System.err.println("ERROR: java modPow value: " + jval.toString());
+        break;
+      }
+    }
+  }
+  double dtotal=totalTime / 1000000f;
+  double djava=javaTime / 1000000f;
+  if (_nativeOk)   System.out.println(String.format("INFO: run time: %.3f ms (%.3f ms each)",dtotal,dtotal / (runsProcessed + 1)));
+  if (numRuns == runsProcessed)   System.out.println("INFO: " + runsProcessed + " runs complete without any errors");
+ else   System.out.println("ERROR: " + runsProcessed + " runs until we got an error");
+  if (_nativeOk) {
+    System.out.println(String.format("Native run time: \t%9.3f ms (%7.3f ms each)",dtotal,dtotal / (runsProcessed + 1)));
+    if (!nativeOnly) {
+      System.out.println(String.format("Java run time:   \t%9.3f ms (%7.3f ms each)",djava,djava / (runsProcessed + 1)));
+      System.out.println(String.format("Native = %.3f%% of pure Java time",dtotal * 100.0d / djava));
+      if (dtotal < djava)       System.out.println(String.format("Native is BETTER by a factor of %.3f -- YAY!",djava / dtotal));
+ else       System.out.println(String.format("Native is WORSE by a factor of %.3f -- BOO!",dtotal / djava));
+    }
+  }
+ else {
+    System.out.println(String.format("java run time: \t%.3f ms (%.3f ms each)",djava,djava / (runsProcessed + 1)));
+    System.out.println("However, we couldn't load the native library, so this doesn't test much");
+  }
+}

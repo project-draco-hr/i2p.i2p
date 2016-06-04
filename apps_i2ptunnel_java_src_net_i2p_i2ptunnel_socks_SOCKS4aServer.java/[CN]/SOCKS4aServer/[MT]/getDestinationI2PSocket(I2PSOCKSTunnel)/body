@@ -18,11 +18,20 @@
   I2PSocket destSock;
   try {
     if (connHostName.toLowerCase(Locale.US).endsWith(".i2p") || connHostName.toLowerCase(Locale.US).endsWith(".onion")) {
-      _log.debug("connecting to " + connHostName + "...");
+      Destination dest=I2PAppContext.getGlobalContext().namingService().lookup(connHostName);
+      if (dest == null) {
+        try {
+          sendRequestReply(Reply.CONNECTION_REFUSED,InetAddress.getByName("127.0.0.1"),0,out);
+        }
+ catch (        IOException ioe) {
+        }
+        throw new SOCKSException("Host not found");
+      }
+      if (_log.shouldDebug())       _log.debug("connecting to " + connHostName + "...");
       Properties overrides=new Properties();
       I2PSocketOptions sktOpts=t.buildOptions(overrides);
       sktOpts.setPort(connPort);
-      destSock=t.createI2PSocket(I2PAppContext.getGlobalContext().namingService().lookup(connHostName),sktOpts);
+      destSock=t.createI2PSocket(dest,sktOpts);
     }
  else     if ("localhost".equals(connHostName) || "127.0.0.1".equals(connHostName)) {
       String err="No localhost accesses allowed through the Socks Proxy";
@@ -58,8 +67,17 @@
       }
       int p=I2PAppContext.getGlobalContext().random().nextInt(proxies.size());
       String proxy=proxies.get(p);
-      _log.debug("connecting to port " + connPort + " proxy "+ proxy+ " for "+ connHostName+ "...");
-      destSock=t.createI2PSocket(I2PAppContext.getGlobalContext().namingService().lookup(proxy));
+      Destination dest=I2PAppContext.getGlobalContext().namingService().lookup(proxy);
+      if (dest == null) {
+        try {
+          sendRequestReply(Reply.CONNECTION_REFUSED,InetAddress.getByName("127.0.0.1"),0,out);
+        }
+ catch (        IOException ioe) {
+        }
+        throw new SOCKSException("Outproxy not found");
+      }
+      if (_log.shouldDebug())       _log.debug("connecting to port " + connPort + " proxy "+ proxy+ " for "+ connHostName+ "...");
+      destSock=t.createI2PSocket(dest);
     }
     confirmConnection();
     _log.debug("connection confirmed - exchanging data...");

@@ -1,0 +1,48 @@
+{
+  File dir=new SecureFile(_context.getConfigDir(),"certificates");
+  if (!dir.exists() && !dir.mkdir()) {
+    _log.error("Failed to create CRL directory " + dir);
+    return;
+  }
+  dir=new SecureFile(dir,"revocations");
+  if (!dir.exists() && !dir.mkdir()) {
+    _log.error("Failed to create CRL directory " + dir);
+    return;
+  }
+  int i=0;
+  for (  CRLEntry e : entries) {
+    if (e.id == null || e.data == null) {
+      if (_log.shouldWarn())       _log.warn("Bad CRL entry received");
+      continue;
+    }
+    byte[] bid=DataHelper.getUTF8(e.id);
+    byte[] hash=new byte[32];
+    _context.sha().calculateHash(bid,0,bid.length,hash,0);
+    String name="crl-" + Base64.encode(hash) + ".crl";
+    File f=new File(dir,name);
+    if (f.exists() && f.lastModified() >= e.updated)     continue;
+    OutputStream out=null;
+    try {
+      byte[] data=DataHelper.getUTF8(e.data);
+      CertUtil.loadCRL(new ByteArrayInputStream(data));
+      out=new SecureFileOutputStream(f);
+      out.write(data);
+    }
+ catch (    GeneralSecurityException gse) {
+      _log.error("Bad CRL",gse);
+    }
+catch (    IOException ioe) {
+      _log.error("Failed to write CRL",ioe);
+    }
+ finally {
+      if (out != null)       try {
+        out.close();
+      }
+ catch (      IOException ioe) {
+      }
+    }
+    f.setLastModified(e.updated);
+    i++;
+  }
+  if (i > 0)   _log.logAlways(Log.WARN,"Stored " + i + " new CRL "+ (i > 1 ? "entries" : "entry"));
+}

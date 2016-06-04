@@ -31,8 +31,11 @@
   if (nextPeerInfo == null) {
     int numTunnels=_context.tunnelManager().getParticipatingCount();
     int limit=Math.max(MIN_LOOKUP_LIMIT,Math.min(MAX_LOOKUP_LIMIT,numTunnels * PERCENT_LOOKUP_LIMIT / 100));
-    int current=_currentLookups.incrementAndGet();
+    int current;
+    if (_context.random().nextInt(16) > 0)     current=_currentLookups.incrementAndGet();
+ else     current=1;
     if (current <= limit) {
+      if (current <= 0)       _currentLookups.set(1);
       if (_log.shouldLog(Log.DEBUG))       _log.debug("Request " + req + " handled, lookup next peer "+ nextPeer+ " lookups: "+ current+ '/'+ limit);
       _context.netDb().lookupRouterInfo(nextPeer,new HandleReq(_context,state,req,nextPeer),new TimeoutReq(_context,state,req,nextPeer),NEXT_HOP_LOOKUP_TIMEOUT);
     }
@@ -40,8 +43,8 @@
       _currentLookups.decrementAndGet();
       if (_log.shouldLog(Log.WARN))       _log.warn("Drop next hop lookup, limit " + limit + ": "+ req);
       _context.statManager().addRateData("tunnel.dropLookupThrottle",1);
+      if (from != null)       _context.commSystem().mayDisconnect(from);
     }
-    if (from != null)     _context.commSystem().mayDisconnect(from);
     return -1;
   }
  else {

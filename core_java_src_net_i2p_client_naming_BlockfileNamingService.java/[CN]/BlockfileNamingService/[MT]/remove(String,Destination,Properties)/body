@@ -1,0 +1,26 @@
+{
+  if (!_isVersion4) {
+synchronized (_bf) {
+      return super.remove(hostname,d,options);
+    }
+  }
+  List<Properties> storedOptions=new ArrayList<Properties>(4);
+synchronized (_bf) {
+    List<Destination> dests=lookupAll2(hostname,options,storedOptions);
+    if (dests == null)     return false;
+    for (int i=0; i < dests.size(); i++) {
+      Destination dd=dests.get(i);
+      if (dd.equals(d)) {
+        if (dests.size() == 1)         return remove(hostname,options);
+        List<Destination> newDests=new ArrayList<Destination>(dests.size() - 1);
+        for (int j=0; j < dests.size(); j++) {
+          if (j != i)           newDests.add(dests.get(j));
+        }
+        storedOptions.remove(i);
+        removeReverseEntry(hostname,d);
+        return put(hostname,newDests,storedOptions,false);
+      }
+    }
+  }
+  return false;
+}

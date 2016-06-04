@@ -1,0 +1,29 @@
+{
+  try {
+    SkipList<Integer,Properties> rev=_bf.getIndex(REVERSE_SKIPLIST,_hashIndexSerializer,_infoSerializer);
+    if (rev == null)     return null;
+    Integer idx=getReverseKey(hash);
+    Properties props=rev.get(idx);
+    if (props == null)     return null;
+    List<String> rv=new ArrayList<String>(props.size());
+    for (    String key : props.stringPropertyNames()) {
+      List<Destination> ld=lookupAll(key);
+      if (ld != null) {
+        for (        Destination d : ld) {
+          if (d.calculateHash().equals(hash)) {
+            rv.add(key);
+            break;
+          }
+        }
+      }
+    }
+    if (!rv.isEmpty())     return rv;
+  }
+ catch (  IOException ioe) {
+    _log.error("DB get reverse error",ioe);
+  }
+catch (  RuntimeException e) {
+    _log.error("DB get reverse error",e);
+  }
+  return null;
+}

@@ -1,0 +1,48 @@
+{
+  DatagramSocket socket=null;
+  try {
+    socket=new DatagramSocket();
+    InetAddress address=InetAddress.getByName(serverName);
+    byte[] buf=new NtpMessage().toByteArray();
+    DatagramPacket packet=new DatagramPacket(buf,buf.length,address,NTP_PORT);
+    byte[] txtime=new byte[8];
+    NtpMessage.encodeTimestamp(packet.getData(),OFF_TXTIME,(System.currentTimeMillis() / 1000.0) + SECONDS_1900_TO_EPOCH);
+    socket.send(packet);
+    System.arraycopy(packet.getData(),OFF_TXTIME,txtime,0,8);
+    if (log != null && log.shouldDebug())     log.debug("Sent:\n" + HexDump.dump(buf));
+    packet=new DatagramPacket(buf,buf.length);
+    socket.setSoTimeout(timeout);
+    socket.receive(packet);
+    double destinationTimestamp=(System.currentTimeMillis() / 1000.0) + SECONDS_1900_TO_EPOCH;
+    if (packet.getLength() < MIN_PKT_LEN) {
+      if (log != null && log.shouldWarn())       log.warn("Short packet length " + packet.getLength());
+      return null;
+    }
+    NtpMessage msg=new NtpMessage(packet.getData());
+    if (log != null && log.shouldDebug())     log.debug("Received from: " + packet.getAddress().getHostAddress() + '\n'+ msg+ '\n'+ HexDump.dump(packet.getData()));
+    if ((msg.stratum < 1) || (msg.stratum > 15)) {
+      if (log != null && log.shouldWarn())       log.warn("Response from NTP server of unacceptable stratum " + msg.stratum + ", failing.");
+      return null;
+    }
+    if (!DataHelper.eq(txtime,0,packet.getData(),OFF_ORIGTIME,8)) {
+      if (log != null && log.shouldWarn())       log.warn("Origin time mismatch sent:\n" + HexDump.dump(txtime) + "rcvd:\n"+ HexDump.dump(packet.getData(),OFF_ORIGTIME,8));
+      return null;
+    }
+    double localClockOffset=((msg.receiveTimestamp - msg.originateTimestamp) + (msg.transmitTimestamp - destinationTimestamp)) / 2;
+    long[] rv=new long[2];
+    rv[0]=(long)(System.currentTimeMillis() + localClockOffset * 1000);
+    rv[1]=msg.stratum;
+    if (log != null && log.shouldInfo()) {
+      double roundTripDelay=(destinationTimestamp - msg.originateTimestamp) - (msg.receiveTimestamp - msg.transmitTimestamp);
+      log.info("host: " + packet.getAddress().getHostAddress() + " rtt: "+ roundTripDelay+ " offset: "+ localClockOffset+ " seconds");
+    }
+    return rv;
+  }
+ catch (  IOException ioe) {
+    if (log != null && log.shouldWarn())     log.warn("NTP failure from " + serverName,ioe);
+    return null;
+  }
+ finally {
+    if (socket != null)     socket.close();
+  }
+}

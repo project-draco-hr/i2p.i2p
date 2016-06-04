@@ -1,0 +1,21 @@
+{
+  if (DAEMON_USER.equals(System.getProperty("user.name")) || (SystemVersion.isWindows() && _context.hasWrapper() && WrapperManager.isLaunchedAsService())) {
+    System.setProperty("java.awt.headless","true");
+    return;
+  }
+  try {
+    boolean desktopguiEnabled=_context.getBooleanProperty(PROP_DTG_ENABLED);
+    if (desktopguiEnabled) {
+      System.setProperty("java.awt.headless",Boolean.toString(GraphicsEnvironment.isHeadless()));
+      net.i2p.desktopgui.Main dtg=new net.i2p.desktopgui.Main(_context,_mgr,null);
+      dtg.startup();
+    }
+ else {
+      System.setProperty("java.awt.headless","true");
+      if (SystemVersion.isWindows() && (!Boolean.getBoolean("systray.disable")) && (!SystemVersion.is64Bit()))       SysTray.getInstance();
+    }
+  }
+ catch (  Throwable t) {
+    t.printStackTrace();
+  }
+}

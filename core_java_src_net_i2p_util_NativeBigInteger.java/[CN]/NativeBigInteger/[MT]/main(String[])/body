@@ -1,4 +1,23 @@
 {
   _doLog=true;
-  runModPowTest(100);
+  boolean nativeOnly=args.length > 0 && args[0].equals("-n");
+  if (nativeOnly && !_nativeOk) {
+    System.out.println("Failed to load native library");
+    System.exit(1);
+  }
+  if (_nativeOk) {
+    System.out.println("JBigi Version: " + _jbigiVersion + " GMP Version: "+ _libGMPVersion);
+    if (_extractedResource != null)     System.out.println("Using native resource: " + _extractedResource);
+  }
+  System.out.println("DEBUG: Warming up the random number generator...");
+  SecureRandom rand=RandomSource.getInstance();
+  rand.nextBoolean();
+  System.out.println("DEBUG: Random number generator warmed up");
+  runModPowTest(100,1,nativeOnly);
+  if (_nativeOk3) {
+    System.out.println("ModPowCT test:");
+    runModPowTest(100,2,nativeOnly);
+    System.out.println("ModInverse test:");
+    runModPowTest(10000,3,nativeOnly);
+  }
 }

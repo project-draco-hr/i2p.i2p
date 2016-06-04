@@ -44,9 +44,34 @@ _queue=mgr.connect();
 _reader=new QueuedI2CPMessageReader(_queue,this);
 }
  else {
-if (SystemVersion.isAndroid() && Boolean.parseBoolean(_options.getProperty(PROP_DOMAIN_SOCKET))) {
-final DomainSocketFactory fact=new DomainSocketFactory(_context);
-_socket=fact.createSocket(DomainSocketFactory.I2CP_SOCKET_ADDRESS);
+if (SystemVersion.isAndroid() && _options.getProperty(PROP_DOMAIN_SOCKET) != null) {
+try {
+Class<?> clazz=Class.forName("net.i2p.client.DomainSocketFactory");
+Constructor<?> ctor=clazz.getDeclaredConstructor(I2PAppContext.class);
+Object fact=ctor.newInstance(_context);
+Method createSocket=clazz.getDeclaredMethod("createSocket",String.class);
+try {
+_socket=(Socket)createSocket.invoke(fact,_options.getProperty(PROP_DOMAIN_SOCKET));
+}
+ catch (InvocationTargetException e) {
+throw new I2PSessionException("Cannot create domain socket",e);
+}
+}
+ catch (ClassNotFoundException e) {
+throw new I2PSessionException("Cannot load DomainSocketFactory",e);
+}
+catch (NoSuchMethodException e) {
+throw new I2PSessionException("Cannot load DomainSocketFactory",e);
+}
+catch (InstantiationException e) {
+throw new I2PSessionException("Cannot load DomainSocketFactory",e);
+}
+catch (IllegalAccessException e) {
+throw new I2PSessionException("Cannot load DomainSocketFactory",e);
+}
+catch (InvocationTargetException e) {
+throw new I2PSessionException("Cannot load DomainSocketFactory",e);
+}
 }
  else if (Boolean.parseBoolean(_options.getProperty(PROP_ENABLE_SSL))) {
 try {
@@ -121,7 +146,7 @@ throw new I2PSessionException(getPrefix() + "Cannot connect to the router on " +
 catch (IOException ioe) {
 String msg;
 if (_context.isRouterContext()) msg="Failed to build tunnels";
- else if (SystemVersion.isAndroid() && Boolean.parseBoolean(_options.getProperty(PROP_DOMAIN_SOCKET))) msg="Failed to bind to the router and build tunnels";
+ else if (SystemVersion.isAndroid() && _options.getProperty(PROP_DOMAIN_SOCKET) != null) msg="Failed to bind to the router on " + _options.getProperty(PROP_DOMAIN_SOCKET) + " and build tunnels";
  else msg="Cannot connect to the router on " + _hostname + ':'+ _portNum+ " and build tunnels";
 throw new I2PSessionException(getPrefix() + msg,ioe);
 }

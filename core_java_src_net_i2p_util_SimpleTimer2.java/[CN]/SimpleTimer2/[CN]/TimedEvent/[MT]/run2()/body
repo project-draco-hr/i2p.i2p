@@ -4,23 +4,25 @@
   long delay=0;
 synchronized (this) {
     if (Thread.currentThread().isInterrupted()) {
-      _log.warn("I was interrupted in run, state " + _state + " event "+ this);
+      if (_log.shouldWarn())       _log.warn("I was interrupted in run, state " + _state + " event "+ this);
       return;
     }
     if (_rescheduleAfterRun)     throw new IllegalStateException(this + " rescheduleAfterRun cannot be true here");
 switch (_state) {
 case CANCELLED:
-      return;
+      if (_log.shouldInfo())       _log.info("Not actually running: CANCELLED " + this);
+    return;
 case IDLE:
 case RUNNING:
-    throw new IllegalStateException(this + " not possible to be in " + _state);
+  throw new IllegalStateException(this + " not possible to be in " + _state);
 case SCHEDULED:
 }
 long difference=_nextRun - before;
 if (difference > _fuzz) {
-  _state=TimedEventState.IDLE;
-  schedule(difference);
-  return;
+_state=TimedEventState.IDLE;
+if (_log.shouldInfo()) _log.info("Early execution, Rescheduling for " + difference + " later: "+ this);
+schedule(difference);
+return;
 }
 _state=TimedEventState.RUNNING;
 }
@@ -41,26 +43,28 @@ synchronized (this) {
 switch (_state) {
 case SCHEDULED:
 case IDLE:
-    throw new IllegalStateException(this + " can't be " + _state);
+  throw new IllegalStateException(this + " can't be " + _state);
 case CANCELLED:
-  break;
+break;
 case RUNNING:
 if (_cancelAfterRun) {
-  _cancelAfterRun=false;
-  _state=TimedEventState.CANCELLED;
+_cancelAfterRun=false;
+_state=TimedEventState.CANCELLED;
 }
  else {
-  _state=TimedEventState.IDLE;
-  if (_rescheduleAfterRun) {
-    _rescheduleAfterRun=false;
-    schedule(_nextRun - System.currentTimeMillis());
-  }
+_state=TimedEventState.IDLE;
+if (_rescheduleAfterRun) {
+  _rescheduleAfterRun=false;
+  if (_log.shouldInfo())   _log.info("Reschedule after run: " + this);
+  schedule(_nextRun - System.currentTimeMillis());
+}
 }
 }
 }
 }
 long time=System.currentTimeMillis() - before;
 if (time > 500 && _log.shouldLog(Log.WARN)) _log.warn(_pool + " event execution took " + time+ ": "+ this);
+ else if (_log.shouldDebug()) _log.debug("Execution finished in " + time + ": "+ this);
 if (_log.shouldLog(Log.INFO)) {
 long completed=_pool.getCompletedTaskCount();
 if (completed % 250 == 0) _log.info(_pool.debug());

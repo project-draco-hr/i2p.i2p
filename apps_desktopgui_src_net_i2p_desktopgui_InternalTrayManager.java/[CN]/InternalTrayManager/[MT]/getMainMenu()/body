@@ -1,31 +1,34 @@
 {
   PopupMenu popup=new PopupMenu();
-  MenuItem browserLauncher=new MenuItem(_t("Launch I2P Browser"));
-  browserLauncher.addActionListener(new ActionListener(){
-    @Override public void actionPerformed(    ActionEvent arg0){
-      new SwingWorker<Object,Object>(){
-        @Override protected Object doInBackground() throws Exception {
-          return null;
-        }
-        @Override protected void done(){
-          try {
-            I2PDesktop.browse("http://localhost:7657");
+  final MenuItem statusItem=new MenuItem("");
+  final MenuItem browserLauncher;
+  if (CONSOLE_ENABLED) {
+    browserLauncher=new MenuItem(_t("Launch I2P Browser"));
+    browserLauncher.addActionListener(new ActionListener(){
+      @Override public void actionPerformed(      ActionEvent arg0){
+        new SwingWorker<Object,Object>(){
+          @Override protected Object doInBackground() throws Exception {
+            return null;
           }
- catch (          BrowseException e1) {
-            log.log(Log.WARN,"Failed to open browser!",e1);
+          @Override protected void done(){
+            launchBrowser();
           }
         }
-      }
 .execute();
+      }
     }
-  }
 );
-  MenuItem desktopguiConfigurationLauncher=new MenuItem(_t("Configure desktopgui"));
-  desktopguiConfigurationLauncher.addActionListener(new ActionListener(){
+  }
+ else {
+    browserLauncher=null;
+  }
+  PopupMenu desktopguiConfigurationLauncher=new PopupMenu(_t("Configure I2P System Tray"));
+  MenuItem configSubmenu=new MenuItem(_t("Disable"));
+  configSubmenu.addActionListener(new ActionListener(){
     @Override public void actionPerformed(    ActionEvent arg0){
       new SwingWorker<Object,Object>(){
         @Override protected Object doInBackground() throws Exception {
-          new DesktopguiConfigurationFrame().setVisible(true);
+          configureDesktopgui(false);
           return null;
         }
       }
@@ -33,25 +36,31 @@
     }
   }
 );
-  MenuItem restartItem=new MenuItem(_t("Restart I2P"));
-  restartItem.addActionListener(new ActionListener(){
-    @Override public void actionPerformed(    ActionEvent arg0){
-      new SwingWorker<Object,Object>(){
-        @Override protected Object doInBackground() throws Exception {
-          RouterManager.restart();
-          return null;
+  final MenuItem restartItem;
+  if (_context.hasWrapper()) {
+    restartItem=new MenuItem(_t("Restart I2P"));
+    restartItem.addActionListener(new ActionListener(){
+      @Override public void actionPerformed(      ActionEvent arg0){
+        new SwingWorker<Object,Object>(){
+          @Override protected Object doInBackground() throws Exception {
+            RouterManager.restartGracefully(_context);
+            return null;
+          }
         }
-      }
 .execute();
+      }
     }
-  }
 );
-  MenuItem stopItem=new MenuItem(_t("Stop I2P"));
+  }
+ else {
+    restartItem=null;
+  }
+  final MenuItem stopItem=new MenuItem(_t("Stop I2P"));
   stopItem.addActionListener(new ActionListener(){
     @Override public void actionPerformed(    ActionEvent arg0){
       new SwingWorker<Object,Object>(){
         @Override protected Object doInBackground() throws Exception {
-          RouterManager.shutDown();
+          RouterManager.shutDownGracefully(_context);
           return null;
         }
       }
@@ -59,11 +68,72 @@
     }
   }
 );
-  popup.add(browserLauncher);
+  final MenuItem restartItem2;
+  if (_context.hasWrapper()) {
+    restartItem2=new MenuItem(_t("Restart I2P Immediately"));
+    restartItem2.addActionListener(new ActionListener(){
+      @Override public void actionPerformed(      ActionEvent arg0){
+        new SwingWorker<Object,Object>(){
+          @Override protected Object doInBackground() throws Exception {
+            RouterManager.restart(_context);
+            return null;
+          }
+        }
+.execute();
+      }
+    }
+);
+  }
+ else {
+    restartItem2=null;
+  }
+  final MenuItem stopItem2=new MenuItem(_t("Stop I2P Immediately"));
+  stopItem2.addActionListener(new ActionListener(){
+    @Override public void actionPerformed(    ActionEvent arg0){
+      new SwingWorker<Object,Object>(){
+        @Override protected Object doInBackground() throws Exception {
+          RouterManager.shutDown(_context);
+          return null;
+        }
+      }
+.execute();
+    }
+  }
+);
+  final MenuItem cancelItem=new MenuItem(_t("Cancel I2P Shutdown"));
+  cancelItem.addActionListener(new ActionListener(){
+    @Override public void actionPerformed(    ActionEvent arg0){
+      new SwingWorker<Object,Object>(){
+        @Override protected Object doInBackground() throws Exception {
+          RouterManager.cancelShutdown(_context);
+          return null;
+        }
+      }
+.execute();
+    }
+  }
+);
+  popup.add(statusItem);
   popup.addSeparator();
+  if (CONSOLE_ENABLED) {
+    popup.add(browserLauncher);
+    popup.addSeparator();
+  }
+  desktopguiConfigurationLauncher.add(configSubmenu);
   popup.add(desktopguiConfigurationLauncher);
   popup.addSeparator();
-  popup.add(restartItem);
+  if (_context.hasWrapper())   popup.add(restartItem);
   popup.add(stopItem);
+  if (_context.hasWrapper())   popup.add(restartItem2);
+  popup.add(stopItem2);
+  popup.add(cancelItem);
+  _statusItem=statusItem;
+  _browserItem=browserLauncher;
+  _configItem=desktopguiConfigurationLauncher;
+  _restartItem=restartItem;
+  _stopItem=stopItem;
+  _restartHardItem=restartItem2;
+  _stopHardItem=stopItem2;
+  _cancelItem=cancelItem;
   return popup;
 }

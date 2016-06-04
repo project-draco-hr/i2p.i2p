@@ -1,0 +1,24 @@
+{
+  this.levelPage=levelPage;
+  this.bf=bf;
+  this.bsl=bsl;
+  BlockFile.pageSeek(bf.file,levelPage);
+  long magic=bf.file.readLong();
+  if (magic != MAGIC)   throw new IOException("Bad SkipLevels magic number 0x" + Long.toHexString(magic) + " on page "+ levelPage);
+  bsl.levelHash.put(Integer.valueOf(this.levelPage),this);
+  int maxLen=bf.file.readUnsignedShort();
+  int nonNull=bf.file.readUnsignedShort();
+  if (maxLen < 1 || maxLen > MAX_SIZE || nonNull > maxLen)   throw new IOException("Invalid Level Skip size " + nonNull + " / "+ maxLen);
+  spanPage=bf.file.readUnsignedInt();
+  bottom=bsl.spanHash.get(Integer.valueOf(spanPage));
+  if (bottom == null) {
+    bf.log.error("No span found in cache???");
+    throw new IOException("No span found in cache???");
+  }
+  this.levels=(BSkipLevels<K,V>[])new BSkipLevels[maxLen];
+  if (bf.log.shouldLog(Log.DEBUG))   bf.log.debug("Reading New BSkipLevels with " + nonNull + " / "+ maxLen+ " valid levels page "+ levelPage+ " in skiplist "+ bsl);
+  lps=new int[nonNull];
+  for (int i=0; i < nonNull; i++) {
+    lps[i]=bf.file.readUnsignedInt();
+  }
+}

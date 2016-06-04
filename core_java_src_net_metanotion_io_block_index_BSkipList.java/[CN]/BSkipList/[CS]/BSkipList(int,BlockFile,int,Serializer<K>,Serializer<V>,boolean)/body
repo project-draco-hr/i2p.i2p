@@ -1,0 +1,31 @@
+{
+  if (spanSize < 1) {
+    throw new RuntimeException("Span size too small");
+  }
+  this.skipPage=skipPage;
+  this.bf=bf;
+  BlockFile.pageSeek(bf.file,skipPage);
+  long magic=bf.file.readLong();
+  if (magic != MAGIC)   throw new IOException("Bad SkipList magic number 0x" + Long.toHexString(magic) + " on page "+ skipPage);
+  firstSpanPage=bf.file.readUnsignedInt();
+  firstLevelPage=bf.file.readUnsignedInt();
+  size=bf.file.readUnsignedInt();
+  int spans=bf.file.readInt();
+  int levelCount=bf.file.readInt();
+  this.fileOnly=fileOnly;
+  if (fileOnly)   first=new IBSkipSpan<K,V>(bf,this,firstSpanPage,key,val);
+ else   first=new BSkipSpan<K,V>(bf,this,firstSpanPage,key,val);
+  BSkipLevels<K,V> bstack=new BSkipLevels<K,V>(bf,firstLevelPage,this);
+  bstack.initializeLevels();
+  stack=bstack;
+  int total=0;
+  for (  BSkipSpan ss : spanHash.values()) {
+    total+=ss.nKeys;
+  }
+  if (bf.log.shouldLog(Log.DEBUG))   bf.log.debug("Loaded " + this + " cached "+ levelHash.size()+ " levels and "+ spanHash.size()+ " spans with "+ total+ " entries");
+  if (bf.file.canWrite() && (levelCount != levelHash.size() || spans != spanHash.size() || size != total)) {
+    if (bf.log.shouldLog(Log.WARN))     bf.log.warn("On-disk counts were " + levelCount + " levels / "+ spans+ " spans / "+ size+ " entries, correcting to "+ total+ " entries");
+    size=total;
+    flush();
+  }
+}

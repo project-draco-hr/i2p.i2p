@@ -18,15 +18,44 @@
   if (bindTo == null) {
     String fixedHost=_context.getProperty(PROP_EXTERNAL_HOST);
     if (fixedHost != null && fixedHost.length() > 0) {
-      try {
-        String testAddr=InetAddress.getByName(fixedHost).getHostAddress();
-        if (Addresses.getAddresses().contains(testAddr))         bindTo=testAddr;
+      TransportUtil.IPv6Config cfg=getIPv6Config();
+      Set<String> myAddrs;
+      if (cfg == IPV6_DISABLED)       myAddrs=Addresses.getAddresses(false,false);
+ else       myAddrs=Addresses.getAddresses(false,true);
+      StringBuilder buf=new StringBuilder();
+      String[] bta=DataHelper.split(fixedHost,"[,; \r\n\t]");
+      for (int i=0; i < bta.length; i++) {
+        String bt=bta[i];
+        if (bt.length() <= 0)         continue;
+        try {
+          InetAddress[] all=InetAddress.getAllByName(bt);
+          for (int j=0; j < all.length; j++) {
+            InetAddress ia=all[j];
+            if (cfg == IPV6_ONLY && (ia instanceof Inet4Address)) {
+              if (_log.shouldWarn())               _log.warn("Configured for IPv6 only, not binding to configured IPv4 host " + bt);
+              continue;
+            }
+            String testAddr=ia.getHostAddress();
+            if (myAddrs.contains(testAddr)) {
+              if (buf.length() > 0)               buf.append(',');
+              buf.append(testAddr);
+            }
+ else {
+              if (_log.shouldWarn())               _log.warn("Not a local address, not binding to configured IP " + testAddr);
+            }
+          }
+        }
+ catch (        UnknownHostException uhe) {
+          if (_log.shouldWarn())           _log.warn("Not binding to configured host " + bt + " - "+ uhe);
+        }
       }
- catch (      UnknownHostException uhe) {
+      if (buf.length() > 0) {
+        bindTo=buf.toString();
+        if (_log.shouldWarn() && !fixedHost.equals(bindTo))         _log.warn("Expanded external host config \"" + fixedHost + "\" to \""+ bindTo+ '"');
       }
     }
   }
-  List<InetAddress> bindToAddrs=new ArrayList<InetAddress>(4);
+  Set<InetAddress> bindToAddrs=new HashSet<InetAddress>(4);
   if (bindTo != null) {
     String[] bta=DataHelper.split(bindTo,"[,; \r\n\t]");
     for (int i=0; i < bta.length; i++) {
