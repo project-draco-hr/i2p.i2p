@@ -6,7 +6,8 @@
  else     resp.sendError(405);
     return;
   }
-  _themePath="/themes/snark/" + _manager.getTheme() + '/';
+  if (_context.isRouterContext())   _themePath="/themes/snark/" + _manager.getTheme() + '/';
+ else   _themePath=_contextPath + WARBASE + "themes/snark/"+ _manager.getTheme()+ '/';
   _imgPath=_themePath + "images/";
   req.setCharacterEncoding("UTF-8");
   String pOverride=_manager.util().connected() ? null : "";
@@ -71,7 +72,8 @@
   if (!isConfigure) {
     delay=_manager.getRefreshDelaySeconds();
     if (delay > 0) {
-      out.write("<script src=\"/js/ajax.js\" type=\"text/javascript\"></script>\n" + "<script type=\"text/javascript\">\n" + "var failMessage = \"<div class=\\\"routerdown\\\"><b>" + _t("Router is down") + "<\\/b><\\/div>\";\n"+ "function requestAjax1() { ajax(\""+ _contextPath+ "/.ajax/xhr1.html"+ peerString.replace("&amp;","&")+ "\", \"mainsection\", "+ (delay * 1000)+ "); }\n"+ "function initAjax() { setTimeout(requestAjax1, "+ (delay * 1000)+ ");  }\n"+ "</script>\n");
+      String jsPfx=_context.isRouterContext() ? "" : ".resources";
+      out.write("<script src=\"" + jsPfx + "/js/ajax.js\" type=\"text/javascript\"></script>\n"+ "<script type=\"text/javascript\">\n"+ "var failMessage = \"<div class=\\\"routerdown\\\"><b>"+ _t("Router is down")+ "<\\/b><\\/div>\";\n"+ "function requestAjax1() { ajax(\""+ _contextPath+ "/.ajax/xhr1.html"+ peerString.replace("&amp;","&")+ "\", \"mainsection\", "+ (delay * 1000)+ "); }\n"+ "function initAjax() { setTimeout(requestAjax1, "+ (delay * 1000)+ ");  }\n"+ "</script>\n");
     }
   }
   out.write(HEADER_A + _themePath + HEADER_B+ "</head>\n");
@@ -97,14 +99,17 @@
     out.write("&nbsp;&nbsp;");
     if (_contextName.equals(DEFAULT_NAME))     out.write(_t("I2PSnark"));
  else     out.write(_contextName);
-    out.write("</a> <a href=\"http://forum.i2p/viewforum.php?f=21\" class=\"snarkRefresh\" target=\"_blank\">");
-    out.write(_t("Forum"));
     out.write("</a>\n");
     sortedTrackers=_manager.getSortedTrackers();
-    for (    Tracker t : sortedTrackers) {
-      if (t.baseURL == null || !t.baseURL.startsWith("http"))       continue;
-      if (_manager.util().isKnownOpenTracker(t.announceURL))       continue;
-      out.write(" <a href=\"" + t.baseURL + "\" class=\"snarkRefresh\" target=\"_blank\">"+ t.name+ "</a>");
+    if (_context.isRouterContext()) {
+      out.write("<a href=\"http://forum.i2p/viewforum.php?f=21\" class=\"snarkRefresh\" target=\"_blank\">");
+      out.write(_t("Forum"));
+      out.write("</a>\n");
+      for (      Tracker t : sortedTrackers) {
+        if (t.baseURL == null || !t.baseURL.startsWith("http"))         continue;
+        if (_manager.util().isKnownOpenTracker(t.announceURL))         continue;
+        out.write(" <a href=\"" + t.baseURL + "\" class=\"snarkRefresh\" target=\"_blank\">"+ t.name+ "</a>");
+      }
     }
   }
   out.write("</div>\n");
