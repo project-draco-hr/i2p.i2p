@@ -1,19 +1,21 @@
 {
   PeerState charlie;
   RouterInfo charlieInfo=null;
+  int sz=from.getIP().length;
+  boolean isIPv6=sz == 16;
   if (state == null) {
-    if (from.getIP().length != 4) {
-      if (_log.shouldLog(Log.WARN))       _log.warn("PeerTest over IPv6 from Alice as Bob? " + from);
-      return;
-    }
-    charlie=_transport.pickTestPeer(CHARLIE,from);
+    charlie=_transport.pickTestPeer(CHARLIE,isIPv6,from);
   }
  else {
     charlie=_transport.getPeerState(new RemoteHostId(state.getCharlieIP().getAddress(),state.getCharliePort()));
   }
-  if (charlie != null)   charlieInfo=_context.netDb().lookupRouterInfoLocally(charlie.getRemotePeer());
-  if ((charlie == null) || (charlieInfo == null)) {
-    if (_log.shouldLog(Log.WARN))     _log.warn("Unable to pick a charlie");
+  if (charlie == null) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Unable to pick a charlie (no peer), IPv6? " + isIPv6);
+    return;
+  }
+  charlieInfo=_context.netDb().lookupRouterInfoLocally(charlie.getRemotePeer());
+  if (charlieInfo == null) {
+    if (_log.shouldLog(Log.WARN))     _log.warn("Unable to pick a charlie (no RI), IPv6? " + isIPv6);
     return;
   }
   InetAddress aliceIP=null;
@@ -24,13 +26,13 @@
     testInfo.readIntroKey(aliceIntroKey.getData(),0);
     RouterAddress raddr=_transport.getTargetAddress(charlieInfo);
     if (raddr == null) {
-      if (_log.shouldLog(Log.WARN))       _log.warn("Unable to pick a charlie");
+      if (_log.shouldLog(Log.WARN))       _log.warn("Unable to pick a charlie (no addr), IPv6? " + isIPv6);
       return;
     }
     UDPAddress addr=new UDPAddress(raddr);
     byte[] ikey=addr.getIntroKey();
     if (ikey == null) {
-      if (_log.shouldLog(Log.WARN))       _log.warn("Unable to pick a charlie");
+      if (_log.shouldLog(Log.WARN))       _log.warn("Unable to pick a charlie (no ikey), IPv6? " + isIPv6);
       return;
     }
     SessionKey charlieIntroKey=new SessionKey(ikey);
@@ -38,7 +40,7 @@
     boolean isNew=false;
     if (state == null) {
       isNew=true;
-      state=new PeerTestState(BOB,nonce,now);
+      state=new PeerTestState(BOB,isIPv6,nonce,now);
     }
  else {
       if (state.getReceiveAliceTime() > now - (RESEND_TIMEOUT / 2)) {

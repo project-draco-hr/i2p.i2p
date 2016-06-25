@@ -1,25 +1,26 @@
 {
   _currentTestComplete=true;
   PeerTestState test=_currentTest;
+  boolean isIPv6=test.isIPv6();
   Status status;
   if (test.getAlicePortFromCharlie() > 0) {
     if ((test.getAlicePort() == test.getAlicePortFromCharlie()) && (test.getAliceIP() != null) && (test.getAliceIPFromCharlie() != null)&& (test.getAliceIP().equals(test.getAliceIPFromCharlie()))) {
-      status=Status.IPV4_OK_IPV6_UNKNOWN;
+      status=isIPv6 ? Status.IPV4_UNKNOWN_IPV6_OK : Status.IPV4_OK_IPV6_UNKNOWN;
     }
  else {
-      status=Status.IPV4_SNAT_IPV6_UNKNOWN;
+      status=isIPv6 ? Status.IPV4_UNKNOWN_IPV6_FIREWALLED : Status.IPV4_SNAT_IPV6_UNKNOWN;
     }
   }
  else   if (test.getReceiveCharlieTime() > 0) {
     status=Status.UNKNOWN;
   }
  else   if (test.getReceiveBobTime() > 0) {
-    status=Status.IPV4_FIREWALLED_IPV6_UNKNOWN;
+    status=isIPv6 ? Status.IPV4_UNKNOWN_IPV6_FIREWALLED : Status.IPV4_FIREWALLED_IPV6_UNKNOWN;
   }
  else {
     status=Status.UNKNOWN;
   }
   if (_log.shouldLog(Log.INFO))   _log.info("Test complete: " + test);
-  honorStatus(status);
+  honorStatus(status,isIPv6);
   if (forgetTest)   _currentTest=null;
 }

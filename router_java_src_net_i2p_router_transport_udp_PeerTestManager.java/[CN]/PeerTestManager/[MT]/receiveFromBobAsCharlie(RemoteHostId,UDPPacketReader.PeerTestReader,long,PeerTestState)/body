@@ -1,9 +1,10 @@
 {
   long now=_context.clock().now();
+  int sz=testInfo.readIPSize();
   boolean isNew=false;
   if (state == null) {
     isNew=true;
-    state=new PeerTestState(CHARLIE,nonce,now);
+    state=new PeerTestState(CHARLIE,sz == 16,nonce,now);
   }
  else {
     if (state.getReceiveBobTime() > now - (RESEND_TIMEOUT / 2)) {
@@ -11,11 +12,11 @@
       return;
     }
   }
-  int sz=testInfo.readIPSize();
   byte aliceIPData[]=new byte[sz];
   try {
     testInfo.readIP(aliceIPData,0);
-    if (sz != 4)     throw new UnknownHostException("not IPv4");
+    boolean expectV6=state.isIPv6();
+    if ((!expectV6 && sz != 4) || (expectV6 && sz != 16))     throw new UnknownHostException("bad sz - expect v6? " + expectV6 + " act sz: "+ sz);
     int alicePort=testInfo.readPort();
     if (alicePort == 0)     throw new UnknownHostException("port 0");
     InetAddress aliceIP=InetAddress.getByAddress(aliceIPData);

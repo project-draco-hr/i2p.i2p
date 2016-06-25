@@ -5,7 +5,8 @@
   if (_currentTestComplete)   return;
   if ((DataHelper.eq(from.getIP(),test.getBobIP().getAddress())) && (from.getPort() == test.getBobPort())) {
     int ipSize=testInfo.readIPSize();
-    if (ipSize != 4) {
+    boolean expectV6=test.isIPv6();
+    if ((!expectV6 && ipSize != 4) || (expectV6 && ipSize != 16)) {
       if (_log.shouldLog(Log.WARN))       _log.warn("Bad IP length " + ipSize + " from bob's reply: "+ from+ ", "+ testInfo);
       return;
     }
@@ -33,7 +34,7 @@
       if (_log.shouldLog(Log.WARN))       _log.warn("Bob chose a charlie we already have a session to, cancelling the test and rerunning (bob: " + _currentTest + ", charlie: "+ from+ ")");
       _currentTestComplete=true;
       _context.statManager().addRateData("udp.statusKnownCharlie",1);
-      honorStatus(Status.UNKNOWN);
+      honorStatus(Status.UNKNOWN,test.isIPv6());
       _currentTest=null;
       return;
     }
@@ -43,7 +44,9 @@
         if (testPort == 0)         throw new UnknownHostException("port 0");
         test.setAlicePortFromCharlie(testPort);
         byte ip[]=new byte[testInfo.readIPSize()];
-        if (ip.length != 4)         throw new UnknownHostException("not IPv4");
+        int ipSize=ip.length;
+        boolean expectV6=test.isIPv6();
+        if ((!expectV6 && ipSize != 4) || (expectV6 && ipSize != 16))         throw new UnknownHostException("bad sz - expect v6? " + expectV6 + " act sz: "+ ipSize);
         testInfo.readIP(ip,0);
         InetAddress addr=InetAddress.getByAddress(ip);
         test.setAliceIPFromCharlie(addr);

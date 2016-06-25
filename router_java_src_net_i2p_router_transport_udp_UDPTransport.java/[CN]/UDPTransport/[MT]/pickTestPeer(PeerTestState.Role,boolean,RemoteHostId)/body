@@ -5,14 +5,22 @@
     PeerState peer=iter.next();
     if ((dontInclude != null) && (dontInclude.equals(peer.getRemoteHostId())))     continue;
     byte[] ip=peer.getRemoteIP();
-    if (peerRole == BOB && ip.length != 4)     continue;
+    if (peerRole == BOB) {
+      if ((!isIPv6 && ip.length != 4) || (isIPv6 && ip.length != 16))       continue;
+    }
     RouterInfo peerInfo=_context.netDb().lookupRouterInfoLocally(peer.getRemotePeer());
     if (peerInfo == null)     continue;
+    if (isIPv6) {
+      String v=peerInfo.getVersion();
+      if (VersionComparator.comp(v,MIN_SIGTYPE_VERSION) < 0)       continue;
+    }
     ip=null;
     List<RouterAddress> addrs=getTargetAddresses(peerInfo);
     for (    RouterAddress addr : addrs) {
       ip=addr.getIP();
-      if (ip != null && ip.length == 4)       break;
+      if (ip != null) {
+        if ((!isIPv6 && ip.length != 4) || (isIPv6 && ip.length != 16))         break;
+      }
     }
     if (ip == null)     continue;
     if (isTooClose(ip))     continue;
