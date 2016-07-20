@@ -6,7 +6,12 @@
     if ((dontInclude != null) && (dontInclude.equals(peer.getRemoteHostId())))     continue;
     byte[] ip=peer.getRemoteIP();
     if (peerRole == BOB) {
-      if ((!isIPv6 && ip.length != 4) || (isIPv6 && ip.length != 16))       continue;
+      if (isIPv6) {
+        if (ip.length != 16)         continue;
+      }
+ else {
+        if (ip.length != 4)         continue;
+      }
     }
     RouterInfo peerInfo=_context.netDb().lookupRouterInfoLocally(peer.getRemotePeer());
     if (peerInfo == null)     continue;
@@ -17,9 +22,19 @@
     ip=null;
     List<RouterAddress> addrs=getTargetAddresses(peerInfo);
     for (    RouterAddress addr : addrs) {
-      ip=addr.getIP();
-      if (ip != null) {
-        if ((!isIPv6 && ip.length != 4) || (isIPv6 && ip.length != 16))         break;
+      byte[] rip=addr.getIP();
+      if (rip != null) {
+        if (isIPv6) {
+          if (rip.length != 16)           continue;
+        }
+ else {
+          if (rip.length != 4)           continue;
+        }
+        String caps=addr.getOption(UDPAddress.PROP_CAPACITY);
+        if (caps != null && caps.contains(CAP_TESTING)) {
+          ip=rip;
+          break;
+        }
       }
     }
     if (ip == null)     continue;
