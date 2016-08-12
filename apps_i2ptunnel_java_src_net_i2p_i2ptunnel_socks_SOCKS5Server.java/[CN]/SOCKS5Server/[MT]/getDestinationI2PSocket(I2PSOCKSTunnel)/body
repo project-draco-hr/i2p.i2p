@@ -18,7 +18,7 @@
   I2PSocket destSock;
   try {
     if (connHostName.toLowerCase(Locale.US).endsWith(".i2p")) {
-      Destination dest=I2PAppContext.getGlobalContext().namingService().lookup(connHostName);
+      Destination dest=_context.namingService().lookup(connHostName);
       if (dest == null) {
         try {
           sendRequestReply(Reply.HOST_UNREACHABLE,AddressType.DOMAINNAME,null,"0.0.0.0",0,out);
@@ -44,30 +44,46 @@
       throw new SOCKSException(err);
     }
  else {
-      List<String> proxies=t.getProxies(connPort);
-      if (proxies == null || proxies.isEmpty()) {
-        String err="No outproxy configured for port " + connPort + " and no default configured either";
-        _log.error(err);
+      Outproxy outproxy=getOutproxyPlugin();
+      if (outproxy != null) {
         try {
-          sendRequestReply(Reply.CONNECTION_NOT_ALLOWED_BY_RULESET,AddressType.DOMAINNAME,null,"0.0.0.0",0,out);
+          destSock=new SocketWrapper(outproxy.connect(connHostName,connPort));
         }
  catch (        IOException ioe) {
+          try {
+            sendRequestReply(Reply.HOST_UNREACHABLE,AddressType.DOMAINNAME,null,"0.0.0.0",0,out);
+          }
+ catch (          IOException ioe2) {
+          }
+          throw new SOCKSException("connect failed via outproxy plugin",ioe);
         }
-        throw new SOCKSException(err);
       }
-      int p=I2PAppContext.getGlobalContext().random().nextInt(proxies.size());
-      String proxy=proxies.get(p);
-      if (_log.shouldLog(Log.DEBUG))       _log.debug("connecting to proxy " + proxy + " for "+ connHostName+ " port "+ connPort);
-      try {
-        destSock=outproxyConnect(t,proxy);
-      }
- catch (      SOCKSException se) {
+ else {
+        List<String> proxies=t.getProxies(connPort);
+        if (proxies == null || proxies.isEmpty()) {
+          String err="No outproxy configured for port " + connPort + " and no default configured either";
+          _log.error(err);
+          try {
+            sendRequestReply(Reply.CONNECTION_NOT_ALLOWED_BY_RULESET,AddressType.DOMAINNAME,null,"0.0.0.0",0,out);
+          }
+ catch (          IOException ioe) {
+          }
+          throw new SOCKSException(err);
+        }
+        int p=_context.random().nextInt(proxies.size());
+        String proxy=proxies.get(p);
+        if (_log.shouldLog(Log.DEBUG))         _log.debug("connecting to proxy " + proxy + " for "+ connHostName+ " port "+ connPort);
         try {
-          sendRequestReply(Reply.HOST_UNREACHABLE,AddressType.DOMAINNAME,null,"0.0.0.0",0,out);
+          destSock=outproxyConnect(t,proxy);
         }
- catch (        IOException ioe) {
+ catch (        SOCKSException se) {
+          try {
+            sendRequestReply(Reply.HOST_UNREACHABLE,AddressType.DOMAINNAME,null,"0.0.0.0",0,out);
+          }
+ catch (          IOException ioe) {
+          }
+          throw se;
         }
-        throw se;
       }
     }
     confirmConnection();
