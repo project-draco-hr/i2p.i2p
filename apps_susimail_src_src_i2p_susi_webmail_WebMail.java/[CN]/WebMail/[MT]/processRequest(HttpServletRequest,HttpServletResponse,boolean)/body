@@ -33,7 +33,14 @@ synchronized (sessionObject) {
     sessionObject.themePath="/themes/susimail/" + theme + '/';
     sessionObject.imgPath=sessionObject.themePath + "images/";
     sessionObject.isMobile=isMobile;
-    if (sessionObject.state == STATE_NEW)     processComposeButtons(sessionObject,request);
+    if (isPOST) {
+      String nonce=request.getParameter(SUSI_NONCE);
+      if (nonce == null || !sessionObject.isValidNonce(nonce)) {
+        sessionObject.error=Translate.getString("Invalid form submission, probably because you used the 'back' or 'reload' button on your browser. Please resubmit.",ctx,CONSOLE_BUNDLE_NAME) + '\n' + Translate.getString("If the problem persists, verify that you have cookies enabled in your browser.",ctx,CONSOLE_BUNDLE_NAME);
+        isPOST=false;
+      }
+    }
+    if (isPOST && sessionObject.state == STATE_NEW)     processComposeButtons(sessionObject,request);
     int oldState=sessionObject.state;
     processStateChangeButtons(sessionObject,request,isPOST);
     if (isPOST)     processConfigButtons(sessionObject,request);
@@ -59,7 +66,7 @@ synchronized (sessionObject) {
       if (processDownloadLink(sessionObject,request,response)) {
         return;
       }
-      if (processSaveAsLink(sessionObject,request,response)) {
+      if (isPOST && processSaveAsLink(sessionObject,request,response)) {
         return;
       }
       if (sessionObject.showUIDL != null) {
@@ -106,7 +113,9 @@ synchronized (sessionObject) {
       out.println("<script src=\"/susimail/js/folder.js\" type=\"text/javascript\"></script>");
     }
     out.print("</head>\n<body" + (sessionObject.state == STATE_LIST ? " onload=\"deleteboxclicked()\">" : ">"));
-    out.println("<div class=\"page\"><div class=\"header\"><img class=\"header\" src=\"" + sessionObject.imgPath + "susimail.png\" alt=\"Susimail\"></div>\n"+ "<form method=\"POST\" enctype=\"multipart/form-data\" action=\""+ myself+ "\" accept-charset=\"UTF-8\">");
+    String nonce=Long.toString(ctx.random().nextLong());
+    sessionObject.addNonce(nonce);
+    out.println("<div class=\"page\"><div class=\"header\"><img class=\"header\" src=\"" + sessionObject.imgPath + "susimail.png\" alt=\"Susimail\"></div>\n"+ "<form method=\"POST\" enctype=\"multipart/form-data\" action=\""+ myself+ "\" accept-charset=\"UTF-8\">\n"+ "<input type=\"hidden\" name=\""+ SUSI_NONCE+ "\" value=\""+ nonce+ "\">");
     if (sessionObject.error != null && sessionObject.error.length() > 0) {
       out.println("<p class=\"error\">" + quoteHTML(sessionObject.error).replace("\n","<br>") + "</p>");
     }

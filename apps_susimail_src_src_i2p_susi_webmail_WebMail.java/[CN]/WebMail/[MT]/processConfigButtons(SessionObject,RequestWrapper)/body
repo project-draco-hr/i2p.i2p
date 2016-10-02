@@ -5,6 +5,16 @@
       if (raw == null)       return;
       Properties props=new Properties();
       DataHelper.loadProps(props,new ByteArrayInputStream(DataHelper.getUTF8(raw)));
+      String oldHost=Config.getProperty(CONFIG_HOST,DEFAULT_HOST);
+      String newHost=props.getProperty(CONFIG_HOST);
+      if (newHost == null) {
+        props.setProperty(CONFIG_HOST,oldHost);
+      }
+ else       if (!newHost.equals(oldHost) && !newHost.equals("localhost")) {
+        props.setProperty(CONFIG_HOST,oldHost);
+        File cfg=new File(I2PAppContext.getGlobalContext().getConfigDir(),"susimail.config");
+        sessionObject.error+=_t("Host unchanged. Edit configation file {0} to change host.",cfg.getAbsolutePath()) + '\n';
+      }
       Config.saveConfiguration(props);
       String ps=props.getProperty(Folder.PAGESIZE);
       if (sessionObject.folder != null && ps != null) {
