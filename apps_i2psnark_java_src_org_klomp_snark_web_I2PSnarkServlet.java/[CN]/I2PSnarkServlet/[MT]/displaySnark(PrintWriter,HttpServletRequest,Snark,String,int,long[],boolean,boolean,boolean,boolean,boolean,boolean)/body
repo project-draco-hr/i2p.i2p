@@ -30,6 +30,8 @@
   if (downBps > 0 && needed > 0)   remainingSeconds=needed / downBps;
  else   remainingSeconds=-1;
   MetaInfo meta=snark.getMetaInfo();
+  String b64=Base64.encode(snark.getInfoHash());
+  String b64Short=b64.substring(0,6);
   boolean isValid=meta != null;
   boolean isMultiFile=isValid && meta.getFiles() != null;
   String err=snark.getTrackerProblems();
@@ -60,23 +62,41 @@
         img="complete";
         txt=_t("Complete");
       }
-      if (curPeers > 0 && !showPeers)       statusString=toThemeImg(img,"",txt) + "</td>" + "<td class=\"snarkTorrentStatus\">"+ txt+ ": <a href=\""+ uri+ getQueryString(req,Base64.encode(snark.getInfoHash()),null,null)+ "\">"+ curPeers+ thinsp(noThinsp)+ ngettext("1 peer","{0} peers",knownPeers)+ "</a>";
- else       statusString=toThemeImg(img,"",txt) + "</td>" + "<td class=\"snarkTorrentStatus\">"+ txt+ ": "+ curPeers+ thinsp(noThinsp)+ ngettext("1 peer","{0} peers",knownPeers);
+      if (curPeers > 0 && !showPeers) {
+        statusString=toThemeImg(img,"",txt) + "</td>" + "<td class=\"snarkTorrentStatus\">"+ txt+ ": <a href=\""+ uri+ getQueryString(req,b64,null,null)+ '#'+ b64Short+ "\">"+ curPeers+ thinsp(noThinsp)+ ngettext("1 peer","{0} peers",knownPeers)+ "</a>";
+      }
+ else {
+        statusString=toThemeImg(img,"",txt) + "</td>" + "<td class=\"snarkTorrentStatus\">"+ txt+ ": "+ curPeers+ thinsp(noThinsp)+ ngettext("1 peer","{0} peers",knownPeers);
+      }
     }
  else {
       statusString=toThemeImg("complete","",_t("Complete")) + "</td>" + "<td class=\"snarkTorrentStatus\">"+ _t("Complete");
     }
   }
  else {
-    if (isRunning && curPeers > 0 && downBps > 0 && !showPeers)     statusString=toThemeImg("downloading","",_t("OK")) + "</td>" + "<td class=\"snarkTorrentStatus\">"+ _t("OK")+ ": <a href=\""+ uri+ getQueryString(req,Base64.encode(snark.getInfoHash()),null,null)+ "\">"+ curPeers+ thinsp(noThinsp)+ ngettext("1 peer","{0} peers",knownPeers)+ "</a>";
- else     if (isRunning && curPeers > 0 && downBps > 0)     statusString=toThemeImg("downloading","",_t("OK")) + "</td>" + "<td class=\"snarkTorrentStatus\">"+ _t("OK")+ ": "+ curPeers+ thinsp(noThinsp)+ ngettext("1 peer","{0} peers",knownPeers);
- else     if (isRunning && curPeers > 0 && !showPeers)     statusString=toThemeImg("stalled","",_t("Stalled")) + "</td>" + "<td class=\"snarkTorrentStatus\">"+ _t("Stalled")+ ": <a href=\""+ uri+ getQueryString(req,Base64.encode(snark.getInfoHash()),null,null)+ "\">"+ curPeers+ thinsp(noThinsp)+ ngettext("1 peer","{0} peers",knownPeers)+ "</a>";
- else     if (isRunning && curPeers > 0)     statusString=toThemeImg("stalled","",_t("Stalled")) + "</td>" + "<td class=\"snarkTorrentStatus\">"+ _t("Stalled")+ ": "+ curPeers+ thinsp(noThinsp)+ ngettext("1 peer","{0} peers",knownPeers);
- else     if (isRunning && knownPeers > 0)     statusString=toThemeImg("nopeers","",_t("No Peers")) + "</td>" + "<td class=\"snarkTorrentStatus\">"+ _t("No Peers")+ ": 0"+ thinsp(noThinsp)+ knownPeers;
- else     if (isRunning)     statusString=toThemeImg("nopeers","",_t("No Peers")) + "</td>" + "<td class=\"snarkTorrentStatus\">"+ _t("No Peers");
- else     statusString=toThemeImg("stopped","",_t("Stopped")) + "</td>" + "<td class=\"snarkTorrentStatus\">"+ _t("Stopped");
+    if (isRunning && curPeers > 0 && downBps > 0 && !showPeers) {
+      statusString=toThemeImg("downloading","",_t("OK")) + "</td>" + "<td class=\"snarkTorrentStatus\">"+ _t("OK")+ ": <a href=\""+ uri+ getQueryString(req,b64,null,null)+ '#'+ b64Short+ "\">"+ curPeers+ thinsp(noThinsp)+ ngettext("1 peer","{0} peers",knownPeers)+ "</a>";
+    }
+ else     if (isRunning && curPeers > 0 && downBps > 0) {
+      statusString=toThemeImg("downloading","",_t("OK")) + "</td>" + "<td class=\"snarkTorrentStatus\">"+ _t("OK")+ ": "+ curPeers+ thinsp(noThinsp)+ ngettext("1 peer","{0} peers",knownPeers);
+    }
+ else     if (isRunning && curPeers > 0 && !showPeers) {
+      statusString=toThemeImg("stalled","",_t("Stalled")) + "</td>" + "<td class=\"snarkTorrentStatus\">"+ _t("Stalled")+ ": <a href=\""+ uri+ getQueryString(req,b64,null,null)+ '#'+ b64Short+ "\">"+ curPeers+ thinsp(noThinsp)+ ngettext("1 peer","{0} peers",knownPeers)+ "</a>";
+    }
+ else     if (isRunning && curPeers > 0) {
+      statusString=toThemeImg("stalled","",_t("Stalled")) + "</td>" + "<td class=\"snarkTorrentStatus\">"+ _t("Stalled")+ ": "+ curPeers+ thinsp(noThinsp)+ ngettext("1 peer","{0} peers",knownPeers);
+    }
+ else     if (isRunning && knownPeers > 0) {
+      statusString=toThemeImg("nopeers","",_t("No Peers")) + "</td>" + "<td class=\"snarkTorrentStatus\">"+ _t("No Peers")+ ": 0"+ thinsp(noThinsp)+ knownPeers;
+    }
+ else     if (isRunning) {
+      statusString=toThemeImg("nopeers","",_t("No Peers")) + "</td>" + "<td class=\"snarkTorrentStatus\">"+ _t("No Peers");
+    }
+ else {
+      statusString=toThemeImg("stopped","",_t("Stopped")) + "</td>" + "<td class=\"snarkTorrentStatus\">"+ _t("Stopped");
+    }
   }
-  out.write("<tr class=\"" + rowClass + "\">");
+  out.write("<tr class=\"" + rowClass + "\" id=\""+ b64Short+ "\">");
   out.write("<td class=\"center\">");
   out.write(statusString + "</td>\n\t");
   out.write("<td>");
@@ -154,7 +174,6 @@
   if (isRunning && isValid)   out.write(formatSize(upBps) + "ps");
   out.write("</td>\n\t");
   out.write("<td align=\"center\" class=\"snarkTorrentAction\">");
-  String b64=Base64.encode(snark.getInfoHash());
   if (snark.isChecking()) {
   }
  else   if (isRunning) {
