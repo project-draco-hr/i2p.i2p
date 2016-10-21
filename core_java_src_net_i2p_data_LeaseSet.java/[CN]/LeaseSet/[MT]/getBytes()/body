@@ -1,4 +1,5 @@
 {
+  if (_byteified != null)   return _byteified;
   if ((_destination == null) || (_encryptionKey == null) || (_signingKey == null))   return null;
   int len=_destination.size() + PublicKey.KEYSIZE_BYTES + _signingKey.length()+ 1+ _leases.size() * 44;
   ByteArrayOutputStream out=new ByteArrayOutputStream(len);
@@ -6,7 +7,7 @@
     _destination.writeBytes(out);
     _encryptionKey.writeBytes(out);
     _signingKey.writeBytes(out);
-    DataHelper.writeLong(out,1,_leases.size());
+    out.write((byte)_leases.size());
     for (    Lease lease : _leases)     lease.writeBytes(out);
   }
  catch (  IOException ioe) {
@@ -16,5 +17,6 @@ catch (  DataFormatException dfe) {
     return null;
   }
   byte rv[]=out.toByteArray();
+  if (_receivedAsPublished)   _byteified=rv;
   return rv;
 }
