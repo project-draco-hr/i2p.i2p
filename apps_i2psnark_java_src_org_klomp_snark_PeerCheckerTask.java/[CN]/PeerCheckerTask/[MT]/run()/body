@@ -8,13 +8,14 @@
   long worstdownload=Long.MAX_VALUE;
   Peer worstDownloader=null;
   int uploaders=0;
+  int interestedUploaders=0;
   int removedCount=0;
   long uploaded=0;
   long downloaded=0;
   List<Peer> removed=new ArrayList<Peer>();
   int uploadLimit=coordinator.allowedUploaders();
   boolean overBWLimit=coordinator.overUpBWLimit();
-  if (_log.shouldLog(Log.DEBUG))   _log.debug("peers: " + peerList.size() + " limit: "+ uploadLimit+ " overBW? "+ overBWLimit);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("START peers: " + peerList.size() + " uploaders: "+ coordinator.getUploaders()+ " interested: "+ coordinator.getInterestedUploaders()+ " limit: "+ uploadLimit+ " overBW? "+ overBWLimit);
   DHT dht=_util.getDHT();
   for (  Peer peer : peerList) {
     if (!peer.isConnected()) {
@@ -25,7 +26,7 @@
       peer.disconnect();
       continue;
     }
-    if (!peer.isChoking())     uploaders++;
+    if (peer.isInterested() && !peer.isChoking())     uploaders++;
     long upload=peer.getUploaded();
     uploaded+=upload;
     long download=peer.getDownloaded();
@@ -36,19 +37,21 @@
       _log.debug(peer + ":" + " ul: "+ upload * 1024 / KILOPERSECOND + " dl: " + download * 1024 / KILOPERSECOND + " i: " + peer.isInterested() + " I: " + peer.isInteresting() + " c: " + peer.isChoking() + " C: " + peer.isChoked());
     }
     boolean overBWLimitChoke=upload > 0 && ((overBWLimit && (random.nextInt(8) > (coordinator.completed() ? 2 : 4))) || (coordinator.overUpBWLimit(uploaded)));
-    if (((coordinator.uploaders == uploadLimit && coordinator.interestedAndChoking > 0) || coordinator.uploaders > uploadLimit || overBWLimitChoke) && !peer.isChoking()) {
+    int cup=coordinator.getUploaders();
+    if (((cup == uploadLimit && coordinator.getInterestedAndChoking() > 0) || cup > uploadLimit || overBWLimitChoke) && !peer.isChoking()) {
       if (!peer.isInterested()) {
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Choke uninterested peer: " + peer);
         peer.setChoking(true);
         uploaders--;
-        coordinator.uploaders--;
+        coordinator.decrementUploaders(false);
         removed.add(peer);
       }
  else       if (overBWLimitChoke) {
         if (_log.shouldLog(Log.DEBUG))         _log.debug("BW limit (" + upload + "/"+ uploaded+ "), choke peer: "+ peer);
         peer.setChoking(true);
         uploaders--;
-        coordinator.uploaders--;
+        interestedUploaders--;
+        coordinator.decrementUploaders(true);
         removedCount++;
         removed.add(peer);
       }
@@ -56,7 +59,8 @@
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Choke choking peer: " + peer);
         peer.setChoking(true);
         uploaders--;
-        coordinator.uploaders--;
+        interestedUploaders--;
+        coordinator.decrementUploaders(true);
         removedCount++;
         removed.add(peer);
       }
@@ -64,7 +68,8 @@
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Choke uninteresting peer: " + peer);
         peer.setChoking(true);
         uploaders--;
-        coordinator.uploaders--;
+        interestedUploaders--;
+        coordinator.decrementUploaders(true);
         removedCount++;
         removed.add(peer);
       }
@@ -72,7 +77,8 @@
         if (_log.shouldLog(Log.DEBUG))         _log.debug("Choke downloader that doesn't deliver: " + peer);
         peer.setChoking(true);
         uploaders--;
-        coordinator.uploaders--;
+        interestedUploaders--;
+        coordinator.decrementUploaders(true);
         removedCount++;
         removed.add(peer);
       }
@@ -92,22 +98,26 @@
       dht.announce(coordinator.getInfoHash(),peer.getPeerID().getDestHash(),peer.isCompleted());
     }
   }
-  coordinator.uploaders=uploaders;
-  if (((uploaders == uploadLimit && coordinator.interestedAndChoking > 0) || uploaders > uploadLimit) && worstDownloader != null) {
+  coordinator.setUploaders(uploaders,interestedUploaders);
+  if (((uploaders == uploadLimit && coordinator.getInterestedAndChoking() > 0) || uploaders > uploadLimit) && worstDownloader != null) {
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Choke worst downloader: " + worstDownloader);
     worstDownloader.setChoking(true);
-    coordinator.uploaders--;
+    coordinator.decrementUploaders(worstDownloader.isInterested());
     removedCount++;
     removed.add(worstDownloader);
   }
-  if ((!overBWLimit) && !coordinator.overUpBWLimit(uploaded))   coordinator.unchokePeer();
+  boolean coordOver=coordinator.overUpBWLimit(uploaded);
 synchronized (coordinator.peers) {
+    if ((!overBWLimit) && !coordOver) {
+      coordinator.unchokePeer();
+    }
     for (    Peer peer : removed) {
       if (coordinator.peers.remove(peer))       coordinator.peers.add(peer);
     }
   }
-  coordinator.interestedAndChoking+=removedCount;
+  coordinator.addInterestedAndChoking(removedCount);
   coordinator.setRateHistory(uploaded,downloaded);
+  if (_log.shouldLog(Log.DEBUG))   _log.debug("END peers: " + peerList.size() + " uploaders: "+ uploaders+ " interested: "+ interestedUploaders);
   Storage storage=coordinator.getStorage();
   if (storage != null) {
     int files=storage.getFileCount();

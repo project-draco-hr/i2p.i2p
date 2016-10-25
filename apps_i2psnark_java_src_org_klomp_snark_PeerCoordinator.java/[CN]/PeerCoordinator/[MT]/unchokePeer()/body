@@ -8,21 +8,23 @@
     Peer peer=it.next();
     if (peer.isChoking() && peer.isInterested()) {
       count++;
-      if (uploaders < maxUploaders) {
+      if (uploaders.get() < maxUploaders) {
         if (peer.isInteresting() && !peer.isChoked())         interested.add(unchokedCount++,peer);
  else         interested.add(peer);
       }
     }
   }
-  while (uploaders < maxUploaders && !interested.isEmpty()) {
+  int up=uploaders.get();
+  while (up < maxUploaders && !interested.isEmpty()) {
     Peer peer=interested.remove(0);
     if (_log.shouldLog(Log.DEBUG))     _log.debug("Unchoke: " + peer);
     peer.setChoking(false);
-    uploaders++;
+    up=uploaders.incrementAndGet();
+    interestedUploaders.incrementAndGet();
     count--;
     peers.remove(peer);
     peers.add(peer);
     peerCount=peers.size();
   }
-  interestedAndChoking=count;
+  interestedAndChoking.set(count);
 }
