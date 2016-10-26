@@ -1,0 +1,29 @@
+{
+  RrdDb rrd=new RrdDb(sourcePath);
+  try {
+    Datasource[] datasources;
+    if (dsName == null) {
+      datasources=rrd.getDatasources();
+    }
+ else {
+      if (rrd.containsDs(dsName)) {
+        datasources=new Datasource[]{rrd.getDatasource(dsName)};
+      }
+ else {
+        throw new RrdException("Could not find datasource [" + dsName + "] in file "+ sourcePath);
+      }
+    }
+    int count=0;
+    for (    Datasource datasource : datasources) {
+      String currentDsName=datasource.getDsName();
+      if (!currentDsName.endsWith(DsDef.FORCE_ZEROS_FOR_NANS_SUFFIX)) {
+        datasource.setDsName(currentDsName + DsDef.FORCE_ZEROS_FOR_NANS_SUFFIX);
+        count++;
+      }
+    }
+    return count;
+  }
+  finally {
+    rrd.close();
+  }
+}

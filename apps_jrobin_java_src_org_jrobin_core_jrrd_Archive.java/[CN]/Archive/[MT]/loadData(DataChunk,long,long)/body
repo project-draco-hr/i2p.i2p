@@ -1,0 +1,34 @@
+{
+  long pointer;
+  if (chunk.start < 0) {
+    pointer=currentRow + 1;
+  }
+ else {
+    pointer=currentRow + chunk.start + 1;
+  }
+  db.rrdFile.ras.seek(dataOffset + (pointer * 8));
+  double[][] data=chunk.data;
+  int row=0;
+  for (int i=chunk.start; i < rowCount - chunk.end; i++, row++) {
+    if (i < 0) {
+      for (int ii=0; ii < chunk.dsCount; ii++) {
+        data[row][ii]=Double.NaN;
+      }
+    }
+ else     if (i >= rowCount) {
+      for (int ii=0; ii < chunk.dsCount; ii++) {
+        data[row][ii]=Double.NaN;
+      }
+    }
+ else {
+      if (pointer >= rowCount) {
+        pointer-=rowCount;
+        db.rrdFile.ras.seek(dataOffset + (pointer * 8));
+      }
+      for (int ii=0; ii < chunk.dsCount; ii++) {
+        data[row][ii]=db.rrdFile.readDouble();
+      }
+      pointer++;
+    }
+  }
+}

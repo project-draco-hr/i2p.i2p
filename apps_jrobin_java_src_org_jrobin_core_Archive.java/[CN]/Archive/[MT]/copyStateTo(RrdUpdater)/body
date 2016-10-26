@@ -1,0 +1,20 @@
+{
+  if (!(other instanceof Archive)) {
+    throw new RrdException("Cannot copy Archive object to " + other.getClass().getName());
+  }
+  final Archive arc=(Archive)other;
+  if (!arc.consolFun.get().equals(consolFun.get())) {
+    throw new RrdException("Incompatible consolidation functions");
+  }
+  if (arc.steps.get() != steps.get()) {
+    throw new RrdException("Incompatible number of steps");
+  }
+  final int count=parentDb.getHeader().getDsCount();
+  for (int i=0; i < count; i++) {
+    final int j=Util.getMatchingDatasourceIndex(parentDb,i,arc.parentDb);
+    if (j >= 0) {
+      states[i].copyStateTo(arc.states[j]);
+      robins[i].copyStateTo(arc.robins[j]);
+    }
+  }
+}

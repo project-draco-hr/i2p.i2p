@@ -1,0 +1,28 @@
+{
+  long t1=Util.getTimestamp(2003,4,1);
+  long t2=Util.getTimestamp(2003,5,1);
+  System.out.println("t1 = " + t1);
+  System.out.println("t2 = " + t2);
+  String rrdPath=Util.getJRobinDemoPath("demo.rrd");
+  DataProcessor dp=new DataProcessor(t1,t2);
+  dp.addDatasource("X",rrdPath,"sun","AVERAGE");
+  dp.addDatasource("Y",rrdPath,"shade","AVERAGE");
+  dp.addDatasource("Z","X,Y,+,2,/");
+  dp.addDatasource("DERIVE[Z]","Z,PREV(Z),-,STEP,/");
+  dp.addDatasource("TREND[Z]","DERIVE[Z],SIGN");
+  dp.addDatasource("AVG[Z]","Z","AVERAGE");
+  dp.addDatasource("DELTA","Z,AVG[Z],-");
+  long laptime=System.currentTimeMillis();
+  dp.processData();
+  System.out.println("Data processed in " + (System.currentTimeMillis() - laptime) + " milliseconds\n---");
+  System.out.println(dp.dump());
+  System.out.println("\nAggregates for X");
+  Aggregates agg=dp.getAggregates("X");
+  System.out.println(agg.dump());
+  System.out.println("\nAggregates for Y");
+  agg=dp.getAggregates("Y");
+  System.out.println(agg.dump());
+  System.out.println("\n95-percentile for X: " + Util.formatDouble(dp.get95Percentile("X")));
+  System.out.println("95-percentile for Y: " + Util.formatDouble(dp.get95Percentile("Y")));
+  System.out.println("\nLast archive update time was: " + dp.getLastRrdArchiveUpdateTime());
+}

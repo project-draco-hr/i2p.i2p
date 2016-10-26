@@ -1,0 +1,33 @@
+{
+  long tEndFixed=(tEnd == 0) ? Util.getTime() : tEnd;
+  for (int i=0; i < defSources.length; i++) {
+    if (!defSources[i].isLoaded()) {
+      Set<String> dsNames=new HashSet<String>();
+      dsNames.add(defSources[i].getDsName());
+      for (int j=i + 1; j < defSources.length; j++) {
+        if (defSources[i].isCompatibleWith(defSources[j])) {
+          dsNames.add(defSources[j].getDsName());
+        }
+      }
+      RrdDb rrd=null;
+      try {
+        rrd=getRrd(defSources[i]);
+        lastRrdArchiveUpdateTime=Math.max(lastRrdArchiveUpdateTime,rrd.getLastArchiveUpdateTime());
+        FetchRequest req=rrd.createFetchRequest(defSources[i].getConsolFun(),tStart,tEndFixed,fetchRequestResolution);
+        req.setFilter(dsNames);
+        FetchData data=req.fetchData();
+        defSources[i].setFetchData(data);
+        for (int j=i + 1; j < defSources.length; j++) {
+          if (defSources[i].isCompatibleWith(defSources[j])) {
+            defSources[j].setFetchData(data);
+          }
+        }
+      }
+  finally {
+        if (rrd != null) {
+          releaseRrd(rrd,defSources[i]);
+        }
+      }
+    }
+  }
+}

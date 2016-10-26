@@ -1,0 +1,45 @@
+{
+  double updateValue=Double.NaN;
+  if (newTime - oldTime <= heartbeat.get()) {
+    final String type=dsType.get();
+    if (type.equals(DT_GAUGE)) {
+      updateValue=newValue;
+    }
+ else     if (type.equals(DT_ABSOLUTE)) {
+      if (!Double.isNaN(newValue)) {
+        updateValue=newValue / (newTime - oldTime);
+      }
+    }
+ else     if (type.equals(DT_DERIVE)) {
+      if (!Double.isNaN(newValue) && !Double.isNaN(oldValue)) {
+        updateValue=(newValue - oldValue) / (newTime - oldTime);
+      }
+    }
+ else     if (type.equals(DT_COUNTER)) {
+      if (!Double.isNaN(newValue) && !Double.isNaN(oldValue)) {
+        double diff=newValue - oldValue;
+        if (diff < 0) {
+          diff+=MAX_32_BIT;
+        }
+        if (diff < 0) {
+          diff+=MAX_64_BIT - MAX_32_BIT;
+        }
+        if (diff >= 0) {
+          updateValue=diff / (newTime - oldTime);
+        }
+      }
+    }
+    if (!Double.isNaN(updateValue)) {
+      final double minVal=minValue.get();
+      final double maxVal=maxValue.get();
+      if (!Double.isNaN(minVal) && updateValue < minVal) {
+        updateValue=Double.NaN;
+      }
+      if (!Double.isNaN(maxVal) && updateValue > maxVal) {
+        updateValue=Double.NaN;
+      }
+    }
+  }
+  lastValue.set(newValue);
+  return updateValue;
+}

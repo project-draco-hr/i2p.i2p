@@ -1,0 +1,52 @@
+{
+  int hour, minute=0;
+  scanner.saveState();
+  if (token.value.length() > 2) {
+    return;
+  }
+  hour=Integer.parseInt(token.value);
+  token=scanner.nextToken();
+  if (token.id == TimeToken.SLASH) {
+    token=scanner.restoreState();
+    return;
+  }
+  if (token.id == TimeToken.COLON || token.id == TimeToken.DOT) {
+    expectToken(TimeToken.NUMBER,"Parsing HH:MM or HH.MM syntax, expecting MM as number, got none");
+    minute=Integer.parseInt(token.value);
+    if (minute > 59) {
+      throw new RrdException("Parsing HH:MM or HH.MM syntax, got MM = " + minute + " (>59!)");
+    }
+    token=scanner.nextToken();
+    if (token.id == TimeToken.DOT) {
+      token=scanner.restoreState();
+      return;
+    }
+  }
+  if (token.id == TimeToken.AM || token.id == TimeToken.PM) {
+    if (hour > 12) {
+      throw new RrdException("There cannot be more than 12 AM or PM hours");
+    }
+    if (token.id == TimeToken.PM) {
+      if (hour != 12) {
+        hour+=12;
+      }
+    }
+ else {
+      if (hour == 12) {
+        hour=0;
+      }
+    }
+    token=scanner.nextToken();
+  }
+ else   if (hour > 23) {
+    token=scanner.restoreState();
+    return;
+  }
+  spec.hour=hour;
+  spec.min=minute;
+  spec.sec=0;
+  if (spec.hour == 24) {
+    spec.hour=0;
+    spec.day++;
+  }
+}

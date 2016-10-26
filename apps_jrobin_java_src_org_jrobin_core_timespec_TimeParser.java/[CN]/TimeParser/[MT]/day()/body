@@ -1,0 +1,93 @@
+{
+  long mday=0, wday, mon, year=spec.year;
+switch (token.id) {
+case TimeToken.YESTERDAY:
+    spec.day--;
+  token=scanner.nextToken();
+break;
+case TimeToken.TODAY:
+token=scanner.nextToken();
+break;
+case TimeToken.TOMORROW:
+spec.day++;
+token=scanner.nextToken();
+break;
+case TimeToken.JAN:
+case TimeToken.FEB:
+case TimeToken.MAR:
+case TimeToken.APR:
+case TimeToken.MAY:
+case TimeToken.JUN:
+case TimeToken.JUL:
+case TimeToken.AUG:
+case TimeToken.SEP:
+case TimeToken.OCT:
+case TimeToken.NOV:
+case TimeToken.DEC:
+mon=(token.id - TimeToken.JAN);
+expectToken(TimeToken.NUMBER,"the day of the month should follow month name");
+mday=Long.parseLong(token.value);
+token=scanner.nextToken();
+if (token.id == TimeToken.NUMBER) {
+year=Long.parseLong(token.value);
+token=scanner.nextToken();
+}
+ else {
+year=spec.year;
+}
+assignDate(mday,mon,year);
+break;
+case TimeToken.SUN:
+case TimeToken.MON:
+case TimeToken.TUE:
+case TimeToken.WED:
+case TimeToken.THU:
+case TimeToken.FRI:
+case TimeToken.SAT:
+wday=(token.id - TimeToken.SUN);
+spec.day+=(wday - spec.wday);
+token=scanner.nextToken();
+break;
+case TimeToken.NUMBER:
+mon=Long.parseLong(token.value);
+if (mon > 10L * 365L * 24L* 60L* 60L) {
+spec.localtime(mon);
+token=scanner.nextToken();
+break;
+}
+if (mon > 19700101 && mon < 24000101) {
+year=mon / 10000;
+mday=mon % 100;
+mon=(mon / 100) % 100;
+token=scanner.nextToken();
+}
+ else {
+token=scanner.nextToken();
+if (mon <= 31 && (token.id == TimeToken.SLASH || token.id == TimeToken.DOT)) {
+int sep=token.id;
+expectToken(TimeToken.NUMBER,"there should be " + (sep == TimeToken.DOT ? "month" : "day") + " number after "+ (sep == TimeToken.DOT ? '.' : '/'));
+mday=Long.parseLong(token.value);
+token=scanner.nextToken();
+if (token.id == sep) {
+expectToken(TimeToken.NUMBER,"there should be year number after " + (sep == TimeToken.DOT ? '.' : '/'));
+year=Long.parseLong(token.value);
+token=scanner.nextToken();
+}
+if (sep == TimeToken.DOT) {
+long x=mday;
+mday=mon;
+mon=x;
+}
+}
+}
+mon--;
+if (mon < 0 || mon > 11) {
+throw new RrdException("Did you really mean month " + (mon + 1));
+}
+if (mday < 1 || mday > 31) {
+throw new RrdException("I'm afraid that " + mday + " is not a valid day of the month");
+}
+assignDate(mday,mon,year);
+break;
+}
+}

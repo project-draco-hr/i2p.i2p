@@ -1,0 +1,38 @@
+{
+  name=file.getName();
+  rrdFile=new RRDFile(file);
+  header=new Header(rrdFile);
+  dataSources=new ArrayList<DataSource>();
+  for (int i=0; i < header.dsCount; i++) {
+    DataSource ds=new DataSource(rrdFile);
+    dataSources.add(ds);
+  }
+  archives=new ArrayList<Archive>();
+  for (int i=0; i < header.rraCount; i++) {
+    Archive archive=new Archive(this);
+    archives.add(archive);
+  }
+  rrdFile.align();
+  long timestamp=(long)(rrdFile.readInt()) * 1000;
+  if (header.getIntVersion() >= 3) {
+    int microSeconds=rrdFile.readInt();
+    timestamp+=(microSeconds / 1000);
+  }
+  lastUpdate=new Date(timestamp);
+  for (int i=0; i < header.dsCount; i++) {
+    DataSource ds=dataSources.get(i);
+    ds.loadPDPStatusBlock(rrdFile);
+  }
+  for (int i=0; i < header.rraCount; i++) {
+    Archive archive=archives.get(i);
+    archive.loadCDPStatusBlocks(rrdFile,header.dsCount);
+  }
+  for (int i=0; i < header.rraCount; i++) {
+    Archive archive=archives.get(i);
+    archive.loadCurrentRow(rrdFile);
+  }
+  for (int i=0; i < header.rraCount; i++) {
+    Archive archive=archives.get(i);
+    archive.loadData(rrdFile,header.dsCount);
+  }
+}

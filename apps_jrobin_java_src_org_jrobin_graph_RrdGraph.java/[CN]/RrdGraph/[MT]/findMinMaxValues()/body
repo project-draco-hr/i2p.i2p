@@ -1,0 +1,40 @@
+{
+  double minval=Double.NaN, maxval=Double.NaN;
+  for (  PlotElement pe : gdef.plotElements) {
+    if (pe instanceof SourcedPlotElement) {
+      minval=Util.min(((SourcedPlotElement)pe).getMinValue(),minval);
+      maxval=Util.max(((SourcedPlotElement)pe).getMaxValue(),maxval);
+    }
+  }
+  if (Double.isNaN(minval)) {
+    minval=0D;
+  }
+  if (Double.isNaN(maxval)) {
+    maxval=1D;
+  }
+  im.minval=gdef.minValue;
+  im.maxval=gdef.maxValue;
+  if (Double.isNaN(im.minval) || ((!gdef.logarithmic && !gdef.rigid) && im.minval > minval)) {
+    im.minval=minval;
+  }
+  if (Double.isNaN(im.maxval) || (!gdef.rigid && im.maxval < maxval)) {
+    if (gdef.logarithmic) {
+      im.maxval=maxval * 1.1;
+    }
+ else {
+      im.maxval=maxval;
+    }
+  }
+  if (im.minval > im.maxval) {
+    im.minval=0.99 * im.maxval;
+  }
+  if (Math.abs(im.minval - im.maxval) < .0000001) {
+    im.maxval*=1.01;
+    if (!gdef.logarithmic) {
+      im.minval*=0.99;
+    }
+    if (im.maxval == 0.0) {
+      im.maxval=1.0;
+    }
+  }
+}

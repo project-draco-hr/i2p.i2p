@@ -1,0 +1,108 @@
+{
+  Font font=gdef.getFont(FONTTAG_AXIS);
+  Paint gridColor=gdef.colors[COLOR_GRID];
+  Paint mGridColor=gdef.colors[COLOR_MGRID];
+  Paint fontColor=gdef.colors[COLOR_FONT];
+  int labelOffset=(int)(worker.getFontAscent(font) / 2);
+  int labfact=2;
+  double range=im.maxval - im.minval;
+  double scaledrange=range / im.magfact;
+  double gridstep;
+  if (Double.isNaN(scaledrange)) {
+    return false;
+  }
+  String labfmt=null;
+  if (Double.isNaN(im.ygridstep)) {
+    if (gdef.altYGrid) {
+      int decimals=(int)Math.ceil(Math.log10(Math.max(Math.abs(im.maxval),Math.abs(im.minval))));
+      if (decimals <= 0) {
+        decimals=1;
+      }
+      int fractionals=(int)Math.floor(Math.log10(range));
+      if (fractionals < 0) {
+        labfmt=Util.sprintf("%%%d.%df",decimals - fractionals + 1,-fractionals + 1);
+      }
+ else {
+        labfmt=Util.sprintf("%%%d.1f",decimals + 1);
+      }
+      gridstep=Math.pow(10,fractionals);
+      if (gridstep == 0) {
+        gridstep=0.1;
+      }
+      if (range / gridstep < 5) {
+        gridstep/=10;
+      }
+      if (range / gridstep > 15) {
+        gridstep*=10;
+      }
+      if (range / gridstep > 5) {
+        labfact=1;
+        if (range / gridstep > 8) {
+          labfact=2;
+        }
+      }
+ else {
+        gridstep/=5;
+        labfact=5;
+      }
+    }
+ else {
+      int minimumLabelCount=3;
+      YLab selectedYLab=null;
+      while (selectedYLab == null) {
+        selectedYLab=findYLab(minimumLabelCount);
+        minimumLabelCount--;
+      }
+      gridstep=selectedYLab.grid * im.magfact;
+      labfact=findLabelFactor(selectedYLab);
+    }
+  }
+ else {
+    gridstep=im.ygridstep;
+    labfact=im.ylabfact;
+  }
+  int x0=im.xorigin, x1=x0 + im.xsize;
+  int sgrid=(int)(im.minval / gridstep - 1);
+  int egrid=(int)(im.maxval / gridstep + 1);
+  double scaledstep=gridstep / im.magfact;
+  for (int i=sgrid; i <= egrid; i++) {
+    int y=this.mapper.ytr(gridstep * i);
+    if (y >= im.yorigin - im.ysize && y <= im.yorigin) {
+      if (i % labfact == 0) {
+        String graph_label;
+        if (i == 0 || im.symbol == ' ') {
+          if (scaledstep < 1) {
+            if (i != 0 && gdef.altYGrid) {
+              graph_label=Util.sprintf(labfmt,scaledstep * i);
+            }
+ else {
+              graph_label=Util.sprintf("%4.1f",scaledstep * i);
+            }
+          }
+ else {
+            graph_label=Util.sprintf("%4.0f",scaledstep * i);
+          }
+        }
+ else {
+          if (scaledstep < 1) {
+            graph_label=Util.sprintf("%4.1f %c",scaledstep * i,im.symbol);
+          }
+ else {
+            graph_label=Util.sprintf("%4.0f %c",scaledstep * i,im.symbol);
+          }
+        }
+        int length=(int)(worker.getStringWidth(graph_label,font));
+        worker.drawString(graph_label,x0 - length - PADDING_VLABEL,y + labelOffset,font,fontColor);
+        worker.drawLine(x0 - 2,y,x0 + 2,y,mGridColor,TICK_STROKE);
+        worker.drawLine(x1 - 2,y,x1 + 2,y,mGridColor,TICK_STROKE);
+        worker.drawLine(x0,y,x1,y,mGridColor,GRID_STROKE);
+      }
+ else       if (!(gdef.noMinorGrid)) {
+        worker.drawLine(x0 - 1,y,x0 + 1,y,gridColor,TICK_STROKE);
+        worker.drawLine(x1 - 1,y,x1 + 1,y,gridColor,TICK_STROKE);
+        worker.drawLine(x0,y,x1,y,gridColor,GRID_STROKE);
+      }
+    }
+  }
+  return true;
+}

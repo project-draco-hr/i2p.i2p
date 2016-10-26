@@ -1,0 +1,28 @@
+{
+  if (!factory.exists(path)) {
+    throw new FileNotFoundException("Could not open " + path + " [non existent]");
+  }
+  backend=factory.open(path,readOnly);
+  try {
+    header=new Header(this,(RrdDef)null);
+    header.validateHeader();
+    int dsCount=header.getDsCount();
+    datasources=new Datasource[dsCount];
+    for (int i=0; i < dsCount; i++) {
+      datasources[i]=new Datasource(this,null);
+    }
+    int arcCount=header.getArcCount();
+    archives=new Archive[arcCount];
+    for (int i=0; i < arcCount; i++) {
+      archives[i]=new Archive(this,null);
+    }
+  }
+ catch (  RrdException e) {
+    backend.close();
+    throw e;
+  }
+catch (  IOException e) {
+    backend.close();
+    throw e;
+  }
+}

@@ -1,0 +1,86 @@
+{
+  long now=Util.getTime();
+  int hr=0;
+  spec.localtime(now);
+  token=scanner.nextToken();
+switch (token.id) {
+case TimeToken.PLUS:
+case TimeToken.MINUS:
+    break;
+case TimeToken.START:
+  spec.type=TimeSpec.TYPE_START;
+case TimeToken.END:
+if (spec.type != TimeSpec.TYPE_START) {
+  spec.type=TimeSpec.TYPE_END;
+}
+case TimeToken.EPOCH:
+case TimeToken.NOW:
+int time_reference=token.id;
+if (token.id != TimeToken.NOW) {
+spec.year=spec.month=spec.day=spec.hour=spec.min=spec.sec=0;
+}
+token=scanner.nextToken();
+if (token.id == TimeToken.PLUS || token.id == TimeToken.MINUS) {
+break;
+}
+if (time_reference == TimeToken.START || time_reference == TimeToken.END) {
+throw new RrdException("Words 'start' or 'end' MUST be followed by +|- offset");
+}
+ else if (token.id != TimeToken.EOF) {
+throw new RrdException("If 'now' or 'epoch' is followed by a token it must be +|- offset");
+}
+break;
+case TimeToken.NUMBER:
+timeOfDay();
+case TimeToken.JAN:
+case TimeToken.FEB:
+case TimeToken.MAR:
+case TimeToken.APR:
+case TimeToken.MAY:
+case TimeToken.JUN:
+case TimeToken.JUL:
+case TimeToken.AUG:
+case TimeToken.SEP:
+case TimeToken.OCT:
+case TimeToken.NOV:
+case TimeToken.DEC:
+case TimeToken.TODAY:
+case TimeToken.YESTERDAY:
+case TimeToken.TOMORROW:
+day();
+if (token.id != TimeToken.NUMBER) {
+break;
+}
+timeOfDay();
+break;
+case TimeToken.TEATIME:
+hr+=4;
+case TimeToken.NOON:
+hr+=12;
+case TimeToken.MIDNIGHT:
+spec.hour=hr;
+spec.min=0;
+spec.sec=0;
+token=scanner.nextToken();
+day();
+break;
+default :
+throw new RrdException("Unparsable time: " + token.value);
+}
+if (token.id == TimeToken.PLUS || token.id == TimeToken.MINUS) {
+scanner.setContext(false);
+while (token.id == TimeToken.PLUS || token.id == TimeToken.MINUS || token.id == TimeToken.NUMBER) {
+if (token.id == TimeToken.NUMBER) {
+plusMinus(PREVIOUS_OP);
+}
+ else {
+plusMinus(token.id);
+}
+token=scanner.nextToken();
+}
+}
+if (token.id != TimeToken.EOF) {
+throw new RrdException("Unparsable trailing text: " + token.value);
+}
+return spec;
+}

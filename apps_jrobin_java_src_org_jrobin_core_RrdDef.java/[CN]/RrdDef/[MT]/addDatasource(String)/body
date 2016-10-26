@@ -1,0 +1,42 @@
+{
+  final RrdException rrdException=new RrdException("Wrong rrdtool-like datasource definition: " + rrdToolDsDef);
+  final StringTokenizer tokenizer=new StringTokenizer(rrdToolDsDef,":");
+  if (tokenizer.countTokens() != 6) {
+    throw rrdException;
+  }
+  final String[] tokens=new String[6];
+  for (int curTok=0; tokenizer.hasMoreTokens(); curTok++) {
+    tokens[curTok]=tokenizer.nextToken();
+  }
+  if (!tokens[0].equalsIgnoreCase("DS")) {
+    throw rrdException;
+  }
+  final String dsName=tokens[1];
+  final String dsType=tokens[2];
+  long dsHeartbeat;
+  try {
+    dsHeartbeat=Long.parseLong(tokens[3]);
+  }
+ catch (  final NumberFormatException nfe) {
+    throw rrdException;
+  }
+  double minValue=Double.NaN;
+  if (!tokens[4].equalsIgnoreCase("U")) {
+    try {
+      minValue=Double.parseDouble(tokens[4]);
+    }
+ catch (    final NumberFormatException nfe) {
+      throw rrdException;
+    }
+  }
+  double maxValue=Double.NaN;
+  if (!tokens[5].equalsIgnoreCase("U")) {
+    try {
+      maxValue=Double.parseDouble(tokens[5]);
+    }
+ catch (    final NumberFormatException nfe) {
+      throw rrdException;
+    }
+  }
+  addDatasource(new DsDef(dsName,dsType,dsHeartbeat,minValue,maxValue));
+}

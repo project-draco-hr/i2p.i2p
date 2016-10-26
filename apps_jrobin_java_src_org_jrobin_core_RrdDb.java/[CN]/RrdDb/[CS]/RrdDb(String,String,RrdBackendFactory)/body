@@ -1,0 +1,36 @@
+{
+  DataImporter reader;
+  if (externalPath.startsWith(PREFIX_RRDTool)) {
+    String rrdToolPath=externalPath.substring(PREFIX_RRDTool.length());
+    reader=new RrdToolReader(rrdToolPath);
+  }
+ else   if (externalPath.startsWith(PREFIX_XML)) {
+    externalPath=externalPath.substring(PREFIX_XML.length());
+    reader=new XmlReader(externalPath);
+  }
+ else {
+    reader=new XmlReader(externalPath);
+  }
+  backend=factory.open(rrdPath,false);
+  try {
+    backend.setLength(reader.getEstimatedSize());
+    header=new Header(this,reader);
+    datasources=new Datasource[reader.getDsCount()];
+    for (int i=0; i < datasources.length; i++) {
+      datasources[i]=new Datasource(this,reader,i);
+    }
+    archives=new Archive[reader.getArcCount()];
+    for (int i=0; i < archives.length; i++) {
+      archives[i]=new Archive(this,reader,i);
+    }
+    reader.release();
+  }
+ catch (  RrdException e) {
+    backend.close();
+    throw e;
+  }
+catch (  IOException e) {
+    backend.close();
+    throw e;
+  }
+}

@@ -1,0 +1,60 @@
+{
+  Aggregates agg=new Aggregates();
+  int cnt=0;
+  int lslstep=0;
+  boolean firstFound=false;
+  double SUMx, SUMy, SUMxy, SUMxx, SUMyy;
+  SUMx=0.0;
+  SUMy=0.0;
+  SUMxy=0.0;
+  SUMxx=0.0;
+  SUMyy=0.0;
+  for (int i=0; i < timestamps.length; i++) {
+    long left=Math.max(timestamps[i] - step,tStart);
+    long right=Math.min(timestamps[i],tEnd);
+    long delta=right - left;
+    if (delta >= 0) {
+      double value=values[i];
+      agg.min=Util.min(agg.min,value);
+      agg.max=Util.max(agg.max,value);
+      if (!firstFound) {
+        agg.first=value;
+        firstFound=true;
+        agg.last=value;
+      }
+ else       if (delta >= step) {
+        agg.last=value;
+      }
+      if (!Double.isNaN(value)) {
+        cnt++;
+        SUMx+=lslstep;
+        SUMxx+=lslstep * lslstep;
+        SUMy=Util.sum(SUMy,value);
+        SUMxy=Util.sum(SUMxy,lslstep * value);
+        SUMyy=Util.sum(SUMyy,value * value);
+      }
+      lslstep++;
+    }
+  }
+  agg.average=cnt > 0 ? (SUMy / cnt) : Double.NaN;
+  if (cnt > 0) {
+    double stdevSum=0.0;
+    for (int i=0; i < timestamps.length; i++) {
+      long left=Math.max(timestamps[i] - step,tStart);
+      long right=Math.min(timestamps[i],tEnd);
+      long delta=right - left;
+      if (delta >= 0) {
+        double value=values[i];
+        if (!Double.isNaN(value)) {
+          stdevSum=Util.sum(stdevSum,Math.pow((value - agg.average),2.0));
+        }
+      }
+    }
+    agg.stdev=Math.pow(stdevSum / cnt,0.5);
+    agg.lslslope=(SUMx * SUMy - cnt * SUMxy) / (SUMx * SUMx - cnt * SUMxx);
+    agg.lslint=(SUMy - agg.lslslope * SUMx) / cnt;
+    agg.lslcorrel=(SUMxy - (SUMx * SUMy) / cnt) / Math.sqrt((SUMxx - (SUMx * SUMx) / cnt) * (SUMyy - (SUMy * SUMy) / cnt));
+  }
+  agg.total=SUMy * step;
+  return agg;
+}

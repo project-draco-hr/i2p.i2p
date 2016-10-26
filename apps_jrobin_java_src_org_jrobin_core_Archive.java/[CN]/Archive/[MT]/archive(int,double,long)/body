@@ -1,0 +1,30 @@
+{
+  final Robin robin=robins[dsIndex];
+  final ArcState state=states[dsIndex];
+  final long step=parentDb.getHeader().getStep();
+  final long lastUpdateTime=parentDb.getHeader().getLastUpdateTime();
+  long updateTime=Util.normalize(lastUpdateTime,step) + step;
+  final long arcStep=getArcStep();
+  final String consolFunString=consolFun.get();
+  final int numSteps=steps.get();
+  final int numRows=rows.get();
+  final double xffValue=xff.get();
+  long numUpdates=numStepUpdates;
+  while (numUpdates > 0) {
+    accumulate(state,value,consolFunString);
+    numUpdates--;
+    if (updateTime % arcStep == 0) {
+      finalizeStep(state,robin,consolFunString,numSteps,xffValue);
+      break;
+    }
+ else {
+      updateTime+=step;
+    }
+  }
+  final int bulkUpdateCount=(int)Math.min(numUpdates / numSteps,(long)numRows);
+  robin.bulkStore(value,bulkUpdateCount);
+  final long remainingUpdates=numUpdates % numSteps;
+  for (long i=0; i < remainingUpdates; i++) {
+    accumulate(state,value,consolFunString);
+  }
+}

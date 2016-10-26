@@ -1,0 +1,76 @@
+{
+  im.ygridstep=(gdef.valueAxisSetting != null) ? gdef.valueAxisSetting.gridStep : Double.NaN;
+  im.ylabfact=(gdef.valueAxisSetting != null) ? gdef.valueAxisSetting.labelFactor : 0;
+  if (!gdef.rigid && !gdef.logarithmic) {
+    double sensiblevalues[]={1000.0,900.0,800.0,750.0,700.0,600.0,500.0,400.0,300.0,250.0,200.0,125.0,100.0,90.0,80.0,75.0,70.0,60.0,50.0,40.0,30.0,25.0,20.0,10.0,9.0,8.0,7.0,6.0,5.0,4.0,3.5,3.0,2.5,2.0,1.8,1.5,1.2,1.0,0.8,0.7,0.6,0.5,0.4,0.3,0.2,0.1,0.0,-1};
+    double scaled_min, scaled_max, adj;
+    if (Double.isNaN(im.ygridstep)) {
+      if (gdef.altYMrtg) {
+        im.decimals=Math.ceil(Math.log10(Math.max(Math.abs(im.maxval),Math.abs(im.minval))));
+        im.quadrant=0;
+        if (im.minval < 0) {
+          im.quadrant=2;
+          if (im.maxval <= 0) {
+            im.quadrant=4;
+          }
+        }
+switch (im.quadrant) {
+case 2:
+          im.scaledstep=Math.ceil(50 * Math.pow(10,-(im.decimals)) * Math.max(Math.abs(im.maxval),Math.abs(im.minval))) * Math.pow(10,im.decimals - 2);
+        scaled_min=-2 * im.scaledstep;
+      scaled_max=2 * im.scaledstep;
+    break;
+case 4:
+  im.scaledstep=Math.ceil(25 * Math.pow(10,-(im.decimals)) * Math.abs(im.minval)) * Math.pow(10,im.decimals - 2);
+scaled_min=-4 * im.scaledstep;
+scaled_max=0;
+break;
+default :
+im.scaledstep=Math.ceil(25 * Math.pow(10,-(im.decimals)) * im.maxval) * Math.pow(10,im.decimals - 2);
+scaled_min=0;
+scaled_max=4 * im.scaledstep;
+break;
+}
+im.minval=scaled_min;
+im.maxval=scaled_max;
+}
+ else if (gdef.altAutoscale) {
+double delt, fact;
+delt=im.maxval - im.minval;
+adj=delt * 0.1;
+fact=2.0 * Math.pow(10.0,Math.floor(Math.log10(Math.max(Math.abs(im.minval),Math.abs(im.maxval)))) - 2);
+if (delt < fact) {
+adj=(fact - delt) * 0.55;
+}
+im.minval-=adj;
+im.maxval+=adj;
+}
+ else if (gdef.altAutoscaleMax) {
+adj=(im.maxval - im.minval) * 0.1;
+im.maxval+=adj;
+}
+ else {
+scaled_min=im.minval / im.magfact;
+scaled_max=im.maxval / im.magfact;
+for (int i=1; sensiblevalues[i] > 0; i++) {
+if (sensiblevalues[i - 1] >= scaled_min && sensiblevalues[i] <= scaled_min) {
+im.minval=sensiblevalues[i] * im.magfact;
+}
+if (-sensiblevalues[i - 1] <= scaled_min && -sensiblevalues[i] >= scaled_min) {
+im.minval=-sensiblevalues[i - 1] * im.magfact;
+}
+if (sensiblevalues[i - 1] >= scaled_max && sensiblevalues[i] <= scaled_max) {
+im.maxval=sensiblevalues[i - 1] * im.magfact;
+}
+if (-sensiblevalues[i - 1] <= scaled_max && -sensiblevalues[i] >= scaled_max) {
+im.maxval=-sensiblevalues[i] * im.magfact;
+}
+}
+}
+}
+ else {
+im.minval=(double)im.ylabfact * im.ygridstep * Math.floor(im.minval / ((double)im.ylabfact * im.ygridstep));
+im.maxval=(double)im.ylabfact * im.ygridstep * Math.ceil(im.maxval / ((double)im.ylabfact * im.ygridstep));
+}
+}
+}

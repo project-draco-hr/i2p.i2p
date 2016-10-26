@@ -1,0 +1,35 @@
+{
+  worker.setAntiAliasing(gdef.antiAliasing);
+  worker.clip(im.xorigin + 1,im.yorigin - gdef.height - 1,gdef.width - 1,gdef.height + 2);
+  double areazero=mapper.ytr((im.minval > 0.0) ? im.minval : (im.maxval < 0.0) ? im.maxval : 0.0);
+  double[] x=xtr(dproc.getTimestamps()), lastY=null;
+  for (  PlotElement plotElement : gdef.plotElements) {
+    if (plotElement instanceof SourcedPlotElement) {
+      SourcedPlotElement source=(SourcedPlotElement)plotElement;
+      double[] y=ytr(source.getValues());
+      if (source instanceof Line) {
+        worker.drawPolyline(x,y,source.color,new BasicStroke(((Line)source).width));
+      }
+ else       if (source instanceof Area) {
+        worker.fillPolygon(x,areazero,y,source.color);
+      }
+ else       if (source instanceof Stack) {
+        Stack stack=(Stack)source;
+        float width=stack.getParentLineWidth();
+        if (width >= 0F) {
+          worker.drawPolyline(x,y,stack.color,new BasicStroke(width));
+        }
+ else {
+          worker.fillPolygon(x,lastY,y,stack.color);
+          worker.drawPolyline(x,lastY,stack.getParentColor(),new BasicStroke(0));
+        }
+      }
+ else {
+        throw new RrdException("Unknown plot source: " + source.getClass().getName());
+      }
+      lastY=y;
+    }
+  }
+  worker.reset();
+  worker.setAntiAliasing(false);
+}

@@ -1,0 +1,396 @@
+{
+  TimeZone tz=TimeZone.getDefault();
+  for (int slot=0; slot < timestamps.length; slot++) {
+    resetStack();
+    int token_rpi=-1;
+    for (int rpi=0; rpi < tokens.length; rpi++) {
+      Token token=tokens[rpi];
+      double x1, x2, x3;
+switch (token.id) {
+case TKN_NUM:
+        push(token.number);
+      break;
+case TKN_VAR:
+    push(token.values[slot]);
+  token_rpi=rpi;
+break;
+case TKN_COUNT:
+push(slot + 1);
+break;
+case TKN_PLUS:
+push(pop() + pop());
+break;
+case TKN_MINUS:
+x2=pop();
+x1=pop();
+push(x1 - x2);
+break;
+case TKN_MULT:
+push(pop() * pop());
+break;
+case TKN_DIV:
+x2=pop();
+x1=pop();
+push(x1 / x2);
+break;
+case TKN_MOD:
+x2=pop();
+x1=pop();
+push(x1 % x2);
+break;
+case TKN_SIN:
+push(Math.sin(pop()));
+break;
+case TKN_COS:
+push(Math.cos(pop()));
+break;
+case TKN_ATAN:
+push(Math.atan(pop()));
+break;
+case TKN_ATAN2:
+x2=pop();
+x1=pop();
+push(Math.atan2(x1,x2));
+break;
+case TKN_LOG:
+push(Math.log(pop()));
+break;
+case TKN_EXP:
+push(Math.exp(pop()));
+break;
+case TKN_FLOOR:
+push(Math.floor(pop()));
+break;
+case TKN_CEIL:
+push(Math.ceil(pop()));
+break;
+case TKN_ROUND:
+push(Math.round(pop()));
+break;
+case TKN_POW:
+x2=pop();
+x1=pop();
+push(Math.pow(x1,x2));
+break;
+case TKN_ABS:
+push(Math.abs(pop()));
+break;
+case TKN_SQRT:
+push(Math.sqrt(pop()));
+break;
+case TKN_RANDOM:
+push(Math.random());
+break;
+case TKN_LT:
+x2=pop();
+x1=pop();
+push(x1 < x2 ? 1 : 0);
+break;
+case TKN_LE:
+x2=pop();
+x1=pop();
+push(x1 <= x2 ? 1 : 0);
+break;
+case TKN_GT:
+x2=pop();
+x1=pop();
+push(x1 > x2 ? 1 : 0);
+break;
+case TKN_GE:
+x2=pop();
+x1=pop();
+push(x1 >= x2 ? 1 : 0);
+break;
+case TKN_EQ:
+x2=pop();
+x1=pop();
+push(x1 == x2 ? 1 : 0);
+break;
+case TKN_NE:
+x2=pop();
+x1=pop();
+push(x1 != x2 ? 1 : 0);
+break;
+case TKN_IF:
+x3=pop();
+x2=pop();
+x1=pop();
+push(x1 != 0 ? x2 : x3);
+break;
+case TKN_MIN:
+push(Math.min(pop(),pop()));
+break;
+case TKN_MAX:
+push(Math.max(pop(),pop()));
+break;
+case TKN_LIMIT:
+x3=pop();
+x2=pop();
+x1=pop();
+push(x1 < x2 || x1 > x3 ? Double.NaN : x1);
+break;
+case TKN_DUP:
+push(peek());
+break;
+case TKN_EXC:
+x2=pop();
+x1=pop();
+push(x2);
+push(x1);
+break;
+case TKN_POP:
+pop();
+break;
+case TKN_UN:
+push(Double.isNaN(pop()) ? 1 : 0);
+break;
+case TKN_ISINF:
+push(Double.isInfinite(pop()) ? 1 : 0);
+break;
+case TKN_UNKN:
+push(Double.NaN);
+break;
+case TKN_NOW:
+push(Util.getTime());
+break;
+case TKN_TIME:
+push(timestamps[slot]);
+break;
+case TKN_LTIME:
+push(timestamps[slot] + (tz.getOffset(timestamps[slot]) / 1000L));
+break;
+case TKN_PI:
+push(Math.PI);
+break;
+case TKN_E:
+push(Math.E);
+break;
+case TKN_AND:
+x2=pop();
+x1=pop();
+push((x1 != 0 && x2 != 0) ? 1 : 0);
+break;
+case TKN_OR:
+x2=pop();
+x1=pop();
+push((x1 != 0 || x2 != 0) ? 1 : 0);
+break;
+case TKN_XOR:
+x2=pop();
+x1=pop();
+push(((x1 != 0 && x2 == 0) || (x1 == 0 && x2 != 0)) ? 1 : 0);
+break;
+case TKN_PREV:
+push((slot == 0) ? Double.NaN : token.values[slot - 1]);
+break;
+case TKN_INF:
+push(Double.POSITIVE_INFINITY);
+break;
+case TKN_NEGINF:
+push(Double.NEGATIVE_INFINITY);
+break;
+case TKN_STEP:
+push(timeStep);
+break;
+case TKN_YEAR:
+push(getCalendarField(pop(),Calendar.YEAR));
+break;
+case TKN_MONTH:
+push(getCalendarField(pop(),Calendar.MONTH));
+break;
+case TKN_DATE:
+push(getCalendarField(pop(),Calendar.DAY_OF_MONTH));
+break;
+case TKN_HOUR:
+push(getCalendarField(pop(),Calendar.HOUR_OF_DAY));
+break;
+case TKN_MINUTE:
+push(getCalendarField(pop(),Calendar.MINUTE));
+break;
+case TKN_SECOND:
+push(getCalendarField(pop(),Calendar.SECOND));
+break;
+case TKN_WEEK:
+push(getCalendarField(pop(),Calendar.WEEK_OF_YEAR));
+break;
+case TKN_SIGN:
+x1=pop();
+push(Double.isNaN(x1) ? Double.NaN : x1 > 0 ? +1 : x1 < 0 ? -1 : 0);
+break;
+case TKN_RND:
+push(Math.floor(pop() * Math.random()));
+break;
+case TKN_ADDNAN:
+x2=pop();
+x1=pop();
+if (Double.isNaN(x1)) {
+push(x2);
+}
+ else if (Double.isNaN(x2)) {
+push(x1);
+}
+ else {
+push(x1 + x2);
+}
+break;
+case TKN_DEG2RAD:
+push(Math.toRadians(pop()));
+break;
+case TKN_RAD2DEG:
+push(Math.toDegrees(pop()));
+break;
+case TKN_SORT:
+{
+int n=(int)pop();
+double[] array=new double[n];
+for (int i=0; i < n; i++) {
+array[i]=pop();
+}
+Arrays.sort(array);
+for (int i=0; i < n; i++) {
+push(array[i]);
+}
+}
+break;
+case TKN_REV:
+{
+int n=(int)pop();
+double[] array=new double[n];
+for (int i=0; i < n; i++) {
+array[i]=pop();
+}
+for (int i=0; i < n; i++) {
+push(array[i]);
+}
+}
+break;
+case TKN_AVG:
+{
+int count=0;
+int n=(int)pop();
+double sum=0.0;
+while (n > 0) {
+x1=pop();
+n--;
+if (Double.isNaN(x1)) {
+continue;
+}
+sum+=x1;
+count++;
+}
+if (count > 0) {
+push(sum / count);
+}
+ else {
+push(Double.NaN);
+}
+}
+break;
+case TKN_TREND:
+case TKN_TRENDNAN:
+{
+int dur=(int)pop();
+pop();
+if ((slot + 1) < Math.ceil(dur / timeStep)) {
+push(Double.NaN);
+}
+ else {
+double[] vals=dataProcessor.getValues(tokens[token_rpi].variable);
+boolean ignorenan=token.id == TKN_TRENDNAN;
+double accum=0.0;
+int count=0;
+int start=(int)(Math.ceil(dur / timeStep));
+int row=2;
+while ((slot + row) > vals.length) {
+row--;
+}
+for (; start > 0; start--) {
+double val=vals[slot + row - start];
+if (ignorenan || !Double.isNaN(val)) {
+accum=Util.sum(accum,val);
+++count;
+}
+}
+push((count == 0) ? Double.NaN : (accum / count));
+}
+}
+break;
+case TKN_PREDICT:
+case TKN_PREDICTSIGMA:
+{
+pop();
+int locstepsize=(int)pop();
+int num_shifts=(int)pop();
+double[] multipliers;
+if (num_shifts < 0) {
+multipliers=new double[1];
+multipliers[0]=pop();
+}
+ else {
+multipliers=new double[num_shifts];
+for (int i=0; i < num_shifts; i++) {
+multipliers[i]=pop();
+}
+}
+double val=Double.NaN;
+double[] vals=dataProcessor.getValues(tokens[rpi - 1].variable);
+int locstep=(int)Math.ceil((float)locstepsize / (float)timeStep);
+double sum=0;
+double sum2=0;
+int count=0;
+int doshifts=Math.abs(num_shifts);
+for (int loop=0; loop < doshifts; loop++) {
+int shiftstep=1;
+if (num_shifts < 0) {
+shiftstep=loop * (int)multipliers[0];
+}
+ else {
+shiftstep=(int)multipliers[loop];
+}
+if (shiftstep < 0) {
+throw new RrdException("negative shift step not allowed: " + shiftstep);
+}
+shiftstep=(int)Math.ceil((float)shiftstep / (float)timeStep);
+for (int i=0; i <= locstep; i++) {
+int offset=shiftstep + i;
+if ((offset >= 0) && (offset < slot)) {
+val=vals[slot - offset];
+if (!Double.isNaN(val)) {
+sum=Util.sum(sum,val);
+sum2=Util.sum(sum2,val * val);
+count++;
+}
+}
+}
+}
+val=Double.NaN;
+if (token.id == TKN_PREDICT) {
+if (count > 0) {
+val=sum / (double)count;
+}
+}
+ else {
+if (count > 1) {
+val=count * sum2 - sum * sum;
+if (val < 0) {
+val=Double.NaN;
+}
+ else {
+val=Math.sqrt(val / ((float)count * ((float)count - 1.0)));
+}
+}
+}
+push(val);
+}
+break;
+default :
+throw new RrdException("Unexpected RPN token encountered, token.id=" + token.id);
+}
+}
+calculatedValues[slot]=pop();
+if (slot == 0 && !isStackEmpty()) {
+throw new RrdException("Stack not empty at the end of calculation. " + "Probably bad RPN expression [" + rpnExpression + "]");
+}
+}
+return calculatedValues;
+}

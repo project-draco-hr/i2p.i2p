@@ -1,0 +1,15 @@
+{
+  if (rrdDb == null) {
+    return;
+  }
+  String canonicalPath=Util.getCanonicalPath(rrdDb.getPath());
+  if (!rrdMap.containsKey(canonicalPath)) {
+    throw new RrdException("Could not release [" + canonicalPath + "], the file was never requested");
+  }
+  RrdEntry entry=rrdMap.get(canonicalPath);
+  if (--entry.count <= 0) {
+    rrdMap.remove(canonicalPath);
+    notifyAll();
+    entry.rrdDb.close();
+  }
+}

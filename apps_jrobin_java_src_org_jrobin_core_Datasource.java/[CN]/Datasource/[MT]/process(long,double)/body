@@ -1,0 +1,22 @@
+{
+  final Header header=parentDb.getHeader();
+  final long step=header.getStep();
+  final long oldTime=header.getLastUpdateTime();
+  final long startTime=Util.normalize(oldTime,step);
+  final long endTime=startTime + step;
+  final double oldValue=lastValue.get();
+  final double updateValue=calculateUpdateValue(oldTime,oldValue,newTime,newValue);
+  if (newTime < endTime) {
+    accumulate(oldTime,newTime,updateValue);
+  }
+ else {
+    final long boundaryTime=Util.normalize(newTime,step);
+    accumulate(oldTime,boundaryTime,updateValue);
+    final double value=calculateTotal(startTime,boundaryTime);
+    final long numSteps=(boundaryTime - endTime) / step + 1L;
+    parentDb.archive(this,value,numSteps);
+    nanSeconds.set(0);
+    accumValue.set(0.0);
+    accumulate(boundaryTime,newTime,updateValue);
+  }
+}

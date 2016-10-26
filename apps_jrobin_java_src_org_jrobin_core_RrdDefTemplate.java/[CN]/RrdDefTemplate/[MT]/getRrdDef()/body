@@ -1,0 +1,41 @@
+{
+  if (!root.getTagName().equals("rrd_def")) {
+    throw new RrdException("XML definition must start with <rrd_def>");
+  }
+  validateTagsOnlyOnce(root,new String[]{"path","start","step","datasource*","archive*"});
+  String path=getChildValue(root,"path");
+  RrdDef rrdDef=new RrdDef(path);
+  try {
+    String startStr=getChildValue(root,"start");
+    Calendar startGc=Util.getCalendar(startStr);
+    rrdDef.setStartTime(startGc);
+  }
+ catch (  RrdException e) {
+  }
+  try {
+    long step=getChildValueAsLong(root,"step");
+    rrdDef.setStep(step);
+  }
+ catch (  RrdException e) {
+  }
+  Node[] dsNodes=getChildNodes(root,"datasource");
+  for (  Node dsNode : dsNodes) {
+    validateTagsOnlyOnce(dsNode,new String[]{"name","type","heartbeat","min","max"});
+    String name=getChildValue(dsNode,"name");
+    String type=getChildValue(dsNode,"type");
+    long heartbeat=getChildValueAsLong(dsNode,"heartbeat");
+    double min=getChildValueAsDouble(dsNode,"min");
+    double max=getChildValueAsDouble(dsNode,"max");
+    rrdDef.addDatasource(name,type,heartbeat,min,max);
+  }
+  Node[] arcNodes=getChildNodes(root,"archive");
+  for (  Node arcNode : arcNodes) {
+    validateTagsOnlyOnce(arcNode,new String[]{"cf","xff","steps","rows"});
+    String consolFun=getChildValue(arcNode,"cf");
+    double xff=getChildValueAsDouble(arcNode,"xff");
+    int steps=getChildValueAsInt(arcNode,"steps");
+    int rows=getChildValueAsInt(arcNode,"rows");
+    rrdDef.addArchive(consolFun,xff,steps,rows);
+  }
+  return rrdDef;
+}

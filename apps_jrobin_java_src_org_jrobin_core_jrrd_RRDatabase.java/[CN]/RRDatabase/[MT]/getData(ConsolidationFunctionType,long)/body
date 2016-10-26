@@ -1,0 +1,27 @@
+{
+  ArrayList<Archive> possibleArchives=getArchiveList(type);
+  if (possibleArchives.size() == 0) {
+    throw new RrdException("Database does not contain an Archive of consolidation function type " + type);
+  }
+  Calendar endCal=Calendar.getInstance();
+  endCal.set(Calendar.MILLISECOND,0);
+  Calendar startCal=(Calendar)endCal.clone();
+  startCal.add(Calendar.DATE,-1);
+  long end=endCal.getTime().getTime() / 1000;
+  long start=startCal.getTime().getTime() / 1000;
+  Archive archive=findBestArchive(start,end,step,possibleArchives);
+  step=header.pdpStep * archive.pdpCount;
+  start-=start % step;
+  if (end % step != 0) {
+    end+=step - end % step;
+  }
+  int rows=(int)((end - start) / step + 1);
+  long lastUpdateLong=lastUpdate.getTime() / 1000;
+  long archiveEndTime=lastUpdateLong - (lastUpdateLong % step);
+  long archiveStartTime=archiveEndTime - (step * (archive.rowCount - 1));
+  int startOffset=(int)((start - archiveStartTime) / step);
+  int endOffset=(int)((archiveEndTime - end) / step);
+  DataChunk chunk=new DataChunk(start,startOffset,endOffset,step,header.dsCount,rows);
+  archive.loadData(chunk);
+  return chunk;
+}

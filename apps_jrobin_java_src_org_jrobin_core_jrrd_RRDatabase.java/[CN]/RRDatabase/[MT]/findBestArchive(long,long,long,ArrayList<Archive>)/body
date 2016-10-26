@@ -1,0 +1,46 @@
+{
+  Archive archive=null;
+  Archive bestFullArchive=null;
+  Archive bestPartialArchive=null;
+  long lastUpdateLong=lastUpdate.getTime() / 1000;
+  int firstPart=1;
+  int firstFull=1;
+  long bestMatch=0;
+  long bestStepDiff=0;
+  long tmpStepDiff=0;
+  for (int i=0; i < archives.size(); i++) {
+    archive=archives.get(i);
+    long calEnd=lastUpdateLong - (lastUpdateLong % (archive.pdpCount * header.pdpStep));
+    long calStart=calEnd - (archive.pdpCount * archive.rowCount * header.pdpStep);
+    long fullMatch=end - start;
+    if ((calEnd >= end) && (calStart < start)) {
+      tmpStepDiff=Math.abs(step - (header.pdpStep * archive.pdpCount));
+      if ((firstFull != 0) || (tmpStepDiff < bestStepDiff)) {
+        firstFull=0;
+        bestStepDiff=tmpStepDiff;
+        bestFullArchive=archive;
+      }
+    }
+ else {
+      long tmpMatch=fullMatch;
+      if (calStart > start) {
+        tmpMatch-=calStart - start;
+      }
+      if (calEnd < end) {
+        tmpMatch-=end - calEnd;
+      }
+      if ((firstPart != 0) || (bestMatch < tmpMatch)) {
+        firstPart=0;
+        bestMatch=tmpMatch;
+        bestPartialArchive=archive;
+      }
+    }
+  }
+  if (firstFull == 0) {
+    archive=bestFullArchive;
+  }
+ else   if (firstPart == 0) {
+    archive=bestPartialArchive;
+  }
+  return archive;
+}
