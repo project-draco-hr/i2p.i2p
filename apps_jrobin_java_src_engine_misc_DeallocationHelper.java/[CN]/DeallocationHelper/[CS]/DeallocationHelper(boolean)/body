@@ -1,0 +1,280 @@
+{
+  super();
+  final List<Buffer> buffersToDelete=new ArrayList<>();
+  final Map<String,String> attachmentOrByteBufferFieldNameMap=new HashMap<>();
+  final String javaVendor=System.getProperty("java.vendor");
+  final String javaVersion=System.getProperty("java.version");
+  if (!ignoreClassesAndFieldsHints) {
+    if (javaVendor.equals("Sun Microsystems Inc.") || javaVendor.equals("Oracle Corporation")) {
+      final String java14to16DirectBufferAttachmentFieldName="viewedBuffer";
+      final String java17to19DirectBufferAttachmentFieldName="att";
+      final String byteBufferAsNonByteBufferByteBufferFieldName="bb";
+      final String[] directBufferClassnames=new String[]{"java.nio.DirectByteBuffer","java.nio.DirectByteBufferR","java.nio.DirectCharBufferRS","java.nio.DirectCharBufferRU","java.nio.DirectCharBufferS","java.nio.DirectCharBufferU","java.nio.DirectDoubleBufferRS","java.nio.DirectDoubleBufferRU","java.nio.DirectDoubleBufferS","java.nio.DirectDoubleBufferU","java.nio.DirectFloatBufferRS","java.nio.DirectFloatBufferRU","java.nio.DirectFloatBufferS","java.nio.DirectFloatBufferU","java.nio.DirectIntBufferRS","java.nio.DirectIntBufferRU","java.nio.DirectIntBufferS","java.nio.DirectIntBufferU","java.nio.DirectLongBufferRS","java.nio.DirectLongBufferRU","java.nio.DirectLongBufferS","java.nio.DirectLongBufferU","java.nio.DirectShortBufferRS","java.nio.DirectShortBufferRU","java.nio.DirectShortBufferS","java.nio.DirectShortBufferU"};
+      final String[] byteBufferAsNonByteBufferClassnames=new String[]{"java.nio.ByteBufferAsCharBufferB","java.nio.ByteBufferAsCharBufferL","java.nio.ByteBufferAsCharBufferRB","java.nio.ByteBufferAsCharBufferRL","java.nio.ByteBufferAsDoubleBufferB","java.nio.ByteBufferAsDoubleBufferL","java.nio.ByteBufferAsDoubleBufferRB","java.nio.ByteBufferAsDoubleBufferRL","java.nio.ByteBufferAsFloatBufferB","java.nio.ByteBufferAsFloatBufferL","java.nio.ByteBufferAsFloatBufferRB","java.nio.ByteBufferAsFloatBufferRL","java.nio.ByteBufferAsIntBufferB","java.nio.ByteBufferAsIntBufferL","java.nio.ByteBufferAsIntBufferRB","java.nio.ByteBufferAsIntBufferRL","java.nio.ByteBufferAsLongBufferB","java.nio.ByteBufferAsLongBufferL","java.nio.ByteBufferAsLongBufferRB","java.nio.ByteBufferAsLongBufferRL","java.nio.ByteBufferAsShortBufferB","java.nio.ByteBufferAsShortBufferL","java.nio.ByteBufferAsShortBufferRB","java.nio.ByteBufferAsShortBufferRL"};
+      final String[] javaVersionElements=System.getProperty("java.version").split("\\.");
+      final int indexOfEarlyAccessSuffix=javaVersionElements[0].lastIndexOf("-ea");
+      if (indexOfEarlyAccessSuffix != -1) {
+        javaVersionElements[0]=javaVersionElements[0].substring(0,indexOfEarlyAccessSuffix);
+      }
+      final int major, minor;
+      if (javaVersionElements.length >= 2) {
+        major=Integer.parseInt(javaVersionElements[0]);
+        minor=Integer.parseInt(javaVersionElements[1]);
+      }
+ else {
+        major=1;
+        minor=Integer.parseInt(javaVersionElements[0]);
+      }
+      final String directBufferAttachmentFieldName;
+      if (minor == 1 && major <= 6)       directBufferAttachmentFieldName=java14to16DirectBufferAttachmentFieldName;
+ else       directBufferAttachmentFieldName=java17to19DirectBufferAttachmentFieldName;
+      for (      final String directBufferClassname : directBufferClassnames)       attachmentOrByteBufferFieldNameMap.put(directBufferClassname,directBufferAttachmentFieldName);
+      for (      final String byteBufferAsNonByteBufferClassname : byteBufferAsNonByteBufferClassnames)       attachmentOrByteBufferFieldNameMap.put(byteBufferAsNonByteBufferClassname,byteBufferAsNonByteBufferByteBufferFieldName);
+    }
+ else     if (javaVendor.equals("The Android Project")) {
+      final String byteBufferAsNonByteBufferByteBufferFieldName="byteBuffer";
+      final String[] byteBufferAsNonByteBufferClassnames=new String[]{"java.nio.ByteBufferAsCharBuffer","java.nio.ByteBufferAsDoubleBuffer","java.nio.ByteBufferAsFloatBuffer","java.nio.ByteBufferAsIntBuffer","java.nio.ByteBufferAsLongBuffer","java.nio.ByteBufferAsShortBuffer"};
+      for (      final String byteBufferAsNonByteBufferClassname : byteBufferAsNonByteBufferClassnames)       attachmentOrByteBufferFieldNameMap.put(byteBufferAsNonByteBufferClassname,byteBufferAsNonByteBufferByteBufferFieldName);
+    }
+ else     if (javaVendor.equals("Free Software Foundation, Inc.")) {
+      final String byteBufferAsNonByteBufferByteBufferFieldName="bb";
+      final String[] byteBufferAsNonByteBufferClassnames=new String[]{"java.nio.CharViewBufferImpl","java.nio.DoubleViewBufferImpl","java.nio.FloatViewBufferImpl","java.nio.IntViewBufferImpl","java.nio.LongViewBufferImpl","java.nio.ShortViewBufferImpl"};
+      for (      final String byteBufferAsNonByteBufferClassname : byteBufferAsNonByteBufferClassnames)       attachmentOrByteBufferFieldNameMap.put(byteBufferAsNonByteBufferClassname,byteBufferAsNonByteBufferByteBufferFieldName);
+    }
+ else     if (javaVendor.contains("Apache")) {
+      final String byteBufferAsNonByteBufferByteBufferFieldName="byteBuffer";
+      final String[] byteBufferAsNonByteBufferClassnames=new String[]{"java.nio.CharToByteBufferAdapter","java.nio.DoubleToByteBufferAdapter","java.nio.FloatToByteBufferAdapter","java.nio.IntToByteBufferAdapter","java.nio.LongToByteBufferAdapter","java.nio.ShortToByteBufferAdapter"};
+      for (      final String byteBufferAsNonByteBufferClassname : byteBufferAsNonByteBufferClassnames)       attachmentOrByteBufferFieldNameMap.put(byteBufferAsNonByteBufferClassname,byteBufferAsNonByteBufferByteBufferFieldName);
+    }
+ else     if (javaVendor.equals("Jeroen Frijters")) {
+    }
+ else     if (javaVendor.contains("IBM")) {
+    }
+  }
+  if (!attachmentOrByteBufferFieldNameMap.isEmpty()) {
+    final List<String> classnamesToRemove=new ArrayList<>();
+    for (    final String classname : attachmentOrByteBufferFieldNameMap.keySet())     try {
+      Class.forName(classname);
+    }
+ catch (    ClassNotFoundException cnfe) {
+      classnamesToRemove.add(classname);
+    }
+    for (    final String classnameToRemove : classnamesToRemove)     attachmentOrByteBufferFieldNameMap.remove(classnameToRemove);
+  }
+  attachmentOrByteBufferFieldMap=new HashMap<>();
+  if (!attachmentOrByteBufferFieldNameMap.isEmpty())   for (  final Entry<String,String> attachmentOrByteBufferFieldNameEntry : attachmentOrByteBufferFieldNameMap.entrySet()) {
+    final String classname=attachmentOrByteBufferFieldNameEntry.getKey();
+    final String fieldname=attachmentOrByteBufferFieldNameEntry.getValue();
+    try {
+      final Class<?> bufferClass=Class.forName(classname);
+      Field bufferField=null;
+      Class<?> bufferIntermediaryClass=bufferClass;
+      final List<Class<?>> intermediaryClassWithoutBufferList=new ArrayList<>();
+      while (bufferIntermediaryClass != null) {
+        try {
+          bufferField=bufferIntermediaryClass.getDeclaredField(fieldname);
+        }
+ catch (        NoSuchFieldException nsfe) {
+          if (!bufferIntermediaryClass.equals(Object.class) && !bufferIntermediaryClass.equals(Buffer.class))           intermediaryClassWithoutBufferList.add(bufferIntermediaryClass);
+        }
+        bufferIntermediaryClass=bufferIntermediaryClass.getSuperclass();
+      }
+      if (bufferField == null) {
+        final String superClassesMsg;
+        if (intermediaryClassWithoutBufferList.isEmpty())         superClassesMsg="";
+ else         if (intermediaryClassWithoutBufferList.size() == 1)         superClassesMsg=" and in its super class " + intermediaryClassWithoutBufferList.get(0).getName();
+ else {
+          final StringBuilder builder=new StringBuilder();
+          builder.append(" and in its super classes");
+          int classIndex=0;
+          for (          final Class<?> intermediaryClassWithoutBuffer : intermediaryClassWithoutBufferList) {
+            builder.append(' ');
+            builder.append(intermediaryClassWithoutBuffer.getName());
+            if (classIndex < intermediaryClassWithoutBufferList.size() - 1)             builder.append(',');
+            classIndex++;
+          }
+          superClassesMsg=builder.toString();
+        }
+        logger.warning("The field " + fieldname + " hasn't been found in the class "+ classname+ superClassesMsg);
+      }
+ else {
+        attachmentOrByteBufferFieldMap.put(bufferClass,bufferField);
+      }
+    }
+ catch (    ClassNotFoundException cnfe) {
+      final String msg="The class " + classname + " hasn't been found while initializing the deallocator. Java vendor: "+ javaVendor+ " Java version: "+ javaVersion;
+      logger.log(Level.WARNING,msg,cnfe);
+    }
+  }
+  if (attachmentOrByteBufferFieldNameMap.isEmpty()) {
+    final ByteBuffer slicedBigEndianReadOnlyDirectByteBuffer=((ByteBuffer)ByteBuffer.allocateDirect(2).order(ByteOrder.BIG_ENDIAN).put((byte)0).put((byte)0).position(1).limit(2)).slice().asReadOnlyBuffer();
+    final ByteBuffer slicedBigEndianReadWriteDirectByteBuffer=((ByteBuffer)ByteBuffer.allocateDirect(2).order(ByteOrder.BIG_ENDIAN).put((byte)0).put((byte)0).position(1).limit(2)).slice();
+    final CharBuffer bigEndianReadOnlyDirectCharBuffer=ByteBuffer.allocateDirect(1).order(ByteOrder.BIG_ENDIAN).asReadOnlyBuffer().asCharBuffer();
+    final CharBuffer bigEndianReadWriteDirectCharBuffer=ByteBuffer.allocateDirect(1).order(ByteOrder.BIG_ENDIAN).asCharBuffer();
+    final DoubleBuffer bigEndianReadOnlyDirectDoubleBuffer=ByteBuffer.allocateDirect(1).order(ByteOrder.BIG_ENDIAN).asReadOnlyBuffer().asDoubleBuffer();
+    final DoubleBuffer bigEndianReadWriteDirectDoubleBuffer=ByteBuffer.allocateDirect(1).order(ByteOrder.BIG_ENDIAN).asDoubleBuffer();
+    final FloatBuffer bigEndianReadOnlyDirectFloatBuffer=ByteBuffer.allocateDirect(1).order(ByteOrder.BIG_ENDIAN).asReadOnlyBuffer().asFloatBuffer();
+    final FloatBuffer bigEndianReadWriteDirectFloatBuffer=ByteBuffer.allocateDirect(1).order(ByteOrder.BIG_ENDIAN).asFloatBuffer();
+    final IntBuffer bigEndianReadOnlyDirectIntBuffer=ByteBuffer.allocateDirect(1).order(ByteOrder.BIG_ENDIAN).asReadOnlyBuffer().asIntBuffer();
+    final IntBuffer bigEndianReadWriteDirectIntBuffer=ByteBuffer.allocateDirect(1).order(ByteOrder.BIG_ENDIAN).asIntBuffer();
+    final LongBuffer bigEndianReadOnlyDirectLongBuffer=ByteBuffer.allocateDirect(1).order(ByteOrder.BIG_ENDIAN).asReadOnlyBuffer().asLongBuffer();
+    final LongBuffer bigEndianReadWriteDirectLongBuffer=ByteBuffer.allocateDirect(1).order(ByteOrder.BIG_ENDIAN).asLongBuffer();
+    final ShortBuffer bigEndianReadOnlyDirectShortBuffer=ByteBuffer.allocateDirect(1).order(ByteOrder.BIG_ENDIAN).asReadOnlyBuffer().asShortBuffer();
+    final ShortBuffer bigEndianReadWriteDirectShortBuffer=ByteBuffer.allocateDirect(1).order(ByteOrder.BIG_ENDIAN).asShortBuffer();
+    final ByteBuffer slicedLittleEndianReadOnlyDirectByteBuffer=((ByteBuffer)ByteBuffer.allocateDirect(2).order(ByteOrder.LITTLE_ENDIAN).put((byte)0).put((byte)0).position(1).limit(2)).slice().asReadOnlyBuffer();
+    final ByteBuffer slicedLittleEndianReadWriteDirectByteBuffer=((ByteBuffer)ByteBuffer.allocateDirect(2).order(ByteOrder.LITTLE_ENDIAN).put((byte)0).put((byte)0).position(1).limit(2)).slice();
+    final CharBuffer littleEndianReadOnlyDirectCharBuffer=ByteBuffer.allocateDirect(1).order(ByteOrder.LITTLE_ENDIAN).asReadOnlyBuffer().asCharBuffer();
+    final CharBuffer littleEndianReadWriteDirectCharBuffer=ByteBuffer.allocateDirect(1).order(ByteOrder.LITTLE_ENDIAN).asCharBuffer();
+    final DoubleBuffer littleEndianReadOnlyDirectDoubleBuffer=ByteBuffer.allocateDirect(1).order(ByteOrder.LITTLE_ENDIAN).asReadOnlyBuffer().asDoubleBuffer();
+    final DoubleBuffer littleEndianReadWriteDirectDoubleBuffer=ByteBuffer.allocateDirect(1).order(ByteOrder.LITTLE_ENDIAN).asDoubleBuffer();
+    final FloatBuffer littleEndianReadOnlyDirectFloatBuffer=ByteBuffer.allocateDirect(1).order(ByteOrder.LITTLE_ENDIAN).asReadOnlyBuffer().asFloatBuffer();
+    final FloatBuffer littleEndianReadWriteDirectFloatBuffer=ByteBuffer.allocateDirect(1).order(ByteOrder.LITTLE_ENDIAN).asFloatBuffer();
+    final IntBuffer littleEndianReadOnlyDirectIntBuffer=ByteBuffer.allocateDirect(1).order(ByteOrder.LITTLE_ENDIAN).asReadOnlyBuffer().asIntBuffer();
+    final IntBuffer littleEndianReadWriteDirectIntBuffer=ByteBuffer.allocateDirect(1).order(ByteOrder.LITTLE_ENDIAN).asIntBuffer();
+    final LongBuffer littleEndianReadOnlyDirectLongBuffer=ByteBuffer.allocateDirect(1).order(ByteOrder.LITTLE_ENDIAN).asReadOnlyBuffer().asLongBuffer();
+    final LongBuffer littleEndianReadWriteDirectLongBuffer=ByteBuffer.allocateDirect(1).order(ByteOrder.LITTLE_ENDIAN).asLongBuffer();
+    final ShortBuffer littleEndianReadOnlyDirectShortBuffer=ByteBuffer.allocateDirect(1).order(ByteOrder.LITTLE_ENDIAN).asReadOnlyBuffer().asShortBuffer();
+    final ShortBuffer littleEndianReadWriteDirectShortBuffer=ByteBuffer.allocateDirect(1).order(ByteOrder.LITTLE_ENDIAN).asShortBuffer();
+    final List<Buffer> buffers=new ArrayList<>();
+    buffers.add(slicedBigEndianReadOnlyDirectByteBuffer);
+    buffers.add(slicedBigEndianReadWriteDirectByteBuffer);
+    buffers.add(bigEndianReadOnlyDirectCharBuffer);
+    buffers.add(bigEndianReadWriteDirectCharBuffer);
+    buffers.add(bigEndianReadOnlyDirectDoubleBuffer);
+    buffers.add(bigEndianReadWriteDirectDoubleBuffer);
+    buffers.add(bigEndianReadOnlyDirectFloatBuffer);
+    buffers.add(bigEndianReadWriteDirectFloatBuffer);
+    buffers.add(bigEndianReadOnlyDirectIntBuffer);
+    buffers.add(bigEndianReadWriteDirectIntBuffer);
+    buffers.add(bigEndianReadOnlyDirectLongBuffer);
+    buffers.add(bigEndianReadWriteDirectLongBuffer);
+    buffers.add(bigEndianReadOnlyDirectShortBuffer);
+    buffers.add(bigEndianReadWriteDirectShortBuffer);
+    buffers.add(slicedLittleEndianReadOnlyDirectByteBuffer);
+    buffers.add(slicedLittleEndianReadWriteDirectByteBuffer);
+    buffers.add(littleEndianReadOnlyDirectCharBuffer);
+    buffers.add(littleEndianReadWriteDirectCharBuffer);
+    buffers.add(littleEndianReadOnlyDirectDoubleBuffer);
+    buffers.add(littleEndianReadWriteDirectDoubleBuffer);
+    buffers.add(littleEndianReadOnlyDirectFloatBuffer);
+    buffers.add(littleEndianReadWriteDirectFloatBuffer);
+    buffers.add(littleEndianReadOnlyDirectIntBuffer);
+    buffers.add(littleEndianReadWriteDirectIntBuffer);
+    buffers.add(littleEndianReadOnlyDirectLongBuffer);
+    buffers.add(littleEndianReadWriteDirectLongBuffer);
+    buffers.add(littleEndianReadOnlyDirectShortBuffer);
+    buffers.add(littleEndianReadWriteDirectShortBuffer);
+    for (    Buffer buffer : buffers) {
+      final Class<?> bufferClass=buffer.getClass();
+      if (!attachmentOrByteBufferFieldMap.containsKey(bufferClass)) {
+        Field bufferField=null;
+        Class<?> bufferIntermediaryClass=bufferClass;
+        while (bufferIntermediaryClass != null && bufferField == null) {
+          for (          final Field field : bufferIntermediaryClass.getDeclaredFields()) {
+            final boolean fieldWasAccessible=field.isAccessible();
+            try {
+              field.setAccessible(true);
+              final Object fieldValue=field.get(buffer);
+              if (fieldValue != null && fieldValue instanceof Buffer) {
+                bufferField=field;
+                break;
+              }
+            }
+ catch (            IllegalAccessException iae) {
+              logger.log(Level.WARNING,"Cannot access the field " + field.getName() + " of the class "+ bufferIntermediaryClass.getName(),iae);
+            }
+ finally {
+              field.setAccessible(fieldWasAccessible);
+            }
+          }
+          bufferIntermediaryClass=bufferIntermediaryClass.getSuperclass();
+        }
+        if (bufferField != null)         attachmentOrByteBufferFieldMap.put(bufferClass,bufferField);
+      }
+    }
+    buffersToDelete.addAll(buffers);
+  }
+  deallocatableBufferClassSet=new HashSet<>();
+  if (javaVendor.equals("Sun Microsystems Inc.") || javaVendor.equals("Oracle Corporation") || javaVendor.equals("The Android Project")) {
+    Class<?> directByteBufferClass=null;
+    final String directByteBufferClassName="java.nio.DirectByteBuffer";
+    try {
+      directByteBufferClass=Class.forName(directByteBufferClassName);
+    }
+ catch (    ClassNotFoundException cnfe) {
+      final String msg="The class " + directByteBufferClassName + " hasn't been found while initializing the deallocator. Java vendor: "+ javaVendor+ " Java version: "+ javaVersion;
+      logger.log(Level.WARNING,msg,cnfe);
+    }
+    if (directByteBufferClass != null)     deallocatableBufferClassSet.add(directByteBufferClass);
+  }
+ else   if (javaVendor.equals("Free Software Foundation, Inc.")) {
+    Class<?> readOnlyDirectByteBufferClass=null;
+    final String readOnlyDirectByteBufferClassName="java.nio.DirectByteBufferImpl.ReadOnly";
+    try {
+      readOnlyDirectByteBufferClass=Class.forName(readOnlyDirectByteBufferClassName);
+    }
+ catch (    ClassNotFoundException cnfe) {
+      final String msg="The class " + readOnlyDirectByteBufferClassName + " hasn't been found while initializing the deallocator. Java vendor: "+ javaVendor+ " Java version: "+ javaVersion;
+      logger.log(Level.WARNING,msg,cnfe);
+    }
+    if (readOnlyDirectByteBufferClass != null)     deallocatableBufferClassSet.add(readOnlyDirectByteBufferClass);
+    Class<?> readWriteDirectByteBufferClass=null;
+    final String readWriteDirectByteBufferClassName="java.nio.DirectByteBufferImpl.ReadWrite";
+    try {
+      readWriteDirectByteBufferClass=Class.forName(readWriteDirectByteBufferClassName);
+    }
+ catch (    ClassNotFoundException cnfe) {
+      final String msg="The class " + readWriteDirectByteBufferClassName + " hasn't been found while initializing the deallocator. Java vendor: "+ javaVendor+ " Java version: "+ javaVersion;
+      logger.log(Level.WARNING,msg,cnfe);
+    }
+    if (readWriteDirectByteBufferClass != null)     deallocatableBufferClassSet.add(readWriteDirectByteBufferClass);
+  }
+ else   if (javaVendor.contains("Apache")) {
+    Class<?> readOnlyDirectByteBufferClass=null;
+    final String readOnlyDirectByteBufferClassName="java.nio.ReadOnlyDirectByteBuffer";
+    try {
+      readOnlyDirectByteBufferClass=Class.forName(readOnlyDirectByteBufferClassName);
+    }
+ catch (    ClassNotFoundException cnfe) {
+      final String msg="The class " + readOnlyDirectByteBufferClassName + " hasn't been found while initializing the deallocator. Java vendor: "+ javaVendor+ " Java version: "+ javaVersion;
+      logger.log(Level.WARNING,msg,cnfe);
+    }
+    if (readOnlyDirectByteBufferClass != null)     deallocatableBufferClassSet.add(readOnlyDirectByteBufferClass);
+    Class<?> readWriteDirectByteBufferClass=null;
+    final String readWriteDirectByteBufferClassName="java.nio.ReadWriteDirectByteBuffer";
+    try {
+      readWriteDirectByteBufferClass=Class.forName(readWriteDirectByteBufferClassName);
+    }
+ catch (    ClassNotFoundException cnfe) {
+      final String msg="The class " + readWriteDirectByteBufferClassName + " hasn't been found while initializing the deallocator. Java vendor: "+ javaVendor+ " Java version: "+ javaVersion;
+      logger.log(Level.WARNING,msg,cnfe);
+    }
+    if (readWriteDirectByteBufferClass != null)     deallocatableBufferClassSet.add(readWriteDirectByteBufferClass);
+  }
+ else   if (javaVendor.equals("Jeroen Frijters")) {
+  }
+ else   if (javaVendor.contains("IBM")) {
+  }
+  if (deallocatableBufferClassSet.isEmpty()) {
+    final ByteBuffer dummyReadWriteDirectByteBuffer=ByteBuffer.allocateDirect(1);
+    final Class<?> readWriteDirectByteBufferClass=dummyReadWriteDirectByteBuffer.getClass();
+    deallocatableBufferClassSet.add(readWriteDirectByteBufferClass);
+    buffersToDelete.add(dummyReadWriteDirectByteBuffer);
+    final ByteBuffer dummyReadOnlyDirectByteBuffer=ByteBuffer.allocateDirect(1).asReadOnlyBuffer();
+    final Class<?> readOnlyDirectByteBufferClass=dummyReadOnlyDirectByteBuffer.getClass();
+    deallocatableBufferClassSet.add(readOnlyDirectByteBufferClass);
+    buffersToDelete.add(dummyReadOnlyDirectByteBuffer);
+  }
+  if (javaVendor.equals("Sun Microsystems Inc.") || javaVendor.equals("Oracle Corporation"))   deallocator=new OracleSunOpenJdkDeallocator();
+ else   if (javaVendor.equals("The Android Project"))   deallocator=new AndroidDeallocator();
+ else   if (javaVendor.equals("Free Software Foundation, Inc."))   deallocator=new GnuClasspathDeallocator();
+ else   if (javaVendor.contains("Apache"))   deallocator=new ApacheHarmonyDeallocator();
+ else   if (javaVendor.equals("Jeroen Frijters")) {
+    deallocator=null;
+  }
+ else   if (javaVendor.contains("IBM")) {
+    deallocator=null;
+  }
+ else   deallocator=null;
+  for (  final Buffer bufferToDelete : buffersToDelete)   deallocate(bufferToDelete);
+}

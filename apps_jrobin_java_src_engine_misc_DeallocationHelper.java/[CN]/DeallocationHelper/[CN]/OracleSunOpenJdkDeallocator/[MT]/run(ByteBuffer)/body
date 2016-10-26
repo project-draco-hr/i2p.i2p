@@ -1,0 +1,24 @@
+{
+  boolean success=false;
+  if (directByteBufferCleanerMethod != null && cleanerCleanMethod != null) {
+    final boolean directByteBufferCleanerMethodWasAccessible=directByteBufferCleanerMethod.isAccessible();
+    final boolean cleanerCleanMethodWasAccessible=cleanerCleanMethod.isAccessible();
+    try {
+      directByteBufferCleanerMethod.setAccessible(true);
+      final Object cleaner=directByteBufferCleanerMethod.invoke(directByteBuffer);
+      if (cleaner != null) {
+        cleanerCleanMethod.setAccessible(true);
+        cleanerCleanMethod.invoke(cleaner);
+        success=true;
+      }
+    }
+ catch (    IllegalAccessException|IllegalArgumentException|InvocationTargetException e) {
+      logger.log(Level.WARNING,"The deallocation of a direct NIO buffer has failed",e);
+    }
+ finally {
+      directByteBufferCleanerMethod.setAccessible(directByteBufferCleanerMethodWasAccessible);
+      cleanerCleanMethod.setAccessible(cleanerCleanMethodWasAccessible);
+    }
+  }
+  return (success);
+}

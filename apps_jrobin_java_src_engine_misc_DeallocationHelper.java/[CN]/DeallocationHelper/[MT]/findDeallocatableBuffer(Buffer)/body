@@ -1,0 +1,40 @@
+{
+  final ByteBuffer deallocatableDirectByteBuffer;
+  if (buffer != null && buffer.isDirect()) {
+    final Class<?> bufferClass=buffer.getClass();
+    final Field attachmentOrByteBufferField=attachmentOrByteBufferFieldMap == null ? null : attachmentOrByteBufferFieldMap.get(bufferClass);
+    final Buffer attachmentBufferOrByteBuffer;
+    if (attachmentOrByteBufferField == null)     attachmentBufferOrByteBuffer=null;
+ else {
+      Object attachedObjectOrByteBuffer;
+      final boolean attachedObjectOrByteBufferFieldWasAccessible=attachmentOrByteBufferField.isAccessible();
+      try {
+        attachmentOrByteBufferField.setAccessible(true);
+        attachedObjectOrByteBuffer=attachmentOrByteBufferField.get(buffer);
+      }
+ catch (      IllegalArgumentException|IllegalAccessException iae) {
+        attachedObjectOrByteBuffer=null;
+      }
+ finally {
+        attachmentOrByteBufferField.setAccessible(attachedObjectOrByteBufferFieldWasAccessible);
+      }
+      if (attachedObjectOrByteBuffer instanceof Buffer)       attachmentBufferOrByteBuffer=(Buffer)attachedObjectOrByteBuffer;
+ else       attachmentBufferOrByteBuffer=null;
+    }
+    if (attachmentBufferOrByteBuffer == null) {
+      if (buffer instanceof ByteBuffer && deallocatableBufferClassSet.contains(bufferClass))       deallocatableDirectByteBuffer=(ByteBuffer)buffer;
+ else {
+        deallocatableDirectByteBuffer=null;
+        final String bufferClassName=bufferClass.getName();
+        logger.warning("No deallocatable buffer has been found for an instance of the class " + bufferClassName + " whereas it is a direct NIO buffer");
+      }
+    }
+ else {
+      deallocatableDirectByteBuffer=findDeallocatableBuffer(attachmentBufferOrByteBuffer);
+    }
+  }
+ else {
+    deallocatableDirectByteBuffer=null;
+  }
+  return deallocatableDirectByteBuffer;
+}
