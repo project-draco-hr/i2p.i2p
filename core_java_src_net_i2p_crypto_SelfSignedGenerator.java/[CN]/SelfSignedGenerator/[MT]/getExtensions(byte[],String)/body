@@ -25,7 +25,9 @@
   int wrap51len=wrap1len;
   int wrap5len=spaceFor(wrap51len);
   int ext5len=oid5.length + spaceFor(wrap5len);
-  int extslen=spaceFor(ext1len) + spaceFor(ext2len) + spaceFor(ext3len)+ spaceFor(ext4len)+ spaceFor(ext5len);
+  int extslen=spaceFor(ext1len) + spaceFor(ext2len) + spaceFor(ext4len)+ spaceFor(ext5len);
+  final boolean isCA=!cname.contains("@");
+  if (isCA)   extslen+=spaceFor(ext3len);
   int seqlen=spaceFor(extslen);
   int totlen=spaceFor(seqlen);
   byte[] rv=new byte[totlen];
@@ -56,18 +58,20 @@
   idx=intToASN1(rv,idx,sha.length);
   System.arraycopy(sha,0,rv,idx,sha.length);
   idx+=sha.length;
-  rv[idx++]=(byte)0x30;
-  idx=intToASN1(rv,idx,ext3len);
-  System.arraycopy(oid3,0,rv,idx,oid3.length);
-  idx+=oid3.length;
-  System.arraycopy(TRUE,0,rv,idx,TRUE.length);
-  idx+=TRUE.length;
-  rv[idx++]=(byte)0x04;
-  idx=intToASN1(rv,idx,wrap3len);
-  rv[idx++]=(byte)0x30;
-  idx=intToASN1(rv,idx,TRUE.length);
-  System.arraycopy(TRUE,0,rv,idx,TRUE.length);
-  idx+=TRUE.length;
+  if (isCA) {
+    rv[idx++]=(byte)0x30;
+    idx=intToASN1(rv,idx,ext3len);
+    System.arraycopy(oid3,0,rv,idx,oid3.length);
+    idx+=oid3.length;
+    System.arraycopy(TRUE,0,rv,idx,TRUE.length);
+    idx+=TRUE.length;
+    rv[idx++]=(byte)0x04;
+    idx=intToASN1(rv,idx,wrap3len);
+    rv[idx++]=(byte)0x30;
+    idx=intToASN1(rv,idx,TRUE.length);
+    System.arraycopy(TRUE,0,rv,idx,TRUE.length);
+    idx+=TRUE.length;
+  }
   rv[idx++]=(byte)0x30;
   idx=intToASN1(rv,idx,ext2len);
   System.arraycopy(oid2,0,rv,idx,oid2.length);
@@ -88,7 +92,7 @@
   idx=intToASN1(rv,idx,wrap4len);
   rv[idx++]=(byte)0x30;
   idx=intToASN1(rv,idx,wrap41len);
-  rv[idx++]=(byte)0x82;
+  rv[idx++]=(byte)(isCA ? 0x82 : 0x81);
   idx=intToASN1(rv,idx,cnameBytes.length);
   System.arraycopy(cnameBytes,0,rv,idx,cnameBytes.length);
   idx+=cnameBytes.length;
