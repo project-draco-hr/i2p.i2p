@@ -2,14 +2,21 @@
   boolean haveIPv4=false;
   boolean haveIPv6=false;
   SortedSet<String> rv=new TreeSet<String>();
+  final boolean omitDeprecated=INET6_CACHE_ENABLED && !includeSiteLocal && includeIPv6;
   try {
     InetAddress localhost=InetAddress.getLocalHost();
     InetAddress[] allMyIps=InetAddress.getAllByName(localhost.getCanonicalHostName());
     if (allMyIps != null) {
       for (int i=0; i < allMyIps.length; i++) {
-        if (allMyIps[i] instanceof Inet4Address)         haveIPv4=true;
+        boolean isv4=allMyIps[i] instanceof Inet4Address;
+        if (isv4)         haveIPv4=true;
  else         haveIPv6=true;
-        if (shouldInclude(allMyIps[i],includeSiteLocal,includeLoopbackAndWildcard,includeIPv6))         rv.add(stripScope(allMyIps[i].getHostAddress()));
+        if (omitDeprecated && !isv4) {
+          if (isDeprecated((Inet6Address)allMyIps[i]))           continue;
+        }
+        if (shouldInclude(allMyIps[i],includeSiteLocal,includeLoopbackAndWildcard,includeIPv6)) {
+          rv.add(stripScope(allMyIps[i].getHostAddress()));
+        }
       }
     }
   }
@@ -22,9 +29,15 @@
         NetworkInterface ifc=ifcs.nextElement();
         for (Enumeration<InetAddress> addrs=ifc.getInetAddresses(); addrs.hasMoreElements(); ) {
           InetAddress addr=addrs.nextElement();
-          if (addr instanceof Inet4Address)           haveIPv4=true;
+          boolean isv4=addr instanceof Inet4Address;
+          if (isv4)           haveIPv4=true;
  else           haveIPv6=true;
-          if (shouldInclude(addr,includeSiteLocal,includeLoopbackAndWildcard,includeIPv6))           rv.add(stripScope(addr.getHostAddress()));
+          if (omitDeprecated && !isv4) {
+            if (isDeprecated((Inet6Address)addr))             continue;
+          }
+          if (shouldInclude(addr,includeSiteLocal,includeLoopbackAndWildcard,includeIPv6)) {
+            rv.add(stripScope(addr.getHostAddress()));
+          }
         }
       }
     }

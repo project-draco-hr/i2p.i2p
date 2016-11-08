@@ -1,0 +1,49 @@
+{
+  long now=System.currentTimeMillis();
+  if (now - _ifCacheTime < INET6_CACHE_EXPIRE)   return;
+  _ifCache.clear();
+  BufferedReader in=null;
+  try {
+    in=new BufferedReader(new InputStreamReader(new FileInputStream(IF_INET6_FILE),"ISO-8859-1"),4096);
+    String line=null;
+    while ((line=in.readLine()) != null) {
+      String[] parts=DataHelper.split(line," ",6);
+      if (parts.length < 5)       continue;
+      String as=parts[0];
+      if (as.length() != 32)       continue;
+      StringBuilder buf=new StringBuilder(40);
+      int i=0;
+      while (true) {
+        buf.append(as.substring(i,i + 4));
+        i+=4;
+        if (i >= 32)         break;
+        buf.append(':');
+      }
+      Inet6Address addr;
+      try {
+        addr=(Inet6Address)InetAddress.getByName(buf.toString());
+      }
+ catch (      UnknownHostException uhe) {
+        continue;
+      }
+      int flags=FLAG_PERMANENT;
+      try {
+        flags=Integer.parseInt(parts[4],16);
+      }
+ catch (      NumberFormatException nfe) {
+      }
+      Inet6Addr a=new Inet6Addr(addr,flags);
+      _ifCache.put(addr,a);
+    }
+  }
+ catch (  IOException ioe) {
+  }
+ finally {
+    if (in != null)     try {
+      in.close();
+    }
+ catch (    IOException ioe) {
+    }
+  }
+  _ifCacheTime=now;
+}

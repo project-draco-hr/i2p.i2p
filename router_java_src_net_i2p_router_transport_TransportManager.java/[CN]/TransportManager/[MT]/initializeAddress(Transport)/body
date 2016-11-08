@@ -1,13 +1,39 @@
 {
   Set<String> ipset=Addresses.getAddresses(false,true);
+  boolean hasNonTempV6Address=false;
+  List<InetAddress> addresses=new ArrayList<InetAddress>(4);
+  List<Inet6Address> tempV6Addresses=new ArrayList<Inet6Address>(4);
   for (  String ips : ipset) {
     try {
-      InetAddress ia=InetAddress.getByName(ips);
-      byte[] ip=ia.getAddress();
-      t.externalAddressReceived(SOURCE_INTERFACE,ip,0);
+      InetAddress addr=InetAddress.getByName(ips);
+      if (ips.contains(":") && (addr instanceof Inet6Address)) {
+        Inet6Address v6addr=(Inet6Address)addr;
+        if (Addresses.isTemporary(v6addr)) {
+          tempV6Addresses.add(v6addr);
+          continue;
+        }
+        hasNonTempV6Address=true;
+      }
+      addresses.add(addr);
     }
  catch (    UnknownHostException e) {
       _log.error("UDP failed to bind to local address",e);
     }
+  }
+  if (!tempV6Addresses.isEmpty()) {
+    if (hasNonTempV6Address) {
+      if (_log.shouldWarn()) {
+        for (        Inet6Address addr : tempV6Addresses) {
+          _log.warn("Not binding to temporary address " + addr.getHostAddress());
+        }
+      }
+    }
+ else {
+      addresses.addAll(tempV6Addresses);
+    }
+  }
+  for (  InetAddress ia : addresses) {
+    byte[] ip=ia.getAddress();
+    t.externalAddressReceived(SOURCE_INTERFACE,ip,0);
   }
 }
